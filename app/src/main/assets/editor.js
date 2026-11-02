@@ -77,7 +77,7 @@ c.restore();if(highlight){if(item.a)drawHandle(c,item.a,'#fff4a6');if(item.b)dra
 function drawLoupe(){
   if(!magnifierPoint)return;
   const p=worldToScreen(magnifierPoint);
-  const l=$('loupe'),size=136,w=stageCanvas.clientWidth;
+  const l=$('loupe'),size=108,w=stageCanvas.clientWidth;
   l.style.left=(p.x>w*.58?12:Math.max(4,w-size-14))+'px';
   l.style.top='16px';
   if(l.width!==size||l.height!==size){l.width=size;l.height=size;}
