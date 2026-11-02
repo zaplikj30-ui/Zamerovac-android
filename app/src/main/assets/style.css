@@ -57,3 +57,16 @@ body.in-editor .top,body.in-note .top{display:none}
  .bottom{left:0;right:0}
  .appMenu{top:58px}
 }
+
+/* Editor adjustments after comparing the touch workflow in the user's ImageMeter video. */
+#loupe {
+  width:152px;
+  height:152px;
+  border:2px solid #9a9a9a;
+  border-radius:20px;
+  box-shadow:0 2px 9px #000b;
+  background:#343537;
+  pointer-events:none;
+}
+.toolbar #activeTool.inactive {opacity:.68}
+.toolbar #activeTool{position:relative;font-size:24px;white-space:nowrap}
