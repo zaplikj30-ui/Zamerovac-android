@@ -52,3 +52,14 @@ Referenční měřítko, perspektivní reference, perspektivní délka, počíta
 ## Převaděč spojitosti
 
 Datový model je zamýšlen jako budoucí vstup PC modulu. Editovatelné kóty jsou uložené v obrazových pixelech odděleně od uživatelem zadaných skutečných rozměrů.
+
+## Instalace a aktualizace Zaměřovače TEST
+
+**Aktuální APK ke stažení: [GitHub Releases – poslední vydání](https://github.com/zaplikj30-ui/Zamerovac-android/releases/latest)**.
+
+- Každé úspěšné sestavení z větve `main` automaticky vytvoří číslované vydání obsahující přímo soubor `Zamerovac-TEST-v1.1.N.apk` (bez ZIP).
+- Na telefonu otevři odkaz, přihlas se ke svému GitHub účtu, vyber soubor `.apk`, otevři jej přes **Moje soubory → Stažené** a potvrď **Aktualizovat**. ChatGPT odkazy na dočasné soubory k instalaci nepoužívej.
+- Aplikace `Zaměřovač TEST` má identifikátor `cz.zamerovac.app.preview` a stálý testovací podpis v `tools/debug-signing.p12.b64`. Všechny běhy workflow používají tento podpis a postupně rostoucí `versionCode` `1000 + GITHUB_RUN_NUMBER`. Aktualizace by proto neměla mazat data.
+- `Zaměřovač` (bez TEST) a `Zaměřovač TEST` jsou dvě **odlišné aplikace** a data se mezi nimi nepřenášejí automaticky.
+- Certifikát v repozitáři je pouze **vývojový/testovací**. Pro budoucí ostré vydání je nutné vytvořit soukromý produkční podpis a zacházet s ním jako s tajemstvím; tenhle testovací klíč nelze považovat za bezpečný pro veřejnou distribuci.
+- Upozornění: Android může instalaci blokovat z jiných důvodů (například zákaz instalace z daného zdroje). Bez instalačního protokolu nelze potvrdit, proč konkrétní historická aktualizace selhala. Starou aplikaci nemaž bez zálohy.
