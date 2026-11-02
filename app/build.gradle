@@ -1,5 +1,15 @@
 plugins { id 'com.android.application' }
 
+// Reproducible signing for INTERNAL DEBUG BUILDS ONLY.
+// This certificate is deliberately bundled with the source; it is NOT a production secret.
+// Never publish the application under this identity or use it for real customer data.
+def debugKey = file("${rootProject.projectDir}/tools/debug-signing.p12")
+if (!debugKey.exists()) {
+    def encoded = file("${rootProject.projectDir}/tools/debug-signing.p12.b64").text.trim()
+    debugKey.bytes = java.util.Base64.getDecoder().decode(encoded)
+}
+def workflowBuildNumber = (System.getenv('GITHUB_RUN_NUMBER') ?: '1').toInteger()
+
 android {
     namespace 'cz.zamerovac.app'
     compileSdk 35
@@ -7,8 +17,22 @@ android {
         applicationId 'cz.zamerovac.app'
         minSdk 26
         targetSdk 35
-        versionCode 1
-        versionName '1.0.0'
+        versionCode 1000 + workflowBuildNumber
+        versionName "1.1.${workflowBuildNumber}"
+    }
+    signingConfigs {
+        debug {
+            storeFile debugKey
+            storePassword 'android'
+            keyAlias 'zamerovacdev'
+            keyPassword 'android'
+            storeType 'PKCS12'
+        }
+    }
+    buildTypes {
+        debug {
+            signingConfig signingConfigs.debug
+        }
     }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
 }
