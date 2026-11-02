@@ -3,7 +3,7 @@ const toolGroups=[{title:'Měřicí nástroje',tools:[['dimension','↔','Rozmě
 const allTools=toolGroups.flatMap(g=>g.tools);
 let drawStart=null,drawCurrent=null,stroke=[],drawPointerId=null,selectedHandle=null,lastTap=0,lastTapAt=null,gesture=null;
 let lastDrawingTool='dimension',suppressToolClick=false,repeatPressTimer=null;
-function openEditor(r){screen='editor';document.body.classList.add('in-editor');closeMenus();current=r;selected=null;mode='dimension';lastDrawingTool='dimension';updateDrawingToolButton();$('browserView').hidden=true;$('browserFoot').hidden=true;$('noteView').hidden=true;$('editorView').hidden=false;$('editorTitle').textContent=r.title;photoSize={w:r.width||1400,h:r.height||900};stageImg=null;selectedHandle=null;editStack=[];redoStack=[];if(r.kind==='photo'&&r.media?.[0]){assetUrl(r.media[0]).then(url=>{let img=new Image();img.onload=()=>{stageImg=img;photoSize={w:img.naturalWidth,h:img.naturalHeight};r.width=photoSize.w;r.height=photoSize.h;fitImage();paint()};img.onerror=()=>notify('Nepodařilo se načíst fotografii');img.src=url})}resizeEditor();fitImage();paint();}
+function openEditor(r){screen='editor';document.body.classList.add('in-editor');closeMenus();$('editorHint').hidden=true;current=r;selected=null;mode='dimension';lastDrawingTool='dimension';updateDrawingToolButton();$('browserView').hidden=true;$('browserFoot').hidden=true;$('noteView').hidden=true;$('editorView').hidden=false;$('editorTitle').textContent=r.title;photoSize={w:r.width||1400,h:r.height||900};stageImg=null;selectedHandle=null;editStack=[];redoStack=[];if(r.kind==='photo'&&r.media?.[0]){assetUrl(r.media[0]).then(url=>{let img=new Image();img.onload=()=>{stageImg=img;photoSize={w:img.naturalWidth,h:img.naturalHeight};r.width=photoSize.w;r.height=photoSize.h;fitImage();paint()};img.onerror=()=>notify('Nepodařilo se načíst fotografii');img.src=url})}resizeEditor();fitImage();paint();}
 function exitEditor(){current=null;screen='browser';showFolder()}
 $('editorBack').onclick=exitEditor;
 $('fitBtn').onclick=fitImage;$('zoomIn').onclick=()=>{const p=centerPoint();zoomAt(1.25,p.x,p.y)};$('zoomOut').onclick=()=>{const p=centerPoint();zoomAt(.8,p.x,p.y)};
@@ -16,8 +16,12 @@ function screenToWorld(p){return {x:(p.x-view.dx)/view.zoom,y:(p.y-view.dy)/view
 function worldToScreen(p){return {x:p.x*view.zoom+view.dx,y:p.y*view.zoom+view.dy}}
 function eventPoint(e){let r=stageCanvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top}}
 function boundsPoint(p){return{x:Math.max(0,Math.min(photoSize.w,p.x)),y:Math.max(0,Math.min(photoSize.h,p.y))}}
-function snap(p,ref=null){p=boundsPoint({...p});const step=Math.max(5,prefs.gridStep);let snapDistance=14/view.zoom;if(prefs.snapGrid){let gx=Math.round(p.x/step)*step,gy=Math.round(p.y/step)*step;if(Math.abs(gx-p.x)<snapDistance)p.x=gx;if(Math.abs(gy-p.y)<snapDistance)p.y=gy}
-if(prefs.snapPoints){let pts=[];for(let item of current.items||[]){if(item.a)pts.push(item.a);if(item.b)pts.push(item.b);for(let x of item.points||[])pts.push(x)}let nearest=pts.reduce((best,v)=>Math.hypot(v.x-p.x,v.y-p.y)<Math.hypot(best.x-p.x,best.y-p.y)?v:best,{x:Infinity,y:Infinity});if(nearest&&Math.hypot(nearest.x-p.x,nearest.y-p.y)<snapDistance)p={...nearest}}
+function snap(p,ref=null,ignore=null){p=boundsPoint({...p});const step=Math.max(5,prefs.gridStep);let snapDistance=14/view.zoom;if(prefs.snapGrid){let gx=Math.round(p.x/step)*step,gy=Math.round(p.y/step)*step;if(Math.abs(gx-p.x)<snapDistance)p.x=gx;if(Math.abs(gy-p.y)<snapDistance)p.y=gy}
+if(prefs.snapPoints){let pts=[];for(let item of current.items||[]){
+  if(item.a && !(ignore?.item===item&&ignore.key==='a'))pts.push(item.a);
+  if(item.b && !(ignore?.item===item&&ignore.key==='b'))pts.push(item.b);
+  for(let x of item.points||[])pts.push(x);
+}let nearest=pts.reduce((best,v)=>Math.hypot(v.x-p.x,v.y-p.y)<Math.hypot(best.x-p.x,best.y-p.y)?v:best,{x:Infinity,y:Infinity});if(nearest&&Math.hypot(nearest.x-p.x,nearest.y-p.y)<snapDistance)p={...nearest}}
 if(prefs.snapHorizontal&&ref){if(Math.abs(p.y-ref.y)<snapDistance)p.y=ref.y;if(Math.abs(p.x-ref.x)<snapDistance)p.x=ref.x}return boundsPoint(p)}
 function checkpoint(){editStack.push(JSON.stringify(current.items||[]));if(editStack.length>50)editStack.shift();redoStack=[]}
 function commitEditor(){touch(current);save();paint()}
@@ -68,25 +72,41 @@ c.restore();if(highlight){if(item.a)drawHandle(c,item.a,'#fff4a6');if(item.b)dra
 function drawLoupe(){
   if(!magnifierPoint)return;
   const p=worldToScreen(magnifierPoint);
-  const l=$('loupe'),size=152,w=stageCanvas.clientWidth;
-  l.style.left=(p.x>w*.58?12:Math.max(4,w-size-12))+'px';
-  l.style.top='14px';
+  const l=$('loupe'),size=136,w=stageCanvas.clientWidth;
+  l.style.left=(p.x>w*.58?12:Math.max(4,w-size-14))+'px';
+  l.style.top='16px';
   if(l.width!==size||l.height!==size){l.width=size;l.height=size;}
   l.hidden=false;
-  const density=stageCanvas.width/Math.max(1,w);
-  const zoom=Math.max(1.2,Math.min(2.35,Number(prefs.loupeZoom)||2));
-  const sample=size*density/zoom;
+  const zoom=Math.max(1.2,Math.min(2.5,Number(prefs.loupeZoom)||2));
   loupeCtx.save();
   loupeCtx.clearRect(0,0,size,size);
-  loupeCtx.fillStyle='#343537';loupeCtx.fillRect(0,0,size,size);
-  loupeCtx.drawImage(stageCanvas,p.x*density-sample/2,p.y*density-sample/2,
-    sample,sample,0,0,size,size);
-  loupeCtx.strokeStyle='rgba(255,224,35,.9)';
-  loupeCtx.lineWidth=1.3;
+  loupeCtx.fillStyle='#3a3a3a';
+  loupeCtx.fillRect(0,0,size,size);
+  if(stageImg){
+    // Zoom the ORIGINAL PHOTO, rather than enlarged lines and grab handles.
+    // This keeps the target precisely at the center, even after pinch-zooming.
+    const k=Math.max(.14,view.zoom)*zoom;
+    loupeCtx.translate(size/2-magnifierPoint.x*k,size/2-magnifierPoint.y*k);
+    loupeCtx.scale(k,k);
+    loupeCtx.imageSmoothingEnabled=true;
+    loupeCtx.drawImage(stageImg,0,0,photoSize.w,photoSize.h);
+    loupeCtx.setTransform(1,0,0,1,0,0);
+  }else{
+    const density=stageCanvas.width/Math.max(1,w);
+    const sample=size*density/zoom;
+    loupeCtx.drawImage(stageCanvas,p.x*density-sample/2,p.y*density-sample/2,
+      sample,sample,0,0,size,size);
+  }
+  // An unobscured green aiming mark, inspired by the user's reference video.
+  loupeCtx.strokeStyle='#222';
+  loupeCtx.lineWidth=3;
   loupeCtx.beginPath();
-  loupeCtx.moveTo(size/2-13,size/2);loupeCtx.lineTo(size/2+13,size/2);
-  loupeCtx.moveTo(size/2,size/2-13);loupeCtx.lineTo(size/2,size/2+13);
+  loupeCtx.arc(size/2,size/2,7,0,Math.PI*2);
   loupeCtx.stroke();
+  loupeCtx.fillStyle='#92f05e';
+  loupeCtx.beginPath();
+  loupeCtx.arc(size/2,size/2,5.5,0,Math.PI*2);
+  loupeCtx.fill();
   loupeCtx.restore();
 }
 function labelInfo(item){
@@ -113,7 +133,15 @@ function nearestLabel(point){
 function nearestHandle(point){let best=null,dist=18;for(let it of current.items||[]){for(let key of ['a','b'])if(it[key]){let d=Math.hypot(point.x-worldToScreen(it[key]).x,point.y-worldToScreen(it[key]).y);if(d<dist){best={item:it,key,point:it[key],kind:'point'};dist=d}}}return best}
 function nearestItem(point){let world=screenToWorld(point),best=null,dist=26/view.zoom;for(let it of current.items||[]){let a=it.a,b=it.b;if(a&&b){let ux=b.x-a.x,uy=b.y-a.y,den=ux*ux+uy*uy||1,t=Math.max(0,Math.min(1,((world.x-a.x)*ux+(world.y-a.y)*uy)/den));let d=Math.hypot(world.x-a.x-t*ux,world.y-a.y-t*uy);if(d<dist){best=it;dist=d}}else if(a&&Math.hypot(a.x-world.x,a.y-world.y)<dist)best=it}return best}
 function stageDown(e){if(screen!=='editor')return;e.preventDefault();stageCanvas.setPointerCapture(e.pointerId);const s=eventPoint(e);pointers.set(e.pointerId,s);if(pointers.size===2){let v=[...pointers.values()];gesture={distance:Math.hypot(v[0].x-v[1].x,v[0].y-v[1].y),zoom:view.zoom,mid:{x:(v[0].x+v[1].x)/2,y:(v[0].y+v[1].y)/2},world:screenToWorld({x:(v[0].x+v[1].x)/2,y:(v[0].y+v[1].y)/2})};drawStart=null;drawCurrent=null;selectedHandle=null;paint();return}if(pointers.size>2)return;
-let hit=(mode==='select')?(nearestHandle(s)||nearestLabel(s)):null;if(hit){selectedHandle=hit;selected=hit.item.id;checkpoint();magnifierPoint=hit.kind==='label'?null:hit.point;paint();return}
+let hit=(mode==='select')?(nearestLabel(s)||nearestHandle(s)):null;
+if(hit){
+  selectedHandle=hit;selected=hit.item.id;
+  hit.startScreen={...s};
+  hit.startLabelT=Number(hit.item.labelT)||0;
+  checkpoint();
+  magnifierPoint=hit.kind==='label'?null:hit.point;
+  paint();return;
+}
 if(mode==='select'){let item=nearestItem(s);if(item&&item.id===selected&&Date.now()-lastTap<450){editItem(item)}else{selected=item?.id||null;lastTap=Date.now();paint()}return}
 if(mode==='pan'){drag={screen:s,dx:view.dx,dy:view.dy};return}
 drawPointerId=e.pointerId;drawStart=snap(screenToWorld(s));drawCurrent=drawStart;stroke=[drawStart];magnifierPoint=drawStart;paint()}
@@ -122,12 +150,13 @@ if(selectedHandle&&pointers.size===1){
   if(selectedHandle.kind==='label'){
     const info=labelInfo(selectedHandle.item);
     if(info&&info.d>0){
-      const delta=((s.x-info.x)*info.ux+(s.y-info.y)*info.uy)/info.d;
-      selectedHandle.item.labelT=Math.max(-.48,Math.min(.48,(Number(selectedHandle.item.labelT)||0)+delta));
+      const delta=((s.x-selectedHandle.startScreen.x)*info.ux+
+        (s.y-selectedHandle.startScreen.y)*info.uy)/info.d;
+      selectedHandle.item.labelT=Math.max(-.92,Math.min(.92,selectedHandle.startLabelT+delta));
     }
     magnifierPoint=null;
   }else{
-    selectedHandle.item[selectedHandle.key]=snap(screenToWorld(s));
+    selectedHandle.item[selectedHandle.key]=snap(screenToWorld(s),null,selectedHandle);
     selectedHandle.point=selectedHandle.item[selectedHandle.key];
     magnifierPoint=selectedHandle.point;
   }
