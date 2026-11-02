@@ -71,13 +71,13 @@ body.in-editor .top,body.in-note .top{display:none}
 .toolbar #activeTool.inactive {opacity:.68}
 .toolbar #activeTool{position:relative;font-size:24px;white-space:nowrap}
 
-/* Compact photo/dimension magnifier aligned to the reference recording. */
+/* Photo dimension magnifier; size/position controlled by editor.js. */
 #loupe{
-  width:120px;
-  height:120px;
-  border-radius:16px;
-  border:2px solid #aaa;
-  background:#262626;
+  width:100px;
+  height:100px;
+  border-radius:15px;
+  border:2px solid #b6b6b6;
+  background:#202123;
   box-shadow:0 3px 10px #0009;
 }
 #editorHint[hidden]{display:none!important}
