@@ -1,13 +1,16 @@
-name: Sestavit instalační APK
+name: Sestavit a vydat Zaměřovač TEST
 on:
   workflow_dispatch:
   push:
-    branches: [main, master]
+    branches: [main]
+concurrency:
+  group: release-test-main
+  cancel-in-progress: false
 jobs:
   android:
     runs-on: ubuntu-latest
     permissions:
-      contents: read
+      contents: write
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-java@v4
@@ -22,17 +25,44 @@ jobs:
           node --check app/src/main/assets/app.js
           node --check app/src/main/assets/editor.js
           python3 -m unittest discover -s tests -p "test_*.py" -v
-      - name: Build debug APK
+      - name: Sestavit obě varianty se stejným vývojovým klíčem
         run: gradle --no-daemon assembleDebug assemblePreview
+      - name: Ověřit podpis a jednoznačnou verzi testovací APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          APK=app/build/outputs/apk/preview/app-preview.apk
+          SIGNER="$(find "${ANDROID_HOME}/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          if [ ! -f "$APK" ] || [ ! -x "$SIGNER" ]; then
+            echo "Chybí testovací APK nebo nástroj apksigner." >&2
+            exit 1
+          fi
+          "$SIGNER" verify --min-sdk-version 26 --print-certs "$APK"
+          mkdir -p dist
+          cp "$APK" "dist/Zamerovac-TEST-v1.1.${GITHUB_RUN_NUMBER}.apk"
+          sha256sum dist/*.apk
       - uses: actions/upload-artifact@v4
-        if: success()
         with:
           name: Zamerovac-debug-APK
           path: app/build/outputs/apk/debug/app-debug.apk
           retention-days: 30
       - uses: actions/upload-artifact@v4
-        if: success()
         with:
           name: Zamerovac-TEST-APK
-          path: app/build/outputs/apk/preview/app-preview.apk
+          path: dist/*.apk
           retention-days: 30
+      - name: Vydat APK přímo do GitHub Releases (bez ZIP)
+        if: github.ref == 'refs/heads/main'
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          TAG="test-v1.1.${GITHUB_RUN_NUMBER}"
+          FILE="dist/Zamerovac-TEST-v1.1.${GITHUB_RUN_NUMBER}.apk"
+          gh release create "$TAG" "$FILE" \
+            --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
+            --title "Zaměřovač TEST 1.1.${GITHUB_RUN_NUMBER}" \
+            --notes "Testovací verze pro Android. Aktualizuje nainstalovaný Zaměřovač TEST bez smazání dat. Původní Zaměřovač má jiné ID a zůstává nedotčený. Instalační balíček lze otevřít přímo ze Stažených souborů." \
+            --latest
