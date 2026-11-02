@@ -2,8 +2,8 @@
 const toolGroups=[{title:'Měřicí nástroje',tools:[['dimension','↔','Rozměr'],['chain','↔','Dimenzní řetězec'],['cumulative','⇥','Kumulativní řetězec'],['angle','∠','Úhel'],['polyline','⌁','Lomená čára'],['area','▱','Plocha'],['rect','▭','Obdélník'],['circle','◯','Kruh'],['target','⊕','Směrovat']]},{title:'Kreslicí nástroje',tools:[['note','▤','Poznámka'],['line','／','Čára'],['arrow','➜','Šipka'],['freehand','✎','Volná ruka'],['ellipse','⬭','Elipsa'],['symbol','⚑','Symbol']]},{title:'Úpravy',tools:[['select','◎','Vybrat a upravit'],['pan','✥','Posun obrazu']]}];
 const allTools=toolGroups.flatMap(g=>g.tools);
 let drawStart=null,drawCurrent=null,stroke=[],drawPointerId=null,selectedHandle=null,lastTap=0,lastTapAt=null,gesture=null;
-let lastDrawingTool='dimension',suppressToolClick=false,repeatPressTimer=null;
-function openEditor(r){screen='editor';document.body.classList.add('in-editor');closeMenus();$('editorHint').hidden=true;current=r;selected=null;mode='dimension';lastDrawingTool='dimension';updateDrawingToolButton();$('browserView').hidden=true;$('browserFoot').hidden=true;$('noteView').hidden=true;$('editorView').hidden=false;$('editorTitle').textContent=r.title;photoSize={w:r.width||1400,h:r.height||900};stageImg=null;selectedHandle=null;editStack=[];redoStack=[];if(r.kind==='photo'&&r.media?.[0]){assetUrl(r.media[0]).then(url=>{let img=new Image();img.onload=()=>{stageImg=img;photoSize={w:img.naturalWidth,h:img.naturalHeight};r.width=photoSize.w;r.height=photoSize.h;fitImage();paint()};img.onerror=()=>notify('Nepodařilo se načíst fotografii');img.src=url})}resizeEditor();fitImage();paint();}
+let lastDrawingTool='dimension',suppressToolClick=false,repeatPressTimer=null,loupeSide=null;
+function openEditor(r){loupeSide=null;screen='editor';document.body.classList.add('in-editor');closeMenus();$('editorHint').hidden=true;current=r;selected=null;mode='dimension';lastDrawingTool='dimension';updateDrawingToolButton();$('browserView').hidden=true;$('browserFoot').hidden=true;$('noteView').hidden=true;$('editorView').hidden=false;$('editorTitle').textContent=r.title;photoSize={w:r.width||1400,h:r.height||900};stageImg=null;selectedHandle=null;editStack=[];redoStack=[];if(r.kind==='photo'&&r.media?.[0]){assetUrl(r.media[0]).then(url=>{let img=new Image();img.onload=()=>{stageImg=img;photoSize={w:img.naturalWidth,h:img.naturalHeight};r.width=photoSize.w;r.height=photoSize.h;fitImage();paint()};img.onerror=()=>notify('Nepodařilo se načíst fotografii');img.src=url})}resizeEditor();fitImage();paint();}
 function exitEditor(){current=null;screen='browser';showFolder()}
 $('editorBack').onclick=exitEditor;
 $('fitBtn').onclick=fitImage;$('zoomIn').onclick=()=>{const p=centerPoint();zoomAt(1.25,p.x,p.y)};$('zoomOut').onclick=()=>{const p=centerPoint();zoomAt(.8,p.x,p.y)};
@@ -77,35 +77,36 @@ function drawLoupe(){
   if(!magnifierPoint)return;
   const pointer=worldToScreen(magnifierPoint);
   const canvas=$('loupe');
-  const size=120;
-  const width=stageCanvas.clientWidth;
+  const width=Math.max(1,stageCanvas.clientWidth);
+  const size=Math.round(Math.max(92,Math.min(116,width*.225)));
+  // Reference interaction: fixed at the opposite upper corner from the
+  // point being manipulated, switching around the image midpoint. Keep a
+  // small hysteresis zone to prevent flickering while crossing the middle.
+  if(loupeSide===null)loupeSide=pointer.x>width/2?'left':'right';
+  else if(loupeSide==='right'&&pointer.x>width*.55)loupeSide='left';
+  else if(loupeSide==='left'&&pointer.x<width*.45)loupeSide='right';
+  const left=loupeSide==='left';
+  canvas.style.width=size+'px';
+  canvas.style.height=size+'px';
+  canvas.style.left=(left?12:Math.max(4,width-size-12))+'px';
+  canvas.style.top='12px';
   const dpr=Math.max(1,window.devicePixelRatio||1);
-  // Keep the magnifier in the upper-right corner. Move it to the other
-  // side only if the finger is actually in the magnifier's area.
-  const onLeft=pointer.y<size+36 && pointer.x>width-size-36;
-  canvas.style.left=(onLeft?12:Math.max(4,width-size-16))+'px';
-  canvas.style.top='16px';
   const pixels=Math.round(size*dpr);
   if(canvas.width!==pixels||canvas.height!==pixels){
-    canvas.width=pixels;
-    canvas.height=pixels;
+    canvas.width=pixels;canvas.height=pixels;
   }
   canvas.hidden=false;
   const zoom=Math.max(1.2,Math.min(2.5,Number(prefs.loupeZoom)||2));
-  const stageDensity=stageCanvas.width/Math.max(1,width);
-  // Like the user's reference: the dimension endpoint is offset toward the
-  // outer edge of the magnifier, not forced underneath a center crosshair.
-  const targetX=onLeft?size*.20:size*.80;
-  const targetY=size*.68;
+  const stageDensity=stageCanvas.width/width;
   loupeCtx.save();
   loupeCtx.setTransform(dpr,0,0,dpr,0,0);
   loupeCtx.clearRect(0,0,size,size);
-  loupeCtx.fillStyle='#262626';
+  loupeCtx.fillStyle='#202123';
   loupeCtx.fillRect(0,0,size,size);
-  // Drawing the entire source canvas under a transform avoids clipped source
-  // rectangles and misalignment near the image edges. Kóta, end tick and
-  // photo stay perfectly synchronized; no extra aiming marker is overlaid.
-  loupeCtx.translate(targetX-pointer.x*zoom,targetY-pointer.y*zoom);
+  // Identical coordinates on either side; point is 50% across and 75% down.
+  // Source is the fully rendered photo with the real dimension end tick.
+  // No crosshair, dots or other synthetic markers.
+  loupeCtx.translate(size*.5-pointer.x*zoom,size*.75-pointer.y*zoom);
   loupeCtx.scale(zoom,zoom);
   loupeCtx.drawImage(stageCanvas,0,0,stageCanvas.width/stageDensity,stageCanvas.height/stageDensity);
   loupeCtx.restore();
@@ -143,6 +144,7 @@ else if(selected){
 if(hit){
   selectedHandle=hit;selected=hit.item.id;
   hit.startScreen={...s};
+  if(hit.kind==='point')hit.startPoint={...hit.point};
   hit.startLabelT=Number(hit.item.labelT)||0;
   hit.dragged=false;
   checkpoint();
@@ -164,7 +166,14 @@ if(selectedHandle&&pointers.size===1){
     }
     magnifierPoint=null;
   }else{
-    selectedHandle.item[selectedHandle.key]=snap(screenToWorld(s),null,selectedHandle);
+    // Retain the initial touch-to-endpoint offset. Otherwise grabbing within
+    // the generous invisible hit area makes the measured end jump.
+    const screenOrigin=worldToScreen(selectedHandle.startPoint);
+    const target=screenToWorld({
+      x:screenOrigin.x+(s.x-selectedHandle.startScreen.x),
+      y:screenOrigin.y+(s.y-selectedHandle.startScreen.y)
+    });
+    selectedHandle.item[selectedHandle.key]=snap(target,null,selectedHandle);
     selectedHandle.point=selectedHandle.item[selectedHandle.key];
     magnifierPoint=selectedHandle.point;
   }
@@ -172,11 +181,11 @@ if(selectedHandle&&pointers.size===1){
 }
 if(drag&&mode==='pan'){view.dx=drag.dx+(s.x-drag.screen.x);view.dy=drag.dy+(s.y-drag.screen.y);paint();return}
 if(drawStart&&drawPointerId===e.pointerId){drawCurrent=snap(screenToWorld(s),drawStart);magnifierPoint=drawCurrent;if(mode==='freehand'||mode==='polyline')stroke.push(drawCurrent);paint()}}
-function stageUp(e){if(screen!=='editor')return;const wasTwo=pointers.size===2;pointers.delete(e.pointerId);if(wasTwo){gesture=null;drawStart=null;drawCurrent=null;magnifierPoint=null;paint();return}if(selectedHandle){
+function stageUp(e){if(screen!=='editor')return;const wasTwo=pointers.size===2;pointers.delete(e.pointerId);if(wasTwo){gesture=null;drawStart=null;drawCurrent=null;magnifierPoint=null;loupeSide=null;paint();return}if(selectedHandle){
   const moved=selectedHandle.dragged;
   const isLabel=selectedHandle.kind==='label';
   const item=selectedHandle.item;
-  selectedHandle=null;magnifierPoint=null;
+  selectedHandle=null;magnifierPoint=null;loupeSide=null;
   if(!moved && isLabel){
     // A tap on '?' or the numeric label opens the simple measurement editor.
     if(editStack.length)editStack.pop();
@@ -188,7 +197,7 @@ function stageUp(e){if(screen!=='editor')return;const wasTwo=pointers.size===2;p
     paint();
   }
   return;
-}if(drag){drag=null;return}if(!drawStart||drawPointerId!==e.pointerId)return;const a=drawStart,b=drawCurrent||drawStart;drawStart=null;drawCurrent=null;magnifierPoint=null;drawPointerId=null;if(Math.hypot(a.x-b.x,a.y-b.y)<3/view.zoom&&mode!=='note'&&mode!=='symbol'){paint();return}let item={id:uid(),type:mode,a,b,color:prefs.color,width:prefs.lineWidth,fontSize:prefs.fontSize,unit:prefs.unit,measure:'',text:'',points:(mode==='freehand'||mode==='polyline')?[...stroke]:[]};stroke=[];
+}if(drag){drag=null;return}if(!drawStart||drawPointerId!==e.pointerId)return;const a=drawStart,b=drawCurrent||drawStart;drawStart=null;drawCurrent=null;magnifierPoint=null;loupeSide=null;drawPointerId=null;if(Math.hypot(a.x-b.x,a.y-b.y)<3/view.zoom&&mode!=='note'&&mode!=='symbol'){paint();return}let item={id:uid(),type:mode,a,b,color:prefs.color,width:prefs.lineWidth,fontSize:prefs.fontSize,unit:prefs.unit,measure:'',text:'',points:(mode==='freehand'||mode==='polyline')?[...stroke]:[]};stroke=[];
 if(['dimension','chain','cumulative','area'].includes(mode)){
   // Follow the reference video: lay down the geometry first, adjust endpoints,
   // and enter the actual laser/manual value later by tapping its '?' label.
