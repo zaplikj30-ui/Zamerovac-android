@@ -32,6 +32,16 @@ android {
     buildTypes {
         debug {
             signingConfig signingConfigs.debug
+            manifestPlaceholders = [appLabel: 'Zaměřovač']
+        }
+        preview {
+            initWith debug
+            applicationIdSuffix '.preview'
+            versionNameSuffix '-test'
+            debuggable true
+            signingConfig signingConfigs.debug
+            manifestPlaceholders = [appLabel: 'Zaměřovač TEST']
+            matchingFallbacks = ['debug']
         }
     }
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
