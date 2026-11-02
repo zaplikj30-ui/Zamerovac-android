@@ -3,7 +3,7 @@
 const $=id=>document.getElementById(id);
 const native=!!window.Native;
 const uid=()=>crypto.randomUUID?crypto.randomUUID():('id-'+Date.now()+'-'+Math.random().toString(36).slice(2));
-const initialPrefs={unit:'mm',decimals:0,color:'#f7dc27',lineWidth:2,fontSize:17,loupe:true,loupeZoom:3,snapGrid:false,gridStep:40,snapPoints:true,snapHorizontal:true,snapCorners:true,snapContours:true,snapRightAngle:true,keepAwake:false,vibration:true,fullScreen:false,autoText:true,autoSync:true,wifiOnly:false,moveSensitivity:1,presets:'Zásuvka;Voda;Odpad;Elektro;Výška parapetu',toolOrder:''};
+const initialPrefs={unit:'mm',decimals:0,color:'#f7dc27',lineWidth:2,fontSize:17,loupe:true,loupeZoom:2,repeatDrawing:false,snapGrid:false,gridStep:40,snapPoints:true,snapHorizontal:true,snapCorners:true,snapContours:true,snapRightAngle:true,keepAwake:false,vibration:true,fullScreen:false,autoText:true,autoSync:true,wifiOnly:false,moveSensitivity:1,presets:'Zásuvka;Voda;Odpad;Elektro;Výška parapetu',toolOrder:''};
 const initial={schema:1,records:[],prefs:{...initialPrefs},created:new Date().toISOString()};
 let state=initial;
 try{const saved=native?Native.loadData():localStorage.getItem('zamerovac-data');if(saved)state={...initial,...JSON.parse(saved)};}catch(e){console.warn('Cannot load database',e)}
