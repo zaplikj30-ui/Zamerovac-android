@@ -61,15 +61,10 @@ $('lineColor').oninput=e=>{prefs.color=e.target.value;save();paint()};
 function showTools(){closeMenus();$('toolMenu').hidden=false;let html='<div class="toolList">';for(let group of toolGroups){html+=`<div class="sectionLabel">${group.title}</div>`;for(let [key,icon,label] of group.tools)html+=`<button class="choice" data-tool="${key}"><strong>${icon}</strong>${label}</button>`}html+='</div>';$('toolMenu').innerHTML=html;$('toolMenu').querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{setTool(b.dataset.tool);closeMenus()})}
 function setTool(key,keepSelection=false){mode=key;selectedHandle=null;if(!keepSelection)selected=null;drawStart=null;drawCurrent=null;stroke=[];if(key!=='select'&&key!=='pan')lastDrawingTool=key;updateDrawingToolButton();$('editorHint').textContent=key==='select'?'Klepni na kótu nebo posuň její koncový bod':key==='pan'?'Táhni fotografii pro posunutí':'Táhni prstem mezi body · rozměry zadáváš ručně';paint()}
 function drawGrid(){if(!prefs.snapGrid)return;let spacing=Math.max(5,prefs.gridStep)*view.zoom;if(spacing<8)return;ctx.save();ctx.strokeStyle='#eeeeee28';ctx.lineWidth=1;const left=Math.max(0,Math.ceil(-view.dx/spacing)),right=Math.min(Math.ceil(photoSize.w/prefs.gridStep),Math.ceil((stageCanvas.clientWidth-view.dx)/spacing));const top=Math.max(0,Math.ceil(-view.dy/spacing)),bottom=Math.min(Math.ceil(photoSize.h/prefs.gridStep),Math.ceil((stageCanvas.clientHeight-view.dy)/spacing));ctx.beginPath();for(let i=left;i<=right;i++){const x=view.dx+i*spacing;ctx.moveTo(x,0);ctx.lineTo(x,stageCanvas.clientHeight)}for(let j=top;j<=bottom;j++){const y=view.dy+j*spacing;ctx.moveTo(0,y);ctx.lineTo(stageCanvas.clientWidth,y)}ctx.stroke();ctx.restore()}
-function paint(){if(screen!=='editor'||!current)return;let w=stageCanvas.clientWidth,h=stageCanvas.clientHeight;ctx.clearRect(0,0,w,h);ctx.save();ctx.fillStyle='#202123';ctx.fillRect(0,0,w,h);ctx.translate(view.dx,view.dy);ctx.scale(view.zoom,view.zoom);if(stageImg)ctx.drawImage(stageImg,0,0,photoSize.w,photoSize.h);else{ctx.fillStyle='#36383a';ctx.fillRect(0,0,photoSize.w,photoSize.h);ctx.strokeStyle='#4b4e50';ctx.lineWidth=3/view.zoom;ctx.strokeRect(0,0,photoSize.w,photoSize.h)}ctx.restore();drawGrid();for(let item of current.items||[])drawItem(ctx,item,item.id===selected);if(drawStart&&drawCurrent){let mock={type:mode,a:drawStart,b:drawCurrent,points:stroke,measure:'',unit:prefs.unit,color:prefs.color,width:prefs.lineWidth,fontSize:prefs.fontSize};drawItem(ctx,mock,false)}if(magnifierPoint&&prefs.loupe)drawLoupe();else $('loupe').hidden=true;}
+function paint(){if(screen!=='editor'||!current)return;let w=stageCanvas.clientWidth,h=stageCanvas.clientHeight;ctx.clearRect(0,0,w,h);ctx.save();ctx.fillStyle='#202123';ctx.fillRect(0,0,w,h);ctx.translate(view.dx,view.dy);ctx.scale(view.zoom,view.zoom);if(stageImg)ctx.drawImage(stageImg,0,0,photoSize.w,photoSize.h);else{ctx.fillStyle='#36383a';ctx.fillRect(0,0,photoSize.w,photoSize.h);ctx.strokeStyle='#4b4e50';ctx.lineWidth=3/view.zoom;ctx.strokeRect(0,0,photoSize.w,photoSize.h)}ctx.restore();drawGrid();for(let item of current.items||[])drawItem(ctx,item);if(drawStart&&drawCurrent){let mock={type:mode,a:drawStart,b:drawCurrent,points:stroke,measure:'',unit:prefs.unit,color:prefs.color,width:prefs.lineWidth,fontSize:prefs.fontSize};drawItem(ctx,mock,false)}if(magnifierPoint&&prefs.loupe)drawLoupe();else $('loupe').hidden=true;}
 function canvasText(text,p,color,size,angle=0){ctx.save();ctx.translate(p.x,p.y);ctx.rotate(angle);ctx.font=`600 ${size}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';let width=ctx.measureText(text).width;ctx.fillStyle='#222d';ctx.fillRect(-width/2-5,-size*.67,width+10,size*1.4);ctx.fillStyle=color;ctx.fillText(text,0,0);ctx.restore()}
 function drawArrow(c,point,to,size=10){let a=Math.atan2(point.y-to.y,point.x-to.x);c.beginPath();c.moveTo(point.x,point.y);c.lineTo(point.x-size*Math.cos(a-.48),point.y-size*Math.sin(a-.48));c.moveTo(point.x,point.y);c.lineTo(point.x-size*Math.cos(a+.48),point.y-size*Math.sin(a+.48));c.stroke()}
-function drawItem(c,item,highlight=false){let a=item.a&&worldToScreen(item.a),b=item.b&&worldToScreen(item.b);let pts=(item.points||[]).map(worldToScreen);const color=item.color||prefs.color,fw=(item.width||prefs.lineWidth),fs=(item.fontSize||prefs.fontSize);c.save();c.strokeStyle=color;c.fillStyle=color;c.lineWidth=fw;c.lineJoin='round';c.lineCap='round';if(highlight){
-  // Selected dimension is distinguished by a soft outline, not endpoint dots.
-  c.lineWidth=fw+1.2;
-  c.shadowColor='rgba(165,255,100,.85)';
-  c.shadowBlur=5;
-}
+function drawItem(c,item){let a=item.a&&worldToScreen(item.a),b=item.b&&worldToScreen(item.b);let pts=(item.points||[]).map(worldToScreen);const color=item.color||prefs.color,fw=(item.width||prefs.lineWidth),fs=(item.fontSize||prefs.fontSize);c.save();c.strokeStyle=color;c.fillStyle=color;c.lineWidth=fw;c.lineJoin='round';c.lineCap='round';
 function seg(){c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.stroke()};
 if(item.type==='dimension'||item.type==='chain'||item.type==='cumulative'){if(a&&b){let dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1;let nx=-dy/d,ny=dx/d;let off=item.offset??-22;let ao={x:a.x+nx*off,y:a.y+ny*off},bo={x:b.x+nx*off,y:b.y+ny*off};c.beginPath();c.moveTo(a.x+nx*(off-11),a.y+ny*(off-11));c.lineTo(a.x+nx*(off+11),a.y+ny*(off+11));c.moveTo(b.x+nx*(off-11),b.y+ny*(off-11));c.lineTo(b.x+nx*(off+11),b.y+ny*(off+11));c.moveTo(ao.x,ao.y);c.lineTo(bo.x,bo.y);c.stroke();drawArrow(c,ao,bo,9);drawArrow(c,bo,ao,9);let label=item.measure?`${item.measure} ${item.unit||'mm'}`:'?';let ang=Math.atan2(dy,dx);if(ang>Math.PI/2||ang< -Math.PI/2)ang+=Math.PI;canvasText(label,{x:(ao.x+bo.x)/2+(bo.x-ao.x)*(Number(item.labelT)||0),y:(ao.y+bo.y)/2+(bo.y-ao.y)*(Number(item.labelT)||0)},color,fs,ang)}}
 else if(item.type==='line'||item.type==='arrow'||item.type==='angle'||item.type==='target'){if(a&&b){seg();if(item.type==='arrow')drawArrow(c,b,a,15);if(item.type==='target'){c.beginPath();c.arc(b.x,b.y,12,0,Math.PI*2);c.stroke()}if(item.type==='angle'){let degree=(Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI+360)%360;canvasText((item.measure||degree.toFixed(0))+'°',{x:(a.x+b.x)/2,y:(a.y+b.y)/2-23},color,fs)}}}
@@ -80,26 +75,39 @@ else if(item.type==='note'||item.type==='symbol'){if(a){canvasText(item.type==='
 c.restore();}
 function drawLoupe(){
   if(!magnifierPoint)return;
-  const p=worldToScreen(magnifierPoint);
-  const l=$('loupe'),size=108,w=stageCanvas.clientWidth;
-  l.style.left=(p.x>w*.58?12:Math.max(4,w-size-14))+'px';
-  l.style.top='16px';
-  if(l.width!==size||l.height!==size){l.width=size;l.height=size;}
-  l.hidden=false;
-  const density=stageCanvas.width/Math.max(1,w);
+  const pointer=worldToScreen(magnifierPoint);
+  const canvas=$('loupe');
+  const size=120;
+  const width=stageCanvas.clientWidth;
+  const dpr=Math.max(1,window.devicePixelRatio||1);
+  // Keep the magnifier in the upper-right corner. Move it to the other
+  // side only if the finger is actually in the magnifier's area.
+  const onLeft=pointer.y<size+36 && pointer.x>width-size-36;
+  canvas.style.left=(onLeft?12:Math.max(4,width-size-16))+'px';
+  canvas.style.top='16px';
+  const pixels=Math.round(size*dpr);
+  if(canvas.width!==pixels||canvas.height!==pixels){
+    canvas.width=pixels;
+    canvas.height=pixels;
+  }
+  canvas.hidden=false;
   const zoom=Math.max(1.2,Math.min(2.5,Number(prefs.loupeZoom)||2));
-  const sample=size*density/zoom;
-  // Magnify the already rendered canvas. This preserves the real dimension
-  // line, its perpendicular end tick and arrows exactly as on the photo.
-  // No aiming dot, crosshair, or alternative endpoint marker.
+  const stageDensity=stageCanvas.width/Math.max(1,width);
+  // Like the user's reference: the dimension endpoint is offset toward the
+  // outer edge of the magnifier, not forced underneath a center crosshair.
+  const targetX=onLeft?size*.20:size*.80;
+  const targetY=size*.68;
   loupeCtx.save();
+  loupeCtx.setTransform(dpr,0,0,dpr,0,0);
   loupeCtx.clearRect(0,0,size,size);
-  loupeCtx.fillStyle='#303030';
+  loupeCtx.fillStyle='#262626';
   loupeCtx.fillRect(0,0,size,size);
-  loupeCtx.imageSmoothingEnabled=true;
-  loupeCtx.drawImage(stageCanvas,
-    p.x*density-sample/2,p.y*density-sample/2,sample,sample,
-    0,0,size,size);
+  // Drawing the entire source canvas under a transform avoids clipped source
+  // rectangles and misalignment near the image edges. Kóta, end tick and
+  // photo stay perfectly synchronized; no extra aiming marker is overlaid.
+  loupeCtx.translate(targetX-pointer.x*zoom,targetY-pointer.y*zoom);
+  loupeCtx.scale(zoom,zoom);
+  loupeCtx.drawImage(stageCanvas,0,0,stageCanvas.width/stageDensity,stageCanvas.height/stageDensity);
   loupeCtx.restore();
 }
 function labelInfo(item){
