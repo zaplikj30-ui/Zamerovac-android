@@ -86,44 +86,20 @@ function drawLoupe(){
   l.style.top='16px';
   if(l.width!==size||l.height!==size){l.width=size;l.height=size;}
   l.hidden=false;
+  const density=stageCanvas.width/Math.max(1,w);
   const zoom=Math.max(1.2,Math.min(2.5,Number(prefs.loupeZoom)||2));
+  const sample=size*density/zoom;
+  // Magnify the already rendered canvas. This preserves the real dimension
+  // line, its perpendicular end tick and arrows exactly as on the photo.
+  // No aiming dot, crosshair, or alternative endpoint marker.
   loupeCtx.save();
   loupeCtx.clearRect(0,0,size,size);
-  loupeCtx.fillStyle='#3a3a3a';
+  loupeCtx.fillStyle='#303030';
   loupeCtx.fillRect(0,0,size,size);
-  if(stageImg){
-    // Zoom the ORIGINAL PHOTO, rather than enlarged lines and grab handles.
-    // This keeps the target precisely at the center, even after pinch-zooming.
-    const k=Math.max(.14,view.zoom)*zoom;
-    loupeCtx.translate(size/2-magnifierPoint.x*k,size/2-magnifierPoint.y*k);
-    loupeCtx.scale(k,k);
-    loupeCtx.imageSmoothingEnabled=true;
-    loupeCtx.drawImage(stageImg,0,0,photoSize.w,photoSize.h);
-    // Show the moving dimension and its end grips over the magnified photo.
-    const dim=selectedHandle?.item || (drawStart?{a:drawStart,b:drawCurrent||drawStart}:null);
-    if(dim?.a&&dim?.b){
-      loupeCtx.strokeStyle=dim.color||prefs.color;
-      loupeCtx.lineWidth=1.8/k;
-      loupeCtx.beginPath();loupeCtx.moveTo(dim.a.x,dim.a.y);
-      loupeCtx.lineTo(dim.b.x,dim.b.y);loupeCtx.stroke();
-    }
-    loupeCtx.setTransform(1,0,0,1,0,0);
-  }else{
-    const density=stageCanvas.width/Math.max(1,w);
-    const sample=size*density/zoom;
-    loupeCtx.drawImage(stageCanvas,p.x*density-sample/2,p.y*density-sample/2,
-      sample,sample,0,0,size,size);
-  }
-  // An unobscured green aiming mark, inspired by the user's reference video.
-  loupeCtx.strokeStyle='#222';
-  loupeCtx.lineWidth=1.2;
-  loupeCtx.beginPath();
-  loupeCtx.arc(size/2,size/2,4,0,Math.PI*2);
-  loupeCtx.stroke();
-  loupeCtx.fillStyle='#92f05e';
-  loupeCtx.beginPath();
-  loupeCtx.arc(size/2,size/2,2.7,0,Math.PI*2);
-  loupeCtx.fill();
+  loupeCtx.imageSmoothingEnabled=true;
+  loupeCtx.drawImage(stageCanvas,
+    p.x*density-sample/2,p.y*density-sample/2,sample,sample,
+    0,0,size,size);
   loupeCtx.restore();
 }
 function labelInfo(item){
