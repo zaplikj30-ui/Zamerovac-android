@@ -2,7 +2,8 @@
 const toolGroups=[{title:'Měřicí nástroje',tools:[['dimension','↔','Rozměr'],['chain','↔','Dimenzní řetězec'],['cumulative','⇥','Kumulativní řetězec'],['angle','∠','Úhel'],['polyline','⌁','Lomená čára'],['area','▱','Plocha'],['rect','▭','Obdélník'],['circle','◯','Kruh'],['target','⊕','Směrovat']]},{title:'Kreslicí nástroje',tools:[['note','▤','Poznámka'],['line','／','Čára'],['arrow','➜','Šipka'],['freehand','✎','Volná ruka'],['ellipse','⬭','Elipsa'],['symbol','⚑','Symbol']]},{title:'Úpravy',tools:[['select','◎','Vybrat a upravit'],['pan','✥','Posun obrazu']]}];
 const allTools=toolGroups.flatMap(g=>g.tools);
 let drawStart=null,drawCurrent=null,stroke=[],drawPointerId=null,selectedHandle=null,lastTap=0,lastTapAt=null,gesture=null;
-function openEditor(r){screen='editor';document.body.classList.add('in-editor');closeMenus();current=r;selected=null;mode='dimension';$('activeTool').textContent='↔';$('browserView').hidden=true;$('browserFoot').hidden=true;$('noteView').hidden=true;$('editorView').hidden=false;$('editorTitle').textContent=r.title;photoSize={w:r.width||1400,h:r.height||900};stageImg=null;selectedHandle=null;editStack=[];redoStack=[];if(r.kind==='photo'&&r.media?.[0]){assetUrl(r.media[0]).then(url=>{let img=new Image();img.onload=()=>{stageImg=img;photoSize={w:img.naturalWidth,h:img.naturalHeight};r.width=photoSize.w;r.height=photoSize.h;fitImage();paint()};img.onerror=()=>notify('Nepodařilo se načíst fotografii');img.src=url})}resizeEditor();fitImage();paint();}
+let lastDrawingTool='dimension',suppressToolClick=false,repeatPressTimer=null;
+function openEditor(r){screen='editor';document.body.classList.add('in-editor');closeMenus();current=r;selected=null;mode='dimension';$('activeTool').textContent='↔¹';$('browserView').hidden=true;$('browserFoot').hidden=true;$('noteView').hidden=true;$('editorView').hidden=false;$('editorTitle').textContent=r.title;photoSize={w:r.width||1400,h:r.height||900};stageImg=null;selectedHandle=null;editStack=[];redoStack=[];if(r.kind==='photo'&&r.media?.[0]){assetUrl(r.media[0]).then(url=>{let img=new Image();img.onload=()=>{stageImg=img;photoSize={w:img.naturalWidth,h:img.naturalHeight};r.width=photoSize.w;r.height=photoSize.h;fitImage();paint()};img.onerror=()=>notify('Nepodařilo se načíst fotografii');img.src=url})}resizeEditor();fitImage();paint();}
 function exitEditor(){current=null;screen='browser';showFolder()}
 $('editorBack').onclick=exitEditor;
 $('fitBtn').onclick=fitImage;$('zoomIn').onclick=()=>{const p=centerPoint();zoomAt(1.25,p.x,p.y)};$('zoomOut').onclick=()=>{const p=centerPoint();zoomAt(.8,p.x,p.y)};
@@ -22,10 +23,34 @@ function checkpoint(){editStack.push(JSON.stringify(current.items||[]));if(editS
 function commitEditor(){touch(current);save();paint()}
 function undoEditor(){if(!editStack.length)return;redoStack.push(JSON.stringify(current.items));current.items=JSON.parse(editStack.pop());commitEditor()}
 function redoEditor(){if(!redoStack.length)return;editStack.push(JSON.stringify(current.items));current.items=JSON.parse(redoStack.pop());commitEditor()}
-$('undo').onclick=undoEditor;$('redo').onclick=redoEditor;$('selectTool').onclick=()=>setTool('select');$('toolsToggle').onclick=()=>showTools();$('activeTool').onclick=()=>setTool(mode);
+$('undo').onclick=undoEditor;$('redo').onclick=redoEditor;$('selectTool').onclick=()=>setTool('select');$('toolsToggle').onclick=()=>showTools();$('activeTool').onclick=()=>{
+  if(suppressToolClick){suppressToolClick=false;return;}
+  if(mode==='select'||mode==='pan')setTool(lastDrawingTool);
+  else setTool('select');
+};
+$('activeTool').addEventListener('pointerdown',()=>{
+  suppressToolClick=false;
+  clearTimeout(repeatPressTimer);
+  repeatPressTimer=setTimeout(()=>{
+    prefs.repeatDrawing=!prefs.repeatDrawing;save();suppressToolClick=true;
+    updateDrawingToolButton();
+    notify(prefs.repeatDrawing?'Opakované kreslení zapnuto':'Po jedné kótě');
+  },650);
+});
+for(const eventName of ['pointerup','pointercancel','pointerleave']){
+  $('activeTool').addEventListener(eventName,()=>clearTimeout(repeatPressTimer));
+}
+function updateDrawingToolButton(){
+  const t=allTools.find(x=>x[0]===lastDrawingTool);
+  const b=$('activeTool');
+  b.textContent=(t?.[1]||'↔')+(prefs.repeatDrawing?'∞':'¹');
+  b.title=(t?.[2]||'Nástroj')+(prefs.repeatDrawing?' – opakovaně':' – jedna kóta')+' · dlouhé podržení přepíná režim';
+  b.classList.toggle('inactive',mode==='select'||mode==='pan');
+}
+function finishDraw(){if(!prefs.repeatDrawing)setTool('select');else paint();}
 $('lineColor').oninput=e=>{prefs.color=e.target.value;save();paint()};
 function showTools(){closeMenus();$('toolMenu').hidden=false;let html='<div class="toolList">';for(let group of toolGroups){html+=`<div class="sectionLabel">${group.title}</div>`;for(let [key,icon,label] of group.tools)html+=`<button class="choice" data-tool="${key}"><strong>${icon}</strong>${label}</button>`}html+='</div>';$('toolMenu').innerHTML=html;$('toolMenu').querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{setTool(b.dataset.tool);closeMenus()})}
-function setTool(key){mode=key;selectedHandle=null;selected=null;drawStart=null;drawCurrent=null;stroke=[];let t=allTools.find(x=>x[0]===key);$('activeTool').textContent=t?.[1]||'↔';$('activeTool').title=t?.[2]||key;$('editorHint').textContent=key==='select'?'Klepni na kótu nebo posuň její koncový bod':key==='pan'?'Táhni fotografii pro posunutí':'Táhni prstem mezi body · rozměry zadáváš ručně';paint()}
+function setTool(key){mode=key;selectedHandle=null;selected=null;drawStart=null;drawCurrent=null;stroke=[];if(key!=='select'&&key!=='pan')lastDrawingTool=key;updateDrawingToolButton();$('editorHint').textContent=key==='select'?'Klepni na kótu nebo posuň její koncový bod':key==='pan'?'Táhni fotografii pro posunutí':'Táhni prstem mezi body · rozměry zadáváš ručně';paint()}
 function drawGrid(){if(!prefs.snapGrid)return;let spacing=Math.max(5,prefs.gridStep)*view.zoom;if(spacing<8)return;ctx.save();ctx.strokeStyle='#eeeeee28';ctx.lineWidth=1;const left=Math.max(0,Math.ceil(-view.dx/spacing)),right=Math.min(Math.ceil(photoSize.w/prefs.gridStep),Math.ceil((stageCanvas.clientWidth-view.dx)/spacing));const top=Math.max(0,Math.ceil(-view.dy/spacing)),bottom=Math.min(Math.ceil(photoSize.h/prefs.gridStep),Math.ceil((stageCanvas.clientHeight-view.dy)/spacing));ctx.beginPath();for(let i=left;i<=right;i++){const x=view.dx+i*spacing;ctx.moveTo(x,0);ctx.lineTo(x,stageCanvas.clientHeight)}for(let j=top;j<=bottom;j++){const y=view.dy+j*spacing;ctx.moveTo(0,y);ctx.lineTo(stageCanvas.clientWidth,y)}ctx.stroke();ctx.restore()}
 function paint(){if(screen!=='editor'||!current)return;let w=stageCanvas.clientWidth,h=stageCanvas.clientHeight;ctx.clearRect(0,0,w,h);ctx.save();ctx.fillStyle='#202123';ctx.fillRect(0,0,w,h);ctx.translate(view.dx,view.dy);ctx.scale(view.zoom,view.zoom);if(stageImg)ctx.drawImage(stageImg,0,0,photoSize.w,photoSize.h);else{ctx.fillStyle='#36383a';ctx.fillRect(0,0,photoSize.w,photoSize.h);ctx.strokeStyle='#4b4e50';ctx.lineWidth=3/view.zoom;ctx.strokeRect(0,0,photoSize.w,photoSize.h)}ctx.restore();drawGrid();for(let item of current.items||[])drawItem(ctx,item,item.id===selected);if(drawStart&&drawCurrent){let mock={type:mode,a:drawStart,b:drawCurrent,points:stroke,measure:'',unit:prefs.unit,color:prefs.color,width:prefs.lineWidth,fontSize:prefs.fontSize};drawItem(ctx,mock,false)}if(selectedHandle&&selectedHandle.kind==='point')drawHandle(ctx,selectedHandle.point,'#94ff70');if(magnifierPoint&&prefs.loupe)drawLoupe();else $('loupe').hidden=true;}
 function canvasText(text,p,color,size,angle=0){ctx.save();ctx.translate(p.x,p.y);ctx.rotate(angle);ctx.font=`600 ${size}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';let width=ctx.measureText(text).width;ctx.fillStyle='#222d';ctx.fillRect(-width/2-5,-size*.67,width+10,size*1.4);ctx.fillStyle=color;ctx.fillText(text,0,0);ctx.restore()}
@@ -53,12 +78,16 @@ if(selectedHandle&&pointers.size===1){selectedHandle.item[selectedHandle.key]=sn
 if(drag&&mode==='pan'){view.dx=drag.dx+(s.x-drag.screen.x);view.dy=drag.dy+(s.y-drag.screen.y);paint();return}
 if(drawStart&&drawPointerId===e.pointerId){drawCurrent=snap(screenToWorld(s),drawStart);magnifierPoint=drawCurrent;if(mode==='freehand'||mode==='polyline')stroke.push(drawCurrent);paint()}}
 function stageUp(e){if(screen!=='editor')return;const wasTwo=pointers.size===2;pointers.delete(e.pointerId);if(wasTwo){gesture=null;drawStart=null;drawCurrent=null;magnifierPoint=null;paint();return}if(selectedHandle){touch(selectedHandle.item);selectedHandle=null;magnifierPoint=null;commitEditor();return}if(drag){drag=null;return}if(!drawStart||drawPointerId!==e.pointerId)return;const a=drawStart,b=drawCurrent||drawStart;drawStart=null;drawCurrent=null;magnifierPoint=null;drawPointerId=null;if(Math.hypot(a.x-b.x,a.y-b.y)<3/view.zoom&&mode!=='note'&&mode!=='symbol'){paint();return}let item={id:uid(),type:mode,a,b,color:prefs.color,width:prefs.lineWidth,fontSize:prefs.fontSize,unit:prefs.unit,measure:'',text:'',points:(mode==='freehand'||mode==='polyline')?[...stroke]:[]};stroke=[];
-if(['dimension','chain','cumulative','area'].includes(mode)){let defaultValue=window.lastLaser?.value||'';modal('Naměřený rozměr',`<label>Hodnota měření (nezávisle na pixelech fotografie)</label><input id="measureInput" type="number" step="any" inputmode="decimal" value="${defaultValue}"><label>Jednotka</label><select id="measureUnit">${['mm','cm','m','in','m²'].map(u=>`<option ${u===(window.lastLaser?.unit||prefs.unit)?'selected':''}>${u}</option>`).join('')}</select><div class="muted">Ruční zadání nebo přenos z laseru Bosch</div>`,()=>{const v=$('measureInput').value;if(!v)return false;item.measure=v;item.unit=$('measureUnit').value;checkpoint();current.items.push(item);commitEditor()});}
-else if(mode==='note'||mode==='symbol'){modal('Text do fotografie',`<label>Popisek</label><input id="drawText" placeholder="Např. přívod vody" value="">`,()=>{item.text=$('drawText').value;checkpoint();current.items.push(item);commitEditor()})}
-else{checkpoint();current.items.push(item);commitEditor()}}
+if(['dimension','chain','cumulative','area'].includes(mode)){let defaultValue=window.lastLaser?.value||'';modal('Naměřený rozměr',`<label>Hodnota měření (nezávisle na pixelech fotografie)</label><input id="measureInput" type="number" step="any" inputmode="decimal" value="${defaultValue}"><label>Jednotka</label><select id="measureUnit">${['mm','cm','m','in','m²'].map(u=>`<option ${u===(window.lastLaser?.unit||prefs.unit)?'selected':''}>${u}</option>`).join('')}</select><div class="muted">Ruční zadání nebo přenos z laseru Bosch</div>`,()=>{const v=$('measureInput').value;if(!v)return false;item.measure=v;item.unit=$('measureUnit').value;checkpoint();current.items.push(item);commitEditor();finishDraw()});}
+else if(mode==='note'||mode==='symbol'){modal('Text do fotografie',`<label>Popisek</label><input id="drawText" placeholder="Např. přívod vody" value="">`,()=>{item.text=$('drawText').value;checkpoint();current.items.push(item);commitEditor();finishDraw()})}
+else{checkpoint();current.items.push(item);commitEditor();finishDraw()}}
 function editItem(item){if(['dimension','chain','cumulative','area','angle'].includes(item.type))modal('Upravit hodnotu',`<label>Rozměr</label><input id="measureInput" type="text" value="${escapeHtml(item.measure)}"><label>Jednotka</label><select id="measureUnit">${['mm','cm','m','in','m²','°'].map(u=>`<option ${u===(item.unit||prefs.unit)?'selected':''}>${u}</option>`).join('')}</select><div class="row wrap"><button id="removeItem" class="outline">Smazat kótu</button></div>`,()=>{checkpoint();item.measure=$('measureInput').value;item.unit=$('measureUnit').value;commitEditor()});else modal('Upravit prvek',`<label>Text</label><input id="drawText" value="${escapeHtml(item.text||'')}"><div class="row"><button id="removeItem" class="outline">Smazat prvek</button></div>`,()=>{checkpoint();item.text=$('drawText').value;commitEditor()});$('removeItem').onclick=()=>{checkpoint();current.items=current.items.filter(i=>i.id!==item.id);selected=null;$('modal').hidden=true;commitEditor()}}
 function showEditorOverflow(){
   showAppMenu('editorOverflow',[
+    [prefs.repeatDrawing?'Opakovat kóty ✓':'Jedna kóta ✓',()=>{
+       prefs.repeatDrawing=!prefs.repeatDrawing;save();updateDrawingToolButton();
+       notify(prefs.repeatDrawing?'Kóty opakovaně':'Jen jedna kóta');
+    }],
     ['Upravit vybranou kótu',()=>{const item=current.items.find(x=>x.id===selected);if(item)editItem(item);else notify('Nejdřív vyber kótu klepnutím')}],
     ['Vybrat a přesunout kótu',()=>setTool('select')],
     ['Přizpůsobit fotografii',()=>fitImage()],
