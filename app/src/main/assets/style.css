@@ -71,13 +71,13 @@ body.in-editor .top,body.in-note .top{display:none}
 .toolbar #activeTool.inactive {opacity:.68}
 .toolbar #activeTool{position:relative;font-size:24px;white-space:nowrap}
 
-/* Endpoint placement – compact floating loupe consistent with field-measurement workflow. */
+/* Compact photo/dimension magnifier aligned to the reference recording. */
 #loupe{
-  width:108px;
-  height:108px;
-  border-radius:13px;
+  width:120px;
+  height:120px;
+  border-radius:16px;
   border:2px solid #aaa;
-  background:#333;
-  box-shadow:0 4px 14px #000b;
+  background:#262626;
+  box-shadow:0 3px 10px #0009;
 }
 #editorHint[hidden]{display:none!important}
