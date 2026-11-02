@@ -44,6 +44,11 @@ import android.webkit.WebViewClient;
 import android.media.MediaRecorder;
 import android.print.PrintManager;
 import android.view.WindowManager;
+import android.view.View;
+import android.view.WindowInsets;
+import android.view.Gravity;
+import android.widget.FrameLayout;
+import android.widget.Toast;
 import android.webkit.WebSettings;
 
 import org.json.JSONException;
@@ -66,6 +71,8 @@ import java.util.regex.Pattern;
 public class MainActivity extends Activity {
     private static final int REQUEST_FILE=20,REQUEST_TREE=21,REQUEST_CAMERA=22,REQUEST_EXPORT=23,REQUEST_PERMISSIONS=24,REQUEST_ATTACH=25;
     private WebView web;
+    private FrameLayout root;
+    private long lastExitPress=0;
     private ValueCallback<Uri[]> fileCallback;
     private Uri cameraOutput;
     private String cameraId;
@@ -86,9 +93,41 @@ public class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle saved){super.onCreate(saved);
         settings=getSharedPreferences("zamerovac",MODE_PRIVATE);
-        getWindow().setStatusBarColor(Color.rgb(112,135,29));
-        getWindow().setNavigationBarColor(Color.rgb(20,21,22));
-        web=new WebView(this);web.setBackgroundColor(Color.rgb(37,38,40));setContentView(web);
+        // Android 15/16/17 draw behind system bars: inset the WebView explicitly.
+        getWindow().getDecorView().setSystemUiVisibility(
+            View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN |
+            View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION);
+        getWindow().setStatusBarColor(Color.TRANSPARENT);
+        getWindow().setNavigationBarColor(Color.TRANSPARENT);
+        root=new FrameLayout(this);
+        root.setBackgroundColor(Color.rgb(37,38,40));
+        web=new WebView(this);
+        web.setBackgroundColor(Color.rgb(37,38,40));
+        root.addView(web,new FrameLayout.LayoutParams(-1,-1));
+        View statusFill=new View(this);
+        statusFill.setBackgroundColor(Color.rgb(112,135,29));
+        FrameLayout.LayoutParams barParams=new FrameLayout.LayoutParams(-1,0,Gravity.TOP);
+        root.addView(statusFill,barParams);
+        setContentView(root);
+        root.setOnApplyWindowInsetsListener((v,insets)->{
+            int top,bottom;
+            if(Build.VERSION.SDK_INT>=30){
+                android.graphics.Insets sys=insets.getInsets(WindowInsets.Type.systemBars()|WindowInsets.Type.displayCutout());
+                top=sys.top;bottom=sys.bottom;
+            }else{top=insets.getSystemWindowInsetTop();bottom=insets.getSystemWindowInsetBottom();}
+            FrameLayout.LayoutParams layout=(FrameLayout.LayoutParams)web.getLayoutParams();
+            if(layout.topMargin!=top||layout.bottomMargin!=bottom){
+                layout.topMargin=top;layout.bottomMargin=bottom;web.setLayoutParams(layout);
+            }
+            FrameLayout.LayoutParams bar=(FrameLayout.LayoutParams)statusFill.getLayoutParams();
+            if(bar.height!=top){bar.height=top;statusFill.setLayoutParams(bar);}
+            return insets;
+        });
+        root.requestApplyInsets();
+        if(Build.VERSION.SDK_INT>=33){
+            getOnBackInvokedDispatcher().registerOnBackInvokedCallback(
+                android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT,()->handleAndroidBack());
+        }
         WebSettings ws=web.getSettings();ws.setJavaScriptEnabled(true);ws.setDomStorageEnabled(true);ws.setDatabaseEnabled(true);
         ws.setAllowFileAccess(false);ws.setAllowContentAccess(true);ws.setMediaPlaybackRequiresUserGesture(false);
         web.addJavascriptInterface(new JsApi(),"Native");
@@ -126,7 +165,17 @@ public class MainActivity extends Activity {
     private void jsCall(String fn,String jsonLiteral){js("window."+fn+"("+JSONObject.quote(jsonLiteral)+")");}
     private void error(String s){jsCall("onNativeError",s);}
     private void onSyncResult(String msg,JSONObject data){try{JSONObject result=new JSONObject().put("message",msg);if(data!=null)result.put("data",data);jsCall("onNativeSync",result.toString());}catch(Exception e){error(e.getMessage());}}
-    @Override public void onBackPressed(){web.evaluateJavascript("(function(){let m=document.getElementById('modal');if(m&&!m.hidden){m.hidden=true;return}let s=document.getElementById('settingsPanel');if(s&&!s.hidden){s.hidden=true;return}if(typeof screen!=='undefined'&&screen==='editor')exitEditor();else if(typeof screen!=='undefined'&&screen==='note')saveNote();else if(typeof currentFolder!=='undefined'&&currentFolder){currentFolder=recById(currentFolder)?.parentId||null;showFolder()}else showFolder()})()",null);}
+    @Override @SuppressWarnings("deprecation") public void onBackPressed(){handleAndroidBack();}
+    private void handleAndroidBack(){
+        if(web==null){finish();return;}
+        web.evaluateJavascript("(window.handleAndroidBack?window.handleAndroidBack():'root')",result->{
+            if(!"\"root\"".equals(result)){lastExitPress=0;return;}
+            long now=android.os.SystemClock.elapsedRealtime();
+            if(now-lastExitPress<2200){finish();return;}
+            lastExitPress=now;
+            Toast.makeText(this,"Ještě jednou Zpět pro ukončení",Toast.LENGTH_SHORT).show();
+        });
+    }
     private void selectCloud(){Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_WRITE_URI_PERMISSION|Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);startActivityForResult(i,REQUEST_TREE);}
     private void exportPng(String name,String b64){exportBase64=b64;Intent i=new Intent(Intent.ACTION_CREATE_DOCUMENT).setType("image/png").addCategory(Intent.CATEGORY_OPENABLE).putExtra(Intent.EXTRA_TITLE,name);startActivityForResult(i,REQUEST_EXPORT);}
     private void useCamera(){
@@ -184,7 +233,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void exportPng(String name,String b64){runOnUiThread(()->exportPng(name,b64));}
         @JavascriptInterface public void printPdf(){runOnUiThread(()->{PrintManager manager=(PrintManager)getSystemService(PRINT_SERVICE);manager.print("Zaměření",web.createPrintDocumentAdapter("Zaměření"),null);});}
         @JavascriptInterface public void openMedia(String id){runOnUiThread(()->{try{Uri uri=new Uri.Builder().scheme("content").authority(getPackageName()+".files").appendPath(id).build();Intent i=new Intent(Intent.ACTION_VIEW).setDataAndType(uri,mediaMime(id)).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);startActivity(Intent.createChooser(i,"Otevřít přílohu"));}catch(Exception e){error("Pro tento formát není dostupný prohlížeč");}});}
-        @JavascriptInterface public void configure(String json){try{JSONObject p=new JSONObject(json);settings.edit().putBoolean("wifiOnly",p.optBoolean("wifiOnly",false)).putBoolean("autoSync",p.optBoolean("autoSync",true)).apply();runOnUiThread(()->{if(p.optBoolean("keepAwake"))getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);if(p.optBoolean("fullscreen"))getWindow().getDecorView().setSystemUiVisibility(4|1024);else getWindow().getDecorView().setSystemUiVisibility(0);});scheduleSync();}catch(Exception e){error(e.getMessage());}}
+        @JavascriptInterface public void configure(String json){try{JSONObject p=new JSONObject(json);settings.edit().putBoolean("wifiOnly",p.optBoolean("wifiOnly",false)).putBoolean("autoSync",p.optBoolean("autoSync",true)).apply();runOnUiThread(()->{if(p.optBoolean("keepAwake"))getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);int flags=View.SYSTEM_UI_FLAG_LAYOUT_STABLE|View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN|View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION;if(p.optBoolean("fullscreen"))flags|=View.SYSTEM_UI_FLAG_FULLSCREEN|View.SYSTEM_UI_FLAG_HIDE_NAVIGATION|View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;getWindow().getDecorView().setSystemUiVisibility(flags);root.requestApplyInsets();});scheduleSync();}catch(Exception e){error(e.getMessage());}}
         @JavascriptInterface public boolean startAudio(String id){if(Build.VERSION.SDK_INT>=23&&checkSelfPermission(Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){runOnUiThread(()->requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO},REQUEST_PERMISSIONS));error("Povol mikrofon a spusť záznam znovu");return false;}
             try{recordingId=id;recorder=new MediaRecorder();recorder.setAudioSource(MediaRecorder.AudioSource.MIC);recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);recorder.setOutputFile(mediaFile(id).getAbsolutePath());recorder.prepare();recorder.start();settings.edit().putString("mime-"+id,"audio/mp4").putString("name-"+id,"Hlasová poznámka.m4a").apply();return true;}catch(Exception e){error("Mikrofon: "+e.getMessage());return false;}}
         @JavascriptInterface public void stopAudio(){try{if(recorder!=null){recorder.stop();recorder.reset();recorder.release();recorder=null;}}catch(Exception e){error("Nahrávání: "+e.getMessage());}}
