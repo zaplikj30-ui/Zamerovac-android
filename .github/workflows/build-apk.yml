@@ -69,9 +69,24 @@ jobs:
           set -euo pipefail
           TAG="test-v1.1.${GITHUB_RUN_NUMBER}"
           FILE="dist/Zamerovac-TEST-v1.1.${GITHUB_RUN_NUMBER}.apk"
-          gh release create "$TAG" "$FILE" \
-            --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" \
-            --title "Zaměřovač TEST 1.1.${GITHUB_RUN_NUMBER}" \
-            --notes "Testovací verze pro Android. Aktualizuje nainstalovaný Zaměřovač TEST bez smazání dat. Původní Zaměřovač má jiné ID a zůstává nedotčený. Instalační balíček lze otevřít přímo ze Stažených souborů." \
-            --latest
+          for attempt in 1 2 3; do
+            if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+              if gh release upload "$TAG" "$FILE" --repo "$GITHUB_REPOSITORY" --clobber && \
+                 gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --latest; then
+                echo "Vydání bylo aktualizováno."
+                exit 0
+              fi
+            else
+              if gh release create "$TAG" "$FILE" \
+                  --repo "$GITHUB_REPOSITORY" \
+                  --target "$GITHUB_SHA" \
+                  --title "Zaměřovač TEST 1.1.${GITHUB_RUN_NUMBER}" \
+                  --notes "Testovací verze pro Android. Aktualizuje nainstalovaný Zaměřovač TEST bez smazání dat. Původní Zaměřovač zůstává nedotčený. Otevři APK přímo ze Stažených souborů." \
+                  --latest; then
+                exit 0
+              fi
+            fi
+            echo "GitHub odmítl vydání, pokus $attempt ze 3." >&2
+            sleep $((attempt * 5))
+          done
+          exit 1
