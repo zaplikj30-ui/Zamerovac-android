@@ -58,7 +58,7 @@ function drawArrow(c,point,to,size=10){let a=Math.atan2(point.y-to.y,point.x-to.
 function drawHandle(c,p,color){let q=worldToScreen(p);c.save();c.fillStyle=color;c.strokeStyle='#222';c.lineWidth=2;c.beginPath();c.arc(q.x,q.y,6,0,2*Math.PI);c.fill();c.stroke();c.restore()}
 function drawItem(c,item,highlight=false){let a=item.a&&worldToScreen(item.a),b=item.b&&worldToScreen(item.b);let pts=(item.points||[]).map(worldToScreen);const color=item.color||prefs.color,fw=(item.width||prefs.lineWidth),fs=(item.fontSize||prefs.fontSize);c.save();c.strokeStyle=color;c.fillStyle=color;c.lineWidth=fw;c.lineJoin='round';c.lineCap='round';if(highlight){c.shadowBlur=8;c.shadowColor='#a5ff64'};
 function seg(){c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.stroke()};
-if(item.type==='dimension'||item.type==='chain'||item.type==='cumulative'){if(a&&b){let dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1;let nx=-dy/d,ny=dx/d;let off=item.offset??-22;let ao={x:a.x+nx*off,y:a.y+ny*off},bo={x:b.x+nx*off,y:b.y+ny*off};c.beginPath();c.moveTo(a.x+nx*(off-11),a.y+ny*(off-11));c.lineTo(a.x+nx*(off+11),a.y+ny*(off+11));c.moveTo(b.x+nx*(off-11),b.y+ny*(off-11));c.lineTo(b.x+nx*(off+11),b.y+ny*(off+11));c.moveTo(ao.x,ao.y);c.lineTo(bo.x,bo.y);c.stroke();drawArrow(c,ao,bo,9);drawArrow(c,bo,ao,9);let label=item.measure?`${item.measure} ${item.unit||'mm'}`:'…';let ang=Math.atan2(dy,dx);if(ang>Math.PI/2||ang< -Math.PI/2)ang+=Math.PI;canvasText(label,{x:(ao.x+bo.x)/2,y:(ao.y+bo.y)/2},color,fs,ang)}}
+if(item.type==='dimension'||item.type==='chain'||item.type==='cumulative'){if(a&&b){let dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1;let nx=-dy/d,ny=dx/d;let off=item.offset??-22;let ao={x:a.x+nx*off,y:a.y+ny*off},bo={x:b.x+nx*off,y:b.y+ny*off};c.beginPath();c.moveTo(a.x+nx*(off-11),a.y+ny*(off-11));c.lineTo(a.x+nx*(off+11),a.y+ny*(off+11));c.moveTo(b.x+nx*(off-11),b.y+ny*(off-11));c.lineTo(b.x+nx*(off+11),b.y+ny*(off+11));c.moveTo(ao.x,ao.y);c.lineTo(bo.x,bo.y);c.stroke();drawArrow(c,ao,bo,9);drawArrow(c,bo,ao,9);let label=item.measure?`${item.measure} ${item.unit||'mm'}`:'…';let ang=Math.atan2(dy,dx);if(ang>Math.PI/2||ang< -Math.PI/2)ang+=Math.PI;canvasText(label,{x:(ao.x+bo.x)/2+(bo.x-ao.x)*(Number(item.labelT)||0),y:(ao.y+bo.y)/2+(bo.y-ao.y)*(Number(item.labelT)||0)},color,fs,ang)}}
 else if(item.type==='line'||item.type==='arrow'||item.type==='angle'||item.type==='target'){if(a&&b){seg();if(item.type==='arrow')drawArrow(c,b,a,15);if(item.type==='target'){c.beginPath();c.arc(b.x,b.y,12,0,Math.PI*2);c.stroke()}if(item.type==='angle'){let degree=(Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI+360)%360;canvasText((item.measure||degree.toFixed(0))+'°',{x:(a.x+b.x)/2,y:(a.y+b.y)/2-23},color,fs)}}}
 else if(item.type==='rect'||item.type==='area'){if(a&&b){let x=Math.min(a.x,b.x),y=Math.min(a.y,b.y),w=Math.abs(a.x-b.x),h=Math.abs(a.y-b.y);c.strokeRect(x,y,w,h);if(item.type==='area'&&item.measure)canvasText(item.measure+' '+(item.unit||'m²'),{x:x+w/2,y:y+h/2},color,fs)}}
 else if(item.type==='ellipse'||item.type==='circle'){if(a&&b){let cx=(a.x+b.x)/2,cy=(a.y+b.y)/2,rx=Math.abs(a.x-b.x)/2,ry=item.type==='circle'?rx:Math.abs(a.y-b.y)/2;c.beginPath();c.ellipse(cx,cy,Math.max(1,rx),Math.max(1,ry),0,0,Math.PI*2);c.stroke()}}
@@ -89,15 +89,50 @@ function drawLoupe(){
   loupeCtx.stroke();
   loupeCtx.restore();
 }
+function labelInfo(item){
+  if(!item||!['dimension','chain','cumulative'].includes(item.type)||!item.a||!item.b)return null;
+  const a=worldToScreen(item.a),b=worldToScreen(item.b);
+  const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1,ux=dx/d,uy=dy/d;
+  const off=item.offset??-22,t=Number(item.labelT)||0;
+  return {x:(a.x+b.x)/2-uy*off+dx*t,y:(a.y+b.y)/2+ux*off+dy*t,ux,uy,d};
+}
+function nearestLabel(point){
+  for(const item of [...(current.items||[])].reverse()){
+    if(!item.measure)continue;
+    const p=labelInfo(item);if(!p)continue;
+    const along=Math.abs((point.x-p.x)*p.ux+(point.y-p.y)*p.uy);
+    const across=Math.abs((point.x-p.x)*(-p.uy)+(point.y-p.y)*p.ux);
+    ctx.save();ctx.font='600 '+(item.fontSize||prefs.fontSize)+'px sans-serif';
+    const width=ctx.measureText(item.measure+' '+(item.unit||'mm')).width;ctx.restore();
+    if(along<=Math.max(28,width/2+15)&&across<=Math.max(22,(item.fontSize||prefs.fontSize)*.85)){
+      return {item,kind:'label'};
+    }
+  }
+  return null;
+}
 function nearestHandle(point){let best=null,dist=18;for(let it of current.items||[]){for(let key of ['a','b'])if(it[key]){let d=Math.hypot(point.x-worldToScreen(it[key]).x,point.y-worldToScreen(it[key]).y);if(d<dist){best={item:it,key,point:it[key],kind:'point'};dist=d}}}return best}
 function nearestItem(point){let world=screenToWorld(point),best=null,dist=26/view.zoom;for(let it of current.items||[]){let a=it.a,b=it.b;if(a&&b){let ux=b.x-a.x,uy=b.y-a.y,den=ux*ux+uy*uy||1,t=Math.max(0,Math.min(1,((world.x-a.x)*ux+(world.y-a.y)*uy)/den));let d=Math.hypot(world.x-a.x-t*ux,world.y-a.y-t*uy);if(d<dist){best=it;dist=d}}else if(a&&Math.hypot(a.x-world.x,a.y-world.y)<dist)best=it}return best}
 function stageDown(e){if(screen!=='editor')return;e.preventDefault();stageCanvas.setPointerCapture(e.pointerId);const s=eventPoint(e);pointers.set(e.pointerId,s);if(pointers.size===2){let v=[...pointers.values()];gesture={distance:Math.hypot(v[0].x-v[1].x,v[0].y-v[1].y),zoom:view.zoom,mid:{x:(v[0].x+v[1].x)/2,y:(v[0].y+v[1].y)/2},world:screenToWorld({x:(v[0].x+v[1].x)/2,y:(v[0].y+v[1].y)/2})};drawStart=null;drawCurrent=null;selectedHandle=null;paint();return}if(pointers.size>2)return;
-let hit=(mode==='select')?nearestHandle(s):null;if(hit){selectedHandle=hit;selected=hit.item.id;checkpoint();magnifierPoint=hit.point;paint();return}
+let hit=(mode==='select')?(nearestHandle(s)||nearestLabel(s)):null;if(hit){selectedHandle=hit;selected=hit.item.id;checkpoint();magnifierPoint=hit.kind==='label'?null:hit.point;paint();return}
 if(mode==='select'){let item=nearestItem(s);if(item&&item.id===selected&&Date.now()-lastTap<450){editItem(item)}else{selected=item?.id||null;lastTap=Date.now();paint()}return}
 if(mode==='pan'){drag={screen:s,dx:view.dx,dy:view.dy};return}
 drawPointerId=e.pointerId;drawStart=snap(screenToWorld(s));drawCurrent=drawStart;stroke=[drawStart];magnifierPoint=drawStart;paint()}
 function stageMove(e){if(screen!=='editor')return;const s=eventPoint(e);if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,s);if(pointers.size===2&&gesture){let v=[...pointers.values()],dist=Math.hypot(v[0].x-v[1].x,v[0].y-v[1].y);let mid={x:(v[0].x+v[1].x)/2,y:(v[0].y+v[1].y)/2};view.zoom=Math.max(.05,Math.min(12,gesture.zoom*dist/Math.max(1,gesture.distance)));view.dx=mid.x-gesture.world.x*view.zoom;view.dy=mid.y-gesture.world.y*view.zoom;paint();return}
-if(selectedHandle&&pointers.size===1){selectedHandle.item[selectedHandle.key]=snap(screenToWorld(s));selectedHandle.point=selectedHandle.item[selectedHandle.key];magnifierPoint=selectedHandle.point;paint();return}
+if(selectedHandle&&pointers.size===1){
+  if(selectedHandle.kind==='label'){
+    const info=labelInfo(selectedHandle.item);
+    if(info&&info.d>0){
+      const delta=((s.x-info.x)*info.ux+(s.y-info.y)*info.uy)/info.d;
+      selectedHandle.item.labelT=Math.max(-.48,Math.min(.48,(Number(selectedHandle.item.labelT)||0)+delta));
+    }
+    magnifierPoint=null;
+  }else{
+    selectedHandle.item[selectedHandle.key]=snap(screenToWorld(s));
+    selectedHandle.point=selectedHandle.item[selectedHandle.key];
+    magnifierPoint=selectedHandle.point;
+  }
+  paint();return;
+}
 if(drag&&mode==='pan'){view.dx=drag.dx+(s.x-drag.screen.x);view.dy=drag.dy+(s.y-drag.screen.y);paint();return}
 if(drawStart&&drawPointerId===e.pointerId){drawCurrent=snap(screenToWorld(s),drawStart);magnifierPoint=drawCurrent;if(mode==='freehand'||mode==='polyline')stroke.push(drawCurrent);paint()}}
 function stageUp(e){if(screen!=='editor')return;const wasTwo=pointers.size===2;pointers.delete(e.pointerId);if(wasTwo){gesture=null;drawStart=null;drawCurrent=null;magnifierPoint=null;paint();return}if(selectedHandle){touch(selectedHandle.item);selectedHandle=null;magnifierPoint=null;commitEditor();return}if(drag){drag=null;return}if(!drawStart||drawPointerId!==e.pointerId)return;const a=drawStart,b=drawCurrent||drawStart;drawStart=null;drawCurrent=null;magnifierPoint=null;drawPointerId=null;if(Math.hypot(a.x-b.x,a.y-b.y)<3/view.zoom&&mode!=='note'&&mode!=='symbol'){paint();return}let item={id:uid(),type:mode,a,b,color:prefs.color,width:prefs.lineWidth,fontSize:prefs.fontSize,unit:prefs.unit,measure:'',text:'',points:(mode==='freehand'||mode==='polyline')?[...stroke]:[]};stroke=[];
