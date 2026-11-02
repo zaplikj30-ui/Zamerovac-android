@@ -73,8 +73,8 @@ body.in-editor .top,body.in-note .top{display:none}
 
 /* Endpoint placement – compact floating loupe consistent with field-measurement workflow. */
 #loupe{
-  width:136px;
-  height:136px;
+  width:108px;
+  height:108px;
   border-radius:13px;
   border:2px solid #aaa;
   background:#333;
