@@ -37,7 +37,16 @@ jobs:
             echo "Chybí testovací APK nebo nástroj apksigner." >&2
             exit 1
           fi
-          "$SIGNER" verify --min-sdk-version 26 --print-certs "$APK"
+          VERIFY_OUTPUT="$("$SIGNER" verify --min-sdk-version 26 --print-certs "$APK")"
+          echo "$VERIFY_OUTPUT"
+          # Pin the same development signing certificate across all app updates.
+          echo "$VERIFY_OUTPUT" | grep -qi 'c828c96739e554e8da4f5851913356134f1359a98d5013772ad5587e74a2d229'
+          AAPT="$(find "${ANDROID_HOME}/build-tools" -type f -name aapt | sort -V | tail -n 1)"
+          test -x "$AAPT"
+          PACKAGE_INFO="$("$AAPT" dump badging "$APK" | head -n 1)"
+          echo "$PACKAGE_INFO"
+          echo "$PACKAGE_INFO" | grep -q "name='cz.zamerovac.app.preview'"
+          echo "$PACKAGE_INFO" | grep -q "versionCode='$((1000 + GITHUB_RUN_NUMBER))'"
           mkdir -p dist
           cp "$APK" "dist/Zamerovac-TEST-v1.1.${GITHUB_RUN_NUMBER}.apk"
           sha256sum dist/*.apk
