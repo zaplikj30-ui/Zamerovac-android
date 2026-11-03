@@ -12,6 +12,7 @@ function extract(start,end){
 }
 const methods=[
  extract('function noteCaptionScreen(item){','function canvasText(text,p,color,size,angle=0){'),
+ extract('function drawArrow(c,point,to,size=10){','function drawItem(c,item){'),
  extract('function nearestHandle(point){','function selectAnnotation(item){'),
  extract('function selectAnnotation(item){','function editItem(item){')
 ].join('\n');
@@ -27,7 +28,10 @@ const sandbox={
  nearestLabel:()=>null,snap:p=>({...p}),paint:()=>{},checkpoint:()=>{sandbox.checkpoints++},
  commitEditor:()=>{sandbox.commits++},touch:()=>{},editItem:()=>{sandbox.edits++},
  setTool:key=>{sandbox.mode=key},
- checkpoints:0,commits:0,edits:0,console
+ uid:()=>`new-note-${++sandbox.ids}`,
+ finishDraw:item=>{sandbox.selected=item.id;sandbox.mode='select'},
+ openRichNote:()=>{throw Error('Creating an empty note must not open a modal')},
+ checkpoints:0,commits:0,edits:0,ids:0,console
 };
 vm.createContext(sandbox);
 vm.runInContext(methods,sandbox);
@@ -52,4 +56,41 @@ assert.equal(note.b.x,250,'Moving arrow must leave label x fixed');
 assert.equal(note.b.y,200,'Moving arrow must leave label y fixed');
 assert.equal(sandbox.commits,2,'Both independent moves must be saved');
 assert.equal(sandbox.edits,0,'Drags must not open the edit dialog');
-console.log('OK: text box and arrow anchor move independently, with persistent coordinates');
+// Prázdná poznámka vznikne jedním dotykem bez otevření formuláře.
+sandbox.mode='note';
+sandbox.selected=null;
+pointer('Down',350,350);
+pointer('Up',350,350);
+assert.equal(sandbox.current.items.length,2,'Tap must create a note without text or photo');
+const empty=sandbox.current.items[1];
+assert.equal(empty.text,'','New note remains textless');
+assert.equal(empty.a.x,350,'Arrow anchor is the tapped point');
+assert.equal(empty.captionMoved,undefined,'Connector stays hidden until moved');
+// První přesunutí prázdného rámečku samo vykreslí propojení.
+pointer('Down',350,350);
+pointer('Move',520,450);
+pointer('Up',520,450);
+assert.equal(empty.a.x,350,'Dragging empty note must not move anchor');
+assert.equal(empty.b.x,520,'Dragging empty note moves the frame');
+assert.equal(empty.b.y,450,'Dragging empty note moves the frame');
+assert.equal(empty.captionMoved,true,'Arrow appears after first drag without text or photo');
+// Ověřit i skutečný směr hrotu, ne pouze pozice v datovém modelu.
+const ops=[];
+const pen={save(){},restore(){},beginPath(){},moveTo(x,y){ops.push(['M',x,y])},
+ lineTo(x,y){ops.push(['L',x,y])},stroke(){}};
+sandbox.testContext=pen;sandbox.testItem=empty;
+vm.runInContext("drawNoteLeader(testContext,testItem,'#ffee22')",sandbox);
+const starts=ops.filter(o=>o[0]==='M');
+assert.equal(starts.length,2,'Connector and arrowhead should have separate paths');
+assert.equal(starts[1][1],350,'Arrowhead must start at original photo point (X)');
+assert.equal(starts[1][2],350,'Arrowhead must start at original photo point (Y)');
+// Hrot jde přemístit i u úplně prázdné poznámky a rámeček zůstane.
+pointer('Down',350,350);
+pointer('Move',370,380);
+pointer('Up',370,380);
+assert.equal(empty.a.x,370);
+assert.equal(empty.a.y,380);
+assert.equal(empty.b.x,520);
+assert.equal(empty.b.y,450);
+assert.equal(sandbox.commits,5,'Both old note and new empty note operations saved');
+console.log('OK: note without text/media, automatic arrow at fixed photo point, independent handles');
