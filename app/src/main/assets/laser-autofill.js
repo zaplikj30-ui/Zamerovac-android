@@ -15,11 +15,24 @@
   if(!Number.isFinite(millimeters)||millimeters<=0||millimeters>250000)return null;
   return {amount,unit:u,millimeters};
  }
- function asText(n,unit){
-  // Nepřevádět opakovaně při přepisu; zachovat rozlišení měřiče.
-  const decimals={mm:2,cm:4,m:6,in:5}[unit]??2;
-  return Number(n.toFixed(decimals)).toString().replace('.',',');
+ // The incoming Bosch value stays unchanged in history and in laserMeasuredMm.
+ // Display precision is separate from the physical measurement resolution.
+ function roundMillimeters(mm,step){
+  const allowed={'0.1':0.1,'0.5':0.5,'1':1};
+  const increment=allowed[String(step)];
+  if(!increment)return mm;
+  return Math.round(mm/increment)*increment;
  }
+ function asText(mm,unit){
+  const rounded=roundMillimeters(mm,prefs.laserRounding||'none');
+  const n=rounded/units[unit];
+  const setting=String(prefs.laserDecimals??'auto');
+  if(/^[0-3]$/.test(setting))return n.toFixed(Number(setting)).replace('.',',');
+  // Automatic display: no unnecessary zeros, but keep fractions received from BLE.
+  const decimalPlaces={mm:3,cm:4,m:6,in:5}[unit]??3;
+  return Number(n.toFixed(decimalPlaces)).toString().replace('.',',');
+ }
+ window.__boschFormatDistance=(millimeters,unit='mm')=>asText(millimeters,unit);
  function apply(value,unit,options={}){
   const reading=parseDistance(value,unit);
   if(!reading){
@@ -42,13 +55,14 @@
   }
   const destUnit=Object.prototype.hasOwnProperty.call(units,item.unit)?item.unit:
     Object.prototype.hasOwnProperty.call(units,prefs.unit)?prefs.unit:'mm';
-  const result=asText(reading.millimeters/units[destUnit],destUnit);
+  const result=asText(reading.millimeters,destUnit);
   if(item.measure===result&&item.unit===destUnit){
    notify('Bosch: '+result+' '+destUnit+' už je u vybrané kóty');
    return true;
   }
   checkpoint();
   item.measure=result;
+  item.laserMeasuredMm=String(reading.millimeters);
   item.unit=destUnit;
   item.lastMeasuredAt=new Date().toISOString();
   commitEditor();
