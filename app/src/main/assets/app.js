@@ -17,6 +17,19 @@ function touch(rec){rec.rev=uid();rec.updatedAt=stamp();}
 function save(){if(native){Native.saveData(JSON.stringify(state));}else{localStorage.setItem('zamerovac-data',JSON.stringify(state));}}
 function notify(msg){const el=$('toast');el.textContent=msg;el.hidden=false;clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>el.hidden=true,3000)}
 function dateText(s){return s?new Date(s).toLocaleDateString('cs-CZ'):''}
+function photoDateText(value){
+  if(!value)return '';
+  const d=new Date(value);
+  return Number.isNaN(d.getTime())?'':d.toLocaleString('cs-CZ',{day:'numeric',month:'numeric',year:'numeric',hour:'2-digit',minute:'2-digit'});
+}
+function photoAddressText(r){
+  if(!r.photoTakenAt)return '';
+  return r.photoAddress|| (r.photoAddressChecked?'Adresu se nepodařilo zjistit':'Zjišťuji adresu…');
+}
+function photoDetailsText(r){
+  if(!r.photoTakenAt)return '';
+  return photoDateText(r.photoTakenAt)+' · '+photoAddressText(r);
+}
 function escapeHtml(t){return String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function recById(id){return state.records.find(r=>r.id===id&&!r.deleted)}
 function newRecord(kind,title,parentId=currentFolder){return {id:uid(),kind,title,parentId,createdAt:stamp(),updatedAt:stamp(),rev:uid(),media:[],items:[],text:'',checks:[],width:1400,height:900,deleted:false}}
@@ -44,7 +57,7 @@ function showFolder(){screen='browser';current=null;document.body.classList.remo
 $('breadcrumbs').innerHTML=`<button class="crumb" data-nav="root">⌂ Domů</button>`+path.map(r=>`<span>›</span><button class="crumb" data-nav="${r.id}">${escapeHtml(r.title)}</button>`).join('');
 $('breadcrumbs').querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>{currentFolder=b.dataset.nav==='root'?null:b.dataset.nav;showFolder()});
 let list=state.records.filter(r=>!r.deleted&&r.parentId===currentFolder).sort((a,b)=>(a.kind==='folder'?0:1)-(b.kind==='folder'?0:1)||(sortAsc?1:-1)*a.title.localeCompare(b.title,'cs'));
-$('items').innerHTML=list.length?list.map(r=>`<div class="entry" data-id="${r.id}">${browserEntryIcon(r)}<div class="entry-info"><div class="entry-title">${escapeHtml(r.title)}</div><div class="entry-date">${dateText(r.updatedAt)}${r.conflict?' · KONFLIKTNÍ KOPIE':''}</div></div><button class="entry-more" data-more="${r.id}">⋮</button></div>`).join(''):`<div class="empty"><div class="big">▤</div>Zatím prázdné.<br>Pomocí ＋ vytvoříš složku, fotografii nebo poznámku.</div>`;
+$('items').innerHTML=list.length?list.map(r=>`<div class="entry" data-id="${r.id}">${browserEntryIcon(r)}<div class="entry-info"><div class="entry-title">${escapeHtml(r.title)}</div><div class="entry-date">${r.photoTakenAt?'Pořízeno: '+escapeHtml(photoDateText(r.photoTakenAt)):dateText(r.updatedAt)}${r.conflict?' · KONFLIKTNÍ KOPIE':''}</div>${r.photoTakenAt?'<div class="entry-place" title="'+escapeHtml(photoAddressText(r))+'">📍 '+escapeHtml(photoAddressText(r))+'</div>':''}</div><button class="entry-more" data-more="${r.id}">⋮</button></div>`).join(''):`<div class="empty"><div class="big">▤</div>Zatím prázdné.<br>Pomocí ＋ vytvoříš složku, fotografii nebo poznámku.</div>`;
 $('items').querySelectorAll('.entry').forEach(el=>el.onclick=(e)=>{if(e.target.closest('[data-more]')){recordActions(el.dataset.id);return}openRecord(el.dataset.id)});
 $('items').querySelectorAll('.entry-thumb').forEach(img=>img.addEventListener('error',()=>{img.hidden=true;img.nextElementSibling.hidden=false},{once:true}));
 }
@@ -63,7 +76,7 @@ function showNewMenu(){closeMenus();$('newMenu').hidden=false;const choices=[
 $('newMenu').innerHTML=choices.map((a,i)=>`<button class="choice" data-i="${i}"><strong>${a[0]}</strong>${a[1]}</button>`).join('');$('newMenu').querySelectorAll('button').forEach(b=>b.onclick=()=>{closeMenus();choices[+b.dataset.i][2]()})}
 function pickMedia(type,handler=null){stagedFileHandler=handler;if(native&&type==='camera'){Native.takePhoto();return}if(native){Native.selectFiles(type);return}const inp=$('filePick');inp.value='';inp.accept=type==='camera'?'image/*':type==='file'?'*/*':'image/*,video/*,application/pdf,audio/*';inp.multiple=type==='file'||type==='media';if(type==='camera')inp.setAttribute('capture','environment');else inp.removeAttribute('capture');inp.click()}
 $('filePick').addEventListener('change',async(e)=>{for(let file of e.target.files){let mediaId=await storeMedia(file);if(stagedFileHandler)stagedFileHandler(mediaId,file);else addMediaRecord(mediaId,file.name,file.type)}stagedFileHandler=null});
-async function addMediaRecord(id,name,mime){const kind=mime.startsWith('image/')?'photo':mime.startsWith('video/')?'video':mime.startsWith('audio/')?'audio':'file';let r=newRecord(kind,name);r.media=[id];addRecord(r);if(kind==='photo')openEditor(r)}
+async function addMediaRecord(id,name,mime,takenAt=null){const kind=mime.startsWith('image/')?'photo':mime.startsWith('video/')?'video':mime.startsWith('audio/')?'audio':'file';let r=newRecord(kind,name);r.media=[id];if(kind==='photo'&&takenAt)r.photoTakenAt=takenAt;addRecord(r);if(kind==='photo')openEditor(r)}
 async function storeMedia(file){const id=uid(),mime=file.type||'application/octet-stream';if(native){let bytes=new Uint8Array(await file.arrayBuffer());const chunkSize=48*1024;Native.beginMedia(id,mime,file.name||'soubor');for(let off=0;off<bytes.length;off+=chunkSize){let sub=bytes.subarray(off,off+chunkSize);let s='';for(let b of sub)s+=String.fromCharCode(b);Native.appendMedia(id,btoa(s));}Native.finishMedia(id);}
 else{const db=await mediaDb();await new Promise((resolve,reject)=>{let tx=db.transaction('files','readwrite');tx.objectStore('files').put(file,id);tx.oncomplete=resolve;tx.onerror=reject})}return id}
 let idb=null;function mediaDb(){if(!idb)idb=new Promise((res,rej)=>{let req=indexedDB.open('zamerovac-media',1);req.onupgradeneeded=()=>req.result.createObjectStore('files');req.onsuccess=()=>res(req.result);req.onerror=rej});return idb}
@@ -106,7 +119,19 @@ function syncCloud(){if(native){Native.syncCloud();notify('Spouštím synchroniz
 $('cloudBtn').onclick=()=>native?modal('Google Disk','<p>Vyber složku na Google Disku, ve které budou projekty všech zařízení. Synchronizace funguje i po návratu z offline režimu.</p><div class="row wrap"><button class="outline" id="cloudChoose">Vybrat složku</button><button class="outline" id="cloudSync">Synchronizovat</button></div>',()=>true,'Zavřít'):notify('Cloud je dostupný v Android aplikaci');
 document.addEventListener('click',e=>{if(e.target.id==='cloudChoose'){Native.selectCloudFolder();$('modal').hidden=true}if(e.target.id==='cloudSync'){Native.syncCloud();$('modal').hidden=true}});
 $('bluetoothBtn').onclick=()=>native?Native.connectLaser():notify('Laser se připojuje v Android aplikaci');
-window.onNativeMedia=async(id,mime,name)=>{if(stagedFileHandler){stagedFileHandler(id,{name,mime,type:mime});save();}else await addMediaRecord(id,name,mime)};
+window.onNativeMedia=async(id,mime,name,takenAt)=>{if(stagedFileHandler){stagedFileHandler(id,{name,mime,type:mime});save();}else await addMediaRecord(id,name,mime,takenAt)};
+window.onNativePhotoAddress=(mediaId,address)=>{
+  const record=state.records.find(r=>r.kind==='photo'&&Array.isArray(r.media)&&r.media.includes(mediaId));
+  if(!record)return;
+  record.photoAddress=String(address||'').trim();
+  record.photoAddressChecked=true;
+  touch(record);save();
+  if(screen==='browser')showFolder();
+  else if(screen==='editor'&&current?.id===record.id){
+    const meta=$('editorPhotoMeta');
+    if(meta){meta.textContent=photoDetailsText(record);meta.title=meta.textContent;}
+  }
+};
 window.onNativeMediaDone=()=>{stagedFileHandler=null;save()};
 window.onNativeSync=(text)=>{try{let s=JSON.parse(text);if(s.data){if(screen==='browser'){state=s.data;Object.assign(prefs,state.prefs||{});state.prefs=prefs;save();showFolder()}else{const activeIds=new Set([current?.id,noteActive?.id].filter(Boolean));const active=state.records.filter(r=>activeIds.has(r.id));let incoming=s.data.records||[];for(const r of active){let at=incoming.findIndex(x=>x.id===r.id);if(at>=0)incoming[at]=r;else incoming.push(r)}state.records=incoming;save();} }notify(s.message||'Synchronizace dokončena')}catch(e){notify(text)}};
 window.onLaserValue=(value,unit)=>{let input=$('measureInput');if(input){input.value=String(value);$('measureUnit').value=unit||'mm';notify('Měření z laseru: '+value+' '+unit)}else{window.lastLaser={value,unit};notify('Laser: '+value+' '+unit+' — dostupné pro další kótu')}};
