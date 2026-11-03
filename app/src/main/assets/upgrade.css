@@ -23,9 +23,6 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 #styleTool {font-size:25px}
 #deleteTool {font-size:24px}
 #activeTool.repeat:after {content:'∞';position:absolute;right:1px;bottom:3px;font-size:12px;background:#332b40;border-radius:50%;color:#fafafa}
-#favoriteTools {display:flex;gap:2px;align-items:center;max-width:36vw;overflow-x:auto;flex-shrink:1}
-#favoriteTools button {font-size:23px;flex:none;min-width:37px;min-height:44px;border:1px solid #4e4d58;border-radius:6px}
-#favoriteTools button:active {background:#5e477e}
 #toolMenu .choice {min-height:57px;font-size:15px}
 #toolMenu .choice strong {font-size:24px;min-width:42px}
 #toolMenu .sectionLabel {font-size:14px}
@@ -58,8 +55,6 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 .releaseItem {border:1px solid #5a4a6a;border-radius:9px;padding:12px;margin:10px 0;line-height:1.5}
 .releaseItem ul {padding-left:20px}
 @media(max-width:520px) {
- #favoriteTools {max-width:22vw}
- #favoriteTools button:nth-child(n+3) {display:none}
  #photoNavigation button {min-width:29px;padding:3px}
  .editor-head #editorTitle {font-size:13px}
  #editorTopMenu {width:36px}
@@ -70,7 +65,6 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
  body.in-editor #editorView {flex-direction:column}
  body.in-editor .toolbar {position:absolute;left:0;top:56px;bottom:0;width:70px;height:auto;flex-direction:column;justify-content:flex-start;gap:8px;border-right:1px solid #5a4b6a;z-index:5;padding:10px 4px;overflow-y:auto;background:#292631}
  body.in-editor #stage {margin-left:70px}
- body.in-editor #favoriteTools {flex-direction:column;max-width:65px;overflow:visible}
  body.in-editor .toolbar #editorMore {margin-top:auto;margin-left:0}
  body.in-editor .toolbar .ico {height:49px;width:53px}
  body.in-editor .toolbar input[type=color] {min-height:40px}
@@ -83,7 +77,6 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 .releaseFeature{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid #554963}.releaseFeature span{flex:1;font-size:13px}.releaseFeature button{font-size:12px;padding:6px 9px;flex-shrink:0}
 #bluetoothBtn.connecting{animation:none;position:relative}#bluetoothBtn.connecting:after{content:'';position:absolute;right:3px;bottom:6px;width:11px;height:11px;border:2px solid #60a5fa;border-top-color:transparent;border-radius:50%;animation:btSpin .85s linear infinite}@keyframes btSpin{to{transform:rotate(360deg)}}
 
-.favoriteOrderRow{display:flex;gap:6px;align-items:center;border-bottom:1px solid #59505d;padding:5px 0}.favoriteOrderRow span{flex:1}.favoriteOrderRow button{border:1px solid #726083;border-radius:5px;min-width:34px;padding:7px}.favoriteOrderRow button:disabled{opacity:.3}
 
 /* Opravené piktogramy galerie a Bluetooth: SVG namísto nečitelných znaků. */
 #browseGallery {display:flex;align-items:center;justify-content:center;color:#f6f4f9}
@@ -112,3 +105,42 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 .addressChoice span{flex:1}
 .addressChoice small{color:#d3c0ee}
 #photoAddressSearch{margin:4px 0}
+
+/* Editor: všechny kreslicí nástroje zůstávají pod jediným "+".
+   Vybraný nástroj viditelný ve výběru i po jeho uzavření. */
+.toolbar #activeTool {display:none!important}
+.toolbar #toolsToggle {
+ border:1px solid #7b7582;
+ border-radius:7px;
+ min-width:48px;
+ min-height:47px;
+ font-size:32px;
+ font-weight:500;
+ transition:background .12s,border-color .12s;
+}
+.toolbar #toolsToggle.tool-active {
+ background:#654581;
+ border:2px solid #d5b4ff;
+ color:#fff;
+ box-shadow:inset 0 0 0 1px #27212d;
+}
+#toolMenu .choice.tool-chosen {
+ background:#5d4379;
+ color:#fff;
+ font-weight:700;
+ border-inline-start:4px solid #dbc4ff;
+ padding-inline-start:8px;
+}
+#toolMenu .choice.tool-chosen strong {color:#fff}
+#toolMenu .tool-choice-check {
+ margin-left:auto;
+ color:#fff;
+ font-size:22px;
+ font-weight:800;
+ padding:0 5px 0 8px;
+}
+#styleTool svg {width:29px;height:29px;display:block;margin:auto}
+#styleTool {display:flex;align-items:center;justify-content:center}
+@media(max-width:520px) {
+ .toolbar #toolsToggle{min-width:44px;height:47px;font-size:30px}
+}

@@ -7,7 +7,6 @@ const dimTypes=['dimension','chain','cumulative','angle','area'];
 const grouped={dimensions:['dimension','chain','cumulative','angle','area'],notes:['note','symbol'],drawing:['line','arrow','rect','circle','ellipse','polyline','freehand','target']};
 prefs.themeAccent=prefs.themeAccent||'#8b5cf6';
 prefs.layerVisible=prefs.layerVisible||{dimensions:true,notes:true,drawing:true};
-prefs.editorFavorites=prefs.editorFavorites||['dimension','note','arrow','select'];
 prefs.seenVersion=prefs.seenVersion||'';
 function accent(){
   const color=/^#[0-9a-f]{6}$/i.test(prefs.themeAccent)?prefs.themeAccent:'#8b5cf6';
@@ -332,7 +331,6 @@ showEditorOverflow=function(){
   ['∑ Kontrola součtu kót',openSumCheck],
   ['◷ Historie úprav',restoreVersion],
   ['▤ Galerie fotografií',()=>{const photos=galleryPhotos(),index=photos.findIndex(r=>r.id===current?.id);if(index>=0)openGallery(index,photos)}],
-  ['⚙ Přizpůsobit lištu nástrojů',configureToolbar],
   ['▣ Export všech zakázek do ZIP',()=>native?Native.exportBackup():notify('ZIP je dostupný v Android verzi')],
   ['▣ Obnovit zakázky ze ZIP',()=>native?Native.importBackup():notify('Obnova ZIP vyžaduje Android verzi')]
  ];
@@ -382,56 +380,49 @@ paint=function(){
  if(current)for(const i of current.items||[])if(i.type==='note'&&i.media?.length)preloadDetail(i);
  oldPaint();
 };
-function configureToolbar(){
- const tools=allTools.filter(x=>x[0]!=='pan');
- let order=[...prefs.editorFavorites].filter(k=>tools.some(t=>t[0]===k));
- function showOrder(){
-  const el=$('favoriteOrder');if(!el)return;
-  el.innerHTML=order.length?order.map((key,index)=>{
-   const t=tools.find(x=>x[0]===key);
-   return '<div class="favoriteOrderRow"><span>'+esc(t[1]+' '+t[2])+'</span>'+
-    '<button type="button" data-up="'+index+'" '+(index===0?'disabled':'')+' aria-label="Posunout nahoru">↑</button>'+
-    '<button type="button" data-down="'+index+'" '+(index===order.length-1?'disabled':'')+' aria-label="Posunout dolů">↓</button>'+
-    '<button type="button" data-remove="'+index+'" aria-label="Odebrat">✕</button></div>';
-  }).join(''):'<p class="muted">Nejsou vybrané žádné rychlé nástroje.</p>';
-  el.querySelectorAll('[data-up]').forEach(button=>button.onclick=()=>{
-   const n=Number(button.dataset.up);[order[n-1],order[n]]=[order[n],order[n-1]];showOrder();
-  });
-  el.querySelectorAll('[data-down]').forEach(button=>button.onclick=()=>{
-   const n=Number(button.dataset.down);[order[n],order[n+1]]=[order[n+1],order[n]];showOrder();
-  });
-  el.querySelectorAll('[data-remove]').forEach(button=>button.onclick=()=>{
-   order.splice(Number(button.dataset.remove),1);showOrder();
+// Jediný seznam pracovních nástrojů je pod tlačítkem "+".
+// Aktivní nástroj zvýrazníme v nabídce i na tlačítku "+".
+function highlightCurrentTool(){
+ const chooser=$('toolsToggle');
+ if(!chooser)return;
+ const isDrawing=mode!=='select'&&mode!=='pan';
+ chooser.classList.toggle('tool-active',isDrawing);
+ chooser.setAttribute('aria-pressed',String(isDrawing));
+ const selectedTool=allTools.find(x=>x[0]===mode);
+ chooser.title='Nástroje · vybráno: '+(selectedTool?.[2]||'Vybrat a upravit');
+ chooser.setAttribute('aria-label',chooser.title);
+ const menu=$('toolMenu');
+ if(menu&&!menu.hidden){
+  menu.querySelectorAll('[data-tool]').forEach(button=>{
+   const active=button.dataset.tool===mode;
+   button.classList.toggle('tool-chosen',active);
+   button.setAttribute('aria-pressed',String(active));
+   let tick=button.querySelector('.tool-choice-check');
+   if(active&&!tick){
+    tick=document.createElement('span');
+    tick.className='tool-choice-check';
+    tick.textContent='✓';
+    tick.setAttribute('aria-hidden','true');
+    button.append(tick);
+   }else if(!active&&tick)tick.remove();
   });
  }
- modal('Chytrá lišta nástrojů',
- '<p>Vyber maximálně 6 nástrojů a šipkami uprav jejich pořadí.</p><div id="favoriteOrder"></div>'+
- '<label>Přidat nástroj do lišty</label><select id="favoriteAdd"><option value="">Vyber nástroj</option>'+
- tools.map(t=>'<option value="'+esc(t[0])+'">'+esc(t[1]+' '+t[2])+'</option>').join('')+
- '</select><button class="outline" type="button" id="favoriteAddButton">＋ Přidat</button>',
- ()=>{
-  prefs.editorFavorites=order.slice(0,6);save();renderFavorites();
- });
- $('favoriteAddButton').onclick=()=>{
-  const key=$('favoriteAdd').value;if(!key)return;
-  if(order.includes(key)){notify('Tento nástroj už v liště je');return}
-  if(order.length>=6){notify('Můžeš mít maximálně 6 rychlých nástrojů');return}
-  order.push(key);showOrder();
- };
- showOrder();
 }
-function renderFavorites(){
- let place=$('favoriteTools');
- if(!place){place=document.createElement('div');place.id='favoriteTools';document.querySelector('.toolbar').insertBefore(place,$('editorMore'))}
- place.innerHTML=prefs.editorFavorites.map(k=>{const t=allTools.find(x=>x[0]===k);return t?'<button title="'+esc(t[2])+'" data-quick="'+esc(k)+'">'+esc(t[1])+'</button>':''}).join('');
- place.querySelectorAll('[data-quick]').forEach(b=>b.onclick=()=>setTool(b.dataset.quick));
-}
-renderFavorites();
-const oldSetTool=setTool;
-setTool=function(key,keepSelection){oldSetTool(key,keepSelection);renderFavorites()};
+const originalShowTools=showTools;
+showTools=function(){
+ originalShowTools();
+ highlightCurrentTool();
+};
+const originalSetTool=setTool;
+setTool=function(key,keepSelection=false){
+ originalSetTool(key,keepSelection);
+ highlightCurrentTool();
+};
 function updateVisualControls(){
  $('fitBtn').hidden=true;
- $('styleTool').innerHTML='<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 18 18 3l3 3L6 21H3z"/><path d="M8 13l3 3M13 8l3 3M4 21l2-3M3 7l4-4 4 4"/></svg>';
+ $('activeTool').hidden=true;
+ // Výrazná ikona tužky a pravítka – editor tloušťky čáry a velikosti textu.
+ $('styleTool').innerHTML='<svg viewBox="0 0 24 24" width="29" height="29" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 16.8 15.8 4a2 2 0 0 1 2.8 0l1.4 1.4a2 2 0 0 1 0 2.8L7.2 21 2 22z"/><path d="m14.2 5.6 4.2 4.2"/><path d="M3 12V3h8"/><path d="M6 3v3M9 3v2M3 6h3M3 9h2"/></svg>';
  $('styleTool').title='Vzhled kóty – pravítko a tužka';
  $('styleTool').setAttribute('aria-label',$('styleTool').title);
  $('deleteTool').innerHTML='<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 7V4h4v3M6 7l1 14h10l1-14M10 11v7M14 11v7"/></svg>';
@@ -445,6 +436,7 @@ updateDrawingToolButton=function(){
  const t=allTools.find(x=>x[0]===lastDrawingTool);
  $('activeTool').textContent=t?.[1]||'↔';
  $('activeTool').classList.toggle('repeat',!!prefs.repeatDrawing);
+ highlightCurrentTool();
 };
 updateDrawingToolButton();
 let laserState='off',laserName='';
@@ -499,7 +491,7 @@ renderSettings=function(){
  '<button class="setting" id="openDiagnostics" style="width:100%">Diagnostika a sdílení logu</button>'+
  '<button class="setting" id="openHistory" style="width:100%">Novinky a historie aktualizací</button>'+
  '<button class="setting" id="openReadings" style="width:100%">Historie měření z laseru</button>'+
- '<button class="setting" id="openFavorites" style="width:100%">Oblíbené nástroje v liště</button>'+
+
  '<button class="setting" id="backupAll" style="width:100%">Exportovat všechny zakázky a přílohy (ZIP)</button>'+
  '<button class="setting" id="restoreAll" style="width:100%">Obnovit ZIP jako nové zakázky</button>';
  place.append(wrapper);
@@ -507,7 +499,6 @@ renderSettings=function(){
  wrapper.querySelector('#openDiagnostics').onclick=openDiagnostics;
  wrapper.querySelector('#openHistory').onclick=showChanges;
  wrapper.querySelector('#openReadings').onclick=showLaserHistory;
- wrapper.querySelector('#openFavorites').onclick=configureToolbar;
  wrapper.querySelector('#backupAll').onclick=()=>native?Native.exportBackup():notify('Export ZIP je dostupný v Android verzi');
  wrapper.querySelector('#restoreAll').onclick=()=>native?Native.importBackup():notify('Obnova ZIP je dostupná v Android verzi');
 };
@@ -525,7 +516,7 @@ const releases=[
   ['Zámek dokončených zakázek','lock'],
   ['Historie úprav fotografií','versions'],
   ['Kontrola součtu kót','sum'],
-  ['Vrstvy anotací a rychlé nástroje','layers'],
+  ['Vrstvy anotací a nástroje pod +','layers'],
   ['Text, hlas a detailní fotografie v poznámce','notes'],
   ['Editovatelná kóta s popiskem v detailu','notes'],
   ['Diagnostika a sdílení logu','diagnostics'],
