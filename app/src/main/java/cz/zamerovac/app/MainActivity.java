@@ -308,8 +308,26 @@ public class MainActivity extends Activity {
     private void filePicked(Uri uri,String id,String mime,String name,String photoTakenAt) throws IOException {
         try(InputStream in=getContentResolver().openInputStream(uri);OutputStream out=new FileOutputStream(mediaFile(id))){if(in==null)throw new IOException("Cannot read file");copy(in,out);}
         settings.edit().putString("mime-"+id,mime).putString("name-"+id,name).apply();
+        // Prefer the camera's EXIF capture timestamp over the return-from-camera time.
+        // Not all Android camera applications provide the original timestamp.
+        String takenAt=photoTakenAt==null?null:readCaptureDate(mediaFile(id),photoTakenAt);
         js("window.onNativeMedia("+JSONObject.quote(id)+","+JSONObject.quote(mime)+","+
-            JSONObject.quote(name)+","+(photoTakenAt==null?"null":JSONObject.quote(photoTakenAt))+")");
+            JSONObject.quote(name)+","+(takenAt==null?"null":JSONObject.quote(takenAt))+")");
+    }
+    private String readCaptureDate(File jpeg,String fallback){
+        try{
+            ExifInterface exif=new ExifInterface(jpeg.getAbsolutePath());
+            String date=exif.getAttribute(ExifInterface.TAG_DATETIME_ORIGINAL);
+            if(date==null||date.isEmpty())date=exif.getAttribute(ExifInterface.TAG_DATETIME);
+            if(date!=null&&!date.isEmpty()){
+                java.text.SimpleDateFormat format=
+                    new java.text.SimpleDateFormat("yyyy:MM:dd HH:mm:ss",java.util.Locale.ROOT);
+                format.setLenient(false);
+                java.util.Date parsed=format.parse(date);
+                if(parsed!=null)return java.time.Instant.ofEpochMilli(parsed.getTime()).toString();
+            }
+        }catch(Exception ignored){}
+        return fallback;
     }
     private void notifyPhotoAddress(String id,String address){
         js("window.onNativePhotoAddress("+JSONObject.quote(id)+","+JSONObject.quote(address)+")");
