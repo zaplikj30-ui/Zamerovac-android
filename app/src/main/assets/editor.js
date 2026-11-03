@@ -131,7 +131,7 @@ function noteCaptionScreen(item){
 }
 function noteCaptionBounds(item){
  const p=noteCaptionScreen(item),fs=Number(item.fontSize)||Number(prefs.fontSize)||17;
- const caption=item.text||'Poznámka';
+ const caption=item.text||'Klikněte pro zadání textu';
  ctx.save();ctx.font='600 '+fs+'px sans-serif';
  const w=ctx.measureText(caption).width+10;ctx.restore();
  return {x:p.x-w/2,y:p.y-fs*.7,w,h:fs*1.4,p};
@@ -157,7 +157,7 @@ else if(item.type==='line'||item.type==='arrow'||item.type==='angle'||item.type=
 else if(item.type==='rect'||item.type==='area'){if(a&&b){let x=Math.min(a.x,b.x),y=Math.min(a.y,b.y),w=Math.abs(a.x-b.x),h=Math.abs(a.y-b.y);c.strokeRect(x,y,w,h);if(item.type==='area'&&item.measure)canvasText(item.measure+' '+(item.unit||'m²'),{x:x+w/2,y:y+h/2},color,fs)}}
 else if(item.type==='ellipse'||item.type==='circle'){if(a&&b){let cx=(a.x+b.x)/2,cy=(a.y+b.y)/2,rx=Math.abs(a.x-b.x)/2,ry=item.type==='circle'?rx:Math.abs(a.y-b.y)/2;c.beginPath();c.ellipse(cx,cy,Math.max(1,rx),Math.max(1,ry),0,0,Math.PI*2);c.stroke()}}
 else if(item.type==='freehand'||item.type==='polyline'){if(pts.length){c.beginPath();c.moveTo(pts[0].x,pts[0].y);for(let p of pts.slice(1))c.lineTo(p.x,p.y);c.stroke()}}
-else if(item.type==='note'||item.type==='symbol'){if(a){if(item.type==='note'){drawNoteLeader(c,item,color);canvasText(item.text||'Poznámka',noteCaptionScreen(item),color,fs)}else canvasText('⚑ '+(item.text||''),a,color,fs)}}
+else if(item.type==='note'||item.type==='symbol'){if(a){if(item.type==='note'){drawNoteLeader(c,item,color);canvasText(item.text||'Klikněte pro zadání textu',noteCaptionScreen(item),color,fs)}else canvasText('⚑ '+(item.text||''),a,color,fs)}}
 c.restore();}
 function drawLoupe(){
   if(!magnifierPoint)return;
@@ -239,7 +239,7 @@ function nearestItem(point){
  for(const item of [...(current.items||[])].reverse()){
   if((item.type==='note'||item.type==='symbol')&&item.a){
    const p=item.type==='note'?noteCaptionScreen(item):worldToScreen(item.a);
-   const caption=item.type==='symbol'?'⚑ '+(item.text||''):item.text||'Poznámka';
+   const caption=item.type==='symbol'?'⚑ '+(item.text||''):item.text||'Klikněte pro zadání textu';
    ctx.save();ctx.font='600 '+(item.fontSize||prefs.fontSize)+'px sans-serif';
    const width=ctx.measureText(caption).width+22;ctx.restore();
    if(Math.abs(point.x-p.x)<width/2+7&&Math.abs(point.y-p.y)<Math.max(23,(item.fontSize||prefs.fontSize)*.9))
@@ -400,7 +400,21 @@ if(['dimension','chain','cumulative','area'].includes(mode)){
   commitEditor();
   finishDraw(item);
 }
-else if(mode==='note'){openRichNote(item,true)}
+else if(mode==='note'){
+ // ImageMeter-like: vložení bodu vytvoří okamžitě i prázdnou poznámku.
+ // Odtáhnutí poznámky při prvním tahu vytvoří propojení bez textu/fotografie.
+ // Text nebo detailní fotku lze doplnit až po klepnutí na rámeček.
+ item.a={...a};
+ item.b={...a};
+ if(Math.hypot(a.x-b.x,a.y-b.y)>3/view.zoom){
+   item.b={...b};
+   item.captionMoved=true;
+ }
+ checkpoint();
+ current.items.push(item);
+ commitEditor();
+ finishDraw(item);
+}
  else if(mode==='symbol'){
  const presets=['🔌 Zásuvka','🚰 Voda','🟤 Odpad','⬆ Výška parapetu','▣ Okno','▯ Dveře','⚡ Elektro','♨ Topení'];
  modal('Rychlý symbol do fotografie',
