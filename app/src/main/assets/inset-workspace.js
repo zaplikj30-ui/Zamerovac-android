@@ -136,13 +136,6 @@
    const image=window.__detailPhotoCache[item.media[0]];
    const g=layout(item,image);
    const near=position=>pointerDistance(point,position)<=24;
-   {
-     // Textová část poznámky může být nezávisle přesouvána.
-     const p=labelPosition(item,g);
-     const w=clamp(String(item.text||'Klikněte pro zadání textu').length*(Number(item.fontSize)||17)*.62+18,88,stageCanvas.clientWidth-20);
-     if(Math.abs(point.x-p.x)<w/2+7&&Math.abs(point.y-p.y)<24)
-       return {item,g,kind:'caption'};
-   }
    if(selected===item.id&&near(turn({x:0,y:-g.h/2-33},g)))return {item,g,kind:'rotate'};
    if(selected===item.id&&near(turn({x:g.w/2+15,y:0},g)))return {item,g,kind:'resize-right'};
    if(selected===item.id&&near(turn({x:-g.w/2-15,y:0},g)))return {item,g,kind:'resize-left'};
@@ -153,6 +146,13 @@
      const t=clamp(((point.x-a.x)*dx+(point.y-a.y)*dy)/(dx*dx+dy*dy||1),0,1);
      const dist=Math.hypot(point.x-a.x-t*dx,point.y-a.y-t*dy);
      if(t<.8&&dist<14)return {item,g,kind:'anchor'};
+   }
+   {
+     // Textová část poznámky může být nezávisle přesouvána.
+     const p=labelPosition(item,g);
+     const w=clamp(String(item.text||'Klikněte pro zadání textu').length*(Number(item.fontSize)||17)*.62+18,88,stageCanvas.clientWidth-20);
+     if(Math.abs(point.x-p.x)<w/2+7&&Math.abs(point.y-p.y)<24)
+       return {item,g,kind:'caption'};
    }
    const local=unrotate(point,g);
    if(Math.abs(local.x)<=g.w/2+4&&Math.abs(local.y)<=g.h/2+4)return {item,g,kind:'move'};
