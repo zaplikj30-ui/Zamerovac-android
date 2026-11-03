@@ -52,7 +52,10 @@ class BigUpdateSmokeTest(unittest.TestCase):
     def test_photo_notes_contain_editable_detail(self):
         editor = (ASSETS / 'editor.js').read_text(encoding='utf-8')
         rich = (ASSETS / 'rich-notes.js').read_text(encoding='utf-8')
-        self.assertIn('openRichNote(item,true)', editor)
+        # Nová poznámka vzniká okamžitě v editoru i bez textu.
+        self.assertIn("else if(mode==='note'){", editor)
+        self.assertIn("item.captionMoved=true", editor)
+        self.assertNotIn("else if(mode==='note'){openRichNote(item,true)}", editor)
         self.assertIn("openRichNote(item,false)", editor)
         self.assertIn('detailItems', rich)
         self.assertIn('openNestedPhoto', rich)
