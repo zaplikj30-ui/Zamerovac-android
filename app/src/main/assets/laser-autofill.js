@@ -7,6 +7,7 @@
  const units={mm:1,cm:10,m:1000,in:25.4};
  const linearTypes=new Set(['dimension','chain','cumulative']);
  let pending=null;
+ let pending=null;
  function parseDistance(value,unit){
   const raw=String(value??'').trim().replace(',','.');
   const u=String(unit||'mm').trim().toLowerCase();
@@ -66,26 +67,35 @@
   notify('✓ Bosch: '+result+' '+destUnit+' zapsáno přímo do kóty');
   return true;
  }
- // Vrací true, když šlo o událost pro editor. Handler v upgrade.js
- // pak správně vynechá původní oznámení, které nic neukládalo.
+ // Pro aktivní kótu se hodnota zapíše hned; jinak zůstane čekat.
+ // Čekající měření se při prvním označení kóty spotřebuje právě jednou.
  window.__handleLaserAuto=function(value,unit){
-  if(screen!=='editor')return false;
-  try{return apply(value,unit,{holdIfUnselected:true})}
-  catch(error){notify('Nepodařilo se uložit měření – kótu zkontroluj');return true}
+  if(screen!=='editor'||!current)return false;
+  try{
+   const reading=parseDistance(value,unit);
+   if(!reading){pending=null;return apply(value,unit)}
+   pending={value:String(value),unit:reading.unit,recordId:current.id,created:Date.now()};
+   window.lastLaser={value:String(value),unit:reading.unit,time:new Date().toISOString()};
+   const item=(current.items||[]).find(x=>x.id===selected);
+   if(item&&linearTypes.has(item.type))return window.__assignPendingLaserToSelected();
+   notify('Bosch: '+value+' '+reading.unit+' připraveno – klepni na kótu');
+   return true;
+  }catch(error){notify('Měření se nepodařilo zpracovat');return true}
+ };
+ window.__assignPendingLaserToSelected=function(){
+  if(!pending||screen!=='editor'||!current)return false;
+  // Nepřenášet čekající hodnotu do jiné fotografie nebo zakázky.
+  if(pending.recordId!==current.id){pending=null;return false}
+  const item=(current.items||[]).find(x=>x.id===selected);
+  if(!item||!linearTypes.has(item.type))return false;
+  if(window.isRecordLocked?.(current))return false;
+  const measured=pending;pending=null;
+  try{return apply(measured.value,measured.unit,{silent:true})}
+  catch(error){notify('Bosch: nepodařilo se zapsat měření');return true}
  };
  window.__applyLaserMeasurement=function(value,unit,options={}){
   try{return apply(value,unit,options)}
   catch(error){notify('Měření z historie se nepodařilo uložit');return true}
- };
- window.__assignPendingLaserToSelected=function(){
-  if(!pending||screen!=='editor'||!current)return false;
-  if(pending.recordId!==current.id){pending=null;return false;}
-  const reading=pending;
-  const item=(current.items||[]).find(x=>x.id===selected);
-  if(!item||!linearTypes.has(item.type))return false;
-  pending=null;
-  try{return apply(reading.value,reading.unit,{fromPending:true})}
-  catch(error){notify('Měření se nepodařilo vložit');return true}
  };
  window.__parseBoschDistance=parseDistance;
 })();
