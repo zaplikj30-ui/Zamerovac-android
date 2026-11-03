@@ -108,6 +108,7 @@ recordActions=function(id){
    rec.locked=!rec.locked;touch(rec);save();$('modal').hidden=true;showFolder();
    notify(rec.locked?'Zakázka uzamčena proti úpravám':'Zakázka odemčena');
  };
+ if(recordLocked(rec))for(const id of ['renameOne','moveOne','deleteOne']){const b=$(id);if(b)b.disabled=true}
  $('modalBody').querySelector('.row')?.append(extra);
 };
 const oldOpenEditor=openEditor;
@@ -219,6 +220,7 @@ function galleryPhotos(){return state.records.filter(r=>!r.deleted&&r.kind==='ph
 function renderGallery(){
  if(!gallery)return;
  const r=galleryList[galleryIndex];if(!r){closeGallery();return}
+ gallery.querySelector('.gallery-img').style.transform='none';
  gallery.querySelector('.gallery-title').textContent=r.title+' · '+(galleryIndex+1)+'/'+galleryList.length;
  const image=gallery.querySelector('.gallery-img');
  image.src='';
@@ -237,8 +239,48 @@ function openGallery(index,records=null){
   galleryIndex=(galleryIndex+(a==='next'?1:-1)+galleryList.length)%galleryList.length;renderGallery();
  });
  const image=gallery.querySelector('.gallery-img');
- image.addEventListener('touchstart',e=>{if(e.touches.length===1)galleryStart={x:e.touches[0].clientX,y:e.touches[0].clientY};else galleryStart=null},{passive:true});
- image.addEventListener('touchend',e=>{if(galleryStart&&e.changedTouches.length===1){const dx=e.changedTouches[0].clientX-galleryStart.x;if(Math.abs(dx)>70){galleryIndex=(galleryIndex+(dx<0?1:-1)+galleryList.length)%galleryList.length;renderGallery()}}galleryStart=null},{passive:true});
+ let galleryZoom=1,galleryTx=0,galleryTy=0,pinch=null,pan=null;
+ const updateZoom=()=>{image.style.transform='translate('+galleryTx+'px,'+galleryTy+'px) scale('+galleryZoom+')'};
+ const resetZoom=()=>{galleryZoom=1;galleryTx=0;galleryTy=0;updateZoom()};
+ const distance=(a,b)=>Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);
+ const oldRender=renderGallery;
+ const galleryNavigate=step=>{
+  galleryIndex=(galleryIndex+step+galleryList.length)%galleryList.length;
+  resetZoom();renderGallery();
+ };
+ image.addEventListener('touchstart',e=>{
+  if(e.touches.length===2){
+   pinch={distance:distance(e.touches[0],e.touches[1]),scale:galleryZoom};
+   galleryStart=null;pan=null;
+  }else if(e.touches.length===1){
+   const t=e.touches[0];
+   if(galleryZoom>1){pan={x:t.clientX,y:t.clientY,tx:galleryTx,ty:galleryTy};galleryStart=null}
+   else {galleryStart={x:t.clientX,y:t.clientY};pan=null}
+  }
+ },{passive:false});
+ image.addEventListener('touchmove',e=>{
+  if(e.touches.length===2&&pinch){
+   e.preventDefault();
+   galleryZoom=Math.max(1,Math.min(5,pinch.scale*distance(e.touches[0],e.touches[1])/Math.max(1,pinch.distance)));
+   if(galleryZoom===1){galleryTx=0;galleryTy=0}
+   updateZoom();
+  }else if(e.touches.length===1&&pan){
+   e.preventDefault();
+   galleryTx=pan.tx+e.touches[0].clientX-pan.x;
+   galleryTy=pan.ty+e.touches[0].clientY-pan.y;
+   updateZoom();
+  }
+ },{passive:false});
+ image.addEventListener('touchend',e=>{
+  if(galleryStart&&e.touches.length===0&&e.changedTouches.length===1){
+   const dx=e.changedTouches[0].clientX-galleryStart.x;
+   if(Math.abs(dx)>70)galleryNavigate(dx<0?1:-1);
+  }
+  if(e.touches.length<2)pinch=null;
+  if(e.touches.length===0){pan=null;galleryStart=null}
+ },{passive:true});
+ image.addEventListener('dblclick',()=>{if(galleryZoom>1)resetZoom();else{galleryZoom=2;updateZoom()}});
+
  renderGallery();
 }
 function closeGallery(){gallery?.remove();gallery=null}
@@ -273,6 +315,16 @@ function openSumCheck(){
 }
 const originalOverflow=showEditorOverflow;
 showEditorOverflow=function(){
+ if(recordLocked(current)){
+  showAppMenu('editorOverflow',[
+   ['▤ Galerie fotografií',()=>{const photos=galleryPhotos(),idx=photos.findIndex(x=>x.id===current?.id);if(idx>=0)openGallery(idx,photos)}],
+   ['☷ Viditelnost vrstev',openLayers],
+   ['Přizpůsobit fotografii',fitImage],
+   ['Export obrázku / PDF',()=>$('exportBtn').click()],
+   ['🔓 Odemknout zakázku',()=>recordActions(current.id)]
+  ]);
+  return;
+ }
  originalOverflow();
  const menu=$('editorOverflow');
  const extras=[
