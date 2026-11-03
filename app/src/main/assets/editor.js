@@ -196,8 +196,14 @@ function nearestItem(point){
   const a=item.a,b=item.b;
   if(a&&b){
    let ux=b.x-a.x,uy=b.y-a.y,den=ux*ux+uy*uy||1;
-   let t=Math.max(0,Math.min(1,((world.x-a.x)*ux+(world.y-a.y)*uy)/den));
-   let d=Math.hypot(world.x-a.x-t*ux,world.y-a.y-t*uy);
+   // Testovat viditelnou odsazenou kótovací čáru, nejen geometrii pod ní.
+   let shift=0;
+   if(['dimension','chain','cumulative'].includes(item.type))
+    shift=(Number(item.offset)||0)/Math.max(0.0001,view.zoom);
+   const lineLength=Math.hypot(ux,uy)||1;
+   const ax=a.x-uy/lineLength*shift,ay=a.y+ux/lineLength*shift;
+   let t=Math.max(0,Math.min(1,((world.x-ax)*ux+(world.y-ay)*uy)/den));
+   let d=Math.hypot(world.x-ax-t*ux,world.y-ay-t*uy);
    if(d<distance){best=item;distance=d}
   }else if(a){
    let d=Math.hypot(a.x-world.x,a.y-world.y);
