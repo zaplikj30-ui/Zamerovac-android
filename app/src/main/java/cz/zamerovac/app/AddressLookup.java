@@ -9,8 +9,8 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 
-/** Vyhledání českých adres přímo z veřejné geokódovací služby RÚIAN (ČÚZK).
- * Do UI se vracejí kandidáti včetně ověřitelného adresního popisu,
+/** Vyhledání českých adresních míst z registru RÚIAN (ČÚZK).
+ * Používá tabulku 1 (AdresniMisto), aby výsledky obsahovaly čísla domů,
  * nikoli jen bod uprostřed obce.
  */
 final class AddressLookup {
@@ -18,7 +18,7 @@ final class AddressLookup {
     static String find(String query) throws Exception {
         String q=query==null?"":query.trim();
         if(q.length()<3||q.length()>100)throw new IllegalArgumentException("Zadej část adresy (3–100 znaků)");
-        String endpoint="https://ags.cuzk.gov.cz/arcgis/rest/services/RUIAN/MapServer/exts/GeocodeSOE/findAddressCandidates"
+        String endpoint="https://ags.cuzk.gov.cz/arcgis/rest/services/RUIAN/MapServer/exts/GeocodeSOE/tables/1/findAddressCandidates"
             +"?SingleLine="+URLEncoder.encode(q,"UTF-8")
             +"&outSR=4326&outFields=*&maxLocations=10&f=pjson";
         HttpURLConnection connection=(HttpURLConnection)new URL(endpoint).openConnection();
