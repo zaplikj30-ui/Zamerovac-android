@@ -44,7 +44,8 @@ const ctx={
 vm.createContext(ctx);vm.runInContext(js,ctx);
 assert.equal(toolbar.inserted,panel);
 assert.equal(panel.hidden,true);
-assert.equal(panel.buttons.length,14);
+assert.equal(panel.buttons.length,13);
+assert.equal(panel.buttons.some(b=>b.dataset.extra==='export'),false,'Duplicitní export se nesmí zobrazovat');
 more.onclick();
 assert.equal(panel.hidden,false);
 assert.equal(more['aria-expanded'],'true');
