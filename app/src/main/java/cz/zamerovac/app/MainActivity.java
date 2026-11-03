@@ -85,7 +85,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class MainActivity extends Activity {
-    private static final int REQUEST_FILE=20,REQUEST_TREE=21,REQUEST_CAMERA=22,REQUEST_EXPORT=23,REQUEST_PERMISSIONS=24,REQUEST_ATTACH=25,REQUEST_CAMERA_PERMISSION=26,REQUEST_PHOTO_LOCATION=27,REQUEST_BACKUP=28;
+    private static final int REQUEST_FILE=20,REQUEST_TREE=21,REQUEST_CAMERA=22,REQUEST_EXPORT=23,REQUEST_PERMISSIONS=24,REQUEST_ATTACH=25,REQUEST_CAMERA_PERMISSION=26,REQUEST_PHOTO_LOCATION=27,REQUEST_BACKUP=28,REQUEST_IMPORT_BACKUP=29;
     private WebView web;
     private FrameLayout root;
     private View statusFill;
@@ -411,6 +411,18 @@ public class MainActivity extends Activity {
             return;
         }
         if(request==REQUEST_TREE&&data!=null&&data.getData()!=null){Uri uri=data.getData();try{getContentResolver().takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_WRITE_URI_PERMISSION);settings.edit().putString("treeUri",uri.toString()).apply();scheduleSync();syncCloud();}catch(Exception e){error("Nelze použít vybranou složku: "+e.getMessage());}return;}
+        if(request==REQUEST_IMPORT_BACKUP&&data!=null&&data.getData()!=null){
+            final Uri origin=data.getData();
+            new Thread(()->{
+                try{
+                    JSONObject existing=new JSONObject(readDb());
+                    BackupImporter.Result result=BackupImporter.importZip(this,origin,existing,settings);
+                    writeDb(result.data.toString());
+                    onSyncResult("Obnoveno "+result.recordCount+" záznamů jako nové zakázky",result.data);
+                }catch(Exception e){error("Obnova ZIP: "+e.getMessage());}
+            },"ZamerovacRestore").start();
+            return;
+        }
         if(request==REQUEST_BACKUP&&data!=null&&data.getData()!=null){
             final Uri destination=data.getData();
             new Thread(()->{
@@ -439,6 +451,15 @@ public class MainActivity extends Activity {
         try(ZipOutputStream zip=new ZipOutputStream(destination)){
             zip.putNextEntry(new ZipEntry("projects.json"));
             zip.write(json.getBytes(StandardCharsets.UTF_8));
+            zip.closeEntry();
+            JSONObject metadata=new JSONObject();
+            for(String id:mediaIds){
+                if(!validId(id))continue;
+                try{metadata.put(id,new JSONObject().put("mime",mediaMime(id))
+                    .put("name",settings.getString("name-"+id,"Příloha")));}catch(Exception ignored){}
+            }
+            zip.putNextEntry(new ZipEntry("media-meta.json"));
+            zip.write(metadata.toString().getBytes(StandardCharsets.UTF_8));
             zip.closeEntry();
             for(String id:mediaIds){
                 if(!validId(id))continue;
@@ -507,6 +528,14 @@ public class MainActivity extends Activity {
                 send.putExtra(Intent.EXTRA_SUBJECT,title==null?"Zaměřovač":title);
                 send.putExtra(Intent.EXTRA_TEXT,content==null?"":content);
                 startActivity(Intent.createChooser(send,"Sdílet diagnostiku"));
+            });
+        }
+        @JavascriptInterface public void importBackup(){
+            runOnUiThread(()->{
+                Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+                    .setType("application/zip").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                try{startActivityForResult(intent,REQUEST_IMPORT_BACKUP);}
+                catch(Exception e){error("Obnova zálohy: "+e.getMessage());}
             });
         }
         @JavascriptInterface public void exportBackup(){
