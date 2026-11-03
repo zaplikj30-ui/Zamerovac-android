@@ -81,9 +81,11 @@ const pen={save(){},restore(){},beginPath(){},moveTo(x,y){ops.push(['M',x,y])},
 sandbox.testContext=pen;sandbox.testItem=empty;
 vm.runInContext("drawNoteLeader(testContext,testItem,'#ffee22')",sandbox);
 const starts=ops.filter(o=>o[0]==='M');
-assert.equal(starts.length,2,'Connector and arrowhead should have separate paths');
-assert.equal(starts[1][1],350,'Arrowhead must start at original photo point (X)');
-assert.equal(starts[1][2],350,'Arrowhead must start at original photo point (Y)');
+assert.equal(starts.length,3,'Connector and two arrowhead arms use separate paths');
+for(const head of starts.slice(1)){
+ assert.equal(head[1],350,'Both arrowhead arms must start at original photo point (X)');
+ assert.equal(head[2],350,'Both arrowhead arms must start at original photo point (Y)');
+}
 // Hrot jde přemístit i u úplně prázdné poznámky a rámeček zůstane.
 pointer('Down',350,350);
 pointer('Move',370,380);
