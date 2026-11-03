@@ -63,3 +63,17 @@ Datový model je zamýšlen jako budoucí vstup PC modulu. Editovatelné kóty j
 - `Zaměřovač` (bez TEST) a `Zaměřovač TEST` jsou dvě **odlišné aplikace** a data se mezi nimi nepřenášejí automaticky.
 - Certifikát v repozitáři je pouze **vývojový/testovací**. Pro budoucí ostré vydání je nutné vytvořit soukromý produkční podpis a zacházet s ním jako s tajemstvím; tenhle testovací klíč nelze považovat za bezpečný pro veřejnou distribuci.
 - Upozornění: Android může instalaci blokovat z jiných důvodů (například zákaz instalace z daného zdroje). Bez instalačního protokolu nelze potvrdit, proč konkrétní historická aktualizace selhala. Starou aplikaci nemaž bez zálohy.
+
+## Vývoj z telefonu přes ChatGPT a GitHub – Android emulátor
+
+Repozitář obsahuje samostatný workflow **Zaměřovač – Android emulátor a snímky obrazovky**:
+[Otevřít GitHub Actions](https://github.com/zaplikj30-ui/Zamerovac-android/actions/workflows/emulator-smoke.yml).
+
+- Běží automaticky po změně kódu Android aplikace a lze ho spustit i ručně přes **Actions → Zaměřovač – Android emulátor a snímky obrazovky → Run workflow**.
+- Na hostovaném virtuálním telefonu Pixel s Androidem 13 nainstaluje **Zaměřovač TEST**.
+- Uloží snímky domovské obrazovky, nabídky a, pokud je zpřístupněné ovládání, také plátna a lupy při tažení kóty. Přidá přístupnostní XML a `logcat` pro diagnostiku.
+- Výstup najdeš v konkrétním běhu pod **Artifacts → Zamerovac-EMULATOR-snimky-a-logy**; soubory jsou dostupné 30 dní. Jde o ZIP se snímky PNG a logy, nikoliv o instalační APK.
+- Pro instalaci do vlastního mobilu stále slouží samostatná stránka [GitHub Releases – poslední APK](https://github.com/zaplikj30-ui/Zamerovac-android/releases/latest).
+- **Nezaměňuj emulátor za ověření na Samsungu:** ovládání prstem, obrazovka, Bluetooth Bosch a přístup k souborům je nutné potvrdit na reálném telefonu.
+- Cizí APK ImageMeteru nejsou součástí repozitáře a emulator je automaticky nespouští. ImageMeter zůstává referenční aplikací pro porovnávání chování, ne zdrojem převzatého proprietárního kódu.
+- Android emulátor v GitHub Actions spotřebovává minuty Actions, podle typu účtu mohou být účtované. Automatický workflow lze kdykoliv vypnout v nastavení Actions.
