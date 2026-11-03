@@ -32,6 +32,7 @@ jobs:
           node --check app/src/main/assets/address-correction.js
           node --check app/src/main/assets/inset-workspace.js
           node tests/inset_workspace_interaction.js
+          node tests/note_leader_interaction.js
           node --check app/src/main/assets/editor-extra-toolbar.js
           node --check app/src/main/assets/laser-autofill.js
           node --check app/src/main/assets/feedback-reports.js
