@@ -173,7 +173,7 @@
      const p=labelPosition(item,g);
      const w=clamp(String(item.text||'Klikněte pro zadání textu').length*(Number(item.fontSize)||17)*.62+18,88,stageCanvas.clientWidth-20);
      if(Math.abs(point.x-p.x)<w/2+7&&Math.abs(point.y-p.y)<24)
-       return {item,g,kind:'caption'};
+       return {item,g,kind:item.captionMoved?'caption':'move-caption'};
    }
    const local=unrotate(point,g);
    if(Math.abs(local.x)<=g.w/2+4&&Math.abs(local.y)<=g.h/2+4)return {item,g,kind:'move'};
@@ -213,7 +213,7 @@
   const dx=at.x-v.start.x,dy=at.y-v.start.y;
   if(Math.hypot(dx,dy)>3)v.changed=true;
   if(!v.changed)return;
-  if(v.kind==='move'){
+  if(v.kind==='move'||v.kind==='move-caption'){
    v.item.insetX=v.startingX+dx/view.zoom;
    v.item.insetY=v.startingY+dy/view.zoom;
    v.item.insetMoved=true;
@@ -255,10 +255,10 @@
   }else{
    if(editStack.length)editStack.pop();
    // První klepnutí jen vybere, druhé otevře; bez časového limitu.
-   if(v.wasSelected&&(v.kind==='move'||v.kind==='caption')){
+   if(v.wasSelected&&(v.kind==='move'||v.kind==='move-caption'||v.kind==='caption')){
     if(v.kind==='move'&&typeof openNestedPhoto==='function')
       openNestedPhoto(current,v.item,v.item.media[0]);
-    else if(v.kind==='caption'&&typeof openRichNote==='function')
+    else if((v.kind==='caption'||v.kind==='move-caption')&&typeof openRichNote==='function')
       openRichNote(v.item,false);
    }
    paint();
