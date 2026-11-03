@@ -278,3 +278,47 @@ body.in-editor #stage{flex:1!important;min-height:0;margin-left:0!important}
 #modal .richNoteDialog #richAttachments{margin:6px 0 16px}
 #modal .richNoteDialog textarea{min-height:75px;resize:vertical}
 #modal .richNoteDialog .rich-attachment .previewMedia img{max-height:250px}
+
+
+/* ImageMeter: další nástroje jsou dvě řady POD hlavní lištou,
+   nerozbíjejí + / poslední nástroj a zmenší pracovní prostor snímku. */
+body.in-editor #editorExtraToolbar{
+ display:grid;grid-template-columns:repeat(7,minmax(0,1fr));
+ grid-template-rows:repeat(2,minmax(0,1fr));
+ flex:0 0 113px;min-height:113px;width:100%;
+ padding:3px 4px 7px;
+ gap:0 1px;
+ align-content:center;align-items:center;
+ background:#323237;
+ border-top:1px solid #47464b;
+ box-sizing:border-box;position:relative;z-index:6;
+}
+body.in-editor #editorExtraToolbar[hidden]{display:none!important}
+#editorExtraToolbar .editor-extra-btn{
+ width:100%;height:49px;min-height:42px;
+ display:flex;align-items:center;justify-content:center;
+ padding:5px;border:1px solid transparent;border-radius:5px;
+ color:#e0e0e5;
+}
+#editorExtraToolbar .editor-extra-btn svg{display:block;flex-shrink:0;width:25px;height:25px}
+#editorExtraToolbar .editor-extra-btn:disabled{opacity:.25;color:#b8b8bf}
+#editorExtraToolbar .editor-extra-btn.extra-active{
+ background:#5d427c;border-color:#a68bcb;color:#fff
+}
+#editorExtraToolbar .editor-extra-btn:focus-visible{
+ outline:2px solid #e6d0ff;outline-offset:-2px
+}
+body.in-editor .toolbar #editorMore.tool-active{
+ background:#5d427c;border:1px solid #a68bcb!important;color:#fff;
+}
+body.in-editor.editor-extra-open #toolMenu.sheet{
+ bottom:182px!important;max-height:calc(100dvh - 250px)!important
+}
+@media(min-width:850px){
+ body.in-editor #editorExtraToolbar{
+  flex-basis:120px;min-height:120px;
+  padding:5px max(12px,calc((100vw - 1100px)/2));
+ }
+ body.in-editor #editorExtraToolbar .editor-extra-btn{height:52px}
+ body.in-editor.editor-extra-open #toolMenu.sheet{bottom:198px!important}
+}
