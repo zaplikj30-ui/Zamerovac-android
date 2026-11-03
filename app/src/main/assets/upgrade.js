@@ -129,6 +129,7 @@ openNote=function(r){
  for(const id of ['noteTitle','noteText','addCheck','attachFile','recordAudio','saveNote']){
   $(id).disabled=locked;
  }
+ if(typeof window.setupNoteSketch==='function')window.setupNoteSketch(r);
  if(locked)notify('Zakázka je uzamčena – poznámku nelze upravovat');
 };
 let noteSaveDebounce;
