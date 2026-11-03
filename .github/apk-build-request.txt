@@ -2,5 +2,5 @@
 # Běžné změny kódu APK nesestavují. Teprve změna tohoto souboru spustí workflow build-apk.yml.
 # Při požadavku na sestavení uprav číslo a popis níže, commitni do main.
 
-request: 1
-reason: aktualizace poznamek - prazdny ramecek, sipka v puvodnim bode, nezavisly tah textu a fotografie
+request: 2
+reason: prvni souhrnna aktualizace editoru - uchopy, cara, poznamky, galerie, symboly, export slozky
