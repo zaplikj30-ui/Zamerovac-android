@@ -1,14 +1,8 @@
 name: Zaměřovač – Android emulátor a snímky obrazovky
 
+# Emulator je narocny, spousti se pouze pred vetsim testovanim na vyzadani.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'app/src/main/**'
-      - 'app/build.gradle'
-      - 'tools/emulator-smoke.sh'
-      - '.github/workflows/emulator-smoke.yml'
 
 concurrency:
   group: zamerovac-android-emulator-main
