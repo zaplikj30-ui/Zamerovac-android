@@ -417,9 +417,9 @@ public class MainActivity extends Activity {
                 try{
                     String existingText=readDb();
                     JSONObject existing=existingText.isEmpty()?new JSONObject().put("schema",1).put("records",new JSONArray()).put("prefs",new JSONObject()):new JSONObject(existingText);
-                    BackupImporter.Result result=BackupImporter.importZip(this,origin,existing,settings);
-                    writeDb(result.data.toString());
-                    onSyncResult("Obnoveno "+result.recordCount+" záznamů jako nové zakázky",result.data);
+                    BackupImporter.Result restored=BackupImporter.importZip(this,origin,existing,settings);
+                    writeDb(restored.data.toString());
+                    onSyncResult("Obnoveno "+restored.recordCount+" záznamů jako nové zakázky",restored.data);
                 }catch(Exception e){error("Obnova ZIP: "+e.getMessage());}
             },"ZamerovacRestore").start();
             return;
