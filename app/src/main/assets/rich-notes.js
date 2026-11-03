@@ -47,7 +47,7 @@ function openRichNote(item,isNew){
  '<div class="rich-tabs"><b>Text · Hlas · Fotografie</b></div>'+
  '<label>Textová poznámka</label><textarea id="richText" rows="3" placeholder="Např. přívod vody, výška parapetu">'+escapeHtml(item.text||'')+'</textarea>'+
  '<div class="row wrap"><button type="button" class="outline" id="richPhotoCamera">📷 Vyfotit detail</button>'+
- '<button type="button" class="outline" id="richPhotoPick">▧ Vybrat fotografii</button>'+
+ '<button type="button" class="outline" id="richPhotoPick">🖼️ Vybrat fotografii</button>'+
  '<button type="button" class="outline" id="richVoice">🎙 Nahrát hlas</button></div>'+
  '<div id="richAttachments"></div>'+
  '<label>Velikost vložené fotografie</label><input id="richSize" type="range" min="70" max="1500" step="10" value="'+initialInsetWidth+'">'+
@@ -74,7 +74,7 @@ function openRichNote(item,isNew){
   });
  };
  render();
- const photoHandler=(id)=>{attachments.unshift(id);render()};
+ const photoHandler=(id)=>{attachments.push(id);render()};
  $('richPhotoCamera').onclick=()=>pickMedia('camera',photoHandler);
  $('richPhotoPick').onclick=()=>pickMedia('media',photoHandler);
  $('richVoice').onclick=()=>{
