@@ -13,7 +13,7 @@ function openRichNote(item,isNew){
  const previousCancel=$('cancelModal').onclick;
  $('modal')?.querySelector('.dialog')?.classList.add('richNoteDialog');
  const cleanRecording=()=>{window.__audioPermissionRetry=null;if(recording){if(native)Native.stopAudio();recording=null}};
- const release=()=>{$('modal')?.querySelector('.dialog')?.classList.remove('richNoteDialog');if(window.__activeRichNoteCleanup===cleanRecording){window.__activeRichNoteCleanup=null;window.__activeRichNoteRelease=null}$('cancelModal').onclick=previousCancel};
+ const release=()=>{$('modal')?.querySelector('.dialog')?.classList.remove('richNoteDialog');if(window.__activeRichNoteCleanup===cleanRecording){window.__activeRichNoteCleanup=null;window.__activeRichNoteRelease=null;window.__activeRichNotePersist=null}$('cancelModal').onclick=previousCancel};
  window.__activeRichNoteCleanup=cleanRecording;
  window.__activeRichNoteRelease=release;
  $('cancelModal').onclick=()=>{cleanRecording();release();$('modal').hidden=true;window.modalOK=null};
@@ -40,6 +40,9 @@ function openRichNote(item,isNew){
   release();
   return true;
  }
+ // Android Back confirms and saves the draft instead of losing photo/text.
+ // Explicit Zrušit still discards unsaved changes as before.
+ window.__activeRichNotePersist=persist;
  modal('Poznámka k fotografii',
  '<div class="rich-tabs"><b>Text · Hlas · Fotografie</b></div>'+
  '<label>Textová poznámka</label><textarea id="richText" rows="3" placeholder="Např. přívod vody, výška parapetu">'+escapeHtml(item.text||'')+'</textarea>'+
@@ -128,4 +131,14 @@ exitEditor=function(){
 $('editorBack').onclick=exitEditor;
 
 const richPreviousAndroidBack=window.handleAndroidBack;
-window.handleAndroidBack=()=>{if(!$('modal').hidden&&window.__activeRichNoteCleanup){window.__activeRichNoteCleanup();window.__activeRichNoteRelease?.()}return richPreviousAndroidBack()};
+window.handleAndroidBack=()=>{
+ if(!$('modal').hidden&&typeof window.__activeRichNotePersist==='function'){
+  try{
+   window.__activeRichNotePersist();
+   $('modal').hidden=true;
+   window.modalOK=null;
+   return 'handled';
+  }catch(err){notify('Poznámku se nepodařilo uložit – zůstaň v editoru');return 'handled'}
+ }
+ return richPreviousAndroidBack();
+};
