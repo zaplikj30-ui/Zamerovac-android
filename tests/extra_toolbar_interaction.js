@@ -20,6 +20,9 @@ const panel={
 const toolbar={insertAdjacentElement(place,element){
  assert.equal(place,'afterend');assert.equal(element,panel);this.inserted=element;
 }};
+const swipeListeners={};
+toolbar.addEventListener=(event,cb)=>(swipeListeners['bar-'+event]??=[]).push(cb);
+panel.addEventListener=(event,cb)=>(swipeListeners['panel-'+event]??=[]).push(cb);
 const more={classList:classes(),setAttribute(k,v){this[k]=v}};
 const topMenu={};
 const editor={};
@@ -55,16 +58,22 @@ more.onclick();
 assert.equal(panel.hidden,true);
 assert.equal(more['aria-expanded'],'false');
 assert.equal(ctx.document.body.classList.contains('editor-extra-open'),false);
-const listeners={};
-toolbar.addEventListener=(event,cb)=>(listeners['bar-'+event]??=[]).push(cb);
-panel.addEventListener=(event,cb)=>(listeners['panel-'+event]??=[]).push(cb);
-// Nově se gesta registrují při načítání skriptu, proto další VM instance
-// je otestuje ve vlastním minimálním scénáři níže.
 assert.equal(typeof ctx.window.setEditorExtraToolbarExpanded,'function');
 ctx.window.setEditorExtraToolbarExpanded(true);
 assert.equal(panel.hidden,false);
 ctx.window.setEditorExtraToolbarExpanded(false);
 assert.equal(panel.hidden,true);
+const fire=(el,event,detail)=>{
+ const id=(el===toolbar?'bar-':'panel-')+event;
+ for(const cb of swipeListeners[id]||[])cb(detail);
+};
+const touch=(x,y)=>({touches:[{clientX:x,clientY:y}],changedTouches:[{clientX:x,clientY:y}],preventDefault(){},stopImmediatePropagation(){}});
+fire(toolbar,'touchstart',touch(100,650));
+fire(toolbar,'touchmove',touch(100,545));
+assert.equal(panel.hidden,false,'Přejetí nahoru musí rozbalit panel');
+fire(panel,'touchstart',touch(100,560));
+fire(panel,'touchmove',touch(100,680));
+assert.equal(panel.hidden,true,'Přejetí dolů musí panel schovat');
 more.onclick();
 assert.equal(ctx.window.handleAndroidBack(),'handled');
 assert.equal(panel.hidden,true);
