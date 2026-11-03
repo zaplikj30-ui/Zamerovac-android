@@ -35,7 +35,7 @@ Toto je **zdrojový projekt, nikoli zkompilovaná a na zařízení otestovaná A
 2. Použij JDK 17 a synchronizaci Gradle.
 3. Zvol **Build > Build APK(s)**. Očekávaný výstup je `app/build/outputs/apk/debug/app-debug.apk`.
 4. APK nainstaluj na testovací zařízení. Před produkčním použitím otestuj lokální ukládání, opětovné otevření projektu, média a cloud.
-5. V GitHubu se APK sestavuje **pouze na vyžádání**: otevři **Actions → Sestavit a vydat Zaměřovač TEST → Run workflow** na větvi `main`. Uložení změny na GitHub samo nespouští Android build.
+5. APK se sestavuje **jen na vyžádání**. Uživatel může říct ChatGPT „pusť se do aktualizace“, „udělej aktualizaci“ nebo „sestav APK“; po dokončení změn ChatGPT spustí jeden testovací build přes vyhrazený soubor v GitHubu. Alternativou zůstává **Actions → Sestavit a vydat Zaměřovač TEST → Run workflow**. Běžné uložení kódu build nespouští.
 
 ## Google Disk
 
@@ -57,9 +57,9 @@ Datový model je zamýšlen jako budoucí vstup PC modulu. Editovatelné kóty j
 
 **Aktuální APK ke stažení: [GitHub Releases – poslední vydání](https://github.com/zaplikj30-ui/Zamerovac-android/releases/latest)**.
 
-Novou APK vytvoříš ručním spuštěním [Actions – Sestavit a vydat Zaměřovač TEST](https://github.com/zaplikj30-ui/Zamerovac-android/actions/workflows/build-apk.yml) přes **Run workflow**. Při běžných změnách se APK nevyrábí, ale při ručním sestavení zůstávají ověření a kontrola podpisu.
+Novou APK zařizuje ChatGPT po dokončení požadované aktualizace změnou `.github/apk-build-request.txt` nebo se dá výjimečně spustit přes [Actions – Sestavit a vydat Zaměřovač TEST](https://github.com/zaplikj30-ui/Zamerovac-android/actions/workflows/build-apk.yml) tlačítkem **Run workflow**. Běžné úpravy kódu APK nevyrábějí. Při vydání se sestavuje jen testovací varianta, proběhnou zdrojové testy a kontrola podpisu.
 
-- Každé úspěšné **ručně spuštěné** sestavení z větve `main` vytvoří číslované vydání obsahující přímo soubor `Zamerovac-v1.2.N.apk` (bez ZIP).
+- Každé úspěšné sestavení **na vyžádání** z větve `main` vytvoří číslované vydání obsahující přímo soubor `Zamerovac-v1.2.N.apk` (bez ZIP).
 - Na telefonu otevři odkaz, přihlas se ke svému GitHub účtu, vyber soubor `.apk`, otevři jej přes **Moje soubory → Stažené** a potvrď **Aktualizovat**. ChatGPT odkazy na dočasné soubory k instalaci nepoužívej.
 - Vývojová aplikace zůstává pod názvem **Zaměřovač** a má identifikátor `cz.zamerovac.app.preview` a stálý testovací podpis v `tools/debug-signing.p12.b64`. Všechny běhy workflow používají tento podpis a postupně rostoucí `versionCode` `1000 + GITHUB_RUN_NUMBER`. Aktualizace by proto neměla mazat data.
 - Původní ostrá varianta (cz.zamerovac.app) a testovací varianta (cz.zamerovac.app.preview) jsou dvě **odlišné aplikace** a data se mezi nimi nepřenášejí automaticky.
