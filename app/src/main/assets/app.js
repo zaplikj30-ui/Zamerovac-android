@@ -67,12 +67,12 @@ function markDeleted(id){let r=recById(id);if(!r)return;r.deleted=true;touch(r);
 function openRecord(id){let r=recById(id);if(!r)return;if(r.kind==='folder'){currentFolder=id;showFolder();return}if(r.kind==='photo'||r.kind==='canvas'){openEditor(r);return}if(r.kind==='note'){openNote(r);return}if(r.kind==='audio'||r.kind==='video'||r.kind==='file'){openAttachment(r.media[0]);return}}
 function showNewMenu(){closeMenus();$('newMenu').hidden=false;const choices=[
 ['📷','Pořídit fotografii',()=>pickMedia('camera')],
-['▧','Importovat obrázek / PDF / video',()=>pickMedia('media')],
-['▦','Nové plátno',()=>promptText('Nové plátno','Název','Nový náčrt',name=>addRecord(newRecord('canvas',name)))],
-['▤','Nová textová poznámka',()=>{let r=newRecord('note','Nová poznámka');state.records.push(r);save();openNote(r)}],
+['🖼️','Importovat obrázek / PDF / video',()=>pickMedia('media')],
+['🎨','Nové plátno',()=>promptText('Nové plátno','Název','Nový náčrt',name=>addRecord(newRecord('canvas',name)))],
+['📝','Nová textová poznámka',()=>{let r=newRecord('note','Nová poznámka');state.records.push(r);save();openNote(r)}],
 ['📁','Nová složka',()=>promptText('Nová složka','Jméno zákazníka nebo místnosti','',name=>addRecord(newRecord('folder',name)))],
-['♫','Hlasová poznámka',()=>recordVoice()],
-['▣','Přidat další soubor',()=>pickMedia('file')]
+['🎤','Hlasová poznámka',()=>recordVoice()],
+['📎','Přidat další soubor',()=>pickMedia('file')]
 ];
 $('newMenu').innerHTML=choices.map((a,i)=>`<button class="choice" data-i="${i}"><strong>${a[0]}</strong>${a[1]}</button>`).join('');$('newMenu').querySelectorAll('button').forEach(b=>b.onclick=()=>{closeMenus();choices[+b.dataset.i][2]()})}
 function pickMedia(type,handler=null){stagedFileHandler=handler;if(native&&type==='camera'){Native.takePhoto();return}if(native){Native.selectFiles(type);return}const inp=$('filePick');inp.value='';inp.accept=type==='camera'?'image/*':type==='file'?'*/*':'image/*,video/*,application/pdf,audio/*';inp.multiple=type==='file'||type==='media';if(type==='camera')inp.setAttribute('capture','environment');else inp.removeAttribute('capture');inp.click()}
