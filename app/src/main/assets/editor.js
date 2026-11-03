@@ -311,17 +311,23 @@ function stageDown(e){
   let hit;
   if(wantsCaption)hit={item:candidate,kind:'note-caption'};
   else if(grip?.item.id===candidate.id)hit=grip;
+  else if(['dimension','chain','cumulative'].includes(candidate.type))
+   hit={item:candidate,kind:'move-dimension'};
   else if(label?.item.id===candidate.id)hit=label;
   else hit={item:candidate,kind:'open-selected'};
   selectedHandle=hit;
   hit.startScreen={...s};
   hit.initialSelection=!alreadySelected;
   if(hit.kind==='point')hit.startPoint={...hit.point};
+  if(hit.kind==='move-dimension'){
+   hit.startA={...candidate.a};
+   hit.startB={...candidate.b};
+  }
   if(hit.kind==='note-caption')
    hit.startPoint={...(hit.item.captionMoved&&hit.item.b?hit.item.b:hit.item.a)};
   hit.startLabelT=Number(hit.item.labelT)||0;
   hit.dragged=false;
-  if(hit.kind==='point'||hit.kind==='label'||hit.kind==='note-caption')checkpoint();
+  if(hit.kind==='point'||hit.kind==='label'||hit.kind==='note-caption'||hit.kind==='move-dimension')checkpoint();
   magnifierPoint=hit.kind==='point'?hit.point:null;
   paint();return;
  }
@@ -337,7 +343,18 @@ if(selectedHandle&&pointers.size===1){
   if(selectedHandle.kind==='select-only'||selectedHandle.kind==='open-selected'){
    magnifierPoint=null;paint();return;
   }
-  if(selectedHandle.kind==='note-caption'){
+  if(selectedHandle.kind==='move-dimension'){
+    if(selectedHandle.dragged){
+      const a=selectedHandle.startA,b=selectedHandle.startB;
+      // Uchopení uprostřed posune oba konce společně. Zachovat délku a směr.
+      // Neprovádět magnet na jednom konci, který by změnil geometrii celé kóty.
+      const dx=Math.max(-Math.min(a.x,b.x),Math.min((s.x-selectedHandle.startScreen.x)/view.zoom,photoSize.w-Math.max(a.x,b.x)));
+      const dy=Math.max(-Math.min(a.y,b.y),Math.min((s.y-selectedHandle.startScreen.y)/view.zoom,photoSize.h-Math.max(a.y,b.y)));
+      selectedHandle.item.a={x:a.x+dx,y:a.y+dy};
+      selectedHandle.item.b={x:b.x+dx,y:b.y+dy};
+    }
+    magnifierPoint=null;
+  }else if(selectedHandle.kind==='note-caption'){
     const origin=worldToScreen(selectedHandle.startPoint);
     selectedHandle.item.b=screenToWorld({
       x:origin.x+s.x-selectedHandle.startScreen.x,
@@ -382,11 +399,11 @@ function stageUp(e){
   selectedHandle=null;magnifierPoint=null;loupeSide=null;
   if(handle.kind==='select-only'){paint();return}
   if(!moved){
-   if((handle.kind==='point'||handle.kind==='label'||handle.kind==='note-caption')&&editStack.length)editStack.pop();
+   if((handle.kind==='point'||handle.kind==='label'||handle.kind==='note-caption'||handle.kind==='move-dimension')&&editStack.length)editStack.pop();
    if(handle.initialSelection){paint();return}
    // Druhé samostatné klepnutí otevře úpravu bez časového limitu.
    editItem(item);
-  }else if(handle.kind==='point'||handle.kind==='label'||handle.kind==='note-caption'){
+  }else if(handle.kind==='point'||handle.kind==='label'||handle.kind==='note-caption'||handle.kind==='move-dimension'){
    touch(item);commitEditor();
   }else paint();
   return;
