@@ -48,7 +48,9 @@ const resizeY=note.insetY+oldWidth/2;
 drag([resizeX,resizeY],[resizeX+20,resizeY]);
 assert.ok(note.insetWidth>oldWidth,'Right-side handle must resize photo');
 assert.equal(sandbox.commits,3,'Changes must be persisted on drag end');
-const caption={x:note.a.x+45,y:note.a.y-23};
+const caption={x:145,y:77}; // Původní pozice textu musí zůstat i po přesunutí hrotu.
+assert.equal(note.b.x,caption.x,'Arrow motion must not move the caption X');
+assert.equal(note.b.y,caption.y,'Arrow motion must not move the caption Y');
 const heightBefore=note.insetY;
 drag([caption.x,caption.y],[caption.x+22,caption.y+10]);
 assert.equal(note.captionMoved,true,'Text label must move separately');
