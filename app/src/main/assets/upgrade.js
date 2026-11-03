@@ -512,6 +512,11 @@ renderSettings=function(){
  wrapper.querySelector('#restoreAll').onclick=()=>native?Native.importBackup():notify('Obnova ZIP je dostupná v Android verzi');
 };
 const releases=[
+ {version:appVersionShort,title:'Opravy adres a ikon',items:[
+  ['Číslo domu u fotografií a doplnění z RÚIAN','photoAddress'],
+  ['Nová přehledná ikona Bluetooth','readings'],
+  ['Ikona galerie fotografií','gallery']
+ ]},
  {version:'1.2',title:'Velká aktualizace Zaměřovače',items:[
   ['Galerie a listování fotografiemi','gallery'],
   ['Video a zvuk přímo v aplikaci','media'],
@@ -554,6 +559,7 @@ function navigateToFeature(key){
   case 'media':showFolder();notify('Klepni na video či hlasový soubor v seznamu zakázky');break;
   case 'search':showFolder();$('searchBtn').click();break;
   case 'address':showFolder();openAddressSearch();break;
+  case 'photoAddress':{if(photo&&window.openPhotoAddressEditor){showFolder();window.openPhotoAddressEditor(photo.id)}else{showFolder();notify('Nejdřív pořiď nebo importuj fotografii')}break}
   case 'lock':showFolder();if(first)recordActions(first.id);else notify('Vytvoř nejdřív zakázku');break;
   case 'versions':if(editor())restoreVersion();break;
   case 'sum':if(editor())openSumCheck();break;
