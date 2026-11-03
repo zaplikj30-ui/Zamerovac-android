@@ -479,9 +479,18 @@ $('bluetoothBtn').onclick=()=>{
 };
 const originalLaser=window.onLaserValue;
 const readings=[];
+try{
+ const saved=JSON.parse(localStorage.getItem('zamerovac-bosch-readings-v1')||'[]');
+ if(Array.isArray(saved))for(const x of saved.slice(0,40)){
+  if(x&&typeof x.value==='string'&&typeof x.unit==='string'&&typeof x.time==='string')
+   readings.push({value:x.value,unit:x.unit,time:x.time});
+ }
+}catch(e){}
+window.__boschHistoryReadings=()=>readings.map(x=>({...x}));
 window.onLaserValue=function(value,unit){
  readings.unshift({value:String(value),unit:String(unit||'mm'),time:new Date().toISOString()});
  if(readings.length>40)readings.pop();
+ try{localStorage.setItem('zamerovac-bosch-readings-v1',JSON.stringify(readings))}catch(e){}
  const handled=typeof window.__handleLaserAuto==='function'&&window.__handleLaserAuto(value,unit);
  if(!handled)originalLaser(value,unit);
  logEvent('bluetooth','Přijata hodnota z laseru');
@@ -497,7 +506,7 @@ function showLaserHistory(){
     window.__applyLaserMeasurement(r.value,r.unit,{fromHistory:true});
   else notify('Otevři fotografii a vyber kótu');
  });
- $('clearReadings').onclick=()=>{readings.length=0;$('modal').hidden=true;notify('Historie měření vymazána')};
+ $('clearReadings').onclick=()=>{readings.length=0;try{localStorage.removeItem('zamerovac-bosch-readings-v1')}catch(e){};$('modal').hidden=true;notify('Historie měření vymazána')};
 }
 const oldBluetoothLong=$('bluetoothBtn');
 oldBluetoothLong.addEventListener('contextmenu',e=>{e.preventDefault();showLaserHistory()});
