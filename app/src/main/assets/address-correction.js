@@ -99,7 +99,7 @@
       btn.setAttribute('aria-label',btn.title);
       btn.onclick=e=>{e.preventDefault();e.stopPropagation();openPhotoAddressEditor(record.id)};
       // U již správných adres nepřidáváme trvalé tlačítko, možnost zůstává v menu ⋮.
-      if(missing)info.append(btn);
+      if(missing&&(record.photoTakenAt||record.photoAddress||record.photoAddressChecked))info.append(btn);
     });
   };
   const previousRecordActions=recordActions;
