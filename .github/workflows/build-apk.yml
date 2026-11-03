@@ -1,13 +1,10 @@
 name: Sestavit a vydat Zaměřovač TEST
+# Testovaci APK vydavat jen na vyzadani; ne po kazdem commitu.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
 concurrency:
-  group: release-test-main
-  cancel-in-progress: false
+  group: zamerovac-test-apk-${{ github.ref }}
+  cancel-in-progress: true
 jobs:
   android:
     runs-on: ubuntu-latest
