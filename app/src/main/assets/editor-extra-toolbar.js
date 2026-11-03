@@ -1,4 +1,4 @@
-/* Rozšířená spodní lišta ImageMeter: klepnutí na ⋮ přidá dvě řady ikon.
+/* Rozšířená spodní lišta ImageMeter: gesta a uživatelské přesouvání ikon.
  * Ovládání zůstává uvnitř editoru. Nedotýká se formátu uložených zakázek.
  */
 'use strict';
@@ -66,7 +66,9 @@
     (needsInset&&!(item?.type==='note'&&item.media?.length))||
     (key==='redo'&&!redoStack.length)||
     (key==='paste'&&!copied);
-   b.disabled=!!disabled;
+   b.disabled=false;
+   b.dataset.unavailable=disabled?'true':'false';
+   b.setAttribute('aria-disabled',String(!!disabled));
    b.classList.toggle('extra-active',(key==='select'&&mode==='select')||(key==='grid'&&prefs.snapGrid));
   }
  }
@@ -118,7 +120,7 @@
   export(){$('exportBtn').click()}
  };
  panel.querySelectorAll('[data-extra]').forEach(b=>b.onclick=()=>{
-  if(b.disabled)return;
+  if(b.dataset.unavailable==='true')return;
   actions[b.dataset.extra]?.();
   update();
  });
@@ -146,7 +148,8 @@
     touch=e.touches.length===1?{x:e.touches[0].clientX,y:e.touches[0].clientY,done:false}:null;
    },{passive:true,capture:true});
    bar.addEventListener('touchmove',e=>{
-    if(!touch||e.touches.length!==1)return;
+    if(window.__toolbarDragging){e.preventDefault();e.stopImmediatePropagation();return}
+     if(!touch||e.touches.length!==1)return;
     const dx=e.touches[0].clientX-touch.x,dy=e.touches[0].clientY-touch.y;
     if(vertical(dx,dy)){
      if(!touch.done)setExpanded(dy<0);
@@ -154,7 +157,8 @@
     }
    },{passive:false,capture:true});
    bar.addEventListener('touchend',e=>{
-    if(!touch)return;
+    if(window.__toolbarDragging){touch=null;return}
+     if(!touch)return;
     const start=touch;touch=null;
     if(start.done){e.preventDefault();e.stopImmediatePropagation();return}
     if(e.changedTouches.length!==1)return;
