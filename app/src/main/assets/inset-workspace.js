@@ -68,6 +68,31 @@
     ctx.fillStyle='#231a30';ctx.fillText(label,p.x,p.y+1)}
   ctx.restore();
  }
+ function labelPosition(it,g){
+  const base=it.b||it.a||{x:0,y:0};
+  const p=worldToScreen(base);
+  return it.captionMoved?p:{x:p.x+45,y:p.y-23};
+ }
+ function labelRect(c,it,g){
+  const text=String(it.text||'').trim();
+  if(!text)return null;
+  const p=labelPosition(it,g),fs=Number(it.fontSize)||Math.max(14,Number(prefs.fontSize)||17);
+  c.font='500 '+fs+'px sans-serif';
+  const width=clamp(c.measureText(text).width+18,88,Math.max(88,stageCanvas.clientWidth-20));
+  return {x:p.x-width/2,y:p.y-fs/2-7,w:width,h:fs+15,p,text,fs};
+ }
+ function renderLabel(c,it,g){
+  const box=labelRect(c,it,g);
+  if(!box)return;
+  c.save();c.fillStyle='rgba(23,24,27,.8)';
+  c.strokeStyle='#f7dc27';c.lineWidth=1.3;
+  c.fillRect(box.x,box.y,box.w,box.h);
+  c.strokeRect(box.x,box.y,box.w,box.h);
+  c.fillStyle='#f7dc27';c.font='500 '+box.fs+'px sans-serif';
+  c.textAlign='center';c.textBaseline='middle';
+  c.fillText(box.text,box.p.x,box.p.y,box.w-8);
+  c.restore();
+ }
  function shouldShowArrow(it,g){
   const outside=(g.x<view.dx-2||g.y<view.dy-2||
     g.x+g.w>view.dx+photoSize.w*view.zoom+2||
@@ -90,6 +115,8 @@
    for(const note of it.detailItems||[])drawOriginal(c,note);
   }finally{view=oldView}
   c.restore();
+  // ImageMeter zachovává textovou část poznámky i po vložení detailu.
+  renderLabel(c,it,g);
   if(show&&!window.__exportingAnnotations)handle(c,g.anchor,'',isSelected);
   if(isSelected){
    // Stejně jako na videu: trojúhelníkové úchopy u obou stran a otáčení nahoře.
@@ -110,6 +137,13 @@
    const image=window.__detailPhotoCache[item.media[0]];
    const g=layout(item,image);
    const near=position=>pointerDistance(point,position)<=24;
+   if(item.text){
+     // Textová část poznámky může být nezávisle přesouvána.
+     const p=labelPosition(item,g);
+     const w=clamp(String(item.text).length*(Number(item.fontSize)||17)*.62+18,88,stageCanvas.clientWidth-20);
+     if(Math.abs(point.x-p.x)<w/2+7&&Math.abs(point.y-p.y)<24)
+       return {item,g,kind:'caption'};
+   }
    if(selected===item.id&&near(turn({x:0,y:-g.h/2-33},g)))return {item,g,kind:'rotate'};
    if(selected===item.id&&near(turn({x:g.w/2+15,y:0},g)))return {item,g,kind:'resize-right'};
    if(selected===item.id&&near(turn({x:-g.w/2-15,y:0},g)))return {item,g,kind:'resize-left'};
@@ -142,7 +176,9 @@
     width:Number(it.insetWidth)||220,
     height:g.h/view.zoom,
     angle:Number(it.insetRotation)||0,
-    anchor:{...(it.a||{x:0,y:0})},center:{x:g.cx,y:g.cy},
+    anchor:{...(it.a||{x:0,y:0})},
+    caption:{...(it.b||it.a||{x:0,y:0})},captionMoved:!!it.captionMoved,
+    center:{x:g.cx,y:g.cy},
     startAngle:Math.atan2(at.y-g.cy,at.x-g.cx),
     g,wasMoved:!!it.insetMoved
   };
@@ -160,6 +196,12 @@
    v.item.insetX=v.startingX+dx/view.zoom;
    v.item.insetY=v.startingY+dy/view.zoom;
    v.item.insetMoved=true;
+  }else if(v.kind==='caption'){
+   const start=v.captionMoved?worldToScreen(v.caption):{
+     x:worldToScreen(v.caption).x+45,y:worldToScreen(v.caption).y-23
+   };
+   v.item.b=screenToWorld({x:start.x+dx,y:start.y+dy});
+   v.item.captionMoved=true;
   }else if(v.kind==='anchor'){
    // Posun začátku šipky NESMÍ přesunout samotný detail.
    v.item.insetX=v.startingX;
@@ -191,11 +233,14 @@
    commitEditor();
   }else{
    if(editStack.length)editStack.pop();
-   if(v.kind==='move'){
+   if(v.kind==='move'||v.kind==='caption'){
     const now=Date.now();
     if(lastTap.id===v.item.id&&now-lastTap.time<410){
      lastTap={id:null,time:0};
-     if(typeof openNestedPhoto==='function')openNestedPhoto(current,v.item,v.item.media[0]);
+     if(v.kind==='move'&&typeof openNestedPhoto==='function')
+       openNestedPhoto(current,v.item,v.item.media[0]);
+     else if(v.kind==='caption'&&typeof openRichNote==='function')
+       openRichNote(v.item,false);
     }else lastTap={id:v.item.id,time:now};
    }
    paint();
@@ -209,6 +254,8 @@
   v.item.insetX=v.startingX;v.item.insetY=v.startingY;
   v.item.insetWidth=v.width;v.item.insetRotation=v.angle;
   v.item.a=v.anchor;
+  v.item.b=v.caption;
+  v.item.captionMoved=v.captionMoved;
   v.item.insetMoved=v.wasMoved;
   if(editStack.length)editStack.pop();
   paint();
