@@ -56,7 +56,7 @@
  function isLocked(){return !!window.isRecordLocked?.(current)}
  function update(){
   const item=currentItem(),locked=isLocked();
-  for(const b of panel.querySelectorAll('[data-extra]')){
+  for(const b of [...panel.querySelectorAll('[data-extra]'),...(toolbar.querySelectorAll?.('[data-extra]')||[])]){
    const key=b.dataset.extra;
    const requiresItem=['duplicate','copy','rotateLeft','rotateRight','forward','backward'].includes(key);
    const needsInset=['rotateLeft','rotateRight'].includes(key);
@@ -157,7 +157,7 @@
     }
    },{passive:false,capture:true});
    bar.addEventListener('touchend',e=>{
-    if(window.__toolbarDragging){touch=null;return}
+    if(window.__toolbarDragging||window.__toolbarDragJustFinished){touch=null;return}
      if(!touch)return;
     const start=touch;touch=null;
     if(start.done){e.preventDefault();e.stopImmediatePropagation();return}
@@ -173,7 +173,8 @@
     pen={x:e.clientX,y:e.clientY,id:e.pointerId};
    },true);
    bar.addEventListener('pointerup',e=>{
-    if(!pen||pen.id!==e.pointerId)return;
+    if(window.__toolbarDragging||window.__toolbarDragJustFinished){pen=null;return}
+     if(!pen||pen.id!==e.pointerId)return;
     const dx=e.clientX-pen.x,dy=e.clientY-pen.y;pen=null;
     if(vertical(dx,dy)){
      setExpanded(dy<0);e.preventDefault();e.stopImmediatePropagation();
