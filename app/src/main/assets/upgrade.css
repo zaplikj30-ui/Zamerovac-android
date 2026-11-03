@@ -106,12 +106,12 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 .addressChoice small{color:#d3c0ee}
 #photoAddressSearch{margin:4px 0}
 
-/* Editor: všechny kreslicí nástroje zůstávají pod jediným "+".
-   Vybraný nástroj viditelný ve výběru i po jeho uzavření. */
-.toolbar #activeTool {display:none!important}
+/* Dvojice původních tlačítek: + otevře všechny nástroje;
+   pravé tlačítko ↔ vrací poslední používaný nástroj. */
+.toolbar #activeTool {display:flex!important;align-items:center;justify-content:center}
 .toolbar #toolsToggle {
  border:1px solid #7b7582;
- border-radius:7px;
+ border-radius:7px 0 0 7px;
  min-width:48px;
  min-height:47px;
  font-size:32px;
@@ -124,6 +124,27 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
  color:#fff;
  box-shadow:inset 0 0 0 1px #27212d;
 }
+
+.toolbar #activeTool {
+ min-width:48px;
+ min-height:47px;
+ background:#333435;
+ border:1px solid #7b7582;
+ border-left:0;
+ border-radius:0 7px 7px 0;
+ transition:background .12s,border-color .12s;
+}
+.toolbar #activeTool.tool-active {
+ background:#654581;
+ color:#fff;
+ border:2px solid #d5b4ff;
+ border-left:1px solid #d5b4ff;
+ box-shadow:inset 0 0 0 1px #27212d;
+ opacity:1;
+}
+.toolbar #activeTool.inactive:not(.tool-active){opacity:.72}
+.toolbar #activeTool:disabled{opacity:.4!important}
+
 #toolMenu .choice.tool-chosen {
  background:#5d4379;
  color:#fff;
@@ -142,5 +163,6 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 #styleTool svg {width:29px;height:29px;display:block;margin:auto}
 #styleTool {display:flex;align-items:center;justify-content:center}
 @media(max-width:520px) {
- .toolbar #toolsToggle{min-width:44px;height:47px;font-size:30px}
+ .toolbar #toolsToggle{min-width:42px;height:47px;font-size:30px}
+ .toolbar #activeTool{min-width:42px;height:47px}
 }

@@ -385,11 +385,22 @@ paint=function(){
 function highlightCurrentTool(){
  const chooser=$('toolsToggle');
  if(!chooser)return;
- const isDrawing=mode!=='select'&&mode!=='pan';
- chooser.classList.toggle('tool-active',isDrawing);
- chooser.setAttribute('aria-pressed',String(isDrawing));
+ const activeLastTool=mode===lastDrawingTool;
+ const lastButton=$('activeTool');
+ if(lastButton){
+  lastButton.classList.toggle('tool-active',activeLastTool);
+  lastButton.setAttribute('aria-pressed',String(activeLastTool));
+  const last=allTools.find(x=>x[0]===lastDrawingTool);
+  // Zachovat obě role: vybrat/upravit ↔ poslední kreslicí nástroj.
+  lastButton.title=(last?.[2]||'Poslední nástroj')+
+    (activeLastTool?' – právě vybráno':' – klepnutím znovu vybrat')+
+    ' · dlouhým podržením přepnout opakované kreslení';
+  lastButton.setAttribute('aria-label',lastButton.title);
+ }
  const selectedTool=allTools.find(x=>x[0]===mode);
- chooser.title='Nástroje · vybráno: '+(selectedTool?.[2]||'Vybrat a upravit');
+ chooser.classList.remove('tool-active');
+ chooser.setAttribute('aria-expanded',String(!$('toolMenu').hidden));
+ chooser.title='Vybrat nástroj (＋) · '+(selectedTool?.[2]||'Vybrat a upravit');
  chooser.setAttribute('aria-label',chooser.title);
  const menu=$('toolMenu');
  if(menu&&!menu.hidden){
@@ -420,7 +431,7 @@ setTool=function(key,keepSelection=false){
 };
 function updateVisualControls(){
  $('fitBtn').hidden=true;
- $('activeTool').hidden=true;
+ $('activeTool').hidden=false;
  // Výrazná ikona tužky a pravítka – editor tloušťky čáry a velikosti textu.
  $('styleTool').innerHTML='<svg viewBox="0 0 24 24" width="29" height="29" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 16.8 15.8 4a2 2 0 0 1 2.8 0l1.4 1.4a2 2 0 0 1 0 2.8L7.2 21 2 22z"/><path d="m14.2 5.6 4.2 4.2"/><path d="M3 12V3h8"/><path d="M6 3v3M9 3v2M3 6h3M3 9h2"/></svg>';
  $('styleTool').title='Vzhled kóty – pravítko a tužka';
