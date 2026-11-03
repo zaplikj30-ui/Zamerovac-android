@@ -129,6 +129,49 @@
  }
  more.onclick=()=>setExpanded(panel.hidden);
  more.setAttribute('aria-controls','editorExtraToolbar');
+ // Video ImageMeter 1000093323.mp4: vysunout spodní panel gestem NAHORU,
+ // znovu zasunout gestem DOLŮ. Klepnutí na ⋮ dál funguje jako alternativa.
+ // Starší testovací DOM nemá addEventListener na panelu, proto ochrana.
+ if(typeof toolbar.addEventListener==='function'&&typeof panel.addEventListener==='function'){
+  for(const bar of [toolbar,panel]){
+   let touch=null,pen=null;
+   function vertical(dx,dy){return Math.abs(dy)>=34&&Math.abs(dy)>Math.abs(dx)*1.3}
+   bar.addEventListener('touchstart',e=>{
+    touch=e.touches.length===1?{x:e.touches[0].clientX,y:e.touches[0].clientY,done:false}:null;
+   },{passive:true,capture:true});
+   bar.addEventListener('touchmove',e=>{
+    if(!touch||e.touches.length!==1)return;
+    const dx=e.touches[0].clientX-touch.x,dy=e.touches[0].clientY-touch.y;
+    if(vertical(dx,dy)){
+     if(!touch.done)setExpanded(dy<0);
+     touch.done=true;e.preventDefault();e.stopImmediatePropagation();
+    }
+   },{passive:false,capture:true});
+   bar.addEventListener('touchend',e=>{
+    if(!touch)return;
+    const start=touch;touch=null;
+    if(start.done){e.preventDefault();e.stopImmediatePropagation();return}
+    if(e.changedTouches.length!==1)return;
+    const dx=e.changedTouches[0].clientX-start.x,dy=e.changedTouches[0].clientY-start.y;
+    if(vertical(dx,dy)){
+     setExpanded(dy<0);e.preventDefault();e.stopImmediatePropagation();
+    }
+   },{passive:false,capture:true});
+   bar.addEventListener('touchcancel',()=>{touch=null},{passive:true,capture:true});
+   bar.addEventListener('pointerdown',e=>{
+    if(e.pointerType==='touch')return;
+    pen={x:e.clientX,y:e.clientY,id:e.pointerId};
+   },true);
+   bar.addEventListener('pointerup',e=>{
+    if(!pen||pen.id!==e.pointerId)return;
+    const dx=e.clientX-pen.x,dy=e.clientY-pen.y;pen=null;
+    if(vertical(dx,dy)){
+     setExpanded(dy<0);e.preventDefault();e.stopImmediatePropagation();
+    }
+   },true);
+  }
+ }
+ window.setEditorExtraToolbarExpanded=setExpanded;
  setExpanded(false);
  // Horní nabídka ⋮ si ponechává všechny méně používané textové akce.
  $('editorTopMenu').onclick=showEditorOverflow;
