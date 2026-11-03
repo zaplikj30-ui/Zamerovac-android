@@ -61,6 +61,22 @@ class SourceSmokeTest(unittest.TestCase):
         # "Zakázky" was a no-op that only called showFolder on itself.
         self.assertNotIn("['📁  Zakázky',()=>showFolder()]", app)
 
+    def test_photo_capture_time_and_readable_location(self):
+        app=(ASSETS/'app.js').read_text()
+        activity=(ROOT/'app/src/main/java/cz/zamerovac/app/MainActivity.java').read_text()
+        resolver=(ROOT/'app/src/main/java/cz/zamerovac/app/PhotoAddressResolver.java').read_text()
+        manifest=(ROOT/'app/src/main/AndroidManifest.xml').read_text()
+        self.assertIn('java.time.Instant.now().toString()', activity)
+        self.assertIn('PhotoAddressResolver.resolve', activity)
+        self.assertIn('window.onNativePhotoAddress=', app)
+        self.assertIn('photoTakenAt', app)
+        self.assertIn('photoAddress', app)
+        self.assertIn('getFromLocation(', resolver)
+        self.assertIn('ACCESS_COARSE_LOCATION', manifest)
+        self.assertIn('ACCESS_FINE_LOCATION', manifest)
+        self.assertNotIn('latitude:', app)
+        self.assertNotIn('longitude:', app)
+
     def test_cloud_and_media_are_real_modules(self):
         java=ROOT/'app/src/main/java/cz/zamerovac/app'
         for module in ('SyncEngine.java','SyncJob.java','BoschClassicReader.java','MediaProvider.java'):
