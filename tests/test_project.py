@@ -40,6 +40,15 @@ class SourceSmokeTest(unittest.TestCase):
         self.assertIn('loupeCtx.setLineDash([5,7])', editor)
         self.assertIn('size*.5-pointer.x*zoom,size*.5-pointer.y*zoom', editor)
 
+    def test_installed_version_visible_to_user(self):
+        activity=(ROOT/'app/src/main/java/cz/zamerovac/app/MainActivity.java').read_text()
+        app=(ASSETS/'app.js').read_text()
+        css=(ASSETS/'style.css').read_text()
+        self.assertIn('getPackageManager().getPackageInfo(getPackageName(),0).versionName', activity)
+        self.assertIn('Native.getAppVersion()', app)
+        self.assertIn("id=\\\"appVersionInfo\\\"", app)
+        self.assertIn('#screenTitle .app-version', css)
+
     def test_cloud_and_media_are_real_modules(self):
         java=ROOT/'app/src/main/java/cz/zamerovac/app'
         for module in ('SyncEngine.java','SyncJob.java','BoschClassicReader.java','MediaProvider.java'):
