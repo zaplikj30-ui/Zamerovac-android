@@ -59,6 +59,13 @@ Uživatel vyrábí zakázkový nábytek. Vyvíjíme vlastní Android aplikaci na
 5. Pokud uživatel pošle screenshot nebo chybu z Androidu, nejprve reprodukuj/diagnostikuj problém a navrhni opravu přímo v repozitáři.
 6. Vzájemná spolupráce mezi ChatGPT a Codexem probíhá pomocí commitů v GitHubu. Neznamená to sdílení celé konverzace ani automatické synchronizování kontextu mimo tento repozitář.
 
+## Jednoduchý provoz pro uživatele — koordinuje ChatGPT/Codex
+- Uživatel zadává **co má aplikace dělat nebo co nefunguje**; nemusí zadávat commity, kroky GitHubu, testování ani sestavení.
+- V jedné pracovní dávce: pochopit zadání → upravit zdrojové soubory → spustit rychlé relevantní testy → uložit změny → **jednou na závěr**, pokud uživatel chce aktualizaci či instalaci, vyvolat sestavení `.github/apk-build-request.txt` → ověřit dostupný výsledek. Neprodlužovat práci zbytečnými průběžnými vydáními ani opakovaným úplným čtením beze změny.
+- Na malé opravy spouštěj cílené testy a kontrolu syntaxe; úplný workflow build až při vydání. Důležitá ověření nesmí být vynechána (kontrola podpisu, verze, příslušné regresní testy, ochrana dat). Emulátor jen když pomůže ověřit problém, nikoli automaticky při každé opravě.
+- Uživatel má testovat jen dotykové chování, Bluetooth a jiné věci vyžadující skutečný telefon či tablet. Dej mu přímý odkaz na ověřené vydání, krátce popiš co otestovat a co je neověřené. Nepředkládej manuální kroky v GitHubu, pokud je lze obsloužit dostupnými nástroji; když přístup neumožní dokončit krok, jasně to řekni.
+- Uživatelovo „pusť se do aktualizace“ znamená dodělat aktuálně požadovaný obsah a potom jednou vydat APK; **nespouštět build nedokončené práce na začátku**. Běžná diskuse či návrh bez požadavku na instalaci build nespouští.
+
 ## Přirozené pokyny k aktualizaci a sestavení APK
 - Uživatel nemusí vyslovit přesné „sestav APK“. Výrazy **„uděláme aktualizaci“**, **„pusť se do aktualizace“**, **„aktualizuj aplikaci“** a podobné znamenají provést požadované úpravy, ověřit dostupné testy a **po dokončení této várky změn sestavit jednu testovací APK**. Samotné zahájení úprav ještě není pokyn sestavit nedokončený kód.
 - Přímé **„sestav APK“**, **„vytvoř testovací verzi“**, **„dej mi instalaci“** znamená spustit sestavení aktuálního stavu bez čekání na další změny.
