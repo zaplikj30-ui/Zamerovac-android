@@ -149,6 +149,19 @@ function nearestLabel(point){
 function nearestHandle(point){let best=null,dist=31;for(let it of current.items||[]){for(let key of ['a','b'])if(it[key]){let d=Math.hypot(point.x-worldToScreen(it[key]).x,point.y-worldToScreen(it[key]).y);if(d<dist){best={item:it,key,point:it[key],kind:'point'};dist=d}}}return best}
 function nearestItem(point){let world=screenToWorld(point),best=null,dist=26/view.zoom;for(let it of current.items||[]){let a=it.a,b=it.b;if(a&&b){let ux=b.x-a.x,uy=b.y-a.y,den=ux*ux+uy*uy||1,t=Math.max(0,Math.min(1,((world.x-a.x)*ux+(world.y-a.y)*uy)/den));let d=Math.hypot(world.x-a.x-t*ux,world.y-a.y-t*uy);if(d<dist){best=it;dist=d}}else if(a&&Math.hypot(a.x-world.x,a.y-world.y)<dist)best=it}return best}
 function stageDown(e){if(screen!=='editor')return;e.preventDefault();stageCanvas.setPointerCapture(e.pointerId);const s=eventPoint(e);pointers.set(e.pointerId,s);if(pointers.size===2){let v=[...pointers.values()];gesture={distance:Math.hypot(v[0].x-v[1].x,v[0].y-v[1].y),zoom:view.zoom,mid:{x:(v[0].x+v[1].x)/2,y:(v[0].y+v[1].y)/2},world:screenToWorld({x:(v[0].x+v[1].x)/2,y:(v[0].y+v[1].y)/2})};drawStart=null;drawCurrent=null;selectedHandle=null;paint();return}if(pointers.size>2)return;
+// Poslední přijatý rozměr z laseru přiřadíme až po klepnutí na kótu.
+// Funguje i při aktivním kreslicím nástroji, ne jen v režimu Výběr.
+const reading=window.lastLaser;
+if(reading&&!reading.assigned&&Number.isFinite(Number(reading.value))&&
+   !window.isRecordLocked?.(current)&&$('modal').hidden){
+  const target=nearestLabel(s)?.item||nearestItem(s);
+  if(target&&['dimension','chain','cumulative'].includes(target.type)){
+   selected=target.id;
+   selectedHandle={item:target,kind:'laser-tap',startScreen:{...s},dragged:false};
+   magnifierPoint=null;
+   paint();return;
+  }
+}
 let hit=null;
 if(mode==='select')hit=nearestHandle(s)||nearestLabel(s);
 else if(selected){
@@ -172,6 +185,10 @@ drawPointerId=e.pointerId;drawStart=snap(screenToWorld(s));drawCurrent=drawStart
 function stageMove(e){if(screen!=='editor')return;const s=eventPoint(e);if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,s);if(pointers.size===2&&gesture){let v=[...pointers.values()],dist=Math.hypot(v[0].x-v[1].x,v[0].y-v[1].y);let mid={x:(v[0].x+v[1].x)/2,y:(v[0].y+v[1].y)/2};view.zoom=Math.max(.05,Math.min(12,gesture.zoom*dist/Math.max(1,gesture.distance)));view.dx=mid.x-gesture.world.x*view.zoom;view.dy=mid.y-gesture.world.y*view.zoom;paint();return}
 if(selectedHandle&&pointers.size===1){
   if(Math.hypot(s.x-selectedHandle.startScreen.x,s.y-selectedHandle.startScreen.y)>7)selectedHandle.dragged=true;
+  if(selectedHandle.kind==='laser-tap'){
+    // Případný posun prstu není potvrzení hodnoty.
+    magnifierPoint=null;paint();return;
+  }
   if(selectedHandle.kind==='label'){
     const info=labelInfo(selectedHandle.item);
     if(info&&info.d>0){
@@ -199,8 +216,22 @@ if(drawStart&&drawPointerId===e.pointerId){drawCurrent=snap(screenToWorld(s),dra
 function stageUp(e){if(screen!=='editor')return;const wasTwo=pointers.size===2;pointers.delete(e.pointerId);if(wasTwo){gesture=null;drawStart=null;drawCurrent=null;magnifierPoint=null;loupeSide=null;paint();return}if(selectedHandle){
   const moved=selectedHandle.dragged;
   const isLabel=selectedHandle.kind==='label';
+  const isLaserTap=selectedHandle.kind==='laser-tap';
   const item=selectedHandle.item;
   selectedHandle=null;magnifierPoint=null;loupeSide=null;
+  if(isLaserTap){
+    const last=window.lastLaser;
+    if(!moved&&last&&!last.assigned&&!window.isRecordLocked?.(current)){
+      checkpoint();
+      item.measure=last.value;
+      item.unit=last.unit;
+      selected=item.id;
+      last.assigned=true;
+      commitEditor();
+      notify('Bosch: '+last.value+' '+last.unit+' – zapsáno do kóty. ↶ vrátí změnu.');
+    }else paint();
+    return;
+  }
   if(!moved && (isLabel || item.type==='note')){
     // A tap on '?' or the numeric label opens the simple measurement editor.
     if(editStack.length)editStack.pop();
