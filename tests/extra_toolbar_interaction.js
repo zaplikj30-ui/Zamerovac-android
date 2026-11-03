@@ -33,7 +33,7 @@ const ctx={
  screen:'editor',current:{id:'photox',items:[]},selected:null,
  mode:'dimension',prefs:{snapGrid:false},redoStack:[],
  stageCanvas:{addEventListener:()=>{}},resizeEditor:()=>{ctx.resizes++},
- openEditor:()=>{},closeMenus:()=>{ctx.menusClosed++},
+ openEditor:()=>{},showEditorOverflow:()=>{},closeMenus:()=>{ctx.menusClosed++},
  paint:()=>{},notify:()=>{},save:()=>{},redoEditor:()=>{},setTool:k=>{ctx.lastTool=k},
  recordActions:()=>{},checkpoint:()=>{},commitEditor:()=>{},uid:()=>String(Math.random()),
  view:{zoom:1},resizes:0,menusClosed:0
