@@ -10,6 +10,10 @@ import java.util.UUID;
  */
 public final class BoschBleProtocol {
     private BoschBleProtocol() {}
+    public static final UUID SERVICE_UUID =
+        UUID.fromString("02a6c0d0-0451-4000-b000-fb3210111989");
+    public static final UUID CCCD_UUID =
+        UUID.fromString("00002902-0000-1000-8000-00805f9b34fb");
     public static final UUID MEASUREMENT_UUID =
         UUID.fromString("02a6c0d1-0451-4000-b000-fb3210111989");
     public static final byte[] START_STREAM =
