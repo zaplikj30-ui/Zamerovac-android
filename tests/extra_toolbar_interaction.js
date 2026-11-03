@@ -55,6 +55,16 @@ more.onclick();
 assert.equal(panel.hidden,true);
 assert.equal(more['aria-expanded'],'false');
 assert.equal(ctx.document.body.classList.contains('editor-extra-open'),false);
+const listeners={};
+toolbar.addEventListener=(event,cb)=>(listeners['bar-'+event]??=[]).push(cb);
+panel.addEventListener=(event,cb)=>(listeners['panel-'+event]??=[]).push(cb);
+// Nově se gesta registrují při načítání skriptu, proto další VM instance
+// je otestuje ve vlastním minimálním scénáři níže.
+assert.equal(typeof ctx.window.setEditorExtraToolbarExpanded,'function');
+ctx.window.setEditorExtraToolbarExpanded(true);
+assert.equal(panel.hidden,false);
+ctx.window.setEditorExtraToolbarExpanded(false);
+assert.equal(panel.hidden,true);
 more.onclick();
 assert.equal(ctx.window.handleAndroidBack(),'handled');
 assert.equal(panel.hidden,true);
