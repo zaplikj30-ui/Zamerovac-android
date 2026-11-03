@@ -108,7 +108,7 @@ function matchesSymbolSearch(label,query){
  return name.split(/\s+/).some(word=>symbolSearchNear(word,q));
 }
 function showTools(){closeMenus();$('toolMenu').hidden=false;let html='<div class="toolList">';for(let group of toolGroups){html+=`<div class="sectionLabel">${group.title}</div>`;for(let [key,icon,label] of group.tools)html+=`<button class="choice" data-tool="${key}"><strong>${icon}</strong>${label}</button>`}html+='</div>';$('toolMenu').innerHTML=html;$('toolMenu').querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{setTool(b.dataset.tool);closeMenus()})}
-function setTool(key,keepSelection=false){mode=key;selectedHandle=null;if(!keepSelection)selected=null;drawStart=null;drawCurrent=null;stroke=[];polylineDraft=[];if(key!=='select'&&key!=='pan')lastDrawingTool=key;updateDrawingToolButton();$('editorHint').textContent=key==='select'?'Klepni na kótu nebo posuň její koncový bod':key==='pan'?'Táhni fotografii pro posunutí':['polyline','chain','cumulative'].includes(key)?'Klepáním přidávej body; dalším klepnutím na poslední dokončíš':'Táhni prstem mezi body · rozměry zadáváš ručně';paint()}
+function setTool(key,keepSelection=false){mode=key;selectedHandle=null;if(!keepSelection)selected=null;drawStart=null;drawCurrent=null;stroke=[];polylineDraft=[];if(key!=='select'&&key!=='pan')lastDrawingTool=key;updateDrawingToolButton();$('editorHint').textContent=key==='select'?'Klepni na kótu nebo posuň její koncový bod':key==='pan'?'Táhni fotografii pro posunutí':key==='angle'?'Klepni na první rameno, vrchol a druhé rameno':['polyline','chain','cumulative'].includes(key)?'Klepáním přidávej body; dalším klepnutím na poslední dokončíš':'Táhni prstem mezi body · rozměry zadáváš ručně';paint()}
 function drawGrid(){if(!prefs.snapGrid)return;let spacing=Math.max(5,prefs.gridStep)*view.zoom;if(spacing<8)return;ctx.save();ctx.strokeStyle='#eeeeee28';ctx.lineWidth=1;const left=Math.max(0,Math.ceil(-view.dx/spacing)),right=Math.min(Math.ceil(photoSize.w/prefs.gridStep),Math.ceil((stageCanvas.clientWidth-view.dx)/spacing));const top=Math.max(0,Math.ceil(-view.dy/spacing)),bottom=Math.min(Math.ceil(photoSize.h/prefs.gridStep),Math.ceil((stageCanvas.clientHeight-view.dy)/spacing));ctx.beginPath();for(let i=left;i<=right;i++){const x=view.dx+i*spacing;ctx.moveTo(x,0);ctx.lineTo(x,stageCanvas.clientHeight)}for(let j=top;j<=bottom;j++){const y=view.dy+j*spacing;ctx.moveTo(0,y);ctx.lineTo(stageCanvas.clientWidth,y)}ctx.stroke();ctx.restore()}
 function paint(){if(screen!=='editor'||!current)return;let w=stageCanvas.clientWidth,h=stageCanvas.clientHeight;ctx.clearRect(0,0,w,h);ctx.save();ctx.fillStyle='#202123';ctx.fillRect(0,0,w,h);ctx.translate(view.dx,view.dy);ctx.scale(view.zoom,view.zoom);if(stageImg)ctx.drawImage(stageImg,0,0,photoSize.w,photoSize.h);else{ctx.fillStyle='#36383a';ctx.fillRect(0,0,photoSize.w,photoSize.h);ctx.strokeStyle='#4b4e50';ctx.lineWidth=3/view.zoom;ctx.strokeRect(0,0,photoSize.w,photoSize.h)}ctx.restore();drawGrid();for(let item of current.items||[]){if(item.id===selected)drawSelectedOutline(ctx,item);drawItem(ctx,item);}if(drawStart&&drawCurrent){let mock={type:mode,a:drawStart,b:drawCurrent,points:stroke,measure:'',unit:prefs.unit,color:prefs.color,width:prefs.lineWidth,fontSize:prefs.fontSize};drawItem(ctx,mock,false)}drawSelectedGrips(ctx);if(magnifierPoint&&prefs.loupe)drawLoupe();else $('loupe').hidden=true;}
 
@@ -164,7 +164,7 @@ function drawSelectedGrips(c){
   c.strokeRect(p.x-14,p.y-14,28,28);
   if(item.type!=='note'||(selectedHandle?.item?.id===item.id&&selectedHandle.kind==='point'&&selectedHandle.dragged)){c.beginPath();c.arc(p.x,p.y,14,0,Math.PI*2);c.fill();c.stroke();}
  }else{
-  if(['polyline','chain','cumulative'].includes(item.type)&&Array.isArray(item.points)&&item.points.length>1){
+  if(['polyline','chain','cumulative','angle'].includes(item.type)&&Array.isArray(item.points)&&item.points.length>1){
    for(const vertex of item.points){
     const p=worldToScreen(vertex);c.beginPath();c.arc(p.x,p.y,14,0,Math.PI*2);c.fill();c.stroke();
    }
@@ -210,7 +210,20 @@ function canvasText(text,p,color,size,angle=0){ctx.save();ctx.translate(p.x,p.y)
 function drawArrow(c,point,to,size=10){let a=Math.atan2(point.y-to.y,point.x-to.x);c.beginPath();c.moveTo(point.x,point.y);c.lineTo(point.x-size*Math.cos(a-.48),point.y-size*Math.sin(a-.48));c.moveTo(point.x,point.y);c.lineTo(point.x-size*Math.cos(a+.48),point.y-size*Math.sin(a+.48));c.stroke()}
 function drawItem(c,item){let a=item.a&&worldToScreen(item.a),b=item.b&&worldToScreen(item.b);let pts=(item.points||[]).map(worldToScreen);const color=item.color||prefs.color,fw=(item.width||prefs.lineWidth),fs=(item.fontSize||prefs.fontSize);c.save();c.strokeStyle=color;c.fillStyle=color;c.lineWidth=fw;c.lineJoin='round';c.lineCap='round';
 function seg(){c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.stroke()};
-if(['chain','cumulative'].includes(item.type)&&pts.length>1){
+if(item.type==='angle'&&pts.length>=3){
+ const p=pts[0],vertex=pts[1],q=pts[2];
+ c.beginPath();c.moveTo(p.x,p.y);c.lineTo(vertex.x,vertex.y);c.lineTo(q.x,q.y);c.stroke();
+ const a1=Math.atan2(p.y-vertex.y,p.x-vertex.x),a2=Math.atan2(q.y-vertex.y,q.x-vertex.x);
+ const angle=Math.atan2(Math.sin(a2-a1),Math.cos(a2-a1));
+ const degrees=Math.abs(angle)*180/Math.PI;
+ const radius=Math.max(8,Math.min(36,Math.hypot(p.x-vertex.x,p.y-vertex.y)*.4,
+  Math.hypot(q.x-vertex.x,q.y-vertex.y)*.4));
+ c.beginPath();c.arc(vertex.x,vertex.y,radius,a1,a1+angle,angle<0);c.stroke();
+ const mid=a1+angle/2;
+ canvasText((item.measure||degrees.toFixed(1))+'°',
+  {x:vertex.x+Math.cos(mid)*(radius+25),y:vertex.y+Math.sin(mid)*(radius+25)},color,fs);
+}
+else if(['chain','cumulative'].includes(item.type)&&pts.length>1){
  for(let i=0;i<pts.length-1;i++){
   const from=item.type==='cumulative'?pts[0]:pts[i],to=pts[i+1];
   const data=item.segmentData?.[i]||{};
@@ -342,7 +355,7 @@ function nearestLabel(point){
 function nearestHandle(point){
  let best=null,dist=31;
  for(const item of current.items||[]){
-  if(['polyline','chain','cumulative'].includes(item.type)&&Array.isArray(item.points)&&item.points.length>1){
+  if(['polyline','chain','cumulative','angle'].includes(item.type)&&Array.isArray(item.points)&&item.points.length>1){
    item.points.forEach((vertex,index)=>{
     const p=worldToScreen(vertex),d=Math.hypot(point.x-p.x,point.y-p.y);
     if(d<dist){best={item,key:'points',point:vertex,pointIndex:index,kind:'point'};dist=d}
@@ -368,7 +381,7 @@ function nearestItem(point){
    if(Math.abs(point.x-p.x)<width/2+7&&Math.abs(point.y-p.y)<Math.max(23,(item.fontSize||prefs.fontSize)*.9))
     return item;
   }
-  if((['polyline','chain','cumulative','freehand'].includes(item.type))&&Array.isArray(item.points)&&item.points.length>1){
+  if((['polyline','chain','cumulative','angle','freehand'].includes(item.type))&&Array.isArray(item.points)&&item.points.length>1){
    for(let i=1;i<item.points.length;i++){
     const a=item.points[i-1],b=item.points[i],dx=b.x-a.x,dy=b.y-a.y;
     const t=Math.max(0,Math.min(1,((world.x-a.x)*dx+(world.y-a.y)*dy)/(dx*dx+dy*dy||1)));
@@ -438,9 +451,12 @@ function stageDown(e){
   drawStart=null;drawCurrent=null;selectedHandle=null;paint();return;
  }
  if(pointers.size>2)return;
- if(['polyline','chain','cumulative'].includes(mode)){
+ if(['polyline','chain','cumulative','angle'].includes(mode)){
    const position=snap(screenToWorld(s),polylineDraft[polylineDraft.length-1]||null);
    const last=polylineDraft[polylineDraft.length-1];
+   if(mode==='angle'&&polylineDraft.length===2){
+    polylineDraft.push({...position});completePolyline('angle');return;
+   }
    if(polylineDraft.length>=2&&last&&Math.hypot(position.x-last.x,position.y-last.y)<15/Math.max(.05,view.zoom)){
     completePolyline(mode);return;
    }
@@ -485,7 +501,7 @@ function stageDown(e){
   let hit;
   if(wantsCaption)hit={item:candidate,kind:'note-caption'};
   else if(grip?.item.id===candidate.id)hit=grip;
-  else if(['chain','cumulative'].includes(candidate.type)&&candidate.points?.length>1)
+  else if(['chain','cumulative','angle'].includes(candidate.type)&&candidate.points?.length>1)
    hit={item:candidate,kind:'move-polyline'};
   else if(['dimension','chain','cumulative','line','arrow','angle','target'].includes(candidate.type))
    hit={item:candidate,kind:'move-dimension'};
@@ -516,7 +532,7 @@ function stageDown(e){
  drawCurrent=drawStart;stroke=[drawStart];magnifierPoint=drawStart;paint();
 }
 function stageMove(e){if(screen!=='editor')return;const s=eventPoint(e);if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,s);if(pointers.size===2&&gesture){let v=[...pointers.values()],dist=Math.hypot(v[0].x-v[1].x,v[0].y-v[1].y);let mid={x:(v[0].x+v[1].x)/2,y:(v[0].y+v[1].y)/2};view.zoom=Math.max(.05,Math.min(12,gesture.zoom*dist/Math.max(1,gesture.distance)));view.dx=mid.x-gesture.world.x*view.zoom;view.dy=mid.y-gesture.world.y*view.zoom;paint();return}
-if(['polyline','chain','cumulative'].includes(mode)&&polylineDraft.length&&pointers.size===1){
+if(['polyline','chain','cumulative','angle'].includes(mode)&&polylineDraft.length&&pointers.size===1){
   drawCurrent=snap(screenToWorld(s),polylineDraft[polylineDraft.length-1]);
   stroke=[...polylineDraft,{...drawCurrent}];paint();return;
  }
@@ -596,7 +612,7 @@ function stageUp(e){
   gesture=null;drawStart=null;drawCurrent=null;
   magnifierPoint=null;loupeSide=null;paint();return;
  }
- if(['polyline','chain','cumulative'].includes(mode)&&polylineDraft.length){magnifierPoint=null;return;}
+ if(['polyline','chain','cumulative','angle'].includes(mode)&&polylineDraft.length){magnifierPoint=null;return;}
  if(selectedHandle){
   const handle=selectedHandle,item=handle.item,moved=handle.dragged;
   selectedHandle=null;magnifierPoint=null;loupeSide=null;
@@ -741,7 +757,7 @@ function editSegmentedItem(item){
  };
 }
 function editItem(item){
- if(['polyline','chain','cumulative'].includes(item.type)&&item.points?.length>1){editSegmentedItem(item);return}
+ if(['polyline','chain','cumulative','angle'].includes(item.type)&&item.points?.length>1){editSegmentedItem(item);return}
  const dimension=['dimension','chain','cumulative','area','angle'].includes(item.type);
  if(dimension){
   const laserApplicable=['dimension','chain','cumulative'].includes(item.type);
