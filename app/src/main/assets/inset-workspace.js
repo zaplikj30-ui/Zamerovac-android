@@ -67,6 +67,19 @@
     ctx.fillStyle='#231a30';ctx.fillText(label,p.x,p.y+1)}
   ctx.restore();
  }
+ // Rotace zobrazená jako dvě lehké šipky nad obrázkem, ne nové tlačítko v kolečku.
+ function rotationHandle(c,p,g){
+  c.save();c.translate(p.x,p.y);c.rotate(g.angle);
+  c.lineCap='round';c.lineJoin='round';
+  c.strokeStyle='rgba(255,255,255,.88)';c.fillStyle='rgba(255,255,255,.88)';
+  c.shadowColor='rgba(0,0,0,.7)';c.shadowBlur=4;c.lineWidth=2.7;
+  for(const side of [-1,1]){
+   const a=side*3,b=side*17;
+   c.beginPath();c.moveTo(a,0);c.lineTo(b,0);c.stroke();
+   c.beginPath();c.moveTo(b,0);c.lineTo(b-side*7,-6);c.lineTo(b-side*7,6);c.closePath();c.fill();
+  }
+  c.restore();
+ }
  function labelPosition(it,g){
   const base=it.b||it.a||{x:0,y:0};
   const p=worldToScreen(base);
@@ -102,10 +115,11 @@
   if(show)connector(c,g);
   c.save();
   c.translate(g.cx,g.cy);c.rotate(g.angle);c.translate(-g.cx,-g.cy);
-  c.fillStyle='#1c1b22';
-  c.fillRect(g.x-3,g.y-3,g.w+6,g.h+6);
+  c.fillStyle='rgba(0,0,0,.25)';
+  c.fillRect(g.x-2,g.y-2,g.w+4,g.h+4);
   c.drawImage(image,g.x,g.y,g.w,g.h);
-  c.strokeStyle=isSelected?'#e3c4ff':'#f7dc27';c.lineWidth=isSelected?3:2;
+  // ImageMeter keeps the original thin yellow photo outline even while selected.
+  c.strokeStyle='#f7dc27';c.lineWidth=isSelected?2.4:2;
   c.strokeRect(g.x-1,g.y-1,g.w+2,g.h+2);
   const oldView=view;
   try{
@@ -117,16 +131,22 @@
   renderLabel(c,it,g);
   if(show&&!window.__exportingAnnotations)handle(c,g.anchor,'',isSelected);
   if(isSelected){
-   // Stejně jako na videu: trojúhelníkové úchopy u obou stran a otáčení nahoře.
+   // Referenční ImageMeter: poloprůhledný středový úchop pro tažení fotografie.
+   c.save();c.fillStyle='rgba(255,255,255,.46)';
+   c.strokeStyle='rgba(38,38,38,.55)';c.lineWidth=1.4;
+   c.setLineDash([3,3]);
+   c.beginPath();c.arc(g.cx,g.cy,11,0,Math.PI*2);c.fill();c.stroke();c.restore();
+   // Jemné bílé trojúhelníkové úchopy u obou stran a otáčení nahoře.
    for(const side of [-1,1]){
     const p=turn({x:side*(g.w/2+15),y:0},g);
     c.save();c.translate(p.x,p.y);c.rotate(g.angle);
-    c.fillStyle='#f7f7f7';c.strokeStyle='#39343e';c.lineWidth=1.3;
+    c.fillStyle='rgba(255,255,255,.72)';
+    c.strokeStyle='rgba(55,55,55,.65)';c.lineWidth=1.3;c.setLineDash([4,3]);
     c.beginPath();
     c.moveTo(side*17,0);c.lineTo(-side*7,-16);c.lineTo(-side*7,16);c.closePath();
     c.fill();c.stroke();c.restore();
    }
-   handle(c,turn({x:0,y:-g.h/2-33},g),'⟳',true);
+   rotationHandle(c,turn({x:0,y:-g.h/2-33},g),g);
   }
  };
  function hitTest(point){

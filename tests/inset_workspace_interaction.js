@@ -16,6 +16,7 @@ const sandbox={
  boundsPoint:p=>({...p}),setTool:k=>{sandbox.mode=k},
  paint:()=>{},commitEditor:()=>{sandbox.commits++},checkpoint:()=>{},editStack:[],commits:0,
  fitImage:()=>{},exportPng:()=>{},notify:()=>{},drawItem:()=>{},stageImg:null,
+ opens:[],openNestedPhoto:(parent,item,media)=>sandbox.opens.push(media),
  native:false,Native:{},document:{createElement:()=>({})},
  console,
 };
@@ -55,4 +56,12 @@ assert.equal(note.insetY,heightBefore,'Moving caption must not move detail');
 assert.equal(note.a.x,130,'Moving caption must not move arrow origin');
 assert.equal(sandbox.commits,4,'Caption motion must be saved');
 assert.equal(typeof sandbox.window.renderPhotoInset,'function');
+// Dvě samostatná klepnutí: první označí vložený obrázek, druhé otevře jeho kóty.
+sandbox.selected=null;
+const center=[note.insetX+note.insetWidth/2,note.insetY+note.insetWidth/2];
+pointer('pointerdown',...center);pointer('pointerup',...center);
+assert.equal(sandbox.selected,note.id,'First tap must select the inset');
+assert.equal(sandbox.opens.length,0,'First tap may not open nested editor');
+pointer('pointerdown',...center);pointer('pointerup',...center);
+assert.deepEqual(sandbox.opens,['detail-1'],'Second separate tap opens editable detail');
 console.log('OK: move outside photo, independent arrow anchor, caption, resize, persistence');

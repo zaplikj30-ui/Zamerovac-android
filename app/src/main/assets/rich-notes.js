@@ -5,7 +5,10 @@ function openRichNote(item,isNew){
  if(!current||window.isRecordLocked?.(current)){notify('Záznam je uzamčen');return}
  const parent=current;
  const attachments=Array.isArray(item.media)?item.media.slice():[];
- const initialInsetWidth=Number(item.insetWidth)||Math.max(120,Math.min(1400,Math.round(photoSize.w*.20)));
+ // ImageMeter reference: default inset occupies about two fifths of the photo width,
+ // rather than the much smaller 20% thumbnail used in older Zaměřovač builds.
+ // Respect an already saved custom size (including deliberately tiny insets).
+ const initialInsetWidth=Number(item.insetWidth)||Math.max(140,Math.min(1400,Math.round(photoSize.w*.42)));
  let recording=null;
  const previousCancel=$('cancelModal').onclick;
  $('modal')?.querySelector('.dialog')?.classList.add('richNoteDialog');
