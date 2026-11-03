@@ -221,10 +221,6 @@ function selectAnnotation(item){
  if(!item)return;
  selected=item.id;
  if(mode!=='select')setTool('select',true);
- // Předchozí Bosch měření se přiřadí právě při výběru kóty.
- // Text poznámky ani samotný detailní obrázek ho nikdy nepřevezme.
- if(['dimension','chain','cumulative'].includes(item.type))
-  window.__assignPendingLaserToSelected?.();
  paint();
 }
 function stageDown(e){
