@@ -201,7 +201,7 @@ function stageUp(e){if(screen!=='editor')return;const wasTwo=pointers.size===2;p
   const isLabel=selectedHandle.kind==='label';
   const item=selectedHandle.item;
   selectedHandle=null;magnifierPoint=null;loupeSide=null;
-  if(!moved && isLabel){
+  if(!moved && (isLabel || item.type==='note')){
     // A tap on '?' or the numeric label opens the simple measurement editor.
     if(editStack.length)editStack.pop();
     editItem(item);
@@ -221,9 +221,10 @@ if(['dimension','chain','cumulative','area'].includes(mode)){
   commitEditor();
   finishDraw(item);
 }
-else if(mode==='note'||mode==='symbol'){modal('Text do fotografie',`<label>Popisek</label><input id="drawText" placeholder="Např. přívod vody" value="">`,()=>{item.text=$('drawText').value;checkpoint();current.items.push(item);commitEditor();finishDraw(item)})}
+else if(mode==='note'){openRichNote(item,true)}
+ else if(mode==='symbol'){modal('Symbol do fotografie',`<label>Popisek</label><input id="drawText" placeholder="Např. přívod vody" value="">`,()=>{item.text=$('drawText').value;checkpoint();current.items.push(item);commitEditor();finishDraw(item)})}
 else{checkpoint();current.items.push(item);commitEditor();finishDraw(item)}}
-function editItem(item){if(['dimension','chain','cumulative','area','angle'].includes(item.type))modal('Upravit hodnotu',`<label>Rozměr</label><input id="measureInput" type="text" value="${escapeHtml(item.measure)}"><label>Jednotka</label><select id="measureUnit">${['mm','cm','m','in','m²','°'].map(u=>`<option ${u===(item.unit||prefs.unit)?'selected':''}>${u}</option>`).join('')}</select><div class="row wrap"><button id="removeItem" class="outline">Smazat kótu</button></div>`,()=>{checkpoint();item.measure=$('measureInput').value;item.unit=$('measureUnit').value;commitEditor()});else modal('Upravit prvek',`<label>Text</label><input id="drawText" value="${escapeHtml(item.text||'')}"><div class="row"><button id="removeItem" class="outline">Smazat prvek</button></div>`,()=>{checkpoint();item.text=$('drawText').value;commitEditor()});$('removeItem').onclick=()=>{checkpoint();current.items=current.items.filter(i=>i.id!==item.id);selected=null;$('modal').hidden=true;commitEditor()}}
+function editItem(item){if(['dimension','chain','cumulative','area','angle'].includes(item.type))modal('Upravit hodnotu',`<label>Rozměr</label><input id="measureInput" type="text" value="${escapeHtml(item.measure)}"><label>Jednotka</label><select id="measureUnit">${['mm','cm','m','in','m²','°'].map(u=>`<option ${u===(item.unit||prefs.unit)?'selected':''}>${u}</option>`).join('')}</select><div class="row wrap"><button id="removeItem" class="outline">Smazat kótu</button></div>`,()=>{checkpoint();item.measure=$('measureInput').value;item.unit=$('measureUnit').value;commitEditor()});else if(item.type==='note'){openRichNote(item,false);return}else modal('Upravit prvek',`<label>Text</label><input id="drawText" value="${escapeHtml(item.text||'')}"><div class="row"><button id="removeItem" class="outline">Smazat prvek</button></div>`,()=>{checkpoint();item.text=$('drawText').value;commitEditor()});$('removeItem').onclick=()=>{checkpoint();current.items=current.items.filter(i=>i.id!==item.id);selected=null;$('modal').hidden=true;commitEditor()}}
 function showEditorOverflow(){
   showAppMenu('editorOverflow',[
     [prefs.repeatDrawing?'Opakovat kóty ✓':'Jedna kóta ✓',()=>{
