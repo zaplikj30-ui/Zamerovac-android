@@ -348,10 +348,9 @@ function stageDown(e){
   const anchor=isTextNote?worldToScreen(candidate.a||{x:0,y:0}):null;
   const anchorNear=anchor&&Math.hypot(s.x-anchor.x,s.y-anchor.y)<=24;
   const wantsCaption=isTextNote&&onCaption&&(!candidate.captionMoved||!anchorNear);
-  if(!alreadySelected&&!wantsCaption){
-   selectedHandle={item:candidate,kind:'select-only',startScreen:s,dragged:false};
-   magnifierPoint=null;return;
-  }
+  // První krátké klepnutí jen označí prvek. První skutečné tažení ale
+  // musí hned fungovat (střed = celá kóta, konec = jediný bod).
+  // Rozlišení klepnutí a tahu zajistí initialSelection v stageUp.
   const grip=nearestHandle(s);
   const label=nearestLabel(s);
   let hit;
