@@ -114,10 +114,20 @@ public final class PhotoAddressResolver {
                         String city=a.getLocality();
                         if(city==null||city.isEmpty())city=a.getSubAdminArea();
                         String postcode=a.getPostalCode();
+                        // Menší obce nemají pojmenované ulice: getThoroughfare()
+                        // bývá null, ale samotné číslo domu může být k dispozici.
+                        if(number==null||number.trim().isEmpty()){
+                            String feature=a.getFeatureName();
+                            if(feature!=null&&feature.matches("[0-9]{1,5}(?:/[0-9]{1,5})?"))
+                                number=feature;
+                        }
                         StringBuilder sb=new StringBuilder();
-                        if(street!=null&&!street.isEmpty()){
-                            sb.append(street);
-                            if(number!=null&&!number.isEmpty())sb.append(" ").append(number);
+                        if(street!=null&&!street.trim().isEmpty())sb.append(street.trim());
+                        else if(number!=null&&!number.trim().isEmpty()&&city!=null)
+                            sb.append(city.trim());
+                        if(number!=null&&!number.trim().isEmpty()){
+                            if(sb.length()>0)sb.append(" ");
+                            sb.append(number.trim());
                         }
                         if(postcode!=null&&!postcode.isEmpty()||city!=null&&!city.isEmpty()){
                             if(sb.length()>0)sb.append(", ");
