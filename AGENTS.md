@@ -4,6 +4,20 @@
 Tento repozitář je SAMOSTATNÝ projekt `Zamerovac-android`. Neměň repozitář `Prevadec-spojitosti`.
 Uživatel vyrábí zakázkový nábytek. Vyvíjíme vlastní Android aplikaci na zaměřování zakázek, inspirovanou pracovním postupem ImageMeteru. Nejde o kopii původního kódu, designových prostředků ani o obcházení jeho licence. Komunikuj česky a používej jednoduché vysvětlení, nevyžaduj znovu už schválené volby.
 
+## ZÁVAZNÝ VÝCHOZÍ PRINCIP: ImageMeter je funkční referenční aplikace
+**Priorita zadání uživatele:** Zaměřovač se má v běžném používání co nejvíc chovat jako ImageMeter. Nejde o volnou inspiraci ani o nový alternativní návrh editoru. Zachovej známé rozložení a pořadí běžných ovládacích prvků, dotykové interakce, práci s kótami, přetahování konců, lupu, výběr, nabídky i workflow fotografií. Nejdřív reprodukuj ověřené chování, teprve potom zjednodušuj a rozšiřuj. Výjimky jsou pouze explicitně vyřazené funkce uvedené níže a další změny, které uživatel skutečně schválil. Funkce mají vlastní originální implementaci bez přebírání proprietárního kódu a grafiky.
+
+**Toto je důležitější než předchozí experimentální odchylky našeho editoru.** Pokud Zaměřovač funguje jinak než ImageMeter a uživatel danou změnu neschválil, je to nevyřešený rozdíl, nikoliv automaticky správné řešení.
+
+### Povinný postup při přizpůsobování funkce
+1. Nejprve prozkoumej dostupné uživatelské referenční snímky/videa a případné APK/XAPK a odděl *pozorované chování* od odhadů. Pokud máš možnost legitimně analyzovat zdroje v APK, použij to jako pomocný podklad; nepředstírej přístup ke zdrojovému kódu ani přímý běh aplikace, pokud není k dispozici.
+2. Sepiš konkrétní rozdíl výchozího ImageMeteru vs. aktuálního Zaměřovače (například velikost lupy, strana obrazovky, poloha kóty uvnitř lupy, přichytávání a drag).
+3. Oprav příčinu v modelu souřadnic a dotyku, nikoliv kosmeticky při každé iteraci přesouvej či zvětšuj lupu. Ověř chování na levé i pravé straně, při různém přiblížení a orientaci fotografie; pokud není možné simulovat skutečné dotyky, označ ověření na telefonu jako stále otevřené.
+4. Přidej cílený regresní test a zkontroluj build, ale **úspěšné sestavení nedokazuje shodu chování**. Nevydávej to za vyřešený problém bez ověření na zařízení.
+5. Nepřidávej do běžného UI další komplikovaná nastavení bez důvodu. Když bude potřeba rozhodnutí, drž se ověřeného výchozího chování; uživateli nepokládej opakovaně otázky o schválených vlastnostech.
+
+**Výslovná preference pro lupu a kóty:** žádné velké tečky/úchyty na koncích, dotykové cíle však zůstávají použitelné. Žádná zelená záře vybrané kóty. Ve zvětšovacím výřezu musí být správně vidět konec skutečně vykreslené kótovací čáry; velikost a tvar porovnávej s uživatelskou referencí a neodhaduj je pouze z paměti. Nepřenášej chybná rozhodnutí ze starých iterací jako nový standard.
+
 ## Schválené požadavky
 - Organizace zákazníků do složek a místností, podsložky a přílohy.
 - Pořizování a import fotografií, PDF a jiných souborů; přidání videí.
