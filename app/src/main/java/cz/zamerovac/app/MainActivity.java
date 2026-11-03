@@ -349,10 +349,23 @@ public class MainActivity extends Activity {
     private void useCamera(){
         if(Build.VERSION.SDK_INT>=23&&checkSelfPermission(Manifest.permission.CAMERA)!=PackageManager.PERMISSION_GRANTED){requestPermissions(new String[]{Manifest.permission.CAMERA},REQUEST_CAMERA_PERMISSION);return;}
         cameraId=UUID.randomUUID().toString();ContentValues vals=new ContentValues();vals.put(MediaStore.Images.Media.DISPLAY_NAME,"zamerovac-"+cameraId+".jpg");vals.put(MediaStore.Images.Media.MIME_TYPE,"image/jpeg");
-        cameraOutput=getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,vals);
-        if(cameraOutput==null){error("Nepodařilo se vytvořit fotografii");return;}
-        Intent i=new Intent(MediaStore.ACTION_IMAGE_CAPTURE);i.putExtra(MediaStore.EXTRA_OUTPUT,cameraOutput);i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
-        try{startActivityForResult(i,REQUEST_CAMERA);}catch(Exception ex){error("Fotoaparát se nepodařilo spustit: "+ex.getMessage());}
+        try{
+            cameraOutput=getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,vals);
+            if(cameraOutput==null){error("Nepodařilo se vytvořit fotografii");js("window.onNativeMediaDone?.()");return;}
+            Intent i=new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
+            i.putExtra(MediaStore.EXTRA_OUTPUT,cameraOutput);
+            i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+            startActivityForResult(i,REQUEST_CAMERA);
+        }catch(Exception ex){
+            error("Fotoaparát se nepodařilo spustit: "+ex.getMessage());
+            discardPendingCamera();
+            js("window.onNativeMediaDone?.()");
+        }
+    }
+    private void discardPendingCamera(){
+        Uri unused=cameraOutput;
+        cameraOutput=null;cameraId=null;
+        if(unused!=null)try{getContentResolver().delete(unused,null,null);}catch(Exception ignored){}
     }
     private void chooseAttachments(String type){
         pendingMediaType=type;
@@ -414,16 +427,25 @@ public class MainActivity extends Activity {
     }
     @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);
         if(request==REQUEST_FILE){if(fileCallback!=null){Uri[] resultUris=null;if(result==RESULT_OK&&data!=null){if(data.getClipData()!=null){int n=data.getClipData().getItemCount();resultUris=new Uri[n];for(int i=0;i<n;i++)resultUris[i]=data.getClipData().getItemAt(i).getUri();}else if(data.getData()!=null)resultUris=new Uri[]{data.getData()};}fileCallback.onReceiveValue(resultUris);fileCallback=null;}return;}
-        if(result!=RESULT_OK){if(request==REQUEST_BACKUP)pendingArchiveFolderId=null;if(request==REQUEST_ATTACH)js("window.onNativeMediaDone?.()");if(request==REQUEST_ISSUE_EXPORT)pendingIssueZipId=null;return;}
+        if(result!=RESULT_OK){
+            if(request==REQUEST_BACKUP)pendingArchiveFolderId=null;
+            if(request==REQUEST_ATTACH)js("window.onNativeMediaDone?.()");
+            if(request==REQUEST_CAMERA){discardPendingCamera();js("window.onNativeMediaDone?.()");}
+            if(request==REQUEST_ISSUE_EXPORT)pendingIssueZipId=null;
+            return;
+        }
         if(request==REQUEST_ATTACH&&data!=null){int done=0;try{
             if(data.getClipData()!=null){for(int i=0;i<data.getClipData().getItemCount();i++){importUri(data.getClipData().getItemAt(i).getUri());done++;}}
             else if(data.getData()!=null){importUri(data.getData());done++;}
         }catch(Exception ex){error("Import souborů: "+ex.getMessage());}js("window.onNativeMediaDone?.()");return;}
-        if(request==REQUEST_CAMERA&&cameraOutput!=null){
+        if(request==REQUEST_CAMERA){
+            Uri captured=cameraOutput;
             String id=cameraId;
+            cameraOutput=null;cameraId=null;
             try{
+                if(captured==null||id==null)throw new IOException("Chybí výstup fotoaparátu");
                 String takenAt=java.time.Instant.now().toString();
-                filePicked(cameraOutput,id,"image/jpeg","Foto "+System.currentTimeMillis()+".jpg",takenAt);
+                filePicked(captured,id,"image/jpeg","Foto "+System.currentTimeMillis()+".jpg",takenAt);
                 requestPhotoAddress(id);
             }catch(Exception e){error("Fotografie: "+e.getMessage());}
             js("window.onNativeMediaDone?.()");
