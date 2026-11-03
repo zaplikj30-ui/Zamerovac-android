@@ -3,6 +3,8 @@ on:
   workflow_dispatch:
   push:
     branches: [main]
+  pull_request:
+    branches: [main]
 concurrency:
   group: release-test-main
   cancel-in-progress: false
@@ -24,6 +26,8 @@ jobs:
         run: |
           node --check app/src/main/assets/app.js
           node --check app/src/main/assets/editor.js
+          node --check app/src/main/assets/upgrade.js
+          node --check app/src/main/assets/rich-notes.js
           python3 -m unittest discover -s tests -p "test_*.py" -v
       - name: Sestavit obě varianty se stejným vývojovým klíčem
         run: gradle --no-daemon assembleDebug assemblePreview
@@ -48,7 +52,7 @@ jobs:
           echo "$PACKAGE_INFO" | grep -q "name='cz.zamerovac.app.preview'"
           echo "$PACKAGE_INFO" | grep -q "versionCode='$((1000 + GITHUB_RUN_NUMBER))'"
           mkdir -p dist
-          cp "$APK" "dist/Zamerovac-TEST-v1.1.${GITHUB_RUN_NUMBER}.apk"
+          cp "$APK" "dist/Zamerovac-v1.2.${GITHUB_RUN_NUMBER}.apk"
           sha256sum dist/*.apk
       - uses: actions/upload-artifact@v4
         with:
@@ -67,8 +71,8 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG="test-v1.1.${GITHUB_RUN_NUMBER}"
-          FILE="dist/Zamerovac-TEST-v1.1.${GITHUB_RUN_NUMBER}.apk"
+          TAG="test-v1.2.${GITHUB_RUN_NUMBER}"
+          FILE="dist/Zamerovac-v1.2.${GITHUB_RUN_NUMBER}.apk"
           for attempt in 1 2 3; do
             if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
               if gh release upload "$TAG" "$FILE" --repo "$GITHUB_REPOSITORY" --clobber && \
@@ -80,7 +84,7 @@ jobs:
               if gh release create "$TAG" "$FILE" \
                   --repo "$GITHUB_REPOSITORY" \
                   --target "$GITHUB_SHA" \
-                  --title "Zaměřovač TEST 1.1.${GITHUB_RUN_NUMBER}" \
+                  --title "Zaměřovač 1.2.${GITHUB_RUN_NUMBER}" \
                   --notes "Testovací verze pro Android. Aktualizuje nainstalovaný Zaměřovač TEST bez smazání dat. Původní Zaměřovač zůstává nedotčený. Otevři APK přímo ze Stažených souborů." \
                   --latest; then
                 exit 0
