@@ -35,7 +35,9 @@ public final class BoschBleProtocol {
         if (kind != 0x06 && kind != 0x0A) return null;
         float metres = ByteBuffer.wrap(data, 7, 4).order(ByteOrder.LITTLE_ENDIAN).getFloat();
         if (!Float.isFinite(metres) || metres < 0.08f || metres > 250f) return null;
-        double mm = Math.round((double)metres * 2000d) / 2d;
+        // Preserve sub-millimetre information sent by Bluetooth. Round only
+        // float32 representation noise (0.001 mm), never to a 0.5 mm grid.
+        double mm = Math.round((double)metres * 1000000d) / 1000d;
         return mm > 0 ? mm : null;
     }
 
