@@ -37,7 +37,7 @@
  }
  function nearestEdgePoint(g){
   const anchor=unrotate(g.anchor,g);
-  const ray={x:-anchor.x,y:-anchor.y};
+  const ray={x:anchor.x,y:anchor.y};
   const limit=Math.min(g.w/2/(Math.abs(ray.x)||0.0001),g.h/2/(Math.abs(ray.y)||0.0001));
   return turn({x:ray.x*limit,y:ray.y*limit},g);
  }
@@ -75,7 +75,7 @@
   return !!it.insetMoved||outside||active?.item===it;
  }
  window.renderPhotoInset=function(c,it,image,drawOriginal){
-  const g=layout(it,image),show=shouldShowArrow(it,g),isSelected=(selected===it.id);
+  const g=layout(it,image),show=shouldShowArrow(it,g),isSelected=(selected===it.id)&&!window.__exportingAnnotations;
   if(show)connector(c,g);
   c.save();
   c.translate(g.cx,g.cy);c.rotate(g.angle);c.translate(-g.cx,-g.cy);
@@ -90,9 +90,17 @@
    for(const note of it.detailItems||[])drawOriginal(c,note);
   }finally{view=oldView}
   c.restore();
-  if(show)handle(c,g.anchor,'',isSelected);
+  if(show&&!window.__exportingAnnotations)handle(c,g.anchor,'',isSelected);
   if(isSelected){
-   handle(c,turn({x:g.w/2,y:g.h/2},g),'↘',true);
+   // Stejně jako na videu: trojúhelníkové úchopy u obou stran a otáčení nahoře.
+   for(const side of [-1,1]){
+    const p=turn({x:side*(g.w/2+15),y:0},g);
+    c.save();c.translate(p.x,p.y);c.rotate(g.angle);
+    c.fillStyle='#f7f7f7';c.strokeStyle='#39343e';c.lineWidth=1.3;
+    c.beginPath();
+    c.moveTo(side*17,0);c.lineTo(-side*7,-16);c.lineTo(-side*7,16);c.closePath();
+    c.fill();c.stroke();c.restore();
+   }
    handle(c,turn({x:0,y:-g.h/2-33},g),'⟳',true);
   }
  };
@@ -103,8 +111,16 @@
    const g=layout(item,image);
    const near=position=>pointerDistance(point,position)<=24;
    if(selected===item.id&&near(turn({x:0,y:-g.h/2-33},g)))return {item,g,kind:'rotate'};
-   if(selected===item.id&&near(turn({x:g.w/2,y:g.h/2},g)))return {item,g,kind:'resize'};
+   if(selected===item.id&&near(turn({x:g.w/2+15,y:0},g)))return {item,g,kind:'resize-right'};
+   if(selected===item.id&&near(turn({x:-g.w/2-15,y:0},g)))return {item,g,kind:'resize-left'};
    if(shouldShowArrow(item,g)&&near(g.anchor))return {item,g,kind:'anchor'};
+   // Tažení přímo za žlutou šipku také posouvá její počáteční bod.
+   if(shouldShowArrow(item,g)){
+     const end=nearestEdgePoint(g),a=g.anchor,dx=end.x-a.x,dy=end.y-a.y;
+     const t=clamp(((point.x-a.x)*dx+(point.y-a.y)*dy)/(dx*dx+dy*dy||1),0,1);
+     const dist=Math.hypot(point.x-a.x-t*dx,point.y-a.y-t*dy);
+     if(t<.8&&dist<14)return {item,g,kind:'anchor'};
+   }
    const local=unrotate(point,g);
    if(Math.abs(local.x)<=g.w/2+4&&Math.abs(local.y)<=g.h/2+4)return {item,g,kind:'move'};
   }
@@ -150,9 +166,10 @@
    const w=screenToWorld({x:worldToScreen(v.anchor).x+dx,y:worldToScreen(v.anchor).y+dy});
    v.item.a=boundsPoint(w);
    v.item.insetMoved=true;
-  }else if(v.kind==='resize'){
+  }else if(v.kind==='resize-right'||v.kind==='resize-left'){
    const vx=dx*Math.cos(v.g.angle)+dy*Math.sin(v.g.angle);
-   v.item.insetWidth=clamp(v.width+vx/view.zoom,70,1500);
+   const mult=v.kind==='resize-right'?2:-2;
+   v.item.insetWidth=clamp(v.width+mult*vx/view.zoom,70,1500);
   }else if(v.kind==='rotate'){
    const delta=Math.atan2(at.y-v.center.y,at.x-v.center.x)-v.startAngle;
    v.item.insetRotation=(((v.angle+delta*180/Math.PI)+540)%360)-180;
@@ -238,8 +255,9 @@
   if(stageImg)c.drawImage(stageImg,shiftX,shiftY,photoSize.w,photoSize.h);
   try{
    ctx=c;view={zoom:1,dx:shiftX,dy:shiftY};
+   window.__exportingAnnotations=true;
    for(const it of current.items||[])drawItem(c,it);
-  }finally{ctx=oldCtx;view=oldView}
+  }finally{window.__exportingAnnotations=false;ctx=oldCtx;view=oldView}
   const data=canvas.toDataURL('image/png');
   if(native)Native.exportPng((current.title||'zamerovani')+'.png',data.substring(data.indexOf(',')+1));
   else{const a=document.createElement('a');a.download='zamerovani.png';a.href=data;a.click()}
