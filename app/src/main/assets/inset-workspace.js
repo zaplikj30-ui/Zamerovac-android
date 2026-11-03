@@ -44,7 +44,8 @@
   const end=nearestEdgePoint(g);
   const start=g.anchor;
   if(pointerDistance(start,end)<15)return;
-  const angle=Math.atan2(end.y-start.y,end.x-start.x);
+  // Hrot šipky je pevný bod na hlavní fotografii, nikoliv na rámečku detailu.
+  const angle=Math.atan2(start.y-end.y,start.x-end.x);
   const size=11;
   ctx.save();
   ctx.lineCap='round';ctx.lineJoin='round';
@@ -52,9 +53,9 @@
   ctx.lineWidth=2.8;
   ctx.beginPath();ctx.moveTo(start.x,start.y);ctx.lineTo(end.x,end.y);ctx.stroke();
   ctx.beginPath();
-  ctx.moveTo(end.x,end.y);
-  ctx.lineTo(end.x-size*Math.cos(angle-.55),end.y-size*Math.sin(angle-.55));
-  ctx.lineTo(end.x-size*Math.cos(angle+.55),end.y-size*Math.sin(angle+.55));
+  ctx.moveTo(start.x,start.y);
+  ctx.lineTo(start.x-size*Math.cos(angle-.55),start.y-size*Math.sin(angle-.55));
+  ctx.lineTo(start.x-size*Math.cos(angle+.55),start.y-size*Math.sin(angle+.55));
   ctx.closePath();ctx.fill();
   ctx.restore();
  }
@@ -222,6 +223,12 @@
    v.item.b=screenToWorld({x:start.x+dx,y:start.y+dy});
    v.item.captionMoved=true;
   }else if(v.kind==='anchor'){
+   // Při přesunu hrotu zůstane na místě i textový rámeček poznámky.
+   if(!v.item.captionMoved){
+    const previous=worldToScreen(v.anchor);
+    v.item.b=screenToWorld({x:previous.x+45,y:previous.y-23});
+    v.item.captionMoved=true;
+   }
    // Posun začátku šipky NESMÍ přesunout samotný detail.
    v.item.insetX=v.startingX;
    v.item.insetY=v.startingY;
