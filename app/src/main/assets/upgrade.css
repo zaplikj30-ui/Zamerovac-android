@@ -249,3 +249,32 @@ body.in-editor #stage{flex:1!important;min-height:0;margin-left:0!important}
  body.in-editor #stage{margin-left:0!important}
  #toolMenu.sheet{left:8px!important;right:8px!important;bottom:75px!important;width:auto!important}
 }
+
+/* Referenční ImageMeter: editor poznámky zabírá celou obrazovku,
+   text, audio a detailní fotografie v jednom souvislém panelu. */
+#modal:has(.richNoteDialog){padding:0!important;background:#262629}
+#modal .dialog.richNoteDialog{
+ max-width:none!important;width:100%!important;height:100%!important;
+ max-height:none!important;border-radius:0!important;
+ padding:64px 16px 84px!important;position:relative;
+ background:#292a2e;box-shadow:none!important;
+ overflow:auto;
+}
+#modal .richNoteDialog .dialogTitle{
+ position:fixed;z-index:3;top:0;left:0;right:0;
+ height:56px;margin:0;display:flex;align-items:center;
+ background:#302d35;border-bottom:1px solid #4a414e;
+ padding:0 105px 0 18px;font-size:17px;
+ white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+#modal .richNoteDialog .dialogActions{
+ position:fixed;z-index:4;right:7px;top:5px;
+ margin:0!important;gap:4px;height:45px;
+ display:flex;align-items:center;
+}
+#modal .richNoteDialog .dialogActions button {
+ padding:9px 12px;min-height:38px;border-radius:5px;
+}
+#modal .richNoteDialog #richAttachments{margin:6px 0 16px}
+#modal .richNoteDialog textarea{min-height:75px;resize:vertical}
+#modal .richNoteDialog .rich-attachment .previewMedia img{max-height:250px}
