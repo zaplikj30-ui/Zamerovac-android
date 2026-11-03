@@ -30,7 +30,7 @@ try{const old=JSON.parse(localStorage.getItem('zamerovac-diagnostic-v1')||'[]');
 window.addEventListener('error',ev=>logEvent('chyba','JavaScript: '+(ev.message||'Neznámá chyba')));
 window.addEventListener('unhandledrejection',ev=>logEvent('chyba','Nesplněný úkol: '+String(ev.reason?.message||'').slice(0,80)));
 const oldError=window.onNativeError;
-window.onNativeError=function(message){logEvent('chyba',String(message).split('\n')[0]);oldError(message)};
+window.onNativeError=function(message){logEvent('chyba',String(message).split('\n')[0]);if(/synchronizac|google disk|cloud/i.test(String(message)))setCloudState('failed');oldError(message)};
 const oldSync=window.onNativeSync;
 window.onNativeSync=function(text){
   let message='Dokončená synchronizace';
@@ -441,6 +441,9 @@ function openDiagnostics(){
  };
  $('deleteLog').onclick=()=>{history.length=0;localStorage.removeItem('zamerovac-diagnostic-v1');$('modal').hidden=true;notify('Log vymazán')};
 }
+// Původní onClick uchovává referenci na starou funkci – přepojit na rozšířenou nabídku.
+$('editorMore').onclick=showEditorOverflow;
+$('editorTopMenu').onclick=showEditorOverflow;
 const oldBack=window.handleAndroidBack;
 window.handleAndroidBack=()=>{
  if(gallery){closeGallery();return 'handled'}
