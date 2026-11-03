@@ -31,6 +31,15 @@ class SourceSmokeTest(unittest.TestCase):
         self.assertIn('worldToScreen(it[key])', editor)
         self.assertIn('magnifierPoint=selectedHandle.point', editor)
 
+    def test_reference_magnifier_geometry(self):
+        editor=(ASSETS/'editor.js').read_text()
+        css=(ASSETS/'style.css').read_text()
+        # Comparison screenshots: ~160 actual pixels on phone = 136 CSS px.
+        self.assertIn('const size=136;', editor)
+        self.assertIn('border-radius:32px', css)
+        self.assertIn('loupeCtx.setLineDash([5,7])', editor)
+        self.assertIn('size*.5-pointer.x*zoom,size*.5-pointer.y*zoom', editor)
+
     def test_cloud_and_media_are_real_modules(self):
         java=ROOT/'app/src/main/java/cz/zamerovac/app'
         for module in ('SyncEngine.java','SyncJob.java','BoschClassicReader.java','MediaProvider.java'):
