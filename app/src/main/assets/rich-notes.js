@@ -6,6 +6,11 @@ function openRichNote(item,isNew){
  const parent=current;
  const attachments=Array.isArray(item.media)?item.media.slice():[];
  let recording=null;
+ const previousCancel=$('cancelModal').onclick;
+ const cleanRecording=()=>{if(recording){if(native)Native.stopAudio();recording=null}};
+ const release=()=>{if(window.__activeRichNoteCleanup===cleanRecording)window.__activeRichNoteCleanup=null;$('cancelModal').onclick=previousCancel};
+ window.__activeRichNoteCleanup=cleanRecording;
+ $('cancelModal').onclick=()=>{cleanRecording();release();$('modal').hidden=true;window.modalOK=null};
  function persist(){
   if(recording){Native.stopAudio();attachments.push(recording);recording=null;}
   item.text=$('richText').value.trim();
@@ -15,6 +20,7 @@ function openRichNote(item,isNew){
   if(isNew){checkpoint();parent.items.push(item);finishDraw(item);isNew=false;}
   else checkpoint();
   commitEditor();
+  release();
   return true;
  }
  modal('Poznámka k fotografii',
@@ -69,8 +75,8 @@ function openRichNote(item,isNew){
   openNestedPhoto(parent,item,attachments[0]);
  };
  $('richDelete').onclick=()=>{
-  if(isNew){$('modal').hidden=true;notify('Poznámka nebyla přidána');return}
-  checkpoint();parent.items=parent.items.filter(x=>x.id!==item.id);selected=null;commitEditor();$('modal').hidden=true;
+  if(isNew){cleanRecording();release();$('modal').hidden=true;notify('Poznámka nebyla přidána');return}
+  cleanRecording();release();checkpoint();parent.items=parent.items.filter(x=>x.id!==item.id);selected=null;commitEditor();$('modal').hidden=true;
  };
 }
 function openNestedPhoto(parent,item,mediaId){
@@ -97,3 +103,6 @@ exitEditor=function(){
  previousExitEditor();
 };
 $('editorBack').onclick=exitEditor;
+
+const richPreviousAndroidBack=window.handleAndroidBack;
+window.handleAndroidBack=()=>{if(!$('modal').hidden&&window.__activeRichNoteCleanup){window.__activeRichNoteCleanup();window.__activeRichNoteCleanup=null}return richPreviousAndroidBack()};
