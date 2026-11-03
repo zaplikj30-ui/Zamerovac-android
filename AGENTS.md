@@ -21,7 +21,7 @@ Uživatel vyrábí zakázkový nábytek. Vyvíjíme vlastní Android aplikaci na
 ## Priorita verzí referenčního ImageMeteru
 - **Hlavní vzor:** ImageMeter **26.6.1** (uživatelem dodaná XAPK; aktuálně nejnovější dostupná reference).
 - **Doplňkový vzor:** ImageMeter **Pro 26.5.0** (uživatelem dodaná APK).
-- **ImageMeter 3.9.15:** pouze archivní reference pro případnou historickou kontrolu; **nepoužívat jako předlohu současného UI nebo chování**.
+- **ImageMeter 3.9.15:** doplňková reference; lze z ní čerpat užitečné postupy, principy či technické poznatky, ale současné ovládání a vzhled určují přednostně verze 26.6.1 a 26.5.0. Starší postup nepřebírat, pokud jej novější verze řeší lépe.
 - Pokud se verze 26.6.1 a 26.5.0 liší, přednost má **26.6.1**. Nezaměňovat starší fungování za aktuální.
 - Referenční soubory jsou uloženy v ChatGPT Library pod `/Zamerovac/reference/ImageMeter/`; nejsou automaticky přístupné GitHub Actions. Nedávat cizí instalační soubory do zdrojového repozitáře. Zaznamenávat pouze vlastní pozorování, struktury a testovací požadavky.
 - Vlastní implementace Zaměřovače zachovává známé ovládání a význam ikon, ale nepřebírá proprietární zdrojový kód, originální ikonové soubory ani obchodní identitu ImageMeteru.
