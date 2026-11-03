@@ -48,10 +48,10 @@ public final class PhotoAddressResolver {
                 }
             };
             main.postDelayed(fallback,14000);
-            Consumer<Location> location->{
+            Consumer<Location> location=loc->{
                 if(!finished.compareAndSet(false,true))return;
                 main.removeCallbacks(fallback);
-                if(isFresh(location))geocode(activity,location,result);
+                if(isFresh(loc))geocode(activity,loc,result);
                 else result.accept("");
             };
             if(Build.VERSION.SDK_INT>=30){
