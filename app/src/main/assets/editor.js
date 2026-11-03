@@ -106,7 +106,11 @@ function drawSelectedGrips(c){
  c.save();
  c.fillStyle='rgba(255,255,255,.90)';
  c.strokeStyle='#353535';c.lineWidth=1.5;
- if(item.type==='note'||item.type==='symbol'){
+ if(item.type==='note'&&!item.media?.length){
+  const p=noteCaptionScreen(item),anchor=worldToScreen(item.a||{x:0,y:0});
+  c.strokeRect(p.x-14,p.y-14,28,28);
+  c.beginPath();c.arc(anchor.x,anchor.y,6,0,Math.PI*2);c.fill();
+ }else if(item.type==='note'||item.type==='symbol'){
   const p=worldToScreen(item.a||{x:0,y:0});
   c.strokeRect(p.x-14,p.y-14,28,28);
   c.beginPath();c.arc(p.x,p.y,6,0,Math.PI*2);c.fill();
@@ -119,6 +123,31 @@ function drawSelectedGrips(c){
  c.restore();
 }
 
+/* Textová poznámka má dva nezávislé body: a = hrot šipky,
+   b = střed rámečku (použije se až při prvním přesunu textu).
+   U starších záznamů bez captionMoved zůstává vzhled beze změny. */
+function noteCaptionScreen(item){
+ return worldToScreen(item.captionMoved&&item.b?item.b:item.a||{x:0,y:0});
+}
+function noteCaptionBounds(item){
+ const p=noteCaptionScreen(item),fs=Number(item.fontSize)||Number(prefs.fontSize)||17;
+ const caption=item.text||'Poznámka';
+ ctx.save();ctx.font='600 '+fs+'px sans-serif';
+ const w=ctx.measureText(caption).width+10;ctx.restore();
+ return {x:p.x-w/2,y:p.y-fs*.7,w,h:fs*1.4,p};
+}
+function drawNoteLeader(c,item,color){
+ if(!item.captionMoved||!item.a)return;
+ const p=worldToScreen(item.a),box=noteCaptionBounds(item),mid=box.p;
+ const dx=p.x-mid.x,dy=p.y-mid.y;
+ const factor=Math.max(Math.abs(dx)/Math.max(1,box.w/2),Math.abs(dy)/Math.max(1,box.h/2));
+ if(factor<=1||!Number.isFinite(factor))return;
+ const edge={x:mid.x+dx/factor,y:mid.y+dy/factor};
+ c.save();c.strokeStyle=color;c.fillStyle=color;
+ c.lineWidth=Number(item.width)||Number(prefs.lineWidth)||2;c.lineCap='round';
+ c.beginPath();c.moveTo(edge.x,edge.y);c.lineTo(p.x,p.y);c.stroke();
+ drawArrow(c,p,edge,11);c.restore();
+}
 function canvasText(text,p,color,size,angle=0){ctx.save();ctx.translate(p.x,p.y);ctx.rotate(angle);ctx.font=`600 ${size}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';let width=ctx.measureText(text).width;ctx.fillStyle='#222d';ctx.fillRect(-width/2-5,-size*.67,width+10,size*1.4);ctx.fillStyle=color;ctx.fillText(text,0,0);ctx.restore()}
 function drawArrow(c,point,to,size=10){let a=Math.atan2(point.y-to.y,point.x-to.x);c.beginPath();c.moveTo(point.x,point.y);c.lineTo(point.x-size*Math.cos(a-.48),point.y-size*Math.sin(a-.48));c.moveTo(point.x,point.y);c.lineTo(point.x-size*Math.cos(a+.48),point.y-size*Math.sin(a+.48));c.stroke()}
 function drawItem(c,item){let a=item.a&&worldToScreen(item.a),b=item.b&&worldToScreen(item.b);let pts=(item.points||[]).map(worldToScreen);const color=item.color||prefs.color,fw=(item.width||prefs.lineWidth),fs=(item.fontSize||prefs.fontSize);c.save();c.strokeStyle=color;c.fillStyle=color;c.lineWidth=fw;c.lineJoin='round';c.lineCap='round';
@@ -128,7 +157,7 @@ else if(item.type==='line'||item.type==='arrow'||item.type==='angle'||item.type=
 else if(item.type==='rect'||item.type==='area'){if(a&&b){let x=Math.min(a.x,b.x),y=Math.min(a.y,b.y),w=Math.abs(a.x-b.x),h=Math.abs(a.y-b.y);c.strokeRect(x,y,w,h);if(item.type==='area'&&item.measure)canvasText(item.measure+' '+(item.unit||'m²'),{x:x+w/2,y:y+h/2},color,fs)}}
 else if(item.type==='ellipse'||item.type==='circle'){if(a&&b){let cx=(a.x+b.x)/2,cy=(a.y+b.y)/2,rx=Math.abs(a.x-b.x)/2,ry=item.type==='circle'?rx:Math.abs(a.y-b.y)/2;c.beginPath();c.ellipse(cx,cy,Math.max(1,rx),Math.max(1,ry),0,0,Math.PI*2);c.stroke()}}
 else if(item.type==='freehand'||item.type==='polyline'){if(pts.length){c.beginPath();c.moveTo(pts[0].x,pts[0].y);for(let p of pts.slice(1))c.lineTo(p.x,p.y);c.stroke()}}
-else if(item.type==='note'||item.type==='symbol'){if(a){canvasText(item.type==='symbol'?'⚑ '+(item.text||''):item.text||'Poznámka',a,color,fs)}}
+else if(item.type==='note'||item.type==='symbol'){if(a){if(item.type==='note'){drawNoteLeader(c,item,color);canvasText(item.text||'Poznámka',noteCaptionScreen(item),color,fs)}else canvasText('⚑ '+(item.text||''),a,color,fs)}}
 c.restore();}
 function drawLoupe(){
   if(!magnifierPoint)return;
@@ -203,13 +232,13 @@ function nearestLabel(point){
   }
   return null;
 }
-function nearestHandle(point){let best=null,dist=31;for(let it of current.items||[]){for(let key of ['a','b'])if(it[key]){let d=Math.hypot(point.x-worldToScreen(it[key]).x,point.y-worldToScreen(it[key]).y);if(d<dist){best={item:it,key,point:it[key],kind:'point'};dist=d}}}return best}
+function nearestHandle(point){let best=null,dist=31;for(let it of current.items||[]){for(let key of ['a','b'])if(it[key]&&!(it.type==='note'&&key==='b')){let d=Math.hypot(point.x-worldToScreen(it[key]).x,point.y-worldToScreen(it[key]).y);if(d<dist){best={item:it,key,point:it[key],kind:'point'};dist=d}}}return best}
 function nearestItem(point){
  const world=screenToWorld(point);
  let best=null,distance=26/view.zoom;
  for(const item of [...(current.items||[])].reverse()){
   if((item.type==='note'||item.type==='symbol')&&item.a){
-   const p=worldToScreen(item.a);
+   const p=item.type==='note'?noteCaptionScreen(item):worldToScreen(item.a);
    const caption=item.type==='symbol'?'⚑ '+(item.text||''):item.text||'Poznámka';
    ctx.save();ctx.font='600 '+(item.fontSize||prefs.fontSize)+'px sans-serif';
    const width=ctx.measureText(caption).width+22;ctx.restore();
@@ -263,23 +292,36 @@ function stageDown(e){
  const candidate=hitAnnotation(s);
  if(candidate){
   const alreadySelected=selected===candidate.id;
-  if(!alreadySelected){
-   selectAnnotation(candidate);
+  const isTextNote=candidate.type==='note'&&!candidate.media?.length;
+  const captionBox=isTextNote?noteCaptionBounds(candidate):null;
+  const onCaption=captionBox&&s.x>=captionBox.x-7&&s.x<=captionBox.x+captionBox.w+7&&
+    s.y>=captionBox.y-7&&s.y<=captionBox.y+captionBox.h+7;
+  if(!alreadySelected)selectAnnotation(candidate);
+  // Tažení za text přesouvá jen rámeček, nikoliv hrot šipky.
+  // Zvolení textu má přednost před překrývajícím se bodem a jen do prvního přesunu.
+  const anchor=isTextNote?worldToScreen(candidate.a||{x:0,y:0}):null;
+  const anchorNear=anchor&&Math.hypot(s.x-anchor.x,s.y-anchor.y)<=24;
+  const wantsCaption=isTextNote&&onCaption&&(!candidate.captionMoved||!anchorNear);
+  if(!alreadySelected&&!wantsCaption){
    selectedHandle={item:candidate,kind:'select-only',startScreen:s,dragged:false};
    magnifierPoint=null;return;
   }
   const grip=nearestHandle(s);
   const label=nearestLabel(s);
   let hit;
-  if(grip?.item.id===candidate.id)hit=grip;
+  if(wantsCaption)hit={item:candidate,kind:'note-caption'};
+  else if(grip?.item.id===candidate.id)hit=grip;
   else if(label?.item.id===candidate.id)hit=label;
   else hit={item:candidate,kind:'open-selected'};
   selectedHandle=hit;
   hit.startScreen={...s};
+  hit.initialSelection=!alreadySelected;
   if(hit.kind==='point')hit.startPoint={...hit.point};
+  if(hit.kind==='note-caption')
+   hit.startPoint={...(hit.item.captionMoved&&hit.item.b?hit.item.b:hit.item.a)};
   hit.startLabelT=Number(hit.item.labelT)||0;
   hit.dragged=false;
-  if(hit.kind==='point'||hit.kind==='label')checkpoint();
+  if(hit.kind==='point'||hit.kind==='label'||hit.kind==='note-caption')checkpoint();
   magnifierPoint=hit.kind==='point'?hit.point:null;
   paint();return;
  }
@@ -295,7 +337,15 @@ if(selectedHandle&&pointers.size===1){
   if(selectedHandle.kind==='select-only'||selectedHandle.kind==='open-selected'){
    magnifierPoint=null;paint();return;
   }
-  if(selectedHandle.kind==='label'){
+  if(selectedHandle.kind==='note-caption'){
+    const origin=worldToScreen(selectedHandle.startPoint);
+    selectedHandle.item.b=screenToWorld({
+      x:origin.x+s.x-selectedHandle.startScreen.x,
+      y:origin.y+s.y-selectedHandle.startScreen.y
+    });
+    selectedHandle.item.captionMoved=true;
+    magnifierPoint=null;
+  }else if(selectedHandle.kind==='label'){
     const info=labelInfo(selectedHandle.item);
     if(info&&info.d>0){
       const delta=((s.x-selectedHandle.startScreen.x)*info.ux+
@@ -332,10 +382,11 @@ function stageUp(e){
   selectedHandle=null;magnifierPoint=null;loupeSide=null;
   if(handle.kind==='select-only'){paint();return}
   if(!moved){
-   if((handle.kind==='point'||handle.kind==='label')&&editStack.length)editStack.pop();
+   if((handle.kind==='point'||handle.kind==='label'||handle.kind==='note-caption')&&editStack.length)editStack.pop();
+   if(handle.initialSelection){paint();return}
    // Druhé samostatné klepnutí otevře úpravu bez časového limitu.
    editItem(item);
-  }else if(handle.kind==='point'||handle.kind==='label'){
+  }else if(handle.kind==='point'||handle.kind==='label'||handle.kind==='note-caption'){
    touch(item);commitEditor();
   }else paint();
   return;
