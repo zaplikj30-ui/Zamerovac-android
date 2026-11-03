@@ -35,7 +35,7 @@ Toto je **zdrojový projekt, nikoli zkompilovaná a na zařízení otestovaná A
 2. Použij JDK 17 a synchronizaci Gradle.
 3. Zvol **Build > Build APK(s)**. Očekávaný výstup je `app/build/outputs/apk/debug/app-debug.apk`.
 4. APK nainstaluj na testovací zařízení. Před produkčním použitím otestuj lokální ukládání, opětovné otevření projektu, média a cloud.
-5. Pro vzdálené sestavení lze projekt vložit do samostatného GitHub repozitáře; workflow `.github/workflows/build-apk.yml` sestaví debug APK při push nebo ručním spuštění.
+5. V GitHubu se APK sestavuje **pouze na vyžádání**: otevři **Actions → Sestavit a vydat Zaměřovač TEST → Run workflow** na větvi `main`. Uložení změny na GitHub samo nespouští Android build.
 
 ## Google Disk
 
@@ -57,7 +57,9 @@ Datový model je zamýšlen jako budoucí vstup PC modulu. Editovatelné kóty j
 
 **Aktuální APK ke stažení: [GitHub Releases – poslední vydání](https://github.com/zaplikj30-ui/Zamerovac-android/releases/latest)**.
 
-- Každé úspěšné sestavení z větve `main` automaticky vytvoří číslované vydání obsahující přímo soubor `Zamerovac-v1.2.N.apk` (bez ZIP).
+Novou APK vytvoříš ručním spuštěním [Actions – Sestavit a vydat Zaměřovač TEST](https://github.com/zaplikj30-ui/Zamerovac-android/actions/workflows/build-apk.yml) přes **Run workflow**. Při běžných změnách se APK nevyrábí, ale při ručním sestavení zůstávají ověření a kontrola podpisu.
+
+- Každé úspěšné **ručně spuštěné** sestavení z větve `main` vytvoří číslované vydání obsahující přímo soubor `Zamerovac-v1.2.N.apk` (bez ZIP).
 - Na telefonu otevři odkaz, přihlas se ke svému GitHub účtu, vyber soubor `.apk`, otevři jej přes **Moje soubory → Stažené** a potvrď **Aktualizovat**. ChatGPT odkazy na dočasné soubory k instalaci nepoužívej.
 - Vývojová aplikace zůstává pod názvem **Zaměřovač** a má identifikátor `cz.zamerovac.app.preview` a stálý testovací podpis v `tools/debug-signing.p12.b64`. Všechny běhy workflow používají tento podpis a postupně rostoucí `versionCode` `1000 + GITHUB_RUN_NUMBER`. Aktualizace by proto neměla mazat data.
 - Původní ostrá varianta (cz.zamerovac.app) a testovací varianta (cz.zamerovac.app.preview) jsou dvě **odlišné aplikace** a data se mezi nimi nepřenášejí automaticky.
@@ -69,14 +71,14 @@ Datový model je zamýšlen jako budoucí vstup PC modulu. Editovatelné kóty j
 Repozitář obsahuje samostatný workflow **Zaměřovač – Android emulátor a snímky obrazovky**:
 [Otevřít GitHub Actions](https://github.com/zaplikj30-ui/Zamerovac-android/actions/workflows/emulator-smoke.yml).
 
-- Běží automaticky po změně kódu Android aplikace a lze ho spustit i ručně přes **Actions → Zaměřovač – Android emulátor a snímky obrazovky → Run workflow**.
+- Spouští se **pouze ručně**, když je potřeba důkladně otestovat obrazovky nebo dotyky: **Actions → Zaměřovač – Android emulátor a snímky obrazovky → Run workflow**. Žádná změna kódu ho automaticky nespouští.
 - Na hostovaném virtuálním telefonu Pixel s Androidem 13 nainstaluje **Zaměřovač TEST**.
 - Uloží snímky domovské obrazovky, nabídky a, pokud je zpřístupněné ovládání, také plátna a lupy při tažení kóty. Přidá přístupnostní XML a `logcat` pro diagnostiku.
 - Výstup najdeš v konkrétním běhu pod **Artifacts → Zamerovac-EMULATOR-snimky-a-logy**; soubory jsou dostupné 30 dní. Jde o ZIP se snímky PNG a logy, nikoliv o instalační APK.
 - Pro instalaci do vlastního mobilu stále slouží samostatná stránka [GitHub Releases – poslední APK](https://github.com/zaplikj30-ui/Zamerovac-android/releases/latest).
 - **Nezaměňuj emulátor za ověření na Samsungu:** ovládání prstem, obrazovka, Bluetooth Bosch a přístup k souborům je nutné potvrdit na reálném telefonu.
 - Cizí APK ImageMeteru nejsou součástí repozitáře a emulator je automaticky nespouští. ImageMeter zůstává referenční aplikací pro porovnávání chování, ne zdrojem převzatého proprietárního kódu.
-- Android emulátor v GitHub Actions spotřebovává minuty Actions, podle typu účtu mohou být účtované. Automatický workflow lze kdykoliv vypnout v nastavení Actions.
+- Android emulátor v GitHub Actions spotřebovává minuty Actions, podle typu účtu mohou být účtované. Spouštěj ho jen když výsledky skutečně potřebujeme.
 
 
 ## Velká aktualizace 1.2 – nové funkce
