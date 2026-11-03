@@ -501,7 +501,9 @@ renderSettings=function(){
  wrapper.querySelector('#restoreAll').onclick=()=>native?Native.importBackup():notify('Obnova ZIP je dostupná v Android verzi');
 };
 const releases=[
- {version:appVersionShort,title:'Opravy adres a ikon',items:[
+ {version:appVersionShort,title:'Ovládání podle ImageMeteru a Bosch',items:[
+  ['Další dvě řady nástrojů pod spodním ⋮','extraToolbar'],
+  ['Měření Bosch – klepnout na kótu a zapsat rozměr','laserTap'],
   ['Číslo domu u fotografií a doplnění z RÚIAN','photoAddress'],
   ['Nová přehledná ikona Bluetooth','readings'],
   ['Ikona galerie fotografií','gallery']
@@ -544,6 +546,8 @@ function navigateToFeature(key){
   const target=$(targetId);if(target)target.scrollIntoView({block:'center',behavior:'smooth'});
  }
  switch(key){
+  case 'extraToolbar':if(editor())$('editorMore').click();break;
+  case 'laserTap':if(editor())notify('Změř Bosch laserem a klepni na kótu. Hodnota se rovnou uloží.');break;
   case 'gallery':showFolder();openGallery(0);break;
   case 'media':showFolder();notify('Klepni na video či hlasový soubor v seznamu zakázky');break;
   case 'search':showFolder();$('searchBtn').click();break;
