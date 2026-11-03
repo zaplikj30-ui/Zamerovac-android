@@ -811,6 +811,15 @@ public class MainActivity extends Activity {
                 if(scanCallback==null)return; // scan cancelled or failed
                 stopLaserScan();
                 ArrayList<BluetoothDevice> devices=new ArrayList<>(scanned);
+                java.util.Set<String> leAddresses=new java.util.HashSet<>();
+                for(BluetoothDevice found:scanned)leAddresses.add(found.getAddress());
+                // Show paired Classic devices too, as ImageMeter does, but never
+                // confuse a paired-only device with a current LE advertisement.
+                try{
+                    for(BluetoothDevice paired:adapter.getBondedDevices()){
+                        if(!devices.contains(paired))devices.add(paired);
+                    }
+                }catch(Exception exception){android.util.Log.w("Zamerovac","Paired Bluetooth list",exception);}
                 devices.sort((a,b)->{
                     String aa=String.valueOf(a.getName()).toUpperCase(java.util.Locale.ROOT);
                     String bb=String.valueOf(b.getName()).toUpperCase(java.util.Locale.ROOT);
@@ -828,12 +837,21 @@ public class MainActivity extends Activity {
                     BluetoothDevice d=devices.get(i);
                     String name=d.getName();
                     labels[i]=(name==null||name.trim().isEmpty()?"Neznámé zařízení":name)
-                            +" · "+d.getAddress();
+                            +" · "+d.getAddress()+(leAddresses.contains(d.getAddress())?"":" (spárované)");
                 }
                 laserStatus("off","");
                 new AlertDialog.Builder(this)
-                    .setTitle("Vyber měřič Bosch (Bluetooth LE)")
-                    .setItems(labels,(dialog,index)->connectGatt(devices.get(index)))
+                    .setTitle("Bluetooth zařízení – Bosch GLM vyber nahoře")
+                    .setItems(labels,(dialog,index)->{
+                        BluetoothDevice d=devices.get(index);
+                        if(leAddresses.contains(d.getAddress()))connectGatt(d);
+                        else{
+                            String n=String.valueOf(d.getName()).toUpperCase(java.util.Locale.ROOT).replace(" ","");
+                            if((n.contains("GLM50C")||n.contains("GLM100C"))&&!n.contains("100-25"))
+                                connectClassicBosch(d);
+                            else error("Zařízení je jen spárované. Zapni laser a zkus nové vyhledávání Bluetooth LE.");
+                        }
+                    })
                     .setNegativeButton("Zrušit",(dialog,index)->laserStatus("off",""))
                     .show();
             },7000);
@@ -842,6 +860,19 @@ public class MainActivity extends Activity {
             laserStatus("off","");
             error("Bluetooth vyhledávání: "+exception.getMessage());
         }
+    }
+    // Backward-compatible Bosch Classic connection for older GLM 50C/100C.
+    private void connectClassicBosch(BluetoothDevice device){
+        try{
+            if(gatt!=null){gatt.disconnect();gatt.close();gatt=null;}
+            if(classic!=null)classic.close();
+            String name=device.getName();
+            classic=new BoschClassicReader(device,
+                value->js("window.onLaserValue("+JSONObject.quote(value)+","+JSONObject.quote("mm")+")"),
+                this::error,status->laserStatus(status,name));
+            laserStatus("connecting",name);
+            classic.start();
+        }catch(Exception ex){laserStatus("off","");error("Bosch Classic: "+ex.getMessage());}
     }
     private void connectGatt(BluetoothDevice device){
         try{
