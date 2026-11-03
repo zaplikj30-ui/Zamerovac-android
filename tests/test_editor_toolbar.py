@@ -16,8 +16,10 @@ class EditorToolbarTests(unittest.TestCase):
         css=(ASSETS/'upgrade.css').read_text(encoding='utf-8')
         self.assertIn("const originalShowTools=showTools", script)
         self.assertIn("showTools=function()", script)
-        self.assertIn("$('activeTool').hidden=true", script)
-        self.assertIn(".toolbar #activeTool {display:none!important}", css)
+        self.assertIn("$('activeTool').hidden=false", script)
+        self.assertIn('display:flex!important', css)
+        self.assertIn("lastButton.classList.toggle('tool-active',activeLastTool)", script)
+        self.assertIn("lastButton.setAttribute('aria-pressed'", script)
         self.assertNotIn("function renderFavorites()", script)
         self.assertNotIn("prefs.editorFavorites.map", script)
         self.assertNotIn("openFavorites", script)
@@ -30,7 +32,8 @@ class EditorToolbarTests(unittest.TestCase):
         self.assertIn("classList.toggle('tool-chosen',active)", script)
         self.assertIn('aria-pressed', script)
         self.assertIn('tool-choice-check', script)
-        self.assertIn('#toolsToggle.tool-active', css)
+        self.assertIn('#activeTool.tool-active', css)
+        self.assertIn('border-left:0', css)
         self.assertIn('.choice.tool-chosen', css)
 
     def test_style_button_is_pencil_and_ruler_not_dimension_shortcut(self):
@@ -46,6 +49,8 @@ class EditorToolbarTests(unittest.TestCase):
         self.assertIn("['dimension'",editor)
         self.assertIn("['select'",editor)
         self.assertIn("prefs.repeatDrawing=!prefs.repeatDrawing",editor)
+        self.assertIn("$('activeTool').onclick=()=>",editor)
+        self.assertIn("setTool(lastDrawingTool)",editor)
 
 if __name__=='__main__':
     unittest.main()
