@@ -281,7 +281,8 @@ showEditorOverflow=function(){
   ['◷ Historie úprav',restoreVersion],
   ['▤ Galerie fotografií',()=>{const photos=galleryPhotos(),index=photos.findIndex(r=>r.id===current?.id);if(index>=0)openGallery(index,photos)}],
   ['⚙ Přizpůsobit lištu nástrojů',configureToolbar],
-  ['▣ Export celé zálohy ZIP',()=>native?Native.exportBackup():notify('ZIP je dostupný v Android verzi')]
+  ['▣ Export všech zakázek do ZIP',()=>native?Native.exportBackup():notify('ZIP je dostupný v Android verzi')],
+  ['▣ Obnovit zakázky ze ZIP',()=>native?Native.importBackup():notify('Obnova ZIP vyžaduje Android verzi')]
  ];
  for(const [text,action] of extras){const b=document.createElement('button');b.className='appMenuItem';b.textContent=text;b.onclick=()=>{menu.hidden=true;action()};menu.append(b)}
 };
@@ -411,13 +412,17 @@ renderSettings=function(){
  '<button class="setting" id="openDiagnostics" style="width:100%">Diagnostika a sdílení logu</button>'+
  '<button class="setting" id="openHistory" style="width:100%">Novinky a historie aktualizací</button>'+
  '<button class="setting" id="openReadings" style="width:100%">Historie měření z laseru</button>'+
- '<button class="setting" id="openFavorites" style="width:100%">Oblíbené nástroje v liště</button>';
+ '<button class="setting" id="openFavorites" style="width:100%">Oblíbené nástroje v liště</button>'+
+ '<button class="setting" id="backupAll" style="width:100%">Exportovat všechny zakázky a přílohy (ZIP)</button>'+
+ '<button class="setting" id="restoreAll" style="width:100%">Obnovit ZIP jako nové zakázky</button>';
  place.append(wrapper);
  wrapper.querySelector('#uiTheme').onchange=e=>{prefs.themeAccent=e.target.value;accent();save();if(native&&typeof Native.setAccent==='function')Native.setAccent(prefs.themeAccent)};
  wrapper.querySelector('#openDiagnostics').onclick=openDiagnostics;
  wrapper.querySelector('#openHistory').onclick=showChanges;
  wrapper.querySelector('#openReadings').onclick=showLaserHistory;
  wrapper.querySelector('#openFavorites').onclick=configureToolbar;
+ wrapper.querySelector('#backupAll').onclick=()=>native?Native.exportBackup():notify('Export ZIP je dostupný v Android verzi');
+ wrapper.querySelector('#restoreAll').onclick=()=>native?Native.importBackup():notify('Obnova ZIP je dostupná v Android verzi');
 };
 const releases=[
  {version:'1.2',title:'Velká aktualizace Zaměřovače',items:[
