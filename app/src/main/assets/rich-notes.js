@@ -12,16 +12,17 @@ function openRichNote(item,isNew){
  let recording=null;
  const previousCancel=$('cancelModal').onclick;
  $('modal')?.querySelector('.dialog')?.classList.add('richNoteDialog');
- const cleanRecording=()=>{if(recording){if(native)Native.stopAudio();recording=null}};
+ const cleanRecording=()=>{window.__audioPermissionRetry=null;if(recording){if(native)Native.stopAudio();recording=null}};
  const release=()=>{$('modal')?.querySelector('.dialog')?.classList.remove('richNoteDialog');if(window.__activeRichNoteCleanup===cleanRecording){window.__activeRichNoteCleanup=null;window.__activeRichNoteRelease=null}$('cancelModal').onclick=previousCancel};
  window.__activeRichNoteCleanup=cleanRecording;
  window.__activeRichNoteRelease=release;
  $('cancelModal').onclick=()=>{cleanRecording();release();$('modal').hidden=true;window.modalOK=null};
  function persist(){
-  if(recording){Native.stopAudio();attachments.push(recording);recording=null;}
+  if(recording){Native.stopAudio();attachments.push(recording);item.audioMedia=[...(item.audioMedia||[]),recording];recording=null;}
   item.text=$('richText').value.trim();
   const hadAttachment=Array.isArray(item.media)&&item.media.length>0;
   item.media=attachments.slice();
+  item.audioMedia=(item.audioMedia||[]).filter(id=>attachments.includes(id));
   item.insetWidth=Math.max(70,Math.min(1500,Number($('richSize').value)||initialInsetWidth));
   item.insetRotation=Number($('richAngle').value)||0;
   // Když už uživatel odtáhl text a potom přidal detailní fotografii,
@@ -78,10 +79,16 @@ function openRichNote(item,isNew){
   const btn=$('richVoice');
   if(!recording){
     const id=uid();
-    if(!Native.startAudio(id))return;
-    recording=id;btn.textContent='■ Zastavit nahrávání';
+    const start=()=>{
+      if($('modal').hidden||!document.getElementById('richVoice'))return;
+      if(!Native.startAudio(id))return;
+      window.__audioPermissionRetry=null;
+      recording=id;btn.textContent='■ Zastavit nahrávání';notify('Nahrávání spuštěno');
+    };
+    window.__audioPermissionRetry=start;start();
   }else{
-    Native.stopAudio();attachments.push(recording);recording=null;
+    Native.stopAudio();attachments.push(recording);
+    item.audioMedia=[...(item.audioMedia||[]),recording];recording=null;
     btn.textContent='🎙 Nahrát hlas';render();notify('Hlas připojen k poznámce');
   }
  };
