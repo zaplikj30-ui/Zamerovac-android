@@ -140,6 +140,7 @@
     startingX:Number.isFinite(it.insetX)?it.insetX:(g.x-view.dx)/view.zoom,
     startingY:Number.isFinite(it.insetY)?it.insetY:(g.y-view.dy)/view.zoom,
     width:Number(it.insetWidth)||220,
+    height:g.h/view.zoom,
     angle:Number(it.insetRotation)||0,
     anchor:{...(it.a||{x:0,y:0})},center:{x:g.cx,y:g.cy},
     startAngle:Math.atan2(at.y-g.cy,at.x-g.cx),
@@ -169,7 +170,12 @@
   }else if(v.kind==='resize-right'||v.kind==='resize-left'){
    const vx=dx*Math.cos(v.g.angle)+dy*Math.sin(v.g.angle);
    const mult=v.kind==='resize-right'?2:-2;
-   v.item.insetWidth=clamp(v.width+mult*vx/view.zoom,70,1500);
+   const newWidth=clamp(v.width+mult*vx/view.zoom,70,1500);
+   const ratio=v.height/v.width;
+   // Úchopy mění velikost kolem středu, nerozjíždějí původní pozici.
+   v.item.insetWidth=newWidth;
+   v.item.insetX=v.startingX-(newWidth-v.width)/2;
+   v.item.insetY=v.startingY-(newWidth-v.width)*ratio/2;
   }else if(v.kind==='rotate'){
    const delta=Math.atan2(at.y-v.center.y,at.x-v.center.x)-v.startAngle;
    v.item.insetRotation=(((v.angle+delta*180/Math.PI)+540)%360)-180;
