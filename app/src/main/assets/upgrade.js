@@ -344,6 +344,8 @@ function openLayers(){
   save();paint();
  });
 }
+window.showEditorLayers=openLayers;
+window.restoreEditorHistory=restoreVersion;
 const drawItemOriginal=drawItem;
 drawItem=function(c,item){
  const kind=Object.entries(grouped).find(([name,kinds])=>kinds.includes(item.type))?.[0];
