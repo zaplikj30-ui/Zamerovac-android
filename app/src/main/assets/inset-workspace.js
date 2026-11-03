@@ -6,7 +6,6 @@
 'use strict';
 (function(){
  let active=null;
- let lastTap={id:null,time:0};
  const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
  const pointerDistance=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y);
  function photoItems(){
@@ -166,10 +165,11 @@
   if(!hit)return;
   e.preventDefault();e.stopImmediatePropagation();
   if(typeof setTool==='function'&&mode!=='select')setTool('select',true);
+  const wasSelected=selected===hit.item.id;
   selected=hit.item.id;
   const it=hit.item;
   const g=layout(it,window.__detailPhotoCache[it.media[0]]);
-  active={item:it,kind:hit.kind,id:e.pointerId,start:at,changed:false,
+  active={item:it,kind:hit.kind,id:e.pointerId,start:at,changed:false,wasSelected,
     startingX:Number.isFinite(it.insetX)?it.insetX:(g.x-view.dx)/view.zoom,
     startingY:Number.isFinite(it.insetY)?it.insetY:(g.y-view.dy)/view.zoom,
     width:Number(it.insetWidth)||220,
@@ -190,7 +190,7 @@
   const at=eventPoint(e),v=active;
   const dx=at.x-v.start.x,dy=at.y-v.start.y;
   if(Math.hypot(dx,dy)>3)v.changed=true;
-  if(!v.changed)return;
+  if(!v.changed||!v.wasSelected)return;
   if(v.kind==='move'){
    v.item.insetX=v.startingX+dx/view.zoom;
    v.item.insetY=v.startingY+dy/view.zoom;
@@ -228,19 +228,16 @@
   e.preventDefault();e.stopImmediatePropagation();
   const v=active;active=null;
   try{stageCanvas.releasePointerCapture(e.pointerId)}catch(err){}
-  if(v.changed){
+  if(v.changed&&v.wasSelected){
    commitEditor();
   }else{
    if(editStack.length)editStack.pop();
-   if(v.kind==='move'||v.kind==='caption'){
-    const now=Date.now();
-    if(lastTap.id===v.item.id&&now-lastTap.time<410){
-     lastTap={id:null,time:0};
-     if(v.kind==='move'&&typeof openNestedPhoto==='function')
-       openNestedPhoto(current,v.item,v.item.media[0]);
-     else if(v.kind==='caption'&&typeof openRichNote==='function')
-       openRichNote(v.item,false);
-    }else lastTap={id:v.item.id,time:now};
+   // První klepnutí jen vybere, druhé otevře; bez časového limitu.
+   if(v.wasSelected&&(v.kind==='move'||v.kind==='caption')){
+    if(v.kind==='move'&&typeof openNestedPhoto==='function')
+      openNestedPhoto(current,v.item,v.item.media[0]);
+    else if(v.kind==='caption'&&typeof openRichNote==='function')
+      openRichNote(v.item,false);
    }
    paint();
   }
