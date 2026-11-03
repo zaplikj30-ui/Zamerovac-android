@@ -77,13 +77,14 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class MainActivity extends Activity {
-    private static final int REQUEST_FILE=20,REQUEST_TREE=21,REQUEST_CAMERA=22,REQUEST_EXPORT=23,REQUEST_PERMISSIONS=24,REQUEST_ATTACH=25,REQUEST_CAMERA_PERMISSION=26;
+    private static final int REQUEST_FILE=20,REQUEST_TREE=21,REQUEST_CAMERA=22,REQUEST_EXPORT=23,REQUEST_PERMISSIONS=24,REQUEST_ATTACH=25,REQUEST_CAMERA_PERMISSION=26,REQUEST_PHOTO_LOCATION=27;
     private WebView web;
     private FrameLayout root;
     private long lastExitPress=0;
     private ValueCallback<Uri[]> fileCallback;
     private Uri cameraOutput;
     private String cameraId;
+    private String pendingPhotoLocationId;
     private String exportBase64;
     private MediaRecorder recorder;
     private FileOutputStream activeUpload;
@@ -265,6 +266,16 @@ public class MainActivity extends Activity {
                 error("Fotoaparát nemá povolení. Povol jej v nastavení aplikace.");
             }
         }
+        if(requestCode==REQUEST_PHOTO_LOCATION){
+            String id=pendingPhotoLocationId;
+            pendingPhotoLocationId=null;
+            boolean granted=false;
+            for(int value:grantResults)if(value==PackageManager.PERMISSION_GRANTED)granted=true;
+            if(id!=null){
+                if(granted)resolvePhotoAddress(id);
+                else notifyPhotoAddress(id,"");
+            }
+        }
     }
     private void useCamera(){
         if(Build.VERSION.SDK_INT>=23&&checkSelfPermission(Manifest.permission.CAMERA)!=PackageManager.PERMISSION_GRANTED){requestPermissions(new String[]{Manifest.permission.CAMERA},REQUEST_CAMERA_PERMISSION);return;}
@@ -292,9 +303,27 @@ public class MainActivity extends Activity {
         filePicked(uri,id,mime,name);
     }
     private void filePicked(Uri uri,String id,String mime,String name) throws IOException {
+        filePicked(uri,id,mime,name,null);
+    }
+    private void filePicked(Uri uri,String id,String mime,String name,String photoTakenAt) throws IOException {
         try(InputStream in=getContentResolver().openInputStream(uri);OutputStream out=new FileOutputStream(mediaFile(id))){if(in==null)throw new IOException("Cannot read file");copy(in,out);}
         settings.edit().putString("mime-"+id,mime).putString("name-"+id,name).apply();
-        js("window.onNativeMedia("+JSONObject.quote(id)+","+JSONObject.quote(mime)+","+JSONObject.quote(name)+")");
+        js("window.onNativeMedia("+JSONObject.quote(id)+","+JSONObject.quote(mime)+","+
+            JSONObject.quote(name)+","+(photoTakenAt==null?"null":JSONObject.quote(photoTakenAt))+")");
+    }
+    private void notifyPhotoAddress(String id,String address){
+        js("window.onNativePhotoAddress("+JSONObject.quote(id)+","+JSONObject.quote(address)+")");
+    }
+    private void resolvePhotoAddress(String id){
+        PhotoAddressResolver.resolve(this,address->notifyPhotoAddress(id,address));
+    }
+    private void requestPhotoAddress(String id){
+        boolean precise=checkSelfPermission(Manifest.permission.ACCESS_FINE_LOCATION)==PackageManager.PERMISSION_GRANTED;
+        boolean approx=checkSelfPermission(Manifest.permission.ACCESS_COARSE_LOCATION)==PackageManager.PERMISSION_GRANTED;
+        if(precise||approx){resolvePhotoAddress(id);return;}
+        pendingPhotoLocationId=id;
+        requestPermissions(new String[]{Manifest.permission.ACCESS_FINE_LOCATION,
+            Manifest.permission.ACCESS_COARSE_LOCATION},REQUEST_PHOTO_LOCATION);
     }
     @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);
         if(request==REQUEST_FILE){if(fileCallback!=null){Uri[] resultUris=null;if(result==RESULT_OK&&data!=null){if(data.getClipData()!=null){int n=data.getClipData().getItemCount();resultUris=new Uri[n];for(int i=0;i<n;i++)resultUris[i]=data.getClipData().getItemAt(i).getUri();}else if(data.getData()!=null)resultUris=new Uri[]{data.getData()};}fileCallback.onReceiveValue(resultUris);fileCallback=null;}return;}
@@ -303,7 +332,16 @@ public class MainActivity extends Activity {
             if(data.getClipData()!=null){for(int i=0;i<data.getClipData().getItemCount();i++){importUri(data.getClipData().getItemAt(i).getUri());done++;}}
             else if(data.getData()!=null){importUri(data.getData());done++;}
         }catch(Exception ex){error("Import souborů: "+ex.getMessage());}js("window.onNativeMediaDone?.()");return;}
-        if(request==REQUEST_CAMERA&&cameraOutput!=null){try{filePicked(cameraOutput,cameraId,"image/jpeg","Foto "+System.currentTimeMillis()+".jpg");}catch(Exception e){error(e.toString());}js("window.onNativeMediaDone?.()");return;}
+        if(request==REQUEST_CAMERA&&cameraOutput!=null){
+            String id=cameraId;
+            try{
+                String takenAt=java.time.Instant.now().toString();
+                filePicked(cameraOutput,id,"image/jpeg","Foto "+System.currentTimeMillis()+".jpg",takenAt);
+                requestPhotoAddress(id);
+            }catch(Exception e){error("Fotografie: "+e.getMessage());}
+            js("window.onNativeMediaDone?.()");
+            return;
+        }
         if(request==REQUEST_TREE&&data!=null&&data.getData()!=null){Uri uri=data.getData();try{getContentResolver().takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_WRITE_URI_PERMISSION);settings.edit().putString("treeUri",uri.toString()).apply();scheduleSync();syncCloud();}catch(Exception e){error("Nelze použít vybranou složku: "+e.getMessage());}return;}
         if(request==REQUEST_EXPORT&&data!=null&&data.getData()!=null&&exportBase64!=null){try(OutputStream out=getContentResolver().openOutputStream(data.getData(),"w")){out.write(Base64.decode(exportBase64,Base64.DEFAULT));exportBase64=null;onSyncResult("Obrázek uložen",null);}catch(Exception e){error("Export: "+e.getMessage());}}
     }
