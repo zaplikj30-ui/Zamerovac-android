@@ -70,7 +70,6 @@ function showAppMenu(id,items){
 }
 $('back').onclick=()=>showAppMenu('navMenu',[
   ['⌂  Domů',()=>{currentFolder=null;showFolder()}],
-  ['📁  Zakázky',()=>showFolder()],
   ['⚙  Nastavení',()=>toggleSettings()],
   ['☁  Google Disk',()=>chooseCloud()],
   ['ⓘ  O Zaměřovači',()=>modal('Zaměřovač','<p>Vlastní aplikace pro zaměřování nábytku. Vývojová verze.</p>',()=>true,'Zavřít')]
