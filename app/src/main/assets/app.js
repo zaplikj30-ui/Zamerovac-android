@@ -63,7 +63,7 @@ $('items').querySelectorAll('.entry').forEach(el=>el.onclick=(e)=>{if(e.target.c
 $('items').querySelectorAll('.entry-thumb').forEach(img=>img.addEventListener('error',()=>{img.hidden=true;img.nextElementSibling.hidden=false},{once:true}));
 }
 function promptRenameRecord(r){
- const match=['photo','video','audio','file'].includes(r.kind)?String(r.title).match(/^(.*?)(\\.[A-Za-z0-9]{1,8})$/):null;
+ const match=['photo','video','audio','file'].includes(r.kind)?String(r.title).match(/^(.*?)(\.[A-Za-z0-9]{1,8})$/):null;
  const base=match?match[1]:r.title,suffix=match?match[2]:'';
  modal('Přejmenovat','<label>Název</label><div class="rename-inline"><input id="renameBase" value="'+escapeHtml(base)+'" autocomplete="off">'+
  (suffix?'<span class="rename-extension">'+escapeHtml(suffix)+'</span>':'')+'</div>',()=>{
