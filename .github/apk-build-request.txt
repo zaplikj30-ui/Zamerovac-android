@@ -2,5 +2,5 @@
 # Běžné změny kódu APK nesestavují. Teprve změna tohoto souboru spustí workflow build-apk.yml.
 # Při požadavku na sestavení uprav číslo a popis níže, commitni do main.
 
-request: 4
-reason: souhrnna aktualizace - barevne ikony, experimenty skryte v menu, Bosch desetiny a zaokrouhlovani, galerie, foto poznamky a fotoaparat
+request: 5
+reason: editor kóty a popisky čar a šipek, vícenásobné řetězce, úhel, plocha, volná ruka, vlastní lišta, ZIP import, poznámky, zámky, koš, hledání; Google Disk odložen
