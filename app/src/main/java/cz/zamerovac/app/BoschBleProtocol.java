@@ -19,6 +19,12 @@ public final class BoschBleProtocol {
     public static final byte[] START_STREAM =
         {(byte)0xC0, (byte)0x55, 0x02, 0x01, 0x00, 0x1A};
 
+    // Experimentální příkaz vzdáleného měření z GLM 120 C / GLM 400 C.
+    // U GLM 100-25 C není veřejně potvrzený; nikdy jej neposílat automaticky.
+    public static final byte[] REMOTE_TRIGGER =
+        {(byte)0xC0, (byte)0x56, 0x01, 0x00, 0x1E};
+
+
     /** Metry v IEEE754 little-endian float32 od pozice 7. Vracime milimetry,
      * vcetne pulmilimetru; ostatni zpravy, statusy a chyby ignorujeme. */
     public static Double millimeters(byte[] data) {
