@@ -222,7 +222,16 @@ if(['dimension','chain','cumulative','area'].includes(mode)){
   finishDraw(item);
 }
 else if(mode==='note'){openRichNote(item,true)}
- else if(mode==='symbol'){modal('Symbol do fotografie',`<label>Popisek</label><input id="drawText" placeholder="Např. přívod vody" value="">`,()=>{item.text=$('drawText').value;checkpoint();current.items.push(item);commitEditor();finishDraw(item)})}
+ else if(mode==='symbol'){
+ const presets=['🔌 Zásuvka','🚰 Voda','🟤 Odpad','⬆ Výška parapetu','▣ Okno','▯ Dveře','⚡ Elektro','♨ Topení'];
+ modal('Rychlý symbol do fotografie',
+   '<label>Přednastavený symbol</label><select id="drawPreset"><option value="">Vlastní popisek</option>'+presets.map(x=>'<option>'+escapeHtml(x)+'</option>').join('')+'</select>'+
+   '<label>Text u symbolu</label><input id="drawText" placeholder="Zvol symbol nebo napiš vlastní" value="">',()=>{
+     item.text=$('drawText').value.trim();if(!item.text)return false;
+     checkpoint();current.items.push(item);commitEditor();finishDraw(item);
+   });
+ $('drawPreset').onchange=()=>{if($('drawPreset').value)$('drawText').value=$('drawPreset').value};
+}
 else{checkpoint();current.items.push(item);commitEditor();finishDraw(item)}}
 function editItem(item){if(['dimension','chain','cumulative','area','angle'].includes(item.type))modal('Upravit hodnotu',`<label>Rozměr</label><input id="measureInput" type="text" value="${escapeHtml(item.measure)}"><label>Jednotka</label><select id="measureUnit">${['mm','cm','m','in','m²','°'].map(u=>`<option ${u===(item.unit||prefs.unit)?'selected':''}>${u}</option>`).join('')}</select><div class="row wrap"><button id="removeItem" class="outline">Smazat kótu</button></div>`,()=>{checkpoint();item.measure=$('measureInput').value;item.unit=$('measureUnit').value;commitEditor()});else if(item.type==='note'){openRichNote(item,false);return}else modal('Upravit prvek',`<label>Text</label><input id="drawText" value="${escapeHtml(item.text||'')}"><div class="row"><button id="removeItem" class="outline">Smazat prvek</button></div>`,()=>{checkpoint();item.text=$('drawText').value;commitEditor()});$('removeItem').onclick=()=>{checkpoint();current.items=current.items.filter(i=>i.id!==item.id);selected=null;$('modal').hidden=true;commitEditor()}}
 function showEditorOverflow(){
