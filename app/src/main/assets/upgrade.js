@@ -431,10 +431,12 @@ const oldSetTool=setTool;
 setTool=function(key,keepSelection){oldSetTool(key,keepSelection);renderFavorites()};
 function updateVisualControls(){
  $('fitBtn').hidden=true;
- $('styleTool').textContent='✎';
+ $('styleTool').innerHTML='<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 18 18 3l3 3L6 21H3z"/><path d="M8 13l3 3M13 8l3 3M4 21l2-3M3 7l4-4 4 4"/></svg>';
  $('styleTool').title='Vzhled kóty – pravítko a tužka';
- $('deleteTool').textContent='🗑';
+ $('styleTool').setAttribute('aria-label',$('styleTool').title);
+ $('deleteTool').innerHTML='<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 7h16M10 7V4h4v3M6 7l1 14h10l1-14M10 11v7M14 11v7"/></svg>';
  $('deleteTool').title='Odstranit vybraný prvek';
+ $('deleteTool').setAttribute('aria-label',$('deleteTool').title);
 }
 updateVisualControls();
 const oldUpdateDrawingToolButton=updateDrawingToolButton;
