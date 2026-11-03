@@ -162,7 +162,44 @@ public class MainActivity extends Activity {
                     if(path.startsWith("/media/")){
                         String id=path.substring(7);if(!validId(id))return null;
                         File f=mediaFile(id);if(!f.isFile())return new WebResourceResponse("text/plain","UTF-8",404,"Not Found",new HashMap<>(),new java.io.ByteArrayInputStream(new byte[0]));
-                        return new WebResourceResponse(mediaMime(id),null,new FileInputStream(f));
+                        String mime=mediaMime(id);
+                        String range=req.getRequestHeaders().get("Range");
+                        if(range==null)range=req.getRequestHeaders().get("range");
+                        if(range!=null&&range.startsWith("bytes=")){
+                            try{
+                                String[] requestRange=range.substring(6).split("-",2);
+                                long start=Long.parseLong(requestRange[0].trim());
+                                long end=requestRange.length>1&&!requestRange[1].trim().isEmpty()
+                                    ?Long.parseLong(requestRange[1].trim()):f.length()-1;
+                                end=Math.min(end,f.length()-1);
+                                if(start>=0&&start<=end){
+                                    final long bytes=end-start+1;
+                                    FileInputStream fileInput=new FileInputStream(f);
+                                    fileInput.getChannel().position(start);
+                                    InputStream limited=new java.io.FilterInputStream(fileInput){
+                                        long remaining=bytes;
+                                        @Override public int read() throws IOException{
+                                            if(remaining<=0)return -1;
+                                            int v=super.read();if(v!=-1)remaining--;return v;
+                                        }
+                                        @Override public int read(byte[] buf,int off,int len)throws IOException{
+                                            if(remaining<=0)return -1;
+                                            int n=super.read(buf,off,(int)Math.min((long)len,remaining));
+                                            if(n>0)remaining-=n;return n;
+                                        }
+                                    };
+                                    Map<String,String> hdr=new HashMap<>();
+                                    hdr.put("Accept-Ranges","bytes");
+                                    hdr.put("Content-Range","bytes "+start+"-"+end+"/"+f.length());
+                                    hdr.put("Content-Length",Long.toString(bytes));
+                                    return new WebResourceResponse(mime,null,206,"Partial Content",hdr,limited);
+                                }
+                            }catch(Exception ignored){}
+                        }
+                        Map<String,String> hdr=new HashMap<>();
+                        hdr.put("Accept-Ranges","bytes");
+                        hdr.put("Content-Length",Long.toString(f.length()));
+                        return new WebResourceResponse(mime,null,200,"OK",hdr,new FileInputStream(f));
                     }
                     if(path.startsWith("/thumb/")){
                         String id=path.substring(7);if(!validId(id))return null;
