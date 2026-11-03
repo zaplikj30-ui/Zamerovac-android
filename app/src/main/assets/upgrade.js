@@ -8,6 +8,44 @@ const grouped={dimensions:['dimension','chain','cumulative','angle','area'],note
 prefs.themeAccent=prefs.themeAccent||'#8b5cf6';
 prefs.layerVisible=prefs.layerVisible||{dimensions:true,notes:true,drawing:true};
 prefs.seenVersion=prefs.seenVersion||'';
+if(!prefs.experimentalFeatures||typeof prefs.experimentalFeatures!=='object'||Array.isArray(prefs.experimentalFeatures))prefs.experimentalFeatures={};
+const experimentalCatalog=[
+ ['remoteTrigger','Dálková spoušť Bosch','Zkušební Bluetooth příkaz – kompatibilitu ověříme až při testování.'],
+ ['boschIncline','Digitální vodováha a sklon Bosch','Přenos úhlu z měřiče zatím není potvrzen.'],
+ ['boschLive','Průběžné hodnoty Bosch','Zobrazí přijaté hodnoty, které Bosch skutečně odešle.'],
+ ['boschArea','Plocha a objem z Bosch','Přenos vypočtené plochy a objemu zatím není ověřen.'],
+ ['smartCanvas','Chytré plátno a půdorys','Připraveno pro budoucí testování narovnávání skic.']
+];
+const experimentalEnabled=id=>prefs.experimentalFeatures[id]===true;
+window.__experimentalEnabled=experimentalEnabled;
+function openExperimentalSettings(){
+ const body='<p class="muted">Všechny experimenty jsou standardně vypnuté. Zapnutím se jejich položka objeví v nabídce nástrojů při zaměřování, vypnutím zmizí. Běžné měření to neovlivní.</p>'+
+ experimentalCatalog.map(([id,label,note])=>
+ '<label class="setting" style="display:flex;align-items:center;gap:12px"><span style="flex:1"><strong>'+esc(label)+'</strong><small style="display:block">'+esc(note)+'</small></span><input type="checkbox" data-experiment="'+id+'" '+(experimentalEnabled(id)?'checked':'')+'></label>').join('');
+ modal('Experimentální funkce',body,()=>true,'Hotovo');
+ $('modalBody').querySelectorAll('[data-experiment]').forEach(input=>input.onchange=()=>{
+  prefs.experimentalFeatures[input.dataset.experiment]=input.checked;
+  save();
+ });
+}
+function openExperimentalAction(id){
+ if(!experimentalEnabled(id))return;
+ if(id==='remoteTrigger'){
+  if(!native||typeof Native.triggerLaser!=='function'){notify('Dálková spoušť není v tomto sestavení dostupná');return}
+  if(laserState!=='receiving'&&laserState!=='connected'){notify('Nejdřív připoj laser Bosch');return}
+  Native.triggerLaser();return;
+ }
+ if(id==='boschLive'){
+  const value=window.lastLaser;
+  modal('Poslední přijaté měření',
+   '<p><b>'+esc(value?value.value+' '+value.unit:'Dosud žádné měření')+'</b></p>'+
+   '<p class="muted">Zobrazujeme pouze skutečná přijatá data. Průběžný přenos závisí na režimu laseru.</p>',()=>true,'Zavřít');return;
+ }
+ const details=experimentalCatalog.find(row=>row[0]===id);
+ modal(details?.[1]||'Experiment','<p>'+esc(details?.[2]||'Zatím nepřipraveno')+'</p>'+
+ '<p class="muted">Neověřená funkce – bez přijatých údajů aplikace neukazuje žádné domnělé hodnoty.</p>',()=>true,'Zavřít');
+}
+
 function accent(){
   const color=/^#[0-9a-f]{6}$/i.test(prefs.themeAccent)?prefs.themeAccent:'#8b5cf6';
   document.documentElement.style.setProperty('--accent',color);
@@ -463,6 +501,19 @@ function highlightCurrentTool(){
 const originalShowTools=showTools;
 showTools=function(){
  originalShowTools();
+ const list=$('toolMenu').querySelector('.toolList');
+ if(list){
+  const enabled=experimentalCatalog.filter(([id])=>experimentalEnabled(id));
+  if(enabled.length){
+   const heading=document.createElement('div');heading.className='sectionLabel';heading.textContent='Experimentální funkce';list.append(heading);
+   for(const [id,label] of enabled){
+    const button=document.createElement('button');button.type='button';button.className='choice';
+    button.dataset.experimentalTool=id;button.textContent='🧪 '+label;
+    button.onclick=()=>{closeMenus();openExperimentalAction(id)};
+    list.append(button);
+   }
+  }
+ }
  highlightCurrentTool();
 };
 const originalSetTool=setTool;
@@ -552,12 +603,29 @@ function showLaserHistory(){
 }
 const oldBluetoothLong=$('bluetoothBtn');
 oldBluetoothLong.addEventListener('contextmenu',e=>{e.preventDefault();showLaserHistory()});
+const originalGlobalOverflow=showOverflow;
+showOverflow=function(){
+ originalGlobalOverflow();
+ const menu=$('overflowMenu');
+ if(menu&&!menu.hidden&&!menu.querySelector('[data-open-experiments]')){
+  const b=document.createElement('button');b.className='appMenuItem';
+  b.dataset.openExperiments='1';b.textContent='🧪 Experimentální funkce';
+  b.onclick=()=>{closeMenus();openExperimentalSettings()};menu.append(b);
+ }
+};
+$('settingsBtn').onclick=showOverflow;
 const oldRenderSettings=renderSettings;
 renderSettings=function(){
  oldRenderSettings();
  const place=$('settingsContent');
  const wrapper=document.createElement('div');
  wrapper.innerHTML='<div class="setGroup">Vzhled aplikace</div><label class="setting"><span>Barva prostředí</span><input type="color" id="uiTheme" value="'+esc(prefs.themeAccent)+'"></label>'+
+ '<div class="setGroup">Laser Bosch – přesnost zápisu</div>'+
+ '<label class="setting"><span>Zaokrouhlování laseru</span><select id="laserRoundingChoice"><option value="none">Bez zaokrouhlení</option><option value="0.1">Na 0,1 mm</option><option value="0.5">Na 0,5 mm</option><option value="1">Na celé milimetry</option></select></label>'+
+ '<label class="setting"><span>Desetinná místa laseru</span><select id="laserDecimalsChoice"><option value="auto">Automaticky</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></label>'+
+ '<p class="muted">Původní naměřená hodnota se zachovává. Volby mění zápis nových kót, ne starší historii.</p>'+
+ '<div class="setGroup">Zkušební funkce</div>'+
+ '<button class="setting" id="openExperiments" style="width:100%">🧪 Experimentální funkce</button>'+
  '<div class="setGroup">Informace a údržba</div>'+
  '<button class="setting" id="openDiagnostics" style="width:100%">Diagnostika a sdílení logu</button>'+
  '<button class="setting" id="openHistory" style="width:100%">Novinky a historie aktualizací</button>'+
@@ -568,6 +636,11 @@ renderSettings=function(){
  '<button class="setting" id="restoreAll" style="width:100%">Obnovit ZIP jako nové zakázky</button>';
  place.append(wrapper);
  wrapper.querySelector('#uiTheme').onchange=e=>{prefs.themeAccent=e.target.value;accent();save();if(native&&typeof Native.setAccent==='function')Native.setAccent(prefs.themeAccent)};
+ for(const [id,key] of [['laserRoundingChoice','laserRounding'],['laserDecimalsChoice','laserDecimals']]){
+  const select=wrapper.querySelector('#'+id);select.value=String(prefs[key]??(key==='laserDecimals'?'auto':'none'));
+  select.onchange=()=>{prefs[key]=select.value;save()};
+ }
+ wrapper.querySelector('#openExperiments').onclick=openExperimentalSettings;
  wrapper.querySelector('#openDiagnostics').onclick=openDiagnostics;
  wrapper.querySelector('#openHistory').onclick=showChanges;
  wrapper.querySelector('#openReadings').onclick=showLaserHistory;
