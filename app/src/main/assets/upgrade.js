@@ -426,16 +426,71 @@ renderSettings=function(){
 };
 const releases=[
  {version:'1.2',title:'Velká aktualizace Zaměřovače',items:[
-  'Galerie a rychlý přechod mezi fotografiemi','Přehrávání videí a zvuku v aplikaci',
-  'Vyhledávání napříč zakázkami','Zámek dokončených zakázek',
-  'Historie úprav a kontrola součtu kót','Vrstvy anotací a oblíbené nástroje',
-  'Diagnostika, měření Bosch, stav cloudu','Nastavitelná barva prostředí a historie novinek'
- ]}];
+  ['Galerie a listování fotografiemi','gallery'],
+  ['Video a zvuk přímo v aplikaci','media'],
+  ['Rozšířené hledání zakázek','search'],
+  ['Přesné adresní místo v RÚIAN','address'],
+  ['Zámek dokončených zakázek','lock'],
+  ['Historie úprav fotografií','versions'],
+  ['Kontrola součtu kót','sum'],
+  ['Vrstvy anotací a rychlé nástroje','layers'],
+  ['Text, hlas a detailní fotografie v poznámce','notes'],
+  ['Editovatelná kóta s popiskem v detailu','notes'],
+  ['Diagnostika a sdílení logu','diagnostics'],
+  ['Bosch měření a indikátor stavu','readings'],
+  ['Fialový vzhled a volitelná barva','theme'],
+  ['Zálohování a obnovení zakázek ZIP','backup'],
+  ['Skici pomocí S Pen','sketch']
+ ]},
+ {version:'1.1',title:'Základní funkce Zaměřovače',items:[
+  ['Zakázky a složky','browser'],['Fotografie s kótami','editor'],
+  ['Textové poznámky a přílohy','notes'],['Export PNG/PDF','editor'],
+  ['Výběr cloudové složky','settings']
+ ]}
+];
+function navigateToFeature(key){
+ $('modal').hidden=true;
+ $('settingsPanel').hidden=true;
+ const photo=state.records.find(r=>!r.deleted&&r.kind==='photo');
+ const note=state.records.find(r=>!r.deleted&&r.kind==='note');
+ const first=state.records.find(r=>!r.deleted);
+ function editor(){
+  if(!photo){showFolder();notify('Nejdřív otevři nebo vytvoř fotografii');return false}
+  currentFolder=photo.parentId||null;openEditor(photo);return true
+ }
+ function settings(targetId){
+  showFolder();$('settingsPanel').hidden=false;renderSettings();
+  const target=$(targetId);if(target)target.scrollIntoView({block:'center',behavior:'smooth'});
+ }
+ switch(key){
+  case 'gallery':showFolder();openGallery(0);break;
+  case 'media':showFolder();notify('Klepni na video či hlasový soubor v seznamu zakázky');break;
+  case 'search':showFolder();$('searchBtn').click();break;
+  case 'address':showFolder();openAddressSearch();break;
+  case 'lock':showFolder();if(first)recordActions(first.id);else notify('Vytvoř nejdřív zakázku');break;
+  case 'versions':if(editor())restoreVersion();break;
+  case 'sum':if(editor())openSumCheck();break;
+  case 'layers':if(editor())openLayers();break;
+  case 'notes':if(editor()){setTool('note');notify('Umísti bod poznámky do fotografie')};break;
+  case 'diagnostics':openDiagnostics();break;
+  case 'readings':showLaserHistory();break;
+  case 'theme':settings('uiTheme');break;
+  case 'backup':settings('backupAll');break;
+  case 'sketch':if(note){currentFolder=note.parentId||null;openNote(note);$('toggleSketch')?.click()}else{showFolder();notify('Nejdřív vytvoř textovou poznámku')};break;
+  case 'editor':editor();break;
+  case 'settings':settings('chooseCloud');break;
+  default:showFolder();break;
+ }
+}
 function showChanges(){
  modal('Novinky a historie aktualizací','<p>Instalovaná verze: <b>'+esc(appVersion)+'</b></p>'+
- releases.map(r=>'<div class="releaseItem"><b>Verze '+esc(r.version)+'</b><p>'+esc(r.title)+'</p><ul>'+r.items.map(t=>'<li>'+esc(t)+'</li>').join('')+'</ul><button class="outline" id="findNewFeature">Ukázat, kde to najdu</button></div>').join('')+
- '<p class="muted">Zobrazují se pouze funkce této aktualizační řady. Datum a přesnou verzi určuje vydaný balíček APK.</p>',()=>true,'Zavřít');
- $('findNewFeature').onclick=()=>{$('modal').hidden=true;showFolder();$('settingsPanel').hidden=false;renderSettings();notify('Novinky najdeš v Nastavení; galerie je u fotografií')};
+ releases.map((r,i)=>'<section class="releaseItem"><b>Verze '+esc(r.version)+'</b><p>'+esc(r.title)+'</p>'+
+ r.items.map((t,j)=>'<div class="releaseFeature"><span>'+esc(t[0])+'</span><button class="outline" data-release="'+i+'" data-feature="'+j+'">Ukázat, kde to najdu</button></div>').join('')+'</section>').join('')+
+ '<p class="muted">Zobrazují se novinky z verze 1.2 a ověřené základní změny verze 1.1. Datum a číslo konkrétní APK určuje GitHub vydání.</p>',()=>true,'Zavřít');
+ $('modalBody').querySelectorAll('[data-release]').forEach(b=>b.onclick=()=>{
+  const i=Number(b.dataset.release),j=Number(b.dataset.feature);
+  navigateToFeature(releases[i].items[j][1]);
+ });
 }
 function openDiagnostics(){
  modal('Diagnostika','<p>Záznamy se ukládají jen v zařízení, bez obsahu zákaznických poznámek. Do jiné aplikace se předají pouze na tvoje vyžádání.</p>'+
