@@ -446,3 +446,15 @@ body.in-editor [data-toolbar-key].toolbar-drop-target{
 body.in-editor #editorExtraToolbar > #editorMore.tool-active{
   background:#5d427c;border-color:#a68bcb;color:#fff
 }
+
+/* Stav zamčené položky, přejmenování bez přípony, přístupný koš. */
+.entry-title .entry-lock{display:inline-block;font-size:14px;margin-left:4px;vertical-align:baseline}
+.rename-inline{display:flex;align-items:center;gap:0;margin-top:4px;margin-bottom:10px}
+#modal .rename-inline input{flex:1;min-width:0;width:100%;margin:0;border-radius:6px 0 0 6px}
+.rename-extension{font-size:15px;padding:12px 10px;background:#414044;border:1px solid #686868;
+ border-left:0;border-radius:0 6px 6px 0;color:#e9d3fb;white-space:nowrap}
+.trash-entry{display:flex;gap:7px;align-items:center;border-bottom:1px solid #55505c;padding:10px 0}
+.trash-entry > div{flex:1;min-width:0}
+.trash-entry strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.trash-entry small{display:block;color:#bbb;margin-top:3px}
+.trash-entry button{padding:8px 5px;font-size:13px}
