@@ -85,7 +85,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class MainActivity extends Activity {
-    private static final int REQUEST_FILE=20,REQUEST_TREE=21,REQUEST_CAMERA=22,REQUEST_EXPORT=23,REQUEST_PERMISSIONS=24,REQUEST_ATTACH=25,REQUEST_CAMERA_PERMISSION=26,REQUEST_PHOTO_LOCATION=27,REQUEST_BACKUP=28,REQUEST_IMPORT_BACKUP=29,REQUEST_ISSUE_EXPORT=30;
+    private static final int REQUEST_FILE=20,REQUEST_TREE=21,REQUEST_CAMERA=22,REQUEST_EXPORT=23,REQUEST_PERMISSIONS=24,REQUEST_ATTACH=25,REQUEST_CAMERA_PERMISSION=26,REQUEST_PHOTO_LOCATION=27,REQUEST_BACKUP=28,REQUEST_IMPORT_BACKUP=29,REQUEST_ISSUE_EXPORT=30,REQUEST_BLUETOOTH_PERMISSION=31;
     private WebView web;
     private FrameLayout root;
     private View statusFill;
@@ -102,6 +102,7 @@ public class MainActivity extends Activity {
     private SharedPreferences settings;
     private final Handler handler=new Handler(Looper.getMainLooper());
     private final ArrayList<BluetoothDevice> scanned =new ArrayList<>();
+    private final Map<String,String> scannedNames=new HashMap<>();
     private BluetoothLeScanner scanner;
     private BluetoothGatt gatt;
     private BoschClassicReader classic;
@@ -320,6 +321,12 @@ public class MainActivity extends Activity {
                 boolean granted=grantResults.length>0&&grantResults[0]==PackageManager.PERMISSION_GRANTED;
                 js(granted?"window.__audioPermissionRetry?.()":"window.__audioPermissionDenied?.()");
             }
+        }
+        if(requestCode==REQUEST_BLUETOOTH_PERMISSION){
+            boolean granted=grantResults.length==permissions.length;
+            for(int value:grantResults)granted &= value==PackageManager.PERMISSION_GRANTED;
+            if(granted)handler.post(this::startScan);
+            else{laserStatus("off","");error("Povol přístup k zařízením v okolí v nastavení Androidu");}
         }
         if(requestCode==REQUEST_CAMERA_PERMISSION){
             if(grantResults.length>0&&grantResults[0]==PackageManager.PERMISSION_GRANTED){
@@ -779,8 +786,8 @@ public class MainActivity extends Activity {
            (checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN)!=PackageManager.PERMISSION_GRANTED||
             checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT)!=PackageManager.PERMISSION_GRANTED)){
             requestPermissions(new String[]{Manifest.permission.BLUETOOTH_SCAN,Manifest.permission.BLUETOOTH_CONNECT},
-                REQUEST_PERMISSIONS);
-            error("Povol Bluetooth a zkus připojení znovu");
+                REQUEST_BLUETOOTH_PERMISSION);
+            laserStatus("connecting","čekám na povolení Bluetooth");
             return;
         }
         BluetoothManager manager=(BluetoothManager)getSystemService(BLUETOOTH_SERVICE);
@@ -794,12 +801,21 @@ public class MainActivity extends Activity {
         scanner=adapter.getBluetoothLeScanner();
         if(scanner==null){error("Bluetooth LE není dostupné");laserStatus("off","");return;}
         scanned.clear();
+        scannedNames.clear();
         laserStatus("connecting","vyhledávání zařízení");
         scanCallback=new ScanCallback(){
             @Override public void onScanResult(int type,ScanResult result){
                 BluetoothDevice device=result.getDevice();
                 if(device==null)return;
-                runOnUiThread(()->{if(!scanned.contains(device))scanned.add(device);});
+                String advertised=result.getScanRecord()==null?null:result.getScanRecord().getDeviceName();
+                runOnUiThread(()->{
+                    if(!scanned.contains(device))scanned.add(device);
+                    if(advertised!=null&&!advertised.trim().isEmpty()){
+                        String prior=scannedNames.get(device.getAddress());
+                        if(prior==null||advertised.length()>prior.length())
+                            scannedNames.put(device.getAddress(),advertised);
+                    }
+                });
             }
             @Override public void onScanFailed(int code){
                 runOnUiThread(()->{stopLaserScan();laserStatus("off","");error("Vyhledávání Bluetooth se nezdařilo ("+code+")");});
@@ -821,8 +837,8 @@ public class MainActivity extends Activity {
                     }
                 }catch(Exception exception){android.util.Log.w("Zamerovac","Paired Bluetooth list",exception);}
                 devices.sort((a,b)->{
-                    String aa=String.valueOf(a.getName()).toUpperCase(java.util.Locale.ROOT);
-                    String bb=String.valueOf(b.getName()).toUpperCase(java.util.Locale.ROOT);
+                    String aa=String.valueOf(scannedNames.containsKey(a.getAddress())?scannedNames.get(a.getAddress()):a.getName()).toUpperCase(java.util.Locale.ROOT);
+                    String bb=String.valueOf(scannedNames.containsKey(b.getAddress())?scannedNames.get(b.getAddress()):b.getName()).toUpperCase(java.util.Locale.ROOT);
                     boolean x=aa.contains("BOSCH")||aa.contains("GLM");
                     boolean y=bb.contains("BOSCH")||bb.contains("GLM");
                     return x==y?aa.compareTo(bb):(x?-1:1);
@@ -835,7 +851,8 @@ public class MainActivity extends Activity {
                 String[] labels=new String[devices.size()];
                 for(int i=0;i<devices.size();i++){
                     BluetoothDevice d=devices.get(i);
-                    String name=d.getName();
+                    String name=scannedNames.containsKey(d.getAddress())?
+                            scannedNames.get(d.getAddress()):d.getName();
                     labels[i]=(name==null||name.trim().isEmpty()?"Neznámé zařízení":name)
                             +" · "+d.getAddress()+(leAddresses.contains(d.getAddress())?"":" (spárované)");
                 }
@@ -881,7 +898,8 @@ public class MainActivity extends Activity {
             if(gatt!=null){gatt.disconnect();gatt.close();gatt=null;}
             boschCommand=null;
             boschStreamEnabled=false;
-            String name=device.getName();
+            String name=scannedNames.containsKey(device.getAddress())?
+                    scannedNames.get(device.getAddress()):device.getName();
             if(name==null||name.isEmpty())name="Bosch";
             final String deviceName=name;
             laserStatus("connecting",deviceName);
