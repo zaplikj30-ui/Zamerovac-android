@@ -16,13 +16,37 @@ function screenToWorld(p){return {x:(p.x-view.dx)/view.zoom,y:(p.y-view.dy)/view
 function worldToScreen(p){return {x:p.x*view.zoom+view.dx,y:p.y*view.zoom+view.dy}}
 function eventPoint(e){let r=stageCanvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top}}
 function boundsPoint(p){return{x:Math.max(0,Math.min(photoSize.w,p.x)),y:Math.max(0,Math.min(photoSize.h,p.y))}}
-function snap(p,ref=null,ignore=null){p=boundsPoint({...p});const step=Math.max(5,prefs.gridStep);let snapDistance=14/view.zoom;if(prefs.snapGrid){let gx=Math.round(p.x/step)*step,gy=Math.round(p.y/step)*step;if(Math.abs(gx-p.x)<snapDistance)p.x=gx;if(Math.abs(gy-p.y)<snapDistance)p.y=gy}
-if(prefs.snapPoints){let pts=[];for(let item of current.items||[]){
-  if(item.a && !(ignore?.item===item&&ignore.key==='a'))pts.push(item.a);
-  if(item.b && !(ignore?.item===item&&ignore.key==='b'))pts.push(item.b);
-  for(let x of item.points||[])pts.push(x);
-}let nearest=pts.reduce((best,v)=>Math.hypot(v.x-p.x,v.y-p.y)<Math.hypot(best.x-p.x,best.y-p.y)?v:best,{x:Infinity,y:Infinity});if(nearest&&Math.hypot(nearest.x-p.x,nearest.y-p.y)<snapDistance)p={...nearest}}
-if(prefs.snapHorizontal&&ref){if(Math.abs(p.y-ref.y)<snapDistance)p.y=ref.y;if(Math.abs(p.x-ref.x)<snapDistance)p.x=ref.x}return boundsPoint(p)}
+// Magnetické přichytávání není vazba: výsledek se přepočítává z aktuální
+// polohy prstu. Vždy musí zbýt prostor mezi magnetickými zónami pro uvolnění.
+function snap(p,ref=null,ignore=null){
+ p=boundsPoint({...p});
+ const step=Math.max(5,Number(prefs.gridStep)||40),zoom=Math.max(.05,view.zoom);
+ const pointDistance=12/zoom;
+ if(prefs.snapGrid){
+  const gridDistance=Math.min(11/zoom,step*.22);
+  const gx=Math.round(p.x/step)*step,gy=Math.round(p.y/step)*step;
+  if(Math.abs(gx-p.x)<gridDistance)p.x=gx;
+  if(Math.abs(gy-p.y)<gridDistance)p.y=gy;
+ }
+ if(prefs.snapPoints){
+  let best=null,bestDistance=pointDistance;
+  for(const item of current.items||[]){
+   // Vlastní kóta nesmí přichytávat svůj konec k druhému vlastnímu konci.
+   if(ignore?.item===item)continue;
+   for(const candidate of [item.a,item.b,...(item.points||[])]){
+    if(!candidate)continue;
+    const distance=Math.hypot(candidate.x-p.x,candidate.y-p.y);
+    if(distance<bestDistance){bestDistance=distance;best=candidate}
+   }
+  }
+  if(best)p={...best};
+ }
+ if(prefs.snapHorizontal&&ref){
+  if(Math.abs(p.y-ref.y)<pointDistance)p.y=ref.y;
+  if(Math.abs(p.x-ref.x)<pointDistance)p.x=ref.x;
+ }
+ return boundsPoint(p);
+}
 function checkpoint(){editStack.push(JSON.stringify(current.items||[]));if(editStack.length>50)editStack.shift();redoStack=[]}
 function commitEditor(){touch(current);save();paint()}
 function undoEditor(){if(!editStack.length)return;redoStack.push(JSON.stringify(current.items));current.items=JSON.parse(editStack.pop());commitEditor()}
@@ -265,6 +289,15 @@ function nearestItem(point){
  return best;
 }
 function hitAnnotation(point){
+ // Při překrývajících se přichycených koncích dát přednost vybrané kótě:
+ // společné souřadnice neznamenají, že se dva samostatné prvky spojily.
+ const activeItem=(current?.items||[]).find(item=>item.id===selected);
+ if(activeItem&&activeItem.type!=='note'){
+  for(const p of [activeItem.a,activeItem.b]){
+   if(p&&Math.hypot(point.x-worldToScreen(p).x,point.y-worldToScreen(p).y)<24)
+    return activeItem;
+  }
+ }
  const label=nearestLabel(point);
  if(label?.item)return label.item;
  return nearestItem(point);
