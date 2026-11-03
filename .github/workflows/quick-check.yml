@@ -1,0 +1,47 @@
+name: Zaměřovač – rychlá kontrola zdrojů (bez APK)
+
+# Po změně editoru/poznámek provést jen krátké testy.
+# Sestavení a vydání APK řídí zvlášť build-apk.yml na vyžádání.
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/src/main/assets/**'
+      - 'tests/**'
+      - '.github/workflows/quick-check.yml'
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/src/main/assets/**'
+      - 'tests/**'
+      - '.github/workflows/quick-check.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zamerovac-fast-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fast-check:
+    name: Syntaxe JS a regresní testy bez Gradlu
+    runs-on: ubuntu-latest
+    timeout-minutes: 6
+    steps:
+      - uses: actions/checkout@v4
+      - name: Zkontrolovat syntax všech JavaScriptových souborů
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in app/src/main/assets/*.js; do
+            node --check "$file"
+          done
+      - name: Spustit rychlé testy editoru a poznámek
+        shell: bash
+        run: |
+          set -euo pipefail
+          for script in tests/*.js; do
+            node "$script"
+          done
+          python3 -m unittest discover -s tests -p 'test_*.py' -v
