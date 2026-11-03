@@ -1,6 +1,7 @@
 /* Bosch laser: varianta A. Platná vzdálenost jde přímo do vybrané lineární kóty.
  * Samostatný modul, aby stávající editor i seznam posledních 40 hodnot zůstaly zachovány.
- * Není-li vybraná lineární kóta, nic se na obrázku nepřepisuje.
+ * Měření se automaticky zapisuje pouze do předem označené kóty.
+ * Bez označené kóty se hodnota ukládá jen do samostatné historie.
  */
 'use strict';
 (function(){
@@ -36,7 +37,7 @@
   }
   const item=(current.items||[]).find(x=>x.id===selected);
   if(!item||!linearTypes.has(item.type)){
-   notify('Bosch: vyber kótu, do které mám zapsat měření');
+   notify('Bosch: hodnota uložena do historie. Nejdřív označ kótu a potom změř.');
    return true;
   }
   const destUnit=Object.prototype.hasOwnProperty.call(units,item.unit)?item.unit:
@@ -60,12 +61,12 @@
   notify('✓ Bosch: '+result+' '+destUnit+' zapsáno přímo do kóty');
   return true;
  }
- // Vrací true, když šlo o událost pro editor. Handler v upgrade.js
- // pak správně vynechá původní oznámení, které nic neukládalo.
+ // Při příchodu nové hodnoty se vždy kontroluje AKTUÁLNĚ označená kóta.
+ // Nikdy nezapíšeme starší odečet dodatečným klepnutím.
  window.__handleLaserAuto=function(value,unit){
-  if(screen!=='editor')return false;
+  if(screen!=='editor'||!current)return false;
   try{return apply(value,unit)}
-  catch(error){notify('Nepodařilo se uložit měření – kótu zkontroluj');return true}
+  catch(error){notify('Měření se nepodařilo zpracovat');return true}
  };
  window.__applyLaserMeasurement=function(value,unit,options={}){
   try{return apply(value,unit,options)}

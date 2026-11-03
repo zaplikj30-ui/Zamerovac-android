@@ -85,7 +85,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class MainActivity extends Activity {
-    private static final int REQUEST_FILE=20,REQUEST_TREE=21,REQUEST_CAMERA=22,REQUEST_EXPORT=23,REQUEST_PERMISSIONS=24,REQUEST_ATTACH=25,REQUEST_CAMERA_PERMISSION=26,REQUEST_PHOTO_LOCATION=27,REQUEST_BACKUP=28,REQUEST_IMPORT_BACKUP=29;
+    private static final int REQUEST_FILE=20,REQUEST_TREE=21,REQUEST_CAMERA=22,REQUEST_EXPORT=23,REQUEST_PERMISSIONS=24,REQUEST_ATTACH=25,REQUEST_CAMERA_PERMISSION=26,REQUEST_PHOTO_LOCATION=27,REQUEST_BACKUP=28,REQUEST_IMPORT_BACKUP=29,REQUEST_ISSUE_EXPORT=30;
     private WebView web;
     private FrameLayout root;
     private View statusFill;
@@ -108,6 +108,7 @@ public class MainActivity extends Activity {
     private volatile boolean syncRunning=false;
     private String recordingId;
     private String pendingMediaType="media";
+    private String pendingIssueZipId;
 
     @Override public void onCreate(Bundle saved){super.onCreate(saved);
         settings=getSharedPreferences("zamerovac",MODE_PRIVATE);
@@ -395,7 +396,7 @@ public class MainActivity extends Activity {
     }
     @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);
         if(request==REQUEST_FILE){if(fileCallback!=null){Uri[] resultUris=null;if(result==RESULT_OK&&data!=null){if(data.getClipData()!=null){int n=data.getClipData().getItemCount();resultUris=new Uri[n];for(int i=0;i<n;i++)resultUris[i]=data.getClipData().getItemAt(i).getUri();}else if(data.getData()!=null)resultUris=new Uri[]{data.getData()};}fileCallback.onReceiveValue(resultUris);fileCallback=null;}return;}
-        if(result!=RESULT_OK){if(request==REQUEST_ATTACH)js("window.onNativeMediaDone?.()");return;}
+        if(result!=RESULT_OK){if(request==REQUEST_ATTACH)js("window.onNativeMediaDone?.()");if(request==REQUEST_ISSUE_EXPORT)pendingIssueZipId=null;return;}
         if(request==REQUEST_ATTACH&&data!=null){int done=0;try{
             if(data.getClipData()!=null){for(int i=0;i<data.getClipData().getItemCount();i++){importUri(data.getClipData().getItemAt(i).getUri());done++;}}
             else if(data.getData()!=null){importUri(data.getData());done++;}
@@ -411,6 +412,18 @@ public class MainActivity extends Activity {
             return;
         }
         if(request==REQUEST_TREE&&data!=null&&data.getData()!=null){Uri uri=data.getData();try{getContentResolver().takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_WRITE_URI_PERMISSION);settings.edit().putString("treeUri",uri.toString()).apply();scheduleSync();syncCloud();}catch(Exception e){error("Nelze použít vybranou složku: "+e.getMessage());}return;}
+        if(request==REQUEST_ISSUE_EXPORT){
+            String id=pendingIssueZipId;pendingIssueZipId=null;
+            if(id!=null&&data!=null&&data.getData()!=null){
+                try(InputStream in=new FileInputStream(mediaFile(id));
+                    OutputStream out=getContentResolver().openOutputStream(data.getData(),"w")){
+                    if(out==null)throw new IOException("Nelze otevřít výstup");
+                    copy(in,out);
+                    js("window.onReportBundleSaved?.()");
+                }catch(Exception ex){error("Uložení balíčku: "+ex.getMessage());}
+            }
+            return;
+        }
         if(request==REQUEST_IMPORT_BACKUP&&data!=null&&data.getData()!=null){
             final Uri origin=data.getData();
             new Thread(()->{
@@ -471,6 +484,78 @@ public class MainActivity extends Activity {
             }
         }
     }
+
+    /** Local feedback ZIP, including only explicitly captured screenshots and attached videos. */
+    private String createIssueZip(String json) throws IOException, JSONException {
+        JSONObject root=new JSONObject(json);
+        JSONArray reports=root.optJSONArray("reports");
+        if(reports==null||reports.length()==0)throw new IOException("Nejsou vybrány žádné připomínky");
+        String id=UUID.randomUUID().toString();
+        File target=mediaFile(id);
+        try(ZipOutputStream zip=new ZipOutputStream(new FileOutputStream(target))){
+            zip.putNextEntry(new ZipEntry("pripominky.json"));
+            zip.write(root.toString(2).getBytes(StandardCharsets.UTF_8));
+            zip.closeEntry();
+            for(int i=0;i<reports.length();i++){
+                JSONObject report=reports.optJSONObject(i);
+                if(report==null)continue;
+                String screenshot=report.optString("annotatedId","");
+                if(!validId(screenshot)||!mediaFile(screenshot).isFile())
+                    screenshot=report.optString("screenshotId","");
+                if(validId(screenshot)&&mediaFile(screenshot).isFile())
+                    zipIssueFile(zip,mediaFile(screenshot),
+                        String.format(java.util.Locale.ROOT,"obrazky/pripominka-%03d.png",i+1));
+                JSONArray videos=report.optJSONArray("videos");
+                if(videos==null)continue;
+                for(int j=0;j<videos.length();j++){
+                    JSONObject item=videos.optJSONObject(j);
+                    String video=item==null?videos.optString(j,""):item.optString("id","");
+                    if(!validId(video)||!mediaFile(video).isFile())continue;
+                    String mime=mediaMime(video);
+                    String extension=mime.contains("webm")?"webm":mime.contains("quicktime")?"mov":"mp4";
+                    zipIssueFile(zip,mediaFile(video),String.format(java.util.Locale.ROOT,
+                        "videa/pripominka-%03d-%02d.%s",i+1,j+1,extension));
+                }
+            }
+        }catch(Exception ex){target.delete();throw ex;}
+        settings.edit().putString("mime-"+id,"application/zip")
+            .putString("name-"+id,"Zamerovac-pripominky.zip").apply();
+        return id;
+    }
+    private void zipIssueFile(ZipOutputStream zip,File input,String name)throws IOException {
+        zip.putNextEntry(new ZipEntry(name));
+        try(InputStream in=new FileInputStream(input)){copy(in,zip);}
+        zip.closeEntry();
+    }
+    private void sendIssueBundle(String text,boolean saveToFile){
+        new Thread(()->{
+            try{
+                String id=createIssueZip(text);
+                runOnUiThread(()->{
+                    try{
+                        if(saveToFile){
+                            pendingIssueZipId=id;
+                            Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT);
+                            intent.addCategory(Intent.CATEGORY_OPENABLE);
+                            intent.setType("application/zip");
+                            intent.putExtra(Intent.EXTRA_TITLE,"Zamerovac-pripominky.zip");
+                            startActivityForResult(intent,REQUEST_ISSUE_EXPORT);
+                        }else{
+                            Uri uri=new Uri.Builder().scheme("content")
+                                .authority(getPackageName()+".files").appendPath(id).build();
+                            Intent intent=new Intent(Intent.ACTION_SEND);
+                            intent.setType("application/zip");
+                            intent.putExtra(Intent.EXTRA_SUBJECT,"Zaměřovač – připomínky");
+                            intent.putExtra(Intent.EXTRA_STREAM,uri);
+                            intent.setClipData(android.content.ClipData.newRawUri("Připomínky",uri));
+                            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                            startActivity(Intent.createChooser(intent,"Sdílet připomínky"));
+                        }
+                    }catch(Exception ex){error("Sdílení připomínek: "+ex.getMessage());}
+                });
+            }catch(Exception ex){error("Balíček připomínek: "+ex.getMessage());}
+        },"ZamerovacIssueBundle").start();
+    }
     private void collectMediaIds(JSONObject record,Set<String> ids){
         JSONArray media=record.optJSONArray("media");
         if(media!=null)for(int i=0;i<media.length();i++)ids.add(media.optString(i));
@@ -523,6 +608,31 @@ public class MainActivity extends Activity {
             if(color==null||!color.matches("#[0-9a-fA-F]{6}"))return;
             runOnUiThread(()->{try{statusFill.setBackgroundColor(Color.rgb(51,43,64));}catch(Exception ignored){}});
         }
+        @JavascriptInterface public void captureReportScreenshot(){
+            runOnUiThread(()->{
+                Bitmap bmp=null;
+                try{
+                    int width=web.getWidth(),height=web.getHeight();
+                    if(width<1||height<1||((long)width)*height>18000000L)
+                        throw new IOException("Neplatné rozměry obrazovky");
+                    bmp=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888);
+                    web.draw(new Canvas(bmp));
+                    String id=UUID.randomUUID().toString();
+                    try(FileOutputStream out=new FileOutputStream(mediaFile(id))){
+                        if(!bmp.compress(Bitmap.CompressFormat.PNG,100,out))
+                            throw new IOException("Snímek se nepodařilo vytvořit");
+                    }
+                    settings.edit().putString("mime-"+id,"image/png")
+                        .putString("name-"+id,"obrazovka-zamerovac.png").apply();
+                    js("window.onReportScreenshot("+JSONObject.quote(id)+")");
+                }catch(Exception ex){
+                    error("Snímek obrazovky: "+ex.getMessage());
+                    js("window.onReportScreenshot(null)");
+                }finally{if(bmp!=null)bmp.recycle();}
+            });
+        }
+        @JavascriptInterface public void shareIssueBundle(String json){sendIssueBundle(json,false);}
+        @JavascriptInterface public void saveIssueBundle(String json){sendIssueBundle(json,true);}
         @JavascriptInterface public void shareText(String title,String content){
             runOnUiThread(()->{
                 Intent send=new Intent(Intent.ACTION_SEND).setType("text/plain");

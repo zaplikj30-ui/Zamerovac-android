@@ -333,3 +333,87 @@ body.in-editor #editorView .toolbar::before{
 }
 body.in-editor.editor-extra-open #editorView .toolbar::before{background:#d9c3fa}
 body.in-editor #editorExtraToolbar{touch-action:pan-y}
+
+/* Proporce přesně podle stávajícího ＋; NEMĚNIT šířku a výšku políček.
+   Všechny poslední nástroje mají jednotnou optickou velikost 32px. */
+body.in-editor .toolbar #activeTool{
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ text-align:center!important;line-height:1!important;
+ padding:4px!important;
+}
+body.in-editor .toolbar #activeTool .last-tool-glyph {
+ display:inline-flex;align-items:center;justify-content:center;
+ width:32px;height:32px;min-width:32px;min-height:32px;
+ font-size:32px;line-height:1;font-weight:400;
+ white-space:nowrap;
+}
+body.in-editor .toolbar #activeTool .last-tool-svg {
+ display:block;width:32px;height:32px;min-width:32px;min-height:32px;
+ flex-shrink:0;
+}
+#galleryMode {display:inline-flex;align-items:center;justify-content:center;padding:3px!important}
+#galleryMode .editor-gallery-thumbnail {
+ display:block;width:30px;height:30px;
+ border-radius:3px;object-fit:cover;
+ border:1px solid rgba(255,255,255,.5);
+ background:#28282a;pointer-events:none;
+}
+#galleryMode .editor-gallery-thumbnail[hidden] {display:none!important}
+
+/* Plovoucí vlaječka pro přímé hlášení ze všech obrazovek včetně kótování. */
+#feedbackFlag{
+ position:fixed;z-index:118;display:flex;align-items:center;justify-content:center;
+ width:48px;height:48px;padding:0;border-radius:50%;border:1px solid #d4b9f0;
+ color:#fff;background:#664b89;box-shadow:0 5px 18px #0009;
+ touch-action:none;user-select:none;-webkit-user-select:none;cursor:grab
+}
+#feedbackFlag:active{cursor:grabbing;background:#755798}
+#feedbackFlag[hidden]{display:none!important}
+#feedbackOverlay.feedback-overlay{
+ position:fixed;inset:0;z-index:130;background:#25232b;color:#fff;
+ display:flex;flex-direction:column;overscroll-behavior:contain
+}
+.feedback-head{display:flex;align-items:center;gap:9px;min-height:55px;padding:6px 12px;background:#332b40;border-bottom:2px solid #845ca5}
+.feedback-head b{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.feedback-head button{border-radius:7px;padding:7px 9px;white-space:nowrap}
+.feedback-close{font-size:24px;min-width:39px}
+.feedback-editor-content{flex:1;display:flex;flex-direction:column;min-height:0;overflow-y:auto}
+.feedback-tools{display:flex;flex-wrap:nowrap;overflow-x:auto;gap:5px;padding:7px;background:#282530;flex-shrink:0}
+.feedback-tools button{border:1px solid #675d70;border-radius:6px;padding:8px 10px;white-space:nowrap;min-height:42px}
+.feedback-tools button.selected{background:#6a4c8c;border-color:#d6b6ff}
+.feedback-image-wrap{display:flex;flex:1;align-items:center;justify-content:center;min-height:160px;overflow:hidden;padding:4px;background:#171717}
+#feedbackCanvas{display:block;max-width:100%;max-height:100%;width:auto;height:auto;touch-action:none;background:#303030}
+.feedback-fields{padding:9px 12px;display:flex;flex-direction:column;gap:7px;background:#282530}
+.feedback-fields label{font-size:13px;color:#ddd}
+.feedback-fields select,.feedback-fields input,.feedback-fields textarea{
+ border:1px solid #706878;border-radius:7px;background:#1f2025;color:#fff;padding:10px;
+ width:100%;min-height:41px;outline-color:#d5b7ff
+}
+.feedback-fields select{max-width:180px;display:block;margin:6px 0}
+.feedback-fields textarea{resize:vertical;min-height:58px}
+.feedback-extra{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+.feedback-extra input{flex:1;min-width:165px}
+.feedback-extra button{min-height:40px;padding:9px}
+.feedback-extra span{font-size:12px;color:#c4b5d1}
+.feedback-resolved{display:flex!important;align-items:center;gap:8px}
+.feedback-resolved input{width:20px;min-height:20px}
+.feedback-foot{display:flex;gap:10px;justify-content:flex-end;padding:9px 12px;border-top:1px solid #564c61;background:#332b40}
+.feedback-foot button{padding:11px 14px;min-height:45px}
+.feedback-list{flex:1;overflow:auto;padding:10px 13px}
+.feedback-muted{font-size:13px;color:#c6bfd1;line-height:1.5}
+.feedback-card{display:flex;align-items:center;gap:10px;border-bottom:1px solid #514b5a;padding:12px 2px}
+.feedback-card>input{width:21px;height:21px;flex-shrink:0;accent-color:#a17ccf}
+.feedback-card-detail{flex:1;min-width:0}
+.feedback-card-title{font-weight:600;overflow-wrap:anywhere}
+.feedback-card small{font-size:12px;color:#bdb4c8}
+.feedback-card button{padding:8px;min-height:40px}
+.feedback-list-footer{display:flex;gap:7px;flex-wrap:wrap;padding:12px;background:#302a39;border-top:1px solid #655774}
+.feedback-list-footer button{padding:9px;min-height:43px}
+.feedback-check-all{display:inline-flex;align-items:center;gap:5px;font-size:13px;flex:1}
+.feedback-check-all input{width:19px;height:19px}
+.bosch-history-hint{display:block;font-size:12px;color:#bcb0c8;margin:0 0 11px}
+@media(min-width:850px){
+ .feedback-overlay .feedback-editor-content{flex-direction:row;overflow:hidden}
+ .feedback-overlay .feedback-image-wrap{min-height:0;min-width:50%}
+ .feedback-overlay .feedback-fields{width:min(450px,37vw);overflow:auto}
+}

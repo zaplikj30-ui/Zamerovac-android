@@ -26,7 +26,8 @@ class SourceSmokeTest(unittest.TestCase):
         # visible endpoint at a different location than its editable anchor.
         # The magnifier correctly centered the anchor, not the visible arrow.
         editor=(ASSETS/'editor.js').read_text()
-        self.assertEqual(editor.count('item.offset??0'), 2)
+        # Geometrie, popisek i bílé zvýraznění používají stejný posun.
+        self.assertEqual(editor.count('item.offset??0'), 3)
         self.assertNotIn('item.offset??-22', editor)
         self.assertIn('worldToScreen(it[key])', editor)
         self.assertIn('magnifierPoint=selectedHandle.point', editor)

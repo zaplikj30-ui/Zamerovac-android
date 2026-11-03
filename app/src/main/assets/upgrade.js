@@ -285,7 +285,7 @@ function openGallery(index,records=null){
 function closeGallery(){gallery?.remove();gallery=null}
 function renderEditorNavigation(){
  let nav=$('photoNavigation');
- if(!nav){nav=document.createElement('div');nav.id='photoNavigation';nav.innerHTML='<button id="previousPhoto" title="Předchozí fotografie">‹</button><button id="nextPhoto" title="Další fotografie">›</button><button id="galleryMode" title="Prohlížet fotografie">▧</button>';const head=document.querySelector('.editor-head');head.insertBefore(nav,$('editorTopMenu'))}
+ if(!nav){nav=document.createElement('div');nav.id='photoNavigation';nav.innerHTML='<button id="previousPhoto" title="Předchozí fotografie">‹</button><button id="nextPhoto" title="Další fotografie">›</button><button id="galleryMode" title="Prohlížet fotografie"><img class="editor-gallery-thumbnail" alt="" draggable="false"></button>';const head=document.querySelector('.editor-head');head.insertBefore(nav,$('editorTopMenu'))}
  const photos=galleryPhotos();const at=photos.findIndex(r=>r.id===current?.id);
  nav.hidden=current?.kind!=='photo'||!!current?._detailTemporary;
  nav.querySelector('#previousPhoto').disabled=at<=0;
@@ -293,6 +293,18 @@ function renderEditorNavigation(){
  nav.querySelector('#previousPhoto').onclick=()=>{if(at>0)openEditor(photos[at-1])};
  nav.querySelector('#nextPhoto').onclick=()=>{if(at>=0&&at<photos.length-1)openEditor(photos[at+1])};
  nav.querySelector('#galleryMode').onclick=()=>{if(at>=0)openGallery(at,photos)};
+ const thumbnail=nav.querySelector('.editor-gallery-thumbnail');
+ if(thumbnail){
+  thumbnail.removeAttribute('src');
+  thumbnail.hidden=true;
+  const mediaId=current?.media?.[0],recordId=current?.id;
+  if(mediaId)assetUrl(mediaId).then(url=>{
+   if(screen==='editor'&&current?.id===recordId&&thumbnail.isConnected){
+    thumbnail.src=url;thumbnail.hidden=false;
+   }
+  }).catch(()=>{thumbnail.hidden=true});
+ }
+
 }
 function openSumCheck(){
  if(!current)return;
@@ -432,7 +444,15 @@ const oldUpdateDrawingToolButton=updateDrawingToolButton;
 updateDrawingToolButton=function(){
  oldUpdateDrawingToolButton();
  const t=allTools.find(x=>x[0]===lastDrawingTool);
- $('activeTool').textContent=t?.[1]||'↔';
+ // Jeden optický rozměr pro každý poslední nástroj: jako symbol ＋.
+ // SVG má pevný čtvercový prostor a lze ho přesně vycentrovat.
+ const glyph=t?.[1]||'↔';
+ const icon=glyph==='↔'
+   ?'<svg class="last-tool-svg" viewBox="0 0 32 32" fill="none" stroke="currentColor" stroke-width="2.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 16h20"/><path d="m11 11-5 5 5 5M21 11l5 5-5 5"/></svg>'
+   :'<span class="last-tool-glyph" aria-hidden="true"></span>';
+ $('activeTool').innerHTML=icon;
+ const span=$('activeTool').querySelector('.last-tool-glyph');
+ if(span)span.textContent=glyph;
  $('activeTool').classList.toggle('repeat',!!prefs.repeatDrawing);
  highlightCurrentTool();
 };
@@ -459,9 +479,18 @@ $('bluetoothBtn').onclick=()=>{
 };
 const originalLaser=window.onLaserValue;
 const readings=[];
+try{
+ const saved=JSON.parse(localStorage.getItem('zamerovac-bosch-readings-v1')||'[]');
+ if(Array.isArray(saved))for(const x of saved.slice(0,40)){
+  if(x&&typeof x.value==='string'&&typeof x.unit==='string'&&typeof x.time==='string')
+   readings.push({value:x.value,unit:x.unit,time:x.time});
+ }
+}catch(e){}
+window.__boschHistoryReadings=()=>readings.map(x=>({...x}));
 window.onLaserValue=function(value,unit){
  readings.unshift({value:String(value),unit:String(unit||'mm'),time:new Date().toISOString()});
  if(readings.length>40)readings.pop();
+ try{localStorage.setItem('zamerovac-bosch-readings-v1',JSON.stringify(readings))}catch(e){}
  const handled=typeof window.__handleLaserAuto==='function'&&window.__handleLaserAuto(value,unit);
  if(!handled)originalLaser(value,unit);
  logEvent('bluetooth','Přijata hodnota z laseru');
@@ -477,7 +506,7 @@ function showLaserHistory(){
     window.__applyLaserMeasurement(r.value,r.unit,{fromHistory:true});
   else notify('Otevři fotografii a vyber kótu');
  });
- $('clearReadings').onclick=()=>{readings.length=0;$('modal').hidden=true;notify('Historie měření vymazána')};
+ $('clearReadings').onclick=()=>{readings.length=0;try{localStorage.removeItem('zamerovac-bosch-readings-v1')}catch(e){};$('modal').hidden=true;notify('Historie měření vymazána')};
 }
 const oldBluetoothLong=$('bluetoothBtn');
 oldBluetoothLong.addEventListener('contextmenu',e=>{e.preventDefault();showLaserHistory()});
@@ -491,6 +520,7 @@ renderSettings=function(){
  '<button class="setting" id="openDiagnostics" style="width:100%">Diagnostika a sdílení logu</button>'+
  '<button class="setting" id="openHistory" style="width:100%">Novinky a historie aktualizací</button>'+
  '<button class="setting" id="openReadings" style="width:100%">Historie měření z laseru</button>'+
+ '<button class="setting" id="openFeedbackReports" style="width:100%">Moje připomínky – chyby a požadavky</button>'+
 
  '<button class="setting" id="backupAll" style="width:100%">Exportovat všechny zakázky a přílohy (ZIP)</button>'+
  '<button class="setting" id="restoreAll" style="width:100%">Obnovit ZIP jako nové zakázky</button>';
@@ -499,6 +529,7 @@ renderSettings=function(){
  wrapper.querySelector('#openDiagnostics').onclick=openDiagnostics;
  wrapper.querySelector('#openHistory').onclick=showChanges;
  wrapper.querySelector('#openReadings').onclick=showLaserHistory;
+ wrapper.querySelector('#openFeedbackReports').onclick=()=>{if(typeof window.__openFeedbackList==='function')window.__openFeedbackList();else notify('Otevření připomínek není dostupné')};
  wrapper.querySelector('#backupAll').onclick=()=>native?Native.exportBackup():notify('Export ZIP je dostupný v Android verzi');
  wrapper.querySelector('#restoreAll').onclick=()=>native?Native.importBackup():notify('Obnova ZIP je dostupná v Android verzi');
 };
