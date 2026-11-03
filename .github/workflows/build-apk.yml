@@ -43,8 +43,8 @@ jobs:
           node tests/laser_auto_interaction.js
           node tests/extra_toolbar_interaction.js
           python3 -m unittest discover -s tests -p "test_*.py" -v
-      - name: Sestavit obě varianty se stejným vývojovým klíčem
-        run: gradle --no-daemon assembleDebug assemblePreview
+      - name: Sestavit pouze instalacni variantu Zaměřovač TEST
+        run: gradle --no-daemon assemblePreview
       - name: Ověřit podpis a jednoznačnou verzi testovací APK
         shell: bash
         run: |
@@ -68,11 +68,6 @@ jobs:
           mkdir -p dist
           cp "$APK" "dist/Zamerovac-v1.2.${GITHUB_RUN_NUMBER}.apk"
           sha256sum dist/*.apk
-      - uses: actions/upload-artifact@v4
-        with:
-          name: Zamerovac-debug-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 30
       - uses: actions/upload-artifact@v4
         with:
           name: Zamerovac-TEST-APK
