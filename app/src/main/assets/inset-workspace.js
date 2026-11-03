@@ -228,7 +228,7 @@
   e.preventDefault();e.stopImmediatePropagation();
   const v=active;active=null;
   try{stageCanvas.releasePointerCapture(e.pointerId)}catch(err){}
-  if(v.changed&&v.wasSelected){
+  if(v.changed){
    commitEditor();
   }else{
    if(editStack.length)editStack.pop();
