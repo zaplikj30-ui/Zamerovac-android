@@ -169,7 +169,8 @@ async function openMediaPlayer(r){
 }
 const oldSearch=$('searchBtn').onclick;
 $('searchBtn').onclick=()=>{
- modal('Hledat zakázky a poznámky','<input id="searchAll" type="search" placeholder="Zákazník, adresa, místnost, poznámka"><div id="searchResults" class="search-results"></div>',()=>true,'Zavřít');
+ modal('Hledat zakázky a poznámky','<input id="searchAll" type="search" placeholder="Zákazník, adresa, místnost, poznámka"><div id="searchResults" class="search-results"></div><button class="outline" id="searchRuian">📍 Vyhledat adresu v RÚIAN</button>',()=>true,'Zavřít');
+ $('searchRuian').onclick=openAddressSearch;
  const input=$('searchAll'),result=$('searchResults');
  const update=()=>{
   const q=input.value.trim().toLocaleLowerCase('cs');
@@ -180,6 +181,34 @@ $('searchBtn').onclick=()=>{
  };
  input.addEventListener('input',update);update();
 };
+
+function openAddressSearch(){
+ modal('Vyhledat přesnou adresu','<label>Adresa v České republice</label><input id="ruianQuery" value="Jezernice 54" placeholder="Obec a číslo domu"><p class="muted">Dotaz se odešle veřejné geokódovací službě RÚIAN (ČÚZK). Výsledky vyber podle skutečného čísla domu.</p><button class="outline" id="ruianFind">Vyhledat adresu</button><div id="ruianResults"></div>',()=>true,'Zavřít');
+ $('ruianFind').onclick=()=>{
+   const q=$('ruianQuery').value.trim();
+   if(q.length<3){notify('Zadej alespoň 3 znaky adresy');return}
+   if(!native||typeof Native.searchAddress!=='function'){notify('Vyhledávání RÚIAN vyžaduje Android verzi');return}
+   $('ruianResults').textContent='Hledám přesné adresní místo…';
+   Native.searchAddress(q);
+ };
+}
+window.onAddressCandidates=function(raw){
+ let response;
+ try{response=JSON.parse(raw)}catch(e){notify('Nepodařilo se načíst adresy');return}
+ const wrap=$('ruianResults');if(!wrap)return;
+ const matches=response.candidates||[];
+ wrap.innerHTML=matches.length?'<h3>Výsledky RÚIAN</h3>'+matches.map((x,i)=>'<button class="addressCandidate" data-candidate="'+i+'">'+esc(x.address||'Neznámá adresa')+' <small>'+Number(x.score||0).toFixed(0)+' % shoda</small></button>').join('')+'<div id="addressMap"></div>':'<p>Pro tuto adresu není v RÚIAN nalezen žádný výsledek. Zkontroluj obec nebo číslo domu.</p>';
+ wrap.querySelectorAll('[data-candidate]').forEach(button=>button.onclick=()=>{
+  const candidate=matches[Number(button.dataset.candidate)];
+  const lat=Number(candidate.lat),lon=Number(candidate.lon);
+  if(!Number.isFinite(lat)||!Number.isFinite(lon))return;
+  const bbox=[lon-.005,lat-.003,lon+.005,lat+.003].join('%2C');
+  const marker=encodeURIComponent(lat+','+lon);
+  const url='https://www.openstreetmap.org/export/embed.html?bbox='+bbox+'&layer=mapnik&marker='+marker;
+  $('addressMap').innerHTML='<p>📍 '+esc(candidate.address)+'</p><iframe title="Mapa adresního místa" loading="lazy" width="100%" height="270" src="'+url+'"></iframe><small>Souřadnice vrácené službou RÚIAN, mapový podklad OpenStreetMap.</small>';
+ });
+};
+
 const browseGallery=document.createElement('button');
 browseGallery.id='browseGallery';browseGallery.className='ico';browseGallery.textContent='▧';browseGallery.title='Prohlížet fotografie zakázky';
 $('browserFoot').insertBefore(browseGallery,$('bluetoothBtn'));
