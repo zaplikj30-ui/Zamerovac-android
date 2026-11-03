@@ -1,0 +1,22 @@
+/* Vyhledávání symbolů musí tolerovat běžné chyby při psaní na mobilu. */
+const assert=require('node:assert/strict');
+const fs=require('node:fs');
+const vm=require('node:vm');
+const src=fs.readFileSync('app/src/main/assets/editor.js','utf8');
+const begin=src.indexOf('function normalizeSymbolSearch(value){');
+const end=src.indexOf('function showTools(){',begin);
+assert.ok(begin>=0&&end>begin);
+const sandbox={};
+vm.createContext(sandbox);
+vm.runInContext(src.slice(begin,end),sandbox);
+const match=sandbox.matchesSymbolSearch;
+assert.equal(match('Zásuvka','zasuvka'),true,'Diakritika není povinná');
+assert.equal(match('Zásuvka','ZÁSUVKA'),true,'Velikost písmen nevadí');
+assert.equal(match('Zásuvka','  zasuvka   '),true,'Mezery okolo nevadí');
+assert.equal(match('Datová zásuvka','datova    zasuvka'),true,'Víc mezer je jedna');
+assert.equal(match('Zásuvka','zasufka'),true,'Jedno chybné písmeno se toleruje');
+assert.equal(match('Zásuvka','zasuvk'),true,'Jedno chybějící písmeno se toleruje');
+assert.equal(match('Zásuvka','zasuvkka'),true,'Jedno písmeno navíc se toleruje');
+assert.equal(match('Zásuvka','okno'),false,'Nesouvisející výrazy nesmí vyhovět');
+assert.equal(match('Okno','  '),true,'Prázdné hledání zobrazí vše');
+console.log('OK: vyhledávání symbolů bez diakritiky, mezer a drobných překlepů');
