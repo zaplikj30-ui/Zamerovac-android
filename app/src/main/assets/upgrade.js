@@ -305,7 +305,9 @@ drawItem=function(c,item){
    const width=Math.max(60,Math.min(390,(item.insetWidth||220)*view.zoom));
    const height=width*image.naturalHeight/image.naturalWidth;
    const x=point.x+8,y=point.y+23;
-   c.save();c.fillStyle='#202024';c.fillRect(x-3,y-3,width+6,height+6);
+   c.save();
+   c.translate(x+width/2,y+height/2);c.rotate((item.insetRotation||0)*Math.PI/180);c.translate(-x-width/2,-y-height/2);
+   c.fillStyle='#202024';c.fillRect(x-3,y-3,width+6,height+6);
    c.drawImage(image,x,y,width,height);
    c.strokeStyle=prefs.themeAccent;c.lineWidth=2;c.strokeRect(x,y,width,height);
    const oldView=view;view={zoom:width/image.naturalWidth,dx:x,dy:y};
