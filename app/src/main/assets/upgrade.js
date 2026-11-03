@@ -216,20 +216,62 @@ $('browserFoot').insertBefore(browseGallery,$('bluetoothBtn'));
 browseGallery.onclick=()=>openGallery(0);
 let gallery=null,galleryList=[],galleryIndex=0,galleryStart=null;
 function galleryPhotos(){return state.records.filter(r=>!r.deleted&&r.kind==='photo'&&r.parentId===currentFolder).sort((a,b)=>a.createdAt.localeCompare(b.createdAt))}
-function renderGallery(){
+async function renderGallery(){
  if(!gallery)return;
- const r=galleryList[galleryIndex];if(!r){closeGallery();return}
- gallery.querySelector('.gallery-img').style.transform='none';
- gallery.querySelector('.gallery-title').textContent=r.title+' · '+(galleryIndex+1)+'/'+galleryList.length;
- const image=gallery.querySelector('.gallery-img');
- image.src='';
- assetUrl(r.media?.[0]).then(url=>{if(gallery&&galleryList[galleryIndex]?.id===r.id)image.src=url});
+ const display=gallery,r=galleryList[galleryIndex];
+ if(!r){closeGallery();return}
+ const canvas=display.querySelector('.gallery-img');
+ canvas.style.transform='none';
+ display.querySelector('.gallery-title').textContent=r.title+' · '+(galleryIndex+1)+'/'+galleryList.length;
+ try{
+  const url=await assetUrl(r.media?.[0]);
+  if(!url)return;
+  const image=await new Promise((resolve,reject)=>{
+   const im=new Image();im.onload=()=>resolve(im);im.onerror=reject;im.src=url;
+  });
+  // Stejnou anotovanou podobu zobrazit i při listování; žádný prvek není dotykově aktivní.
+  const details=(r.items||[]).filter(it=>it.type==='note'&&it.media?.length);
+  await Promise.all(details.map(async it=>{
+   const id=it.media[0];
+   if(window.__detailPhotoCache?.[id]?.naturalWidth)return;
+   try{
+    const source=await assetUrl(id);
+    await new Promise((resolve,reject)=>{
+     const im=new Image();im.onload=resolve;im.onerror=reject;im.src=source;
+     window.__detailPhotoCache[id]=im;
+    });
+   }catch(err){/* Přílohou může být i audio; nemění zobrazení ostatních poznámek. */}
+  }));
+  if(gallery!==display||galleryList[galleryIndex]?.id!==r.id)return;
+  const available=display.querySelector('.gallery-content');
+  const density=Math.min(2,window.devicePixelRatio||1);
+  const maxW=Math.max(240,(available.clientWidth||500)*density);
+  const maxH=Math.max(240,(available.clientHeight||650)*density);
+  const scale=Math.min(maxW/image.naturalWidth,maxH/image.naturalHeight,2);
+  const width=Math.max(1,Math.round(image.naturalWidth*scale));
+  const height=Math.max(1,Math.round(image.naturalHeight*scale));
+  canvas.width=width;canvas.height=height;
+  canvas.style.width=(width/density)+'px';canvas.style.height=(height/density)+'px';
+  const c=canvas.getContext('2d');
+  c.drawImage(image,0,0,width,height);
+  const oldCtx=ctx,oldView=view,oldCurrent=current,oldPhoto=photoSize,oldSelected=selected;
+  const oldExport=window.__exportingAnnotations;
+  try{
+   ctx=c;view={zoom:scale,dx:0,dy:0};
+   current=r;photoSize={w:image.naturalWidth,h:image.naturalHeight};
+   selected=null;window.__exportingAnnotations=true;
+   for(const item of r.items||[])drawItem(c,item);
+  }finally{
+   ctx=oldCtx;view=oldView;current=oldCurrent;photoSize=oldPhoto;selected=oldSelected;
+   window.__exportingAnnotations=oldExport;
+  }
+ }catch(err){notify('Fotografii v galerii se nepodařilo zobrazit');}
 }
 function openGallery(index,records=null){
  galleryList=records||galleryPhotos();galleryIndex=Math.min(Math.max(index,0),galleryList.length-1);
  if(!galleryList.length){notify('Ve složce nejsou fotografie');return}
  gallery=document.createElement('div');gallery.className='galleryOverlay';
- gallery.innerHTML='<div class="gallery-top"><button data-action="close">←</button><strong class="gallery-title"></strong><button data-action="edit">Upravit</button></div><div class="gallery-content"><img class="gallery-img" alt="Fotografie" draggable="false"></div><div class="gallery-bottom"><button data-action="prev" aria-label="Předchozí fotografie">❮</button><span>Listuj přejetím do stran · přibliž dvěma prsty</span><button data-action="next" aria-label="Další fotografie">❯</button></div>';
+ gallery.innerHTML='<div class="gallery-top"><button data-action="close">←</button><strong class="gallery-title"></strong><button data-action="edit">Upravit</button></div><div class="gallery-content"><canvas class="gallery-img" role="img" aria-label="Fotografie včetně kót a poznámek"></canvas></div><div class="gallery-bottom"><button data-action="prev" aria-label="Předchozí fotografie">❮</button><span>Listuj přejetím do stran · přibliž dvěma prsty</span><button data-action="next" aria-label="Další fotografie">❯</button></div>';
  document.body.append(gallery);
  gallery.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>{
   const a=b.dataset.action;
