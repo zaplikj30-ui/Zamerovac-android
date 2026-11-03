@@ -285,17 +285,43 @@ async function renderGallery(){
   const density=Math.min(2,window.devicePixelRatio||1);
   const maxW=Math.max(240,(available.clientWidth||500)*density);
   const maxH=Math.max(240,(available.clientHeight||650)*density);
-  const scale=Math.min(maxW/image.naturalWidth,maxH/image.naturalHeight,2);
-  const width=Math.max(1,Math.round(image.naturalWidth*scale));
-  const height=Math.max(1,Math.round(image.naturalHeight*scale));
+  // Include insets dragged outside the original photo. Gallery must use
+  // the whole annotated workspace, not clip at the original image edges.
+  let minX=0,minY=0,maxX=image.naturalWidth,maxY=image.naturalHeight;
+  for(const item of details){
+   const inset=window.__detailPhotoCache?.[item.media?.[0]];
+   if(!inset?.naturalWidth||!inset?.naturalHeight)continue;
+   if(!Number.isFinite(item.insetX)||!Number.isFinite(item.insetY))continue;
+   const w=Math.max(70,Math.min(1500,Number(item.insetWidth)||220));
+   const h=w*inset.naturalHeight/inset.naturalWidth;
+   const angle=(Number(item.insetRotation)||0)*Math.PI/180;
+   const rotatedW=Math.abs(w*Math.cos(angle))+Math.abs(h*Math.sin(angle));
+   const rotatedH=Math.abs(w*Math.sin(angle))+Math.abs(h*Math.cos(angle));
+   const x=item.insetX,y=item.insetY;
+   minX=Math.min(minX,x+(w-rotatedW)/2);
+   minY=Math.min(minY,y+(h-rotatedH)/2);
+   maxX=Math.max(maxX,x+(w+rotatedW)/2);
+   maxY=Math.max(maxY,y+(h+rotatedH)/2);
+   if(item.captionMoved&&item.b){
+    minX=Math.min(minX,item.b.x-100);maxX=Math.max(maxX,item.b.x+100);
+    minY=Math.min(minY,item.b.y-35);maxY=Math.max(maxY,item.b.y+35);
+   }
+  }
+  const margin=38;
+  const workspaceW=maxX-minX+2*margin,workspaceH=maxY-minY+2*margin;
+  const scale=Math.min(maxW/workspaceW,maxH/workspaceH,2);
+  const width=Math.max(1,Math.round(workspaceW*scale));
+  const height=Math.max(1,Math.round(workspaceH*scale));
   canvas.width=width;canvas.height=height;
   canvas.style.width=(width/density)+'px';canvas.style.height=(height/density)+'px';
   const c=canvas.getContext('2d');
-  c.drawImage(image,0,0,width,height);
+  c.fillStyle='#292a2f';c.fillRect(0,0,width,height);
+  const shiftX=(margin-minX)*scale,shiftY=(margin-minY)*scale;
+  c.drawImage(image,shiftX,shiftY,image.naturalWidth*scale,image.naturalHeight*scale);
   const oldCtx=ctx,oldView=view,oldCurrent=current,oldPhoto=photoSize,oldSelected=selected;
   const oldExport=window.__exportingAnnotations;
   try{
-   ctx=c;view={zoom:scale,dx:0,dy:0};
+   ctx=c;view={zoom:scale,dx:shiftX,dy:shiftY};
    current=r;photoSize={w:image.naturalWidth,h:image.naturalHeight};
    selected=null;window.__exportingAnnotations=true;
    for(const item of r.items||[])drawItem(c,item);
