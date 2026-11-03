@@ -312,6 +312,7 @@ function nearestHandle(point){
     if(d<dist){best={item,key:'points',point:vertex,pointIndex:index,kind:'point'};dist=d}
    });continue;
   }
+  if(item.type==='freehand')continue;
   for(const key of ['a','b'])if(item[key]&&!(item.type==='note'&&key==='b')){
    const p=worldToScreen(item[key]),d=Math.hypot(point.x-p.x,point.y-p.y);
    if(d<dist){best={item,key,point:item[key],kind:'point'};dist=d}
@@ -331,7 +332,7 @@ function nearestItem(point){
    if(Math.abs(point.x-p.x)<width/2+7&&Math.abs(point.y-p.y)<Math.max(23,(item.fontSize||prefs.fontSize)*.9))
     return item;
   }
-  if(item.type==='polyline'&&Array.isArray(item.points)){
+  if((item.type==='polyline'||item.type==='freehand')&&Array.isArray(item.points)){
    for(let i=1;i<item.points.length;i++){
     const a=item.points[i-1],b=item.points[i],dx=b.x-a.x,dy=b.y-a.y;
     const t=Math.max(0,Math.min(1,((world.x-a.x)*dx+(world.y-a.y)*dy)/(dx*dx+dy*dy||1)));
@@ -436,7 +437,7 @@ function stageDown(e){
   else if(grip?.item.id===candidate.id)hit=grip;
   else if(['dimension','chain','cumulative','line','arrow','angle','target'].includes(candidate.type))
    hit={item:candidate,kind:'move-dimension'};
-  else if(candidate.type==='polyline')hit={item:candidate,kind:'move-polyline'};
+  else if(candidate.type==='polyline'||candidate.type==='freehand')hit={item:candidate,kind:'move-polyline'};
   else if(label?.item.id===candidate.id)hit=label;
   else hit={item:candidate,kind:'open-selected'};
   selectedHandle=hit;
