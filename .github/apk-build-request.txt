@@ -2,5 +2,5 @@
 # Běžné změny kódu APK nesestavují. Teprve změna tohoto souboru spustí workflow build-apk.yml.
 # Při požadavku na sestavení uprav číslo a popis níže, commitni do main.
 
-request: 0
-reason: priprava spoustece; zatim NESESTAVOVAT
+request: 1
+reason: aktualizace poznamek - prazdny ramecek, sipka v puvodnim bode, nezavisly tah textu a fotografie
