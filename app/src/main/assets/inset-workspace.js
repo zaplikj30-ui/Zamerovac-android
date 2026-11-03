@@ -69,7 +69,7 @@
   const outside=(g.x<view.dx-2||g.y<view.dy-2||
     g.x+g.w>view.dx+photoSize.w*view.zoom+2||
     g.y+g.h>view.dy+photoSize.h*view.zoom+2);
-  return it.insetMoved||outside||selected===it.id||active?.item===it;
+  return !!it.insetMoved||outside||active?.item===it;
  }
  window.renderPhotoInset=function(c,it,image,drawOriginal){
   const g=layout(it,image),show=shouldShowArrow(it,g),isSelected=(selected===it.id);
@@ -124,7 +124,7 @@
     angle:Number(it.insetRotation)||0,
     anchor:{...(it.a||{x:0,y:0})},center:{x:g.cx,y:g.cy},
     startAngle:Math.atan2(at.y-g.cy,at.x-g.cx),
-    g
+    g,wasMoved:!!it.insetMoved
   };
   try{stageCanvas.setPointerCapture(e.pointerId)}catch(err){}
   checkpoint();paint();
@@ -151,7 +151,6 @@
   }else if(v.kind==='rotate'){
    const delta=Math.atan2(at.y-v.center.y,at.x-v.center.x)-v.startAngle;
    v.item.insetRotation=(((v.angle+delta*180/Math.PI)+540)%360)-180;
-   v.item.insetMoved=true;
   }
   paint();
  }
@@ -182,6 +181,7 @@
   v.item.insetX=v.startingX;v.item.insetY=v.startingY;
   v.item.insetWidth=v.width;v.item.insetRotation=v.angle;
   v.item.a=v.anchor;
+  v.item.insetMoved=v.wasMoved;
   if(editStack.length)editStack.pop();
   paint();
  }
