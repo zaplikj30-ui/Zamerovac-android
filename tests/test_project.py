@@ -29,7 +29,7 @@ class SourceSmokeTest(unittest.TestCase):
         # Geometrie, popisek i bílé zvýraznění používají stejný posun.
         self.assertEqual(editor.count('item.offset??0'), 3)
         self.assertNotIn('item.offset??-22', editor)
-        self.assertIn('worldToScreen(it[key])', editor)
+        self.assertIn('worldToScreen(item[key])', editor)
         self.assertIn('magnifierPoint=selectedHandle.point', editor)
 
     def test_reference_magnifier_geometry(self):
