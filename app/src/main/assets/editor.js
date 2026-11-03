@@ -78,7 +78,9 @@ function drawLoupe(){
   const pointer=worldToScreen(magnifierPoint);
   const canvas=$('loupe');
   const width=Math.max(1,stageCanvas.clientWidth);
-  const size=Math.round(Math.max(92,Math.min(116,width*.225)));
+  // 90 CSS px matches the compact ~105 px phone-screen magnifier in the reference screenshot.
+  // Do not resize by screen width: the old variable size made the loupe look oversized.
+  const size=90;
   // Reference interaction: fixed at the opposite upper corner from the
   // point being manipulated, switching around the image midpoint. Keep a
   // small hysteresis zone to prevent flickering while crossing the middle.
