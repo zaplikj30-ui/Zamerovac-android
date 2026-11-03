@@ -35,7 +35,7 @@ function recById(id){return state.records.find(r=>r.id===id&&!r.deleted)}
 function newRecord(kind,title,parentId=currentFolder){return {id:uid(),kind,title,parentId,createdAt:stamp(),updatedAt:stamp(),rev:uid(),media:[],items:[],text:'',checks:[],width:1400,height:900,deleted:false}}
 function addRecord(r){state.records.push(r);save();showFolder();return r}
 function closeMenus(){for(let id of ['toolMenu','newMenu','navMenu','overflowMenu','editorOverflow'])$(id).hidden=true}
-function modal(title,markup,cb,okText='Uložit'){$('modalTitle').textContent=title;$('modalBody').innerHTML=markup;$('modal').hidden=false;$('okModal').textContent=okText;window.modalOK=cb;setTimeout(()=>$('modalBody').querySelector('input,textarea')?.focus(),90)}
+function modal(title,markup,cb,okText='Uložit'){$('modalTitle').textContent=title;$('modalBody').innerHTML=markup;$('modal').hidden=false;$('okModal').textContent=okText;$('cancelModal').hidden=okText==='Zavřít';window.modalOK=cb;setTimeout(()=>$('modalBody').querySelector('input,textarea')?.focus(),90)}
 $('okModal').onclick=()=>{try{if(window.modalOK?.()!==false){$('modal').hidden=true;window.modalOK=null}}catch(e){notify('Chyba: '+e.message)}};
 $('cancelModal').onclick=()=>{$('modal').hidden=true;window.modalOK=null};
 function promptText(title,label,initial,done){modal(title,`<label>${escapeHtml(label)}</label><input id="promptValue" value="${escapeHtml(initial)}">`,()=>{let v=$('promptValue').value.trim();if(!v){notify('Vyplň hodnotu');return false}done(v)})}
@@ -100,7 +100,7 @@ $('back').onclick=()=>showAppMenu('navMenu',[
   ['⌂  Domů',()=>{currentFolder=null;showFolder()}],
   ['⚙  Nastavení',()=>toggleSettings()],
   ['☁  Google Disk',()=>chooseCloud()],
-  ['ⓘ  O Zaměřovači',()=>modal('Zaměřovač','<p>Vlastní aplikace pro zaměřování nábytku. Vývojová verze.</p>',()=>true,'Zavřít')]
+  ['ⓘ  O Zaměřovači',()=>modal('O Zaměřovači','<p>Vlastní aplikace pro zaměřování nábytku.</p><p>Aktuální verze: <b>'+escapeHtml(appVersion)+'</b></p>',()=>true,'Zavřít')]
 ]);
 $('sortBtn').onclick=()=>{sortAsc=!sortAsc;$('sortBtn').textContent=sortAsc?'ᴬ↓ᶻ':'ᶻ↓ᴬ';showFolder()};
 function showOverflow(){showAppMenu('overflowMenu',[

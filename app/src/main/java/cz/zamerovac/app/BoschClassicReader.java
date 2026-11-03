@@ -17,12 +17,12 @@ import java.util.function.Consumer;
 public final class BoschClassicReader {
     private static final UUID SPP=UUID.fromString("00001101-0000-1000-8000-00805f9b34fb");
     private final BluetoothDevice device;
-    private final Consumer<String> onRead,onError;
+    private final Consumer<String> onRead,onError,onStatus;
     private volatile BluetoothSocket socket;
-    public BoschClassicReader(BluetoothDevice d,Consumer<String> measurement,Consumer<String> error){device=d;onRead=measurement;onError=error;}
+    public BoschClassicReader(BluetoothDevice d,Consumer<String> measurement,Consumer<String> error,Consumer<String> status){device=d;onRead=measurement;onError=error;onStatus=status;}
     public void start(){new Thread(()->{
         try{
-            BluetoothSocket s=device.createRfcommSocketToServiceRecord(SPP);socket=s;s.connect();
+            BluetoothSocket s=device.createRfcommSocketToServiceRecord(SPP);socket=s;s.connect();onStatus.accept("connected");
             OutputStream out=s.getOutputStream();out.write(new byte[]{(byte)0xc0,0x55,0x02,0x01,0x00,0x1a});out.flush();
             InputStream in=s.getInputStream();byte[] data=new byte[20];
             int state=0,n=0;
@@ -33,7 +33,7 @@ public final class BoschClassicReader {
                 else{data[n++]=(byte)v;if(n==20){decode(data);state=0;}}
             }
         }catch(Exception e){onError.accept("Bosch Bluetooth Classic: "+e.getMessage());}
-        finally{close();}
+        finally{close();onStatus.accept("off");}
     },"BoschGLM-Classic").start();}
     private void decode(byte[] data){
         try{

@@ -66,7 +66,7 @@ function canvasText(text,p,color,size,angle=0){ctx.save();ctx.translate(p.x,p.y)
 function drawArrow(c,point,to,size=10){let a=Math.atan2(point.y-to.y,point.x-to.x);c.beginPath();c.moveTo(point.x,point.y);c.lineTo(point.x-size*Math.cos(a-.48),point.y-size*Math.sin(a-.48));c.moveTo(point.x,point.y);c.lineTo(point.x-size*Math.cos(a+.48),point.y-size*Math.sin(a+.48));c.stroke()}
 function drawItem(c,item){let a=item.a&&worldToScreen(item.a),b=item.b&&worldToScreen(item.b);let pts=(item.points||[]).map(worldToScreen);const color=item.color||prefs.color,fw=(item.width||prefs.lineWidth),fs=(item.fontSize||prefs.fontSize);c.save();c.strokeStyle=color;c.fillStyle=color;c.lineWidth=fw;c.lineJoin='round';c.lineCap='round';
 function seg(){c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.stroke()};
-if(item.type==='dimension'||item.type==='chain'||item.type==='cumulative'){if(a&&b){let dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1;let nx=-dy/d,ny=dx/d;let off=item.offset??0;let ao={x:a.x+nx*off,y:a.y+ny*off},bo={x:b.x+nx*off,y:b.y+ny*off};c.beginPath();c.moveTo(a.x+nx*(off-11),a.y+ny*(off-11));c.lineTo(a.x+nx*(off+11),a.y+ny*(off+11));c.moveTo(b.x+nx*(off-11),b.y+ny*(off-11));c.lineTo(b.x+nx*(off+11),b.y+ny*(off+11));c.moveTo(ao.x,ao.y);c.lineTo(bo.x,bo.y);c.stroke();drawArrow(c,ao,bo,9);drawArrow(c,bo,ao,9);let label=item.measure?`${item.measure} ${item.unit||'mm'}`:'?';let ang=Math.atan2(dy,dx);if(ang>Math.PI/2||ang< -Math.PI/2)ang+=Math.PI;canvasText(label,{x:(ao.x+bo.x)/2+(bo.x-ao.x)*(Number(item.labelT)||0),y:(ao.y+bo.y)/2+(bo.y-ao.y)*(Number(item.labelT)||0)},color,fs,ang)}}
+if(item.type==='dimension'||item.type==='chain'||item.type==='cumulative'){if(a&&b){let dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1;let nx=-dy/d,ny=dx/d;let off=item.offset??0;let ao={x:a.x+nx*off,y:a.y+ny*off},bo={x:b.x+nx*off,y:b.y+ny*off};c.beginPath();c.moveTo(a.x+nx*(off-11),a.y+ny*(off-11));c.lineTo(a.x+nx*(off+11),a.y+ny*(off+11));c.moveTo(b.x+nx*(off-11),b.y+ny*(off-11));c.lineTo(b.x+nx*(off+11),b.y+ny*(off+11));c.moveTo(ao.x,ao.y);c.lineTo(bo.x,bo.y);c.stroke();drawArrow(c,ao,bo,9);drawArrow(c,bo,ao,9);let label=item.measure?`${item.measure} ${item.unit||'mm'}`:'?';if(item.text)label+=' · '+item.text;let ang=Math.atan2(dy,dx);if(ang>Math.PI/2||ang< -Math.PI/2)ang+=Math.PI;canvasText(label,{x:(ao.x+bo.x)/2+(bo.x-ao.x)*(Number(item.labelT)||0),y:(ao.y+bo.y)/2+(bo.y-ao.y)*(Number(item.labelT)||0)},color,fs,ang)}}
 else if(item.type==='line'||item.type==='arrow'||item.type==='angle'||item.type==='target'){if(a&&b){seg();if(item.type==='arrow')drawArrow(c,b,a,15);if(item.type==='target'){c.beginPath();c.arc(b.x,b.y,12,0,Math.PI*2);c.stroke()}if(item.type==='angle'){let degree=(Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI+360)%360;canvasText((item.measure||degree.toFixed(0))+'°',{x:(a.x+b.x)/2,y:(a.y+b.y)/2-23},color,fs)}}}
 else if(item.type==='rect'||item.type==='area'){if(a&&b){let x=Math.min(a.x,b.x),y=Math.min(a.y,b.y),w=Math.abs(a.x-b.x),h=Math.abs(a.y-b.y);c.strokeRect(x,y,w,h);if(item.type==='area'&&item.measure)canvasText(item.measure+' '+(item.unit||'m²'),{x:x+w/2,y:y+h/2},color,fs)}}
 else if(item.type==='ellipse'||item.type==='circle'){if(a&&b){let cx=(a.x+b.x)/2,cy=(a.y+b.y)/2,rx=Math.abs(a.x-b.x)/2,ry=item.type==='circle'?rx:Math.abs(a.y-b.y)/2;c.beginPath();c.ellipse(cx,cy,Math.max(1,rx),Math.max(1,ry),0,0,Math.PI*2);c.stroke()}}
@@ -139,7 +139,7 @@ function nearestLabel(point){
     const along=Math.abs((point.x-p.x)*p.ux+(point.y-p.y)*p.uy);
     const across=Math.abs((point.x-p.x)*(-p.uy)+(point.y-p.y)*p.ux);
     ctx.save();ctx.font='600 '+(item.fontSize||prefs.fontSize)+'px sans-serif';
-    const width=ctx.measureText(item.measure?(item.measure+' '+(item.unit||'mm')):'?').width;ctx.restore();
+    const width=ctx.measureText((item.measure?(item.measure+' '+(item.unit||'mm')):'?')+(item.text?' · '+item.text:'')).width;ctx.restore();
     if(along<=Math.max(28,width/2+15)&&across<=Math.max(22,(item.fontSize||prefs.fontSize)*.85)){
       return {item,kind:'label'};
     }
@@ -201,7 +201,7 @@ function stageUp(e){if(screen!=='editor')return;const wasTwo=pointers.size===2;p
   const isLabel=selectedHandle.kind==='label';
   const item=selectedHandle.item;
   selectedHandle=null;magnifierPoint=null;loupeSide=null;
-  if(!moved && isLabel){
+  if(!moved && (isLabel || item.type==='note')){
     // A tap on '?' or the numeric label opens the simple measurement editor.
     if(editStack.length)editStack.pop();
     editItem(item);
@@ -221,9 +221,19 @@ if(['dimension','chain','cumulative','area'].includes(mode)){
   commitEditor();
   finishDraw(item);
 }
-else if(mode==='note'||mode==='symbol'){modal('Text do fotografie',`<label>Popisek</label><input id="drawText" placeholder="Např. přívod vody" value="">`,()=>{item.text=$('drawText').value;checkpoint();current.items.push(item);commitEditor();finishDraw(item)})}
+else if(mode==='note'){openRichNote(item,true)}
+ else if(mode==='symbol'){
+ const presets=['🔌 Zásuvka','🚰 Voda','🟤 Odpad','⬆ Výška parapetu','▣ Okno','▯ Dveře','⚡ Elektro','♨ Topení'];
+ modal('Rychlý symbol do fotografie',
+   '<label>Přednastavený symbol</label><select id="drawPreset"><option value="">Vlastní popisek</option>'+presets.map(x=>'<option>'+escapeHtml(x)+'</option>').join('')+'</select>'+
+   '<label>Text u symbolu</label><input id="drawText" placeholder="Zvol symbol nebo napiš vlastní" value="">',()=>{
+     item.text=$('drawText').value.trim();if(!item.text)return false;
+     checkpoint();current.items.push(item);commitEditor();finishDraw(item);
+   });
+ $('drawPreset').onchange=()=>{if($('drawPreset').value)$('drawText').value=$('drawPreset').value};
+}
 else{checkpoint();current.items.push(item);commitEditor();finishDraw(item)}}
-function editItem(item){if(['dimension','chain','cumulative','area','angle'].includes(item.type))modal('Upravit hodnotu',`<label>Rozměr</label><input id="measureInput" type="text" value="${escapeHtml(item.measure)}"><label>Jednotka</label><select id="measureUnit">${['mm','cm','m','in','m²','°'].map(u=>`<option ${u===(item.unit||prefs.unit)?'selected':''}>${u}</option>`).join('')}</select><div class="row wrap"><button id="removeItem" class="outline">Smazat kótu</button></div>`,()=>{checkpoint();item.measure=$('measureInput').value;item.unit=$('measureUnit').value;commitEditor()});else modal('Upravit prvek',`<label>Text</label><input id="drawText" value="${escapeHtml(item.text||'')}"><div class="row"><button id="removeItem" class="outline">Smazat prvek</button></div>`,()=>{checkpoint();item.text=$('drawText').value;commitEditor()});$('removeItem').onclick=()=>{checkpoint();current.items=current.items.filter(i=>i.id!==item.id);selected=null;$('modal').hidden=true;commitEditor()}}
+function editItem(item){if(['dimension','chain','cumulative','area','angle'].includes(item.type))modal('Upravit hodnotu',`<label>Rozměr</label><input id="measureInput" type="text" value="${escapeHtml(item.measure)}"><label>Jednotka</label><select id="measureUnit">${['mm','cm','m','in','m²','°'].map(u=>`<option ${u===(item.unit||prefs.unit)?'selected':''}>${u}</option>`).join('')}</select><label>Popisek ke kótě (volitelné)</label><input id="dimensionCaption" value="${escapeHtml(item.text||'')}" placeholder="Např. přívod vody"><div class="row wrap"><button id="removeItem" class="outline">Smazat kótu</button></div>`,()=>{checkpoint();item.measure=$('measureInput').value;item.unit=$('measureUnit').value;item.text=$('dimensionCaption').value.trim();commitEditor()});else if(item.type==='note'){openRichNote(item,false);return}else modal('Upravit prvek',`<label>Text</label><input id="drawText" value="${escapeHtml(item.text||'')}"><div class="row"><button id="removeItem" class="outline">Smazat prvek</button></div>`,()=>{checkpoint();item.text=$('drawText').value;commitEditor()});$('removeItem').onclick=()=>{checkpoint();current.items=current.items.filter(i=>i.id!==item.id);selected=null;$('modal').hidden=true;commitEditor()}}
 function showEditorOverflow(){
   showAppMenu('editorOverflow',[
     [prefs.repeatDrawing?'Opakovat kóty ✓':'Jedna kóta ✓',()=>{

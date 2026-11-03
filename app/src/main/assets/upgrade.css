@@ -1,0 +1,86 @@
+/* Přístupné, tmavé ovládání velké aktualizace. Neodstraňuje původní styly. */
+:root {--accent:#8b5cf6;--green:#8b5cf6;--top-accent:#8b5cf6;}
+.top,.editor-head,.note-head,.panelHead {background:#332b40;color:#faf8ff;border-bottom:2px solid var(--accent)}
+.breadcrumbs {background:#302739;border-bottom:1px solid #5f5070}
+.primary {background:var(--accent);color:#fff}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible {outline:2px solid #e8ccff;outline-offset:2px}
+#fitBtn {display:none!important}
+#appVersionInfo strong {color:#f8eaff}
+#bluetoothBtn {font-size:21px;color:#b6bac2}
+#bluetoothBtn.connected {color:#60a5fa}
+#bluetoothBtn.connecting {color:#60a5fa;animation:btPulse 1s linear infinite}
+@keyframes btPulse {50%{opacity:.38}}
+#cloudBtn[data-status=ok]{color:#c2a1ff}
+#cloudBtn[data-status=failed]{text-decoration:underline;text-decoration-style:wavy;text-decoration-color:#fbbf24}
+#cloudBtn[data-status=running]{animation:btPulse 1s linear infinite}
+#screenTitle .app-version {color:#e8d6ff}
+#editorPhotoMeta {color:#e3d4f7}
+#editorHint {max-width:96%}
+#photoNavigation {display:flex;gap:0;align-items:center;flex-shrink:0}
+#photoNavigation button {min-width:30px;min-height:42px;font-size:26px;padding:4px}
+#photoNavigation button:disabled {opacity:.25}
+.toolbar .ico {font-size:29px;min-height:46px}
+#styleTool {font-size:25px}
+#deleteTool {font-size:24px}
+#activeTool.repeat:after {content:'∞';position:absolute;right:1px;bottom:3px;font-size:12px;background:#332b40;border-radius:50%;color:#fafafa}
+#favoriteTools {display:flex;gap:2px;align-items:center;max-width:36vw;overflow-x:auto;flex-shrink:1}
+#favoriteTools button {font-size:23px;flex:none;min-width:37px;min-height:44px;border:1px solid #4e4d58;border-radius:6px}
+#favoriteTools button:active {background:#5e477e}
+#toolMenu .choice {min-height:57px;font-size:15px}
+#toolMenu .choice strong {font-size:24px;min-width:42px}
+#toolMenu .sectionLabel {font-size:14px}
+#browseGallery {border:none!important;font-size:27px}
+.setting input[type=color] {min-width:48px;min-height:38px;background:none;border:0}
+.search-results {max-height:48vh;overflow-y:auto;margin:8px 0}
+.search-results button {display:flex;flex-direction:column;text-align:left;gap:3px;width:100%;padding:11px;border-bottom:1px solid #5c5365}
+.search-results button small {font-size:12px;color:#bbb}
+.sum-option {display:flex!important;align-items:center;gap:12px;padding:7px 0;font-size:15px!important;color:inherit!important}
+.sum-option input {width:20px!important;height:20px;flex-shrink:0;margin:0!important;accent-color:var(--accent)}
+#sumResult {font-weight:600;line-height:1.6;white-space:pre-wrap}
+.mediaOverlay,.galleryOverlay {position:fixed;inset:0;z-index:110;background:#17181d;color:#fff;display:flex;flex-direction:column}
+.mediaTop,.gallery-top {display:flex;align-items:center;gap:12px;padding:10px 14px;min-height:58px;background:#322b3c}
+.mediaTop strong,.gallery-title {flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mediaTop button,.gallery-top button,.gallery-bottom button {padding:8px 13px;border:1px solid #8e6ab8;border-radius:8px;font-size:16px}
+.mediaOverlay video {display:block;width:100%;max-height:75vh;min-height:35vh;margin:auto;background:#000;object-fit:contain}
+.mediaOverlay audio {display:block;max-width:90%;width:440px;margin:auto}
+.mediaOverlay p {color:#aaa;text-align:center}
+.gallery-content {flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.gallery-img {max-width:100%;max-height:100%;object-fit:contain;touch-action:pan-y pinch-zoom;user-select:none}
+.gallery-bottom {display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:67px;padding:8px;background:#28252e}
+.gallery-bottom span {font-size:12px;color:#d0c2dc;text-align:center}
+.gallery-bottom button {font-size:25px}
+.diagScroll {max-height:46vh;overflow:auto;background:#23222a;border:1px solid #55505d;border-radius:7px;padding:9px;margin:12px 0;font-size:12px;font-family:monospace;overflow-wrap:anywhere}
+.diagScroll>div {padding:6px 0;border-bottom:1px solid #4a4652}
+.diagScroll small {color:#a8a1b4}
+.historyLine {display:flex;justify-content:space-between;align-items:center;gap:10px;border-bottom:1px solid #4b4652;padding:10px}
+.historyLine small {color:#aaa}
+.historyLine button {border:1px solid #766582;padding:7px;border-radius:6px}
+.releaseItem {border:1px solid #5a4a6a;border-radius:9px;padding:12px;margin:10px 0;line-height:1.5}
+.releaseItem ul {padding-left:20px}
+@media(max-width:520px) {
+ #favoriteTools {max-width:22vw}
+ #favoriteTools button:nth-child(n+3) {display:none}
+ #photoNavigation button {min-width:29px;padding:3px}
+ .editor-head #editorTitle {font-size:13px}
+ #editorTopMenu {width:36px}
+ .toolbar #lineColor {width:34px;margin:0 3px}
+ .toolbar .ico {width:39px;font-size:25px}
+}
+@media(min-width:850px){
+ body.in-editor #editorView {flex-direction:column}
+ body.in-editor .toolbar {position:absolute;left:0;top:56px;bottom:0;width:70px;height:auto;flex-direction:column;justify-content:flex-start;gap:8px;border-right:1px solid #5a4b6a;z-index:5;padding:10px 4px;overflow-y:auto;background:#292631}
+ body.in-editor #stage {margin-left:70px}
+ body.in-editor #favoriteTools {flex-direction:column;max-width:65px;overflow:visible}
+ body.in-editor .toolbar #editorMore {margin-top:auto;margin-left:0}
+ body.in-editor .toolbar .ico {height:49px;width:53px}
+ body.in-editor .toolbar input[type=color] {min-height:40px}
+ #toolMenu.sheet {left:70px;right:auto;width:min(410px,60vw)}
+ .dialog {max-width:640px}
+}
+
+#sketchTools{padding:12px 0}#sketchCanvas{display:block;width:100%;height:auto;aspect-ratio:1000 / 580;background:#171720;touch-action:none;border:2px solid #665575;border-radius:8px;margin:12px 0;cursor:crosshair}#sketchTools .activePen{outline:2px solid #dccaff}#sketchTools .muted{font-size:13px;color:#b8b0c1}.rich-tabs{padding:0 0 10px;font-size:13px;color:#d5c5e2}.rich-attachment{border-bottom:1px solid #56505d;padding:10px 0;display:flex;align-items:center;gap:10px;flex-wrap:wrap}.rich-attachment>span{flex:1}.rich-attachment button{padding:7px;border-radius:6px}.previewMedia{width:100%}.previewMedia img{max-width:100%;max-height:145px;object-fit:contain;border-radius:5px}.previewMedia audio{width:100%}.addressCandidate{display:flex;justify-content:space-between;gap:10px;text-align:left;width:100%;border-bottom:1px solid #555;padding:12px}.addressCandidate small{color:#c6b4e0}#addressMap{margin:10px 0}#addressMap iframe{border:1px solid #666;border-radius:8px}
+
+.releaseFeature{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:8px 0;border-bottom:1px solid #554963}.releaseFeature span{flex:1;font-size:13px}.releaseFeature button{font-size:12px;padding:6px 9px;flex-shrink:0}
+#bluetoothBtn.connecting{animation:none;position:relative}#bluetoothBtn.connecting:after{content:'';position:absolute;right:3px;bottom:6px;width:11px;height:11px;border:2px solid #60a5fa;border-top-color:transparent;border-radius:50%;animation:btSpin .85s linear infinite}@keyframes btSpin{to{transform:rotate(360deg)}}
+
+.favoriteOrderRow{display:flex;gap:6px;align-items:center;border-bottom:1px solid #59505d;padding:5px 0}.favoriteOrderRow span{flex:1}.favoriteOrderRow button{border:1px solid #726083;border-radius:5px;min-width:34px;padding:7px}.favoriteOrderRow button:disabled{opacity:.3}

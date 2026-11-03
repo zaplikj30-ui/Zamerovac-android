@@ -53,14 +53,14 @@ Referenční měřítko, perspektivní reference, perspektivní délka, počíta
 
 Datový model je zamýšlen jako budoucí vstup PC modulu. Editovatelné kóty jsou uložené v obrazových pixelech odděleně od uživatelem zadaných skutečných rozměrů.
 
-## Instalace a aktualizace Zaměřovače TEST
+## Instalace a aktualizace Zaměřovače (vývojová APK)
 
 **Aktuální APK ke stažení: [GitHub Releases – poslední vydání](https://github.com/zaplikj30-ui/Zamerovac-android/releases/latest)**.
 
-- Každé úspěšné sestavení z větve `main` automaticky vytvoří číslované vydání obsahující přímo soubor `Zamerovac-TEST-v1.1.N.apk` (bez ZIP).
+- Každé úspěšné sestavení z větve `main` automaticky vytvoří číslované vydání obsahující přímo soubor `Zamerovac-v1.2.N.apk` (bez ZIP).
 - Na telefonu otevři odkaz, přihlas se ke svému GitHub účtu, vyber soubor `.apk`, otevři jej přes **Moje soubory → Stažené** a potvrď **Aktualizovat**. ChatGPT odkazy na dočasné soubory k instalaci nepoužívej.
-- Aplikace `Zaměřovač TEST` má identifikátor `cz.zamerovac.app.preview` a stálý testovací podpis v `tools/debug-signing.p12.b64`. Všechny běhy workflow používají tento podpis a postupně rostoucí `versionCode` `1000 + GITHUB_RUN_NUMBER`. Aktualizace by proto neměla mazat data.
-- `Zaměřovač` (bez TEST) a `Zaměřovač TEST` jsou dvě **odlišné aplikace** a data se mezi nimi nepřenášejí automaticky.
+- Vývojová aplikace zůstává pod názvem **Zaměřovač** a má identifikátor `cz.zamerovac.app.preview` a stálý testovací podpis v `tools/debug-signing.p12.b64`. Všechny běhy workflow používají tento podpis a postupně rostoucí `versionCode` `1000 + GITHUB_RUN_NUMBER`. Aktualizace by proto neměla mazat data.
+- Původní ostrá varianta (cz.zamerovac.app) a testovací varianta (cz.zamerovac.app.preview) jsou dvě **odlišné aplikace** a data se mezi nimi nepřenášejí automaticky.
 - Certifikát v repozitáři je pouze **vývojový/testovací**. Pro budoucí ostré vydání je nutné vytvořit soukromý produkční podpis a zacházet s ním jako s tajemstvím; tenhle testovací klíč nelze považovat za bezpečný pro veřejnou distribuci.
 - Upozornění: Android může instalaci blokovat z jiných důvodů (například zákaz instalace z daného zdroje). Bez instalačního protokolu nelze potvrdit, proč konkrétní historická aktualizace selhala. Starou aplikaci nemaž bez zálohy.
 
@@ -77,3 +77,34 @@ Repozitář obsahuje samostatný workflow **Zaměřovač – Android emulátor a
 - **Nezaměňuj emulátor za ověření na Samsungu:** ovládání prstem, obrazovka, Bluetooth Bosch a přístup k souborům je nutné potvrdit na reálném telefonu.
 - Cizí APK ImageMeteru nejsou součástí repozitáře a emulator je automaticky nespouští. ImageMeter zůstává referenční aplikací pro porovnávání chování, ne zdrojem převzatého proprietárního kódu.
 - Android emulátor v GitHub Actions spotřebovává minuty Actions, podle typu účtu mohou být účtované. Automatický workflow lze kdykoliv vypnout v nastavení Actions.
+
+
+## Velká aktualizace 1.2 – nové funkce
+
+V této větvi přibývá originální implementace následujících funkcí:
+
+- Tmavý fialovo-antracitový vzhled s volitelnou akcentní barvou a hlavní ikonou skříněk se žlutými kótami.
+- Galerie fotografií, rychlý přechod mezi snímky při kótování a lokální přehrávání audio/video souborů.
+- Poznámky ve fotografii: text, hlas, detailní fotografie a její samostatné editovatelné kóty s popisky.
+- Vrstvy zobrazení kót, textových poznámek a kreseb, vlastní oblíbené nástroje, rychlé symboly.
+- Ručně označené navazující kóty a kontrola součtu, historie uložených podob anotací.
+- Rozšířené hledání v názvech, adresách a textových poznámkách; adresy ČR lze vyhledat přes RÚIAN a prohlédnout na mapě.
+- Uzamykání dokončených zakázek, automatické ukládání textu poznámek a podpora skic S Pen.
+- Diagnostický záznam pouze na zařízení, jeho sdílení na výslovné vyžádání, historie měření Bosch, rozlišení skutečného připojení laseru.
+- ZIP export **všech zakázek** včetně originálních příloh a editovatelných kót, možnost bezpečné obnovy jako novou složku (při importu se stávající zakázky nepřepisují).
+- Novinky po aktualizaci a přehled změn v nastavení.
+
+### Výslovně neověřené nebo nedokončené
+
+- **Google Disk:** současný SAF mechanismus je omezen podporou poskytovatele dokumentů. Skutečná obousměrná synchronizace mezi telefonem a tabletem se musí ověřit a případně přepsat na oficiální Drive API/OAuth.
+- **Bosch:** protokoly BLE/Classic, dostupnost modelů a stav připojení se musí otestovat s fyzickým laserem.
+- **Samsung Notes:** veřejně zdokumentované obousměrné rozhraní pro automatickou synchronizaci cizí aplikace nebylo ověřeno. Skici fungují uvnitř Zaměřovače; neznamená to automatickou synchronizaci se Samsung Notes.
+- Pro předání zákazníkovi je nutný běh na zařízení a zátěžový test importu/exportu ZIP a přesnosti rozměrů. Emulátor a úspěšný Gradle build nestačí.
+
+**Uživatelsky odložené nápady, které nejsou součástí 1.2:** propojení fotek s půdorysem, dvě fotky vedle sebe, šablony zakázek, karta zákazníka, pokročilé magnetické přichytávání a výměna fotky při zachování kót.
+
+### Bezpečnost aktualizací
+
+- Vývojový build drží applicationId = cz.zamerovac.app.preview a původní testovací podpis; změnil se jen viditelný název aplikace. **Neodinstalovávat**, nejprve uchovat ZIP zálohu.
+- Nové datové atributy jsou volitelné, základní struktura databáze zůstává schema: 1, takže staré projekty není třeba mazat nebo převádět.
+- Import ZIP záměrně vytvoří nové identifikátory a nadřazenou složku; nezničí existující projekty, ale může vytvořit duplicitní obsah, pokud ZIP importuješ dvakrát.
