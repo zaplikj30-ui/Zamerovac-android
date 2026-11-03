@@ -26,12 +26,27 @@ function modal(title,markup,cb,okText='Uložit'){$('modalTitle').textContent=tit
 $('okModal').onclick=()=>{try{if(window.modalOK?.()!==false){$('modal').hidden=true;window.modalOK=null}}catch(e){notify('Chyba: '+e.message)}};
 $('cancelModal').onclick=()=>{$('modal').hidden=true;window.modalOK=null};
 function promptText(title,label,initial,done){modal(title,`<label>${escapeHtml(label)}</label><input id="promptValue" value="${escapeHtml(initial)}">`,()=>{let v=$('promptValue').value.trim();if(!v){notify('Vyplň hodnotu');return false}done(v)})}
+// ImageMeter-style browser previews. Android loads only cached small JPEG
+// thumbnails from /thumb/<id>, never the original full-size camera image.
+function browserEntryIcon(r){
+  if(r.kind==='folder'){
+    return '<div class="entry-icon folder"><svg viewBox="0 0 52 44" width="51" height="43" aria-label="Složka"><path d="M2 11V7c0-2 2-3 4-3h16l5 5h20c2 0 3 1 3 3v28H2Z" fill="#dfb65d" stroke="#242424" stroke-width="2"/><path d="M2 15h48v25H2Z" fill="#ffd17a" stroke="#222" stroke-width="2"/></svg></div>';
+  }
+  const fallback=({photo:'▧',canvas:'▦',note:'▤',video:'▶',audio:'♫',file:'▣'}[r.kind]||'▣');
+  const id=r.kind==='photo'&&Array.isArray(r.media)?r.media[0]:null;
+  if(native&&id&&/^[a-zA-Z0-9_-]{3,120}$/.test(id)){
+    const url='https://appassets.androidplatform.net/thumb/'+encodeURIComponent(id);
+    return '<div class="entry-icon photo-preview"><img class="entry-thumb" src="'+url+'" alt="" loading="lazy"><span class="thumb-fallback" hidden>▧</span></div>';
+  }
+  return '<div class="entry-icon">'+fallback+'</div>';
+}
 function showFolder(){screen='browser';current=null;document.body.classList.remove('in-editor','in-note');closeMenus();$('browserView').hidden=false;$('browserFoot').hidden=false;$('editorView').hidden=true;$('noteView').hidden=true;$('back').textContent='☰';$('screenTitle').innerHTML=`<span class="app-title">Zaměřovač</span><small class="app-version">verze ${escapeHtml(appVersionShort)}</small>`;let path=[];let walk=currentFolder;let guard=0;while(walk&&guard++<50){let r=recById(walk);if(!r)break;path.unshift(r);walk=r.parentId;}
 $('breadcrumbs').innerHTML=`<button class="crumb" data-nav="root">⌂ Domů</button>`+path.map(r=>`<span>›</span><button class="crumb" data-nav="${r.id}">${escapeHtml(r.title)}</button>`).join('');
 $('breadcrumbs').querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>{currentFolder=b.dataset.nav==='root'?null:b.dataset.nav;showFolder()});
 let list=state.records.filter(r=>!r.deleted&&r.parentId===currentFolder).sort((a,b)=>(a.kind==='folder'?0:1)-(b.kind==='folder'?0:1)||(sortAsc?1:-1)*a.title.localeCompare(b.title,'cs'));
-$('items').innerHTML=list.length?list.map(r=>`<div class="entry" data-id="${r.id}"><div class="entry-icon ${r.kind==='folder'?'folder':''}">${r.kind==='folder'?'<svg viewBox="0 0 52 44" width="51" height="43" aria-label="Složka"><path d="M2 11V7c0-2 2-3 4-3h16l5 5h20c2 0 3 1 3 3v28H2Z" fill="#dfb65d" stroke="#242424" stroke-width="2"/><path d="M2 15h48v25H2Z" fill="#ffd17a" stroke="#222" stroke-width="2"/></svg>':({photo:'▧',canvas:'▦',note:'▤',video:'▶',audio:'♫',file:'▣'}[r.kind]||'▣')}</div><div class="entry-info"><div class="entry-title">${escapeHtml(r.title)}</div><div class="entry-date">${dateText(r.updatedAt)}${r.conflict?' · KONFLIKTNÍ KOPIE':''}</div></div><button class="entry-more" data-more="${r.id}">⋮</button></div>`).join(''):`<div class="empty"><div class="big">▤</div>Zatím prázdné.<br>Pomocí ＋ vytvoříš složku, fotografii nebo poznámku.</div>`;
+$('items').innerHTML=list.length?list.map(r=>`<div class="entry" data-id="${r.id}">${browserEntryIcon(r)}<div class="entry-info"><div class="entry-title">${escapeHtml(r.title)}</div><div class="entry-date">${dateText(r.updatedAt)}${r.conflict?' · KONFLIKTNÍ KOPIE':''}</div></div><button class="entry-more" data-more="${r.id}">⋮</button></div>`).join(''):`<div class="empty"><div class="big">▤</div>Zatím prázdné.<br>Pomocí ＋ vytvoříš složku, fotografii nebo poznámku.</div>`;
 $('items').querySelectorAll('.entry').forEach(el=>el.onclick=(e)=>{if(e.target.closest('[data-more]')){recordActions(el.dataset.id);return}openRecord(el.dataset.id)});
+$('items').querySelectorAll('.entry-thumb').forEach(img=>img.addEventListener('error',()=>{img.hidden=true;img.nextElementSibling.hidden=false},{once:true}));
 }
 function recordActions(id){let r=recById(id);modal(r.title,`<div class="message">${escapeHtml(r.kind)} · ${dateText(r.updatedAt)}</div><div class="row wrap" style="margin-top:20px"><button class="outline" id="renameOne">Přejmenovat</button><button class="outline" id="moveOne">Přesunout</button><button class="outline" id="deleteOne">Smazat</button></div>`,()=>true,'Zavřít');$('renameOne').onclick=()=>{ $('modal').hidden=true;promptText('Přejmenovat','Název',r.title,v=>{r.title=v;touch(r);save();showFolder()})};$('deleteOne').onclick=()=>{$('modal').hidden=true;modal('Odstranit?',`<p>Přesunout „${escapeHtml(r.title)}“ do koše? Záznam se při synchronizaci označí jako odstraněný.</p>`,()=>{markDeleted(r.id);save();showFolder()},'Odstranit')};$('moveOne').onclick=()=>{$('modal').hidden=true;let folders=state.records.filter(x=>x.kind==='folder'&&!x.deleted&&x.id!==r.id);modal('Přesunout do složky',`<select id="moveWhere"><option value="">Kořen</option>${folders.map(f=>`<option value="${f.id}">${escapeHtml(f.title)}</option>`).join('')}</select>`,()=>{r.parentId=$('moveWhere').value||null;touch(r);save();showFolder()})};}
 function markDeleted(id){let r=recById(id);if(!r)return;r.deleted=true;touch(r);for(let child of state.records.filter(x=>x.parentId===id&&!x.deleted))markDeleted(child.id)}
