@@ -78,9 +78,10 @@ function drawLoupe(){
   const pointer=worldToScreen(magnifierPoint);
   const canvas=$('loupe');
   const width=Math.max(1,stageCanvas.clientWidth);
-  // 90 CSS px matches the compact ~105 px phone-screen magnifier in the reference screenshot.
-  // Do not resize by screen width: the old variable size made the loupe look oversized.
-  const size=90;
+  // Reference comparison on the same phone: the ImageMeter magnifier is
+  // about 160 screenshot pixels, while ours was about 105. At the device's
+  // WebView scaling this corresponds to roughly 136 CSS pixels.
+  const size=136;
   // Reference interaction: fixed at the opposite upper corner from the
   // point being manipulated, switching around the image midpoint. Keep a
   // small hysteresis zone to prevent flickering while crossing the middle.
@@ -111,6 +112,18 @@ function drawLoupe(){
   loupeCtx.translate(size*.5-pointer.x*zoom,size*.5-pointer.y*zoom);
   loupeCtx.scale(zoom,zoom);
   loupeCtx.drawImage(stageCanvas,0,0,stageCanvas.width/stageDensity,stageCanvas.height/stageDensity);
+  // A thin dashed cross like the reference screenshot. The REAL dimension
+  // end tick remains visible underneath; no large dots or grab handles.
+  loupeCtx.setTransform(dpr,0,0,dpr,0,0);
+  loupeCtx.beginPath();
+  loupeCtx.setLineDash([5,7]);
+  loupeCtx.lineWidth=.8;
+  loupeCtx.strokeStyle='rgba(245,245,245,.65)';
+  loupeCtx.moveTo(size*.5,0);
+  loupeCtx.lineTo(size*.5,size);
+  loupeCtx.moveTo(0,size*.5);
+  loupeCtx.lineTo(size,size*.5);
+  loupeCtx.stroke();
   loupeCtx.restore();
 }
 function labelInfo(item){
