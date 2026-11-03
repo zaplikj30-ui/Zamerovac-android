@@ -45,7 +45,7 @@ Uživatel vyrábí zakázkový nábytek. Vyvíjíme vlastní Android aplikaci na
 
 ## Stav projektu a omezení
 - Projekt obsahuje Android Java shell/WebView a HTML/JS editor v `app/src/main/assets/`, Android nativní most v `app/src/main/java/cz/zamerovac/app/`.
-- GitHub Actions workflow `.github/workflows/build-apk.yml` sestavil debug APK při push na main (běh 41524533406 z 2026-11-02). Úspěšný build NENÍ ověření správného fungování.
+- GitHub Actions workflow `.github/workflows/build-apk.yml` sestavuje a vydává testovací APK **pouze po ručním spuštění** přes Actions → Run workflow. Emulátor `.github/workflows/emulator-smoke.yml` se také spouští výhradně ručně. Každý commit na main už NESMÍ automaticky spouštět Android build ani emulátor. Před předáním nové APK proveď všechny kontroly podpisu a zachování dat, které jsou součástí vydávacího workflow. Úspěšný build NENÍ ověření správného fungování.
 - Pozor: synchronizace přes Android Storage Access Framework je podmíněna podporou zapisovatelné složky poskytovatelem Google Disku. Pokud nefunguje, zvaž bezpečnou oficiální integraci Drive API/OAuth, nikoli předstírání funkčního cloudu.
 - Bluetooth implementace v `BoschClassicReader.java` je experimentální; funkčnost je nutné ověřit na konkrétním laseru Bosch, konkrétním firmware a Android zařízení.
 - Žádné reálné zákaznické soubory nepoužívat jako testovací data bez výslovného souhlasu. Preferuj testovací zakázky.
@@ -54,7 +54,7 @@ Uživatel vyrábí zakázkový nábytek. Vyvíjíme vlastní Android aplikaci na
 ## Doporučený způsob práce
 1. Přečti README.md a existující kód, než cokoliv změníš.
 2. Opravuj konkrétní chyby, nevytvářej nový projekt od nuly bez důvodu.
-3. Při změnách spouštěj dostupné testy, alespoň `gradle assembleDebug`; kontroluj i běh na zařízení, pokud je dostupné.
+3. Při úpravách spouštěj cílené rychlé lokální kontroly a testy, pokud to prostředí umožňuje. Plný Gradle build a kontrolu testovací APK prováděj souhrnně před testováním či vydáním, nikoli po každém drobném commitu přes GitHub Actions. Emulátor spouštěj ručně jen při potřebě ověřit chování a výsledky potvrď na skutečném zařízení.
 4. Průběžně commituj změny do tohoto repozitáře; popisuj přesně co je implementované, co je jen prototyp a co není ověřené.
 5. Pokud uživatel pošle screenshot nebo chybu z Androidu, nejprve reprodukuj/diagnostikuj problém a navrhni opravu přímo v repozitáři.
 6. Vzájemná spolupráce mezi ChatGPT a Codexem probíhá pomocí commitů v GitHubu. Neznamená to sdílení celé konverzace ani automatické synchronizování kontextu mimo tento repozitář.
