@@ -82,9 +82,10 @@
   c.restore();
  }
  function labelPosition(it,g){
-  const base=it.b||it.a||{x:0,y:0};
-  const p=worldToScreen(base);
-  return it.captionMoved?p:{x:p.x+45,y:p.y-23};
+  // Výchozí text je součástí rámečku fotografie, a proto jede spolu s ní.
+  // Uživatelsky přetažený text (starší uložené poznámky) má vlastní souřadnici.
+  if(it.captionMoved&&it.b)return worldToScreen(it.b);
+  return {x:g.cx,y:g.y+g.h+18};
  }
  function labelRect(c,it,g){
   const text=String(it.text||'Klikněte pro zadání textu').trim();
@@ -109,7 +110,7 @@
   const outside=(g.x<view.dx-2||g.y<view.dy-2||
     g.x+g.w>view.dx+photoSize.w*view.zoom+2||
     g.y+g.h>view.dy+photoSize.h*view.zoom+2);
-  return !!it.insetMoved||outside||active?.item===it;
+  return !!it.insetMoved||outside;
  }
  window.renderPhotoInset=function(c,it,image,drawOriginal){
   const g=layout(it,image),show=shouldShowArrow(it,g),isSelected=(selected===it.id)&&!window.__exportingAnnotations;
@@ -217,18 +218,12 @@
    v.item.insetY=v.startingY+dy/view.zoom;
    v.item.insetMoved=true;
   }else if(v.kind==='caption'){
-   const start=v.captionMoved?worldToScreen(v.caption):{
-     x:worldToScreen(v.caption).x+45,y:worldToScreen(v.caption).y-23
-   };
+   const start=v.captionMoved?worldToScreen(v.caption):labelPosition(v.item,v.g);
    v.item.b=screenToWorld({x:start.x+dx,y:start.y+dy});
    v.item.captionMoved=true;
   }else if(v.kind==='anchor'){
-   // Při přesunu hrotu zůstane na místě i textový rámeček poznámky.
-   if(!v.item.captionMoved){
-    const previous=worldToScreen(v.anchor);
-    v.item.b=screenToWorld({x:previous.x+45,y:previous.y-23});
-    v.item.captionMoved=true;
-   }
+   // Hrot se přesouvá samostatně, fotografie i její text zůstávají na místě.
+   // Není třeba ukládat umělou polohu textu (captionMoved zůstane nezměněno).
    // Posun začátku šipky NESMÍ přesunout samotný detail.
    v.item.insetX=v.startingX;
    v.item.insetY=v.startingY;
