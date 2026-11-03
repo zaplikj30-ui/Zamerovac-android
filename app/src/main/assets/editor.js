@@ -266,7 +266,18 @@ else if(item.type==='line'||item.type==='arrow'||item.type==='angle'||item.type=
   }
  }
 }
-else if(item.type==='rect'||item.type==='area'){if(a&&b){let x=Math.min(a.x,b.x),y=Math.min(a.y,b.y),w=Math.abs(a.x-b.x),h=Math.abs(a.y-b.y);c.strokeRect(x,y,w,h);if(item.type==='area'&&item.measure)canvasText(item.measure+' '+(item.unit||'m²'),{x:x+w/2,y:y+h/2},color,fs)}}
+else if(item.type==='rect'||item.type==='area'){
+ if(a&&b){
+  const x=Math.min(a.x,b.x),y=Math.min(a.y,b.y),w=Math.abs(a.x-b.x),h=Math.abs(a.y-b.y);
+  c.strokeRect(x,y,w,h);
+  if(item.type==='area'&&item.measure)canvasText(item.measure+' '+(item.unit||'m²'),{x:x+w/2,y:y+h/2},color,fs);
+  if(item.type==='rect'&&item.text)canvasText(item.text,{x:x+w/2,y:y+h/2},color,fs);
+  const width=item.type==='area'?item.areaWidth:item.dimW;
+  const height=item.type==='area'?item.areaHeight:item.dimH;
+  if(width)canvasText(width+' mm',{x:x+w/2,y:y+14},color,Math.max(11,fs*.8));
+  if(height)canvasText(height+' mm',{x:x+35,y:y+h/2},color,Math.max(11,fs*.8));
+ }
+}
 else if(item.type==='ellipse'||item.type==='circle'){
  if(a&&b){
   const cx=(a.x+b.x)/2,cy=(a.y+b.y)/2;
@@ -434,7 +445,7 @@ function completePolyline(kind='polyline'){
  const points=polylineDraft.map(p=>({...p}));
  polylineDraft=[];drawStart=null;drawCurrent=null;stroke=[];magnifierPoint=null;
  const item={id:uid(),type:kind,a:{...points[0]},b:{...points[points.length-1]},
-  points,segmentData:points.slice(1).map(()=>({measure:'',text:'',unit:prefs.unit})),color:prefs.color,width:prefs.lineWidth,fontSize:prefs.fontSize,unit:prefs.unit,measure:'',text:''};
+  points,segmentData:points.slice(1).map(()=>({measure:'',text:'',unit:prefs.unit})),color:prefs.color,width:prefs.lineWidth,fontSize:prefs.fontSize,unit:kind==='angle'?'°':prefs.unit,measure:'',text:''};
  checkpoint();current.items.push(item);commitEditor();finishDraw(item);
 }
 function stageDown(e){
@@ -627,7 +638,7 @@ function stageUp(e){
   }else paint();
   return;
  }
- if(drag){drag=null;return}if(!drawStart||drawPointerId!==e.pointerId)return;const a=drawStart,b=drawCurrent||drawStart;drawStart=null;drawCurrent=null;magnifierPoint=null;loupeSide=null;drawPointerId=null;if(Math.hypot(a.x-b.x,a.y-b.y)<3/view.zoom&&mode!=='note'&&mode!=='symbol'){paint();return}let item={id:uid(),type:mode,a,b,color:prefs.color,width:prefs.lineWidth,fontSize:prefs.fontSize,unit:prefs.unit,measure:'',text:'',points:(mode==='freehand'||mode==='polyline')?[...stroke]:[]};stroke=[];
+ if(drag){drag=null;return}if(!drawStart||drawPointerId!==e.pointerId)return;const a=drawStart,b=drawCurrent||drawStart;drawStart=null;drawCurrent=null;magnifierPoint=null;loupeSide=null;drawPointerId=null;if(Math.hypot(a.x-b.x,a.y-b.y)<3/view.zoom&&mode!=='note'&&mode!=='symbol'){paint();return}let item={id:uid(),type:mode,a,b,color:prefs.color,width:prefs.lineWidth,fontSize:prefs.fontSize,unit:mode==='area'?'m²':prefs.unit,measure:'',text:'',points:(mode==='freehand'||mode==='polyline')?[...stroke]:[]};stroke=[];
 if(['dimension','chain','cumulative','area'].includes(mode)){
   // Follow the reference video: lay down the geometry first, adjust endpoints,
   // and enter the actual laser/manual value later by tapping its '?' label.
@@ -757,7 +768,23 @@ function editSegmentedItem(item){
  };
 }
 function editItem(item){
- if(['polyline','chain','cumulative','angle'].includes(item.type)&&item.points?.length>1){editSegmentedItem(item);return}
+ if(['polyline','chain','cumulative'].includes(item.type)&&item.points?.length>1){editSegmentedItem(item);return}
+ if(item.type==='area'){
+  modal('Plocha – rozměry a obsah',
+   '<p class="muted">Zadej šířku a výšku v mm. Obsah v m² spočítáme automaticky; nebo můžeš zadat obsah ručně.</p>'+
+   '<label>Šířka (mm)</label><input id="areaWidth" inputmode="decimal" value="'+escapeHtml(item.areaWidth||'')+'">'+
+   '<label>Výška (mm)</label><input id="areaHeight" inputmode="decimal" value="'+escapeHtml(item.areaHeight||'')+'">'+
+   '<label>Plocha (m²)</label><input id="areaMeasure" inputmode="decimal" value="'+escapeHtml(item.measure||'')+'">'+
+   '<label>Popisek</label><input id="areaCaption" value="'+escapeHtml(item.text||'')+'">'+
+   '<button id="removeItem" class="outline">Smazat plochu</button>',
+   ()=>{checkpoint();item.areaWidth=$('areaWidth').value.trim();item.areaHeight=$('areaHeight').value.trim();
+    const w=Number(item.areaWidth.replace(',','.')),h=Number(item.areaHeight.replace(',','.'));
+    item.measure=w>0&&h>0?String(Number((w*h/1000000).toFixed(5))).replace('.',','):$('areaMeasure').value.trim();
+    item.text=$('areaCaption').value.trim();item.unit='m²';commitEditor();
+   },'Uložit');
+  $('removeItem').onclick=()=>{checkpoint();current.items=current.items.filter(x=>x.id!==item.id);selected=null;$('modal').hidden=true;commitEditor()};
+  return;
+ }
  const dimension=['dimension','chain','cumulative','area','angle'].includes(item.type);
  if(dimension){
   const laserApplicable=['dimension','chain','cumulative'].includes(item.type);
