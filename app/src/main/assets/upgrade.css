@@ -333,3 +333,29 @@ body.in-editor #editorView .toolbar::before{
 }
 body.in-editor.editor-extra-open #editorView .toolbar::before{background:#d9c3fa}
 body.in-editor #editorExtraToolbar{touch-action:pan-y}
+
+/* Proporce přesně podle stávajícího ＋; NEMĚNIT šířku a výšku políček.
+   Všechny poslední nástroje mají jednotnou optickou velikost 32px. */
+body.in-editor .toolbar #activeTool{
+ display:flex!important;align-items:center!important;justify-content:center!important;
+ text-align:center!important;line-height:1!important;
+ padding:4px!important;
+}
+body.in-editor .toolbar #activeTool .last-tool-glyph {
+ display:inline-flex;align-items:center;justify-content:center;
+ width:32px;height:32px;min-width:32px;min-height:32px;
+ font-size:32px;line-height:1;font-weight:400;
+ white-space:nowrap;
+}
+body.in-editor .toolbar #activeTool .last-tool-svg {
+ display:block;width:32px;height:32px;min-width:32px;min-height:32px;
+ flex-shrink:0;
+}
+#galleryMode {display:inline-flex;align-items:center;justify-content:center;padding:3px!important}
+#galleryMode .editor-gallery-thumbnail {
+ display:block;width:30px;height:30px;
+ border-radius:3px;object-fit:cover;
+ border:1px solid rgba(255,255,255,.5);
+ background:#28282a;pointer-events:none;
+}
+#galleryMode .editor-gallery-thumbnail[hidden] {display:none!important}
