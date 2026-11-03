@@ -56,6 +56,24 @@
   const destUnit=Object.prototype.hasOwnProperty.call(units,item.unit)?item.unit:
     Object.prototype.hasOwnProperty.call(units,prefs.unit)?prefs.unit:'mm';
   const result=asText(reading.millimeters,destUnit);
+  if(['chain','cumulative'].includes(item.type)&&item.points?.length>1){
+   const index=Math.min(item.points.length-2,Math.max(0,Number(item.activeSegmentIndex)||0));
+   if(!Array.isArray(item.segmentData))item.segmentData=[];
+   const segment=item.segmentData[index]||{measure:'',text:'',unit:destUnit};
+   if(segment.measure===result&&segment.unit===destUnit){
+    notify('Bosch: naměřený rozměr už je u úseku '+(index+1));return true;
+   }
+   checkpoint();
+   item.segmentData[index]={...segment,measure:result,unit:destUnit,
+    laserMeasuredMm:String(reading.millimeters),lastMeasuredAt:new Date().toISOString()};
+   commitEditor();
+   const input=$('segmentMeasure'+index),unitInput=$('segmentUnit'+index);
+   if(input&&$('modal')&&!$('modal').hidden){
+    input.value=result;if(unitInput)unitInput.value=destUnit;
+   }
+   notify('✓ Bosch: '+result+' '+destUnit+' zapsáno do úseku '+(index+1));
+   return true;
+  }
   if(item.measure===result&&item.unit===destUnit){
    notify('Bosch: '+result+' '+destUnit+' už je u vybrané kóty');
    return true;
