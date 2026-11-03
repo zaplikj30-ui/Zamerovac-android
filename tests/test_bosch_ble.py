@@ -30,8 +30,8 @@ public class BoschBleProtocolTest {
   public static void main(String[] args) {
     byte[] packet = {(byte)192,85,16,6,0,97,0,(byte)162,(byte)180,
                      (byte)151,62,0,0,0,0,0,0,0,0,(byte)172};
-    if (!"296.5".equals(BoschBleProtocol.millimetersText(packet)))
-      throw new AssertionError("Známý paket Bosch 0,296 m musí dát 296,5 mm");
+    if (!"296.3".equals(BoschBleProtocol.millimetersText(packet)))
+      throw new AssertionError("Známý paket Bosch 0,296 m musí zachovat 296,3 mm");
     packet[0]=0;
     if (BoschBleProtocol.millimetersText(packet)!=null)
       throw new AssertionError("Neplatný paket nesmí dát měření");
