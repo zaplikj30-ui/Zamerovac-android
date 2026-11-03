@@ -50,6 +50,7 @@ assert.equal(tools.commits,2);
 // Uzamčená zakázka není možné změnit jen příchozím Bluetooth měřením.
 tools.window.lastLaser={value:'5',unit:'m',assigned:false};
 tools.window.isRecordLocked=()=>true;
+tools.mode='pan';
 tap(50,100);
 assert.equal(a.measure,'2437');
 assert.equal(tools.commits,2);
