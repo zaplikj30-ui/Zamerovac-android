@@ -46,8 +46,7 @@
   ['rotateLeft','Otočit detail doleva'],
   ['rotateRight','Otočit detail doprava'],
   ['forward','Přenést prvek dopředu'],
-  ['backward','Přenést prvek dozadu'],
-  ['export','Export obrázku nebo PDF']
+  ['backward','Přenést prvek dozadu']
  ];
  let copied=null;
  panel.innerHTML=entries.map(([key,label])=>
