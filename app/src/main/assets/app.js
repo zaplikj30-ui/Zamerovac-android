@@ -58,11 +58,58 @@ function showFolder(){screen='browser';current=null;document.body.classList.remo
 $('breadcrumbs').innerHTML=`<button class="crumb" data-nav="root">⌂ Domů</button>`+path.map(r=>`<span>›</span><button class="crumb" data-nav="${r.id}">${escapeHtml(r.title)}</button>`).join('');
 $('breadcrumbs').querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>{currentFolder=b.dataset.nav==='root'?null:b.dataset.nav;showFolder()});
 let list=state.records.filter(r=>!r.deleted&&r.parentId===currentFolder).sort((a,b)=>(a.kind==='folder'?0:1)-(b.kind==='folder'?0:1)||(sortAsc?1:-1)*a.title.localeCompare(b.title,'cs'));
-$('items').innerHTML=list.length?list.map(r=>`<div class="entry" data-id="${r.id}">${browserEntryIcon(r)}<div class="entry-info"><div class="entry-title">${escapeHtml(r.title)}</div><div class="entry-date">${r.photoTakenAt?'Pořízeno: '+escapeHtml(photoDateText(r.photoTakenAt)):dateText(r.updatedAt)}${r.conflict?' · KONFLIKTNÍ KOPIE':''}</div>${r.photoTakenAt||r.photoAddress?'<div class="entry-place" title="'+escapeHtml(photoAddressText(r))+'">📍 '+escapeHtml(photoAddressText(r))+'</div>':''}</div><button class="entry-more" data-more="${r.id}">⋮</button></div>`).join(''):`<div class="empty"><div class="big">▤</div>Zatím prázdné.<br>Pomocí ＋ vytvoříš složku, fotografii nebo poznámku.</div>`;
+$('items').innerHTML=list.length?list.map(r=>`<div class="entry" data-id="${r.id}">${browserEntryIcon(r)}<div class="entry-info"><div class="entry-title">${escapeHtml(r.title)}${(r.locked||window.isRecordLocked?.(r))?' <span class="entry-lock" title="Uzamčeno" aria-label="Uzamčeno">🔒</span>':''}</div><div class="entry-date">${r.photoTakenAt?'Pořízeno: '+escapeHtml(photoDateText(r.photoTakenAt)):dateText(r.updatedAt)}${r.conflict?' · KONFLIKTNÍ KOPIE':''}</div>${r.photoTakenAt||r.photoAddress?'<div class="entry-place" title="'+escapeHtml(photoAddressText(r))+'">📍 '+escapeHtml(photoAddressText(r))+'</div>':''}</div><button class="entry-more" data-more="${r.id}">⋮</button></div>`).join(''):`<div class="empty"><div class="big">▤</div>Zatím prázdné.<br>Pomocí ＋ vytvoříš složku, fotografii nebo poznámku.</div>`;
 $('items').querySelectorAll('.entry').forEach(el=>el.onclick=(e)=>{if(e.target.closest('[data-more]')){recordActions(el.dataset.id);return}openRecord(el.dataset.id)});
 $('items').querySelectorAll('.entry-thumb').forEach(img=>img.addEventListener('error',()=>{img.hidden=true;img.nextElementSibling.hidden=false},{once:true}));
 }
-function recordActions(id){let r=recById(id);modal(r.title,`<div class="message">${escapeHtml(r.kind)} · ${dateText(r.updatedAt)}</div><div class="row wrap" style="margin-top:20px"><button class="outline" id="renameOne">Přejmenovat</button><button class="outline" id="moveOne">Přesunout</button><button class="outline" id="deleteOne">Smazat</button>${r.kind==='folder'?'<button class="outline" id="exportFolderOne">Exportovat složku ZIP</button>':''}</div>`,()=>true,'Zavřít');const folderExport=$('exportFolderOne');if(folderExport)folderExport.onclick=()=>{if(native){$('modal').hidden=true;Native.exportFolder(r.id)}else notify('Export složky do ZIP vyžaduje Android aplikaci')};$('renameOne').onclick=()=>{ $('modal').hidden=true;promptText('Přejmenovat','Název',r.title,v=>{r.title=v;touch(r);save();showFolder()})};$('deleteOne').onclick=()=>{$('modal').hidden=true;modal('Odstranit?',`<p>Přesunout „${escapeHtml(r.title)}“ do koše? Záznam se při synchronizaci označí jako odstraněný.</p>`,()=>{markDeleted(r.id);save();showFolder()},'Odstranit')};$('moveOne').onclick=()=>{$('modal').hidden=true;let folders=state.records.filter(x=>x.kind==='folder'&&!x.deleted&&x.id!==r.id);modal('Přesunout do složky',`<select id="moveWhere"><option value="">Kořen</option>${folders.map(f=>`<option value="${f.id}">${escapeHtml(f.title)}</option>`).join('')}</select>`,()=>{r.parentId=$('moveWhere').value||null;touch(r);save();showFolder()})};}
+function promptRenameRecord(r){
+ const match=['photo','video','audio','file'].includes(r.kind)?String(r.title).match(/^(.*?)(\\.[A-Za-z0-9]{1,8})$/):null;
+ const base=match?match[1]:r.title,suffix=match?match[2]:'';
+ modal('Přejmenovat','<label>Název</label><div class="rename-inline"><input id="renameBase" value="'+escapeHtml(base)+'" autocomplete="off">'+
+ (suffix?'<span class="rename-extension">'+escapeHtml(suffix)+'</span>':'')+'</div>',()=>{
+  const name=$('renameBase').value.trim();
+  if(!name){notify('Zadej název');return false}
+  r.title=name+suffix;touch(r);save();showFolder();
+ });
+ setTimeout(()=>{const input=$('renameBase');if(input){input.focus();input.setSelectionRange(input.value.length,input.value.length)}},120);
+}
+function restoreDeleted(id){
+ const r=recById(id);if(!r)return;
+ r.deleted=false;touch(r);
+ for(const child of state.records.filter(x=>x.parentId===id&&x.deleted))restoreDeleted(child.id);
+}
+function removeDeletedForever(id){
+ const children=new Set([id]);
+ let count=0;
+ while(count++<60){let changed=false;for(const r of state.records){
+  if(r.parentId&&children.has(r.parentId)&&!children.has(r.id)){children.add(r.id);changed=true}
+ }if(!changed)break}
+ state.records=state.records.filter(r=>!children.has(r.id));
+}
+function showTrash(){
+ closeMenus();
+ const root=state.records.filter(r=>r.deleted&&!state.records.some(p=>p.id===r.parentId&&p.deleted));
+ const body=root.length?root.map(r=>
+  '<div class="trash-entry"><div><strong>'+escapeHtml(r.title)+'</strong><small>'+escapeHtml(r.kind)+'</small></div>'+
+  '<button class="outline" data-restore="'+escapeHtml(r.id)+'">Obnovit</button>'+
+  '<button class="outline" data-purge="'+escapeHtml(r.id)+'">Odstranit</button></div>'
+ ).join(''):'<p class="muted">Koš je prázdný.</p>';
+ modal('🗑️ Koš',body,()=>true,'Zavřít');
+ $('modalBody').querySelectorAll('[data-restore]').forEach(b=>b.onclick=()=>{
+  restoreDeleted(b.dataset.restore);
+  const r=recById(b.dataset.restore);if(r&&r.parentId&&!recById(r.parentId))r.parentId=null;
+  save();showTrash();notify('Položka obnovena');
+ });
+ $('modalBody').querySelectorAll('[data-purge]').forEach(b=>b.onclick=()=>{
+  const r=recById(b.dataset.purge);
+  if(!r)return;
+  $('modal').hidden=true;
+  modal('Trvale odstranit?', '<p>Odstranit „'+escapeHtml(r.title)+'“ ze seznamu bez možnosti obnovení?</p>',()=>{
+   removeDeletedForever(r.id);save();showFolder();return true;
+  },'Odstranit');
+ });
+}
+function recordActions(id){let r=recById(id);modal(r.title,`<div class="message">${escapeHtml(r.kind)} · ${dateText(r.updatedAt)}</div><div class="row wrap" style="margin-top:20px"><button class="outline" id="renameOne">Přejmenovat</button><button class="outline" id="moveOne">Přesunout</button><button class="outline" id="deleteOne">Smazat</button>${r.kind==='folder'?'<button class="outline" id="exportFolderOne">Exportovat složku ZIP</button>':''}</div>`,()=>true,'Zavřít');const folderExport=$('exportFolderOne');if(folderExport)folderExport.onclick=()=>{if(native){$('modal').hidden=true;Native.exportFolder(r.id)}else notify('Export složky do ZIP vyžaduje Android aplikaci')};$('renameOne').onclick=()=>{ $('modal').hidden=true;promptRenameRecord(r)};$('deleteOne').onclick=()=>{$('modal').hidden=true;modal('Odstranit?',`<p>Přesunout „${escapeHtml(r.title)}“ do koše? Záznam se při synchronizaci označí jako odstraněný.</p>`,()=>{markDeleted(r.id);save();showFolder()},'Odstranit')};$('moveOne').onclick=()=>{$('modal').hidden=true;let folders=state.records.filter(x=>x.kind==='folder'&&!x.deleted&&x.id!==r.id);modal('Přesunout do složky',`<select id="moveWhere"><option value="">Kořen</option>${folders.map(f=>`<option value="${f.id}">${escapeHtml(f.title)}</option>`).join('')}</select>`,()=>{r.parentId=$('moveWhere').value||null;touch(r);save();showFolder()})};}
 function markDeleted(id){let r=recById(id);if(!r)return;r.deleted=true;touch(r);for(let child of state.records.filter(x=>x.parentId===id&&!x.deleted))markDeleted(child.id)}
 function openRecord(id){let r=recById(id);if(!r)return;if(r.kind==='folder'){currentFolder=id;showFolder();return}if(r.kind==='photo'||r.kind==='canvas'){openEditor(r);return}if(r.kind==='note'){openNote(r);return}if(r.kind==='audio'||r.kind==='video'||r.kind==='file'){openAttachment(r.media[0]);return}}
 function showNewMenu(){closeMenus();$('newMenu').hidden=false;const choices=[
@@ -72,7 +119,8 @@ function showNewMenu(){closeMenus();$('newMenu').hidden=false;const choices=[
 ['📝','Nová textová poznámka',()=>{let r=newRecord('note','Nová poznámka');state.records.push(r);save();openNote(r)}],
 ['📁','Nová složka',()=>promptText('Nová složka','Jméno zákazníka nebo místnosti','',name=>addRecord(newRecord('folder',name)))],
 ['🎤','Hlasová poznámka',()=>recordVoice()],
-['📎','Přidat další soubor',()=>pickMedia('file')]
+['📎','Přidat další soubor',()=>pickMedia('file')],
+['<svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h16v12H4z" fill="#e8bf65" stroke="#b98828" stroke-width="1.7"/><path d="M3 4h18v4H3z" fill="#ffd778" stroke="#b98828" stroke-width="1.7"/><path d="M12 11a4 4 0 1 1-3.5 5.9" stroke="#9263d5" stroke-width="2.2"/><path d="m7 12 1.5 4.9 4.8-1.1" stroke="#9263d5" stroke-width="2.2"/></svg>','Importovat zakázky ze ZIP',()=>native?Native.importBackup():notify('Obnova ZIP je dostupná v Android aplikaci')]
 ];
 $('newMenu').innerHTML=choices.map((a,i)=>`<button class="choice" data-i="${i}"><strong>${a[0]}</strong>${a[1]}</button>`).join('');$('newMenu').querySelectorAll('button').forEach(b=>b.onclick=()=>{closeMenus();choices[+b.dataset.i][2]()})}
 function pickMedia(type,handler=null){stagedFileHandler=handler;if(native&&type==='camera'){Native.takePhoto();return}if(native){Native.selectFiles(type);return}const inp=$('filePick');inp.value='';inp.accept=type==='camera'?'image/*':type==='file'?'*/*':'image/*,video/*,application/pdf,audio/*';inp.multiple=type==='file'||type==='media';if(type==='camera')inp.setAttribute('capture','environment');else inp.removeAttribute('capture');inp.click()}
