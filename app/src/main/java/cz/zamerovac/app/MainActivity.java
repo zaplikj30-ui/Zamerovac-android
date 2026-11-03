@@ -652,6 +652,7 @@ public class MainActivity extends Activity {
             },"AddressRUIAN").start();
         }
         @JavascriptInterface public void connectLaser(){runOnUiThread(()->startScan());}
+        @JavascriptInterface public void triggerLaser(){runOnUiThread(()->sendExperimentalLaserTrigger());}
         @JavascriptInterface public void setAccent(String color){
             if(color==null||!color.matches("#[0-9a-fA-F]{6}"))return;
             runOnUiThread(()->{try{statusFill.setBackgroundColor(Color.rgb(51,43,64));}catch(Exception ignored){}});
@@ -891,6 +892,32 @@ public class MainActivity extends Activity {
             classic.start();
         }catch(Exception ex){laserStatus("off","");error("Bosch Classic: "+ex.getMessage());}
     }
+    // Only invoked after the user has enabled the experiment AND tapped it.
+    // The Bosch BLE command is not yet proven for GLM 100-25 C; never retry.
+    private void sendExperimentalLaserTrigger(){
+        if(!boschStreamEnabled||gatt==null||boschCommand==null){
+            error("Dálková spoušť: nejdřív připoj laser Bosch");return;
+        }
+        if(Build.VERSION.SDK_INT>=31&&
+           checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT)!=PackageManager.PERMISSION_GRANTED){
+            error("Dálková spoušť: chybí oprávnění Bluetooth");return;
+        }
+        int properties=boschCommand.getProperties();
+        if((properties&(BluetoothGattCharacteristic.PROPERTY_WRITE|
+                        BluetoothGattCharacteristic.PROPERTY_WRITE_NO_RESPONSE))==0){
+            error("Dálková spoušť: laser nepodporuje zápis příkazů");return;
+        }
+        boschCommand.setWriteType(
+            (properties&BluetoothGattCharacteristic.PROPERTY_WRITE)!=0?
+            BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT:
+            BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE);
+        boschCommand.setValue(BoschBleProtocol.REMOTE_TRIGGER);
+        try{
+            if(gatt.writeCharacteristic(boschCommand)){
+                js("window.onExperimentalLaserTrigger?.('sent')");
+            }else error("Dálková spoušť: příkaz se nepodařilo odeslat");
+        }catch(Exception ex){error("Dálková spoušť: "+ex.getMessage());}
+    }
     private void connectGatt(BluetoothDevice device){
         try{
             stopLaserScan();
@@ -991,6 +1018,11 @@ public class MainActivity extends Activity {
                 @Override public void onCharacteristicWrite(BluetoothGatt connection,
                         BluetoothGattCharacteristic characteristic,int status){
                     if(!BoschBleProtocol.MEASUREMENT_UUID.equals(characteristic.getUuid()))return;
+                    if(java.util.Arrays.equals(characteristic.getValue(),BoschBleProtocol.REMOTE_TRIGGER)){
+                        if(status!=BluetoothGatt.GATT_SUCCESS)
+                            error("Laser nepotvrdil dálkovou spoušť ("+status+")");
+                        return;
+                    }
                     if(status==BluetoothGatt.GATT_SUCCESS){
                         boschStreamEnabled=true;
                         laserStatus("connected",deviceName);
