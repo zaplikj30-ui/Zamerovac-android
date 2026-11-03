@@ -211,22 +211,38 @@ function drawArrow(c,point,to,size=10){let a=Math.atan2(point.y-to.y,point.x-to.
 function drawItem(c,item){let a=item.a&&worldToScreen(item.a),b=item.b&&worldToScreen(item.b);let pts=(item.points||[]).map(worldToScreen);const color=item.color||prefs.color,fw=(item.width||prefs.lineWidth),fs=(item.fontSize||prefs.fontSize);c.save();c.strokeStyle=color;c.fillStyle=color;c.lineWidth=fw;c.lineJoin='round';c.lineCap='round';
 function seg(){c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.stroke()};
 if(item.type==='dimension'||item.type==='chain'||item.type==='cumulative'){if(a&&b){let dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1;let nx=-dy/d,ny=dx/d;let off=item.offset??0;let ao={x:a.x+nx*off,y:a.y+ny*off},bo={x:b.x+nx*off,y:b.y+ny*off};c.beginPath();c.moveTo(a.x+nx*(off-11),a.y+ny*(off-11));c.lineTo(a.x+nx*(off+11),a.y+ny*(off+11));c.moveTo(b.x+nx*(off-11),b.y+ny*(off-11));c.lineTo(b.x+nx*(off+11),b.y+ny*(off+11));c.moveTo(ao.x,ao.y);c.lineTo(bo.x,bo.y);c.stroke();drawArrow(c,ao,bo,9);drawArrow(c,bo,ao,9);let label=item.measure?`${item.measure} ${item.unit||'mm'}`:'?';if(item.text)label+=' · '+item.text;let ang=Math.atan2(dy,dx);if(ang>Math.PI/2||ang< -Math.PI/2)ang+=Math.PI;canvasText(label,{x:(ao.x+bo.x)/2+(bo.x-ao.x)*(Number(item.labelT)||0),y:(ao.y+bo.y)/2+(bo.y-ao.y)*(Number(item.labelT)||0)},color,fs,ang)}}
-else if(item.type==='line'||item.type==='arrow'||item.type==='angle'||item.type==='target'){if(a&&b){seg();if(item.type==='arrow'){
- drawArrow(c,b,a,15);
- if(item.text){
-  // Popisek nad čárou šipky, orientovaný čitelně jako u kót.
-  const dx=b.x-a.x,dy=b.y-a.y;
-  let angle=Math.atan2(dy,dx);
-  if(angle>Math.PI/2||angle< -Math.PI/2)angle+=Math.PI;
-  const gap=(Number(fs)||17)*.85+4;
-  canvasText(item.text,{
-   x:(a.x+b.x)/2+Math.sin(angle)*gap,
-   y:(a.y+b.y)/2-Math.cos(angle)*gap
-  },color,fs,angle);
+else if(item.type==='line'||item.type==='arrow'||item.type==='angle'||item.type==='target'){
+ if(a&&b){
+  seg();
+  if(item.type==='arrow')drawArrow(c,b,a,15);
+  if(item.type==='target'){c.beginPath();c.arc(b.x,b.y,12,0,Math.PI*2);c.stroke()}
+  if(item.type==='angle'){
+   const degree=(Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI+360)%360;
+   canvasText((item.measure||degree.toFixed(0))+'°',{x:(a.x+b.x)/2,y:(a.y+b.y)/2-23},color,fs);
+  }else if(item.type==='line'||item.type==='arrow'){
+   // Stejný postup pro čáru i šipku: libovolný text a/nebo kóta.
+   const label=[item.measure?item.measure+' '+(item.unit||'mm'):'',item.text||''].filter(Boolean).join(' · ');
+   if(label){
+    const dx=b.x-a.x,dy=b.y-a.y;
+    let angle=Math.atan2(dy,dx);
+    if(angle>Math.PI/2||angle< -Math.PI/2)angle+=Math.PI;
+    const gap=(Number(fs)||17)*.85+4;
+    canvasText(label,{x:(a.x+b.x)/2+Math.sin(angle)*gap,
+      y:(a.y+b.y)/2-Math.cos(angle)*gap},color,fs,angle);
+   }
+  }
  }
-}if(item.type==='target'){c.beginPath();c.arc(b.x,b.y,12,0,Math.PI*2);c.stroke()}if(item.type==='angle'){let degree=(Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI+360)%360;canvasText((item.measure||degree.toFixed(0))+'°',{x:(a.x+b.x)/2,y:(a.y+b.y)/2-23},color,fs)}}}
+}
 else if(item.type==='rect'||item.type==='area'){if(a&&b){let x=Math.min(a.x,b.x),y=Math.min(a.y,b.y),w=Math.abs(a.x-b.x),h=Math.abs(a.y-b.y);c.strokeRect(x,y,w,h);if(item.type==='area'&&item.measure)canvasText(item.measure+' '+(item.unit||'m²'),{x:x+w/2,y:y+h/2},color,fs)}}
-else if(item.type==='ellipse'||item.type==='circle'){if(a&&b){let cx=(a.x+b.x)/2,cy=(a.y+b.y)/2,rx=Math.abs(a.x-b.x)/2,ry=item.type==='circle'?rx:Math.abs(a.y-b.y)/2;c.beginPath();c.ellipse(cx,cy,Math.max(1,rx),Math.max(1,ry),0,0,Math.PI*2);c.stroke()}}
+else if(item.type==='ellipse'||item.type==='circle'){
+ if(a&&b){
+  const cx=(a.x+b.x)/2,cy=(a.y+b.y)/2;
+  const rx=Math.abs(a.x-b.x)/2,ry=item.type==='circle'?rx:Math.abs(a.y-b.y)/2;
+  c.beginPath();c.ellipse(cx,cy,Math.max(1,rx),Math.max(1,ry),0,0,Math.PI*2);c.stroke();
+  const label=[item.measure?(item.measureKind==='radius'?'R ':'Ø ')+item.measure+' '+(item.unit||'mm'):'',item.text||''].filter(Boolean).join(' · ');
+  if(label)canvasText(label,{x:cx,y:cy},color,fs);
+ }
+}
 else if(item.type==='freehand'||item.type==='polyline'){if(pts.length){c.beginPath();c.moveTo(pts[0].x,pts[0].y);for(let p of pts.slice(1))c.lineTo(p.x,p.y);c.stroke()}}
 else if(item.type==='note'||item.type==='symbol'){if(a){if(item.type==='note'){drawNoteLeader(c,item,color);(noteDisplayedCaption(item)&&canvasText(noteDisplayedCaption(item),noteCaptionScreen(item),color,fs))}else canvasText((item.icon||'⚑')+' '+(item.text||''),a,color,fs)}}
 c.restore();}
@@ -654,6 +670,24 @@ function editItem(item){
    $('measureInput').value=previous[index].value;
    $('measureUnit').value=previous[index].unit;
   };
+ }else if(['line','arrow','circle','ellipse','rect'].includes(item.type)){
+  const kind=item.type;
+  const isRound=kind==='circle'||kind==='ellipse';
+  const roundFields=isRound?'<label>Značení rozměru</label><select id="measureKind"><option value="diameter">Ø Průměr</option><option value="radius">R Poloměr</option></select>':'';
+  const rectFields=kind==='rect'?'<label>Šířka (mm)</label><input id="rectWidth" type="text" value="'+escapeHtml(item.dimW||'')+'"><label>Výška (mm)</label><input id="rectHeight" type="text" value="'+escapeHtml(item.dimH||'')+'">':'';
+  modal(kind==='line'?'Upravit čáru':kind==='arrow'?'Upravit šipku':kind==='rect'?'Upravit obdélník':'Upravit tvar',
+   '<label>'+(isRound?'Rozměr kruhu / elipsy':'Kóta / rozměr (volitelné)')+'</label><input id="measureInput" type="text" value="'+escapeHtml(item.measure||'')+'" placeholder="Např. 1250">'+
+   '<label>Jednotka</label><select id="measureUnit">'+['mm','cm','m','in'].map(u=>'<option '+(u===(item.unit||prefs.unit)?'selected':'')+'>'+u+'</option>').join('')+'</select>'+
+   roundFields+rectFields+
+   '<label>Textový popisek</label><input id="drawText" value="'+escapeHtml(item.text||'')+'" placeholder="Např. přívod vody">'+
+   '<div class="row"><button id="removeItem" class="outline">Smazat prvek</button></div>',
+   ()=>{checkpoint();item.measure=$('measureInput').value.trim();item.unit=$('measureUnit').value;item.text=$('drawText').value.trim();
+     if(isRound)item.measureKind=$('measureKind').value;
+     if(kind==='rect'){item.dimW=$('rectWidth').value.trim();item.dimH=$('rectHeight').value.trim()}
+     commitEditor();
+   }
+  );
+  if(isRound)$('measureKind').value=item.measureKind||'diameter';
  }else if(item.type==='note'){openRichNote(item,false);return}
  else modal('Upravit prvek',
   '<label>Text</label><input id="drawText" value="'+escapeHtml(item.text||'')+'"><div class="row"><button id="removeItem" class="outline">Smazat prvek</button></div>',
