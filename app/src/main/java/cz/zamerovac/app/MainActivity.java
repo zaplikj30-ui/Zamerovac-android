@@ -19,6 +19,14 @@ import android.bluetooth.le.ScanCallback;
 import android.bluetooth.le.ScanResult;
 import android.content.ComponentName;
 import android.content.ContentValues;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.graphics.Canvas;
+import android.graphics.Matrix;
+import android.graphics.Paint;
+import android.graphics.Rect;
+import android.graphics.RectF;
+import android.media.ExifInterface;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
@@ -146,6 +154,12 @@ public class MainActivity extends Activity {
                         File f=mediaFile(id);if(!f.isFile())return new WebResourceResponse("text/plain","UTF-8",404,"Not Found",new HashMap<>(),new java.io.ByteArrayInputStream(new byte[0]));
                         return new WebResourceResponse(mediaMime(id),null,new FileInputStream(f));
                     }
+                    if(path.startsWith("/thumb/")){
+                        String id=path.substring(7);if(!validId(id))return null;
+                        InputStream in=photoThumbnail(id);
+                        if(in==null)return new WebResourceResponse("text/plain","UTF-8",404,"Not Found",new HashMap<>(),new java.io.ByteArrayInputStream(new byte[0]));
+                        return new WebResourceResponse("image/jpeg",null,in);
+                    }
                 }catch(Exception e){android.util.Log.e("Zamerovac","Read resource",e);}return null;
             }
         });
@@ -159,6 +173,70 @@ public class MainActivity extends Activity {
         if(settings.getString("treeUri",null)!=null&&settings.getBoolean("autoSync",true))scheduleSync();
     }
     private File mediaFile(String id){File d=new File(getFilesDir(),"media");if(!d.exists())d.mkdirs();return new File(d,id);}
+    /**
+     * Small on-disk thumbnails for the record browser.
+     * Decode with sampling so browsing many high-resolution customer photos
+     * does not repeatedly allocate their full-resolution bitmaps.
+     * The media file itself is never modified.
+     */
+    private InputStream photoThumbnail(String id) throws IOException {
+        File source=mediaFile(id);
+        if(!source.isFile())return null;
+        File dir=new File(getCacheDir(),"photo-thumbs");
+        if(!dir.isDirectory()&&!dir.mkdirs())throw new IOException("Cannot create thumbnails cache");
+        File cached=new File(dir,id+".jpg");
+        if(!cached.isFile()||cached.lastModified()<source.lastModified()){
+            BitmapFactory.Options bounds=new BitmapFactory.Options();
+            bounds.inJustDecodeBounds=true;
+            BitmapFactory.decodeFile(source.getAbsolutePath(),bounds);
+            if(bounds.outWidth<=0||bounds.outHeight<=0)return null;
+            int sample=1;
+            while(Math.max(bounds.outWidth/sample,bounds.outHeight/sample)>512)sample*=2;
+            BitmapFactory.Options options=new BitmapFactory.Options();
+            options.inSampleSize=sample;
+            options.inPreferredConfig=Bitmap.Config.RGB_565;
+            Bitmap decoded=BitmapFactory.decodeFile(source.getAbsolutePath(),options);
+            if(decoded==null)return null;
+            Bitmap oriented=decoded,thumb=null;
+            try {
+                int orientation=ExifInterface.ORIENTATION_NORMAL;
+                try {
+                    orientation=new ExifInterface(source.getAbsolutePath()).getAttributeInt(
+                        ExifInterface.TAG_ORIENTATION,ExifInterface.ORIENTATION_NORMAL);
+                } catch(Exception e){android.util.Log.d("Zamerovac","Thumbnail EXIF unavailable",e);}
+                int angle=orientation==ExifInterface.ORIENTATION_ROTATE_90?90:
+                    orientation==ExifInterface.ORIENTATION_ROTATE_180?180:
+                    orientation==ExifInterface.ORIENTATION_ROTATE_270?270:0;
+                if(angle!=0){
+                    Matrix matrix=new Matrix();matrix.postRotate(angle);
+                    oriented=Bitmap.createBitmap(decoded,0,0,decoded.getWidth(),decoded.getHeight(),matrix,true);
+                }
+                int size=144;thumb=Bitmap.createBitmap(size,size,Bitmap.Config.RGB_565);
+                Canvas canvas=new Canvas(thumb);
+                Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG|Paint.FILTER_BITMAP_FLAG);
+                float side=Math.min(oriented.getWidth(),oriented.getHeight());
+                Rect src=new Rect(
+                    (int)((oriented.getWidth()-side)/2f),(int)((oriented.getHeight()-side)/2f),
+                    (int)((oriented.getWidth()+side)/2f),(int)((oriented.getHeight()+side)/2f));
+                canvas.drawBitmap(oriented,src,new RectF(0,0,size,size),paint);
+                File tmp=new File(dir,id+".tmp");
+                try(FileOutputStream out=new FileOutputStream(tmp)){
+                    if(!thumb.compress(Bitmap.CompressFormat.JPEG,82,out))
+                        throw new IOException("Cannot encode thumbnail");
+                }
+                if(!tmp.renameTo(cached)){
+                    if(!cached.delete()||!tmp.renameTo(cached))
+                        throw new IOException("Cannot save thumbnail");
+                }
+            } finally {
+                if(thumb!=null)thumb.recycle();
+                if(oriented!=decoded)oriented.recycle();
+                decoded.recycle();
+            }
+        }
+        return new FileInputStream(cached);
+    }
+
     private boolean validId(String s){return s.matches("[a-zA-Z0-9_-]{3,120}");}
     private String mediaMime(String id){return settings.getString("mime-"+id,"application/octet-stream");}
     private void js(String code){runOnUiThread(()->web.evaluateJavascript(code,null));}
