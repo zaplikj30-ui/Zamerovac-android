@@ -20,9 +20,19 @@ function openRichNote(item,isNew){
  function persist(){
   if(recording){Native.stopAudio();attachments.push(recording);recording=null;}
   item.text=$('richText').value.trim();
+  const hadAttachment=Array.isArray(item.media)&&item.media.length>0;
   item.media=attachments.slice();
   item.insetWidth=Math.max(70,Math.min(1500,Number($('richSize').value)||initialInsetWidth));
   item.insetRotation=Number($('richAngle').value)||0;
+  // Když už uživatel odtáhl text a potom přidal detailní fotografii,
+  // vložený detail se objeví u odtažené poznámky, ne znovu na hrotu šipky.
+  // Text se nadále pohybuje společně s rámečkem fotografie.
+  if(!hadAttachment&&attachments.length&&item.captionMoved&&item.b&&!Number.isFinite(item.insetX)){
+   item.insetX=item.b.x-item.insetWidth/2;
+   item.insetY=item.b.y;
+   item.insetMoved=true;
+   item.captionMoved=false;
+  }
   if(isNew){checkpoint();parent.items.push(item);finishDraw(item);isNew=false;}
   else checkpoint();
   commitEditor();
