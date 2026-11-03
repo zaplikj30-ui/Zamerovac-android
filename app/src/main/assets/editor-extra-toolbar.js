@@ -101,7 +101,14 @@
   symbol(){setTool('symbol')},
   style(){$('styleTool').click()},
   lock(){if(current?.id)recordActions(current.id)},
-  grid(){prefs.snapGrid=!prefs.snapGrid;save();paint();notify(prefs.snapGrid?'Přichytávání k mřížce zapnuto':'Přichytávání k mřížce vypnuto')},
+  grid(){
+   // Tato ikona ovládá všechny magnety, nejen zobrazení rastru.
+   const enabled=!prefs.snapGrid;
+   for(const key of ['snapGrid','snapPoints','snapHorizontal','snapCorners','snapContours','snapRightAngle'])
+    prefs[key]=enabled;
+   save();paint();
+   notify(enabled?'Magnetické přichytávání zapnuto':'Magnetické přichytávání úplně vypnuto');
+  },
   duplicate(){const it=currentItem();if(it)commitWithUndo(()=>{const x=cloneItem(it);current.items.push(x);selected=x.id})},
   copy(){const it=currentItem();if(it){copied=JSON.parse(JSON.stringify(it));notify('Prvek zkopírován, vyber Vložit')}},
   paste(){if(copied)commitWithUndo(()=>{const x=cloneItem(copied);current.items.push(x);selected=x.id})},
