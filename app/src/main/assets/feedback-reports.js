@@ -295,7 +295,10 @@
    }
    active.stroke=null;moving=null;active.pan=null;
    const ps=[...active.pointers.values()];
+   const rect=active.canvas.getBoundingClientRect();
    active.gesture={
+    center:{x:rect.left+rect.width/2-active.viewport.x,
+            y:rect.top+rect.height/2-active.viewport.y},
     distance:Math.max(1,Math.hypot(ps[0].x-ps[1].x,ps[0].y-ps[1].y)),
     mid:{x:(ps[0].x+ps[1].x)/2,y:(ps[0].y+ps[1].y)/2},
     scale:active.viewport.scale,x:active.viewport.x,y:active.viewport.y
@@ -331,8 +334,10 @@
    const mid={x:(ps[0].x+ps[1].x)/2,y:(ps[0].y+ps[1].y)/2};
    const v=active.viewport,g=active.gesture;
    v.scale=clamp(g.scale*distance/g.distance,1,6);
-   v.x=g.x+(mid.x-g.mid.x);
-   v.y=g.y+(mid.y-g.mid.y);
+   // Místo pod prsty zůstává pod prsty i při změně měřítka.
+   const ratio=v.scale/g.scale;
+   v.x=mid.x-g.center.x-(g.mid.x-g.center.x-g.x)*ratio;
+   v.y=mid.y-g.center.y-(g.mid.y-g.center.y-g.y)*ratio;
    if(v.scale===1){v.x=0;v.y=0}
    updateImageView();return;
   }
