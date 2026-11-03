@@ -21,6 +21,16 @@ class SourceSmokeTest(unittest.TestCase):
         tools=(ASSETS/'editor.js').read_text()
         for forbidden in ('Počítadlo','Výsledková listina','Perspektivní délka','Referenční měřítko'):
             self.assertNotIn(forbidden,tools)
+    def test_dimension_endpoints_match_grips_and_loupe(self):
+        # Regression: the previous -22px visual offset put the dimension's
+        # visible endpoint at a different location than its editable anchor.
+        # The magnifier correctly centered the anchor, not the visible arrow.
+        editor=(ASSETS/'editor.js').read_text()
+        self.assertEqual(editor.count('item.offset??0'), 2)
+        self.assertNotIn('item.offset??-22', editor)
+        self.assertIn('worldToScreen(it[key])', editor)
+        self.assertIn('magnifierPoint=selectedHandle.point', editor)
+
     def test_cloud_and_media_are_real_modules(self):
         java=ROOT/'app/src/main/java/cz/zamerovac/app'
         for module in ('SyncEngine.java','SyncJob.java','BoschClassicReader.java','MediaProvider.java'):
