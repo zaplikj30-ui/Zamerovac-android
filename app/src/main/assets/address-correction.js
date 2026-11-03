@@ -82,6 +82,7 @@
         panel.innerHTML='<p>Vybráno: <strong>'+escapeHtml(choice.address)+'</strong>. Potvrď tlačítkem „Uložit adresu“.</p>';}
     });
   };
+  window.openPhotoAddressEditor=openPhotoAddressEditor;
   const previousShowFolder=showFolder;
   showFolder=function(){
     previousShowFolder();
