@@ -19,8 +19,11 @@
   const h=w*image.naturalHeight/image.naturalWidth;
   const anchor=worldToScreen(it.a||{x:0,y:0});
   // Původní poznámky zůstanou na svém místě.
-  const x=Number.isFinite(it.insetX)?it.insetX*zoom+view.dx:anchor.x+8;
-  const y=Number.isFinite(it.insetY)?it.insetY*zoom+view.dy:anchor.y+23;
+  // Výchozí vložený obrázek nesmí začínat mimo dostupný displej.
+  const initialX=clamp(anchor.x+8,8,Math.max(8,stageCanvas.clientWidth-w-8));
+  const initialY=clamp(anchor.y+23,8,Math.max(8,stageCanvas.clientHeight-h-8));
+  const x=Number.isFinite(it.insetX)?it.insetX*zoom+view.dx:initialX;
+  const y=Number.isFinite(it.insetY)?it.insetY*zoom+view.dy:initialY;
   return {x,y,w,h,anchor,cx:x+w/2,cy:y+h/2,angle:(Number(it.insetRotation)||0)*Math.PI/180};
  }
  function unrotate(p,g){
@@ -141,13 +144,15 @@
    v.item.insetY=v.startingY+dy/view.zoom;
    v.item.insetMoved=true;
   }else if(v.kind==='anchor'){
+   // Posun začátku šipky NESMÍ přesunout samotný detail.
+   v.item.insetX=v.startingX;
+   v.item.insetY=v.startingY;
    const w=screenToWorld({x:worldToScreen(v.anchor).x+dx,y:worldToScreen(v.anchor).y+dy});
    v.item.a=boundsPoint(w);
    v.item.insetMoved=true;
   }else if(v.kind==='resize'){
    const vx=dx*Math.cos(v.g.angle)+dy*Math.sin(v.g.angle);
    v.item.insetWidth=clamp(v.width+vx/view.zoom,70,1500);
-   v.item.insetMoved=true;
   }else if(v.kind==='rotate'){
    const delta=Math.atan2(at.y-v.center.y,at.x-v.center.x)-v.startAngle;
    v.item.insetRotation=(((v.angle+delta*180/Math.PI)+540)%360)-180;
