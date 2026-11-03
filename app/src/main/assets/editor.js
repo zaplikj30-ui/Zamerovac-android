@@ -342,7 +342,38 @@ else if(mode==='note'){openRichNote(item,true)}
  $('drawPreset').onchange=()=>{if($('drawPreset').value)$('drawText').value=$('drawPreset').value};
 }
 else{checkpoint();current.items.push(item);commitEditor();finishDraw(item)}}
-function editItem(item){if(['dimension','chain','cumulative','area','angle'].includes(item.type))modal('Upravit hodnotu',`<label>Rozměr</label><input id="measureInput" type="text" value="${escapeHtml(item.measure)}"><label>Jednotka</label><select id="measureUnit">${['mm','cm','m','in','m²','°'].map(u=>`<option ${u===(item.unit||prefs.unit)?'selected':''}>${u}</option>`).join('')}</select><label>Popisek ke kótě (volitelné)</label><input id="dimensionCaption" value="${escapeHtml(item.text||'')}" placeholder="Např. přívod vody"><div class="row wrap"><button id="removeItem" class="outline">Smazat kótu</button></div>`,()=>{checkpoint();item.measure=$('measureInput').value;item.unit=$('measureUnit').value;item.text=$('dimensionCaption').value.trim();commitEditor()});else if(item.type==='note'){openRichNote(item,false);return}else modal('Upravit prvek',`<label>Text</label><input id="drawText" value="${escapeHtml(item.text||'')}"><div class="row"><button id="removeItem" class="outline">Smazat prvek</button></div>`,()=>{checkpoint();item.text=$('drawText').value;commitEditor()});$('removeItem').onclick=()=>{checkpoint();current.items=current.items.filter(i=>i.id!==item.id);selected=null;$('modal').hidden=true;commitEditor()}}
+function editItem(item){
+ const dimension=['dimension','chain','cumulative','area','angle'].includes(item.type);
+ if(dimension){
+  const laserApplicable=['dimension','chain','cumulative'].includes(item.type);
+  const previous=laserApplicable&&window.__boschHistoryReadings?.()||[];
+  const historyMarkup=laserApplicable?
+   '<label for="boschReadingSelection">Historie měření Bosch (posledních 40)</label>'+
+   '<select id="boschReadingSelection"><option value="">Vybrat naměřenou hodnotu…</option>'+
+   previous.map((reading,index)=>'<option value="'+index+'">'+escapeHtml(reading.value)+' '+escapeHtml(reading.unit)+' · '+escapeHtml(new Date(reading.time).toLocaleTimeString('cs-CZ'))+'</option>').join('')+
+   '</select><small class="bosch-history-hint">Výběrem hodnoty se vyplní rozměr. Potvrď tlačítkem Uložit.</small>':'';
+  modal('Upravit hodnotu',
+   '<label>Rozměr</label><input id="measureInput" type="text" value="'+escapeHtml(item.measure||'')+'">'+
+   '<label>Jednotka</label><select id="measureUnit">'+['mm','cm','m','in','m²','°'].map(u=>'<option '+(u===(item.unit||prefs.unit)?'selected':'')+'>'+u+'</option>').join('')+'</select>'+
+   historyMarkup+
+   '<label>Popisek ke kótě (volitelné)</label><input id="dimensionCaption" value="'+escapeHtml(item.text||'')+'" placeholder="Např. přívod vody">'+
+   '<div class="row wrap"><button id="removeItem" class="outline">Smazat kótu</button></div>',
+   ()=>{checkpoint();item.measure=$('measureInput').value;item.unit=$('measureUnit').value;item.text=$('dimensionCaption').value.trim();commitEditor()}
+  );
+  const chooser=$('boschReadingSelection');
+  if(chooser)chooser.onchange=()=>{
+   const index=Number(chooser.value);
+   if(chooser.value===''||!previous[index])return;
+   $('measureInput').value=previous[index].value;
+   $('measureUnit').value=previous[index].unit;
+  };
+ }else if(item.type==='note'){openRichNote(item,false);return}
+ else modal('Upravit prvek',
+  '<label>Text</label><input id="drawText" value="'+escapeHtml(item.text||'')+'"><div class="row"><button id="removeItem" class="outline">Smazat prvek</button></div>',
+  ()=>{checkpoint();item.text=$('drawText').value;commitEditor()}
+ );
+ $('removeItem').onclick=()=>{checkpoint();current.items=current.items.filter(i=>i.id!==item.id);selected=null;$('modal').hidden=true;commitEditor()};
+}
 function showEditorOverflow(){
   showAppMenu('editorOverflow',[
     [prefs.repeatDrawing?'Opakovat kóty ✓':'Jedna kóta ✓',()=>{
