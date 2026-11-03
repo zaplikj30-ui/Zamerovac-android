@@ -608,27 +608,44 @@ public class MainActivity extends Activity {
             if(color==null||!color.matches("#[0-9a-fA-F]{6}"))return;
             runOnUiThread(()->{try{statusFill.setBackgroundColor(Color.rgb(51,43,64));}catch(Exception ignored){}});
         }
+        /**
+         * Capture the compositor output, NOT WebView.draw(Canvas).
+         * WebView.draw misses hardware-accelerated canvases: the user then sees a
+         * mostly black photo in the feedback screenshot despite visible annotations.
+         * PixelCopy (API 26+) captures the actual displayed window pixels.
+         */
         @JavascriptInterface public void captureReportScreenshot(){
             runOnUiThread(()->{
-                Bitmap bmp=null;
                 try{
                     int width=web.getWidth(),height=web.getHeight();
                     if(width<1||height<1||((long)width)*height>18000000L)
                         throw new IOException("Neplatné rozměry obrazovky");
-                    bmp=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888);
-                    web.draw(new Canvas(bmp));
-                    String id=UUID.randomUUID().toString();
-                    try(FileOutputStream out=new FileOutputStream(mediaFile(id))){
-                        if(!bmp.compress(Bitmap.CompressFormat.PNG,100,out))
-                            throw new IOException("Snímek se nepodařilo vytvořit");
-                    }
-                    settings.edit().putString("mime-"+id,"image/png")
-                        .putString("name-"+id,"obrazovka-zamerovac.png").apply();
-                    js("window.onReportScreenshot("+JSONObject.quote(id)+")");
+                    int[] coords=new int[2];
+                    web.getLocationInWindow(coords);
+                    Rect source=new Rect(coords[0],coords[1],
+                        coords[0]+width,coords[1]+height);
+                    Bitmap bitmap=Bitmap.createBitmap(width,height,Bitmap.Config.ARGB_8888);
+                    android.view.PixelCopy.request(getWindow(),source,bitmap,result->{
+                        try{
+                            if(result!=android.view.PixelCopy.SUCCESS)
+                                throw new IOException("Nepodařilo se zachytit obraz ("+result+")");
+                            String id=UUID.randomUUID().toString();
+                            try(FileOutputStream out=new FileOutputStream(mediaFile(id))){
+                                if(!bitmap.compress(Bitmap.CompressFormat.PNG,100,out))
+                                    throw new IOException("Snímek se nepodařilo uložit");
+                            }
+                            settings.edit().putString("mime-"+id,"image/png")
+                                .putString("name-"+id,"obrazovka-zamerovac.png").apply();
+                            js("window.onReportScreenshot("+JSONObject.quote(id)+")");
+                        }catch(Exception ex){
+                            error("Snímek obrazovky: "+ex.getMessage());
+                            js("window.onReportScreenshot(null)");
+                        }finally{bitmap.recycle();}
+                    },handler);
                 }catch(Exception ex){
                     error("Snímek obrazovky: "+ex.getMessage());
                     js("window.onReportScreenshot(null)");
-                }finally{if(bmp!=null)bmp.recycle();}
+                }
             });
         }
         @JavascriptInterface public void shareIssueBundle(String json){sendIssueBundle(json,false);}

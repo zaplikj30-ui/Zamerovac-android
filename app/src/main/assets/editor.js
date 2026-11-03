@@ -71,8 +71,9 @@ function drawSelectedOutline(c){
  // Vložená fotografie má vlastní bílé boční úchopy v inset-workspace.
  if(item.type==='note'&&item.media?.length)return;
  c.save();
- c.strokeStyle='#f8f8f8';c.fillStyle='#fafafa';
- c.lineWidth=2.5;c.lineCap='round';c.lineJoin='round';
+ // ImageMeter: lehce průsvitné světlé označení. Není to druhá plná kótovací čára.
+ c.strokeStyle='rgba(255,255,255,.76)';c.fillStyle='rgba(255,255,255,.90)';
+ c.lineWidth=2;c.lineCap='round';c.lineJoin='round';
  if(['dimension','chain','cumulative'].includes(item.type)&&item.a&&item.b){
   const a=worldToScreen(item.a),b=worldToScreen(item.b),
     dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1,

@@ -155,7 +155,8 @@
  }
  window.onReportBundleSaved=()=>notify('ZIP připomínek uložen');
  function editReport(report,isNew){
-  active={report,isNew,tool:'pen',selected:-1,stroke:null,canvas:null,image:null};
+  active={report,isNew,tool:'pen',selected:-1,stroke:null,canvas:null,image:null,
+    viewport:{scale:1,x:0,y:0},pointers:new Map(),gesture:null,gestureEnding:false,pan:null};
   makeOverlay('<div class="feedback-head"><b>'+(isNew?'Nová připomínka':'Upravit připomínku')+'</b>'+
    '<button id="feedbackToList" class="outline">Seznam ('+reports.length+')</button>'+
    '<button id="feedbackClose" class="feedback-close" aria-label="Zavřít">✕</button></div>'+
@@ -169,8 +170,14 @@
      '<button data-feedback-tool="move">✥ Přesunout</button>'+
      '<button id="feedbackUndo" title="Vrátit poslední značku">↶</button>'+
     '</div>'+
-    '<div class="feedback-image-wrap"><canvas id="feedbackCanvas" aria-label="Zachycená obrazovka pro označení chyby"></canvas></div>'+
-    '<div class="feedback-fields">'+
+    '<div class="feedback-image-wrap"><canvas id="feedbackCanvas" aria-label="Celá zachycená obrazovka pro označení chyby"></canvas>'+ 
+     '<div class="feedback-zoom" aria-label="Přiblížení obrázku">'+
+      '<button type="button" id="feedbackZoomIn" title="Přiblížit">＋</button>'+
+      '<button type="button" id="feedbackZoomOut" title="Oddálit">−</button>'+
+      '<button type="button" id="feedbackZoomFit" title="Zobrazit celou obrazovku">Celá</button>'+
+     '</div></div>'+
+    '<div class="feedback-fields collapsed">'+
+     '<button type="button" id="feedbackFieldsToggle" class="feedback-fields-toggle" aria-expanded="false">▴ Popis chyby a přílohy (otevřít)</button>'+
      '<label>Co chceš nahlásit? <select id="feedbackType"><option value="bug">Chyba</option><option value="change">Chci změnu</option></select></label>'+
      '<input id="feedbackTitle" placeholder="Krátký název, např. Posunout tlačítko" maxlength="130">'+
      '<textarea id="feedbackDescription" rows="3" placeholder="Co je špatně a jak to má fungovat?"></textarea>'+
@@ -207,7 +214,26 @@
    if(report.annotations.length)report.annotations.pop();
    active.selected=-1;repaint();
   };
-  overlay.querySelector('#feedbackSave').onclick=()=>saveReport();
+  const fields=overlay.querySelector('.feedback-fields');
+  const fieldsToggle=overlay.querySelector('#feedbackFieldsToggle');
+  function setFieldsOpen(open){
+   fields.classList.toggle('collapsed',!open);
+   fieldsToggle.setAttribute('aria-expanded',String(open));
+   fieldsToggle.textContent=open?'▾ Popis chyby a přílohy (skrýt)':'▴ Popis chyby a přílohy (otevřít)';
+  }
+  fieldsToggle.onclick=()=>setFieldsOpen(fields.classList.contains('collapsed'));
+  overlay.querySelector('#feedbackSave').onclick=()=>{
+   if(fields.classList.contains('collapsed')&&!overlay.querySelector('#feedbackTitle').value.trim()&&
+      !overlay.querySelector('#feedbackDescription').value.trim()){
+    setFieldsOpen(true);
+    overlay.querySelector('#feedbackTitle').focus();
+    return;
+   }
+   saveReport();
+  };
+  overlay.querySelector('#feedbackZoomIn').onclick=()=>setZoom(active.viewport.scale*1.5);
+  overlay.querySelector('#feedbackZoomOut').onclick=()=>setZoom(active.viewport.scale/1.5);
+  overlay.querySelector('#feedbackZoomFit').onclick=()=>setZoom(1);
   const canvas=overlay.querySelector('#feedbackCanvas');
   active.canvas=canvas;
   const img=new Image();
@@ -242,14 +268,52 @@
   }
   return -1;
  }
+ function updateImageView(){
+  if(!active?.canvas)return;
+  const v=active.viewport;
+  active.canvas.style.transform='translate('+v.x+'px,'+v.y+'px) scale('+v.scale+')';
+ }
+ function setZoom(scale){
+  if(!active)return;
+  const v=active.viewport;
+  v.scale=clamp(scale,1,6);
+  if(v.scale===1){v.x=0;v.y=0}
+  updateImageView();
+ }
  let moving=null;
  function pointerDown(e){
-  if(!active||e.button!==0)return;
-  e.preventDefault();active.canvas.setPointerCapture(e.pointerId);
+  if(!active||(e.pointerType==='mouse'&&e.button!==0))return;
+  e.preventDefault();
+  try{active.canvas.setPointerCapture(e.pointerId)}catch(err){}
+  active.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(active.pointers.size===2){
+   // Druhý prst znamená přiblížení/posunutí, nikoli další malování.
+   if(active.stroke){
+    const annotations=active.report.annotations;
+    const last=annotations[annotations.length-1];
+    if(last===active.stroke)annotations.pop();
+   }
+   active.stroke=null;moving=null;active.pan=null;
+   const ps=[...active.pointers.values()];
+   const rect=active.canvas.getBoundingClientRect();
+   active.gesture={
+    center:{x:rect.left+rect.width/2-active.viewport.x,
+            y:rect.top+rect.height/2-active.viewport.y},
+    distance:Math.max(1,Math.hypot(ps[0].x-ps[1].x,ps[0].y-ps[1].y)),
+    mid:{x:(ps[0].x+ps[1].x)/2,y:(ps[0].y+ps[1].y)/2},
+    scale:active.viewport.scale,x:active.viewport.x,y:active.viewport.y
+   };
+   repaint();return;
+  }
+  if(active.pointers.size!==1||active.gestureEnding)return;
   const p=locate(e),tool=active.tool;
   if(tool==='move'){
    const i=hitIndex(p);active.selected=i;
    moving=i>=0?{index:i,point:p,points:active.report.annotations[i].points.map(x=>x.slice())}:null;
+   active.pan=i<0&&active.viewport.scale>1?{
+    id:e.pointerId,x:e.clientX,y:e.clientY,
+    startX:active.viewport.x,startY:active.viewport.y
+   }:null;
   }else{
    const a={type:tool,points:[p,p.slice()],text:''};
    if(tool==='text'){
@@ -261,9 +325,30 @@
   repaint();
  }
  function pointerMove(e){
-  if(!active||e.buttons===0)return;
-  if(!active.stroke&&!moving)return;
+  if(!active||!active.pointers.has(e.pointerId))return;
+  active.pointers.set(e.pointerId,{x:e.clientX,y:e.clientY});
+  if(active.gesture&&active.pointers.size>=2){
+   e.preventDefault();
+   const ps=[...active.pointers.values()];
+   const distance=Math.max(1,Math.hypot(ps[0].x-ps[1].x,ps[0].y-ps[1].y));
+   const mid={x:(ps[0].x+ps[1].x)/2,y:(ps[0].y+ps[1].y)/2};
+   const v=active.viewport,g=active.gesture;
+   v.scale=clamp(g.scale*distance/g.distance,1,6);
+   // Místo pod prsty zůstává pod prsty i při změně měřítka.
+   const ratio=v.scale/g.scale;
+   v.x=mid.x-g.center.x-(g.mid.x-g.center.x-g.x)*ratio;
+   v.y=mid.y-g.center.y-(g.mid.y-g.center.y-g.y)*ratio;
+   if(v.scale===1){v.x=0;v.y=0}
+   updateImageView();return;
+  }
+  if(active.gestureEnding||(!active.stroke&&!moving&&!active.pan))return;
   e.preventDefault();
+  if(active.pan){
+   const v=active.viewport,p=active.pan;
+   v.x=p.startX+(e.clientX-p.x);
+   v.y=p.startY+(e.clientY-p.y);
+   updateImageView();return;
+  }
   const p=locate(e);
   if(moving){
    const a=active.report.annotations[moving.index];
@@ -276,7 +361,14 @@
  }
  function pointerUp(e){
   if(!active)return;
-  active.stroke=null;moving=null;
+  active.pointers.delete(e.pointerId);
+  try{active.canvas.releasePointerCapture(e.pointerId)}catch(err){}
+  if(active.gesture){
+   if(active.pointers.size<2){active.gesture=null;active.gestureEnding=true}
+  }else if(active.gestureEnding&&active.pointers.size===0)active.gestureEnding=false;
+  if(active.pointers.size===0){
+   active.stroke=null;active.pan=null;moving=null;
+  }
  }
  function repaint(){
   if(!active||!active.canvas)return;
