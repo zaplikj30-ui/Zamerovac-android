@@ -19,6 +19,8 @@ class BoschBleTests(unittest.TestCase):
         self.assertIn('BoschBleProtocol.millimetersText(', java)
         self.assertNotIn('new String(bytes,StandardCharsets.US_ASCII).trim()', java)
         self.assertIn('private void startScan()', java)
+        self.assertIn('adapter.getBondedDevices()', java)
+        self.assertIn('leAddresses.contains(d.getAddress())', java)
 
     @unittest.skipUnless(shutil.which('javac') and shutil.which('java'), 'JDK není dostupné')
     def test_binary_distance_frame(self):
