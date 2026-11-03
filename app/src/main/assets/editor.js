@@ -116,7 +116,7 @@ function paint(){if(screen!=='editor'||!current)return;let w=stageCanvas.clientW
    BEFORE the original colored annotation. No white stroke covers the
    yellow line, terminal ticks, or arrows. Stored annotation is untouched. */
 function drawSelectedOutline(c,item){
- if(!item?.a||!item?.b||!['dimension','chain','cumulative'].includes(item.type))return;
+ if(!item?.a||!item?.b||!['dimension','chain','cumulative'].includes(item.type)||(['chain','cumulative'].includes(item.type)&&item.points?.length>1))return;
  const a=worldToScreen(item.a),b=worldToScreen(item.b);
  const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1;
  const nx=-dy/d,ny=dx/d,off=item.offset??0;
@@ -151,7 +151,7 @@ function drawSelectedGrips(c){
  const item=(current?.items||[]).find(i=>i.id===selected);
  if(!item)return;
  if(item.type==='note'&&item.media?.length)return;
- if(['dimension','chain','cumulative'].includes(item.type))return;
+ if(item.type==='dimension'||(['chain','cumulative'].includes(item.type)&&!(item.points?.length>1)))return;
  c.save();
  c.fillStyle='rgba(255,255,255,.14)';
  c.strokeStyle='rgba(255,255,255,.78)';c.lineWidth=1.6;
@@ -164,7 +164,7 @@ function drawSelectedGrips(c){
   c.strokeRect(p.x-14,p.y-14,28,28);
   if(item.type!=='note'||(selectedHandle?.item?.id===item.id&&selectedHandle.kind==='point'&&selectedHandle.dragged)){c.beginPath();c.arc(p.x,p.y,14,0,Math.PI*2);c.fill();c.stroke();}
  }else{
-  if(item.type==='polyline'&&Array.isArray(item.points)){
+  if(['polyline','chain','cumulative'].includes(item.type)&&Array.isArray(item.points)&&item.points.length>1){
    for(const vertex of item.points){
     const p=worldToScreen(vertex);c.beginPath();c.arc(p.x,p.y,14,0,Math.PI*2);c.fill();c.stroke();
    }
@@ -320,7 +320,7 @@ function drawLoupe(){
   loupeCtx.restore();
 }
 function labelInfo(item){
-  if(!item||!['dimension','chain','cumulative'].includes(item.type)||!item.a||!item.b)return null;
+  if(!item||!['dimension','chain','cumulative'].includes(item.type)||!item.a||!item.b||(['chain','cumulative'].includes(item.type)&&item.points?.length>1))return null;
   const a=worldToScreen(item.a),b=worldToScreen(item.b);
   const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1,ux=dx/d,uy=dy/d;
   const off=item.offset??0,t=Number(item.labelT)||0;
@@ -667,7 +667,67 @@ else if(mode==='note'){
  $('symbolCategory').onchange=render;$('symbolSearch').oninput=render;render();
 }
 else{checkpoint();current.items.push(item);commitEditor();finishDraw(item)}}
+function editSegmentedItem(item){
+ const count=item.points.length-1;
+ const saved=Array.from({length:count},(_,i)=>item.segmentData?.[i]||{measure:'',text:'',unit:item.unit||prefs.unit});
+ const readings=window.__boschHistoryReadings?.()||[];
+ const header=item.type==='chain'?'Dimenzní řetězec':item.type==='cumulative'?'Kumulativní řetězec':'Lomená čára';
+ const fields=saved.map((row,i)=>{
+  const selectedUnit=row.unit||item.unit||prefs.unit;
+  const readingField=readings.length?'<select data-segment-reading="'+i+'"><option value="">Použít hodnotu z laseru…</option>'+
+   readings.slice(0,30).map((reading,index)=>'<option value="'+index+'">'+escapeHtml(reading.value)+' '+escapeHtml(reading.unit)+'</option>').join('')+'</select>':'';
+  return '<div class="segment-row"><strong>'+(item.type==='cumulative'?'Od začátku k bodu ':'Úsek ')+(i+1)+'</strong>'+
+   '<label>Rozměr</label><input id="segmentMeasure'+i+'" type="text" value="'+escapeHtml(row.measure||'')+'" placeholder="Hodnota z laseru nebo ručně">'+
+   '<label>Jednotka</label><select id="segmentUnit'+i+'">'+['mm','cm','m','in'].map(u=>'<option '+(u===selectedUnit?'selected':'')+'>'+u+'</option>').join('')+'</select>'+
+   readingField+'<label>Popisek</label><input id="segmentText'+i+'" value="'+escapeHtml(row.text||'')+'" placeholder="Volitelný text"></div>';
+ }).join('');
+ const insertOptions=Array.from({length:count},(_,i)=>'<option value="'+i+'">Za úsek '+(i+1)+'</option>').join('');
+ const removeOptions=item.points.slice(1).map((_,i)=>'<option value="'+(i+1)+'">Bod '+(i+2)+'</option>').join('');
+ modal(header,fields+
+   '<div class="segment-tools"><label>Vložit další bod</label><select id="insertSegmentAt">'+insertOptions+'</select>'+
+   '<button class="outline" id="insertSegmentPoint">Přidat bod mezi dva body</button>'+
+   '<label>Odstranit existující bod</label><select id="removeSegmentAt">'+removeOptions+'</select>'+
+   '<button class="outline" id="removeSegmentPoint">Odstranit vybraný bod</button></div>'+
+   '<button class="outline" id="removeItem">Smazat celý prvek</button>',
+   ()=>{checkpoint();readSegmentFields(item);commitEditor()},'Uložit');
+ function readSegmentFields(target){
+  target.segmentData=Array.from({length:count},(_,i)=>({
+   measure:$('segmentMeasure'+i).value.trim(),
+   text:$('segmentText'+i).value.trim(),unit:$('segmentUnit'+i).value
+  }));
+ }
+ $('modalBody').querySelectorAll('[data-segment-reading]').forEach(select=>select.onchange=()=>{
+  if(select.value==='')return;
+  const r=readings[Number(select.value)],i=Number(select.dataset.segmentReading);
+  if(r){$('segmentMeasure'+i).value=String(r.value);$('segmentUnit'+i).value=r.unit}
+ });
+ $('insertSegmentPoint').onclick=()=>{
+  const index=Number($('insertSegmentAt').value);
+  if(!Number.isInteger(index)||!item.points[index+1])return;
+  checkpoint();readSegmentFields(item);
+  const a=item.points[index],b=item.points[index+1];
+  item.points.splice(index+1,0,{x:(a.x+b.x)/2,y:(a.y+b.y)/2});
+  item.segmentData.splice(index,1,{measure:'',text:'',unit:item.unit||prefs.unit},{measure:'',text:'',unit:item.unit||prefs.unit});
+  item.a={...item.points[0]};item.b={...item.points[item.points.length-1]};
+  commitEditor();editSegmentedItem(item);
+ };
+ $('removeSegmentPoint').onclick=()=>{
+  if(item.points.length<=2){notify('Musí zůstat aspoň dva body');return}
+  const index=Number($('removeSegmentAt').value);
+  if(!Number.isInteger(index)||index<1||index>=item.points.length)return;
+  checkpoint();readSegmentFields(item);
+  item.points.splice(index,1);
+  item.segmentData.splice(Math.max(0,index-1),1);
+  item.a={...item.points[0]};item.b={...item.points[item.points.length-1]};
+  commitEditor();editSegmentedItem(item);
+ };
+ $('removeItem').onclick=()=>{
+  checkpoint();current.items=current.items.filter(x=>x.id!==item.id);
+  selected=null;$('modal').hidden=true;commitEditor();
+ };
+}
 function editItem(item){
+ if(['polyline','chain','cumulative'].includes(item.type)&&item.points?.length>1){editSegmentedItem(item);return}
  const dimension=['dimension','chain','cumulative','area','angle'].includes(item.type);
  if(dimension){
   const laserApplicable=['dimension','chain','cumulative'].includes(item.type);
