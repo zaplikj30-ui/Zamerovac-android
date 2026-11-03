@@ -76,7 +76,7 @@ function drawSelectedOutline(c){
  if(['dimension','chain','cumulative'].includes(item.type)&&item.a&&item.b){
   const a=worldToScreen(item.a),b=worldToScreen(item.b),
     dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1,
-    nx=-dy/d,ny=dx/d,off=Number(item.offset)||0;
+    nx=-dy/d,ny=dx/d,off=item.offset??0;
   c.beginPath();c.moveTo(a.x+nx*off,a.y+ny*off);
   c.lineTo(b.x+nx*off,b.y+ny*off);c.stroke();
   for(const p of [a,b]){
