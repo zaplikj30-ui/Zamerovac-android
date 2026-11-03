@@ -56,18 +56,8 @@ $('undo').onclick=undoEditor;$('redo').onclick=redoEditor;$('selectTool').onclic
   if(mode==='select'||mode==='pan')setTool(lastDrawingTool);
   else setTool('select');
 };
-$('activeTool').addEventListener('pointerdown',()=>{
-  suppressToolClick=false;
-  clearTimeout(repeatPressTimer);
-  repeatPressTimer=setTimeout(()=>{
-    prefs.repeatDrawing=!prefs.repeatDrawing;save();suppressToolClick=true;
-    updateDrawingToolButton();
-    notify(prefs.repeatDrawing?'Opakované kreslení zapnuto':'Po jedné kótě');
-  },650);
-});
-for(const eventName of ['pointerup','pointercancel','pointerleave']){
-  $('activeTool').addEventListener(eventName,()=>clearTimeout(repeatPressTimer));
-}
+// Dlouhé podržení nyní slouží k přesunu ikony. Režim opakovaného kreslení
+// zůstává dostupný v existující nabídce editoru, bez kolize dvou gest.
 function updateDrawingToolButton(){
   const t=allTools.find(x=>x[0]===lastDrawingTool);
   const b=$('activeTool');
