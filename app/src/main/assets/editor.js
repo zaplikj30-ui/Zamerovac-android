@@ -203,7 +203,7 @@ else if(item.type==='line'||item.type==='arrow'||item.type==='angle'||item.type=
 else if(item.type==='rect'||item.type==='area'){if(a&&b){let x=Math.min(a.x,b.x),y=Math.min(a.y,b.y),w=Math.abs(a.x-b.x),h=Math.abs(a.y-b.y);c.strokeRect(x,y,w,h);if(item.type==='area'&&item.measure)canvasText(item.measure+' '+(item.unit||'m²'),{x:x+w/2,y:y+h/2},color,fs)}}
 else if(item.type==='ellipse'||item.type==='circle'){if(a&&b){let cx=(a.x+b.x)/2,cy=(a.y+b.y)/2,rx=Math.abs(a.x-b.x)/2,ry=item.type==='circle'?rx:Math.abs(a.y-b.y)/2;c.beginPath();c.ellipse(cx,cy,Math.max(1,rx),Math.max(1,ry),0,0,Math.PI*2);c.stroke()}}
 else if(item.type==='freehand'||item.type==='polyline'){if(pts.length){c.beginPath();c.moveTo(pts[0].x,pts[0].y);for(let p of pts.slice(1))c.lineTo(p.x,p.y);c.stroke()}}
-else if(item.type==='note'||item.type==='symbol'){if(a){if(item.type==='note'){drawNoteLeader(c,item,color);(noteDisplayedCaption(item)&&canvasText(noteDisplayedCaption(item),noteCaptionScreen(item),color,fs))}else canvasText('⚑ '+(item.text||''),a,color,fs)}}
+else if(item.type==='note'||item.type==='symbol'){if(a){if(item.type==='note'){drawNoteLeader(c,item,color);(noteDisplayedCaption(item)&&canvasText(noteDisplayedCaption(item),noteCaptionScreen(item),color,fs))}else canvasText((item.icon||'⚑')+' '+(item.text||''),a,color,fs)}}
 c.restore();}
 function drawLoupe(){
   if(!magnifierPoint)return;
@@ -300,7 +300,7 @@ function nearestItem(point){
  for(const item of [...(current.items||[])].reverse()){
   if((item.type==='note'||item.type==='symbol')&&item.a){
    const p=item.type==='note'?noteCaptionScreen(item):worldToScreen(item.a);
-   const caption=item.type==='symbol'?'⚑ '+(item.text||''):noteDisplayedCaption(item);
+   const caption=item.type==='symbol'?(item.icon||'⚑')+' '+(item.text||''):noteDisplayedCaption(item);
    ctx.save();ctx.font='600 '+(item.fontSize||prefs.fontSize)+'px sans-serif';
    const width=ctx.measureText(caption).width+22;ctx.restore();
    if(Math.abs(point.x-p.x)<width/2+7&&Math.abs(point.y-p.y)<Math.max(23,(item.fontSize||prefs.fontSize)*.9))
@@ -558,14 +558,49 @@ else if(mode==='note'){
  finishDraw(item);
 }
  else if(mode==='symbol'){
- const presets=['🔌 Zásuvka','🚰 Voda','🟤 Odpad','⬆ Výška parapetu','▣ Okno','▯ Dveře','⚡ Elektro','♨ Topení'];
- modal('Rychlý symbol do fotografie',
-   '<label>Přednastavený symbol</label><select id="drawPreset"><option value="">Vlastní popisek</option>'+presets.map(x=>'<option>'+escapeHtml(x)+'</option>').join('')+'</select>'+
-   '<label>Text u symbolu</label><input id="drawText" placeholder="Zvol symbol nebo napiš vlastní" value="">',()=>{
-     item.text=$('drawText').value.trim();if(!item.text)return false;
-     checkpoint();current.items.push(item);commitEditor();finishDraw(item);
-   });
- $('drawPreset').onchange=()=>{if($('drawPreset').value)$('drawText').value=$('drawPreset').value};
+ const symbols=[
+  ['Elektroinstalace','🔌','Zásuvka'],['Elektroinstalace','⚡','Elektro'],['Elektroinstalace','💡','Světlo'],
+  ['Elektroinstalace','🔘','Vypínač'],['Elektroinstalace','🔋','Rozvaděč'],['Elektroinstalace','📡','Datová zásuvka'],
+  ['Půdorys','▣','Okno'],['Půdorys','🚪','Dveře'],['Půdorys','▰','Skříň'],
+  ['Půdorys','▤','Pracovní deska'],['Půdorys','⊞','Stůl'],['Půdorys','⬆','Výška parapetu'],
+  ['Voda a topení','🚰','Voda'],['Voda a topení','🟤','Odpad'],['Voda a topení','♨','Topení'],
+  ['Voda a topení','🚿','Sprcha'],['Voda a topení','🚽','WC'],
+  ['Obecné','📍','Bod'],['Obecné','⚠','Pozor'],['Obecné','↗','Směr'],
+  ['Obecné','✕','Označit místo'],['Obecné','📷','Detail'],['Obecné','☑','Zkontrolováno']
+ ];
+ let chosen=null;
+ const recent=Array.isArray(prefs.recentSymbols)?prefs.recentSymbols:[];
+ modal('Knihovna symbolů',
+  '<label>Kategorie</label><select id="symbolCategory">'+
+  ['Vše','Naposledy použité','Elektroinstalace','Půdorys','Voda a topení','Obecné']
+  .map(x=>'<option>'+escapeHtml(x)+'</option>').join('')+'</select>'+
+  '<label>Vyhledat symbol</label><input id="symbolSearch" placeholder="Např. zásuvka nebo okno">'+
+  '<div id="symbolChoices" style="max-height:32vh;overflow:auto;margin:10px 0"></div>'+
+  '<label>Text u symbolu (volitelný)</label><input id="drawText" placeholder="Vlastní popisek">',
+  ()=>{
+   const label=$('drawText').value.trim();
+   if(chosen===null&&!label){notify('Vyber symbol nebo napiš popisek');return false}
+   item.icon=chosen===null?'⚑':symbols[chosen][1];
+   item.text=label;
+   if(chosen!==null){
+    prefs.recentSymbols=[chosen,...recent.filter(i=>i!==chosen)].slice(0,12);save();
+   }
+   checkpoint();current.items.push(item);commitEditor();finishDraw(item);
+  },'Vložit');
+ const render=()=>{
+  const cat=$('symbolCategory').value,q=$('symbolSearch').value.toLocaleLowerCase('cs');
+  const choices=$('symbolChoices');
+  const found=symbols.map((row,index)=>({row,index}))
+   .filter(({row,index})=>(cat==='Vše'||(cat==='Naposledy použité'?recent.includes(index):row[0]===cat))&&
+    (row[2].toLocaleLowerCase('cs').includes(q)||row[0].toLocaleLowerCase('cs').includes(q)));
+  choices.innerHTML=found.map(({row,index})=>
+   '<button type="button" class="choice" data-symbol="'+index+'" style="width:100%;text-align:left;'+(chosen===index?'outline:2px solid #f7dc27;':'')+'"><strong>'+row[1]+'</strong> '+escapeHtml(row[2])+'</button>').join('')||'<p class="muted">Žádný symbol neodpovídá výběru.</p>';
+  choices.querySelectorAll('[data-symbol]').forEach(btn=>btn.onclick=()=>{
+   chosen=Number(btn.dataset.symbol);
+   $('drawText').value=symbols[chosen][2];render();
+  });
+ };
+ $('symbolCategory').onchange=render;$('symbolSearch').oninput=render;render();
 }
 else{checkpoint();current.items.push(item);commitEditor();finishDraw(item)}}
 function editItem(item){
