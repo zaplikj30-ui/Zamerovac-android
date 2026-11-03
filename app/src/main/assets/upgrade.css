@@ -95,3 +95,20 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 #bluetoothBtn .bt-check {color:#60a5fa}
 #bluetoothBtn .bt-off {color:#abb3bf}
 #bluetoothBtn .bt-spinner {width:13px;height:13px;border:2px solid #60a5fa;border-top-color:transparent;animation:btSpin .85s linear infinite}
+
+/* Doplnění čísla popisného: rozpoznatelné i bez barev. */
+#bluetoothBtn.connecting:after {content:none!important}
+.entry-address-edit {
+  display:inline-flex;align-items:center;justify-content:flex-start;
+  margin-top:5px;min-height:31px;border:1px solid #a08a59;
+  border-radius:6px;padding:5px 9px;background:#39352b;
+  color:#fff2ce;font-size:12px;font-weight:600;
+}
+.entry-address-edit:active{background:#5a4d34}
+.address-current{border-left:3px solid #9679c5;background:#292630;padding:10px;margin:12px 0;color:#e0d5ea;line-height:1.4}
+.address-candidates{max-height:40vh;overflow-y:auto;margin-top:10px}
+.addressChoice{width:100%;display:flex;justify-content:space-between;gap:10px;align-items:center;
+  min-height:48px;padding:10px;border-bottom:1px solid #5a515f;text-align:left}
+.addressChoice span{flex:1}
+.addressChoice small{color:#d3c0ee}
+#photoAddressSearch{margin:4px 0}
