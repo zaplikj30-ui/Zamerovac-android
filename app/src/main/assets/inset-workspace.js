@@ -118,6 +118,19 @@
   if(show)connector(c,g);
   c.save();
   c.translate(g.cx,g.cy);c.rotate(g.angle);c.translate(-g.cx,-g.cy);
+  // U více fotografií je vidět první v plné ploše. Zadní snímky
+  // naznačují pouze vykukující rohy (bez zásahu do obsahu náhledu).
+  const imageCount=(it.media||[]).filter(id=>!(it.audioMedia||[]).includes(id)).length;
+  if(imageCount>1){
+   for(let layer=Math.min(imageCount-1,3);layer>=1;layer--){
+    const offset=layer*5;
+    c.fillStyle='#282c36';
+    c.strokeStyle='#d8be6f';
+    c.lineWidth=1.7;
+    c.fillRect(g.x+offset,g.y-offset,g.w,g.h);
+    c.strokeRect(g.x+offset,g.y-offset,g.w,g.h);
+   }
+  }
   c.fillStyle='rgba(0,0,0,.25)';
   c.fillRect(g.x-2,g.y-2,g.w+4,g.h+4);
   c.drawImage(image,g.x,g.y,g.w,g.h);
@@ -129,6 +142,16 @@
    view={zoom:g.w/image.naturalWidth,dx:g.x,dy:g.y};
    for(const note of it.detailItems||[])drawOriginal(c,note);
   }finally{view=oldView}
+  if(imageCount>1&&!window.__exportingAnnotations){
+   c.save();
+   c.font='bold 12px sans-serif';
+   c.textAlign='center';c.textBaseline='middle';
+   c.fillStyle='#d7b4ff';c.strokeStyle='#31253b';c.lineWidth=2;
+   const px=g.x+g.w+15,py=g.y-11;
+   c.beginPath();c.arc(px,py,13,0,Math.PI*2);c.fill();c.stroke();
+   c.fillStyle='#271c35';c.fillText(String(imageCount),px,py+.5);
+   c.restore();
+  }
   c.restore();
   // ImageMeter zachovává textovou část poznámky i po vložení detailu.
   renderLabel(c,it,g);
