@@ -7,7 +7,6 @@
  const units={mm:1,cm:10,m:1000,in:25.4};
  const linearTypes=new Set(['dimension','chain','cumulative']);
  let pending=null;
- let pending=null;
  function parseDistance(value,unit){
   const raw=String(value??'').trim().replace(',','.');
   const u=String(unit||'mm').trim().toLowerCase();
