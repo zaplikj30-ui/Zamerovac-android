@@ -2,7 +2,7 @@
 'use strict';
 let detailEditorParent=null,detailEditorNote=null;
 function openRichNote(item,isNew){
- if(!current||recordLocked?.(current)){notify('Záznam je uzamčen');return}
+ if(!current||window.isRecordLocked?.(current)){notify('Záznam je uzamčen');return}
  const parent=current;
  const attachments=Array.isArray(item.media)?item.media.slice():[];
  let recording=null;
