@@ -274,7 +274,22 @@ function nearestLabel(point){
   }
   return null;
 }
-function nearestHandle(point){let best=null,dist=31;for(let it of current.items||[]){for(let key of ['a','b'])if(it[key]&&!(it.type==='note'&&key==='b')){let d=Math.hypot(point.x-worldToScreen(it[key]).x,point.y-worldToScreen(it[key]).y);if(d<dist){best={item:it,key,point:it[key],kind:'point'};dist=d}}}return best}
+function nearestHandle(point){
+ let best=null,dist=31;
+ for(const item of current.items||[]){
+  if(item.type==='polyline'&&Array.isArray(item.points)){
+   item.points.forEach((vertex,index)=>{
+    const p=worldToScreen(vertex),d=Math.hypot(point.x-p.x,point.y-p.y);
+    if(d<dist){best={item,key:'points',point:vertex,pointIndex:index,kind:'point'};dist=d}
+   });continue;
+  }
+  for(const key of ['a','b'])if(item[key]&&!(item.type==='note'&&key==='b')){
+   const p=worldToScreen(item[key]),d=Math.hypot(point.x-p.x,point.y-p.y);
+   if(d<dist){best={item,key,point:item[key],kind:'point'};dist=d}
+  }
+ }
+ return best;
+}
 function nearestItem(point){
  const world=screenToWorld(point);
  let best=null,distance=26/view.zoom;
@@ -286,6 +301,15 @@ function nearestItem(point){
    const width=ctx.measureText(caption).width+22;ctx.restore();
    if(Math.abs(point.x-p.x)<width/2+7&&Math.abs(point.y-p.y)<Math.max(23,(item.fontSize||prefs.fontSize)*.9))
     return item;
+  }
+  if(item.type==='polyline'&&Array.isArray(item.points)){
+   for(let i=1;i<item.points.length;i++){
+    const a=item.points[i-1],b=item.points[i],dx=b.x-a.x,dy=b.y-a.y;
+    const t=Math.max(0,Math.min(1,((world.x-a.x)*dx+(world.y-a.y)*dy)/(dx*dx+dy*dy||1)));
+    const d=Math.hypot(world.x-a.x-t*dx,world.y-a.y-t*dy);
+    if(d<distance){best=item;distance=d}
+   }
+   continue;
   }
   const a=item.a,b=item.b;
   if(a&&b){
@@ -383,6 +407,7 @@ function stageDown(e){
   else if(grip?.item.id===candidate.id)hit=grip;
   else if(['dimension','chain','cumulative','line','arrow','angle','target'].includes(candidate.type))
    hit={item:candidate,kind:'move-dimension'};
+  else if(candidate.type==='polyline')hit={item:candidate,kind:'move-polyline'};
   else if(label?.item.id===candidate.id)hit=label;
   else hit={item:candidate,kind:'open-selected'};
   selectedHandle=hit;
@@ -395,9 +420,10 @@ function stageDown(e){
   }
   if(hit.kind==='note-caption')
    hit.startPoint={...(hit.item.captionMoved&&hit.item.b?hit.item.b:hit.item.a)};
+  if(hit.kind==='move-polyline')hit.startPoints=candidate.points.map(p=>({...p}));
   hit.startLabelT=Number(hit.item.labelT)||0;
   hit.dragged=false;
-  if(hit.kind==='point'||hit.kind==='label'||hit.kind==='note-caption'||hit.kind==='move-dimension')checkpoint();
+  if(hit.kind==='point'||hit.kind==='label'||hit.kind==='note-caption'||hit.kind==='move-dimension'||hit.kind==='move-polyline')checkpoint();
   magnifierPoint=hit.kind==='point'?hit.point:null;
   paint();return;
  }
@@ -417,7 +443,21 @@ if(mode==='polyline'&&polylineDraft.length&&pointers.size===1){
   if(selectedHandle.kind==='select-only'||selectedHandle.kind==='open-selected'){
    magnifierPoint=null;paint();return;
   }
-  if(selectedHandle.kind==='move-dimension'){
+  if(selectedHandle.kind==='move-polyline'){
+     if(selectedHandle.dragged){
+      const dx=(s.x-selectedHandle.startScreen.x)/view.zoom;
+      const dy=(s.y-selectedHandle.startScreen.y)/view.zoom;
+      const points=selectedHandle.startPoints;
+      const minX=Math.min(...points.map(p=>p.x)),maxX=Math.max(...points.map(p=>p.x));
+      const minY=Math.min(...points.map(p=>p.y)),maxY=Math.max(...points.map(p=>p.y));
+      const shiftX=Math.max(-minX,Math.min(dx,photoSize.w-maxX));
+      const shiftY=Math.max(-minY,Math.min(dy,photoSize.h-maxY));
+      selectedHandle.item.points=points.map(p=>({x:p.x+shiftX,y:p.y+shiftY}));
+      selectedHandle.item.a={...selectedHandle.item.points[0]};
+      selectedHandle.item.b={...selectedHandle.item.points[selectedHandle.item.points.length-1]};
+     }
+     magnifierPoint=null;
+  }else if(selectedHandle.kind==='move-dimension'){
     if(selectedHandle.dragged){
       const a=selectedHandle.startA,b=selectedHandle.startB;
       // Uchopení uprostřed posune oba konce společně. Zachovat délku a směr.
@@ -452,8 +492,14 @@ if(mode==='polyline'&&polylineDraft.length&&pointers.size===1){
       x:screenOrigin.x+(s.x-selectedHandle.startScreen.x),
       y:screenOrigin.y+(s.y-selectedHandle.startScreen.y)
     });
-    selectedHandle.item[selectedHandle.key]=snap(target,null,selectedHandle);
-    selectedHandle.point=selectedHandle.item[selectedHandle.key];
+    const movedPoint=snap(target,null,selectedHandle);
+    if(Number.isInteger(selectedHandle.pointIndex)){
+     const item=selectedHandle.item,index=selectedHandle.pointIndex;
+     item.points[index]=movedPoint;
+     if(index===0)item.a={...movedPoint};
+     if(index===item.points.length-1)item.b={...movedPoint};
+    }else selectedHandle.item[selectedHandle.key]=movedPoint;
+    selectedHandle.point=movedPoint;
     magnifierPoint=selectedHandle.point;
   }
   paint();return;
@@ -474,11 +520,11 @@ function stageUp(e){
   selectedHandle=null;magnifierPoint=null;loupeSide=null;
   if(handle.kind==='select-only'){paint();return}
   if(!moved){
-   if((handle.kind==='point'||handle.kind==='label'||handle.kind==='note-caption'||handle.kind==='move-dimension')&&editStack.length)editStack.pop();
+   if((handle.kind==='point'||handle.kind==='label'||handle.kind==='note-caption'||handle.kind==='move-dimension'||handle.kind==='move-polyline')&&editStack.length)editStack.pop();
    if(handle.initialSelection){paint();return}
    // Druhé samostatné klepnutí otevře úpravu bez časového limitu.
    editItem(item);
-  }else if(handle.kind==='point'||handle.kind==='label'||handle.kind==='note-caption'||handle.kind==='move-dimension'){
+  }else if(handle.kind==='point'||handle.kind==='label'||handle.kind==='note-caption'||handle.kind==='move-dimension'||handle.kind==='move-polyline'){
    touch(item);commitEditor();
   }else paint();
   return;
