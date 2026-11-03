@@ -322,3 +322,14 @@ body.in-editor.editor-extra-open #toolMenu.sheet{
  body.in-editor #editorExtraToolbar .editor-extra-btn{height:52px}
  body.in-editor.editor-extra-open #toolMenu.sheet{bottom:198px!important}
 }
+
+/* Přesně podle ukázky: spodní paleta se vysouvá tažením nahoru a
+   zasouvá tažením dolů. Tři tečky zůstávají alternativním ovládáním. */
+body.in-editor #editorView .toolbar{position:relative!important;touch-action:pan-y}
+body.in-editor #editorView .toolbar::before{
+ content:"";position:absolute;top:-9px;left:50%;transform:translateX(-50%);
+ width:42px;height:5px;border-radius:7px;background:#737078;
+ box-shadow:0 0 0 6px #333136;pointer-events:none;z-index:4
+}
+body.in-editor.editor-extra-open #editorView .toolbar::before{background:#d9c3fa}
+body.in-editor #editorExtraToolbar{touch-action:pan-y}
