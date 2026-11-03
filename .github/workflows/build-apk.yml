@@ -1,7 +1,12 @@
 name: Sestavit a vydat Zaměřovač TEST
-# Testovaci APK vydavat jen na vyzadani; ne po kazdem commitu.
+# APK spustit jen rucne nebo zmenou vyhrazeneho spousteciho souboru.
+# Obycejne commity na main nesestavuji aplikaci.
 on:
   workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - '.github/apk-build-request.txt'
 concurrency:
   group: zamerovac-test-apk-${{ github.ref }}
   cancel-in-progress: true
