@@ -116,7 +116,7 @@ function drawSelectedOutline(c,item){
  c.strokeStyle='rgba(255,255,255,.73)';
  c.lineWidth=1.4;
  for(const point of [a,b]){
-  c.beginPath();c.arc(point.x,point.y,12,0,Math.PI*2);c.fill();c.stroke();
+  c.beginPath();c.arc(point.x,point.y,14,0,Math.PI*2);c.fill();c.stroke();
  }
  c.restore();
 }
@@ -128,20 +128,20 @@ function drawSelectedGrips(c){
  if(item.type==='note'&&item.media?.length)return;
  if(['dimension','chain','cumulative'].includes(item.type))return;
  c.save();
- c.fillStyle='rgba(255,255,255,.90)';
- c.strokeStyle='#353535';c.lineWidth=1.5;
+ c.fillStyle='rgba(255,255,255,.14)';
+ c.strokeStyle='rgba(255,255,255,.78)';c.lineWidth=1.6;
  if(item.type==='note'&&!item.media?.length){
   const p=noteCaptionScreen(item),anchor=worldToScreen(item.a||{x:0,y:0});
   c.strokeRect(p.x-14,p.y-14,28,28);
-  c.beginPath();c.arc(anchor.x,anchor.y,6,0,Math.PI*2);c.fill();
+  if(selectedHandle?.item?.id===item.id&&selectedHandle.kind==='point'&&selectedHandle.dragged){c.beginPath();c.arc(anchor.x,anchor.y,14,0,Math.PI*2);c.fill();c.stroke();}
  }else if(item.type==='note'||item.type==='symbol'){
   const p=worldToScreen(item.a||{x:0,y:0});
   c.strokeRect(p.x-14,p.y-14,28,28);
-  c.beginPath();c.arc(p.x,p.y,6,0,Math.PI*2);c.fill();
+  if(item.type!=='note'||(selectedHandle?.item?.id===item.id&&selectedHandle.kind==='point'&&selectedHandle.dragged)){c.beginPath();c.arc(p.x,p.y,14,0,Math.PI*2);c.fill();c.stroke();}
  }else{
   for(const key of ['a','b'])if(item[key]){
    const p=worldToScreen(item[key]);
-   c.beginPath();c.arc(p.x,p.y,7,0,Math.PI*2);c.fill();c.stroke();
+   c.beginPath();c.arc(p.x,p.y,14,0,Math.PI*2);c.fill();c.stroke();
   }
  }
  c.restore();
@@ -356,7 +356,7 @@ function stageDown(e){
   let hit;
   if(wantsCaption)hit={item:candidate,kind:'note-caption'};
   else if(grip?.item.id===candidate.id)hit=grip;
-  else if(['dimension','chain','cumulative'].includes(candidate.type))
+  else if(['dimension','chain','cumulative','line','arrow','angle','target'].includes(candidate.type))
    hit={item:candidate,kind:'move-dimension'};
   else if(label?.item.id===candidate.id)hit=label;
   else hit={item:candidate,kind:'open-selected'};
@@ -379,7 +379,7 @@ function stageDown(e){
  if(selected!==null){selected=null;paint()}
  if(mode==='select')return;
  if(mode==='pan'){drag={screen:s,dx:view.dx,dy:view.dy};return}
- drawPointerId=e.pointerId;drawStart=snap(screenToWorld(s));
+ drawPointerId=e.pointerId;drawStart=mode==='freehand'?boundsPoint(screenToWorld(s)):snap(screenToWorld(s));
  drawCurrent=drawStart;stroke=[drawStart];magnifierPoint=drawStart;paint();
 }
 function stageMove(e){if(screen!=='editor')return;const s=eventPoint(e);if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,s);if(pointers.size===2&&gesture){let v=[...pointers.values()],dist=Math.hypot(v[0].x-v[1].x,v[0].y-v[1].y);let mid={x:(v[0].x+v[1].x)/2,y:(v[0].y+v[1].y)/2};view.zoom=Math.max(.05,Math.min(12,gesture.zoom*dist/Math.max(1,gesture.distance)));view.dx=mid.x-gesture.world.x*view.zoom;view.dy=mid.y-gesture.world.y*view.zoom;paint();return}
@@ -430,7 +430,7 @@ if(selectedHandle&&pointers.size===1){
   paint();return;
 }
 if(drag&&mode==='pan'){view.dx=drag.dx+(s.x-drag.screen.x);view.dy=drag.dy+(s.y-drag.screen.y);paint();return}
-if(drawStart&&drawPointerId===e.pointerId){drawCurrent=snap(screenToWorld(s),drawStart);magnifierPoint=drawCurrent;if(mode==='freehand'||mode==='polyline')stroke.push(drawCurrent);paint()}}
+if(drawStart&&drawPointerId===e.pointerId){drawCurrent=mode==='freehand'?boundsPoint(screenToWorld(s)):snap(screenToWorld(s),drawStart);magnifierPoint=drawCurrent;if(mode==='freehand'||mode==='polyline')stroke.push({...drawCurrent});paint()}}
 function stageUp(e){
  if(screen!=='editor')return;
  const wasTwo=pointers.size===2;
