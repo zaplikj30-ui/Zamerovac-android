@@ -462,7 +462,8 @@ const readings=[];
 window.onLaserValue=function(value,unit){
  readings.unshift({value:String(value),unit:String(unit||'mm'),time:new Date().toISOString()});
  if(readings.length>40)readings.pop();
- originalLaser(value,unit);
+ const handled=typeof window.__handleLaserAuto==='function'&&window.__handleLaserAuto(value,unit);
+ if(!handled)originalLaser(value,unit);
  logEvent('bluetooth','Přijata hodnota z laseru');
 };
 function showLaserHistory(){
@@ -470,10 +471,14 @@ function showLaserHistory(){
  (readings.length?readings.map((r,i)=>'<div class="historyLine"><span>'+esc(r.value)+' '+esc(r.unit)+' <small>'+esc(new Date(r.time).toLocaleTimeString('cs-CZ'))+'</small></span><button data-reading="'+i+'">Použít</button></div>').join(''):'<p>Žádné naměřené hodnoty</p>')+
  '<button class="outline" id="clearReadings">Vymazat historii</button>',()=>true,'Zavřít');
  $('modalBody').querySelectorAll('[data-reading]').forEach(b=>b.onclick=()=>{
-  const r=readings[Number(b.dataset.reading)],input=$('measureInput');
-  if(input){input.value=r.value;$('measureUnit').value=r.unit}
-  else if(screen==='editor'&&selected){const it=current.items.find(i=>i.id===selected);if(it&&dimTypes.includes(it.type)){checkpoint();it.measure=r.value;it.unit=r.unit;commitEditor()}}
-  $('modal').hidden=true;notify('Hodnota připravena');
+  const r=readings[Number(b.dataset.reading)];
+  $('modal').hidden=true;
+  if(typeof window.__applyLaserMeasurement==='function'){
+    window.__applyLaserMeasurement(r.value,r.unit,{fromHistory:true});
+  }else if(screen==='editor'&&selected){
+    const it=current?.items?.find(i=>i.id===selected);
+    if(it&&['dimension','chain','cumulative'].includes(it.type)){checkpoint();it.measure=r.value;it.unit=r.unit;commitEditor()}
+  }
  });
  $('clearReadings').onclick=()=>{readings.length=0;$('modal').hidden=true;notify('Historie měření vymazána')};
 }
