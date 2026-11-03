@@ -46,7 +46,7 @@ class SourceSmokeTest(unittest.TestCase):
         css=(ASSETS/'style.css').read_text()
         self.assertIn('getPackageManager().getPackageInfo(getPackageName(),0).versionName', activity)
         self.assertIn('Native.getAppVersion()', app)
-        self.assertIn("id=\\\"appVersionInfo\\\"", app)
+        self.assertIn('id="appVersionInfo"', app)
         self.assertIn('#screenTitle .app-version', css)
 
     def test_cloud_and_media_are_real_modules(self):
