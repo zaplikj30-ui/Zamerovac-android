@@ -95,6 +95,7 @@ public class MainActivity extends Activity {
     private String cameraId;
     private String pendingPhotoLocationId;
     private String exportBase64;
+    private String pendingArchiveFolderId;
     private MediaRecorder recorder;
     private FileOutputStream activeUpload;
     private String activeUploadId;
@@ -404,7 +405,7 @@ public class MainActivity extends Activity {
     }
     @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);
         if(request==REQUEST_FILE){if(fileCallback!=null){Uri[] resultUris=null;if(result==RESULT_OK&&data!=null){if(data.getClipData()!=null){int n=data.getClipData().getItemCount();resultUris=new Uri[n];for(int i=0;i<n;i++)resultUris[i]=data.getClipData().getItemAt(i).getUri();}else if(data.getData()!=null)resultUris=new Uri[]{data.getData()};}fileCallback.onReceiveValue(resultUris);fileCallback=null;}return;}
-        if(result!=RESULT_OK){if(request==REQUEST_ATTACH)js("window.onNativeMediaDone?.()");if(request==REQUEST_ISSUE_EXPORT)pendingIssueZipId=null;return;}
+        if(result!=RESULT_OK){if(request==REQUEST_BACKUP)pendingArchiveFolderId=null;if(request==REQUEST_ATTACH)js("window.onNativeMediaDone?.()");if(request==REQUEST_ISSUE_EXPORT)pendingIssueZipId=null;return;}
         if(request==REQUEST_ATTACH&&data!=null){int done=0;try{
             if(data.getClipData()!=null){for(int i=0;i<data.getClipData().getItemCount();i++){importUri(data.getClipData().getItemAt(i).getUri());done++;}}
             else if(data.getData()!=null){importUri(data.getData());done++;}
@@ -447,10 +448,12 @@ public class MainActivity extends Activity {
         }
         if(request==REQUEST_BACKUP&&data!=null&&data.getData()!=null){
             final Uri destination=data.getData();
+            final String folderId=pendingArchiveFolderId;
+            pendingArchiveFolderId=null;
             new Thread(()->{
                 try(OutputStream stream=getContentResolver().openOutputStream(destination,"w")){
                     if(stream==null)throw new IOException("Nelze otevřít soubor");
-                    exportArchive(stream);
+                    exportArchive(stream,folderId);
                     onSyncResult("ZIP záloha zakázek a původních médií byla uložena",null);
                 }catch(Exception e){error("Záloha ZIP: "+e.getMessage());}
             },"ZamerovacBackup").start();
@@ -458,14 +461,42 @@ public class MainActivity extends Activity {
         }
         if(request==REQUEST_EXPORT&&data!=null&&data.getData()!=null&&exportBase64!=null){try(OutputStream out=getContentResolver().openOutputStream(data.getData(),"w")){out.write(Base64.decode(exportBase64,Base64.DEFAULT));exportBase64=null;onSyncResult("Obrázek uložen",null);}catch(Exception e){error("Export: "+e.getMessage());}}
     }
-    private void exportArchive(OutputStream destination) throws IOException{
-        final String json=readDb();
+    private void exportArchive(OutputStream destination,String folderId) throws IOException{
+        String json=readDb();
         if(json.isEmpty())throw new IOException("Databáze je prázdná");
         JSONObject parsed;
         try{parsed=new JSONObject(json);if(parsed.optInt("schema")!=1)throw new IOException("Nepodporovaná verze dat");}
         catch(JSONException e){throw new IOException("Poškozená databáze",e);}
         Set<String> mediaIds=new HashSet<>();
         JSONArray records=parsed.optJSONArray("records");
+        if(folderId!=null){
+            if(records==null)throw new IOException("Složka neexistuje");
+            Set<String> included=new HashSet<>();
+            boolean found=false;
+            for(int i=0;i<records.length();i++){
+                JSONObject r=records.optJSONObject(i);
+                if(r!=null&&folderId.equals(r.optString("id"))&&"folder".equals(r.optString("kind"))&&!r.optBoolean("deleted")){
+                    included.add(folderId);found=true;break;
+                }
+            }
+            if(!found)throw new IOException("Vybraná složka neexistuje");
+            boolean expanded=true;
+            while(expanded){
+                expanded=false;
+                for(int i=0;i<records.length();i++){
+                    JSONObject r=records.optJSONObject(i);
+                    if(r!=null&&!r.optBoolean("deleted")&&included.contains(r.optString("parentId"))&&included.add(r.optString("id")))
+                        expanded=true;
+                }
+            }
+            JSONArray subset=new JSONArray();
+            for(int i=0;i<records.length();i++){
+                JSONObject r=records.optJSONObject(i);
+                if(r!=null&&included.contains(r.optString("id")))subset.put(r);
+            }
+            try{parsed.put("records",subset);}catch(JSONException ex){throw new IOException("Nedá se připravit export složky",ex);}
+            records=subset;json=parsed.toString();
+        }
         if(records!=null)for(int i=0;i<records.length();i++){
             JSONObject record=records.optJSONObject(i);
             if(record!=null)collectMediaIds(record,mediaIds);
@@ -676,9 +707,20 @@ public class MainActivity extends Activity {
         }
         @JavascriptInterface public void exportBackup(){
             runOnUiThread(()->{
+                pendingArchiveFolderId=null;
                 Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
                     .setType("application/zip").putExtra(Intent.EXTRA_TITLE,"Zamerovac-zaloha.zip");
                 try{startActivityForResult(intent,REQUEST_BACKUP);}catch(Exception e){error("Záloha: "+e.getMessage());}
+            });
+        }
+        @JavascriptInterface public void exportFolder(String folderId){
+            if(folderId==null||!folderId.matches("[a-zA-Z0-9_-]{1,100}")){error("Neplatná složka");return;}
+            runOnUiThread(()->{
+                pendingArchiveFolderId=folderId;
+                Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+                    .setType("application/zip").putExtra(Intent.EXTRA_TITLE,"Zamerovac-slozka.zip");
+                try{startActivityForResult(intent,REQUEST_BACKUP);}
+                catch(Exception e){pendingArchiveFolderId=null;error("Export složky: "+e.getMessage());}
             });
         }
     }
