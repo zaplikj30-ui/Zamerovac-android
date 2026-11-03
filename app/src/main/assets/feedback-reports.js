@@ -18,7 +18,7 @@
  flag.innerHTML='<svg width="25" height="25" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 21V4m0 1c2-2 5-2 8 0s5 2 7 0v12c-2 2-5 2-7 0s-6-2-8 0"/></svg>';
  document.body.appendChild(flag);
  const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
- let flagPosition={edge:'right',top:.43};
+ let flagPosition={edge:'right',top:.17};
  try{const saved=JSON.parse(localStorage.getItem(POS)||'{}');if(['left','right'].includes(saved.edge)&&Number.isFinite(saved.top))flagPosition=saved}catch(e){}
  function placeFlag(){
   flag.style.top=clamp(flagPosition.top,0.10,0.88)*100+'%';
@@ -33,7 +33,7 @@
   longHandled=false;
   try{flag.setPointerCapture(e.pointerId)}catch(err){}
   clearTimeout(longTimer);
-  longTimer=setTimeout(()=>{if(drag&&!drag.moved){longHandled=true;showReportList()}},650);
+  longTimer=setTimeout(()=>{if(drag&&!drag.moved){longHandled=true;drag=null;showReportList()}},650);
  });
  flag.addEventListener('pointermove',e=>{
   if(!drag)return;
