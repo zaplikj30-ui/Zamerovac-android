@@ -24,7 +24,7 @@ class DimensionSelectionTests(unittest.TestCase):
 
     def test_visual_rings_are_translucent_and_independent_of_touch_target(self):
         self.assertIn("c.fillStyle='rgba(255,255,255,.12)'", self.outline)
-        self.assertIn('c.arc(point.x,point.y,12,0,Math.PI*2)', self.outline)
+        self.assertIn('c.arc(point.x,point.y,14,0,Math.PI*2)', self.outline)
         self.assertIn('function nearestHandle(point){let best=null,dist=31', self.script)
         self.assertNotIn('current.items.push', self.outline)
 
