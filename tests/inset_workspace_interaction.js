@@ -48,12 +48,14 @@ const resizeY=note.insetY+oldWidth/2;
 drag([resizeX,resizeY],[resizeX+20,resizeY]);
 assert.ok(note.insetWidth>oldWidth,'Right-side handle must resize photo');
 assert.equal(sandbox.commits,3,'Changes must be persisted on drag end');
-const caption={x:145,y:77}; // Původní pozice textu musí zůstat i po přesunutí hrotu.
-assert.equal(note.b.x,caption.x,'Arrow motion must not move the caption X');
-assert.equal(note.b.y,caption.y,'Arrow motion must not move the caption Y');
+// Textový rámeček bez samostatného přesunu následuje vloženou fotografii.
+assert.equal(note.captionMoved,undefined,'Dragging arrow must not detach caption from photo');
+const caption={x:note.insetX+note.insetWidth/2,y:note.insetY+note.insetWidth+18};
 const heightBefore=note.insetY;
 drag([caption.x,caption.y],[caption.x+22,caption.y+10]);
-assert.equal(note.captionMoved,true,'Text label must move separately');
+assert.equal(note.captionMoved,true,'Manual text drag still allows independent caption');
+assert.equal(note.b.x,caption.x+22,'Manual caption drag moves only caption x');
+assert.equal(note.b.y,caption.y+10,'Manual caption drag moves only caption y');
 assert.equal(note.insetY,heightBefore,'Moving caption must not move detail');
 assert.equal(note.a.x,130,'Moving caption must not move arrow origin');
 assert.equal(sandbox.commits,4,'Caption motion must be saved');
