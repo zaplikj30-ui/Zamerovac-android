@@ -55,10 +55,12 @@ public final class PhotoAddressResolver {
             };
             main.postDelayed(fallback,14000);
             Consumer<Location> location=loc->{
+                // A null GPS result must NOT complete the lookup: the
+                // network provider may still return a usable indoor fix.
+                if(!isFresh(loc))return;
                 if(!finished.compareAndSet(false,true))return;
                 main.removeCallbacks(fallback);
-                if(isFresh(loc))geocode(activity,loc,result);
-                else result.accept("");
+                geocode(activity,loc,result);
             };
             // Indoors GPS may never lock; after four seconds also try the
             // network/Wi-Fi provider. Whichever returns a fresh fix first wins.
