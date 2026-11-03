@@ -2,5 +2,5 @@
 # Běžné změny kódu APK nesestavují. Teprve změna tohoto souboru spustí workflow build-apk.yml.
 # Při požadavku na sestavení uprav číslo a popis níže, commitni do main.
 
-request: 3
-reason: test Bluetooth Bosch GLM 100-25 C - opravene BLE vyhledavani, protokol mereni, historie, nova identifikace zarizeni
+request: 4
+reason: souhrnna aktualizace - barevne ikony, experimenty skryte v menu, Bosch desetiny a zaokrouhlovani, galerie, foto poznamky a fotoaparat
