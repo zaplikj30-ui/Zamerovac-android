@@ -74,8 +74,7 @@
   return it.captionMoved?p:{x:p.x+45,y:p.y-23};
  }
  function labelRect(c,it,g){
-  const text=String(it.text||'').trim();
-  if(!text)return null;
+  const text=String(it.text||'Klikněte pro zadání textu').trim();
   const p=labelPosition(it,g),fs=Number(it.fontSize)||Math.max(14,Number(prefs.fontSize)||17);
   c.font='500 '+fs+'px sans-serif';
   const width=clamp(c.measureText(text).width+18,88,Math.max(88,stageCanvas.clientWidth-20));
@@ -137,10 +136,10 @@
    const image=window.__detailPhotoCache[item.media[0]];
    const g=layout(item,image);
    const near=position=>pointerDistance(point,position)<=24;
-   if(item.text){
+   {
      // Textová část poznámky může být nezávisle přesouvána.
      const p=labelPosition(item,g);
-     const w=clamp(String(item.text).length*(Number(item.fontSize)||17)*.62+18,88,stageCanvas.clientWidth-20);
+     const w=clamp(String(item.text||'Klikněte pro zadání textu').length*(Number(item.fontSize)||17)*.62+18,88,stageCanvas.clientWidth-20);
      if(Math.abs(point.x-p.x)<w/2+7&&Math.abs(point.y-p.y)<24)
        return {item,g,kind:'caption'};
    }
