@@ -212,7 +212,7 @@ window.onAddressCandidates=function(raw){
 };
 
 const browseGallery=document.createElement('button');
-browseGallery.id='browseGallery';browseGallery.className='ico';browseGallery.textContent='▧';browseGallery.title='Prohlížet fotografie zakázky';
+browseGallery.id='browseGallery';browseGallery.className='ico';browseGallery.innerHTML='<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="6" width="15" height="15" rx="2"/><path d="M3 16V5a2 2 0 0 1 2-2h11"/><circle cx="16" cy="10" r="1.5"/><path d="m7 18 4-4 3 3 2-2 4 4"/></svg>';browseGallery.title='Galerie fotografií';browseGallery.setAttribute('aria-label','Galerie fotografií');
 $('browserFoot').insertBefore(browseGallery,$('bluetoothBtn'));
 browseGallery.onclick=()=>openGallery(0);
 let gallery=null,galleryList=[],galleryIndex=0,galleryStart=null;
@@ -452,7 +452,10 @@ function renderBluetooth(){
  const b=$('bluetoothBtn');
  b.classList.toggle('connecting',laserState==='connecting');
  b.classList.toggle('connected',laserState==='connected');
- b.textContent=laserState==='connected'?'ᛒ✓':laserState==='connecting'?'ᛒ◌':'ᛒ̸';
+ b.classList.toggle('disconnected',laserState!=='connected'&&laserState!=='connecting');
+ const icon='<svg class="bluetooth-symbol" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7l10 10-5 4V3l5 4L7 17"/></svg>';
+ const overlay=laserState==='connected'?'<span class="bt-overlay bt-check" aria-hidden="true">✓</span>':laserState==='connecting'?'<span class="bt-overlay bt-spinner" aria-hidden="true"></span>':'<span class="bt-overlay bt-off" aria-hidden="true">×</span>';
+ b.innerHTML=icon+overlay;
  b.title='Bosch Bluetooth: '+(laserState==='connected'?'připojen':laserState==='connecting'?'připojování':'odpojen')+(laserName?' · '+laserName:'');
  b.setAttribute('aria-label',b.title);
 }
