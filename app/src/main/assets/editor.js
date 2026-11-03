@@ -139,7 +139,11 @@ function drawSelectedGrips(c){
   c.strokeRect(p.x-14,p.y-14,28,28);
   if(item.type!=='note'||(selectedHandle?.item?.id===item.id&&selectedHandle.kind==='point'&&selectedHandle.dragged)){c.beginPath();c.arc(p.x,p.y,14,0,Math.PI*2);c.fill();c.stroke();}
  }else{
-  for(const key of ['a','b'])if(item[key]){
+  if(item.type==='polyline'&&Array.isArray(item.points)){
+   for(const vertex of item.points){
+    const p=worldToScreen(vertex);c.beginPath();c.arc(p.x,p.y,14,0,Math.PI*2);c.fill();c.stroke();
+   }
+  }else for(const key of ['a','b'])if(item[key]){
    const p=worldToScreen(item[key]);
    c.beginPath();c.arc(p.x,p.y,14,0,Math.PI*2);c.fill();c.stroke();
   }
