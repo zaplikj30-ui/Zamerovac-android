@@ -67,6 +67,7 @@ class SourceSmokeTest(unittest.TestCase):
         resolver=(ROOT/'app/src/main/java/cz/zamerovac/app/PhotoAddressResolver.java').read_text()
         manifest=(ROOT/'app/src/main/AndroidManifest.xml').read_text()
         self.assertIn('java.time.Instant.now().toString()', activity)
+        self.assertIn('ExifInterface.TAG_DATETIME_ORIGINAL', activity)
         self.assertIn('PhotoAddressResolver.resolve', activity)
         self.assertIn('window.onNativePhotoAddress=', app)
         self.assertIn('photoTakenAt', app)
