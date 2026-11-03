@@ -2,5 +2,5 @@
 # Běžné změny kódu APK nesestavují. Teprve změna tohoto souboru spustí workflow build-apk.yml.
 # Při požadavku na sestavení uprav číslo a popis níže, commitni do main.
 
-request: 2
-reason: prvni souhrnna aktualizace editoru - uchopy, cara, poznamky, galerie, symboly, export slozky
+request: 3
+reason: test Bluetooth Bosch GLM 100-25 C - opravene BLE vyhledavani, protokol mereni, historie, nova identifikace zarizeni
