@@ -82,3 +82,9 @@ body.in-editor .top,body.in-note .top{display:none}
   box-shadow:0 3px 10px #0009;
 }
 #editorHint[hidden]{display:none!important}
+
+/* Installed app version always visible on the main screen. */
+#screenTitle{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;line-height:1.08}
+#screenTitle .app-title{font-size:16px;font-weight:600}
+#screenTitle .app-version{font-size:11px;font-weight:500;color:#f0f6d7;opacity:.92;padding-top:3px}
+#appVersionInfo strong{font-size:13px;font-weight:600;color:var(--muted)}
