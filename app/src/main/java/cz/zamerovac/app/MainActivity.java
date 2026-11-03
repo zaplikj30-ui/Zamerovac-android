@@ -106,6 +106,8 @@ public class MainActivity extends Activity {
     private BluetoothGatt gatt;
     private BoschClassicReader classic;
     private ScanCallback scanCallback;
+    private BluetoothGattCharacteristic boschCommand;
+    private volatile boolean boschStreamEnabled=false;
     private volatile boolean syncRunning=false;
     private String recordingId;
     private String pendingMediaType="media";
@@ -642,7 +644,7 @@ public class MainActivity extends Activity {
                 catch(Exception ex){error("Vyhledávání adres: "+ex.getMessage());}
             },"AddressRUIAN").start();
         }
-        @JavascriptInterface public void connectLaser(){runOnUiThread(()->showLaserChoices());}
+        @JavascriptInterface public void connectLaser(){runOnUiThread(()->startScan());}
         @JavascriptInterface public void setAccent(String color){
             if(color==null||!color.matches("#[0-9a-fA-F]{6}"))return;
             runOnUiThread(()->{try{statusFill.setBackgroundColor(Color.rgb(51,43,64));}catch(Exception ignored){}});
@@ -761,44 +763,208 @@ public class MainActivity extends Activity {
     private void syncCloud(){if(syncRunning){onSyncResult("Synchronizace již probíhá",null);return;}syncRunning=true;new Thread(()->{try{SyncEngine.Result result=new SyncEngine(this,settings).sync();onSyncResult(result.message,result.data);}catch(Exception e){error("Synchronizace: "+e.getMessage());}finally{syncRunning=false;}},"DriveSync").start();}
     private void scheduleSync(){try{JobScheduler jobs=(JobScheduler)getSystemService(JOB_SCHEDULER_SERVICE);JobInfo j=new JobInfo.Builder(14,new ComponentName(this,SyncJob.class)).setPeriodic(15*60*1000L).setRequiredNetworkType(settings.getBoolean("wifiOnly",false)?JobInfo.NETWORK_TYPE_UNMETERED:JobInfo.NETWORK_TYPE_ANY).setPersisted(true).build();if(settings.getString("treeUri",null)!=null&&settings.getBoolean("autoSync",true))jobs.schedule(j);else jobs.cancel(14);}catch(Exception e){android.util.Log.w("Zamerovac","Background job",e);}}
     @Override public void onResume(){super.onResume();if(settings!=null&&settings.getBoolean("autoSync",true)&&settings.getString("treeUri",null)!=null)handler.postDelayed(()->syncCloud(),1400);}
-    @Override protected void onDestroy(){closeUpload();if(gatt!=null)gatt.close();if(classic!=null)classic.close();if(recorder!=null){recorder.release();recorder=null;}if(web!=null)web.destroy();super.onDestroy();}
+    @Override protected void onDestroy(){closeUpload();stopLaserScan();if(gatt!=null)gatt.close();if(classic!=null)classic.close();if(recorder!=null){recorder.release();recorder=null;}if(web!=null)web.destroy();super.onDestroy();}
 
-    private void showLaserChoices(){
-        new AlertDialog.Builder(this).setTitle("Připojení laseru Bosch")
-        .setItems(new String[]{"Spárovaný GLM 50C / GLM 100C (Bluetooth Classic)","Vyhledat novější Bluetooth LE měřič"},
-            (dialog,which)->{if(which==0)pickPairedClassic();else startScan();})
-        .setNegativeButton("Zrušit",null).show();
-    }
-    private void pickPairedClassic(){
-        if(Build.VERSION.SDK_INT>=31&&checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT)!=PackageManager.PERMISSION_GRANTED){
-            requestPermissions(new String[]{Manifest.permission.BLUETOOTH_CONNECT},REQUEST_PERMISSIONS);error("Povol Bluetooth a zopakuj připojení");return;
+
+    // The GLM 100-25 C is Bluetooth LE. Show ALL nearby LE advertisements (like
+    // ImageMeter), preferring Bosch entries but not hiding unknown device names.
+    private void stopLaserScan(){
+        if(scanner!=null&&scanCallback!=null){
+            try{scanner.stopScan(scanCallback);}catch(Exception ignored){}
+            scanCallback=null;
         }
-        BluetoothManager mgr=(BluetoothManager)getSystemService(BLUETOOTH_SERVICE);
-        BluetoothAdapter adapter=mgr==null?null:mgr.getAdapter();
-        if(adapter==null||!adapter.isEnabled()){error("Zapni Bluetooth");return;}
-        java.util.Set<BluetoothDevice> bonded=adapter.getBondedDevices();
-        if(bonded==null||bonded.isEmpty()){error("Nejprve spáruj laser v nastavení Bluetooth telefonu");return;}
-        ArrayList<BluetoothDevice> devices=new ArrayList<>(bonded);
-        String[] labels=new String[devices.size()];for(int i=0;i<devices.size();i++){
-            String name=devices.get(i).getName();labels[i]=(name==null?"Zařízení":name)+" · "+devices.get(i).getAddress();
+    }
+    private void startScan(){
+        if(Build.VERSION.SDK_INT>=31&&
+           (checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN)!=PackageManager.PERMISSION_GRANTED||
+            checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT)!=PackageManager.PERMISSION_GRANTED)){
+            requestPermissions(new String[]{Manifest.permission.BLUETOOTH_SCAN,Manifest.permission.BLUETOOTH_CONNECT},
+                REQUEST_PERMISSIONS);
+            error("Povol Bluetooth a zkus připojení znovu");
+            return;
         }
-        new AlertDialog.Builder(this).setTitle("Vyber spárovaný laser").setItems(labels,(dlg,n)->{
-            if(classic!=null)classic.close();classic=new BoschClassicReader(devices.get(n),
-                value->js("window.onLaserValue("+JSONObject.quote(value)+","+JSONObject.quote("mm")+")"),
-                this::error,status->laserStatus(status,devices.get(n).getName()));
-            laserStatus("connecting",devices.get(n).getName());
-            classic.start();
-        }).setNegativeButton("Zrušit",null).show();
+        BluetoothManager manager=(BluetoothManager)getSystemService(BLUETOOTH_SERVICE);
+        BluetoothAdapter adapter=manager==null?null:manager.getAdapter();
+        if(adapter==null||!adapter.isEnabled()){
+            error("Zapni Bluetooth telefonu a měřiče Bosch");
+            laserStatus("off","");
+            return;
+        }
+        stopLaserScan();
+        scanner=adapter.getBluetoothLeScanner();
+        if(scanner==null){error("Bluetooth LE není dostupné");laserStatus("off","");return;}
+        scanned.clear();
+        laserStatus("connecting","vyhledávání zařízení");
+        scanCallback=new ScanCallback(){
+            @Override public void onScanResult(int type,ScanResult result){
+                BluetoothDevice device=result.getDevice();
+                if(device==null)return;
+                runOnUiThread(()->{if(!scanned.contains(device))scanned.add(device);});
+            }
+            @Override public void onScanFailed(int code){
+                runOnUiThread(()->{stopLaserScan();laserStatus("off","");error("Vyhledávání Bluetooth se nezdařilo ("+code+")");});
+            }
+        };
+        try{
+            scanner.startScan(scanCallback);
+            handler.postDelayed(()->{
+                if(scanCallback==null)return; // scan cancelled or failed
+                stopLaserScan();
+                ArrayList<BluetoothDevice> devices=new ArrayList<>(scanned);
+                devices.sort((a,b)->{
+                    String aa=String.valueOf(a.getName()).toUpperCase(java.util.Locale.ROOT);
+                    String bb=String.valueOf(b.getName()).toUpperCase(java.util.Locale.ROOT);
+                    boolean x=aa.contains("BOSCH")||aa.contains("GLM");
+                    boolean y=bb.contains("BOSCH")||bb.contains("GLM");
+                    return x==y?aa.compareTo(bb):(x?-1:1);
+                });
+                if(devices.isEmpty()){
+                    laserStatus("off","");
+                    error("Nenašel jsem žádné LE zařízení. Zapni Bluetooth na laseru a vypni spojení v ImageMeteru.");
+                    return;
+                }
+                String[] labels=new String[devices.size()];
+                for(int i=0;i<devices.size();i++){
+                    BluetoothDevice d=devices.get(i);
+                    String name=d.getName();
+                    labels[i]=(name==null||name.trim().isEmpty()?"Neznámé zařízení":name)
+                            +" · "+d.getAddress();
+                }
+                laserStatus("off","");
+                new AlertDialog.Builder(this)
+                    .setTitle("Vyber měřič Bosch (Bluetooth LE)")
+                    .setItems(labels,(dialog,index)->connectGatt(devices.get(index)))
+                    .setNegativeButton("Zrušit",(dialog,index)->laserStatus("off",""))
+                    .show();
+            },7000);
+        }catch(Exception exception){
+            stopLaserScan();
+            laserStatus("off","");
+            error("Bluetooth vyhledávání: "+exception.getMessage());
+        }
     }
-    private void startScan(){if(Build.VERSION.SDK_INT>=31&&(checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN)!=PackageManager.PERMISSION_GRANTED||checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT)!=PackageManager.PERMISSION_GRANTED)){requestPermissions(new String[]{Manifest.permission.BLUETOOTH_SCAN,Manifest.permission.BLUETOOTH_CONNECT},REQUEST_PERMISSIONS);error("Povol Bluetooth a vyber měřič znovu");return;}
-        BluetoothManager m=(BluetoothManager)getSystemService(BLUETOOTH_SERVICE);BluetoothAdapter adapter=m.getAdapter();if(adapter==null||!adapter.isEnabled()){new AlertDialog.Builder(this).setMessage("Zapni Bluetooth v telefonu a zkus připojení znovu.").setPositiveButton("OK",null).show();return;}
-        scanner=adapter.getBluetoothLeScanner();if(scanner==null){error("Bluetooth BLE není dostupné");return;}scanned.clear();scanCallback=new ScanCallback(){@Override public void onScanResult(int callbackType,ScanResult result){BluetoothDevice d=result.getDevice();if(!scanned.contains(d))scanned.add(d);}};try{scanner.startScan(scanCallback);handler.postDelayed(()->{try{scanner.stopScan(scanCallback);}catch(Exception ignored){}ArrayList<BluetoothDevice> list=new ArrayList<>(scanned);if(list.isEmpty()){error("Nebylo nalezeno žádné BLE zařízení");return;}String[] names=new String[list.size()];for(int i=0;i<list.size();i++){BluetoothDevice d=list.get(i);String name=d.getName();names[i]=(name==null||name.isEmpty()?"Neznámé zařízení":name)+" · "+d.getAddress();}new AlertDialog.Builder(this).setTitle("Vyber laser Bosch").setItems(names,(dlg,i)->connectGatt(list.get(i))).setNegativeButton("Zrušit",null).show();},7000);}catch(SecurityException ex){error("Bluetooth oprávnění: "+ex.getMessage());}}
-    private void connectGatt(BluetoothDevice device){try{if(gatt!=null)gatt.close();laserStatus("connecting",device.getName());gatt=device.connectGatt(this,false,new BluetoothGattCallback(){
-        @Override public void onConnectionStateChange(BluetoothGatt g,int status,int newState){if(newState==2){laserStatus("connected",device.getName());g.discoverServices();}else if(newState==0){laserStatus("off",device.getName());error("Bluetooth odpojeno");}}
-        @Override public void onServicesDiscovered(BluetoothGatt g,int status){for(BluetoothGattService srv:g.getServices())for(BluetoothGattCharacteristic ch:srv.getCharacteristics())if((ch.getProperties()&BluetoothGattCharacteristic.PROPERTY_NOTIFY)!=0){try{g.setCharacteristicNotification(ch,true);for(BluetoothGattDescriptor d:ch.getDescriptors()){if(d.getUuid().toString().equals("00002902-0000-1000-8000-00805f9b34fb")){d.setValue(BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);g.writeDescriptor(d);}}}catch(Exception ignored){}}}
-        @Override public void onCharacteristicChanged(BluetoothGatt g,BluetoothGattCharacteristic ch){processReading(ch.getValue());}
-    });}catch(Exception e){error("Nelze připojit laser: "+e.getMessage());}}
-    private void processReading(byte[] bytes){if(bytes==null)return;String raw=new String(bytes,StandardCharsets.US_ASCII).trim();Matcher m=Pattern.compile("([-+]?[0-9]+(?:[.,][0-9]+)?)\\s*(mm|cm|m|in)?",Pattern.CASE_INSENSITIVE).matcher(raw);
-        if(!m.find()||m.group(0).trim().length()<2)return;try{String value=m.group(1).replace(',','.');String unit=m.group(2)==null?"mm":m.group(2);js("window.onLaserValue("+JSONObject.quote(value)+","+JSONObject.quote(unit)+")");}catch(Exception ignored){}
+    private void connectGatt(BluetoothDevice device){
+        try{
+            stopLaserScan();
+            if(classic!=null){classic.close();classic=null;}
+            if(gatt!=null){gatt.disconnect();gatt.close();gatt=null;}
+            boschCommand=null;
+            boschStreamEnabled=false;
+            String name=device.getName();
+            if(name==null||name.isEmpty())name="Bosch";
+            final String deviceName=name;
+            laserStatus("connecting",deviceName);
+            gatt=device.connectGatt(this,false,new BluetoothGattCallback(){
+                @Override public void onConnectionStateChange(BluetoothGatt connection,int status,int newState){
+                    if(status!=BluetoothGatt.GATT_SUCCESS){
+                        laserStatus("off",deviceName);
+                        error("Spojení Bluetooth selhalo ("+status+"). Zkus měřič znovu.");
+                        connection.close();
+                        return;
+                    }
+                    if(newState==android.bluetooth.BluetoothProfile.STATE_CONNECTED){
+                        laserStatus("connecting",deviceName+" – hledám měření");
+                        if(!connection.discoverServices()){
+                            laserStatus("off",deviceName);
+                            error("Laser neumožnil načíst služby Bluetooth");
+                        }
+                    }else if(newState==android.bluetooth.BluetoothProfile.STATE_DISCONNECTED){
+                        boschStreamEnabled=false;
+                        laserStatus("off",deviceName);
+                        connection.close();
+                    }
+                }
+                @Override public void onServicesDiscovered(BluetoothGatt connection,int status){
+                    if(status!=BluetoothGatt.GATT_SUCCESS){
+                        laserStatus("off",deviceName);
+                        error("Nepodařilo se načíst služby laseru");
+                        return;
+                    }
+                    BluetoothGattService service=connection.getService(BoschBleProtocol.SERVICE_UUID);
+                    BluetoothGattCharacteristic characteristic=service==null?null:
+                        service.getCharacteristic(BoschBleProtocol.MEASUREMENT_UUID);
+                    if(characteristic==null){
+                        laserStatus("off",deviceName);
+                        error("Zařízení nemá očekávaný protokol Bosch GLM LE. Vyber GLM 100-25 C.");
+                        connection.disconnect();
+                        return;
+                    }
+                    boschCommand=characteristic;
+                    int flags=characteristic.getProperties();
+                    boolean indications=(flags&BluetoothGattCharacteristic.PROPERTY_INDICATE)!=0;
+                    boolean notifications=(flags&BluetoothGattCharacteristic.PROPERTY_NOTIFY)!=0;
+                    if(!indications&&!notifications||!connection.setCharacteristicNotification(characteristic,true)){
+                        laserStatus("off",deviceName);
+                        error("Nepodařilo se zapnout příjem měření");
+                        connection.disconnect();
+                        return;
+                    }
+                    BluetoothGattDescriptor cccd=characteristic.getDescriptor(BoschBleProtocol.CCCD_UUID);
+                    if(cccd==null){
+                        laserStatus("off",deviceName);
+                        error("Laser neobsahuje kanál pro potvrzení měření (CCCD)");
+                        connection.disconnect();
+                        return;
+                    }
+                    cccd.setValue(indications?BluetoothGattDescriptor.ENABLE_INDICATION_VALUE:
+                        BluetoothGattDescriptor.ENABLE_NOTIFICATION_VALUE);
+                    if(!connection.writeDescriptor(cccd)){
+                        laserStatus("off",deviceName);
+                        error("Nepodařilo se povolit oznámení z laseru");
+                        connection.disconnect();
+                    }
+                }
+                @Override public void onDescriptorWrite(BluetoothGatt connection,
+                        BluetoothGattDescriptor descriptor,int status){
+                    if(!BoschBleProtocol.CCCD_UUID.equals(descriptor.getUuid()))return;
+                    if(status!=BluetoothGatt.GATT_SUCCESS){
+                        laserStatus("off",deviceName);
+                        error("Laser nepotvrdil přihlášení k měření ("+status+")");
+                        connection.disconnect();
+                        return;
+                    }
+                    BluetoothGattCharacteristic characteristic=boschCommand;
+                    if(characteristic==null)return;
+                    characteristic.setWriteType(
+                        (characteristic.getProperties()&BluetoothGattCharacteristic.PROPERTY_WRITE)!=0?
+                            BluetoothGattCharacteristic.WRITE_TYPE_DEFAULT:
+                            BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE);
+                    characteristic.setValue(BoschBleProtocol.START_STREAM);
+                    if(!connection.writeCharacteristic(characteristic)){
+                        laserStatus("off",deviceName);
+                        error("Nelze zapnout přenos Bosch měření");
+                        connection.disconnect();
+                    }else if(characteristic.getWriteType()==BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE){
+                        boschStreamEnabled=true;
+                        laserStatus("connected",deviceName);
+                    }
+                }
+                @Override public void onCharacteristicWrite(BluetoothGatt connection,
+                        BluetoothGattCharacteristic characteristic,int status){
+                    if(!BoschBleProtocol.MEASUREMENT_UUID.equals(characteristic.getUuid()))return;
+                    if(status==BluetoothGatt.GATT_SUCCESS){
+                        boschStreamEnabled=true;
+                        laserStatus("connected",deviceName);
+                    }else{
+                        laserStatus("off",deviceName);
+                        error("Laser odmítl aktivaci přenosu ("+status+")");
+                        connection.disconnect();
+                    }
+                }
+                @Override public void onCharacteristicChanged(BluetoothGatt connection,
+                        BluetoothGattCharacteristic characteristic){
+                    if(!BoschBleProtocol.MEASUREMENT_UUID.equals(characteristic.getUuid()))return;
+                    String mm=BoschBleProtocol.millimetersText(characteristic.getValue());
+                    if(mm==null)return;
+                    boschStreamEnabled=true;
+                    laserStatus("receiving",deviceName);
+                    js("window.onLaserValue("+JSONObject.quote(mm)+","+JSONObject.quote("mm")+")");
+                }
+            });
+        }catch(Exception exception){
+            laserStatus("off","");
+            error("Připojení laseru: "+exception.getMessage());
+        }
     }
+
 }
