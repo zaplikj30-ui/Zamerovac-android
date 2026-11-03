@@ -11,7 +11,7 @@ function extract(start,end){
  return source.slice(a,b);
 }
 const methods=[
- extract('function noteCaptionScreen(item){','function canvasText(text,p,color,size,angle=0){'),
+ extract('function noteDisplayedCaption(item){','function canvasText(text,p,color,size,angle=0){'),
  extract('function drawArrow(c,point,to,size=10){','function drawItem(c,item){'),
  extract('function nearestHandle(point){','function selectAnnotation(item){'),
  extract('function selectAnnotation(item){','function editItem(item){')
