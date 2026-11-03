@@ -28,6 +28,14 @@ function openExperimentalSettings(){
   save();
  });
 }
+$('back').onclick=()=>showAppMenu('navMenu',[
+ ['⌂  Domů',()=>{currentFolder=null;showFolder()}],
+ ['⚙  Nastavení',()=>toggleSettings()],
+ ['🧪  Experimentální funkce',openExperimentalSettings],
+ ['🗑️  Koš',showTrash],
+ ['☁  Google Disk',chooseCloud],
+ ['ⓘ  O Zaměřovači',()=>modal('O Zaměřovači','<p>Vlastní aplikace pro zaměřování nábytku.</p><p>Verze: <b>'+esc(appVersion)+'</b></p>',()=>true,'Zavřít')]
+]);
 function openExperimentalAction(id){
  if(!experimentalEnabled(id))return;
  if(id==='remoteTrigger'){
@@ -214,7 +222,12 @@ $('searchBtn').onclick=()=>{
  const update=()=>{
   const q=input.value.trim().toLocaleLowerCase('cs');
   if(q.length<2){result.innerHTML='<p>Prohledají se názvy, adresy a texty poznámek.</p>';return}
-  const found=state.records.filter(r=>!r.deleted&&[r.title,r.photoAddress,r.text,...(r.items||[]).map(x=>x.text||''),...(r.checks||[]).map(x=>x.text||'')].join(' ').toLocaleLowerCase('cs').includes(q)).slice(0,60);
+  const found=state.records.filter(r=>!r.deleted&&[r.title,r.photoAddress,r.text,...(r.items||[]).map(x=>x.text||''),...(r.checks||[]).map(x=>x.text||'')].join(' ').toLocaleLowerCase('cs').includes(q))
+   .sort((a,b)=>{
+    const rank=r=>{const title=r.title.toLocaleLowerCase('cs');
+      return title===q?0:title.startsWith(q)?1:title.includes(q)?2:3};
+    return rank(a)-rank(b)||a.title.localeCompare(b.title,'cs');
+   }).slice(0,60);
   result.innerHTML=found.length?found.map(r=>'<button data-found="'+esc(r.id)+'"><span>'+esc(r.title)+'</span><small>'+esc(r.kind)+' · '+esc(r.photoAddress||'')+'</small></button>').join(''):'<p>Nic nenalezeno</p>';
   result.querySelectorAll('[data-found]').forEach(b=>b.onclick=()=>{$('modal').hidden=true;currentFolder=recById(b.dataset.found)?.parentId||null;showFolder();openRecord(b.dataset.found)});
  };
@@ -655,8 +668,8 @@ renderSettings=function(){
  '<label class="setting"><span>Zaokrouhlování laseru</span><select id="laserRoundingChoice"><option value="none">Bez zaokrouhlení</option><option value="0.1">Na 0,1 mm</option><option value="0.5">Na 0,5 mm</option><option value="1">Na celé milimetry</option></select></label>'+
  '<label class="setting"><span>Desetinná místa laseru</span><select id="laserDecimalsChoice"><option value="auto">Automaticky</option><option value="0">0</option><option value="1">1</option><option value="2">2</option><option value="3">3</option></select></label>'+
  '<p class="muted">Původní naměřená hodnota se zachovává. Volby mění zápis nových kót, ne starší historii.</p>'+
- '<div class="setGroup">Zkušební funkce</div>'+
- '<button class="setting" id="openExperiments" style="width:100%">🧪 Experimentální funkce</button>'+
+ 
+ 
  '<div class="setGroup">Informace a údržba</div>'+
  '<button class="setting" id="openDiagnostics" style="width:100%">Diagnostika a sdílení logu</button>'+
  '<button class="setting" id="openHistory" style="width:100%">Novinky a historie aktualizací</button>'+
@@ -671,7 +684,7 @@ renderSettings=function(){
   const select=wrapper.querySelector('#'+id);select.value=String(prefs[key]??(key==='laserDecimals'?'auto':'none'));
   select.onchange=()=>{prefs[key]=select.value;save()};
  }
- wrapper.querySelector('#openExperiments').onclick=openExperimentalSettings;
+ 
  wrapper.querySelector('#openDiagnostics').onclick=openDiagnostics;
  wrapper.querySelector('#openHistory').onclick=showChanges;
  wrapper.querySelector('#openReadings').onclick=showLaserHistory;
