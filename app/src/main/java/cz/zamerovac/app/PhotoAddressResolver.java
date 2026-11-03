@@ -40,10 +40,16 @@ public final class PhotoAddressResolver {
             Handler main=new Handler(Looper.getMainLooper());
             Runnable fallback=()->{
                 if(finished.compareAndSet(false,true)){
-                    Location last=null;
-                    try{last=lm.getLastKnownLocation(precise?LocationManager.GPS_PROVIDER:LocationManager.NETWORK_PROVIDER);}
-                    catch(SecurityException ignored){}
-                    if(isFresh(last))geocode(activity,last,result);
+                    Location gps=null,network=null;
+                    try{
+                        if(precise)gps=lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+                        network=lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+                    }catch(SecurityException ignored){}
+                    // Fallback if there was no fresh GPS fix (common indoors).
+                    Location best=isFresh(gps)?gps:null;
+                    if(isFresh(network)&&(best==null||
+                        network.getTime()>best.getTime()+30000L))best=network;
+                    if(best!=null)geocode(activity,best,result);
                     else result.accept("");
                 }
             };
@@ -54,6 +60,27 @@ public final class PhotoAddressResolver {
                 if(isFresh(loc))geocode(activity,loc,result);
                 else result.accept("");
             };
+            // Indoors GPS may never lock; after four seconds also try the
+            // network/Wi-Fi provider. Whichever returns a fresh fix first wins.
+            if(precise&&lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)){
+                main.postDelayed(()->{
+                    if(finished.get())return;
+                    try{
+                        if(Build.VERSION.SDK_INT>=30){
+                            lm.getCurrentLocation(LocationManager.NETWORK_PROVIDER,
+                                null,activity.getMainExecutor(),location::accept);
+                        }else{
+                            lm.requestSingleUpdate(LocationManager.NETWORK_PROVIDER,
+                                new android.location.LocationListener(){
+                                  @Override public void onLocationChanged(Location l){location.accept(l);}
+                                  @Override public void onStatusChanged(String p,int status,android.os.Bundle extras){}
+                                  @Override public void onProviderEnabled(String p){}
+                                  @Override public void onProviderDisabled(String p){}
+                                },Looper.getMainLooper());
+                        }
+                    }catch(Exception ignored){}
+                },4000);
+            }
             if(Build.VERSION.SDK_INT>=30){
                 lm.getCurrentLocation(provider,null,activity.getMainExecutor(),location::accept);
             }else{
