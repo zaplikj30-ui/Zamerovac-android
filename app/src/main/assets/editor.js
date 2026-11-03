@@ -82,6 +82,31 @@ function finishDraw(item){
   else paint();
 }
 $('lineColor').oninput=e=>{prefs.color=e.target.value;save();paint()};
+// Vyhledávání symbolů odpouští diakritiku, mezery a drobné překlepy.
+function normalizeSymbolSearch(value){
+ return String(value||'').normalize('NFD').replace(/[\u0300-\u036f]/g,'')
+  .toLocaleLowerCase('cs').trim().replace(/\s+/g,' ');
+}
+function symbolSearchNear(word,query){
+ if(query.length<4||Math.abs(word.length-query.length)>1)return false;
+ if(word===query)return true;
+ let i=0,j=0,edits=0;
+ while(i<word.length&&j<query.length){
+  if(word[i]===query[j]){i++;j++;continue}
+  if(++edits>1)return false;
+  if(word.length>query.length)i++;
+  else if(query.length>word.length)j++;
+  else {i++;j++}
+ }
+ return edits+Number(i<word.length||j<query.length)<=1;
+}
+function matchesSymbolSearch(label,query){
+ const q=normalizeSymbolSearch(query);
+ if(!q)return true;
+ const name=normalizeSymbolSearch(label);
+ if(name.includes(q))return true;
+ return name.split(/\s+/).some(word=>symbolSearchNear(word,q));
+}
 function showTools(){closeMenus();$('toolMenu').hidden=false;let html='<div class="toolList">';for(let group of toolGroups){html+=`<div class="sectionLabel">${group.title}</div>`;for(let [key,icon,label] of group.tools)html+=`<button class="choice" data-tool="${key}"><strong>${icon}</strong>${label}</button>`}html+='</div>';$('toolMenu').innerHTML=html;$('toolMenu').querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{setTool(b.dataset.tool);closeMenus()})}
 function setTool(key,keepSelection=false){mode=key;selectedHandle=null;if(!keepSelection)selected=null;drawStart=null;drawCurrent=null;stroke=[];polylineDraft=[];if(key!=='select'&&key!=='pan')lastDrawingTool=key;updateDrawingToolButton();$('editorHint').textContent=key==='select'?'Klepni na kótu nebo posuň její koncový bod':key==='pan'?'Táhni fotografii pro posunutí':key==='polyline'?'Klepáním přidávej vrcholy, opětovným klepnutím na poslední dokončíš':'Táhni prstem mezi body · rozměry zadáváš ručně';paint()}
 function drawGrid(){if(!prefs.snapGrid)return;let spacing=Math.max(5,prefs.gridStep)*view.zoom;if(spacing<8)return;ctx.save();ctx.strokeStyle='#eeeeee28';ctx.lineWidth=1;const left=Math.max(0,Math.ceil(-view.dx/spacing)),right=Math.min(Math.ceil(photoSize.w/prefs.gridStep),Math.ceil((stageCanvas.clientWidth-view.dx)/spacing));const top=Math.max(0,Math.ceil(-view.dy/spacing)),bottom=Math.min(Math.ceil(photoSize.h/prefs.gridStep),Math.ceil((stageCanvas.clientHeight-view.dy)/spacing));ctx.beginPath();for(let i=left;i<=right;i++){const x=view.dx+i*spacing;ctx.moveTo(x,0);ctx.lineTo(x,stageCanvas.clientHeight)}for(let j=top;j<=bottom;j++){const y=view.dy+j*spacing;ctx.moveTo(0,y);ctx.lineTo(stageCanvas.clientWidth,y)}ctx.stroke();ctx.restore()}
@@ -588,11 +613,11 @@ else if(mode==='note'){
    checkpoint();current.items.push(item);commitEditor();finishDraw(item);
   },'Vložit');
  const render=()=>{
-  const cat=$('symbolCategory').value,q=$('symbolSearch').value.toLocaleLowerCase('cs');
+  const cat=$('symbolCategory').value,q=$('symbolSearch').value;
   const choices=$('symbolChoices');
   const found=symbols.map((row,index)=>({row,index}))
    .filter(({row,index})=>(cat==='Vše'||(cat==='Naposledy použité'?recent.includes(index):row[0]===cat))&&
-    (row[2].toLocaleLowerCase('cs').includes(q)||row[0].toLocaleLowerCase('cs').includes(q)));
+    (matchesSymbolSearch(row[2],q)||matchesSymbolSearch(row[0],q)));
   choices.innerHTML=found.map(({row,index})=>
    '<button type="button" class="choice" data-symbol="'+index+'" style="width:100%;text-align:left;'+(chosen===index?'outline:2px solid #f7dc27;':'')+'"><strong>'+row[1]+'</strong> '+escapeHtml(row[2])+'</button>').join('')||'<p class="muted">Žádný symbol neodpovídá výběru.</p>';
   choices.querySelectorAll('[data-symbol]').forEach(btn=>btn.onclick=()=>{
