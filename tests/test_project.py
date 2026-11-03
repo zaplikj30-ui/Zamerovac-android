@@ -49,6 +49,18 @@ class SourceSmokeTest(unittest.TestCase):
         self.assertIn('id="appVersionInfo"', app)
         self.assertIn('#screenTitle .app-version', css)
 
+    def test_photo_thumbnails_and_menu(self):
+        app=(ASSETS/'app.js').read_text()
+        css=(ASSETS/'style.css').read_text()
+        activity=(ROOT/'app/src/main/java/cz/zamerovac/app/MainActivity.java').read_text()
+        self.assertIn('function browserEntryIcon(r)', app)
+        self.assertIn('entry-thumb', app)
+        self.assertIn('photoThumbnail(id)', activity)
+        self.assertIn('"/thumb/"', activity)
+        self.assertIn('.entry-icon.photo-preview', css)
+        # "Zakázky" was a no-op that only called showFolder on itself.
+        self.assertNotIn("['📁  Zakázky',()=>showFolder()]", app)
+
     def test_cloud_and_media_are_real_modules(self):
         java=ROOT/'app/src/main/java/cz/zamerovac/app'
         for module in ('SyncEngine.java','SyncJob.java','BoschClassicReader.java','MediaProvider.java'):
