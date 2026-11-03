@@ -129,9 +129,15 @@
   });
   overlay.querySelector('#feedbackAll').onchange=e=>overlay.querySelectorAll('[data-feedback-check]').forEach(c=>c.checked=e.target.checked);
   overlay.querySelector('#feedbackDeleteResolved').onclick=()=>{
+   const button=overlay.querySelector('#feedbackDeleteResolved');
    const count=reports.filter(r=>r.resolved).length;
    if(!count){notify('Žádné vyřešené připomínky');return}
-   if(!window.confirm('Smazat '+count+' vyřešených připomínek ze seznamu?'))return;
+   if(button.dataset.confirm!=='yes'){
+    button.dataset.confirm='yes';
+    button.textContent='Potvrdit smazání ('+count+')';
+    notify('Pro smazání klepni ještě jednou');
+    return;
+   }
    reports=reports.filter(r=>!r.resolved);persist();showReportList();
   };
   overlay.querySelector('#feedbackShareZip').onclick=()=>sendBatch(false);
@@ -346,5 +352,11 @@
    if(saveBtn){saveBtn.disabled=false;saveBtn.textContent='Uložit připomínku'}
   }finally{busy=false}
  }
+ // Android Zpět musí zavřít právě hlášení, nikoliv rozpracovanou fotografii.
+ const previousBack=window.handleAndroidBack;
+ window.handleAndroidBack=function(){
+  if(overlay){closeOverlay();return 'handled'}
+  return typeof previousBack==='function'?previousBack():'root';
+ };
  window.__openFeedbackList=showReportList;
 })();
