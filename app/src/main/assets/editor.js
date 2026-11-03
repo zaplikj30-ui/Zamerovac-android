@@ -103,10 +103,10 @@ function drawLoupe(){
   loupeCtx.clearRect(0,0,size,size);
   loupeCtx.fillStyle='#202123';
   loupeCtx.fillRect(0,0,size,size);
-  // Identical coordinates on either side; point is 50% across and 75% down.
-  // Source is the fully rendered photo with the real dimension end tick.
-  // No crosshair, dots or other synthetic markers.
-  loupeCtx.translate(size*.5-pointer.x*zoom,size*.75-pointer.y*zoom);
+  // Center the real dimension endpoint in the magnifier in both corners.
+  // The reference video shows the end tick crossing the exact center.
+  // No extra crosshair, dots or synthetic markers.
+  loupeCtx.translate(size*.5-pointer.x*zoom,size*.5-pointer.y*zoom);
   loupeCtx.scale(zoom,zoom);
   loupeCtx.drawImage(stageCanvas,0,0,stageCanvas.width/stageDensity,stageCanvas.height/stageDensity);
   loupeCtx.restore();
