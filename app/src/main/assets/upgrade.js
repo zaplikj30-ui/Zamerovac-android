@@ -348,27 +348,14 @@ const drawItemOriginal=drawItem;
 drawItem=function(c,item){
  const kind=Object.entries(grouped).find(([name,kinds])=>kinds.includes(item.type))?.[0];
  if(kind&&prefs.layerVisible[kind]===false)return;
- drawItemOriginal(c,item);
  if(item.type==='note'&&Array.isArray(item.media)&&item.media.length){
   const imageId=item.media[0],image=window.__detailPhotoCache?.[imageId];
-  if(image?.complete&&image.naturalWidth){
-   const point=worldToScreen(item.a||{x:0,y:0});
-   const width=Math.max(60,Math.min(390,(item.insetWidth||220)*view.zoom));
-   const height=width*image.naturalHeight/image.naturalWidth;
-   const x=point.x+8,y=point.y+23;
-   c.save();
-   c.translate(x+width/2,y+height/2);c.rotate((item.insetRotation||0)*Math.PI/180);c.translate(-x-width/2,-y-height/2);
-   c.fillStyle='#202024';c.fillRect(x-3,y-3,width+6,height+6);
-   c.drawImage(image,x,y,width,height);
-   c.strokeStyle=prefs.themeAccent;c.lineWidth=2;c.strokeRect(x,y,width,height);
-   const oldView=view;view={zoom:width/image.naturalWidth,dx:x,dy:y};
-   for(const annotated of item.detailItems||[]){
-    const mini={...annotated,width:Math.max(1,(annotated.width||2)*.65),fontSize:Math.max(9,(annotated.fontSize||15)*.65)};
-    drawItemOriginal(c,mini);
-   }
-   view=oldView;c.restore();
+  if(image?.complete&&image.naturalWidth&&typeof window.renderPhotoInset==='function'){
+    window.renderPhotoInset(c,item,image,drawItemOriginal);
+    return;
   }
  }
+ drawItemOriginal(c,item);
 };
 window.__detailPhotoCache={};
 function preloadDetail(item){

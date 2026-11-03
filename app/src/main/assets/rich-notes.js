@@ -5,10 +5,12 @@ function openRichNote(item,isNew){
  if(!current||window.isRecordLocked?.(current)){notify('Záznam je uzamčen');return}
  const parent=current;
  const attachments=Array.isArray(item.media)?item.media.slice():[];
+ const initialInsetWidth=Number(item.insetWidth)||Math.max(120,Math.min(1400,Math.round(photoSize.w*.20)));
  let recording=null;
  const previousCancel=$('cancelModal').onclick;
+ $('modal')?.querySelector('.dialog')?.classList.add('richNoteDialog');
  const cleanRecording=()=>{if(recording){if(native)Native.stopAudio();recording=null}};
- const release=()=>{if(window.__activeRichNoteCleanup===cleanRecording){window.__activeRichNoteCleanup=null;window.__activeRichNoteRelease=null}$('cancelModal').onclick=previousCancel};
+ const release=()=>{$('modal')?.querySelector('.dialog')?.classList.remove('richNoteDialog');if(window.__activeRichNoteCleanup===cleanRecording){window.__activeRichNoteCleanup=null;window.__activeRichNoteRelease=null}$('cancelModal').onclick=previousCancel};
  window.__activeRichNoteCleanup=cleanRecording;
  window.__activeRichNoteRelease=release;
  $('cancelModal').onclick=()=>{cleanRecording();release();$('modal').hidden=true;window.modalOK=null};
@@ -16,7 +18,7 @@ function openRichNote(item,isNew){
   if(recording){Native.stopAudio();attachments.push(recording);recording=null;}
   item.text=$('richText').value.trim();
   item.media=attachments.slice();
-  item.insetWidth=Math.max(120,Math.min(420,Number($('richSize').value)||220));
+  item.insetWidth=Math.max(70,Math.min(1500,Number($('richSize').value)||initialInsetWidth));
   item.insetRotation=Number($('richAngle').value)||0;
   if(isNew){checkpoint();parent.items.push(item);finishDraw(item);isNew=false;}
   else checkpoint();
@@ -31,11 +33,11 @@ function openRichNote(item,isNew){
  '<button type="button" class="outline" id="richPhotoPick">▧ Vybrat fotografii</button>'+
  '<button type="button" class="outline" id="richVoice">🎙 Nahrát hlas</button></div>'+
  '<div id="richAttachments"></div>'+
- '<label>Velikost vložené fotografie</label><input id="richSize" type="range" min="120" max="420" step="10" value="'+(item.insetWidth||220)+'">'+
+ '<label>Velikost vložené fotografie</label><input id="richSize" type="range" min="70" max="1500" step="10" value="'+initialInsetWidth+'">'+
  '<label>Natočení detailu (stupně)</label><input id="richAngle" type="range" min="-180" max="180" step="5" value="'+(item.insetRotation||0)+'">'+
  '<div class="row wrap"><button type="button" class="outline" id="richEditDetail">✎ Kótovat vloženou fotografii</button>'+
  '<button type="button" class="outline" id="richDelete">🗑 Odstranit poznámku</button></div>'+
- '<p class="muted">Přílohy zůstanou u bodu ve fotografii. Kóty detailu se ukládají zvlášť a zůstávají editovatelné.</p>',
+ '<p class="muted">Detail můžeš prstem přetáhnout i mimo hlavní fotografii. Žlutá šipka ukáže původní místo, bílý bod lze také přemístit. Dvojklepnutím na detail otevřeš jeho vlastní kóty.</p><p class="muted">Přílohy a kóty se ukládají editovatelně.</p>',
  ()=>{persist()},'Uložit');
  const render=()=>{
   const container=$('richAttachments');if(!container)return;

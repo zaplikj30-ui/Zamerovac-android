@@ -166,3 +166,115 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
  .toolbar #toolsToggle{min-width:42px;height:47px;font-size:30px}
  .toolbar #activeTool{min-width:42px;height:47px}
 }
+
+
+/* Celá spodní lišta rozvržená jako na uživatelském videu ImageMeteru:
+   dvojice nástrojů vlevo, barva, styl, koš, zpět, nabídka.
+   Všechna tlačítka se škálují podle skutečné šířky zařízení. */
+body.in-editor #editorView {display:flex;flex-direction:column}
+body.in-editor .toolbar {
+ display:flex!important;
+ position:relative!important;
+ left:auto!important;top:auto!important;bottom:auto!important;
+ width:100%!important;max-width:none!important;
+ height:66px!important;min-height:66px!important;
+ flex-direction:row!important;flex-wrap:nowrap!important;
+ justify-content:space-between!important;
+ align-items:center!important;gap:1px!important;
+ padding:5px 5px!important;
+ background:#323136!important;
+ border-top:1px solid #4f4b50!important;
+ border-right:0!important;
+ overflow:visible!important;
+}
+body.in-editor .toolbar .ico {
+ display:flex;
+ align-items:center;justify-content:center;
+ flex:1 1 12%;
+ min-width:0!important;max-width:none;
+ width:auto!important;height:53px!important;
+ margin:0!important;padding:4px!important;
+ font-size:27px;line-height:1.1;
+ border-radius:5px;
+}
+body.in-editor .toolbar #toolsToggle {
+ flex:1.07 1 13%;font-size:32px;
+ border:1.5px solid #757378!important;
+ border-radius:8px 0 0 8px!important;
+}
+body.in-editor .toolbar #activeTool {
+ flex:1.07 1 13%;font-size:28px;
+ border:1.5px solid #757378!important;
+ border-left:0!important;
+ border-radius:0 8px 8px 0!important;
+}
+body.in-editor .toolbar #activeTool.tool-active {
+ background:#665087!important;color:white;
+ border:2px solid #d5b4ff!important;
+ box-shadow:inset 0 0 0 1px #292533;
+}
+body.in-editor .toolbar #lineColor {
+ flex:0.85 1 10%;min-width:0!important;max-width:none!important;
+ width:auto!important;height:46px!important;
+ margin:0 2px!important;padding:5px 4px!important;
+ border:0!important;background:transparent!important;
+}
+body.in-editor .toolbar #styleTool,
+body.in-editor .toolbar #deleteTool,
+body.in-editor .toolbar #undo,
+body.in-editor .toolbar #editorMore {
+ flex:1 1 12%;margin:0!important;border:0!important;
+}
+body.in-editor .toolbar #styleTool svg,
+body.in-editor .toolbar #deleteTool svg {width:29px;height:29px;display:block}
+body.in-editor .toolbar button:focus-visible {outline:2px solid #f6d258;outline-offset:-2px}
+body.in-editor #stage{flex:1!important;min-height:0;margin-left:0!important}
+@media(max-width:390px) {
+ body.in-editor .toolbar{padding:4px 3px!important}
+ body.in-editor .toolbar .ico{height:50px!important;font-size:24px;padding:3px!important}
+ body.in-editor .toolbar #toolsToggle{font-size:29px}
+ body.in-editor .toolbar #activeTool{font-size:25px}
+ body.in-editor .toolbar #lineColor{margin:0!important;padding:3px!important}
+}
+@media(min-width:850px) {
+ body.in-editor .toolbar {
+  position:relative!important;left:auto!important;right:auto!important;
+  top:auto!important;bottom:auto!important;
+  width:100%!important;height:74px!important;min-height:74px!important;
+  flex-direction:row!important;overflow:visible!important;
+  padding:7px max(12px,calc((100vw - 1100px)/2))!important;
+ }
+ body.in-editor .toolbar .ico{height:55px!important;max-width:132px}
+ body.in-editor .toolbar #lineColor{max-width:90px}
+ body.in-editor #stage{margin-left:0!important}
+ #toolMenu.sheet{left:8px!important;right:8px!important;bottom:75px!important;width:auto!important}
+}
+
+/* Referenční ImageMeter: editor poznámky zabírá celou obrazovku,
+   text, audio a detailní fotografie v jednom souvislém panelu. */
+#modal:has(.richNoteDialog){padding:0!important;background:#262629}
+#modal .dialog.richNoteDialog{
+ max-width:none!important;width:100%!important;height:100%!important;
+ max-height:none!important;border-radius:0!important;
+ padding:64px 16px 84px!important;position:relative;
+ background:#292a2e;box-shadow:none!important;
+ overflow:auto;
+}
+#modal .richNoteDialog .dialogTitle{
+ position:fixed;z-index:3;top:0;left:0;right:0;
+ height:56px;margin:0;display:flex;align-items:center;
+ background:#302d35;border-bottom:1px solid #4a414e;
+ padding:0 105px 0 18px;font-size:17px;
+ white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+}
+#modal .richNoteDialog .dialogActions{
+ position:fixed;z-index:4;right:7px;top:5px;
+ margin:0!important;gap:4px;height:45px;
+ display:flex;align-items:center;
+}
+#modal .richNoteDialog .dialogActions button {
+ padding:9px 12px;min-height:38px;border-radius:5px;
+}
+#modal .richNoteDialog #richAttachments{margin:6px 0 16px}
+#modal .richNoteDialog textarea{min-height:75px;resize:vertical}
+#modal .richNoteDialog .rich-attachment .previewMedia img{max-height:250px}
