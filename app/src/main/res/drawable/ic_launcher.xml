@@ -1,10 +1,30 @@
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
-  android:width="108dp" android:height="108dp"
-  android:viewportWidth="108" android:viewportHeight="108">
-  <path android:fillColor="#70871D" android:pathData="M0,0h108v108h-108z" />
-  <path android:fillColor="#ffffff" android:pathData="M21,33h66v44h-66z" />
-  <path android:fillColor="#2D331B" android:pathData="M28,40h52v30h-52z" />
-  <path android:strokeColor="#FBEA64" android:strokeWidth="4" android:pathData="M31,66L76,43"/>
-  <path android:strokeColor="#FBEA64" android:strokeWidth="3" android:pathData="M31,58v16M76,35v16"/>
-  <path android:fillColor="#ffffff" android:pathData="M42,24h24l4,9h-32z"/>
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+  <!-- Vlastní motiv: bílé kuchyňské skříňky, žluté kóty, antracit. -->
+  <path android:fillColor="#272630" android:pathData="M0,0h108v108h-108z"/>
+  <path android:fillColor="#313442" android:pathData="M12,10h84v88h-84z"/>
+  <path android:fillColor="#394052" android:pathData="M23,18h63v65h-63z"/>
+  <!-- Horní skříňky -->
+  <path android:fillColor="#F2EFF5" android:strokeColor="#16171F" android:strokeWidth="1.2"
+        android:pathData="M32,26h23v24h-23z M56,26h24v24h-24z"/>
+  <path android:strokeColor="#65616E" android:strokeWidth="2"
+        android:pathData="M51,36v8M60,36v8"/>
+  <!-- Zadní stěna, pracovní plocha -->
+  <path android:fillColor="#A47C60" android:pathData="M32,51h48v4h-48z"/>
+  <path android:fillColor="#272B36" android:pathData="M32,55h48v5h-48z"/>
+  <!-- Spodní skříňky a šuplíky -->
+  <path android:fillColor="#E7E5EB" android:strokeColor="#171820" android:strokeWidth="1.2"
+        android:pathData="M32,60h18v23h-18z M51,60h13v23h-13z M65,60h15v23h-15z"/>
+  <path android:strokeColor="#76717B" android:strokeWidth="2"
+        android:pathData="M46,65v5 M55,65h6 M55,74h6 M69,67h8 M69,75h8"/>
+  <path android:fillColor="#15151A" android:pathData="M32,84h48v3h-48z"/>
+  <!-- Levá svislá žlutá kóta -->
+  <path android:strokeColor="#FFDE39" android:strokeWidth="2.8" android:strokeLineCap="round"
+        android:pathData="M23,22v63 M18,22h10 M18,85h10"/>
+  <path android:fillColor="#FFDE39" android:pathData="M23,18l-4,8h8z M23,89l-4,-8h8z"/>
+  <!-- Spodní vodorovná kóta -->
+  <path android:strokeColor="#FFDE39" android:strokeWidth="2.8" android:strokeLineCap="round"
+        android:pathData="M34,93h45 M32,89v8 M81,89v8"/>
+  <path android:fillColor="#FFDE39" android:pathData="M29,93l8,-4v8z M84,93l-8,-4v8z"/>
 </vector>
