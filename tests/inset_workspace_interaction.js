@@ -53,12 +53,12 @@ assert.equal(note.captionMoved,undefined,'Dragging arrow must not detach caption
 const caption={x:note.insetX+note.insetWidth/2,y:note.insetY+note.insetWidth+18};
 const heightBefore=note.insetY;
 drag([caption.x,caption.y],[caption.x+22,caption.y+10]);
-assert.equal(note.captionMoved,true,'Manual text drag still allows independent caption');
-assert.equal(note.b.x,caption.x+22,'Manual caption drag moves only caption x');
-assert.equal(note.b.y,caption.y+10,'Manual caption drag moves only caption y');
-assert.equal(note.insetY,heightBefore,'Moving caption must not move detail');
-assert.equal(note.a.x,130,'Moving caption must not move arrow origin');
-assert.equal(sandbox.commits,4,'Caption motion must be saved');
+assert.equal(note.captionMoved,undefined,'Text stays attached to the photo frame');
+assert.equal(note.insetX,caption.x-note.insetWidth/2+22,'Dragging photo caption moves the whole frame X');
+assert.equal(note.insetY,heightBefore+10,'Dragging photo caption moves the whole frame Y');
+assert.equal(note.a.x,130,'Dragging photo caption must not move the arrow origin');
+assert.equal(note.a.y,124,'Dragging photo caption must not move the arrow origin Y');
+assert.equal(sandbox.commits,4,'Dragging photo frame by its caption must be saved');
 assert.equal(typeof sandbox.window.renderPhotoInset,'function');
 // Dvě samostatná klepnutí: první označí vložený obrázek, druhé otevře jeho kóty.
 sandbox.selected=null;
