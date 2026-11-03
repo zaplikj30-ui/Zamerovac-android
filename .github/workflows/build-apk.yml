@@ -34,6 +34,8 @@ jobs:
           node tests/inset_workspace_interaction.js
           node --check app/src/main/assets/editor-extra-toolbar.js
           node --check app/src/main/assets/laser-autofill.js
+          node --check app/src/main/assets/feedback-reports.js
+          node tests/feedback_report_structure.js
           node tests/laser_tap_interaction.js
           node tests/laser_auto_interaction.js
           node tests/extra_toolbar_interaction.js
