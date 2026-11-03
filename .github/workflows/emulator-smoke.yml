@@ -43,6 +43,28 @@ jobs:
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
           sudo udevadm control --reload-rules
           sudo udevadm trigger --name-match=kvm
+      - name: Stáhnout systémový obraz Androidu s opakováním při chybě ZIP
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          TOOL="$SDK/cmdline-tools/latest/bin/sdkmanager"
+          PKG="system-images;android-33;google_apis;x86_64"
+          IMAGE="$SDK/system-images/android-33/google_apis/x86_64"
+          for n in 1 2 3 4; do
+            echo "Stažení Android 13 obrazu, pokus $n/4"
+            if "$TOOL" --install "$PKG" --channel=0 > /tmp/sdk-install-image.log 2>&1 &&
+               test -s "$IMAGE/system.img"; then
+              echo "Android systémový obraz je připraven."
+              exit 0
+            fi
+            tail -n 16 /tmp/sdk-install-image.log || true
+            echo "::warning::Poškozené/neúplné stažení obrazu Androidu ($n/4); odstraním jen neúplný balíček."
+            rm -rf "$IMAGE" "$SDK/.temp" "$SDK/.downloadIntermediates" || true
+            sleep 10
+          done
+          echo "::error::Systémový obraz se nepodařilo stáhnout ani po čtyřech pokusech."
+          exit 1
       - name: Spustit Android emulátor a ověřit Zaměřovač
         uses: reactivecircus/android-emulator-runner@v2
         with:
