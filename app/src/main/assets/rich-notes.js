@@ -8,8 +8,9 @@ function openRichNote(item,isNew){
  let recording=null;
  const previousCancel=$('cancelModal').onclick;
  const cleanRecording=()=>{if(recording){if(native)Native.stopAudio();recording=null}};
- const release=()=>{if(window.__activeRichNoteCleanup===cleanRecording)window.__activeRichNoteCleanup=null;$('cancelModal').onclick=previousCancel};
+ const release=()=>{if(window.__activeRichNoteCleanup===cleanRecording){window.__activeRichNoteCleanup=null;window.__activeRichNoteRelease=null}$('cancelModal').onclick=previousCancel};
  window.__activeRichNoteCleanup=cleanRecording;
+ window.__activeRichNoteRelease=release;
  $('cancelModal').onclick=()=>{cleanRecording();release();$('modal').hidden=true;window.modalOK=null};
  function persist(){
   if(recording){Native.stopAudio();attachments.push(recording);recording=null;}
@@ -105,4 +106,4 @@ exitEditor=function(){
 $('editorBack').onclick=exitEditor;
 
 const richPreviousAndroidBack=window.handleAndroidBack;
-window.handleAndroidBack=()=>{if(!$('modal').hidden&&window.__activeRichNoteCleanup){window.__activeRichNoteCleanup();window.__activeRichNoteCleanup=null}return richPreviousAndroidBack()};
+window.handleAndroidBack=()=>{if(!$('modal').hidden&&window.__activeRichNoteCleanup){window.__activeRichNoteCleanup();window.__activeRichNoteRelease?.()}return richPreviousAndroidBack()};
