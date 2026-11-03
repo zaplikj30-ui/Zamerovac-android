@@ -95,6 +95,7 @@ function recordLocked(rec){
  while(node&&seen++<50){if(node.locked)return true;node=node.parentId?recById(node.parentId):null}
  return false;
 }
+window.isRecordLocked=recordLocked;
 const oldRecordActions=recordActions;
 recordActions=function(id){
  oldRecordActions(id);
@@ -112,6 +113,9 @@ recordActions=function(id){
 const oldOpenEditor=openEditor;
 openEditor=function(r){
  oldOpenEditor(r);
+ if(!r._detailTemporary&&(!r.versionHistory||!r.versionHistory.length)){
+   r.versionHistory=[{time:new Date().toISOString(),items:JSON.stringify(r.items||[])}];
+ }
  const locked=recordLocked(r);
  stageCanvas.style.pointerEvents=locked?'none':'auto';
  $('editorHint').textContent=locked?'Zakázka je uzamčena – jen prohlížení':$('editorHint').textContent;
@@ -246,7 +250,8 @@ showEditorOverflow=function(){
   ['∑ Kontrola součtu kót',openSumCheck],
   ['◷ Historie úprav',restoreVersion],
   ['▤ Galerie fotografií',()=>{const photos=galleryPhotos(),index=photos.findIndex(r=>r.id===current?.id);if(index>=0)openGallery(index,photos)}],
-  ['⚙ Přizpůsobit lištu nástrojů',configureToolbar]
+  ['⚙ Přizpůsobit lištu nástrojů',configureToolbar],
+  ['▣ Export celé zálohy ZIP',()=>native?Native.exportBackup():notify('ZIP je dostupný v Android verzi')]
  ];
  for(const [text,action] of extras){const b=document.createElement('button');b.className='appMenuItem';b.textContent=text;b.onclick=()=>{menu.hidden=true;action()};menu.append(b)}
 };
