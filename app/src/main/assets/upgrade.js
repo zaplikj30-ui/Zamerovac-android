@@ -38,7 +38,7 @@ function openExperimentalAction(id){
  if(id==='boschLive'){
   const value=window.lastLaser;
   modal('Poslední přijaté měření',
-   '<p><b>'+esc(value?value.value+' '+value.unit:'Dosud žádné měření')+'</b></p>'+
+   '<p><b id="experimentalLiveReading">'+esc(value?value.value+' '+value.unit:'Dosud žádné měření')+'</b></p>'+
    '<p class="muted">Zobrazujeme pouze skutečná přijatá data. Průběžný přenos závisí na režimu laseru.</p>',()=>true,'Zavřít');return;
  }
  const details=experimentalCatalog.find(row=>row[0]===id);
@@ -570,6 +570,9 @@ $('bluetoothBtn').onclick=()=>{
  modal('Měřič Bosch','<p>'+esc($('bluetoothBtn').title)+'</p><p>Po připojení čeká Zaměřovač na první naměřenou hodnotu. Teprve potom potvrdí příjem měření.</p><button class="outline" id="laserConnect" >Vyhledat zařízení</button>',()=>true,'Zavřít');
  $('laserConnect').onclick=()=>{if(native){$('modal').hidden=true;laserState='connecting';laserName='vyhledávání okolních zařízení';renderBluetooth();Native.connectLaser()}else notify('Vyžaduje Android')};
 };
+window.onExperimentalLaserTrigger=function(status){
+ if(status==='sent')notify('Zkušební příkaz spouště odeslán. Zkontroluj laser; úspěšné měření zatím není potvrzené.');
+};
 const originalLaser=window.onLaserValue;
 const readings=[];
 try{
@@ -581,6 +584,8 @@ try{
 }catch(e){}
 window.__boschHistoryReadings=()=>readings.map(x=>({...x}));
 window.onLaserValue=function(value,unit){
+ const live=$('experimentalLiveReading');
+ if(live&&experimentalEnabled('boschLive'))live.textContent=String(value)+' '+String(unit||'mm');
  readings.unshift({value:String(value),unit:String(unit||'mm'),time:new Date().toISOString()});
  if(readings.length>40)readings.pop();
  try{localStorage.setItem('zamerovac-bosch-readings-v1',JSON.stringify(readings))}catch(e){}
