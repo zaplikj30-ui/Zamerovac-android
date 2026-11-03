@@ -61,7 +61,41 @@ $('lineColor').oninput=e=>{prefs.color=e.target.value;save();paint()};
 function showTools(){closeMenus();$('toolMenu').hidden=false;let html='<div class="toolList">';for(let group of toolGroups){html+=`<div class="sectionLabel">${group.title}</div>`;for(let [key,icon,label] of group.tools)html+=`<button class="choice" data-tool="${key}"><strong>${icon}</strong>${label}</button>`}html+='</div>';$('toolMenu').innerHTML=html;$('toolMenu').querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{setTool(b.dataset.tool);closeMenus()})}
 function setTool(key,keepSelection=false){mode=key;selectedHandle=null;if(!keepSelection)selected=null;drawStart=null;drawCurrent=null;stroke=[];if(key!=='select'&&key!=='pan')lastDrawingTool=key;updateDrawingToolButton();$('editorHint').textContent=key==='select'?'Klepni na kótu nebo posuň její koncový bod':key==='pan'?'Táhni fotografii pro posunutí':'Táhni prstem mezi body · rozměry zadáváš ručně';paint()}
 function drawGrid(){if(!prefs.snapGrid)return;let spacing=Math.max(5,prefs.gridStep)*view.zoom;if(spacing<8)return;ctx.save();ctx.strokeStyle='#eeeeee28';ctx.lineWidth=1;const left=Math.max(0,Math.ceil(-view.dx/spacing)),right=Math.min(Math.ceil(photoSize.w/prefs.gridStep),Math.ceil((stageCanvas.clientWidth-view.dx)/spacing));const top=Math.max(0,Math.ceil(-view.dy/spacing)),bottom=Math.min(Math.ceil(photoSize.h/prefs.gridStep),Math.ceil((stageCanvas.clientHeight-view.dy)/spacing));ctx.beginPath();for(let i=left;i<=right;i++){const x=view.dx+i*spacing;ctx.moveTo(x,0);ctx.lineTo(x,stageCanvas.clientHeight)}for(let j=top;j<=bottom;j++){const y=view.dy+j*spacing;ctx.moveTo(0,y);ctx.lineTo(stageCanvas.clientWidth,y)}ctx.stroke();ctx.restore()}
-function paint(){if(screen!=='editor'||!current)return;let w=stageCanvas.clientWidth,h=stageCanvas.clientHeight;ctx.clearRect(0,0,w,h);ctx.save();ctx.fillStyle='#202123';ctx.fillRect(0,0,w,h);ctx.translate(view.dx,view.dy);ctx.scale(view.zoom,view.zoom);if(stageImg)ctx.drawImage(stageImg,0,0,photoSize.w,photoSize.h);else{ctx.fillStyle='#36383a';ctx.fillRect(0,0,photoSize.w,photoSize.h);ctx.strokeStyle='#4b4e50';ctx.lineWidth=3/view.zoom;ctx.strokeRect(0,0,photoSize.w,photoSize.h)}ctx.restore();drawGrid();for(let item of current.items||[])drawItem(ctx,item);if(drawStart&&drawCurrent){let mock={type:mode,a:drawStart,b:drawCurrent,points:stroke,measure:'',unit:prefs.unit,color:prefs.color,width:prefs.lineWidth,fontSize:prefs.fontSize};drawItem(ctx,mock,false)}if(magnifierPoint&&prefs.loupe)drawLoupe();else $('loupe').hidden=true;}
+function paint(){if(screen!=='editor'||!current)return;let w=stageCanvas.clientWidth,h=stageCanvas.clientHeight;ctx.clearRect(0,0,w,h);ctx.save();ctx.fillStyle='#202123';ctx.fillRect(0,0,w,h);ctx.translate(view.dx,view.dy);ctx.scale(view.zoom,view.zoom);if(stageImg)ctx.drawImage(stageImg,0,0,photoSize.w,photoSize.h);else{ctx.fillStyle='#36383a';ctx.fillRect(0,0,photoSize.w,photoSize.h);ctx.strokeStyle='#4b4e50';ctx.lineWidth=3/view.zoom;ctx.strokeRect(0,0,photoSize.w,photoSize.h)}ctx.restore();drawGrid();for(let item of current.items||[])drawItem(ctx,item);if(drawStart&&drawCurrent){let mock={type:mode,a:drawStart,b:drawCurrent,points:stroke,measure:'',unit:prefs.unit,color:prefs.color,width:prefs.lineWidth,fontSize:prefs.fontSize};drawItem(ctx,mock,false)}drawSelectedOutline(ctx);if(magnifierPoint&&prefs.loupe)drawLoupe();else $('loupe').hidden=true;}
+
+/* Zvýraznění jako v ImageMeteru: po prvním klepnutí zřetelný bílý
+   obrys a kruhové úchopy; bez zásahu do uloženého vzhledu kóty. */
+function drawSelectedOutline(c){
+ const item=(current?.items||[]).find(i=>i.id===selected);
+ if(!item)return;
+ // Vložená fotografie má vlastní bílé boční úchopy v inset-workspace.
+ if(item.type==='note'&&item.media?.length)return;
+ c.save();
+ c.strokeStyle='#f8f8f8';c.fillStyle='#fafafa';
+ c.lineWidth=2.5;c.lineCap='round';c.lineJoin='round';
+ if(['dimension','chain','cumulative'].includes(item.type)&&item.a&&item.b){
+  const a=worldToScreen(item.a),b=worldToScreen(item.b),
+    dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1,
+    nx=-dy/d,ny=dx/d,off=item.offset??0;
+  c.beginPath();c.moveTo(a.x+nx*off,a.y+ny*off);
+  c.lineTo(b.x+nx*off,b.y+ny*off);c.stroke();
+  for(const p of [a,b]){
+   c.beginPath();c.arc(p.x,p.y,7,0,Math.PI*2);
+   c.fill();c.strokeStyle='#353535';c.lineWidth=1.5;c.stroke();
+  }
+ }else if(item.type==='note'||item.type==='symbol'){
+  const p=worldToScreen(item.a||{x:0,y:0});
+  c.strokeRect(p.x-14,p.y-14,28,28);
+  c.beginPath();c.arc(p.x,p.y,6,0,Math.PI*2);c.fill();
+ }else{
+  for(const key of ['a','b'])if(item[key]){
+   const p=worldToScreen(item[key]);
+   c.beginPath();c.arc(p.x,p.y,7,0,Math.PI*2);c.fill();
+   c.strokeStyle='#353535';c.lineWidth=1.5;c.stroke();
+  }
+ }
+ c.restore();
+}
 function canvasText(text,p,color,size,angle=0){ctx.save();ctx.translate(p.x,p.y);ctx.rotate(angle);ctx.font=`600 ${size}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';let width=ctx.measureText(text).width;ctx.fillStyle='#222d';ctx.fillRect(-width/2-5,-size*.67,width+10,size*1.4);ctx.fillStyle=color;ctx.fillText(text,0,0);ctx.restore()}
 function drawArrow(c,point,to,size=10){let a=Math.atan2(point.y-to.y,point.x-to.x);c.beginPath();c.moveTo(point.x,point.y);c.lineTo(point.x-size*Math.cos(a-.48),point.y-size*Math.sin(a-.48));c.moveTo(point.x,point.y);c.lineTo(point.x-size*Math.cos(a+.48),point.y-size*Math.sin(a+.48));c.stroke()}
 function drawItem(c,item){let a=item.a&&worldToScreen(item.a),b=item.b&&worldToScreen(item.b);let pts=(item.points||[]).map(worldToScreen);const color=item.color||prefs.color,fw=(item.width||prefs.lineWidth),fs=(item.fontSize||prefs.fontSize);c.save();c.strokeStyle=color;c.fillStyle=color;c.lineWidth=fw;c.lineJoin='round';c.lineCap='round';
@@ -147,31 +181,95 @@ function nearestLabel(point){
   return null;
 }
 function nearestHandle(point){let best=null,dist=31;for(let it of current.items||[]){for(let key of ['a','b'])if(it[key]){let d=Math.hypot(point.x-worldToScreen(it[key]).x,point.y-worldToScreen(it[key]).y);if(d<dist){best={item:it,key,point:it[key],kind:'point'};dist=d}}}return best}
-function nearestItem(point){let world=screenToWorld(point),best=null,dist=26/view.zoom;for(let it of current.items||[]){let a=it.a,b=it.b;if(a&&b){let ux=b.x-a.x,uy=b.y-a.y,den=ux*ux+uy*uy||1,t=Math.max(0,Math.min(1,((world.x-a.x)*ux+(world.y-a.y)*uy)/den));let d=Math.hypot(world.x-a.x-t*ux,world.y-a.y-t*uy);if(d<dist){best=it;dist=d}}else if(a&&Math.hypot(a.x-world.x,a.y-world.y)<dist)best=it}return best}
-function stageDown(e){if(screen!=='editor')return;e.preventDefault();stageCanvas.setPointerCapture(e.pointerId);const s=eventPoint(e);pointers.set(e.pointerId,s);if(pointers.size===2){let v=[...pointers.values()];gesture={distance:Math.hypot(v[0].x-v[1].x,v[0].y-v[1].y),zoom:view.zoom,mid:{x:(v[0].x+v[1].x)/2,y:(v[0].y+v[1].y)/2},world:screenToWorld({x:(v[0].x+v[1].x)/2,y:(v[0].y+v[1].y)/2})};drawStart=null;drawCurrent=null;selectedHandle=null;paint();return}if(pointers.size>2)return;
-let hit=null;
-if(mode==='select')hit=nearestHandle(s)||nearestLabel(s);
-else if(selected){
-  const grip=nearestHandle(s);
-  if(grip?.item.id===selected)hit=grip;
+function nearestItem(point){
+ const world=screenToWorld(point);
+ let best=null,distance=26/view.zoom;
+ for(const item of [...(current.items||[])].reverse()){
+  if((item.type==='note'||item.type==='symbol')&&item.a){
+   const p=worldToScreen(item.a);
+   const caption=item.type==='symbol'?'⚑ '+(item.text||''):item.text||'Poznámka';
+   ctx.save();ctx.font='600 '+(item.fontSize||prefs.fontSize)+'px sans-serif';
+   const width=ctx.measureText(caption).width+22;ctx.restore();
+   if(Math.abs(point.x-p.x)<width/2+7&&Math.abs(point.y-p.y)<Math.max(23,(item.fontSize||prefs.fontSize)*.9))
+    return item;
+  }
+  const a=item.a,b=item.b;
+  if(a&&b){
+   let ux=b.x-a.x,uy=b.y-a.y,den=ux*ux+uy*uy||1;
+   let t=Math.max(0,Math.min(1,((world.x-a.x)*ux+(world.y-a.y)*uy)/den));
+   let d=Math.hypot(world.x-a.x-t*ux,world.y-a.y-t*uy);
+   if(d<distance){best=item;distance=d}
+  }else if(a){
+   let d=Math.hypot(a.x-world.x,a.y-world.y);
+   if(d<distance){best=item;distance=d}
+  }
+ }
+ return best;
 }
-
-if(hit){
-  selectedHandle=hit;selected=hit.item.id;
+function hitAnnotation(point){
+ const label=nearestLabel(point);
+ if(label?.item)return label.item;
+ return nearestItem(point);
+}
+function selectAnnotation(item){
+ if(!item)return;
+ selected=item.id;
+ if(mode!=='select')setTool('select',true);
+ // Předchozí Bosch měření se přiřadí právě při výběru kóty.
+ // Text poznámky ani samotný detailní obrázek ho nikdy nepřevezme.
+ if(['dimension','chain','cumulative'].includes(item.type))
+  window.__assignPendingLaserToSelected?.();
+ paint();
+}
+function stageDown(e){
+ if(screen!=='editor')return;
+ e.preventDefault();
+ stageCanvas.setPointerCapture(e.pointerId);
+ const s=eventPoint(e);
+ pointers.set(e.pointerId,s);
+ if(pointers.size===2){
+  const v=[...pointers.values()];
+  gesture={distance:Math.hypot(v[0].x-v[1].x,v[0].y-v[1].y),zoom:view.zoom,
+   mid:{x:(v[0].x+v[1].x)/2,y:(v[0].y+v[1].y)/2},
+   world:screenToWorld({x:(v[0].x+v[1].x)/2,y:(v[0].y+v[1].y)/2})};
+  drawStart=null;drawCurrent=null;selectedHandle=null;paint();return;
+ }
+ if(pointers.size>2)return;
+ const candidate=hitAnnotation(s);
+ if(candidate){
+  const alreadySelected=selected===candidate.id;
+  if(!alreadySelected){
+   selectAnnotation(candidate);
+   selectedHandle={item:candidate,kind:'select-only',startScreen:s,dragged:false};
+   magnifierPoint=null;return;
+  }
+  const grip=nearestHandle(s);
+  const label=nearestLabel(s);
+  let hit;
+  if(grip?.item.id===candidate.id)hit=grip;
+  else if(label?.item.id===candidate.id)hit=label;
+  else hit={item:candidate,kind:'open-selected'};
+  selectedHandle=hit;
   hit.startScreen={...s};
   if(hit.kind==='point')hit.startPoint={...hit.point};
   hit.startLabelT=Number(hit.item.labelT)||0;
   hit.dragged=false;
-  checkpoint();
-  magnifierPoint=hit.kind==='label'?null:hit.point;
+  if(hit.kind==='point'||hit.kind==='label')checkpoint();
+  magnifierPoint=hit.kind==='point'?hit.point:null;
   paint();return;
+ }
+ if(selected!==null){selected=null;paint()}
+ if(mode==='select')return;
+ if(mode==='pan'){drag={screen:s,dx:view.dx,dy:view.dy};return}
+ drawPointerId=e.pointerId;drawStart=snap(screenToWorld(s));
+ drawCurrent=drawStart;stroke=[drawStart];magnifierPoint=drawStart;paint();
 }
-if(mode==='select'){let item=nearestItem(s);if(item&&item.id===selected&&Date.now()-lastTap<450){editItem(item)}else{selected=item?.id||null;lastTap=Date.now();paint()}return}
-if(mode==='pan'){drag={screen:s,dx:view.dx,dy:view.dy};return}
-drawPointerId=e.pointerId;drawStart=snap(screenToWorld(s));drawCurrent=drawStart;stroke=[drawStart];magnifierPoint=drawStart;paint()}
 function stageMove(e){if(screen!=='editor')return;const s=eventPoint(e);if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,s);if(pointers.size===2&&gesture){let v=[...pointers.values()],dist=Math.hypot(v[0].x-v[1].x,v[0].y-v[1].y);let mid={x:(v[0].x+v[1].x)/2,y:(v[0].y+v[1].y)/2};view.zoom=Math.max(.05,Math.min(12,gesture.zoom*dist/Math.max(1,gesture.distance)));view.dx=mid.x-gesture.world.x*view.zoom;view.dy=mid.y-gesture.world.y*view.zoom;paint();return}
 if(selectedHandle&&pointers.size===1){
   if(Math.hypot(s.x-selectedHandle.startScreen.x,s.y-selectedHandle.startScreen.y)>7)selectedHandle.dragged=true;
+  if(selectedHandle.kind==='select-only'||selectedHandle.kind==='open-selected'){
+   magnifierPoint=null;paint();return;
+  }
   if(selectedHandle.kind==='label'){
     const info=labelInfo(selectedHandle.item);
     if(info&&info.d>0){
@@ -196,23 +294,28 @@ if(selectedHandle&&pointers.size===1){
 }
 if(drag&&mode==='pan'){view.dx=drag.dx+(s.x-drag.screen.x);view.dy=drag.dy+(s.y-drag.screen.y);paint();return}
 if(drawStart&&drawPointerId===e.pointerId){drawCurrent=snap(screenToWorld(s),drawStart);magnifierPoint=drawCurrent;if(mode==='freehand'||mode==='polyline')stroke.push(drawCurrent);paint()}}
-function stageUp(e){if(screen!=='editor')return;const wasTwo=pointers.size===2;pointers.delete(e.pointerId);if(wasTwo){gesture=null;drawStart=null;drawCurrent=null;magnifierPoint=null;loupeSide=null;paint();return}if(selectedHandle){
-  const moved=selectedHandle.dragged;
-  const isLabel=selectedHandle.kind==='label';
-  const item=selectedHandle.item;
+function stageUp(e){
+ if(screen!=='editor')return;
+ const wasTwo=pointers.size===2;
+ pointers.delete(e.pointerId);
+ if(wasTwo){
+  gesture=null;drawStart=null;drawCurrent=null;
+  magnifierPoint=null;loupeSide=null;paint();return;
+ }
+ if(selectedHandle){
+  const handle=selectedHandle,item=handle.item,moved=handle.dragged;
   selectedHandle=null;magnifierPoint=null;loupeSide=null;
-  if(!moved && (isLabel || item.type==='note')){
-    // A tap on '?' or the numeric label opens the simple measurement editor.
-    if(editStack.length)editStack.pop();
-    editItem(item);
-  }else if(moved){
-    touch(item);commitEditor();
-  }else{
-    if(editStack.length)editStack.pop();
-    paint();
-  }
+  if(handle.kind==='select-only'){paint();return}
+  if(!moved){
+   if((handle.kind==='point'||handle.kind==='label')&&editStack.length)editStack.pop();
+   // Druhé samostatné klepnutí otevře úpravu bez časového limitu.
+   editItem(item);
+  }else if(handle.kind==='point'||handle.kind==='label'){
+   touch(item);commitEditor();
+  }else paint();
   return;
-}if(drag){drag=null;return}if(!drawStart||drawPointerId!==e.pointerId)return;const a=drawStart,b=drawCurrent||drawStart;drawStart=null;drawCurrent=null;magnifierPoint=null;loupeSide=null;drawPointerId=null;if(Math.hypot(a.x-b.x,a.y-b.y)<3/view.zoom&&mode!=='note'&&mode!=='symbol'){paint();return}let item={id:uid(),type:mode,a,b,color:prefs.color,width:prefs.lineWidth,fontSize:prefs.fontSize,unit:prefs.unit,measure:'',text:'',points:(mode==='freehand'||mode==='polyline')?[...stroke]:[]};stroke=[];
+ }
+ if(drag){drag=null;return}if(!drawStart||drawPointerId!==e.pointerId)return;const a=drawStart,b=drawCurrent||drawStart;drawStart=null;drawCurrent=null;magnifierPoint=null;loupeSide=null;drawPointerId=null;if(Math.hypot(a.x-b.x,a.y-b.y)<3/view.zoom&&mode!=='note'&&mode!=='symbol'){paint();return}let item={id:uid(),type:mode,a,b,color:prefs.color,width:prefs.lineWidth,fontSize:prefs.fontSize,unit:prefs.unit,measure:'',text:'',points:(mode==='freehand'||mode==='polyline')?[...stroke]:[]};stroke=[];
 if(['dimension','chain','cumulative','area'].includes(mode)){
   // Follow the reference video: lay down the geometry first, adjust endpoints,
   // and enter the actual laser/manual value later by tapping its '?' label.
