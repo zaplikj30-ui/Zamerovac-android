@@ -383,12 +383,42 @@ paint=function(){
  oldPaint();
 };
 function configureToolbar(){
- const tools=allTools.filter(x=>!['pan'].includes(x[0]));
- modal('Oblíbené nástroje','<p>Vyber nástroje pro rychlou lištu.</p>'+
- tools.map(t=>'<label class="sum-option"><input type="checkbox" data-fav="'+esc(t[0])+'" '+(prefs.editorFavorites.includes(t[0])?'checked':'')+'> '+esc(t[1])+' '+esc(t[2])+'</label>').join(''),()=>{
- const keys=[...document.querySelectorAll('[data-fav]:checked')].map(e=>e.dataset.fav);
- prefs.editorFavorites=keys.slice(0,6);save();renderFavorites();
+ const tools=allTools.filter(x=>x[0]!=='pan');
+ let order=[...prefs.editorFavorites].filter(k=>tools.some(t=>t[0]===k));
+ function showOrder(){
+  const el=$('favoriteOrder');if(!el)return;
+  el.innerHTML=order.length?order.map((key,index)=>{
+   const t=tools.find(x=>x[0]===key);
+   return '<div class="favoriteOrderRow"><span>'+esc(t[1]+' '+t[2])+'</span>'+
+    '<button type="button" data-up="'+index+'" '+(index===0?'disabled':'')+' aria-label="Posunout nahoru">↑</button>'+
+    '<button type="button" data-down="'+index+'" '+(index===order.length-1?'disabled':'')+' aria-label="Posunout dolů">↓</button>'+
+    '<button type="button" data-remove="'+index+'" aria-label="Odebrat">✕</button></div>';
+  }).join(''):'<p class="muted">Nejsou vybrané žádné rychlé nástroje.</p>';
+  el.querySelectorAll('[data-up]').forEach(button=>button.onclick=()=>{
+   const n=Number(button.dataset.up);[order[n-1],order[n]]=[order[n],order[n-1]];showOrder();
+  });
+  el.querySelectorAll('[data-down]').forEach(button=>button.onclick=()=>{
+   const n=Number(button.dataset.down);[order[n],order[n+1]]=[order[n+1],order[n]];showOrder();
+  });
+  el.querySelectorAll('[data-remove]').forEach(button=>button.onclick=()=>{
+   order.splice(Number(button.dataset.remove),1);showOrder();
+  });
+ }
+ modal('Chytrá lišta nástrojů',
+ '<p>Vyber maximálně 6 nástrojů a šipkami uprav jejich pořadí.</p><div id="favoriteOrder"></div>'+
+ '<label>Přidat nástroj do lišty</label><select id="favoriteAdd"><option value="">Vyber nástroj</option>'+
+ tools.map(t=>'<option value="'+esc(t[0])+'">'+esc(t[1]+' '+t[2])+'</option>').join('')+
+ '</select><button class="outline" type="button" id="favoriteAddButton">＋ Přidat</button>',
+ ()=>{
+  prefs.editorFavorites=order.slice(0,6);save();renderFavorites();
  });
+ $('favoriteAddButton').onclick=()=>{
+  const key=$('favoriteAdd').value;if(!key)return;
+  if(order.includes(key)){notify('Tento nástroj už v liště je');return}
+  if(order.length>=6){notify('Můžeš mít maximálně 6 rychlých nástrojů');return}
+  order.push(key);showOrder();
+ };
+ showOrder();
 }
 function renderFavorites(){
  let place=$('favoriteTools');
