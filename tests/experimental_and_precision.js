@@ -17,7 +17,7 @@ assert.ok(app.includes("laserRounding:'none'"),'Default must preserve measuremen
 assert.ok(app.includes("laserDecimals:'auto'"),'Default decimals must preserve precision');
 assert.ok(upgrade.includes('Experimentální funkce'));
 assert.ok(upgrade.includes('data-experiment'));
-assert.ok(upgrade.includes('data.experimentalTool=id'));
+assert.ok(upgrade.includes('dataset.experimentalTool=id'));
 assert.ok(upgrade.includes('experimentalCatalog.filter(([id])=>experimentalEnabled(id))'),
  'Only enabled experimental entries are shown in measurement tools');
 assert.ok(upgrade.includes('Zaokrouhlování laseru'));
