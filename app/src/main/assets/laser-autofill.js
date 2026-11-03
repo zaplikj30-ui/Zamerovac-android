@@ -1,12 +1,12 @@
 /* Bosch laser: varianta A. Platná vzdálenost jde přímo do vybrané lineární kóty.
  * Samostatný modul, aby stávající editor i seznam posledních 40 hodnot zůstaly zachovány.
- * Měření přijde buď do již vybrané kóty, nebo čeká na první výběr.
+ * Měření se automaticky zapisuje pouze do předem označené kóty.
+ * Bez označené kóty se hodnota ukládá jen do samostatné historie.
  */
 'use strict';
 (function(){
  const units={mm:1,cm:10,m:1000,in:25.4};
  const linearTypes=new Set(['dimension','chain','cumulative']);
- let pending=null;
  function parseDistance(value,unit){
   const raw=String(value??'').trim().replace(',','.');
   const u=String(unit||'mm').trim().toLowerCase();
@@ -37,14 +37,9 @@
   }
   const item=(current.items||[]).find(x=>x.id===selected);
   if(!item||!linearTypes.has(item.type)){
-   if(options.holdIfUnselected){
-    pending={value:String(value),unit:reading.unit,recordId:current.id};
-    notify('Bosch: hodnota připravena. Klepni na kótu.');
-   }else notify('Bosch: vyber kótu, do které mám zapsat měření');
+   notify('Bosch: hodnota uložena do historie. Nejdřív označ kótu a potom změř.');
    return true;
   }
-  // Každý fyzický odečet se smí zapsat jen jednou.
-  if(options.holdIfUnselected||options.fromPending)pending=null;
   const destUnit=Object.prototype.hasOwnProperty.call(units,item.unit)?item.unit:
     Object.prototype.hasOwnProperty.call(units,prefs.unit)?prefs.unit:'mm';
   const result=asText(reading.millimeters/units[destUnit],destUnit);
@@ -66,31 +61,12 @@
   notify('✓ Bosch: '+result+' '+destUnit+' zapsáno přímo do kóty');
   return true;
  }
- // Pro aktivní kótu se hodnota zapíše hned; jinak zůstane čekat.
- // Čekající měření se při prvním označení kóty spotřebuje právě jednou.
+ // Při příchodu nové hodnoty se vždy kontroluje AKTUÁLNĚ označená kóta.
+ // Nikdy nezapíšeme starší odečet dodatečným klepnutím.
  window.__handleLaserAuto=function(value,unit){
   if(screen!=='editor'||!current)return false;
-  try{
-   const reading=parseDistance(value,unit);
-   if(!reading){pending=null;return apply(value,unit)}
-   pending={value:String(value),unit:reading.unit,recordId:current.id,created:Date.now()};
-   window.lastLaser={value:String(value),unit:reading.unit,time:new Date().toISOString()};
-   const item=(current.items||[]).find(x=>x.id===selected);
-   if(item&&linearTypes.has(item.type))return window.__assignPendingLaserToSelected();
-   notify('Bosch: '+value+' '+reading.unit+' připraveno – klepni na kótu');
-   return true;
-  }catch(error){notify('Měření se nepodařilo zpracovat');return true}
- };
- window.__assignPendingLaserToSelected=function(){
-  if(!pending||screen!=='editor'||!current)return false;
-  // Nepřenášet čekající hodnotu do jiné fotografie nebo zakázky.
-  if(pending.recordId!==current.id){pending=null;return false}
-  const item=(current.items||[]).find(x=>x.id===selected);
-  if(!item||!linearTypes.has(item.type))return false;
-  if(window.isRecordLocked?.(current))return false;
-  const measured=pending;pending=null;
-  try{return apply(measured.value,measured.unit,{silent:true})}
-  catch(error){notify('Bosch: nepodařilo se zapsat měření');return true}
+  try{return apply(value,unit)}
+  catch(error){notify('Měření se nepodařilo zpracovat');return true}
  };
  window.__applyLaserMeasurement=function(value,unit,options={}){
   try{return apply(value,unit,options)}
