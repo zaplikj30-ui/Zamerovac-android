@@ -88,7 +88,8 @@
   return {x:g.cx,y:g.y+g.h+18};
  }
  function labelRect(c,it,g){
-  const text=String(it.text||'Klikněte pro zadání textu').trim();
+  const text=String(it.text||'').trim();
+  if(!text)return null;
   const p=labelPosition(it,g),fs=Number(it.fontSize)||Math.max(14,Number(prefs.fontSize)||17);
   c.font='500 '+fs+'px sans-serif';
   const width=clamp(c.measureText(text).width+18,88,Math.max(88,stageCanvas.clientWidth-20));
@@ -131,7 +132,15 @@
   c.restore();
   // ImageMeter zachovává textovou část poznámky i po vložení detailu.
   renderLabel(c,it,g);
-  if(show&&!window.__exportingAnnotations)handle(c,g.anchor,'',isSelected);
+  // Přítomnost hlasu vyznačujeme ikonou, i když není vyplněný text.
+  if(Array.isArray(it.audioMedia)&&it.audioMedia.length){
+   const p=labelPosition(it,g);
+   c.save();c.font='bold 22px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillStyle='#f7dc27';
+   c.fillText('🎙',p.x+(it.text?Math.min(140,g.w/2):0),p.y+(it.text?0:3));c.restore();
+  }
+  // Bílý úchopový bod na konci šipky pouze při skutečném přetahování.
+  if(show&&active?.item===it&&active.kind==='anchor'&&active.changed&&!window.__exportingAnnotations)
+   handle(c,g.anchor,'',true);
   if(isSelected){
    // Referenční ImageMeter: poloprůhledný středový úchop pro tažení fotografie.
    c.save();c.fillStyle='rgba(255,255,255,.46)';
@@ -169,11 +178,13 @@
      if(t<.8&&dist<14)return {item,g,kind:'anchor'};
    }
    {
-     // Textová část poznámky může být nezávisle přesouvána.
-     const p=labelPosition(item,g);
-     const w=clamp(String(item.text||'Klikněte pro zadání textu').length*(Number(item.fontSize)||17)*.62+18,88,stageCanvas.clientWidth-20);
-     if(Math.abs(point.x-p.x)<w/2+7&&Math.abs(point.y-p.y)<24)
-       return {item,g,kind:item.captionMoved?'caption':'move-caption'};
+     // Fotografie a vlastní text jsou společný objekt.
+     if(item.text){
+      const p=labelPosition(item,g);
+      const w=clamp(String(item.text).length*(Number(item.fontSize)||17)*.62+18,88,stageCanvas.clientWidth-20);
+      if(Math.abs(point.x-p.x)<w/2+7&&Math.abs(point.y-p.y)<24)
+       return {item,g,kind:'move-caption'};
+     }
    }
    const local=unrotate(point,g);
    if(Math.abs(local.x)<=g.w/2+4&&Math.abs(local.y)<=g.h/2+4)return {item,g,kind:'move'};
@@ -217,10 +228,14 @@
    v.item.insetX=v.startingX+dx/view.zoom;
    v.item.insetY=v.startingY+dy/view.zoom;
    v.item.insetMoved=true;
+   if(v.captionMoved&&v.caption)
+    v.item.b={x:v.caption.x+dx/view.zoom,y:v.caption.y+dy/view.zoom};
   }else if(v.kind==='caption'){
-   const start=v.captionMoved?worldToScreen(v.caption):labelPosition(v.item,v.g);
-   v.item.b=screenToWorld({x:start.x+dx,y:start.y+dy});
-   v.item.captionMoved=true;
+   // Starší uložené poznámky: text už nesmí odjíždět od fotografie.
+   v.item.insetX=v.startingX+dx/view.zoom;v.item.insetY=v.startingY+dy/view.zoom;
+   v.item.insetMoved=true;
+   if(v.captionMoved&&v.caption)
+    v.item.b={x:v.caption.x+dx/view.zoom,y:v.caption.y+dy/view.zoom};
   }else if(v.kind==='anchor'){
    // Hrot se přesouvá samostatně, fotografie i její text zůstávají na místě.
    // Není třeba ukládat umělou polohu textu (captionMoved zůstane nezměněno).
@@ -256,10 +271,7 @@
    if(editStack.length)editStack.pop();
    // První klepnutí jen vybere, druhé otevře; bez časového limitu.
    if(v.wasSelected&&(v.kind==='move'||v.kind==='move-caption'||v.kind==='caption')){
-    if(v.kind==='move'&&typeof openNestedPhoto==='function')
-      openNestedPhoto(current,v.item,v.item.media[0]);
-    else if((v.kind==='caption'||v.kind==='move-caption')&&typeof openRichNote==='function')
-      openRichNote(v.item,false);
+    if(typeof openRichNote==='function')openRichNote(v.item,false);
    }
    paint();
   }
