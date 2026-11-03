@@ -16,7 +16,7 @@ const sandbox={
  boundsPoint:p=>({...p}),setTool:k=>{sandbox.mode=k},
  paint:()=>{},commitEditor:()=>{sandbox.commits++},checkpoint:()=>{},editStack:[],commits:0,
  fitImage:()=>{},exportPng:()=>{},notify:()=>{},drawItem:()=>{},stageImg:null,
- opens:[],openNestedPhoto:(parent,item,media)=>sandbox.opens.push(media),
+ opens:[],openNestedPhoto:(parent,item,media)=>sandbox.opens.push('nested:'+media),openRichNote:(item)=>sandbox.opens.push('note:'+item.id),
  native:false,Native:{},document:{createElement:()=>({})},
  console,
 };
@@ -50,6 +50,7 @@ assert.ok(note.insetWidth>oldWidth,'Right-side handle must resize photo');
 assert.equal(sandbox.commits,3,'Changes must be persisted on drag end');
 // Textový rámeček bez samostatného přesunu následuje vloženou fotografii.
 assert.equal(note.captionMoved,undefined,'Dragging arrow must not detach caption from photo');
+note.text='Detail zásuvky';
 const caption={x:note.insetX+note.insetWidth/2,y:note.insetY+note.insetWidth+18};
 const heightBefore=note.insetY;
 drag([caption.x,caption.y],[caption.x+22,caption.y+10]);
@@ -67,5 +68,5 @@ pointer('pointerdown',...center);pointer('pointerup',...center);
 assert.equal(sandbox.selected,note.id,'First tap must select the inset');
 assert.equal(sandbox.opens.length,0,'First tap may not open nested editor');
 pointer('pointerdown',...center);pointer('pointerup',...center);
-assert.deepEqual(sandbox.opens,['detail-1'],'Second separate tap opens editable detail');
+assert.deepEqual(sandbox.opens,['note:note-1'],'Second separate tap opens full note');
 console.log('OK: move outside photo, independent arrow anchor, caption, resize, persistence');
