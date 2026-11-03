@@ -278,3 +278,62 @@ body.in-editor #stage{flex:1!important;min-height:0;margin-left:0!important}
 #modal .richNoteDialog #richAttachments{margin:6px 0 16px}
 #modal .richNoteDialog textarea{min-height:75px;resize:vertical}
 #modal .richNoteDialog .rich-attachment .previewMedia img{max-height:250px}
+
+/* ImageMeter: vysunutí spodní palety přejetím nahoru; dvě další řady ikon.
+   Hlavní řada zůstává stále viditelná a využívá plnou šířku. */
+body.in-editor #editorView {display:flex;flex-direction:column}
+body.in-editor .toolbar {position:relative!important;flex-shrink:0;touch-action:pan-y}
+#editorTrayGrip.editor-tray-grip {
+ position:absolute;z-index:6;top:-11px;left:50%;transform:translateX(-50%);
+ display:flex;align-items:center;justify-content:center;
+ width:73px;height:15px;min-height:15px;padding:3px;
+ background:#333136;border-radius:7px 7px 0 0;
+ border:1px solid #504d51;border-bottom:0;
+ touch-action:none;cursor:pointer;
+}
+#editorTrayGrip span {
+ display:block;width:36px;height:4px;border-radius:6px;
+ background:#79767d;transition:background .15s;
+}
+body.in-editor .toolbar.tray-open #editorTrayGrip span {background:#ddcaff}
+body.in-editor #editorToolTray.editor-tool-tray {
+ position:relative;z-index:2;
+ flex-shrink:0;display:grid;
+ grid-template-columns:repeat(7,minmax(0,1fr));
+ grid-template-rows:repeat(2,52px);
+ width:100%;height:111px;min-height:111px;
+ padding:3px 4px 5px;gap:1px 2px;
+ border-top:1px solid #515058;
+ background:#323136;
+ touch-action:pan-y;
+}
+body.in-editor #editorToolTray[hidden] {display:none!important}
+#editorToolTray .tray-action {
+ display:flex;align-items:center;justify-content:center;
+ width:100%;height:50px;min-width:0;
+ border-radius:5px;border:0;
+ color:#d0cbd3;background:transparent;
+ opacity:1;padding:6px 2px;touch-action:manipulation;
+}
+#editorToolTray .tray-action svg {display:block;width:25px;height:25px}
+#editorToolTray .tray-action[data-action=pin] {color:#ec757f}
+#editorToolTray .tray-action:active,
+#editorToolTray .tray-action:focus-visible {
+ background:#574172;color:#fff;opacity:1
+}
+#editorToolTray .tray-action:disabled {opacity:.35}
+@media (max-width:390px) {
+ body.in-editor #editorToolTray.editor-tool-tray {
+  grid-template-rows:repeat(2,45px);height:98px;min-height:98px;
+ }
+ #editorToolTray .tray-action{height:44px}
+ #editorToolTray .tray-action svg{width:23px;height:23px}
+}
+@media (min-width:850px) {
+ body.in-editor #editorToolTray.editor-tool-tray{
+  grid-template-rows:repeat(2,58px);height:122px;min-height:122px;
+  padding-inline:max(12px,calc((100vw - 1100px)/2));
+ }
+ #editorToolTray .tray-action{height:56px}
+ #editorToolTray .tray-action svg{width:28px;height:28px}
+}
