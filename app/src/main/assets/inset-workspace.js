@@ -190,7 +190,7 @@
   const at=eventPoint(e),v=active;
   const dx=at.x-v.start.x,dy=at.y-v.start.y;
   if(Math.hypot(dx,dy)>3)v.changed=true;
-  if(!v.changed||!v.wasSelected)return;
+  if(!v.changed)return;
   if(v.kind==='move'){
    v.item.insetX=v.startingX+dx/view.zoom;
    v.item.insetY=v.startingY+dy/view.zoom;
