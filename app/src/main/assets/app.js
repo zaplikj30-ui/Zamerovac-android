@@ -135,7 +135,24 @@ window.onNativePhotoAddress=(mediaId,address)=>{
 };
 window.onNativeMediaDone=()=>{stagedFileHandler=null;save()};
 window.onNativeSync=(text)=>{try{let s=JSON.parse(text);if(s.data){if(screen==='browser'){state=s.data;Object.assign(prefs,state.prefs||{});state.prefs=prefs;save();showFolder()}else{const activeIds=new Set([current?.id,noteActive?.id].filter(Boolean));const active=state.records.filter(r=>activeIds.has(r.id));let incoming=s.data.records||[];for(const r of active){let at=incoming.findIndex(x=>x.id===r.id);if(at>=0)incoming[at]=r;else incoming.push(r)}state.records=incoming;save();} }notify(s.message||'Synchronizace dokončena')}catch(e){notify(text)}};
-window.onLaserValue=(value,unit)=>{let input=$('measureInput');if(input){input.value=String(value);$('measureUnit').value=unit||'mm';notify('Měření z laseru: '+value+' '+unit)}else{window.lastLaser={value,unit};notify('Laser: '+value+' '+unit+' — dostupné pro další kótu')}};
+window.onLaserValue=(value,unit)=>{
+ // Po každém měření si zapamatuj poslední hodnotu pro JEDNO následné
+ // klepnutí na kótu. Zápis proběhne až po klepnutí, nikdy ne samovolně.
+ const val=String(value).trim().replace(',','.');
+ const u=String(unit||'mm').trim().toLowerCase();
+ if(!Number.isFinite(Number(val))||Number(val)<=0||!['mm','cm','m','in'].includes(u)){
+   notify('Bosch poslal neplatný rozměr');return;
+ }
+ window.lastLaser={value:val,unit:u,receivedAt:Date.now(),assigned:false};
+ const input=$('measureInput');
+ if(input&&!$('modal').hidden){
+   input.value=val;
+   const units=$('measureUnit');if(units)units.value=u;
+   notify('Laser: '+val+' '+u+' – potvrď hodnotu');
+ }else{
+   notify('Laser: '+val+' '+u+' – klepni na kótu');
+ }
+};
 window.onNativeError=message=>notify('Chyba: '+message);
 window.handleAndroidBack=()=>{
   if(!$('modal').hidden){$('modal').hidden=true;return 'handled';}
