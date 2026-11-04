@@ -64,18 +64,23 @@
 
 **Poznámka k nynějším předběžným souhrnům:** Některá starší přiřazení čísel a závěrů se již ukázala chybná. Považovat je pouze za pracovní stopy, **ne za schválené kompletní výsledky**.
 
-## Stav rekonstrukce historických 28 kontrol (4. 11. 2026)
+## Výsledek rekonstrukce historických 28 kontrol (4. 11. 2026)
 
-**Dosud NEUZAVŘENO.** V deníku [#13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13) existuje předběžná rekonstrukce některých čísel, která je ještě nutné porovnat s videem původního chatu. Zde nebudeme vymýšlet, že už jsou kompletně hotové.
+**Všech 28 testů bylo rozepsáno do detailních historických protokolů.** Nejde o stoprocentně ověřený doslovný přepis, protože některé pasáže rychle posouvaného videa jsou částečně překryté. Jde o průběžné technické podklady z čitelných částí a z doplňujících příloh. Před implementací porovnat se skutečným aktuálním kódem a nejasnosti se zeptat; žádný odhad neprohlašovat za potvrzený.
 
-| Kontroly | Rekonstrukce | Akce |
+| Kontroly | Kde jsou rozepsané | Další stav |
 |---|---|---|
-| 1–28 | Postupně z dostupného chatu a příloh, **výsledky ještě neúplné** | Vzít jednotlivě, upřesnit domluvu, uložit **ihned každou** |
-| 29 | Původně zamýšlený test offline | Provést až v odpovídající fázi; dosud nezaměňovat za hotový |
+| **1–10** | [REKONSTRUKCE_TESTU_01_10.md](REKONSTRUKCE_TESTU_01_10.md) | Sepsáno z videa, implementace/retest nezávisle neověřeny |
+| **11–20** | [REKONSTRUKCE_TESTU_11_20.md](REKONSTRUKCE_TESTU_11_20.md) | Sepsáno z videa, implementace/retest nezávisle neověřeny |
+| **21–28** | [REKONSTRUKCE_TESTU_21_28.md](REKONSTRUKCE_TESTU_21_28.md) | Sepsáno z videa, implementace/retest nezávisle neověřeny |
+| **Mimo čísla testů** | [ROZHODNUTI_A_NAPADY_Z_TESTU.md](ROZHODNUTI_A_NAPADY_Z_TESTU.md) | Schválené novinky i neodsouhlasené „možná později“ |
+| **29** | Plánovaný test provozu bez internetu | Nezařazovat do 28; není potvrzen jako splněný |
+
+**Dohoda o cyklech:** nyní použít všech 28 historických bodů jako podklad pro společnou další aktualizaci. Teprve **po ní** pokračovat s novými testy a opravami po skupinách přibližně pěti; jednotlivé výsledky však ukládat na GitHub hned po každé domluvě.
 
 ## Zápisy jednotlivých testů
 
-*První úplný zápis podle níže uvedené šablony bude přidán teprve po ověření celého kontextu konkrétní kontroly a schválené dohody. Předběžné poznámky zůstávají v #13.*
+*Původní historické zápisy všech 28 testů jsou nyní ve třech propojených detailních dokumentech výše. Tato šablona zůstává pro nové testy a budoucí krátké cykly.*
 
 ### Test [číslo] – [název]
 - **Předmět testu:**
@@ -93,3 +98,4 @@
 - [Issue #12](https://github.com/zaplikj30-ui/Zamerovac-android/issues/12) – původních 49 úprav
 - [VIZE_A_PLAN.md](VIZE_A_PLAN.md) – budoucí vize a nápady
 - [TESTOVANI_MEDIA_INDEX.md](TESTOVANI_MEDIA_INDEX.md) – evidence videí
+- [ROZHODNUTI_A_NAPADY_Z_TESTU.md](ROZHODNUTI_A_NAPADY_Z_TESTU.md) – schválená rozšíření, odložené nápady a důkazní přílohy
