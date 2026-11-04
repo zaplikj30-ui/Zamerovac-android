@@ -69,7 +69,7 @@
    b.disabled=false;
    b.dataset.unavailable=disabled?'true':'false';
    b.setAttribute('aria-disabled',String(!!disabled));
-   b.classList.toggle('extra-active',(key==='select'&&mode==='select')||(key==='grid'&&prefs.snapGrid));
+   b.classList.toggle('extra-active',(key==='select'&&mode==='select')||(key==='grid'&&['snapGrid','snapPoints','snapHorizontal','snapCorners','snapContours','snapRightAngle'].some(k=>prefs[k])));
   }
  }
  function commitWithUndo(action){
@@ -104,7 +104,7 @@
   lock(){if(current?.id)recordActions(current.id)},
   grid(){
    // Tato ikona ovládá všechny magnety, nejen zobrazení rastru.
-   const enabled=!prefs.snapGrid;
+   const enabled=!['snapGrid','snapPoints','snapHorizontal','snapCorners','snapContours','snapRightAngle'].some(k=>prefs[k]);
    for(const key of ['snapGrid','snapPoints','snapHorizontal','snapCorners','snapContours','snapRightAngle'])
     prefs[key]=enabled;
    save();paint();

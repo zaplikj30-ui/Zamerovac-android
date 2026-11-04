@@ -74,7 +74,7 @@ final class BackupImporter {
         String now=java.time.Instant.now().toString();
         String rootId=UUID.randomUUID().toString();
         JSONObject root=new JSONObject().put("id",rootId).put("kind","folder")
-            .put("title","Obnovená záloha "+new java.text.SimpleDateFormat("d. M. yyyy",Locale.forLanguageTag("cs-CZ")).format(new Date()))
+            .put("title",restoredTitle(records)+" – obnovená kopie "+new java.text.SimpleDateFormat("d. M. yyyy",Locale.forLanguageTag("cs-CZ")).format(new Date()))
             .put("parentId",JSONObject.NULL).put("createdAt",now).put("updatedAt",now)
             .put("rev",UUID.randomUUID().toString()).put("media",new JSONArray())
             .put("items",new JSONArray()).put("checks",new JSONArray()).put("text","").put("deleted",false);
@@ -127,6 +127,24 @@ final class BackupImporter {
         target.put(root);
         for(JSONObject rec:newRecords)target.put(rec);
         return new Result(result,newRecords.size());
+    }
+    static String restoredTitle(JSONArray records){
+        Set<String> ids=new HashSet<>();
+        for(int i=0;i<records.length();i++){
+            JSONObject r=records.optJSONObject(i);
+            if(r!=null&&!r.optBoolean("deleted"))ids.add(r.optString("id"));
+        }
+        List<String> names=new ArrayList<>();
+        for(int i=0;i<records.length();i++){
+            JSONObject r=records.optJSONObject(i);
+            if(r==null||r.optBoolean("deleted")||ids.contains(r.optString("parentId")))continue;
+            String name=r.optString("title", "").trim();
+            if(!name.isEmpty())names.add(name);
+        }
+        if(names.isEmpty())return "Záloha";
+        String first=names.get(0);
+        if(first.length()>100)first=first.substring(0,100);
+        return first+(names.size()>1?" a další ("+names.size()+")":"");
     }
     private static void rewriteMedia(JSONArray media,Map<String,String> mapping)throws JSONException{
         if(media==null)return;

@@ -43,7 +43,7 @@ class BigUpdateSmokeTest(unittest.TestCase):
         self.assertIn('new ZipEntry("media-meta.json")', main)
         self.assertIn('new ZipEntry("media/"+id)', main)
         self.assertIn('UUID.randomUUID()', restore)
-        self.assertIn('Obnovená záloha', restore)
+        self.assertIn('restoredTitle(records)', restore)
         self.assertIn('MAX_ENTRIES', restore)
         self.assertIn('collectNestedMedia', main)
         self.assertIn('rewriteItems', restore)
