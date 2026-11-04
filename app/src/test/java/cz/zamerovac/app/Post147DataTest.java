@@ -20,6 +20,7 @@ import static org.junit.Assert.*;
 
 @RunWith(RobolectricTestRunner.class)
 @Config(sdk=35)
+@GraphicsMode(GraphicsMode.Mode.NATIVE)
 public class Post147DataTest {
     private Context context;
     @Before public void setup(){context=RuntimeEnvironment.getApplication();}

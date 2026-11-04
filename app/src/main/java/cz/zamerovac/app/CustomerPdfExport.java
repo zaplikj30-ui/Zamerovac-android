@@ -2,7 +2,6 @@ package cz.zamerovac.app;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.graphics.pdf.PdfDocument;
 import android.util.Base64;
 import java.io.*;
 import java.util.*;
@@ -26,15 +25,13 @@ final class CustomerPdfExport {
             throw new IOException("Neplatné rozlišení exportu");
         Bitmap bitmap=BitmapFactory.decodeByteArray(bytes,0,bytes.length);
         if(bitmap==null)throw new IOException("Fotografii nelze vykreslit");
-        PdfDocument pdf=new PdfDocument();
         try{
-            PdfDocument.Page page=pdf.startPage(new PdfDocument.PageInfo.Builder(bitmap.getWidth(),bitmap.getHeight(),1).create());
-            page.getCanvas().drawBitmap(bitmap,0,0,null);
-            pdf.finishPage(page);
+            ByteArrayOutputStream jpeg=new ByteArrayOutputStream();
+            if(!bitmap.compress(Bitmap.CompressFormat.JPEG,94,jpeg))throw new IOException("Fotografii nelze převést do PDF");
             File output=new File(directory,String.format(Locale.ROOT,"%03d-",count+1)+safeName(title)+".pdf");
-            try(OutputStream out=new FileOutputStream(output)){pdf.writeTo(out);}
+            try(OutputStream out=new FileOutputStream(output)){RasterPdfWriter.write(out,bitmap.getWidth(),bitmap.getHeight(),jpeg.toByteArray());}
             count++;
-        }finally{try{pdf.close();}finally{bitmap.recycle();}}
+        }finally{bitmap.recycle();}
     }
     synchronized File archive() throws IOException {
         if(count==0)throw new IOException("Vyber alespoň jednu fotografii");
