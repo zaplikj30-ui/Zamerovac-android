@@ -7,6 +7,9 @@
 .z-help-header{display:flex;align-items:center;gap:8px;flex-shrink:0;
  min-height:56px;padding:0 12px;background:var(--green,#70871d)}
 .z-help-header h1{font-size:19px;line-height:1.3;margin:0;font-weight:600}
+.z-help-search-button{margin-left:auto;width:44px;height:44px;flex-shrink:0;
+ display:flex;align-items:center;justify-content:center;border-radius:6px;font-size:24px}
+.z-help-search-button:focus-visible{outline:3px solid #f7dc27;outline-offset:2px}
 .z-help-close{width:44px;height:44px;flex-shrink:0;font-size:27px;
  border-radius:6px;text-align:center}
 .z-help-close:focus-visible,.z-help-panel summary:focus-visible,
