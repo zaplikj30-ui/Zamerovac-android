@@ -5,6 +5,7 @@ let drawStart=null,drawCurrent=null,stroke=[],polylineDraft=[],drawPointerId=nul
 let lastDrawingTool='dimension',suppressToolClick=false,repeatPressTimer=null,loupeSide=null;
 let photoLoadGeneration=0,photoLoadTimer=null,photoLoadFailed=false,editorViewport=null;
 function openEditor(r){
+ hideEditorLoupe();
  editorViewport=null;
  polylineDraft=[];stroke=[];drawStart=null;drawCurrent=null;lastTap=0;lastTapAt=null;loupeSide=null;
  screen='editor';document.body.classList.add('in-editor');closeMenus();$('editorHint').hidden=true;
@@ -35,8 +36,15 @@ function openEditor(r){
  }
  resizeEditor();initialImageView();paint();
 }
-function exitEditor(){finishPendingPath();magnifierPoint=null;loupeSide=null;$('loupe').hidden=true;current=null;screen='browser';showFolder()}
+function hideEditorLoupe(){
+ magnifierPoint=null;loupeSide=null;$('loupe').hidden=true;
+ for(const id of pointers.keys())try{stageCanvas.releasePointerCapture(id)}catch(error){}
+ pointers.clear();
+}
+function exitEditor(){hideEditorLoupe();if(selectedHandle?.dragged)commitEditor();selectedHandle=null;finishPendingPath();current=null;screen='browser';showFolder()}
 $('editorBack').onclick=exitEditor;
+// Hide before the Back click, and retire captured pointers before any queued move.
+$('editorBack').addEventListener('pointerdown',hideEditorLoupe,{capture:true});
 $('fitBtn').onclick=fitImage;$('zoomIn').onclick=()=>{const p=centerPoint();zoomAt(1.25,p.x,p.y)};$('zoomOut').onclick=()=>{const p=centerPoint();zoomAt(.8,p.x,p.y)};
 function centerPoint(){return{x:stageCanvas.clientWidth/2,y:stageCanvas.clientHeight/2}}
 function resizeEditor(){
@@ -435,7 +443,7 @@ else if(item.type==='freehand'||item.type==='polyline'){if(pts.length){c.beginPa
 else if(item.type==='note'||item.type==='symbol'){if(a){if(item.type==='note'){drawNoteLeader(c,item,color);(noteDisplayedCaption(item)&&canvasText(noteDisplayedCaption(item),noteCaptionScreen(item),color,fs))}else canvasText((item.icon||'⚑')+' '+(item.text||''),a,color,fs)}}
 c.restore();}
 function drawLoupe(){
-  if(!magnifierPoint)return;
+  if(screen!=='editor'||!current||!magnifierPoint||pointers.size===0){$('loupe').hidden=true;return;}
   const pointer=worldToScreen(magnifierPoint);
   const canvas=$('loupe');
   const width=Math.max(1,stageCanvas.clientWidth);
@@ -946,7 +954,7 @@ if(['polyline','chain','cumulative','angle'].includes(mode)&&polylineDraft.lengt
 if(drag&&mode==='pan'){view.dx=drag.dx+(s.x-drag.screen.x);view.dy=drag.dy+(s.y-drag.screen.y);paint();return}
 if(drawStart&&drawPointerId===e.pointerId){drawCurrent=mode==='freehand'?boundsPoint(screenToWorld(s)):snap(screenToWorld(s),drawStart);magnifierPoint=drawCurrent;if(mode==='freehand')stroke.push({...drawCurrent});paint()}}
 function stageUp(e){
- if(screen!=='editor')return;
+ if(screen!=='editor'||!pointers.has(e.pointerId))return;
  const wasTwo=pointers.size===2;
  pointers.delete(e.pointerId);
  if(wasTwo){
@@ -1310,6 +1318,6 @@ $('styleTool').onclick=()=>{
       else{prefs.lineWidth=w;prefs.fontSize=fs;prefs.color=color;save();paint()}
   });
 };
-stageCanvas.addEventListener('pointerdown',stageDown);stageCanvas.addEventListener('pointermove',stageMove);stageCanvas.addEventListener('pointerup',stageUp);stageCanvas.addEventListener('pointercancel',e=>{pointers.delete(e.pointerId);magnifierPoint=null;drawStart=null;selectedHandle=null;paint()});stageCanvas.addEventListener('wheel',e=>{e.preventDefault();const p=eventPoint(e);zoomAt(e.deltaY<0?1.1:.9,p.x,p.y)},{passive:false});
+stageCanvas.addEventListener('pointerdown',stageDown);stageCanvas.addEventListener('pointermove',stageMove);stageCanvas.addEventListener('pointerup',stageUp);stageCanvas.addEventListener('pointercancel',e=>{if(screen!=='editor'||!pointers.has(e.pointerId))return;pointers.delete(e.pointerId);magnifierPoint=null;drawStart=null;selectedHandle=null;paint()});stageCanvas.addEventListener('wheel',e=>{e.preventDefault();const p=eventPoint(e);zoomAt(e.deltaY<0?1.1:.9,p.x,p.y)},{passive:false});
 $('exportBtn').onclick=()=>{modal('Export',`<div class="row wrap"><button id="exportPng" class="outline">Export PNG</button><button id="exportPdf" class="outline">Export PDF</button></div><div class="muted">Originální soubor a editovatelné kóty se zachovávají zvlášť.</div>`,()=>true,'Zavřít');$('exportPng').onclick=()=>{exportPng();$('modal').hidden=true};$('exportPdf').onclick=()=>{if(native)Native.printPdf();else window.print();$('modal').hidden=true}};
 function exportPng(){let o=document.createElement('canvas');o.width=photoSize.w;o.height=photoSize.h;let c=o.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,o.width,o.height);if(stageImg)c.drawImage(stageImg,0,0,o.width,o.height);let oldCtx=ctx,oldView={...view};ctx=c;view={zoom:1,dx:0,dy:0};for(let item of current.items||[])drawItem(c,item,false);ctx=oldCtx;view=oldView;const data=o.toDataURL('image/png');if(native)Native.exportPng((current.title||'zamerovani')+'.png',data.slice(data.indexOf(',')+1));else{let a=document.createElement('a');a.download='zamerovani.png';a.href=data;a.click()}notify('Export obrázku připraven')}

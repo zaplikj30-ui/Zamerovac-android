@@ -85,7 +85,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
  assert.deepEqual(errors,[]);
  // The actual openRecord wrapper must select the native video player on Android.
  const nativePage=await browser.newPage();await nativePage.addInitScript(()=>{
-  window.Native=new Proxy({loadData:()=>JSON.stringify({schema:1,records:[{id:'video-record',kind:'video',media:['synthetic-video'],title:'Video'}]}),getAppVersion:()=> '1.2.149-test',openMedia:id=>window.__openedMedia=id},{get:(object,key)=>object[key]||(()=> '')});
+  window.Native=new Proxy({loadData:()=>JSON.stringify({schema:1,records:[{id:'video-record',kind:'video',media:['synthetic-video'],title:'Video'}]}),getAppVersion:()=> '1.2.149-test',openVideo:id=>window.__openedMedia=id,openMedia:()=>{throw Error("Legacy video routed to MIME-based dispatch")}},{get:(object,key)=>object[key]||(()=> '')});
  });
  await nativePage.goto(process.argv[2]||'http://127.0.0.1:8765');await nativePage.evaluate(()=>openRecord('video-record'));
  assert.equal(await nativePage.evaluate(()=>__openedMedia),'synthetic-video');assert.equal(await nativePage.locator('.mediaOverlay').count(),0);await nativePage.close();

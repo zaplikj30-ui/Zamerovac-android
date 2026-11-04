@@ -203,7 +203,7 @@ openRecord=function(id){
 };
 async function openMediaPlayer(r){
  const id=r.media?.[0];
- if(native&&r.kind==='video'){Native.openMedia(id);return}
+ if(native&&r.kind==='video'){Native.openVideo(id);return}
  const url=await assetUrl(id);
  if(!url){notify('Soubor nelze otevřít');return}
  const el=document.createElement('div');el.className='mediaOverlay';
