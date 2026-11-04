@@ -6,6 +6,8 @@
 
 ## 0. Společná práce přes ChatGPT i Codex
 
+**Závazné upřesnění předávání Codexu (4. 11. 2026):** ChatGPT sám rozhoduje, které úpravy provede a které zadá Codexu. **Pokud vybere Codex, musí uživateli rovnou poslat celý připravený text ke zkopírování do Codexu** včetně repozitáře, rozsahu, odkazů na schválené issues, pravidel ochrany dat a testů. Uživatel jej pouze vloží; nepřipravuje zadání ani nerozhoduje o dělbě práce. GitHub záznam není spuštění Codexu; teprve po skutečném provedení zkontrolovat jeho výsledky. Stejné pravidlo doporučit vložit do Pokynů projektu Zaměřování v ChatGPT; GitHub tyto pokyny sám nemění. Detail viz [AGENTS.md](AGENTS.md#rozdělení-práce-mezi-chatgpt-a-codex--rozhoduje-asistent).
+
 **Závazný postup je v [AGENTS.md](AGENTS.md#společný-pracovní-protokol-chatgpt--codex--github-závazné).** Na projektu se střídají klasické chaty ChatGPT i Codex. **GitHub je jediný sdílený trvalý zdroj aktuálního stavu**; nepočítat s tím, že druhý chat vidí náš rozhovor.
 
 **Než kdokoli začne další práci**, musí znovu ověřit tento rozcestník, `AGENTS.md`, poslední commity a aktivní PR, relevantní issues **včetně nových komentářů** (zejména #13, #12, #14), aktuální stav Actions a Releases. Před zápisem znovu ověřit změněné soubory/SHA, aby se nepřepsala práce druhého chatu nebo Codexu.
