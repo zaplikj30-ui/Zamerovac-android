@@ -282,6 +282,19 @@ Tato část **zpřesňuje již existující požadavek**, nezakládá druhé nez
 
 **K případnému přechodu do plánu vydání** dojde teprve po výslovném rozhodnutí uživatele a samostatné kontrole stability, kompatibility, právních/obchodních požadavků, zásad obchodu a skutečných testů. Do té doby je toto **nezávazný dlouhodobý směr, nikoli úkol „vydat APK na Google Play“.**
 
+### Širší okruh uživatelů a možná mezinárodní dostupnost (nezávazná vize)
+
+**Stav k 4. 11. 2026: NEZÁVAZNÁ DLOUHODOBÁ VIZE, nikoli pokyn k implementaci nebo rozhodnutí o zveřejnění či prodeji.** Tento zápis pouze doplňuje existující dlouhodobé plány pro Android, možný iPhone/iPad, Windows, jazykovou podporu a samostatné/propojené moduly. Neznamená, že už jsou tyto varianty vytvořené nebo ověřené.
+
+- **Cílové skupiny:** systém by jednou mohl pomáhat nejen při vlastní zakázkové výrobě, ale také dalším truhlářům, nábytkářům, montážníkům a příbuzným řemeslům, případně v zahraničí. Konkrétní trhy ani skutečná poptávka nejsou ověřené.
+- **Široká dostupnost a mezinárodní použitelnost:** usilovat dlouhodobě o možnost podpory různých telefonů/tabletů s Androidem, případně iOS/iPadOS a Windows, a více jazyků, jednotek a místních formátů. Interní rozměry, přesnost a význam údajů se nesmějí nechtěně měnit podle jazyka nebo regionu. Každá platforma, jazyk a zařízení potřebují vlastní ověření.
+- **Rozsah funkcí podle potřeb:** budoucí uživatel může potřebovat pouze Zaměření, Návrh, Kusovník nebo Nářezák, případně celý propojený systém. Zda budou moduly součástí jedné instalace, nebo oddělených aplikací, zůstává otevřené. Současné dvě aplikace se neslučují.
+- **Přehledné ovládání:** šíře budoucích funkcí nemá vynucovat složitý postup. Uživatel má mít snadno přístupné potřebné nástroje a možnost začít i bez předchozích kroků v jiném modulu.
+- **Veřejná distribuce:** Google Play a Apple App Store zůstávají pouze možnými distribučními cestami. Široká kompatibilita sama o sobě nezaručuje počet uživatelů ani úspěch vydání.
+- **Finanční/obchodní model je výslovně NEROZHODNUTÝ:** není stanoveno, zda by aplikace byla zdarma, jednorázově placená, na měsíční/roční předplatné, zda by měla některé prémiové nebo placené funkce, nebo jiný model. Žádná z těchto možností se nyní neschvaluje ani nevylučuje. Nezavádět dnes platby, omezení funkcí, registraci, předplatné nebo obchodní infrastrukturu jen kvůli této vizi; případné řešení a dopad na uživatele se posoudí samostatně později.
+
+**Současný postup:** pouze zaznamenat dlouhodobý směr. Pokračovat v domluvených opravách, testování a rozvoji současných aplikací se zásadní prioritou spolehlivost → bezpečnost dat → přesnost a funkčnost → jednoduché ovládání. Bez nových modulů, přepisování frameworku, vývoje iOS/PC, změn cenové politiky nebo samostatného APK buildu kvůli tomuto zápisu.
+
 ### Kontrola sjednocení dlouhodobých požadavků – co platí nyní a co později
 
 **Kontrola proti devíti bodům uživatele ze 4. 11. 2026.** Tato tabulka **jen rozcestníkem propojuje existující podrobné dohody**; nenahrazuje je a neotvírá nové implementační úkoly.
@@ -328,6 +341,8 @@ Tato část **zpřesňuje již existující požadavek**, nezakládá druhé nez
 | 2026-11-04 | Sjednocena kontrola devíti dlouhodobých oblastí; již existující dohody zachovány a propojeny. **Nově jako samostatný nezávazný nápad** evidován průvodce zaměřením pro chybějící měření a kontroly součtů kót. Nejbližší aktualizace nadále řeší dohodnuté opravy a českou přípravu lokalizace. |
 | 2026-11-04 | Schválen široký cílový rozsah Android telefonů a tabletů různých výrobců, velikostí a výkonnostních tříd; postupné testování skutečné kompatibility, bez tvrzení, že všechny modely již fungují, a bez plošného přepisu aplikace. |
 | 2026-11-04 | Přidána nezávazná možnost budoucí podpory iPhone/iPad (iOS/iPadOS), přenositelné logiky a dat a případného Apple App Store; bez zahájení iOS vývoje, změny frameworku či oslabení Androidu. |
+
+| 2026-11-04 | Upřesněn nezávazný dlouhodobý směr širší dostupnosti pro různá řemesla a zahraniční uživatele, volitelných samostatných modulů a přehledného ovládání. **Finanční model není rozhodnutý** (zdarma / jednorázová platba / předplatné / volitelné placené funkce či jinak); žádná varianta není schválena ani vyloučena. Pouze dokumentace, bez změn kódu. |
 
 ## 8. Další dohledané drobné náměty a ověřované detaily z testování
 Tyto body jsou rozdělené podle původního kontextu; **nesmí se automaticky vydávat za hotové**.
