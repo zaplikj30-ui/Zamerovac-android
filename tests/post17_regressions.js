@@ -96,3 +96,74 @@ assert.equal(env.segmentLineScreen(cumulative,1).a.y,31,'Hit areas match the act
 cumulative.segmentData=[{measure:'100,000123',unit:'cm'},{measure:'100,000123',unit:'cm'}];
 const reloaded=JSON.parse(JSON.stringify(cumulative));assert.equal(reloaded.segmentData.length,2);
 assert.equal(reloaded.segmentData[1].measure,'100,000123');
+
+// Back from an edited annotation form must offer save, discard, or keep editing.
+{
+ const originalApp=fs.readFileSync('app/src/main/assets/app.js','utf8');
+ assert(originalApp.includes("if(typeof window.modalBackHandler==='function'){window.modalBackHandler();return 'handled'}"),
+  'System Back must invoke the optional annotation confirmation instead of discarding the form');
+ assert(originalApp.includes('window.modalBackHandler=null;'),
+  'Opening another modal or closing the current one must clear the handler');
+
+ const fields=[
+  {id:'segmentMeasure0',type:'text',value:'1250',matches:()=>false},
+  {id:'segmentText0',type:'text',value:'Voda',matches:()=>false},
+  {id:'segmentUnit0',type:'select-one',value:'mm',matches:()=>false},
+  {id:'insertSegmentAt',type:'select-one',value:'0',matches:()=>false},
+  {id:'ignoredReading',type:'select-one',value:'',matches:selector=>selector.includes('[data-segment-reading]')}
+ ];
+ let overlay=null,saves=0,discards=0;
+ const modalBody={querySelectorAll:()=>fields};
+ const controls={
+  modalBody,
+  okModal:{click:()=>{saves++}},
+  cancelModal:{click:()=>{discards++}}
+ };
+ const documentStub={
+  getElementById:id=>id==='editorUnsavedConfirm'?overlay:null,
+  createElement:()=>({
+   style:{},buttons:{},innerHTML:'',
+   querySelector(id){
+    if(!this.buttons[id])this.buttons[id]={onclick:null,focus(){}};
+    return this.buttons[id];
+   },
+   remove(){overlay=null}
+  }),
+  body:{append(element){overlay=element}}
+ };
+ const ctx={document:documentStub,window:{},$:id=>controls[id],console};
+ vm.createContext(ctx);
+ vm.runInContext(part('function protectAnnotationModalOnBack()', 'function editSegmentedItem('),ctx);
+ ctx.protectAnnotationModalOnBack();
+ // Without edits, Back closes like before; selecting an insertion position is not a data edit.
+ fields[3].value='1';ctx.window.modalBackHandler();
+ assert.equal(discards,1);assert.equal(overlay,null);
+ fields[3].value='0';discards=0;
+ ctx.protectAnnotationModalOnBack();
+ fields[0].value='1251';
+ ctx.window.modalBackHandler();
+ assert(overlay);assert(overlay.innerHTML.includes('Uložit změny?'));
+ overlay.querySelector('#keepAnnotationEditing').onclick();
+ assert.equal(overlay,null);assert.equal(saves,0);assert.equal(discards,0);
+ ctx.window.modalBackHandler();
+ assert(overlay);
+ ctx.window.modalBackHandler(); // Back again dismisses confirmation only.
+ assert.equal(overlay,null);assert.equal(discards,0);
+ ctx.window.modalBackHandler();overlay.querySelector('#saveAnnotationEdits').onclick();
+ assert.equal(saves,1);assert.equal(overlay,null);
+ fields[0].value='1251';
+ ctx.protectAnnotationModalOnBack();
+ fields[1].value='Nový popisek';
+ ctx.window.modalBackHandler();
+ assert(overlay,'Text changes must trigger the same confirmation');
+ overlay.querySelector('#discardAnnotationEdits').onclick();
+ assert.equal(discards,1);assert.equal(overlay,null);
+ fields[1].value='Voda';
+ ctx.protectAnnotationModalOnBack();
+ fields[2].value='none';
+ ctx.window.modalBackHandler();
+ assert(overlay,'Unit visibility is a real saved edit');
+ overlay.querySelector('#saveAnnotationEdits').onclick();
+ assert.equal(saves,2);
+}
+console.log('OK: annotation Back saves on confirmation, discards explicitly, or keeps editing');
