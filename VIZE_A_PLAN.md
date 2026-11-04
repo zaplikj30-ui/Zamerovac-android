@@ -38,6 +38,20 @@ Tento seznam obsahuje dříve zmíněné nebo odložené směry. O přesném pro
 - Lepší práce s poznámkami/S Pen a hledání možností propojení se Samsung Notes, pouze pokud to dostupná rozhraní umožní.
 - Vylepšené srozumitelné popisky/editor a změna názvu aplikace/složek, pokud se na tom dohodneme.
 
+### Průvodce zaměřením – budoucí možnost, nikoli současná úprava
+
+**Stav: NÁPAD / BUDOUCÍ MOŽNOST K POZDĚJŠÍMU ROZHODNUTÍ.** Není to potvrzená funkce stávající APK, nepatří automaticky do nejbližší aktualizace a neznamená příkaz nyní vytvořit novou obrazovku. Doplňuje již zaznamenanou budoucí možnost automatických kontrol chyb při zaměření a navrhování nábytku.
+
+**Cíl:** pomoct při skutečném zaměřování místnosti a přípravě zakázky zabránit tomu, aby se zapomnělo na podstatný rozměr nebo vznikly vzájemně rozporné kóty. Průvodce má být pomocník, nikoli překážka při volném zaměřování.
+
+- **Evidence potřebných měření:** podle konkrétní místnosti/typu zakázky přehledně evidovat zvolené délky stěn, výšky, šířky, důležité odstupy a polohy otvorů či instalací (okna, dveře, zásuvky, voda, odpad, překážky), včetně fotky, poznámky, referenčního bodu nebo stěny. **Konečný povinný seznam měření není stanoven** a musí být později upravitelný podle zakázky.
+- **Přehled úplnosti:** rozlišit naměřeno / chybí / není potřeba / nutno ověřit; upozornit na chybějící údaj, neúplnou skupinu měření či nejasné přiřazení k místnosti. Pokud se odvozuje rozměr, označit jej jako **odvozený**, nikoli přímo naměřený.
+- **Kontrola navazujících kót:** porovnávat např. součet dílčích rozměrů se skutečně změřeným celkovým rozměrem včetně správných jednotek a směru; zřetelně ukázat **konkrétní rozdíl a dotčené kóty**. Tolerance, zaokrouhlování a pravidla geometrického vyhodnocení jsou **otázky pro budoucí návrh**, nesmějí být nyní domyšleny jako schválená konstanta.
+- **Kontrola bez nechtěných změn:** doporučit doplnění nebo opětovné přeměření, ale **neopravovat automaticky hodnoty, fotografie, anotace ani návazné schválené návrhy a výrobní podklady**. Rozhodnutí o převzetí a případném přepočtu zůstává na uživateli.
+- **Použitelnost a budoucí návaznost:** průvodce může pracovat offline, zachovat editovatelnost jednotlivých kót a být později zdrojem ověřených údajů pro půdorys, návrh skříněk a kontroly kolizí. **Nyní nevytvářet závislost Zaměřovače na Konfigurátoru.**
+
+**Otevřeno pro další domluvu:** seznam povinných položek, práce s typy místností, toleranční pravidla, pořadí kroků, způsob zobrazení i míra automatizace. Tyto detaily nejsou nyní schváleným zadáním k programování.
+
 ### Dlouhodobý směr: propojení Zaměřovače a Konfigurátoru–Nářezáku
 
 **Dohoda 4. 11. 2026. Stav: DLOUHODOBÁ VIZE, nikoli schválení slučování aplikací či okamžité implementace.** Zaměřovač a [Konfigurátor – Nářezák Android](https://github.com/zaplikj30-ui/Konfigurator-Narezak-Android) jsou **dva samostatné projekty**, které se nyní vyvíjejí, testují, ukládají a aktualizují nezávisle. Nezaměňovat je ani s projektem „Převaděč spojitosti“. Cílovou možností je **jeden profesionální systém pro zakázkovou výrobu nábytku**, na Androidu (telefon/tablet) a Windows PC. O skutečném sloučení, technologii a termínu se rozhodne později.
@@ -219,6 +233,24 @@ Kontrola má **upozornit a vysvětlit konkrétní nesrovnalost**. Bez výslovné
 
 **K případnému přechodu do plánu vydání** dojde teprve po výslovném rozhodnutí uživatele a samostatné kontrole stability, kompatibility, právních/obchodních požadavků, zásad obchodu a skutečných testů. Do té doby je toto **nezávazný dlouhodobý směr, nikoli úkol „vydat APK na Google Play“.**
 
+### Kontrola sjednocení dlouhodobých požadavků – co platí nyní a co později
+
+**Kontrola proti devíti bodům uživatele ze 4. 11. 2026.** Tato tabulka **jen rozcestníkem propojuje existující podrobné dohody**; nenahrazuje je a neotvírá nové implementační úkoly.
+
+| Oblast | Stav dohody | Platný podrobný zápis |
+|---|---|---|
+| **1. Vícejazyčnost** | **SCHVÁLENO PRO NADCHÁZEJÍCÍ AKTUALIZACI:** bezpečný postupný český lokalizační základ, položka „Jazyk aplikace“ pouze s 🇨🇿 Čeština. Desítky jazyků jsou technický budoucí cíl, **žádné hotové překlady nyní**. | [LOKALIZACE_PLAN.md](LOKALIZACE_PLAN.md), [Issue #14](https://github.com/zaplikj30-ui/Zamerovac-android/issues/14) |
+| **2. Google Play** | **NEZÁVAZNÁ DLOUHODOBÁ MOŽNOST**, bez termínu, vydání, registrace nebo změn kvůli publikování. | Sekce „Možný dlouhodobý cíl: veřejné vydání na Google Play“ níže |
+| **3. PC aplikace** | **DLOUHODOBÝ SMĚR:** plnohodnotný Windows editor stejné zakázky a grafických objektů; **vývoj nezahájen**. | Sekce „plnohodnotný Zaměřovač pro Windows 11“ níže |
+| **4. Společná aplikace** | **DLOUHODOBÁ MOŽNOST**, nikoli pokyn spojit dva dnešní projekty. | Sekce propojení Zaměřovače a Konfigurátoru–Nářezáku; [vize druhého projektu](https://github.com/zaplikj30-ui/Konfigurator-Narezak-Android/blob/main/VIZE_A_PLAN.md) |
+| **5. Společné zakázky / přenos měření** | **DLOUHODOBÝ SMĚR**, zatím bez datového API; kontrolované převzetí fotografií, rozměrů, prostorových vazeb a překážek bez přepisování a bez zásahu do schválené výroby. | Sekce „jeden systém pro celý proces zakázkové výroby“ a [datová inventura](DATOVY_FORMAT_A_PC_KOMPATIBILITA.md) |
+| **6. Datová kompatibilita** | **ZÁVAZNÁ ZÁSADA DNEŠNÍHO VÝVOJE** zachovávat originály, editovatelné objekty, stabilní identity, zpětnou kompatibilitu a bezpečnost; **nové společné schéma/synchronizace nejsou schválené k realizaci**. | [DATOVY_FORMAT_A_PC_KOMPATIBILITA.md](DATOVY_FORMAT_A_PC_KOMPATIBILITA.md) |
+| **7. Průvodce zaměřením** | **NOVĚ SAMOSTATNĚ EVIDOVANÁ BUDOUCÍ MOŽNOST:** přehled potřebných měření, chybějící údaje a kontroly součtů kót. **Neimplementovat zatím.** | Sekce „Průvodce zaměřením“ výše |
+| **8. Historie a bezpečnost** | **OCHRANA DAT A ZÁLOH JE PRIORITA SOUČASNÝCH OPRAV**; univerzální historie verzí a řešení konfliktů jsou **budoucí možnosti**. | [Audit 28 testů](AUDIT_KODU_PROTI_28_TESTUM.md), [datová inventura](DATOVY_FORMAT_A_PC_KOMPATIBILITA.md) |
+| **9. Automatizované testování** | **SCHVÁLENÉ PRŮBĚŽNÉ VÝVOJOVÉ PRAVIDLO**; reálná kompatibilita Android zařízení a konkrétního laseru potvrdit jen fyzickým testem. | [Audit 28 testů](AUDIT_KODU_PROTI_28_TESTUM.md), sekce Google Play níže |
+
+**Aktuální vývojový rozsah:** domluvené opravy a testy Zaměřovače podle [rekonstrukce 28 testů](START_ZDE.md), plus již schválená česká první fáze lokalizace. **Všechny ostatní uvedené cíle se nyní jen dokumentují a technicky zohledňují tam, kde to dává smysl.** Nezačínat PC aplikaci, sloučení projektů, cloudovou synchronizaci ani průvodce zaměřením bez dalšího schválení.
+
 ## 5. Aktuálně zaznamenané otevřené body a testování
 - Podrobný kontrolní seznam 49 úprav: [Issue #12](https://github.com/zaplikj30-ui/Zamerovac-android/issues/12).
 - Průběžný testovací deník: [Issue #13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13).
@@ -244,6 +276,7 @@ Kontrola má **upozornit a vysvětlit konkrétní nesrovnalost**. Bez výslovné
 | 2026-11-04 | Doplněna plnohodnotná budoucí PC verze pro Windows 11, stejná editovatelná data a bezpečná obousměrná výměna zakázek. Jde o dlouhodobý směr bez zahájení vývoje, technologického rozhodnutí či termínu. [Technický podklad](DATOVY_FORMAT_A_PC_KOMPATIBILITA.md). |
 | 2026-11-04 | Doplněna dlouhodobá vize propojení samostatných projektů Zaměřovač a Konfigurátor–Nářezák do modulárního systému Zaměření → Návrh → Kusovník → Nářezák pro Android i PC. Bez nynějšího slučování či vývoje společné aplikace; důraz na data, jednotky, editovatelnost, bezpečné předávání a ruční schválení změn hotové výroby. |
 | 2026-11-04 | Rozšířena vize společného systému: jedna zakázka zahrnuje zaměření, 2D/3D a pohledy na stěny, návrh, kusovník, nářez, nastavitelnou kalkulaci ceny, revize, výrobu/montáž a automatické kontroly; beze změn stávajících aplikací a dat, bez schválení implementace těchto budoucích modulů. |
+| 2026-11-04 | Sjednocena kontrola devíti dlouhodobých oblastí; již existující dohody zachovány a propojeny. **Nově jako samostatný nezávazný nápad** evidován průvodce zaměřením pro chybějící měření a kontroly součtů kót. Nejbližší aktualizace nadále řeší dohodnuté opravy a českou přípravu lokalizace. |
 
 ## 8. Další dohledané drobné náměty a ověřované detaily z testování
 Tyto body jsou rozdělené podle původního kontextu; **nesmí se automaticky vydávat za hotové**.
