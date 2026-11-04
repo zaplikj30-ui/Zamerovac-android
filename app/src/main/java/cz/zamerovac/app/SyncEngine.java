@@ -74,11 +74,17 @@ public class SyncEngine {
         JSONArray a=local.optJSONArray("records"), b=remote.optJSONArray("records");
         if(a!=null)for(int i=0;i<a.length();i++){JSONObject rec=a.optJSONObject(i);if(rec!=null&&rec.has("id"))l.put(rec.getString("id"),rec);}
         if(b!=null)for(int i=0;i<b.length();i++){JSONObject rec=b.optJSONObject(i);if(rec!=null&&rec.has("id"))r.put(rec.getString("id"),rec);}
+        Set<String> purged=TrashPurger.purgedIds(local);purged.addAll(TrashPurger.purgedIds(remote));
         Map<String,String> base=baseline();Set<String> all=new HashSet<>();all.addAll(l.keySet());all.addAll(r.keySet());
         JSONArray merged=new JSONArray();JSONObject nextBase=new JSONObject();
         // Deterministic order keeps generated JSON stable.
         ArrayList<String> sorted=new ArrayList<>(all);java.util.Collections.sort(sorted);
         for(String id: sorted){JSONObject lv=l.get(id),rv=r.get(id), chosen;
+            if(purged.contains(id)){
+                if(lv!=null&&lv.optBoolean("deleted"))lv=null;
+                if(rv!=null&&rv.optBoolean("deleted"))rv=null;
+                if(lv==null&&rv==null)continue;
+            }
             if(lv==null)chosen=rv;
             else if(rv==null)chosen=lv;
             else {
@@ -99,7 +105,7 @@ public class SyncEngine {
             }
             merged.put(chosen);nextBase.put(id,chosen.optString("rev",""));
         }
-        JSONObject result=new JSONObject(local.toString());result.put("records",merged);
+        JSONObject result=new JSONObject(local.toString());result.put("records",merged);result.put("trashPurgedIds",new JSONArray(purged));
         // Preferences are device-local (screen size, tool order, colors). Never overwrite.
         nextBaseline=nextBase.toString();
         return result;
@@ -148,6 +154,7 @@ public class SyncEngine {
         }
     }
     public synchronized Result sync() throws Exception{
+        synchronized(TrashPurger.LOCK){
         if(tree==null)throw new Exception("Nejdřív vyber složku na Google Disku");
         String rootId=DocumentsContract.getTreeDocumentId(tree);
         Uri root=DocumentsContract.buildDocumentUriUsingTree(tree,rootId);
@@ -164,5 +171,6 @@ public class SyncEngine {
         saveLocal(merged.toString());
         prefs.edit().putString("syncBase",nextBaseline).apply();
         return new Result("Synchronizováno · "+merged.optJSONArray("records").length()+" položek",merged);
+        }
     }
 }

@@ -32,7 +32,7 @@
     '<button type="button" data-bulk="copy">Kopírovat</button>'+
     '<button type="button" data-bulk="delete">Smazat</button>'+
     '<button type="button" data-bulk="zip">Exportovat do ZIP</button>'+
-    '<button type="button" data-bulk="customer">Pro zákazníka: PDF ZIP</button>'+
+    '<button type="button" data-bulk="customer">Export pro zákazníka: ZIP s PDF</button>'+
     '<button type="button" data-bulk="cancel">Zrušit</button>';
    toolbar.querySelectorAll('[data-bulk]').forEach(b=>b.onclick=()=>handle(b.dataset.bulk));
  }

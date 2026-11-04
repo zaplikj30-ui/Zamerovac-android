@@ -12,6 +12,20 @@
 
 **Předávání bez kopírování chatu:** přesné nové dohody, schválené úpravy, výsledky testů, rozpracovaný kód, otevřené blokátory i nezávazné nápady průběžně hned ukládat ke správnému issue nebo dokumentu. V tomto souboru udržovat **hotovo / zbývá / nerozhodnuto / další konkrétní krok** a odkazy. Odlišit **nápad → schválené → v kódu → APK vydaná → fyzicky ověřená**. Samotný commit, zelené CI ani APK neprokazují reálné ověření.
 
+## Rozpracováno po 1.2.148 – E + F + G a značka miniatury
+
+Zahájeno 4. 11. 2026 z `f646a87`, bez otevřených PR. Větev `feature/post148-trash-menus`.
+Schválené: bezpečně vysypat koš, zavírat běžná menu dotykem mimo bez průchodu do editoru,
+text všech vstupů „Export pro zákazníka: ZIP s PDF“. Uživatel následně schválil přesun
+značky pravítka vlevo nahoru **a další mírné zmenšení**: 17 → 15 px, symbol 12 → 11 px.
+[Zahájení #17](https://github.com/zaplikj30-ui/Zamerovac-android/issues/17#issuecomment-6636851681).
+První implementace a cílené testy v pracovní větvi; dosavadních 13 JS skriptů,
+Python 41 kontrol (1 skip bez SDK) a původní Chromium průchod prošly.
+Nové nativní a browser regrese jsou rozpracované. APK zatím nebyla vyvolána.
+Další krok: dokončit nové bezpečnostní testy, nativní CI v PR a kontrolu změn;
+potom sloučit a **jednou** vydat vyšší testovací verzi s původním podpisem.
+Fyzické ověření na telefonu stále čeká, skutečná data se k destruktivním testům nepoužívají.
+
 **Aktuální vydání společné aktualizace #17: [Zaměřovač 1.2.148 – stáhnout APK](https://github.com/zaplikj30-ui/Zamerovac-android/releases/download/test-v1.2.148/Zamerovac-v1.2.148.apk).** [Release](https://github.com/zaplikj30-ui/Zamerovac-android/releases/tag/test-v1.2.148) · [úspěšné jediné sestavení #148](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/41870681150) · [přesná mapa všech změn a kontrol](IMPLEMENTACE_17.md). Opravy i vymezená vylepšení jsou sloučené do main, APK vydaná, podpis a balíček zachovány, `versionCode 1148` > `1147`. Stažená vydaná APK má shodný SHA-256 s buildem a stejné upravené assets jako ověřený kód.
 
 **Další jediný krok: fyzicky ověřit aktualizaci z 1.2.147 na zkušebních zakázkách a zachování dat po opětovném otevření; předtím uchovat původní zálohovací ZIP.** Aplikaci neodinstalovávat ani nevymazávat její data. Teprve po jednotlivých výsledcích pokračovat dalšími cílenými retesty podle #13. Nová APK není důkazem fyzického ověření: stále čeká původní případ lichoběžníku, prst/S Pen a úchopy, zákaznické PDF na telefonu, reálné Bluetooth měření Bosch v konkrétních úsecích/jednotkách a **offline test 29**. Rozsáhlé dlouhodobé nápady AI/iOS/Windows/cloud/Samsung Notes nebyly přidány.

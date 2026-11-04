@@ -91,7 +91,7 @@
   const record=recById(id);
   if(!record||!['photo','folder'].includes(record.kind))return;
   const button=document.createElement('button');button.className='outline';
-  button.textContent='Pro zákazníka: ZIP s PDF';
+  button.textContent='Export pro zákazníka: ZIP s PDF';
   button.onclick=()=>open([id]);$('modalBody').querySelector('.row')?.append(button);
  };
  const previousOverflow=showEditorOverflow;
@@ -99,7 +99,7 @@
   previousOverflow();
   const menu=$('editorOverflow');
   if(menu.hidden||!current||current.kind!=='photo')return;
-  const button=document.createElement('button');button.className='appMenuItem';button.textContent='Pro zákazníka: ZIP s PDF';
+  const button=document.createElement('button');button.className='appMenuItem';button.textContent='Export pro zákazníka: ZIP s PDF';
   button.onclick=()=>{closeMenus();finishPendingPath();open([current.id])};menu.append(button);
  };
  $('editorTopMenu').onclick=showEditorOverflow;
