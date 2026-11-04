@@ -640,6 +640,44 @@ updateDrawingToolButton=function(){
 };
 updateDrawingToolButton();
 let laserState='off',laserName='',activeLaserHistoryId='',activeLaserHistoryName='';
+// A distinct model mark is shown only when the Bluetooth name is unambiguous.
+// We draw our own simple silhouette, not a brand illustration.
+function recognizedLaserModel(name){
+ const n=String(name||'').toUpperCase().replace(/[\s-]/g,'');
+ if(n.includes('GLM10025C'))return {label:'100',type:'ble',name:'Bosch GLM 100-25 C'};
+ if(n.includes('GLM50C'))return {label:'50',type:'classic',name:'Bosch GLM 50 C'};
+ if(n.includes('GLM100C'))return {label:'100',type:'classic',name:'Bosch GLM 100 C'};
+ return {label:'',type:'unknown',name:String(name||'Neznámý měřák')};
+}
+function renderLaserMeterIcon(){
+ const btn=$('boschHistoryBtn');if(!btn)return;
+ const model=recognizedLaserModel(laserName);
+ // The screen tint/shape varies for known devices without claiming an exact photo.
+ const wide=model.type==='ble';
+ btn.innerHTML='<svg viewBox="0 0 24 24" width="24" height="28" fill="none" stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+
+  '<rect x="'+(wide?5:6)+'" y="1.5" width="'+(wide?14:12)+'" height="21" rx="2.4"/>'+
+  '<rect x="'+(wide?7.5:8.5)+'" y="5.5" width="'+(wide?9:7)+'" height="8" rx="1" fill="currentColor" fill-opacity=".13"/>'+
+  '<path d="M9.5 17h5M10 20h4"/>'+
+  (model.label?'<text x="12" y="11" text-anchor="middle" font-size="5.5" stroke="none" fill="currentColor">'+model.label+'</text>':'')+
+  '</svg>';
+ btn.title=(laserName?'Měřák '+laserName:'Měřák')+' – klepni pro historii, podrž pro možnosti';
+ btn.setAttribute('aria-label',btn.title);
+}
+function showLaserCapabilities(){
+ const model=recognizedLaserModel(laserName);
+ const connected=['connected','receiving'].includes(laserState);
+ const confirmed=laserState==='receiving';
+ const name=connected?model.name:(activeLaserHistoryName||'Není připojený žádný měřák');
+ const distance=confirmed?'Ověřeno – Zaměřovač přijal měření':'Neověřeno v tomto spojení';
+ const details='<p><strong>'+esc(name)+'</strong></p>'+
+  '<p>Stav: '+(connected?'připojen':'odpojen')+'</p>'+
+  '<div class="setGroup">Přenos do Zaměřovače</div>'+
+  '<p>Vzdálenost: <strong>'+distance+'</strong></p>'+
+  '<p>Plocha, objem, sklon a další hodnoty: <strong>zatím nezjištěno</strong>.</p>'+
+  '<p class="muted">Seznam ukazuje jen funkce, které umíme skutečně rozpoznat. '+
+  'Možnosti samotného laseru se mohou lišit od údajů dostupných přes Bluetooth.</p>';
+ modal('Informace o měřáku',details,()=>true,'Zavřít');
+}
 function renderBluetooth(){
  const b=$('bluetoothBtn');
  b.classList.toggle('connecting',laserState==='connecting');
@@ -650,6 +688,7 @@ function renderBluetooth(){
  b.innerHTML=icon+overlay;
  b.title='Bosch Bluetooth: '+(laserState==='receiving'?'přenos ověřen':laserState==='connected'?'připojen – čekám na první měření':laserState==='connecting'?'připojování':'odpojen')+(laserName?' · '+laserName:'');
  b.setAttribute('aria-label',b.title);
+ renderLaserMeterIcon();
 }
 window.onLaserStatus=(json)=>{
  try{
@@ -784,7 +823,16 @@ function showLaserHistory(filter='all'){
 }
 const oldBluetoothLong=$('bluetoothBtn');
 oldBluetoothLong.addEventListener('contextmenu',e=>{e.preventDefault();showLaserHistory()});
-$('boschHistoryBtn').onclick=showLaserHistory;
+let meterHistoryLongPressed=false;
+$('boschHistoryBtn').addEventListener('contextmenu',event=>{
+ event.preventDefault();
+ meterHistoryLongPressed=true;
+ showLaserCapabilities();
+});
+$('boschHistoryBtn').onclick=()=>{
+ if(meterHistoryLongPressed){meterHistoryLongPressed=false;return}
+ showLaserHistory();
+};
 const originalGlobalOverflow=showOverflow;
 showOverflow=function(){
  originalGlobalOverflow();
