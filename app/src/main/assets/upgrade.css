@@ -38,6 +38,9 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 .mediaTop,.gallery-top {display:flex;align-items:center;gap:12px;padding:10px 14px;min-height:58px;background:#322b3c}
 .mediaTop strong,.gallery-title {flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .mediaTop button,.gallery-top button,.gallery-bottom button {padding:8px 13px;border:1px solid #8e6ab8;border-radius:8px;font-size:16px}
+/* The play emblem remains readable even when a video thumbnail is bright. */
+.video-preview {position:relative}
+.video-thumb-play {position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:grid;place-items:center;min-width:29px;min-height:29px;border-radius:99px;background:rgba(20,18,25,.8);border:1px solid #e1cee9;color:#fff;font-size:16px;pointer-events:none}
 .mediaOverlay video {display:block;width:100%;max-height:75vh;min-height:35vh;margin:auto;background:#000;object-fit:contain}
 .mediaOverlay audio {display:block;max-width:90%;width:440px;margin:auto}
 .mediaOverlay p {color:#aaa;text-align:center}
