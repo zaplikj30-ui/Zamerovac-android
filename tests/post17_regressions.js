@@ -79,6 +79,10 @@ for(const type of ['line','arrow','dimension'])for(const length of [20,60,200]){
  assert.equal(env.nearestHandle({x:50+length*.5,y:100}),null,'Middle must remain move zone even on short lines');
  assert.equal(env.nearestHandle({x:50+length*.1,y:100}).key,'a');
  assert.equal(env.nearestHandle({x:50+length*.9,y:100}).key,'b');
+ assert.equal(env.nearestHandle({x:50+length*.26,y:100}).key,'a',type+' near endpoint');
+ assert.equal(env.nearestHandle({x:50+length*.29,y:100}),null,type+' slight margin now moves whole object');
+ assert.equal(env.nearestHandle({x:50+length*.71,y:100}),null,type+' mirrored move margin');
+ assert.equal(env.nearestHandle({x:50+length*.74,y:100}).key,'b',type+' opposite near endpoint');
  assert.equal(item.measure,'1250,123');
 }
 console.log('OK: #17 transformed contours, area, readable text, finish/persist paths, exact hints, short/long grip zones');
@@ -87,6 +91,8 @@ for(const type of ['chain','cumulative','polyline','angle']){
  env.current.items=[{id:type,type,points:[{x:50,y:100},{x:70,y:100}]}];
  assert.equal(env.nearestHandle({x:60,y:100}),null,type+' short midpoint');
  assert.equal(env.nearestHandle({x:52,y:100}).pointIndex,0,type+' first endpoint');
+ assert.equal(env.nearestHandle({x:55.8,y:100}),null,type+' short segment 29% move zone');
+ assert.equal(env.nearestHandle({x:54,y:100}).pointIndex,0,type+' short segment end remains usable');
 }
 vm.runInContext(part('function labelInfo(', 'function nearestSegmentLabel('),env);
 const cumulative={type:'cumulative',points:[{x:0,y:0},{x:100,y:0},{x:200,y:0}],offset:5};
