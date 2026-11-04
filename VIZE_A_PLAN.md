@@ -76,6 +76,93 @@ V jednom přehledném uživatelském celku má být možné:
 
 **Povinnost upozornit:** Když při nynějších opravách narazíme na návrh, který by zásadně komplikoval budoucí propojení (např. přepis původních fotografií, ztráta identity/editovatelnosti, nedefinované jednotky, nevratné exporty, tichá změna hotového nářezu), vysvětlit konkrétní riziko a navrhnout přiměřenou variantu. **Současná priorita zůstává stabilita, bezpečnost dat a dokončení schválených oprav každé aplikace.**
 
+### Upřesněná dlouhodobá vize: jeden systém pro celý proces zakázkové výroby
+
+**Upřesnění 4. 11. 2026. Stav: DLOUHODOBÁ VIZE, NIKOLI SCHVÁLENÍ OKAMŽITÉ IMPLEMENTACE.** Předchozí [vize propojení Zaměřovače a Konfigurátoru–Nářezáku](https://github.com/zaplikj30-ui/Konfigurator-Narezak-Android/blob/main/VIZE_A_PLAN.md) zůstává v platnosti, ale její cílový rozsah se **rozšiřuje o návrh místnosti, půdorys, 3D a čelní pohledy, kalkulaci ceny, výrobní/montážní režim, kontroly chyb a historii revizí**. Má vzniknout možnost profesionálního pracovního prostředí pro zakázkovou výrobu nábytku na Android telefonu, tabletu a plnohodnotném Windows PC; konkrétní technologie, podoba jedné aplikace / propojených modulů, termín a synchronizace jsou **nerozhodnuté**.
+
+#### 1. Jedna zakázka pro celý výrobní proces
+Uživatel v budoucnu založí např. **„Kuchyň Novákovi“** a bez opakovaného ručního zadávání údajů postupuje v téže zakázce:
+1. **Zaměření a záznam podkladů:** místnost/nábytek, fotografie, laserové i ruční kóty, poznámky, přílohy, překážky a instalační body.
+2. **Návrh prostoru:** skutečný **2D půdorys**, volně prohlížitelný **3D návrh místnosti** a samostatný **čelní/nástěnný pohled na každou stěnu** s okny, dveřmi, zásuvkami, vodou, odpadem, výklenky, skříňkami a dalšími prvky. Tyto pohledy jsou **budoucí požadavek**, nikoli potvrzená schopnost současného Zaměřovače.
+3. **Návrh nábytku:** skříňky, konstrukce, dílce, materiály, hrany, dekory, kování, pracovní desky, sokly a související součásti.
+4. **Kusovník a seznam materiálů:** automaticky odvozený seznam všech dílců, rozměrů, množství, olepených hran, materiálů, kování a potřebných položek pro konkrétní návrh.
+5. **Nářez a výroba:** převod dílců do nářezáku, optimalizace rozložení a respektování skutečné proveditelnosti řezů, prořezu, orientace dekoru a hran; výrobní dokumentace.
+6. **Kalkulace a nabídky:** ocenění skutečných položek a práce pomocí **uživatelsky nastavitelných pravidel**, porovnání variant, předpokládaný zisk a cenová nabídka.
+7. **Příprava výroby a montáž:** přehled skříněk, dílců, hran, nářezů, montážních rozměrů, poznámek a podkladů i **bez internetu**.
+8. **Pokračování v téže zakázce** na telefonu, tabletu nebo Windows PC se zachováním samostatně editovatelných podkladů.
+
+#### 2. Bezpečné propojení zaměření a návrhu
+- Převzít lze zvolené délky stěn a další míry, **polohy oken, dveří, zásuvek, vody, odpadu, instalací a překážek**, s příslušným bodem/stranou, orientací a jednotkou.
+- Uživatel určí, **který údaj použít** pro konkrétní objekt návrhu. Automatický přenos smí zrychlit práci, ale nemá nahrazovat kontrolu místa, směru, jednotek a geometrické návaznosti.
+- **Pozdější změna zaměření nesmí bez potvrzení změnit již schválený návrh.** Systém může upozornit na rozdíly a nabídnout aktualizaci s přehledem dopadu.
+
+#### 3. Kusovník a nářezák vázané na revizi návrhu
+- Z parametrické konstrukce vznikají jednotlivé dílce s typem, rozměry, množstvím, materiálem, tloušťkou, hranami **podle konkrétní strany**, orientací dekoru a kováním. Kusovník musí mít jasnou návaznost na skříňku, zakázku a revizi.
+- Dílce se **bez ručního přepisování** předají do nářezáku; nářezový plán zná původní dimenze a skutečné výrobní podmínky.
+- Po změně rozměru skříňky systém zjistí **dotčené dílce**, zobrazí **návrh** změny kusovníku a nářezu a vyžádá schválení před zásahy do hotových výrobních výstupů. Historie předchozí varianty zůstane dostupná.
+- **NIKDY automaticky nepřehazovat délku a šířku jen podle větší hodnoty**, nepřevracet související hrany a nerespektovat směr dekoru. Zachovat uživatelem definovanou orientaci, bez níž by se mohly chybně vyrobit dílce.
+
+#### 4. Budoucí modul kalkulací – otevřený, nastavitelný model
+Počítat s volitelným budoucím naceněním podle **skutečně použitých materiálů, dílců, kování a všech dalších položek**, nikoli s jediným natvrdo zakódovaným způsobem ceny. Možnosti:
+- více dodavatelů, ceníků, cenových období a variant materiálů;
+- skutečné **nákupní ceny**, individuální slevy, prodejní ceny a rozdíly mezi nimi;
+- součet materiálových nákladů včetně hran, kování a ostatních položek;
+- ocenění vlastní **práce**, času, dopravy, spotřebního materiálu a dalších nákladů;
+- **vlastní přirážky, koeficienty, pravidla výpočtu, náklady a marže**, upravitelné dle konkrétní zakázky;
+- porovnání alternativních variant a přehled předpokládaného **zisku**;
+- tvorbu a export přehledných **cenových nabídek** zákazníkovi.
+**Bez současného zavedení modulu, bez povinného dodavatele a bez pevně zakódované cenové formule.** Daňové režimy, pravidla kalkulace, ceny a marže se nesmějí v datovém formátu zaměnit.
+
+#### 5. Historie, varianty a bezpečné přepočty
+- Budoucí **revize zakázky, zaměření, návrhu, kusovníku, nářezového plánu a kalkulace**; přehled rozdílů mezi variantami a případné obnovení staršího stavu.
+- Výrobní dokument má odkazovat na konkrétní **schválenou revizi**. Při změně vstupních měření nebo konstrukce předložit dopady a **nepřepsat tiše vydaný nářez, kusovník, nabídku či montážní podklady**.
+- Automatická nabídka přepočtu je v pořádku; **automatická destruktivní změna bez potvrzení není**.
+
+#### 6. Budoucí offline režim výroby a montáže
+- Pracovní přehled pro výrobu, pilu a montáž: identifikace skříněk, dílců, všech hran, materiálů, rozmístění, nářezové plány, montážní míry, postupy, přílohy a poznámky.
+- Podklady použitelné **offline** a konzistentní s revizí zakázky, bez nechtěného přepsání při pozdější synchronizaci.
+- Uživatel si může kontrolovat stav výroby/montáže; konkrétní pracovní tok a ovládání zatím nejsou rozhodnuté.
+
+#### 7. Automatické kontroly a upozorňování na chyby
+Jako **budoucí možnost** prověřovat alespoň:
+- neshodné součty navazujících rozměrových kót;
+- chybějící míry, neúplné zaměření a nejasné podklady;
+- **kolize skříněk** s konstrukcí místnosti, okny, dveřmi, instalacemi a překážkami;
+- chybějící nebo nesprávně přiřazený **materiál, hrana, orientace** či kování;
+- rozpor mezi aktuálním **návrhem, kusovníkem a nářezovým plánem**.
+Kontrola má **upozornit a vysvětlit konkrétní nesrovnalost**. Bez výslovného rozhodnutí uživatele nesmí opravou automaticky změnit výchozí data, návrh ani výrobní podklady.
+
+#### 8. Společný technický základ – zásady pro dnešní i budoucí vývoj
+**Závazné pravidlo současných změn je neblokovat budoucí propojení, ne rovnou vytvářet společnou databázi:**
+- jednoznačná identita zakázek, místností, měření, fotografií, grafických objektů, skříněk, sestav, dílců, materiálů a výstupů; možnost propojení s přesně definovaným původem dat;
+- dokumentované a **verzované** datové struktury a migrace; oddělení datových modelů od Android/Windows UI a jazykových textů;
+- originální média, grafické prvky, parametry skříněk a poznámky **samostatně editovatelné**, nikoli jen rasterizované náhledy;
+- přesně definované jednotky, orientace, referenční body, rozměry a pravidla převodu;
+- možnost **Android ↔ Windows PC**, offline práce a budoucí bezpečné synchronizace s detekcí konfliktů a bez tiché ztráty dat;
+- možnost rozdílných uživatelských rozhraní a modulů nad společným sémantickým základem;
+- **import/export do jiných programů**, aby se data nestala uzamčenými v jednom dodavatelském řešení; konkrétní formáty a rozsah budou vybrány později.
+**Nyní se nezavádí sdílené schéma/databáze ani cloudový server a nemění se existující `schema: 1` bez bezpečné migrace a testů.** Detailní přenositelnost je v [DATOVY_FORMAT_A_PC_KOMPATIBILITA.md](DATOVY_FORMAT_A_PC_KOMPATIBILITA.md).
+
+#### 9. Samostatnost a budoucí moduly
+- **Zaměřovač** i **Konfigurátor – Nářezák** zůstávají samostatně spustitelné, použitelné a testované Android aplikace.
+- Budoucí části **Zaměření, Návrh, Kusovník, Nářezák**, případně **Kalkulace, Výroba a Montáž, Kontroly**, se mohou jednou stát moduly jedné aplikace nebo propojenými programy. **Forma propojení není rozhodnutá.**
+- Návrh **půdorysu/3D/stěnových pohledů** a návaznosti na jiný samostatný projekt nelze považovat za hotovou implementaci nebo za pokyn nyní spojovat třetí repozitář.
+- Jiní dodavatelé, systémy a výměnné formáty mohou být později napojeny přes záměrně oddělené rozhraní; dnes bez předčasného API a závislostí.
+
+#### 10. Stav, priorita a pravidla pro další práci
+| Oblast | Současná skutečnost / stav rozhodnutí |
+|---|---|
+| Zaměřovač Android (zakázky, fotografie, anotace, lokální data a ZIP) | **Částečný existující kód, některé známé chyby.** Podrobnosti v [auditu](AUDIT_KODU_PROTI_28_TESTUM.md); funkčnost každé části vyžaduje reálný test. |
+| Konfigurátor–Nářezák Android (návrh, dílce a nářezák) | **Samostatně vyvíjený projekt.** Plnohodnotné výrobní výpočty a použitelný nářez nejsou tímto zápisem prokázané. |
+| Bezpečnost dat, identifikátory, exporty, editovatelnost při dnešních opravách | **Schválené průřezové zásady**, dodržovat při prováděných změnách, neotevírat bezdůvodnou migraci. |
+| Jedna společná zakázka, 2D/3D/stěny, automatické propojení zaměření → návrh → kusovník → nářez | **Budoucí funkční vize – NENAPROGRAMOVAT bez další dohody.** |
+| Kalkulace, ceníky, zisk, nabídky, historie revizí, výrobní/montážní režim, automatické kontroly | **Budoucí možnosti – NEIMPLEMENTOVANÉ, bez závazného pořadí či termínu.** |
+| Windows 11 plnohodnotný editor, bezpečný Android/PC sync a multi-platformní konfliktové řízení | **Budoucí možnost – NEROZHODNUTÁ technologie, bez zahájení vývoje.** |
+| Vícejazyčnost, možnost veřejného Google Play | **Schválená postupná česká lokalizační příprava** podle [Issue #14](https://github.com/zaplikj30-ui/Zamerovac-android/issues/14); další jazyky a Google Play jsou dlouhodobé možnosti. |
+| Aktuální další krok | **Přednostně domluvené opravy a testování obou samostatných aplikací.** Nic z budoucích modulů nepřidávat bez výslovného odsouhlasení. |
+
+**Povinnost vývojáře:** objeví-li se při současné práci rozhodnutí, které výrazně ztíží propojení (nevratná serializace, přepis originálních fotografií, chybějící ID, nedefinovaná orientace hran, nepřenosné formáty, neřízené přepočty), **upozornit na konkrétní důsledek a navrhnout bezpečnější řešení**. Vždy držet prioritu **spolehlivost → bezpečnost dat → přesnost a funkčnost → jednoduché ovládání**, teprve pak nové ambice.
+
 ### Dlouhodobý směr: plnohodnotný Zaměřovač pro Windows 11 a společné zakázky
 
 **Zapsáno 4. 11. 2026. Stav: SCHVÁLENÁ DLOUHODOBÁ VIZE / SMĚR, NIKOLI SCHVÁLENÉ ZAHÁJENÍ VÝVOJE PC APLIKACE.** Cílová platforma je primárně **Windows 11**. Konkrétní technický stack, rozsah první PC verze, metoda synchronizace a termín se rozhodnou až později. **Nyní se PC aplikace nezačíná vyvíjet a Android se kvůli ní zásadně nepřepisuje.**
@@ -156,6 +243,7 @@ V jednom přehledném uživatelském celku má být možné:
 | 2026-11-04 | Možné budoucí vydání na Google Play pouze jako nezávazný směr. Vývoj má přednostně zajistit spolehlivost, bezpečnost dat, přesnost, jednoduché ovládání a kompatibilitu; bez termínu, reklamy, registrace nebo zbytečných změn kvůli publikování. |
 | 2026-11-04 | Doplněna plnohodnotná budoucí PC verze pro Windows 11, stejná editovatelná data a bezpečná obousměrná výměna zakázek. Jde o dlouhodobý směr bez zahájení vývoje, technologického rozhodnutí či termínu. [Technický podklad](DATOVY_FORMAT_A_PC_KOMPATIBILITA.md). |
 | 2026-11-04 | Doplněna dlouhodobá vize propojení samostatných projektů Zaměřovač a Konfigurátor–Nářezák do modulárního systému Zaměření → Návrh → Kusovník → Nářezák pro Android i PC. Bez nynějšího slučování či vývoje společné aplikace; důraz na data, jednotky, editovatelnost, bezpečné předávání a ruční schválení změn hotové výroby. |
+| 2026-11-04 | Rozšířena vize společného systému: jedna zakázka zahrnuje zaměření, 2D/3D a pohledy na stěny, návrh, kusovník, nářez, nastavitelnou kalkulaci ceny, revize, výrobu/montáž a automatické kontroly; beze změn stávajících aplikací a dat, bez schválení implementace těchto budoucích modulů. |
 
 ## 8. Další dohledané drobné náměty a ověřované detaily z testování
 Tyto body jsou rozdělené podle původního kontextu; **nesmí se automaticky vydávat za hotové**.
