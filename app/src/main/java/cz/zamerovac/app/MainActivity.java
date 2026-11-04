@@ -111,6 +111,8 @@ public class MainActivity extends Activity {
     private ScanCallback scanCallback;
     private BluetoothGattCharacteristic boschCommand;
     private volatile boolean boschStreamEnabled=false;
+    // Stable, app-private pseudonymous key for per-device measurement history.
+    private volatile String activeLaserHistoryId="";
     private volatile boolean syncRunning=false;
     private volatile boolean databaseReadFailed=false;
     private String recordingId;
@@ -335,8 +337,32 @@ public class MainActivity extends Activity {
     private String mediaMime(String id){return settings.getString("mime-"+id,"application/octet-stream");}
     private void js(String code){runOnUiThread(()->web.evaluateJavascript(code,null));}
     private void jsCall(String fn,String jsonLiteral){js("window."+fn+"("+JSONObject.quote(jsonLiteral)+")");}
+    // Hash the Bluetooth address with a private persisted salt; never expose raw
+    // hardware addresses in JavaScript history or public diagnostic output.
+    private String laserHistoryKey(BluetoothDevice device){
+        try {
+            String salt=settings.getString("boschHistorySalt",null);
+            if(salt==null){
+                salt=UUID.randomUUID().toString();
+                settings.edit().putString("boschHistorySalt",salt).commit();
+            }
+            byte[] digest=java.security.MessageDigest.getInstance("SHA-256").digest(
+                (salt+":"+device.getAddress()).getBytes(StandardCharsets.UTF_8));
+            StringBuilder key=new StringBuilder("meter-");
+            for(int i=0;i<12;i++){
+                int byteValue=digest[i]&255;
+                key.append(Character.forDigit(byteValue>>4,16));
+                key.append(Character.forDigit(byteValue&15,16));
+            }
+            return key.toString();
+        }catch(Exception ex){
+            android.util.Log.w("Zamerovac","Cannot identify history device; storing unassigned reading");
+            return "";
+        }
+    }
     private void laserStatus(String status,String name){
-        try{jsCall("onLaserStatus",new JSONObject().put("status",status).put("name",name==null?"":name).toString());}
+        try{jsCall("onLaserStatus",new JSONObject().put("status",status)
+            .put("name",name==null?"":name).put("deviceId",activeLaserHistoryId).toString());}
         catch(Exception ignored){}
     }
     private void error(String s){jsCall("onNativeError",s);}
@@ -985,6 +1011,7 @@ public class MainActivity extends Activity {
     /** End an in-progress scan or live connection without forgetting the paired meter. */
     private void stopLaserConnection(){
         stopLaserScan();
+        activeLaserHistoryId="";
         boschStreamEnabled=false;
         boschCommand=null;
         if(classic!=null){
@@ -1126,6 +1153,7 @@ public class MainActivity extends Activity {
             if(gatt!=null){gatt.disconnect();gatt.close();gatt=null;}
             if(classic!=null)classic.close();
             String name=device.getName();
+            activeLaserHistoryId=laserHistoryKey(device);
             classic=new BoschClassicReader(device,
                 value->js("window.onLaserValue("+JSONObject.quote(value)+","+JSONObject.quote("mm")+")"),
                 this::error,status->{
@@ -1174,6 +1202,7 @@ public class MainActivity extends Activity {
                     scannedNames.get(device.getAddress()):device.getName();
             if(name==null||name.isEmpty())name="Bosch";
             final String deviceName=name;
+            activeLaserHistoryId=laserHistoryKey(device);
             laserStatus("connecting",deviceName);
             gatt=device.connectGatt(this,false,new BluetoothGattCallback(){
                 @Override public void onConnectionStateChange(BluetoothGatt connection,int status,int newState){
