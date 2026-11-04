@@ -329,6 +329,10 @@ else if(item.type==='rect'||item.type==='area'){
    if(item.type==='area'){const calculated=quadAreaFromMeasures(item);if(calculated!==null)measure=calculated.toFixed(4).replace('.',',')}
    if(measure)canvasText(measure+' m²',center,color,fs);
    if(item.type==='area'){
+     if(!item.points?.length){
+       if(item.areaWidth)canvasText(item.areaWidth+' mm',{x:(corners[0].x+corners[1].x)/2,y:corners[0].y+14},color,Math.max(11,fs*.8));
+       if(item.areaHeight)canvasText(item.areaHeight+' mm',{x:corners[1].x+20,y:(corners[1].y+corners[2].y)/2},color,Math.max(11,fs*.8));
+     }
      corners.forEach((p,i)=>{
        const q=corners[(i+1)%4],info=item.sideMeasures?.[i]||'';
        const txt=[info?info+' mm':'',item.sideTexts?.[i]||''].filter(Boolean).join(' · ');
