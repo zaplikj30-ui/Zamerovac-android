@@ -10,16 +10,21 @@ SOURCE = ROOT / 'app/src/main/java/cz/zamerovac/app/BoschBleProtocol.java'
 ACTIVITY = ROOT / 'app/src/main/java/cz/zamerovac/app/MainActivity.java'
 
 class BoschBleTests(unittest.TestCase):
-    def test_meter_menu_explains_hidden_history(self):
+    def test_meter_history_separate_button_and_long_press(self):
         ui=(ROOT/'app/src/main/assets/upgrade.js').read_text(encoding='utf-8')
-        self.assertIn('Historii měření otevřeš dlouhým podržením ikony Bluetooth.',ui)
+        html=(ROOT/'app/src/main/assets/index.html').read_text(encoding='utf-8')
+        css=(ROOT/'app/src/main/assets/upgrade.css').read_text(encoding='utf-8')
+        self.assertIn('Historii měření otevřeš ikonou měřáku vedle Bluetooth',ui)
         self.assertIn("oldBluetoothLong.addEventListener('contextmenu'",ui)
         self.assertIn("window.__boschHistoryReadings=()",ui)
-        self.assertIn('bt-history-mark',ui)
-        css=(ROOT/'app/src/main/assets/upgrade.css').read_text(encoding='utf-8')
-        self.assertIn('#bluetoothBtn .bt-history-mark',css)
-        self.assertIn('font-size:12px',css)
-        self.assertIn('left:4px;top:2px',css)
+        self.assertIn("$('boschHistoryBtn').onclick=showLaserHistory;",ui)
+        self.assertIn('id="boschHistoryBtn"',html)
+        self.assertIn('aria-label="Historie měření Bosch"',html)
+        self.assertLess(html.index('id="bluetoothBtn"'),html.index('id="boschHistoryBtn"'))
+        self.assertLess(html.index('id="boschHistoryBtn"'),html.index('id="cloudBtn"'))
+        self.assertIn('#boschHistoryBtn',css)
+        self.assertNotIn('bt-history-mark',ui+css)
+        self.assertIn('b.innerHTML=icon+overlay',ui)
 
     def test_protocol_integration(self):
         java = ACTIVITY.read_text(encoding='utf-8')
