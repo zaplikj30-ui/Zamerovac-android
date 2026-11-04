@@ -647,8 +647,7 @@ function renderBluetooth(){
  b.classList.toggle('disconnected',laserState!=='connected'&&laserState!=='receiving'&&laserState!=='connecting');
  const icon='<svg class="bluetooth-symbol" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7l10 10-5 4V3l5 4L7 17"/></svg>';
  const overlay=(laserState==='connected'||laserState==='receiving')?'<span class="bt-overlay bt-check" aria-hidden="true">✓</span>':laserState==='connecting'?'<span class="bt-overlay bt-spinner" aria-hidden="true"></span>':'<span class="bt-overlay bt-off" aria-hidden="true">×</span>';
- // Small H marks the long-press history gesture without covering the connection badge.
- b.innerHTML=icon+'<span class="bt-history-mark" aria-hidden="true">H</span>'+overlay;
+ b.innerHTML=icon+overlay;
  b.title='Bosch Bluetooth: '+(laserState==='receiving'?'přenos ověřen':laserState==='connected'?'připojen – čekám na první měření':laserState==='connecting'?'připojování':'odpojen')+(laserName?' · '+laserName:'');
  b.setAttribute('aria-label',b.title);
 }
@@ -659,7 +658,7 @@ renderBluetooth();
 $('bluetoothBtn').onclick=()=>{
  const canDisconnect=['connecting','connected','receiving'].includes(laserState);
  const disconnectLabel=laserState==='connecting'?'Zrušit připojování':'Odpojit měřák';
- modal('Měřič Bosch','<p>'+esc($('bluetoothBtn').title)+'</p><p>Po připojení čeká Zaměřovač na první naměřenou hodnotu. Teprve potom potvrdí příjem měření.</p><p class="muted">Historii měření otevřeš dlouhým podržením ikony Bluetooth.</p><button class="outline" id="laserConnect" type="button">Připojit můj laser Bosch</button><button class="outline" id="laserOther" type="button">Vybrat jiný měřič</button>'+
+ modal('Měřič Bosch','<p>'+esc($('bluetoothBtn').title)+'</p><p>Po připojení čeká Zaměřovač na první naměřenou hodnotu. Teprve potom potvrdí příjem měření.</p><p class="muted">Historii měření otevřeš ikonou měřáku vedle Bluetooth nebo dlouhým podržením Bluetooth.</p><button class="outline" id="laserConnect" type="button">Připojit můj laser Bosch</button><button class="outline" id="laserOther" type="button">Vybrat jiný měřič</button>'+
  (canDisconnect?'<button class="outline" id="laserDisconnect" type="button">'+disconnectLabel+'</button>':''),
  ()=>true,'Zavřít');
  $('laserConnect').onclick=()=>{if(native){$('modal').hidden=true;laserState='connecting';laserName='vyhledávání Bosch';renderBluetooth();Native.connectLaser()}else notify('Vyžaduje Android')};
@@ -712,6 +711,7 @@ function showLaserHistory(){
 }
 const oldBluetoothLong=$('bluetoothBtn');
 oldBluetoothLong.addEventListener('contextmenu',e=>{e.preventDefault();showLaserHistory()});
+$('boschHistoryBtn').onclick=showLaserHistory;
 const originalGlobalOverflow=showOverflow;
 showOverflow=function(){
  originalGlobalOverflow();
