@@ -26,6 +26,23 @@ class BoschBleTests(unittest.TestCase):
         self.assertNotIn('bt-history-mark',ui+css)
         self.assertIn('b.innerHTML=icon+overlay',ui)
 
+    def test_meter_identity_is_private_and_persistent(self):
+        java=ACTIVITY.read_text(encoding='utf-8')
+        self.assertIn('private String laserHistoryKey(BluetoothDevice device)',java)
+        self.assertIn('getString("boschHistorySalt",null)',java)
+        self.assertIn('MessageDigest.getInstance("SHA-256")',java)
+        self.assertIn('.put("deviceId",activeLaserHistoryId)',java)
+        self.assertIn('activeLaserHistoryId=laserHistoryKey(device)',java)
+        self.assertIn('activeLaserHistoryId=""',java)
+        self.assertNotIn('.put("deviceId",device.getAddress())',java)
+        ui=(ROOT/'app/src/main/assets/upgrade.js').read_text(encoding='utf-8')
+        self.assertIn('function boschHistoryGroups()',ui)
+        self.assertIn('const multi=groups.size>1',ui)
+        self.assertIn('Starší měření bez přiřazení',ui)
+        self.assertIn("readings.length>200",ui)
+        self.assertIn('Vymazat vybranou historii',ui)
+        self.assertIn('Potvrdit vymazání historie',ui)
+
     def test_protocol_integration(self):
         java = ACTIVITY.read_text(encoding='utf-8')
         self.assertIn('BoschBleProtocol.MEASUREMENT_UUID', java)
