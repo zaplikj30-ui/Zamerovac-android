@@ -239,6 +239,24 @@ Tato část **zpřesňuje již existující požadavek**, nezakládá druhé nez
 
 
 
+### Možná budoucí podpora iPhone a iPad (iOS / iPadOS)
+
+**Dohoda 4. 11. 2026 – NEZÁVAZNÝ DLOUHODOBÝ SMĚR, NIKOLI SCHVÁLENÍ VÝVOJE iOS APLIKACE, PŘECHODU NA JINÝ FRAMEWORK ANI VYDÁNÍ V APP STORE.** Vedle současných Android telefonů a tabletů a plánovaného plnohodnotného Windows PC editoru se **do budoucna nevylučuje** podpora zařízení **Apple iPhone (iOS)** a **Apple iPad (iPadOS)**. Jde o možnost, jejíž účelnost, způsob realizace, technologie, rozsah a termín budou rozhodnuty samostatně později. **Hlavní priorita nyní: kvalitní a funkční Android aplikace, bezpečnost zákaznických dat a dokončení schválených oprav.**
+
+**Architektonická pravidla při současném vývoji – rozumně zohledňovat, neprovádět plošný refactoring:**
+
+1. **Oddělovat čistou aplikační a datovou logiku od operačního systému.** Výpočty rozměrů a geometrie, význam objektů, interpretace editovatelných anotací, kontrola kusovníku/nářezu a čtení či validace dat by neměly být bez nutnosti svázané s konkrétním Android API nebo obrazovkou.
+2. **Sdílení kódu je možnost, ne dogma.** V budoucnu posoudit znovupoužitelné knihovny či společné jádro pro Android, iOS/iPadOS a Windows, pokud to přinese skutečný užitek a nebude omezovat výkon, kvalitu nebo dostupné nativní funkce. **Dnes nepřevádět aplikaci na nový multiplatformní framework** jen kvůli hypotetickému iOS.
+3. **Přenositelné, dokumentované a verzované zakázky.** Originální fotografie, oddělené editovatelné kóty a grafické objekty, poznámky, návrhy, kusovníky, dílce, materiály a další přílohy musejí mít bezpečně interpretovatelná data, jednotky, souřadnice, identifikátory a schéma. Zachovávat zpětnou kompatibilitu a nepřepisovat současný formát bez migrace.
+4. **Budoucí stejné zakázky napříč zařízeními.** Android ↔ iOS/iPadOS ↔ Windows může jednou bezpečně přenášet změny, fungovat offline a řešit souběh úprav bez tiché ztráty dat. **Dnešní ZIP záloha, která při importu vytváří kopii, není hotová synchronizace.** Výběr synchronizační technologie zůstává otevřený.
+5. **Ovládání podle hardware:** základní práce prstem; pokud zařízení umožňuje přesné pero, také běžný stylus, Samsung **S Pen** nebo **Apple Pencil**, podle skutečné podpory konkrétního zařízení. Gesta, citlivost úchopů, obrazovkové souřadnice a přesnost měření mají zůstat konzistentní; platformy mohou používat odlišné UI.
+6. **Platformní adaptéry:** Bluetooth/BLE měřáky, fotoaparát, galerie, výběr souborů, systémová oprávnění, sdílení, notifikace, životní cyklus aplikace a případné přihlašování implementovat pro každou platformu podle jejích API. **Nepředpokládat stejný Bluetooth protokol ani totožné oprávnění na Androidu a iOS.** Případné omezení hardware nesmí poškodit ostatní funkce.
+7. **Testování a budoucí distribuce:** pokud se iOS vývoj jednou schválí, vytvořit samostatnou matici testů pro skutečné iPhone/iPad, různé verze iOS/iPadOS, rozměry displejů, Apple Pencil, práci offline, data, import/export, měření a aktualizace; případné vydání přes **Apple App Store** řešit až tehdy s aktuálními pravidly a správným podpisem/ochranou soukromí. **Teď žádný účet, build, platba ani publikování.**
+
+**Pravidlo rozhodování:** pokud nové řešení v Androidu vytváří zbytečnou nezvratnou závislost na jeho specifickém úložišti, způsobu serializace, nepřenosném modelu grafických prvků nebo konkrétním výrobci, upozornit na riziko a nabídnout rozumně přenositelnou variantu. **Nedělat drahý redesign stabilní funkce pouze kvůli možnosti budoucího iOS.**
+
+**Stav plnění:** pouze zdokumentováno; **iOS/iPadOS aplikace nebyla vytvořena, jazyková a datová kompatibilita s Apple platformami nebyla otestována a sdílený multiplatformní kód nebyl schválen ani zaveden**. Současný Android vývoj pokračuje nezávisle.
+
 ### Možný dlouhodobý cíl: veřejné vydání na Google Play (nezávazné)
 
 **Zapsáno 4. 11. 2026. Stav: MOŽNOST DO BUDOUCNA – NENÍ SCHVÁLENÉ VYDÁNÍ, TERMÍN, PRIORITA ANI ZÁVAZEK.** Smyslem projektu je především **profesionální, stabilní, přesný a spolehlivý Zaměřovač pro zaměřování nábytku**, vhodný i pro každodenní vlastní práci. Veřejné vydání na **Google Play** je pouze jedna z možností, o které se může uživatel rozhodnout až později. Neusilovat o vydání za každou cenu ani pod časovým tlakem.
@@ -309,6 +327,7 @@ Tato část **zpřesňuje již existující požadavek**, nezakládá druhé nez
 | 2026-11-04 | Rozšířena vize společného systému: jedna zakázka zahrnuje zaměření, 2D/3D a pohledy na stěny, návrh, kusovník, nářez, nastavitelnou kalkulaci ceny, revize, výrobu/montáž a automatické kontroly; beze změn stávajících aplikací a dat, bez schválení implementace těchto budoucích modulů. |
 | 2026-11-04 | Sjednocena kontrola devíti dlouhodobých oblastí; již existující dohody zachovány a propojeny. **Nově jako samostatný nezávazný nápad** evidován průvodce zaměřením pro chybějící měření a kontroly součtů kót. Nejbližší aktualizace nadále řeší dohodnuté opravy a českou přípravu lokalizace. |
 | 2026-11-04 | Schválen široký cílový rozsah Android telefonů a tabletů různých výrobců, velikostí a výkonnostních tříd; postupné testování skutečné kompatibility, bez tvrzení, že všechny modely již fungují, a bez plošného přepisu aplikace. |
+| 2026-11-04 | Přidána nezávazná možnost budoucí podpory iPhone/iPad (iOS/iPadOS), přenositelné logiky a dat a případného Apple App Store; bez zahájení iOS vývoje, změny frameworku či oslabení Androidu. |
 
 ## 8. Další dohledané drobné náměty a ověřované detaily z testování
 Tyto body jsou rozdělené podle původního kontextu; **nesmí se automaticky vydávat za hotové**.
