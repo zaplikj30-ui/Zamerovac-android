@@ -86,14 +86,14 @@ Tento seznam obsahuje dříve zmíněné nebo odložené směry. O přesném pro
 
 **Stav:** **záměr funkce a princip jemného narovnávání jsou zaznamenané**, ale **neexistuje schválený termín, finální UX ani přesná technická specifikace pro okamžitou implementaci**. V tomto kroku se **nemění Android kód, nevytváří nová APK a nezasahuje do probíhajících oprav ani do starých zakázek**. Před implementací bude potřeba samostatně dohodnout podrobnosti interakce a otestovat přesnost na prstu i stylusu.
 
-### Chytré rozmístění kót a textové / AI pokyny – budoucí námět
+### Chytré rozmístění kót do fotografie a textové / AI pokyny – budoucí námět
 
-**Nápad uživatele 4. 11. 2026, podrobnosti v [Issue #16](https://github.com/zaplikj30-ui/Zamerovac-android/issues/16). Stav: NÁPAD, ne schválená implementace.**
+**Nápad uživatele 4. 11. 2026, upřesněn: hlavně editor FOTOGRAFIÍ, teprve případně i Půdorys.** Podrobnosti v [Issue #16](https://github.com/zaplikj30-ui/Zamerovac-android/issues/16). **Stav: NÁPAD, ne schválená implementace; detaily se doladí později.**
 
-- **Jedno tlačítko:** z nákresu/půdorysu místnosti navrhnout přehledné umístění kót nahoře, dole, vlevo a vpravo (případně jednotlivé úseky), bez překryvů; uživatel poté doplní skutečné naměřené rozměry ručně nebo Bosch laserem.
-- **Textový pokyn, případně AI:** uživatel napíše např. „Celkovou šířku okótuj nahoře, jednotlivé úseky dole, délku vlevo“ a aplikace navrhne rozvržení kót. Rozpoznání jednoduchých povelů offline vs. volnější AI, případný cloud, cena i soukromí se musí posoudit až při rozhodnutí o vývoji.
-- **Povinná bezpečnost:** nikdy neodhadovat skutečné milimetry z pixelů, nevymýšlet naměřené hodnoty, nezasahovat bez potvrzení do stávajících kót nebo geometrie. Náhled před potvrzením, vrácení změny a všechny nové kóty samostatně editovatelné. Neodesílat zákaznická data externím AI službám bez výslovného rozhodnutí a vhodné ochrany soukromí.
-- **Návaznost:** může jednou doplnit plánovaný modul Půdorys a nápad Průvodce zaměřením; nenahrazuje je a automaticky nespouští vývoj, slučování projektů ani nové APK.
+- **Jedno tlačítko v editoru fotografie:** navrhnout přehledné grafické umístění kót **nahoře, dole, vlevo a vpravo** do fotografie místnosti či nábytku (případně úseky), pokud možno bez překryvů. Jak určovat přesné koncové body, uživatelská označení a význam „chytře“, se teprve dohodne. Uživatel doplní skutečné naměřené rozměry ručně nebo Bosch laserem.
+- **Textový pokyn, případně AI nad fotografií:** uživatel napíše např. „Okótuj horní a spodní část fotky“ či „Kóty nahoru, dolů, vlevo a vpravo“ a program vytvoří návrh, který lze upravit a potvrdit. Offline příkazy vs. volnější AI, případný cloud, cena i soukromí se posoudí až při rozhodnutí o vývoji.
+- **Povinná bezpečnost:** nikdy neodhadovat skutečné milimetry z pixelů, nevymýšlet naměřené hodnoty, nezasahovat bez potvrzení do stávajících kót či fotografie. Náhled před potvrzením, vrácení změny a všechny nové kóty samostatně editovatelné. Neodesílat zákaznická data externím AI službám bez výslovného rozhodnutí a vhodné ochrany soukromí.
+- **Návaznost:** později případně zpřístupnit i v plánovaném modulu **Půdorys**, ale nenahrazuje jej ani nápad Průvodce zaměřením. Nic nyní neprogramovat, neslučovat projekty ani nesestavovat APK.
 
 ### Průvodce zaměřením – budoucí možnost, nikoli současná úprava
 
