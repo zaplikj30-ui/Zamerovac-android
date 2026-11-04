@@ -51,6 +51,20 @@ Uživatel vyrábí zakázkový nábytek. Vyvíjíme vlastní Android aplikaci na
 - Žádné reálné zákaznické soubory nepoužívat jako testovací data bez výslovného souhlasu. Preferuj testovací zakázky.
 - Neoznačuj aplikaci za plně hotovou, dokud nejsou testované všechny deklarované funkce. Zachovej kompatibilitu uložených záznamů a proveď migrace, pokud se mění schéma.
 
+## Společný pracovní protokol ChatGPT ↔ Codex ↔ GitHub (závazné)
+
+**Schváleno 4. 11. 2026 pro oba samostatné projekty.** Na projektu střídavě pracuje **klasický ChatGPT (i více různých chatů) a Codex**. Nemusejí vidět stejnou konverzaci, lokální soubory ani neuložené rozpracované změny. **GitHub – commity, větve, issues, dokumentace, PR, Actions a Releases – je jejich společný trvalý zdroj aktuálního stavu**, nikoliv paměť jednotlivého chatu. Pravidla níže doplňují stávající bezpečnostní a sestavovací postupy; **nesmějí spouštět automatický build ani měnit jiný repozitář**.
+
+1. **Před KAŽDÝM novým úkolem / navázáním v dalším chatu** načíst aktuální `AGENTS.md`, [START_ZDE.md](START_ZDE.md), poslední relevantní commity a změněné soubory, aktivní větve/PR, otevřená související issues **včetně nejnovějších komentářů**, stav testů, Actions a nejnovější skutečná Releases. Při návratu po přestávce a těsně před zápisem či mergem aktualizovat porovnání s GitHubem. **Nepředpokládat, že stav známý z předchozího chatu je stále platný.**
+2. **Zjistit, zda mezitím pracoval druhý chat nebo Codex.** Porovnat aktuální SHA/commit, otevřený PR a dotčené soubory s výchozím stavem. Při kolizi nebo souběžných změnách nejdřív přečíst rozdíl, zachovat platné úpravy, případně bezpečně rebase/sloučit. **Nikdy bez kontroly nepřepsat novější práci ani stará uživatelská data.**
+3. **Zaznamenávat průběžně HNED po ujasnění, ne až při konci chatu:** přesné zadání a odsouhlasené chování, nová rozhodnutí a jejich změny, chyby, výsledky testů (včetně neúspěchů), důležité pozorování, rozpracovaný kód/PR/commit, zbývající práci, blokátory, rizika a nápady „možná později“. Není potřeba, aby uživatel pokaždé zvlášť žádal „ulož na GitHub“. Zapisovat cíleně k existujícímu issue / dokumentu, **bez duplicit a bez zveřejňování soukromých zákaznických dat**.
+4. **Stavy důsledně oddělovat:** **nápad / nezávazná vize → schválený požadavek → naplánováno → rozpracováno → změna v kódu (commit/PR) → sestaveno/vydáno v konkrétní APK → reálně ověřeno na uvedeném zařízení**. Stavy „odloženo“, „zamítnuto“, „selhalo“, „neověřeno“ rovněž zachovat. Build nebo zelené CI **nejsou** potvrzení dotyků, Bluetooth ani výrobních výpočtů.
+5. **Jedno konkrétní předání práce pro další chat/Codex:** průběžně udržovat [START_ZDE.md](START_ZDE.md) jako rychlý stavový rozcestník a [testovací deník #13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13) pro detaily testů. Musí být dohledatelné: **co je hotové**, **co zbývá**, **co není rozhodnuté**, **aktuální větev/PR/commit**, **poslední skutečně vydaná verze APK a její úroveň ověření**, a **jediný další konkrétní krok** s odkazy. Podrobnosti patří do odpovídajících issues a technických dokumentů; rozcestník je **nepřepisuje ani neduplikuje**.
+6. **Po každém důležitém zápisu potvrdit výsledek:** získat commit SHA / odkaz na issue a podle možností soubor znovu načíst. Uživatel obdrží přímý odkaz. Pokud zápis nebo kontrola selže, **výslovně říct, že změna není ověřeně uložená**; nikdy nevymýšlet úspěšný commit či release.
+7. **Respektovat hranici schválení:** budoucí vize (např. PC, iOS, propojení aplikací) se samy nemění na úkoly k implementaci. Vyžadovat skutečné schválení rozsahu; neposouvat bez něj hranice funkčnosti. **Dokumentační aktualizace nespouští sestavení APK.**
+
+**Zdroje a rozdíly mezi projekty:** Záznamy podrobné rekonstrukce 28 testů, [IMPLEMENTACE_A_TESTOVANI_28.md](IMPLEMENTACE_A_TESTOVANI_28.md), [VIZE_A_PLAN.md](VIZE_A_PLAN.md), otevřené issues #12, #13, #14 a aktuální Releases jsou podklady; stav „testováno na zařízení“ má přednost pouze při konkrétním důkazu.
+
 ## Doporučený způsob práce
 1. Přečti README.md a existující kód, než cokoliv změníš.
 2. Opravuj konkrétní chyby, nevytvářej nový projekt od nuly bez důvodu.
