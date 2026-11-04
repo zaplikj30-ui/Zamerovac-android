@@ -15,6 +15,11 @@ class BoschBleTests(unittest.TestCase):
         self.assertIn('Historii měření otevřeš dlouhým podržením ikony Bluetooth.',ui)
         self.assertIn("oldBluetoothLong.addEventListener('contextmenu'",ui)
         self.assertIn("window.__boschHistoryReadings=()",ui)
+        self.assertIn('bt-history-mark',ui)
+        css=(ROOT/'app/src/main/assets/upgrade.css').read_text(encoding='utf-8')
+        self.assertIn('#bluetoothBtn .bt-history-mark',css)
+        self.assertIn('font-size:12px',css)
+        self.assertIn('left:4px;top:2px',css)
 
     def test_protocol_integration(self):
         java = ACTIVITY.read_text(encoding='utf-8')
