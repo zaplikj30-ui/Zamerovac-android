@@ -36,7 +36,7 @@ for(const entry of history.releases){
 const find=(version,term)=>JSON.stringify(history.releases.find(x=>x.version===version)).includes(term);
 assert(find('1.2.151','Nápověda')&&find('1.2.151','Lupa'));
 assert(find('1.2.150','Bluetooth Bosch')&&find('1.2.150','PDF'));
-assert(find('1.2.149','Vysypat koš')&&find('1.2.149','klepnutí'));
+assert(find('1.2.149','Vysypat koš')&&find('1.2.149','Klepnutí'));
 assert(find('1.2.152','chybné přiřazování'));
 assert(find('1.2.148','nejsou na GitHubu dostatečně podrobné'));
 const upgrade=fs.readFileSync(path.join(root,'app/src/main/assets/upgrade.js'),'utf8');
