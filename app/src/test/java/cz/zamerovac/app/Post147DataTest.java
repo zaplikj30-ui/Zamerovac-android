@@ -57,6 +57,27 @@ public class Post147DataTest {
         try{BackupImporter.importZip(context,Uri.fromFile(archive(unsupported,true)),existing,context.getSharedPreferences("test",0));fail("Unknown schema must fail");}catch(IOException expected){}
         assertEquals(before,existing.toString());
     }
+    @Test public void originalBackupExporterRoundTripsEditableDataAndOriginalMedia()throws Exception {
+        MainActivity activity=org.robolectric.Robolectric.buildActivity(MainActivity.class).get();
+        android.content.SharedPreferences prefs=context.getSharedPreferences("backup-test",0);
+        java.lang.reflect.Field settings=MainActivity.class.getDeclaredField("settings");settings.setAccessible(true);settings.set(activity,prefs);
+        JSONObject original=legacy();
+        java.nio.file.Files.write(new File(activity.getFilesDir(),"projects.json").toPath(),original.toString().getBytes(StandardCharsets.UTF_8));
+        File mediaDir=new File(activity.getFilesDir(),"media");mediaDir.mkdirs();
+        byte[] originalBytes={10,20,30,40};java.nio.file.Files.write(new File(mediaDir,"original-photo").toPath(),originalBytes);
+        java.lang.reflect.Method export=MainActivity.class.getDeclaredMethod("exportArchive",OutputStream.class,String.class);export.setAccessible(true);
+        for(String selection:new String[]{null,"old-photo"}){
+            ByteArrayOutputStream bytes=new ByteArrayOutputStream();export.invoke(activity,bytes,selection);
+            Map<String,byte[]> entries=new HashMap<>();
+            try(ZipInputStream zip=new ZipInputStream(new ByteArrayInputStream(bytes.toByteArray()))){ZipEntry entry;while((entry=zip.getNextEntry())!=null)entries.put(entry.getName(),zip.readAllBytes());}
+            assertTrue(entries.containsKey("projects.json"));assertTrue(entries.containsKey("media-meta.json"));assertArrayEquals(originalBytes,entries.get("media/original-photo"));
+            JSONObject backed=new JSONObject(new String(entries.get("projects.json"),StandardCharsets.UTF_8));
+            assertEquals(original.getJSONArray("records").toString(),backed.getJSONArray("records").toString());
+            File file=File.createTempFile("roundtrip-", ".zip",context.getCacheDir());java.nio.file.Files.write(file.toPath(),bytes.toByteArray());
+            BackupImporter.Result result=BackupImporter.importZip(context,Uri.fromFile(file),original,prefs);
+            assertEquals(original.getJSONArray("records").getJSONObject(0).getJSONArray("items").toString(),result.data.getJSONArray("records").getJSONObject(2).getJSONArray("items").toString());
+        }
+    }
     @Test public void unreadableDatabaseNeverBecomesWritableEmptyState()throws Exception {
         MainActivity activity=org.robolectric.Robolectric.buildActivity(MainActivity.class).get();
         File primary=new File(activity.getFilesDir(),"projects.json"),backup=new File(activity.getFilesDir(),"projects.bak");
