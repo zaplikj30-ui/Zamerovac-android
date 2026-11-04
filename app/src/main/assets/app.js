@@ -42,16 +42,25 @@ $('cancelModal').onclick=()=>{$('modal').hidden=true;window.modalOK=null};
 function promptText(title,label,initial,done){modal(title,`<label>${escapeHtml(label)}</label><input id="promptValue" value="${escapeHtml(initial)}">`,()=>{let v=$('promptValue').value.trim();if(!v){notify('Vyplň hodnotu');return false}done(v)})}
 // ImageMeter-style browser previews. Android loads only cached small JPEG
 // thumbnails from /thumb/<id>, never the original full-size camera image.
+// A compact, high-contrast badge for any photo containing saved annotations.
+function photoEditedBadge(r){
+  if(r.kind!=='photo'||!Array.isArray(r.items)||!r.items.some(item=>item&&!item.deleted))return '';
+  return '<span class="photo-edited-badge" title="Fotografie obsahuje kóty nebo poznámky" aria-label="Fotografie obsahuje úpravy">'+
+    '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+
+    '<path d="m21 7-4-4L3 17l4 4L21 7Z"/><path d="m14 6 4 4m-6-1 4 4m-7-1 4 4"/></svg></span>';
+}
 function browserEntryIcon(r){
   if(r.kind==='folder'){
     return '<div class="entry-icon folder"><svg viewBox="0 0 52 44" width="51" height="43" aria-label="Složka"><path d="M2 11V7c0-2 2-3 4-3h16l5 5h20c2 0 3 1 3 3v28H2Z" fill="#dfb65d" stroke="#242424" stroke-width="2"/><path d="M2 15h48v25H2Z" fill="#ffd17a" stroke="#222" stroke-width="2"/></svg></div>';
   }
   const fallback=({photo:'▧',canvas:'▦',note:'▤',video:'▶',audio:'♫',file:'▣'}[r.kind]||'▣');
   const id=r.kind==='photo'&&Array.isArray(r.media)?r.media[0]:null;
+  const badge=photoEditedBadge(r);
   if(native&&id&&/^[a-zA-Z0-9_-]{3,120}$/.test(id)){
     const url='https://appassets.androidplatform.net/thumb/'+encodeURIComponent(id);
-    return '<div class="entry-icon photo-preview"><img class="entry-thumb" src="'+url+'" alt="" loading="lazy"><span class="thumb-fallback" hidden>▧</span></div>';
+    return '<div class="entry-icon photo-preview"><img class="entry-thumb" src="'+url+'" alt="" loading="lazy"><span class="thumb-fallback" hidden>▧</span>'+badge+'</div>';
   }
+  if(r.kind==='photo')return '<div class="entry-icon photo-preview"><span class="thumb-fallback">▧</span>'+badge+'</div>';
   return '<div class="entry-icon">'+fallback+'</div>';
 }
 function showFolder(){screen='browser';current=null;document.body.classList.remove('in-editor','in-note');closeMenus();$('browserView').hidden=false;$('browserFoot').hidden=false;$('editorView').hidden=true;$('noteView').hidden=true;$('back').textContent='☰';$('screenTitle').innerHTML=`<span class="app-title">Zaměřovač</span><small class="app-version">verze ${escapeHtml(appVersionShort)}</small>`;let path=[];let walk=currentFolder;let guard=0;while(walk&&guard++<50){let r=recById(walk);if(!r)break;path.unshift(r);walk=r.parentId;}
