@@ -4,6 +4,14 @@
 Tento repozitář je SAMOSTATNÝ projekt `Zamerovac-android`. Neměň repozitář `Prevadec-spojitosti`.
 Uživatel vyrábí zakázkový nábytek. Vyvíjíme vlastní Android aplikaci na zaměřování zakázek, inspirovanou pracovním postupem ImageMeteru. Nejde o kopii původního kódu, designových prostředků ani o obcházení jeho licence. Komunikuj česky a používej jednoduché vysvětlení, nevyžaduj znovu už schválené volby.
 
+## Povinná průběžná aktualizace nápovědy při KAŽDÉ změně aplikace (4. 11. 2026)
+
+**Schválené trvalé pravidlo uživatele:** Pokaždé, když se v Zaměřovači **přidá nová funkce, změní ovládání/chování, text, název, ikona, nabídka, nastavení, import/export, podpora zařízení nebo relevantní omezení**, je součástí téže vývojové změny také odpovídající **aktualizace české offline nápovědy** v `app/src/main/assets/help.js` (a je-li třeba i jejích stylů, odkazů a vyhledávacích slov). Není potřeba další pokyn uživatele. Pokud nová funkce potřebuje samostatnou kapitolu, vytvoř ji; pokud jde o změnu dosavadní funkce, oprav text příslušného postupu a zruš zastaralé informace. Přidávej i chybové stavy, bezpečnostní upozornění a omezení kompatibility, pokud souvisí se změnou. Vysvětluj **reálně naprogramované** chování, ne přání nebo experiment jako hotovou funkci.
+
+**Nápověda patří ke stejnému PR a stejnému následnému APK** jako související změna (nevyrábět APK zvlášť kvůli dokumentaci). Před dokončením PR zkontroluj **kód ↔ UI texty ↔ kapitoly nápovědy ↔ vyhledávací klíčová slova ↔ testy**. Rozšiř `tests/help_guide.js` a podle potřeby `tools/e2e/help.cjs` o odpovídající scénář. Bez této kontroly nepovažovat úpravu za zcela dokončenou, ledaže je výslovně zdokumentováno, proč se nápovědy netýká (např. čistá oprava CI bez změny chování aplikace).
+
+**Dvě vyhledávání zůstávají oddělená:** globální lupa hledá zakázky/soubory/poznámky, **nikoliv obsah nápovědy**; lupa v nápovědě hledá jen mezi jejími kapitolami. Pomocná nápověda je offline a nesmí číst, měnit ani odesílat projektová data. Zadání a historie v [issue #29](https://github.com/zaplikj30-ui/Zamerovac-android/issues/29), implementace v [PR #30](https://github.com/zaplikj30-ui/Zamerovac-android/pull/30) (stav ověřovat podle GitHubu).
+
 ## Trvalá předávka a automatické testy napříč nástroji (4. 11. 2026)
 **Nezávislost na Codexu a konkrétním chatu:** Schválené požadavky, opravy, rozhodnutí, testovací výsledky a rozpracovaná práce se předávají **přes GitHub**, ne přes paměť chatu ani neveřejnou historii Codexu. Do nového chatu a k jinému nástroji se nemají ručně znovu diktovat. Záznam na GitHubu není sám o sobě automaticky spuštěné zadání Codexu; kód existuje pro dalšího pracovníka až po skutečném pushi, nesloučený PR není vydaná aplikace.
 
