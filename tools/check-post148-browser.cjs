@@ -18,8 +18,22 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
   for(const touch of [false,true]){
    await page.click('#'+button);assert(await page.locator('#'+menu).isVisible());
    const before=await page.evaluate(()=>JSON.stringify(state));
-   if(touch)await page.touchscreen.tap(2,400);else await page.mouse.click(2,400);
+   // Use a point comfortably outside the menu. Touch target adjustment near
+   // its 8px border can otherwise *legitimately* select the last menu row.
+   const bounds=await page.locator('#'+menu).boundingBox();
+   const viewport=page.viewportSize();
+   const px=bounds.x<viewport.width/2?viewport.width-5:5,py=Math.min(400,viewport.height-5);
+   if(touch)await page.touchscreen.tap(px,py);else await page.mouse.click(px,py);
    assert.equal(await page.locator('#'+menu).isVisible(),false);assert.equal(await page.evaluate(()=>JSON.stringify(state)),before);
+   if(await page.locator('#modal').isVisible()){
+    const info=await page.evaluate(({button,menu,touch,px,py})=>({
+     button,menu,touch,modalTitle:document.getElementById('modalTitle').textContent,
+     menuRect:(()=>{const r=document.getElementById(menu).getBoundingClientRect();return{x:r.x,y:r.y,w:r.width,h:r.height}})(),
+     menuItems:[...document.querySelectorAll('#'+menu+' button')].map(b=>({text:b.textContent,rect:(()=>{const r=b.getBoundingClientRect();return{x:r.x,y:r.y,w:r.width,h:r.height}})()})),
+     actualTarget:document.elementFromPoint(px,py)?.outerHTML.slice(0,120)
+    }),{button,menu,touch,px,py});
+    throw new Error('Outside gesture activated modal: '+JSON.stringify(info));
+   }
    await page.click('#'+button);await page.click('#'+button);assert.equal(await page.locator('#'+menu).isVisible(),false);
    await page.click('#'+button);await page.evaluate(()=>window.handleAndroidBack());assert.equal(await page.locator('#'+menu).isVisible(),false);
   }

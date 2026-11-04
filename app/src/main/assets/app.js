@@ -232,7 +232,7 @@ $('sortBtn').onclick=()=>{sortAsc=!sortAsc;$('sortBtn').textContent=sortAsc?'ᴬ
 function showOverflow(){showAppMenu('overflowMenu',[
   ['Nastavení',()=>toggleSettings()],['Seřadit A–Z / Z–A',()=>{$('sortBtn').click()}],
   ['Nová složka',()=>promptText('Nová složka','Jméno zákazníka nebo místnosti','',name=>addRecord(newRecord('folder',name)))],
-  ['Google Disk',()=>chooseCloud()]
+  ['Google Disk',()=>chooseCloud()],['Nápověda',()=>window.openZamerovacHelp?.()]
 ]);}
 $('settingsBtn').onclick=showOverflow;$('searchBtn').onclick=()=>promptText('Hledat zakázku','Název','',val=>{let found=state.records.find(r=>!r.deleted&&r.title.toLocaleLowerCase('cs').includes(val.toLocaleLowerCase('cs')));if(found){currentFolder=found.parentId;showFolder();document.querySelector(`.entry[data-id="${found.id}"]`)?.scrollIntoView()}else notify('Nenašel jsem žádnou odpovídající položku')});
 function toggleSettings(){$('settingsPanel').hidden=!$('settingsPanel').hidden;if(!$('settingsPanel').hidden)renderSettings()}
