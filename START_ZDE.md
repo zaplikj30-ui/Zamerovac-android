@@ -14,6 +14,7 @@
 | Dlouhodobá představa | Vzhled, schopnosti, možnosti „možná později“; lze měnit. | [Vize a plán](VIZE_A_PLAN.md) |
 | Statický audit kódu proti 28 testům | **Dokončen** s odkazy na konkrétní zdrojové soubory. **Není to test funkčnosti na telefonu.** | [AUDIT_KODU_PROTI_28_TESTUM.md](AUDIT_KODU_PROTI_28_TESTUM.md) |
 | Další aktualizace APK | **Zatím není sestavena**. Audit je podkladem pro jednu společnou aktualizaci všech schválených oprav a nové česky-only Nastavení jazyka. Až po ní testovat další práci v dávkách cca pěti. | [Audit](AUDIT_KODU_PROTI_28_TESTUM.md) · [Plán #13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13) |
+| Budoucí plnohodnotná PC verze | **Dlouhodobý směr, nikoliv zahájený vývoj.** Windows 11 má později pracovat se stejnými editovatelnými zakázkami a bezpečně přenášet změny mezi PC a Androidem. | [Vize](VIZE_A_PLAN.md) · [Datový formát a PC kompatibilita](DATOVY_FORMAT_A_PC_KOMPATIBILITA.md) |
 | Verze APK | Reálnou **aktuálně používanou** verzi ověřit před dalším cyklem; historický screenshot není důkaz aktuálního vydání. | [GitHub Releases](https://github.com/zaplikj30-ui/Zamerovac-android/releases) |
 
 
@@ -85,6 +86,7 @@ Nemusí se znovu kopírovat celý původní chat. Neznámé informace ověřit z
 - **Tento soubor:** aktuální stav a rozcestník. Musí se aktualizovat při změně fáze, zvolené dávky nebo důležitého rozhodnutí.
 - **[Podrobná rekonstrukce 1–10](REKONSTRUKCE_TESTU_01_10.md), [11–20](REKONSTRUKCE_TESTU_11_20.md), [21–28](REKONSTRUKCE_TESTU_21_28.md):** aktuální podklady pro pozdější audit zdrojového kódu.
 - **[Katalog dohodnutých změn a nápadů](ROZHODNUTI_A_NAPADY_Z_TESTU.md):** schválené novinky i nápady „možná později“.
+- **[Datový formát a budoucí Windows editor](DATOVY_FORMAT_A_PC_KOMPATIBILITA.md):** současné schéma 1 a ZIP jsou zdokumentované; PC/synchronizace dosud neexistují. Nenahrazovat zálohování synchronizací bez samostatného návrhu.
 - **[Statický audit 28 testů](AUDIT_KODU_PROTI_28_TESTUM.md):** konkrétní rozdíly v kódu a priorita oprav před vydáním APK.
 - **[Testovací deník #13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13):** výsledky kontrol, průběžné dohody a konkrétní kroky; během rekonstrukce 28 testů primární evidence.
 - **[49 původních úprav #12](https://github.com/zaplikj30-ui/Zamerovac-android/issues/12):** původní základní zadání; nesmazat jen proto, že už vznikla další evidence.
@@ -96,4 +98,4 @@ Nemusí se znovu kopírovat celý původní chat. Neznámé informace ověřit z
 
 **4. 11. 2026 – uživatel:** „Důležité je ukládat všechny kroky na GitHub ... co budeme dělat, chceme dělat, nebo na čem jsme se dohodli ... a rychle dohledatelné.“
 
-**Výsledek:** Tento rozcestník a pravidlo okamžitého průběžného zápisu; nevydávat ChatGPT paměť za spolehlivé úložiště projektu. **Tentýž den dokončena rekonstrukce všech testů 1–28 i [statický audit zdrojového kódu](AUDIT_KODU_PROTI_28_TESTUM.md)**. Opravy podle auditu, český výběr jazyka, sestavení a fyzický retest ještě neproběhly. Schváleno: lokalizační architektura pro desítky jazyků; aktivní pouze čeština. Při dalších fázích aktualizovat přehled i příslušné issues.
+**Výsledek:** Tento rozcestník a pravidlo okamžitého průběžného zápisu; nevydávat ChatGPT paměť za spolehlivé úložiště projektu. **Tentýž den dokončena rekonstrukce všech testů 1–28 i [statický audit zdrojového kódu](AUDIT_KODU_PROTI_28_TESTUM.md)**. Opravy podle auditu, český výběr jazyka, sestavení a fyzický retest ještě neproběhly. Schváleno: lokalizační architektura pro desítky jazyků; aktivní pouze čeština. Další dlouhodobé cíle: možné veřejné vydání na Google Play a **možná plnohodnotná Windows 11 aplikace** s editovatelnými společnými zakázkami; ani jedno se nyní nevyvíjí. Při dalších fázích aktualizovat přehled i příslušné issues.
