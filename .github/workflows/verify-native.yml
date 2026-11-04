@@ -1,0 +1,23 @@
+name: Zaměřovač – kontrola kompilace Androidu bez APK
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'app/src/main/java/**'
+      - 'app/src/main/AndroidManifest.xml'
+      - 'app/src/main/res/**'
+      - '.github/workflows/verify-native.yml'
+jobs:
+  compile:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Ověřit Java a Android zdroje bez vydání APK
+        run: gradle --no-daemon :app:compilePreviewJavaWithJavac
