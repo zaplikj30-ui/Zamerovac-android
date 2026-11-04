@@ -375,7 +375,7 @@ function openGallery(index,records=null){
  galleryList=records||galleryPhotos();galleryIndex=Math.min(Math.max(index,0),galleryList.length-1);
  if(!galleryList.length){notify('Ve složce nejsou fotografie');return}
  gallery=document.createElement('div');gallery.className='galleryOverlay';
- gallery.innerHTML='<div class="gallery-top"><button data-action="close">←</button><strong class="gallery-title"></strong><button data-action="edit">Upravit</button></div><div class="gallery-content"><canvas class="gallery-img" role="img" aria-label="Fotografie včetně kót a poznámek"></canvas></div><div class="gallery-bottom"><button data-action="prev" aria-label="Předchozí fotografie">❮</button><span>Listuj přejetím do stran · přibliž dvěma prsty</span><button data-action="next" aria-label="Další fotografie">❯</button></div>';
+ gallery.innerHTML='<div class="gallery-top"><button data-action="close">←</button><strong class="gallery-title"></strong><button data-action="edit">Upravit</button></div><div class="gallery-content"><canvas class="gallery-img" role="img" aria-label="Fotografie včetně kót a poznámek"></canvas></div><div class="gallery-bottom"><span>Listuj přejetím do stran · přibliž dvěma prsty</span></div>';
  document.body.append(gallery);
  gallery.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>{
   const a=b.dataset.action;
