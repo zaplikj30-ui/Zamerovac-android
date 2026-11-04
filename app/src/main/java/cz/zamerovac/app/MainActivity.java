@@ -243,6 +243,41 @@ public class MainActivity extends Activity {
         if(!dir.isDirectory()&&!dir.mkdirs())throw new IOException("Cannot create thumbnails cache");
         File cached=new File(dir,id+".jpg");
         if(!cached.isFile()||cached.lastModified()<source.lastModified()){
+            // Extract one frame only for video thumbnails. Full video stays unchanged.
+            if(mediaMime(id).startsWith("video/")){
+                android.media.MediaMetadataRetriever retriever=new android.media.MediaMetadataRetriever();
+                Bitmap frame=null,thumbnail=null;
+                try{
+                    retriever.setDataSource(source.getAbsolutePath());
+                    frame=retriever.getFrameAtTime(0,android.media.MediaMetadataRetriever.OPTION_CLOSEST_SYNC);
+                    if(frame==null)return null;
+                    int size=144;
+                    thumbnail=Bitmap.createBitmap(size,size,Bitmap.Config.RGB_565);
+                    Canvas canvas=new Canvas(thumbnail);
+                    Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG|Paint.FILTER_BITMAP_FLAG);
+                    float side=Math.min(frame.getWidth(),frame.getHeight());
+                    Rect rect=new Rect((int)((frame.getWidth()-side)/2f),(int)((frame.getHeight()-side)/2f),
+                        (int)((frame.getWidth()+side)/2f),(int)((frame.getHeight()+side)/2f));
+                    canvas.drawBitmap(frame,rect,new RectF(0,0,size,size),paint);
+                    File tmp=new File(dir,id+".tmp");
+                    try(FileOutputStream out=new FileOutputStream(tmp)){
+                        if(!thumbnail.compress(Bitmap.CompressFormat.JPEG,82,out))
+                            throw new IOException("Cannot encode video thumbnail");
+                    }
+                    if(!tmp.renameTo(cached)){
+                        if(!cached.delete()||!tmp.renameTo(cached))
+                            throw new IOException("Cannot save video thumbnail");
+                    }
+                }catch(RuntimeException e){
+                    android.util.Log.w("Zamerovac","Video preview unavailable",e);
+                    return null;
+                }finally{
+                    if(thumbnail!=null)thumbnail.recycle();
+                    if(frame!=null)frame.recycle();
+                    try{retriever.release();}catch(Exception ignored){}
+                }
+                return new FileInputStream(cached);
+            }
             BitmapFactory.Options bounds=new BitmapFactory.Options();
             bounds.inJustDecodeBounds=true;
             BitmapFactory.decodeFile(source.getAbsolutePath(),bounds);
