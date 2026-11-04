@@ -485,6 +485,7 @@ body.in-editor #editorExtraToolbar > #editorMore.tool-active{
 
 /* Long-press selection: flexible for narrow phones, tablets and split-screen. */
 .bulk-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 12px;background:#373b3c;position:sticky;top:0;z-index:6;border-bottom:1px solid #858785}
+.bulk-toolbar[hidden]{display:none!important}
 .bulk-toolbar strong{margin-inline-end:8px;white-space:nowrap}
 .bulk-toolbar button{min-height:42px;padding:6px 10px;border:1px solid #696d6d;border-radius:6px}
 .entry.bulk-selected{background:rgba(247,220,39,.14);outline:2px solid rgba(247,220,39,.72);outline-offset:-2px}
