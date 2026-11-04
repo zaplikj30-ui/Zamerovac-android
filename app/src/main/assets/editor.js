@@ -646,19 +646,6 @@ function stageDown(e){
     }
     candidate.activeSegmentIndex=candidate.type==='rect'?nearest%2:nearest;
    }
-   /* Earlier chain hit-testing used raw fan coordinates; displayed geometry above is authoritative. */
-   if(false&&['chain','cumulative'].includes(candidate.type)&&candidate.points?.length>1){
-   const w=screenToWorld(s);
-   let nearest=0,dist=Infinity;
-   for(let i=0;i<candidate.points.length-1;i++){
-    const a=candidate.type==='cumulative'?candidate.points[0]:candidate.points[i];
-    const b=candidate.points[i+1],dx=b.x-a.x,dy=b.y-a.y;
-    const t=Math.max(0,Math.min(1,((w.x-a.x)*dx+(w.y-a.y)*dy)/(dx*dx+dy*dy||1)));
-    const d=Math.hypot(w.x-a.x-t*dx,w.y-a.y-t*dy);
-    if(d<dist){dist=d;nearest=i}
-   }
-   candidate.activeSegmentIndex=nearest;
-  }
   const alreadySelected=selected===candidate.id;
   const isTextNote=candidate.type==='note'&&!candidate.media?.length;
   const captionBox=isTextNote?noteCaptionBounds(candidate):null;
