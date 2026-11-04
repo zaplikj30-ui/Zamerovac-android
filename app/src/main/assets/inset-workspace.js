@@ -129,6 +129,11 @@
     c.lineWidth=1.7;
     c.fillRect(g.x+offset,g.y-offset,g.w,g.h);
     c.strokeRect(g.x+offset,g.y-offset,g.w,g.h);
+    // The rear photo sheets have subtle folded corners.
+    const x=g.x+offset+g.w,y=g.y-offset;
+    c.fillStyle='#e9debf';c.beginPath();
+    c.moveTo(x-14,y);c.lineTo(x,y+14);c.lineTo(x-14,y+14);c.closePath();c.fill();
+    c.strokeStyle='#ae9560';c.beginPath();c.moveTo(x-14,y);c.lineTo(x-14,y+14);c.lineTo(x,y+14);c.stroke();
    }
   }
   c.fillStyle='rgba(0,0,0,.25)';
