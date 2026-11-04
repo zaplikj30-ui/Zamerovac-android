@@ -163,6 +163,10 @@ Kontrola má **upozornit a vysvětlit konkrétní nesrovnalost**. Bez výslovné
 - Návrh **půdorysu/3D/stěnových pohledů** a návaznosti na jiný samostatný projekt nelze považovat za hotovou implementaci nebo za pokyn nyní spojovat třetí repozitář.
 - Jiní dodavatelé, systémy a výměnné formáty mohou být později napojeny přes záměrně oddělené rozhraní; dnes bez předčasného API a závislostí.
 
+- **Širší cílová skupina – budoucí možnost:** systém může jednou sloužit nejen pro vlastní zakázky, ale také dalším truhlářům, nábytkářům, montážníkům a příbuzným řemeslům v ČR i zahraničí. Dnes to nemění zaměření aplikace ani neznamená závazek veřejného či komerčního vydání.
+- **Jen potřebné funkce:** budoucí uživatel může pracovat jen se Zaměřovačem, jen s návrhem, kusovníkem či nářezákem, nebo s jejich kombinací, bez povinného absolvování ostatních kroků. Rozhraní má přednostně ukazovat funkce relevantní pro jeho práci, aby pokročilé možnosti neznepřehlednily základní použití; konkrétní způsob výběru a skrytí funkcí zatím není rozhodnutý.
+- **Mezinárodní místní nastavení:** vedle překladu textů do budoucna počítat s různými jednotkami, desetinnými oddělovači, formáty data a dalšími regionálními zvyklostmi. Ukládané hodnoty a výměnné soubory musí zachovávat jednoznačný význam a přesnost výrobních rozměrů bez tichých změn nebo zaokrouhlení při přepnutí jazyka či jednotek.
+
 #### 10. Stav, priorita a pravidla pro další práci
 | Oblast | Současná skutečnost / stav rozhodnutí |
 |---|---|
