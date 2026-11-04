@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Czech is the only shipping locale. Keep program IDs independent from UI strings. -->
+    <string name="app_language_setting">Jazyk aplikace</string>
+    <string name="app_language_czech">Čeština</string>
+    <string name="bluetooth_laser_missing">Nenalezen laser Bosch. Zapni laser a zkus hledat znovu; jiný měřič lze vybrat ručně.</string>
+    <string name="bluetooth_choose_other">Vybrat jiné Bluetooth zařízení</string>
+    <string name="bluetooth_choose_bosch">Vybrat laser Bosch</string>
+</resources>
