@@ -228,8 +228,9 @@ $('searchBtn').onclick=()=>{
       return title===q?0:title.startsWith(q)?1:title.includes(q)?2:3};
     return rank(a)-rank(b)||a.title.localeCompare(b.title,'cs');
    }).slice(0,60);
-  result.innerHTML=found.length?found.map(r=>'<button data-found="'+esc(r.id)+'"><span>'+esc(r.title)+'</span><small>'+esc(r.kind)+' · '+esc(r.photoAddress||'')+'</small></button>').join(''):'<p>Nic nenalezeno</p>';
+  result.innerHTML=found.length?found.map(r=>'<button class="search-hit" data-found="'+esc(r.id)+'">'+browserEntryIcon(r)+'<span class="search-hit-body"><span>'+esc(r.title)+'</span><small>'+esc(r.kind)+' · '+esc(r.photoAddress||'')+'</small></span></button>').join(''):'<p>Nic nenalezeno</p>';
   result.querySelectorAll('[data-found]').forEach(b=>b.onclick=()=>{$('modal').hidden=true;currentFolder=recById(b.dataset.found)?.parentId||null;showFolder();openRecord(b.dataset.found)});
+  result.querySelectorAll('.entry-thumb').forEach(img=>img.addEventListener('error',()=>{img.hidden=true;if(img.nextElementSibling)img.nextElementSibling.hidden=false},{once:true}));
  };
  input.addEventListener('input',update);update();
 };
