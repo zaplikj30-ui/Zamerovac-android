@@ -53,7 +53,7 @@ final class VideoThumbnails implements AutoCloseable {
             synchronized(TrashPurger.LOCK){
                 if(Thread.currentThread().isInterrupted()||!source.isFile()||source.lastModified()!=modified)return null;
                 java.nio.file.Files.move(temporary.toPath(),cached.toPath(),java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-                failed.delete();success=true;return cached;
+                cached.setLastModified(modified);failed.delete();success=true;return cached;
             }
         }catch(RuntimeException ex){unsupported=true;return null;}
         finally{

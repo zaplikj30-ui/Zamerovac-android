@@ -7,11 +7,12 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
  page.on('pageerror',e=>errors.push(e.message));
  await page.goto(process.argv[2]||'http://127.0.0.1:8765');
  const result=await page.evaluate(async()=>{
-  const photo=async(color,w,h)=>{
+  const photo=async(color,w,h,type='image/png')=>{
    const c=document.createElement('canvas');c.width=w;c.height=h;c.getContext('2d').fillStyle=color;c.getContext('2d').fillRect(0,0,w,h);
-   const blob=await new Promise(r=>c.toBlob(r,'image/png'));return storeMedia(new File([blob],'synthetic.png',{type:'image/png'}));
+   const blob=await new Promise(r=>c.toBlob(r,'image/png'));return storeMedia(new File([blob],'synthetic.png',{type}));
   };
   const main=await photo('#777777',1600,900),red=await photo('#ff0000',800,400),green=await photo('#00ff00',300,900),blue=await photo('#0000ff',900,200);
+  const legacy=await photo('#ffff00',200,100,'application/octet-stream');
   const other=await storeMedia(new File(['unsupported data'],'synthetic.bin',{type:'video/unsupported'}));
   const record=newRecord('photo','Synthetic PDF');record.media=[main];record.width=1600;record.height=900;
   record.items=[{id:'precise',type:'dimension',a:{x:100,y:100},b:{x:600,y:100},measure:'1585,800001',unit:'mm'},
@@ -19,7 +20,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
    {id:'private-b',type:'note',a:{x:800,y:400},text:'SOUKROMÁ POZNÁMKA B',media:Array(15).fill(blue)},
    {id:'text-only',type:'note',a:{x:900,y:700},text:'POUZE TEXTOVÁ POZNÁMKA\n'+('Dlouhý text poznámky. '.repeat(500)),media:[]},
    {id:'empty',type:'note',a:{x:950,y:700},text:'',media:[]},
-   {id:'audio-first',type:'note',a:{x:950,y:750},text:'Neobrazová příloha první',audioMedia:[other],media:[other,green]}];
+   {id:'audio-first',type:'note',a:{x:950,y:750},text:'Neobrazová příloha první',audioMedia:[other],media:[other,green,legacy]}];
   state.records=[record];save();const before=JSON.stringify(record);
   const originalText=CanvasRenderingContext2D.prototype.fillText,texts=[];
   CanvasRenderingContext2D.prototype.fillText=function(text,...args){texts.push(String(text));return originalText.call(this,text,...args)};
@@ -43,6 +44,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
   return {publicPages,publicTexts,texts,privatePages,privatePng,requested,main,before};
  });
  assert.equal(result.publicPages.length,1);assert.deepEqual(result.publicPages[0].counts,[0,0,0]);
+ assert(!result.texts.includes('Klikněte pro zadání textu'),'Editor placeholders do not appear in customer PDF');
  assert(!result.publicTexts.some(t=>t.includes('SOUKROMÁ')||t.includes('POUZE TEXTOVÁ')));
  assert(result.texts.includes('Poznámka 3'),'Text-only note has a separate section');
  assert(result.texts.some(t=>t.startsWith('POUZE TEXTOVÁ POZNÁMKA')));

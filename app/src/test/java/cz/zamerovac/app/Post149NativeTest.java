@@ -72,6 +72,11 @@ public class Post149NativeTest {
             BluetoothGatt second=mock(BluetoothGatt.class);
             when(device.connectGatt(eq(activity),eq(false),any(BluetoothGattCallback.class),eq(BluetoothDevice.TRANSPORT_LE))).thenReturn(second);
             call(activity,"connectGatt",new Class<?>[]{BluetoothDevice.class},device);
+            BluetoothGattCharacteristic stale=mock(BluetoothGattCharacteristic.class);
+            when(stale.getUuid()).thenReturn(BoschBleProtocol.MEASUREMENT_UUID);
+            callback.get().onCharacteristicWrite(connection,stale,BluetoothGatt.GATT_SUCCESS);
+            Shadows.shadowOf(Looper.getMainLooper()).idle();
+            assertSame(second,field(activity,"gatt"));assertFalse((boolean)field(activity,"boschStreamEnabled"));
             Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(21));
             assertNull(field(activity,"gatt"));verify(second).disconnect();verify(second).close();
             assertFalse((boolean)field(activity,"boschStreamEnabled"));
@@ -131,6 +136,10 @@ public class Post149NativeTest {
             }
             try(InputStream stream=thumbnails.open(source,cache)){assertNotNull(stream);}
             verify(decoder,times(1)).setDataSource(source.getAbsolutePath());
+            assertTrue(source.setLastModified(new File(cache,source.getName()+".jpg").lastModified()+1000));
+            try(InputStream stream=thumbnails.open(source,cache)){assertNotNull(stream);}
+            try(InputStream stream=thumbnails.open(source,cache)){assertNotNull(stream);}
+            verify(decoder,times(2)).setDataSource(source.getAbsolutePath());
         }
         assertArrayEquals(original,java.nio.file.Files.readAllBytes(source.toPath()));
         File bad=new File(context.getCacheDir(),"unsupported-video");java.nio.file.Files.write(bad.toPath(),original);
@@ -170,6 +179,21 @@ public class Post149NativeTest {
         }
         try{provider.openFile(uri,"w");fail("Writable original");}catch(FileNotFoundException expected){}
         assertEquals(offset+1,file.length());file.delete();
+    }
+
+    @Test public void rotationKeepsActivityWebViewAndSavedProject()throws Exception {
+        try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
+            MainActivity activity=controller.get();Object web=field(activity,"web");
+            String data="{\"schema\":1,\"records\":[{\"id\":\"saved-photo\",\"kind\":\"photo\",\"media\":[\"original-image\"],\"items\":[{\"measure\":\"1585,800001\",\"unit\":\"mm\"}]}]}";
+            activity.new JsApi().saveData(data);
+            for(int orientation:new int[]{android.content.res.Configuration.ORIENTATION_LANDSCAPE,android.content.res.Configuration.ORIENTATION_PORTRAIT}){
+                android.content.res.Configuration configuration=new android.content.res.Configuration(activity.getResources().getConfiguration());
+                configuration.orientation=orientation;configuration.screenWidthDp=orientation==2?1024:768;configuration.screenHeightDp=orientation==2?768:1024;
+                controller.configurationChange(configuration);
+                assertSame(activity,controller.get());assertSame(web,field(activity,"web"));
+                assertEquals(data,activity.new JsApi().loadData());
+            }
+        }
     }
 
 }

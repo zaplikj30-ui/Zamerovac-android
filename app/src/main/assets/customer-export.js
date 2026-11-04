@@ -22,10 +22,17 @@
  }
  async function isPhoto(id,item){
   if(item.audioMedia?.includes(id))return false;
-  if(native&&typeof Native.getMediaMime==='function')return Native.getMediaMime(id).startsWith('image/');
-  const url=await assetUrl(id);
-  try{return (await fetch(url)).headers.get('Content-Type')?.startsWith('image/')||false}
-  finally{if(url.startsWith('blob:'))URL.revokeObjectURL(url)}
+  let mime='';
+  if(native&&typeof Native.getMediaMime==='function')mime=Native.getMediaMime(id);
+  else{
+   const url=await assetUrl(id);
+   try{mime=(await fetch(url)).headers.get('Content-Type')||''}
+   finally{if(url.startsWith('blob:'))URL.revokeObjectURL(url)}
+  }
+  if(mime.startsWith('image/'))return true;
+  if(mime&&mime!=='application/octet-stream')return false;
+  // Older attachments may lack MIME metadata. Probe the local image safely.
+  try{await loadImage(id);return true}catch(error){return false}
  }
  async function preloadNotes(items){
   for(const item of items)if(item.type==='note'&&item.media?.length){
@@ -82,15 +89,23 @@
   }
   function header(text){c.font='bold 30px sans-serif';c.fillStyle='#222';c.fillText(text,margin,y+30);y+=52}
   function lines(text,font='24px sans-serif'){
-   c.font=font;const result=[];
+   c.font=font;const result=[],available=width-2*margin;
    for(const paragraph of String(text||'').split('\n')){
-    let line='';for(const character of paragraph){
-     if(c.measureText(line+character).width>width-2*margin){result.push(line);line=''}line+=character;
-    }result.push(line);
+    let line='';
+    for(const word of paragraph.match(/\S+\s*|\s+/gu)||[]){
+     if(line&&c.measureText(line+word).width>available){result.push(line.trimEnd());line=''}
+     const token=line?word:word.trimStart();
+     for(const character of token){
+      if(c.measureText(line+character).width>available){result.push(line.trimEnd());line=''}
+      line+=character;
+     }
+    }
+    result.push(line.trimEnd());
    }return result;
   }
   function output(){if(++number>200)throw new Error('PDF má příliš mnoho stran');return encode(canvas)}
-  blank();c.drawImage(main,(width-main.width)/2,0);y=main.height+margin;
+  const mainScale=Math.min(width/main.width,height/main.height);
+  blank();c.drawImage(main,(width-main.width*mainScale)/2,0,main.width*mainScale,main.height*mainScale);y=main.height*mainScale+margin;
   if(y+160>height-margin){yield output();blank()}
   header('Poznámky a fotografie');
   for(const {item,index,ids} of groups){

@@ -1,0 +1,67 @@
+/* #26: keep icon artwork fixed; adapt the available slots and scrolling area. */
+:root{--editor-head-height:56px;--editor-toolbar-height:66px;--editor-extra-height:113px}
+#browserView{height:calc(100dvh - 122px)}
+#browserFoot{padding-inline:8px}
+#browserFoot .ico{flex:0 1 50px;width:50px;min-width:42px;max-width:56px}
+#browserFoot #boschHistoryBtn{flex-basis:42px;width:42px}
+/* Only control pictograms: folder artwork may have a non-square viewBox. */
+.ico svg,.editor-extra-btn svg{flex-shrink:0;max-width:32px;max-height:32px;object-fit:contain}
+.editor-head,.note-head{height:var(--editor-head-height);min-height:var(--editor-head-height)}
+body.in-editor #editorView .toolbar{
+ height:var(--editor-toolbar-height)!important;min-height:var(--editor-toolbar-height)!important;
+ padding:5px!important;justify-content:center!important;gap:1px!important;
+}
+body.in-editor #editorView .toolbar > [data-toolbar-key]{
+ flex:1 1 0!important;min-width:40px!important;max-width:64px!important;
+ width:auto!important;margin:0!important;height:53px!important;
+}
+body.in-editor #editorView .toolbar > #lineColor{height:46px!important}
+body.in-editor #editorView #editorExtraToolbar{
+ grid-template-columns:repeat(7,minmax(40px,64px));grid-template-rows:repeat(2,49px);
+ justify-content:center;flex:0 0 var(--editor-extra-height);min-height:var(--editor-extra-height);
+ padding:3px 4px 7px;
+}
+body.in-editor #editorView #editorExtraToolbar > [data-toolbar-key]{height:49px}
+body.in-editor #toolMenu.sheet{
+ left:max(8px,calc((100vw - 720px)/2))!important;
+ right:max(8px,calc((100vw - 720px)/2))!important;width:auto!important;
+ bottom:var(--editor-toolbar-height)!important;
+ max-height:calc(100dvh - var(--editor-head-height) - var(--editor-toolbar-height) - 12px)!important;
+}
+body.in-editor.editor-extra-open #toolMenu.sheet{
+ bottom:calc(var(--editor-toolbar-height) + var(--editor-extra-height))!important;
+ max-height:calc(100dvh - var(--editor-head-height) - var(--editor-toolbar-height) - var(--editor-extra-height) - 12px)!important;
+}
+.appMenu{max-height:min(68dvh,calc(100dvh - 72px))}
+.appMenu.editorOverflow{top:calc(var(--editor-head-height) + 2px)}
+.modal{padding:8px}
+.dialog{max-height:calc(100dvh - 16px);overflow-wrap:anywhere}
+.dialog:not(.richNoteDialog) .dialogActions{position:sticky;bottom:-22px;background:#36383b;padding-block:8px;z-index:2}
+#modal .richNoteDialog .dialogTitle{padding-right:175px}
+#modal .richNoteDialog #modalBody{max-width:800px;margin-inline:auto}
+.note-body{max-width:900px;margin-inline:auto}
+.gallery-top,.gallery-bottom,.mediaTop{flex-shrink:0}
+.gallery-content{min-width:0;min-height:0}
+.gallery-img{flex-shrink:0}
+.mediaOverlay video{flex:1;min-height:0;max-height:none;object-fit:contain}
+@media(min-width:700px){#toolMenu .toolList{grid-template-columns:repeat(3,minmax(0,1fr))}}
+/* Short landscapes keep the photo useful. Extra tools scroll as a single row. */
+@media(max-height:500px) and (orientation:landscape){
+ :root{--editor-head-height:44px;--editor-toolbar-height:54px;--editor-extra-height:56px}
+ .editor-head .ico,.note-head .ico{height:42px}
+ body.in-editor #editorView .toolbar{padding:4px!important}
+ body.in-editor #editorView .toolbar > [data-toolbar-key]{height:44px!important}
+ body.in-editor #editorView .toolbar > #lineColor{height:40px!important}
+ body.in-editor #editorView #editorExtraToolbar{
+  grid-template-columns:repeat(14,48px);grid-template-rows:48px;
+  justify-content:safe center;overflow-x:auto;overflow-y:hidden;touch-action:pan-x;
+  padding:3px 4px;
+ }
+ body.in-editor #editorView #editorExtraToolbar > [data-toolbar-key]{height:44px}
+ .gallery-top,.mediaTop{min-height:44px;padding:3px 8px}
+ .gallery-bottom{min-height:38px;padding:5px 8px}
+ .dialog:not(.richNoteDialog){padding:14px}
+ .dialog:not(.richNoteDialog) .dialogActions{bottom:-14px}
+ .zoomControl button{width:40px;height:34px;line-height:30px}
+ #editorHint{font-size:11px;bottom:12px;padding:4px 10px}
+}

@@ -3,8 +3,9 @@ const toolGroups=[{title:'Měřicí nástroje',tools:[['dimension','↔','Rozmě
 const allTools=toolGroups.flatMap(g=>g.tools);
 let drawStart=null,drawCurrent=null,stroke=[],polylineDraft=[],drawPointerId=null,selectedHandle=null,lastTap=0,lastTapAt=null,gesture=null;
 let lastDrawingTool='dimension',suppressToolClick=false,repeatPressTimer=null,loupeSide=null;
-let photoLoadGeneration=0,photoLoadTimer=null,photoLoadFailed=false;
+let photoLoadGeneration=0,photoLoadTimer=null,photoLoadFailed=false,editorViewport=null;
 function openEditor(r){
+ editorViewport=null;
  polylineDraft=[];stroke=[];drawStart=null;drawCurrent=null;lastTap=0;lastTapAt=null;loupeSide=null;
  screen='editor';document.body.classList.add('in-editor');closeMenus();$('editorHint').hidden=true;
  current=r;selected=null;mode='dimension';lastDrawingTool='dimension';updateDrawingToolButton();
@@ -38,7 +39,17 @@ function exitEditor(){finishPendingPath();magnifierPoint=null;loupeSide=null;$('
 $('editorBack').onclick=exitEditor;
 $('fitBtn').onclick=fitImage;$('zoomIn').onclick=()=>{const p=centerPoint();zoomAt(1.25,p.x,p.y)};$('zoomOut').onclick=()=>{const p=centerPoint();zoomAt(.8,p.x,p.y)};
 function centerPoint(){return{x:stageCanvas.clientWidth/2,y:stageCanvas.clientHeight/2}}
-function resizeEditor(){if(screen!=='editor')return;let el=$('stage'),dpr=window.devicePixelRatio||1;stageCanvas.width=Math.max(1,Math.floor(el.clientWidth*dpr));stageCanvas.height=Math.max(1,Math.floor(el.clientHeight*dpr));ctx.setTransform(dpr,0,0,dpr,0,0);paint()}
+function resizeEditor(){
+ if(screen!=='editor')return;
+ const el=$('stage'),dpr=window.devicePixelRatio||1,w=el.clientWidth,h=el.clientHeight;
+ // Preserve zoom and the world point at the centre, including unsaved drafts.
+ if(editorViewport?.record===current&&w>0&&h>0){
+  view.dx+=(w-editorViewport.w)/2;view.dy+=(h-editorViewport.h)/2;
+ }
+ editorViewport={record:current,w,h};
+ stageCanvas.width=Math.max(1,Math.floor(w*dpr));stageCanvas.height=Math.max(1,Math.floor(h*dpr));
+ ctx.setTransform(dpr,0,0,dpr,0,0);paint();
+}
 window.addEventListener('resize',resizeEditor);
 function fitImage(){let w=stageCanvas.clientWidth,h=stageCanvas.clientHeight;if(!w||!h)return;view.zoom=Math.min((w-24)/photoSize.w,(h-24)/photoSize.h);view.dx=(w-photoSize.w*view.zoom)/2;view.dy=(h-photoSize.h*view.zoom)/2;paint()}
 function initialImageView(){fitImage();const p=centerPoint();zoomAt(1.15,p.x,p.y)}
@@ -227,7 +238,7 @@ function drawSelectedGrips(c){
    U starších záznamů bez captionMoved zůstává vzhled beze změny. */
 function noteDisplayedCaption(item){
  const voice=Array.isArray(item.audioMedia)&&item.audioMedia.length?'🎙 ':'';
- const body=item.text||((item.media?.length)?'':'Klikněte pro zadání textu');
+ const body=item.text||((item.media?.length||window.__exportingAnnotations)?'':'Klikněte pro zadání textu');
  return voice+body;
 }
 function noteCaptionScreen(item){
