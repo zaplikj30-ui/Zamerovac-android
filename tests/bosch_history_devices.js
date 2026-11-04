@@ -22,7 +22,7 @@ const bluetooth={
  classList:{toggle(){}},innerHTML:'',title:'',setAttribute(){},addEventListener(){}
 };
 elements.set('bluetoothBtn',bluetooth);
-elements.set('boschHistoryBtn',{onclick:null});
+elements.set('boschHistoryBtn',{onclick:null,addEventListener(){},setAttribute(){}});
 elements.set('modal',{hidden:true});
 elements.set('modalBody',{querySelectorAll:()=>[]});
 const $=key=>elements.get(key)||null;
