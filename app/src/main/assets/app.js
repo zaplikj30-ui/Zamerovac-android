@@ -119,7 +119,9 @@ function purgeTrashRecords(ids){
    result={data:next};
   }
   persistedSnapshot=result.snapshot||JSON.stringify(result.data);
-  state={...result.data,prefs};
+  // Kept records are unchanged by purge. Preserve references held by editor/note/detail workspaces.
+  const kept=new Map(state.records.map(r=>[r.id,r]));
+  state={...result.data,records:result.data.records.map(r=>kept.get(r.id)||r),prefs};
   if(screen==='browser')showFolder();
   showTrash();
   notify(result.warning||'Koš byl trvale vyprázdněn');
@@ -272,7 +274,7 @@ window.onNativePhotoAddress=(mediaId,address)=>{
   }
 };
 window.onNativeMediaDone=()=>{stagedFileHandler=null;save()};
-window.onNativeSync=(text)=>{try{let s=JSON.parse(text);if(s.data){const purged=new Set([...(state.trashPurgedIds||[]),...(s.data.trashPurgedIds||[])]);s.data.trashPurgedIds=[...purged];s.data.records=(s.data.records||[]).filter(r=>!r.deleted||!purged.has(r.id));if(screen==='browser'){state=s.data;Object.assign(prefs,state.prefs||{});state.prefs=prefs;save();showFolder()}else{const activeIds=new Set([current?.id,noteActive?.id].filter(Boolean));const active=state.records.filter(r=>activeIds.has(r.id));let incoming=s.data.records||[];for(const r of active){let at=incoming.findIndex(x=>x.id===r.id);if(at>=0)incoming[at]=r;else incoming.push(r)}state.records=incoming;save();} }notify(s.message||'Synchronizace dokončena')}catch(e){notify(text)}};
+window.onNativeSync=(text)=>{try{let s=JSON.parse(text);if(s.data){const purged=new Set([...(state.trashPurgedIds||[]),...(s.data.trashPurgedIds||[])]);s.data.trashPurgedIds=[...purged];s.data.records=(s.data.records||[]).filter(r=>!r.deleted||!purged.has(r.id));if(screen==='browser'){state=s.data;Object.assign(prefs,state.prefs||{});state.prefs=prefs;save();showFolder()}else{const activeIds=new Set([current?.id,noteActive?.id].filter(Boolean));const active=state.records.filter(r=>activeIds.has(r.id));let incoming=s.data.records||[];for(const r of active){let at=incoming.findIndex(x=>x.id===r.id);if(at>=0)incoming[at]=r;else incoming.push(r)}state.records=incoming;state.trashPurgedIds=[...purged];save();} }notify(s.message||'Synchronizace dokončena')}catch(e){notify(text)}};
 window.onLaserValue=(value,unit)=>{
  // Přenos mimo editor: uložit poslední přijatou hodnotu do paměti.
  // V editoru provede přímý zápis __handleLaserAuto v upgrade.js.
