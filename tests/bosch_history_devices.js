@@ -86,6 +86,6 @@ assert(!afterDelete.some(x=>x.value==='100'));
 elements.get('boschHistoryBtn').onclick();
 const selector2=elements.get('laserHistoryFilter');
 // After removing one of two known meters, the selector is no longer needed.
-assert.equal(selector2,null);
+assert.equal(selector2,undefined);
 assert(lastModal.content.includes('123 mm')&&lastModal.content.includes('200 mm'));
 console.log('OK: meter-specific history, simple single-meter UI, legacy migration and safe deletion');
