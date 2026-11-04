@@ -978,6 +978,36 @@ else if(mode==='note'){
  $('symbolCategory').onchange=render;$('symbolSearch').oninput=render;render();
 }
 else{checkpoint();current.items.push(item);commitEditor();finishDraw(item)}}
+// Annotation forms: Back asks what to do with edits; explicit Zrušit always discards.
+function protectAnnotationModalOnBack(){
+ const body=$('modalBody');
+ const ignored=new Set(['insertSegmentAt','removeSegmentAt','boschReadingSelection','simpleBOSCH']);
+ const snapshot=()=>JSON.stringify(Array.from(body.querySelectorAll('input,textarea,select'))
+  .filter(el=>!ignored.has(el.id)&&!el.matches('[data-segment-reading],[data-area-reading],[data-angle-reading]'))
+  .map(el=>[el.id,el.type==='checkbox'?el.checked:el.value]));
+ const original=snapshot();
+ window.modalBackHandler=()=>{
+  const existing=document.getElementById('editorUnsavedConfirm');
+  if(existing){existing.remove();return}
+  if(snapshot()===original){$('cancelModal').click();return}
+  const confirmation=document.createElement('div');
+  confirmation.id='editorUnsavedConfirm';
+  confirmation.className='modal';
+  confirmation.style.zIndex='120';
+  confirmation.innerHTML='<div class="dialog" role="alertdialog" aria-modal="true" aria-label="Neuložené změny">'+
+   '<div class="dialogTitle">Uložit změny?</div>'+
+   '<p>Upravil jsi rozměry nebo popisky. Co chceš udělat?</p>'+
+   '<div class="dialogActions" style="flex-wrap:wrap">'+
+   '<button type="button" id="keepAnnotationEditing" class="outline">Pokračovat v úpravách</button>'+
+   '<button type="button" id="discardAnnotationEdits" class="outline danger">Zahodit</button>'+
+   '<button type="button" id="saveAnnotationEdits" class="primary">Uložit</button></div></div>';
+  document.body.append(confirmation);
+  confirmation.querySelector('#keepAnnotationEditing').onclick=()=>confirmation.remove();
+  confirmation.querySelector('#discardAnnotationEdits').onclick=()=>{$('cancelModal').click();confirmation.remove()};
+  confirmation.querySelector('#saveAnnotationEdits').onclick=()=>{confirmation.remove();$('okModal').click()};
+  confirmation.querySelector('#saveAnnotationEdits').focus();
+ };
+}
 function editSegmentedItem(item){
  const count=item.points.length-1;
  const saved=Array.from({length:count},(_,i)=>item.segmentData?.[i]||{measure:'',text:'',unit:item.unit||prefs.unit});
@@ -1044,6 +1074,7 @@ function editSegmentedItem(item){
   checkpoint();current.items=current.items.filter(x=>x.id!==item.id);
   selected=null;$('modal').hidden=true;commitEditor();
  };
+ protectAnnotationModalOnBack();
 }
 function editItem(item){
  if(['polyline','chain','cumulative'].includes(item.type)&&item.points?.length>1){editSegmentedItem(item);return}
@@ -1078,6 +1109,7 @@ function editItem(item){
   });
   labels.forEach((_,i)=>$('areaSide'+i).onfocus=()=>{item.activeSegmentIndex=i});
   $('removeItem').onclick=()=>{checkpoint();current.items=current.items.filter(x=>x.id!==item.id);selected=null;$('modal').hidden=true;commitEditor()};
+  protectAnnotationModalOnBack();
   return;
  }
  if(item.type==='angle'&&item.points?.length>=3){
@@ -1094,6 +1126,7 @@ function editItem(item){
   });
   [0,1].forEach(i=>$('angleLength'+i).onfocus=()=>{item.activeSegmentIndex=i});
   $('removeItem').onclick=()=>{checkpoint();current.items=current.items.filter(x=>x.id!==item.id);selected=null;$('modal').hidden=true;commitEditor()};
+  protectAnnotationModalOnBack();
   return;
  }
  const dimension=['dimension','chain','cumulative','area','angle'].includes(item.type);
@@ -1165,6 +1198,7 @@ function editItem(item){
   ()=>{checkpoint();item.text=$('drawText').value;commitEditor()}
  );
  $('removeItem').onclick=()=>{checkpoint();current.items=current.items.filter(i=>i.id!==item.id);selected=null;$('modal').hidden=true;commitEditor()};
+ protectAnnotationModalOnBack();
 }
 function showEditorOverflow(){
   showAppMenu('editorOverflow',[
