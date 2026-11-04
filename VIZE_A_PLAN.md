@@ -15,7 +15,7 @@ Praktická samostatná Android aplikace pro zaměřování zakázkového nábytk
 - Funkce mají být vysvětlené srozumitelnými názvy/popisky, ne jen nejasnými ikonami.
 
 
-- **Příprava na vícejazyčnost (schválená, zatím bez změny kódu):** [Plán lokalizace](LOKALIZACE_PLAN.md) · [Úkol #14](https://github.com/zaplikj30-ui/Zamerovac-android/issues/14). Nyní zůstává vše v češtině; jazykové klíče se budou bezpečně přidávat jen k nově opravovaným funkcím. **Nově schválená položka Nastavení „Jazyk aplikace“** nabídne pouze „🇨🇿 Čeština“; další jazyky a skutečné přepínání nejsou nyní v rozsahu.
+- **Příprava na vícejazyčnost (schválená, zatím bez změny kódu):** [Plán lokalizace](LOKALIZACE_PLAN.md) · [Úkol #14](https://github.com/zaplikj30-ui/Zamerovac-android/issues/14). Nyní zůstává vše v češtině; jazykové klíče se budou bezpečně přidávat jen k nově opravovaným funkcím. **Nově schválená položka Nastavení „Jazyk aplikace“** nabídne pouze „🇨🇿 Čeština“, ale architektura bude připravena na desítky jazyků v jejich vlastních názvech a písmech, vyhledávání, různá locale a případné RTL. Další jazyky nyní nejsou dostupné.
 
 ## 3. Co má umět – cílový funkční celek
 - **Zakázky a data:** vytvořit zakázku a adresu, členit do složek, ukládat původní fotografie/PDF/video a editovatelné anotace, hledat, zálohovat, exportovat/importovat včetně podsložek; přežít restart a aktualizaci.
@@ -57,7 +57,8 @@ Tento seznam obsahuje dříve zmíněné nebo odložené směry. O přesném pro
 | Datum | Co bylo dohodnuto |
 |---|---|
 | 2026-11-04 | Udržovat také dlouhodobou podobu aplikace, budoucí nápady, plánované změny a rozhodnutí. Vize se může měnit. |
-| 2026-11-04 | Schválena bezpečná příprava vícejazyčnosti a následně upřesněno: již v příští společné aktualizaci přidat do Nastavení „Jazyk aplikace“ s jedinou zvolenou možností 🇨🇿 Čeština; bez překladů a bez samostatné APK. [Issue #14](https://github.com/zaplikj30-ui/Zamerovac-android/issues/14). |
+| 2026-11-04 | Schválena bezpečná příprava vícejazyčnosti, řádek „Jazyk aplikace“ s jedinou volbou 🇨🇿 Čeština; bez samostatné APK. [Issue #14](https://github.com/zaplikj30-ui/Zamerovac-android/issues/14). |
+| 2026-11-04 | Nové upřesnění: škálovat na desítky jazyků, vyhledávání, autonyma, různé skripty/formáty a RTL; v příští aktualizaci pouze česká volba, ostatní opravy mají přednost. |
 
 ## 8. Další dohledané drobné náměty a ověřované detaily z testování
 Tyto body jsou rozdělené podle původního kontextu; **nesmí se automaticky vydávat za hotové**.
@@ -65,4 +66,4 @@ Tyto body jsou rozdělené podle původního kontextu; **nesmí se automaticky v
 - **Dohodnuté očekávané ovládání:** samostatně přesouvat text/rozměr při práci se šipkou, nezávisle přesouvat rám poznámky a hrot, mít jemné průhledné označení kóty.
 - **K opravě/ověření:** pohyb volné kresby, úchopy kruhu a elipsy, lupa s vycentrovaným bodem, černá plocha při hlášení chyby, import ZIP.
 - **Plánovaný test:** obousměrná synchronizace Google Disk, reálný offline provoz a navazující test 29.
-- Podrobné výsledky podle čísel jsou pouze v [deníku #13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13), který bude aktualizován po porovnání s videem.
+- Podrobné výsledky podle čísel jsou v [rekonstrukci 1–28](START_ZDE.md) a statická kontrola současného kódu je v [auditu](AUDIT_KODU_PROTI_28_TESTUM.md); ani jedno nenahrazuje test nové APK.
