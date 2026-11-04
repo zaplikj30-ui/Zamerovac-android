@@ -96,6 +96,7 @@ public class MainActivity extends Activity {
     private String pendingPhotoLocationId;
     private String exportBase64;
     private String pendingArchiveFolderId;
+    private Set<String> pendingArchiveSelectionIds;
     private MediaRecorder recorder;
     private FileOutputStream activeUpload;
     private String activeUploadId;
@@ -428,7 +429,7 @@ public class MainActivity extends Activity {
     @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);
         if(request==REQUEST_FILE){if(fileCallback!=null){Uri[] resultUris=null;if(result==RESULT_OK&&data!=null){if(data.getClipData()!=null){int n=data.getClipData().getItemCount();resultUris=new Uri[n];for(int i=0;i<n;i++)resultUris[i]=data.getClipData().getItemAt(i).getUri();}else if(data.getData()!=null)resultUris=new Uri[]{data.getData()};}fileCallback.onReceiveValue(resultUris);fileCallback=null;}return;}
         if(result!=RESULT_OK){
-            if(request==REQUEST_BACKUP)pendingArchiveFolderId=null;
+            if(request==REQUEST_BACKUP){pendingArchiveFolderId=null;pendingArchiveSelectionIds=null;}
             if(request==REQUEST_ATTACH)js("window.onNativeMediaDone?.()");
             if(request==REQUEST_CAMERA){discardPendingCamera();js("window.onNativeMediaDone?.()");}
             if(request==REQUEST_ISSUE_EXPORT)pendingIssueZipId=null;
@@ -480,11 +481,12 @@ public class MainActivity extends Activity {
         if(request==REQUEST_BACKUP&&data!=null&&data.getData()!=null){
             final Uri destination=data.getData();
             final String folderId=pendingArchiveFolderId;
-            pendingArchiveFolderId=null;
+            final Set<String> selectionIds=pendingArchiveSelectionIds;
+            pendingArchiveFolderId=null;pendingArchiveSelectionIds=null;
             new Thread(()->{
                 try(OutputStream stream=getContentResolver().openOutputStream(destination,"w")){
                     if(stream==null)throw new IOException("Nelze otevřít soubor");
-                    exportArchive(stream,folderId);
+                    exportArchive(stream,folderId,selectionIds);
                     onSyncResult("ZIP záloha zakázek a původních médií byla uložena",null);
                 }catch(Exception e){error("Záloha ZIP: "+e.getMessage());}
             },"ZamerovacBackup").start();
@@ -511,6 +513,9 @@ public class MainActivity extends Activity {
         return (name.isEmpty()?"Zamerovac-zaloha":name)+".zip";
     }
     private void exportArchive(OutputStream destination,String folderId) throws IOException{
+        exportArchive(destination,folderId,null);
+    }
+    private void exportArchive(OutputStream destination,String folderId,Set<String> selectionIds) throws IOException{
         String json=readDb();
         if(json.isEmpty())throw new IOException("Databáze je prázdná");
         JSONObject parsed;
@@ -518,18 +523,22 @@ public class MainActivity extends Activity {
         catch(JSONException e){throw new IOException("Poškozená databáze",e);}
         Set<String> mediaIds=new HashSet<>();
         JSONArray records=parsed.optJSONArray("records");
-        if(folderId!=null){
-            if(records==null)throw new IOException("Složka neexistuje");
+        if(folderId!=null||selectionIds!=null){
+            if(records==null)throw new IOException("Složka ani výběr neexistuje");
             Set<String> included=new HashSet<>();
             boolean found=false;
             for(int i=0;i<records.length();i++){
                 JSONObject r=records.optJSONObject(i);
-                if(r!=null&&folderId.equals(r.optString("id"))&&
-                    ("folder".equals(r.optString("kind"))||"photo".equals(r.optString("kind")))&&!r.optBoolean("deleted")){
-                    included.add(folderId);found=true;break;
+                if(r==null||r.optBoolean("deleted"))continue;
+                String id=r.optString("id");
+                if(selectionIds!=null){
+                    if(selectionIds.contains(id)){included.add(id);found=true;}
+                }else if(folderId.equals(id)&&
+                    ("folder".equals(r.optString("kind"))||"photo".equals(r.optString("kind")))){
+                    included.add(id);found=true;break;
                 }
             }
-            if(!found)throw new IOException("Vybraná složka neexistuje");
+            if(!found)throw new IOException("Žádné platné soubory k exportu");
             boolean expanded=true;
             while(expanded){
                 expanded=false;
@@ -760,10 +769,32 @@ public class MainActivity extends Activity {
             });
         }
         /** Export one photo with its editable annotations and all nested attachments. */
+        /** One archive for selected files and their entire nested folder subtrees. */
+        @JavascriptInterface public void exportSelection(String idsJson){
+            final Set<String> ids=new HashSet<>();
+            try{
+                JSONArray requested=new JSONArray(idsJson);
+                if(requested.length()<1||requested.length()>1000)throw new JSONException("Neplatný počet");
+                for(int i=0;i<requested.length();i++){
+                    String id=requested.getString(i);
+                    if(!validId(id))throw new JSONException("Neplatný identifikátor");
+                    ids.add(id);
+                }
+            }catch(Exception e){error("Hromadný export: neplatný výběr");return;}
+            runOnUiThread(()->{
+                pendingArchiveSelectionIds=ids;
+                pendingArchiveFolderId=null;
+                String filename=String.valueOf(getApplicationInfo().loadLabel(getPackageManager()))+"-vyber.zip";
+                Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+                    .setType("application/zip").putExtra(Intent.EXTRA_TITLE,filename);
+                try{startActivityForResult(intent,REQUEST_BACKUP);}
+                catch(Exception e){pendingArchiveSelectionIds=null;error("Hromadný ZIP: "+e.getMessage());}
+            });
+        }
         @JavascriptInterface public void exportPhoto(String photoId){
             if(photoId==null||!photoId.matches("[a-zA-Z0-9_-]{1,100}")){error("Neplatná fotografie");return;}
             runOnUiThread(()->{
-                pendingArchiveFolderId=photoId;
+                pendingArchiveFolderId=photoId;pendingArchiveSelectionIds=null;
                 Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
                     .setType("application/zip").putExtra(Intent.EXTRA_TITLE,suggestArchiveName(photoId));
                 try{startActivityForResult(intent,REQUEST_BACKUP);}
@@ -772,7 +803,7 @@ public class MainActivity extends Activity {
         }
         @JavascriptInterface public void exportBackup(){
             runOnUiThread(()->{
-                pendingArchiveFolderId=null;
+                pendingArchiveFolderId=null;pendingArchiveSelectionIds=null;
                 Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
                     .setType("application/zip").putExtra(Intent.EXTRA_TITLE,suggestArchiveName(null));
                 try{startActivityForResult(intent,REQUEST_BACKUP);}catch(Exception e){error("Záloha: "+e.getMessage());}
@@ -781,7 +812,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void exportFolder(String folderId){
             if(folderId==null||!folderId.matches("[a-zA-Z0-9_-]{1,100}")){error("Neplatná složka");return;}
             runOnUiThread(()->{
-                pendingArchiveFolderId=folderId;
+                pendingArchiveFolderId=folderId;pendingArchiveSelectionIds=null;
                 Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
                     .setType("application/zip").putExtra(Intent.EXTRA_TITLE,suggestArchiveName(folderId));
                 try{startActivityForResult(intent,REQUEST_BACKUP);}
