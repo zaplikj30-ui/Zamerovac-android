@@ -123,4 +123,16 @@ Zdroj: [BackupImporter.java](app/src/main/java/cz/zamerovac/app/BackupImporter.j
 - **Nynější povinnost:** neblokovat budoucí rozšíření, chránit původní soubory a editační data, písemně zachytit každou změnu formátu a ověřit staré ZIP. **Nyní žádný společný build, synchronizace nebo migrace.**
 
 
+## 7. Možná budoucí přenositelnost iOS/iPadOS – bez dnešní migrace
+
+**Nezávazné upřesnění 4. 11. 2026:** vize nyní připouští také iPhone/iPad. Dosavadní přenositelné principy originálních médií + nezávislých editovatelných objektů + verzovaného JSON/ZIP mají **zůstat použitelné i pro případnou iOS/iPadOS aplikaci**, nikoliv jen pro Windows. O schopnosti otevřít stejnou zakázku na iOS dnes **neexistuje implementace ani test**.
+
+- **Společná data, nikoliv společné platformní API:** doménová logika a formát zakázky mají oddělenou odpovědnost od nativních funkcí Androidu, iOS/iPadOS a Windows (Bluetooth, fotoaparát, úložiště, souborové dialogy, systémová oprávnění, pero).
+- **Potenciální sdílený kód** posuzovat až s konkrétním projektem. Nynější Android technologii neměnit a netvořit iOS build.
+- **Stejné identity a úpravy:** do budoucna zachovat editovatelnost kót, kusovníků, mediálních příloh a revizí i při přesunu mezi Android/iOS/Windows. Současný import vytvářející kopii s novými ID **není synchronizace**.
+- **Bezpečnost:** před každou skutečnou změnou datového schématu zdokumentovat serializaci, kompatibilitu, migrační testy a chování neznámých polí. Návrhy odpovídající jedné platformě nesmí tiše zničit data jiné.
+
+**Stav: pouze budoucí architektonický cíl, bez schválení vývoje iOS verze, migrace schématu nebo nové synchronizace.**
+
+
 [**Vize a plán**](VIZE_A_PLAN.md) · [**START ZDE**](START_ZDE.md) · [**Audit kódu**](AUDIT_KODU_PROTI_28_TESTUM.md)
