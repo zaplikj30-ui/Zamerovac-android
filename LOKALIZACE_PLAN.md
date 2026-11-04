@@ -55,6 +55,18 @@ Oproti původnímu plánu bez viditelného přepínače je **nově schválená o
 
 **Stav:** zadání schváleno, implementace nezahájena, APK nevytvořena, testy nespouštěny.
 
+### Volba jazyka podle systému s ručním přepsáním (budoucí chování)
+
+**Upřesnění uživatele 4. 11. 2026 – až bude skutečně k dispozici více překladů; nikoliv požadavek na další jazyk v aktuální APK.**
+
+- **Výchozí nastavení „Podle systému“:** při prvním spuštění a dokud si uživatel ručně neurčí jazyk, volit podle jazykových preferencí telefonu/tabletu (preferenční pořadí, dostupné překlady a vhodný jazykový fallback). Změnu jazyka zařízení za běhu či po dalším spuštění respektovat, když zůstává nastaveno „Podle systému“.
+- **Ruční výběr v „Nastavení → Jazyk aplikace“:** uživatel může kdykoliv zvolit některý ze skutečně podporovaných jazyků; ruční volba má přednost před jazykem telefonu a zůstane uložená i po restartu. Volbou „Podle systému“ se zase vrátí automatické sledování zařízení.
+- **Nepodporovaný jazyk telefonu:** bezpečně použít vhodný dostupný překlad, v první etapě **češtinu**. Nezobrazovat chybějící překlady, technické klíče ani falešně nabízené jazyky; nikdy nestahovat překlad kvůli běžnému offline ovládání.
+- **Oddělit nastavení jazyka od projektových dat:** přepnutí nezmění hodnoty měření, anotace, uživatelské texty, název souborů, ZIP ani uložená čísla; nemá ztratit rozpracovanou práci.
+- **Přechodné období:** v nejbližší aktualizaci Zaměřovače je stále jediný dostupný jazyk **🇨🇿 Čeština**, i na telefonu s jiným systémovým jazykem. Samotnou možnost „Podle systému“ v UI lze zobrazit až tehdy, kdy má skutečný význam a jsou schváleny alespoň dva funkční překlady. Neměnit dříve schválený jednoduchý výběr pouze češtiny.
+
+**Stav:** zapsáno jako pravidlo pro budoucí skutečné vícejazyčné vydání. Nyní jen dokumentace, ne zadání k implementaci a ne nové APK.
+
 ## Bezpečná první etapa v příští aktualizaci
 - Vybrat první **malou logickou sadu právě upravovaných funkcí** z opravných testů 1–28.
 - Přidat malý český katalog + malé rozhraní pro JS a Android, soubory lokality jen v rozsahu skutečně dotčených textů.
