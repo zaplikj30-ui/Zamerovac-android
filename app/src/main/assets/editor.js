@@ -773,6 +773,11 @@ if(['polyline','chain','cumulative','angle'].includes(mode)&&polylineDraft.lengt
  }
  if(selectedHandle&&pointers.size===1){
   if(Math.hypot(s.x-selectedHandle.startScreen.x,s.y-selectedHandle.startScreen.y)>7)selectedHandle.dragged=true;
+  // Android often sends tiny pointermove events during a tap or double tap.
+  // Never mutate annotation coordinates until a real drag is established.
+  // Previously the endpoint branch called snap() even below 7 px, silently
+  // changing geometry while stageUp discarded the undo checkpoint as a tap.
+  if(!selectedHandle.dragged){paint();return;}
   if(selectedHandle.kind==='select-only'||selectedHandle.kind==='open-selected'){
    magnifierPoint=null;paint();return;
   }
@@ -873,6 +878,18 @@ if(['polyline','chain','cumulative','angle'].includes(mode)&&polylineDraft.lengt
       y:screenOrigin.y+(s.y-selectedHandle.startScreen.y)
     });
     const movedPoint=snap(target,null,selectedHandle);
+    // Do not allow a snapped endpoint to collapse a measured line or one
+    // segment onto its neighbour. Such a zero-length annotation can disappear.
+    const selectedItem=selectedHandle.item;
+    const adjacent=Number.isInteger(selectedHandle.pointIndex)?
+     [selectedItem.points?.[selectedHandle.pointIndex-1],
+      selectedItem.points?.[selectedHandle.pointIndex+1]]:
+     ['dimension','line','arrow','chain','cumulative'].includes(selectedItem.type)?
+      [selectedItem[selectedHandle.key==='a'?'b':'a']]:[];
+    const minLength=8/Math.max(.05,view.zoom);
+    if(adjacent.some(other=>other&&Math.hypot(movedPoint.x-other.x,movedPoint.y-other.y)<minLength)){
+     magnifierPoint=null;paint();return;
+    }
     if(Number.isInteger(selectedHandle.pointIndex)){
      const item=selectedHandle.item,index=selectedHandle.pointIndex;
      item.points[index]=movedPoint;
