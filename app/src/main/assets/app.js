@@ -78,6 +78,7 @@ $('items').querySelectorAll('.entry').forEach(el=>el.onclick=(e)=>{if(e.target.c
 $('items').querySelectorAll('.entry-thumb').forEach(img=>img.addEventListener('error',()=>{img.hidden=true;img.nextElementSibling.hidden=false},{once:true}));
 }
 function promptRenameRecord(r){
+ if(window.isRecordLocked?.(r)){notify('Nejdříve odemkněte složku.');return}
  const match=['photo','video','audio','file'].includes(r.kind)?String(r.title).match(/^(.*?)(\.[A-Za-z0-9]{1,8})$/):null;
  const base=match?match[1]:r.title,suffix=match?match[2]:'';
  modal('Přejmenovat','<label>Název</label><div class="rename-inline"><input id="renameBase" value="'+escapeHtml(base)+'" autocomplete="off">'+
@@ -140,7 +141,7 @@ function recordActions(id){let r=recById(id);modal(r.title,`<div class="message"
    else notify('Export fotografie ZIP vyžaduje aktualizovanou Android aplikaci');
  },'Exportovat do ZIP');
 };$('renameOne').onclick=()=>{ $('modal').hidden=true;promptRenameRecord(r)};$('deleteOne').onclick=()=>{$('modal').hidden=true;modal('Odstranit?',`<p>Přesunout „${escapeHtml(r.title)}“ do koše? Záznam se při synchronizaci označí jako odstraněný.</p>`,()=>{markDeleted(r.id);save();showFolder()},'Odstranit')};$('moveOne').onclick=()=>{if(window.isRecordLocked?.(r)){notify('Nejdříve odemkněte složku.');return}$('modal').hidden=true;let folders=state.records.filter(x=>x.kind==='folder'&&!x.deleted&&x.id!==r.id&&!folderContains(r.id,x.id));modal('Přesunout do složky',`<select id="moveWhere"><option value="">Kořen</option>${folders.map(f=>`<option value="${f.id}" ${window.isRecordLocked?.(f)?'disabled':''}>${escapeHtml(f.title)}${window.isRecordLocked?.(f)?' 🔒':''}</option>`).join('')}</select>`,()=>{const destination=$('moveWhere').value||null;if(!canWriteToFolder(destination)||window.isRecordLocked?.(r)){notify('Nejdříve odemkněte složku.');return false}if(destination&&folderContains(r.id,destination)){notify('Složku nelze přesunout do sebe');return false}r.parentId=destination;touch(r);save();showFolder()})};}
-function markDeleted(id){let r=recById(id);if(!r)return;r.deleted=true;touch(r);for(let child of state.records.filter(x=>x.parentId===id&&!x.deleted))markDeleted(child.id)}
+function markDeleted(id){let r=recById(id);if(!r||window.isRecordLocked?.(r)){notify('Nejdříve odemkněte složku.');return false}r.deleted=true;touch(r);for(let child of state.records.filter(x=>x.parentId===id&&!x.deleted))markDeleted(child.id)}
 function openRecord(id){let r=recById(id);if(!r)return;if(r.kind==='folder'){currentFolder=id;showFolder();return}if(r.kind==='photo'||r.kind==='canvas'){openEditor(r);return}if(r.kind==='note'){openNote(r);return}if(r.kind==='audio'||r.kind==='video'||r.kind==='file'){openAttachment(r.media[0]);return}}
 function showNewMenu(){if(!canWriteToFolder(currentFolder)){notify('Nejdříve odemkněte složku.');return}closeMenus();$('newMenu').hidden=false;const choices=[
 ['📷','Pořídit fotografii',()=>pickMedia('camera')],
