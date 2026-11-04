@@ -481,3 +481,18 @@ body.in-editor #editorExtraToolbar > #editorMore.tool-active{
   overflow:hidden;text-overflow:ellipsis;white-space:nowrap
 }
 .search-results .entry-icon.photo-preview{flex:0 0 48px}
+
+
+/* Long-press selection: flexible for narrow phones, tablets and split-screen. */
+.bulk-toolbar{display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:8px 12px;background:#373b3c;position:sticky;top:0;z-index:6;border-bottom:1px solid #858785}
+.bulk-toolbar strong{margin-inline-end:8px;white-space:nowrap}
+.bulk-toolbar button{min-height:42px;padding:6px 10px;border:1px solid #696d6d;border-radius:6px}
+.entry.bulk-selected{background:rgba(247,220,39,.14);outline:2px solid rgba(247,220,39,.72);outline-offset:-2px}
+#languageOptions{display:flex;flex-direction:column;max-height:58vh;overflow:auto}
+#languageOptions .language-option{width:100%;justify-content:space-between;flex-wrap:wrap;text-align:start;white-space:normal}
+#languageOptions .language-option[aria-checked="true"]{border-inline-start:3px solid #f7dc27}
+#languageSearchWrap[hidden]{display:none!important}
+#modal.search-open{align-items:flex-start;padding-top:clamp(12px,5vh,48px)}
+#modal.search-open .dialog{max-height:calc(100dvh - 24px)}
+#modal.search-open .search-results{max-height:min(44vh,360px);overflow-y:auto}
+@media (max-height:550px){#modal.search-open{padding-top:8px}#modal.search-open .search-results{max-height:24vh}}
