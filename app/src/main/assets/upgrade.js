@@ -679,6 +679,8 @@ window.onLaserValue=function(value,unit){
  readings.unshift({value:String(value),unit:String(unit||'mm'),time:new Date().toISOString()});
  if(readings.length>40)readings.pop();
  try{localStorage.setItem('zamerovac-bosch-readings-v1',JSON.stringify(readings))}catch(e){}
+ // The dialog must show this fresh reading without requiring close/reopen.
+ window.__refreshOpenBoschHistory?.();
  const handled=typeof window.__handleLaserAuto==='function'&&window.__handleLaserAuto(value,unit);
  if(!handled)originalLaser(value,unit);
  logEvent('bluetooth','Přijata hodnota z laseru');
