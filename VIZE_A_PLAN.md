@@ -45,7 +45,7 @@ Praktická samostatná Android aplikace pro zaměřování zakázkového nábytk
 
 **Přání uživatele:** kromě dříve plánovaných možností „Podle systému / Tmavý / Světlý“ mít případně **volitelný jednoduchý, jemný vzor či decentní pozadí v prostředí aplikace**. Nejde o přikreslování vzoru do zdrojových zaměřovacích fotografií, exportů ani do podkladů zákazníka. Konkrétní vzhled a umístění vzoru doladit až před realizací podle uživatelových ukázek.
 
-**Důležité:** zachovat čitelnost textů, náhledů, kót, ikon a ovládání; žádná ztráta dat ani změna skutečných rozměrů. **JEN NÁMĚT NA POZDĚJI, není schváleno programování ani sestavení APK.**
+**Důležité:** zachovat čitelnost textů, náhledů, kót, ikon a ovládání; žádná ztráta dat ani změna skutečných rozměrů. **Nové rozhodnutí uživatele 4. 11. 2026:** do nynější společné aktualizace výslovně zahrnout **úzkou, bezpečnou variantu volitelného decentního pozadí / vzoru aplikace**; výchozí stávající vzhled nezměnit, nezasahovat do fotografií, editoru ani exportů. [Přesný rozsah pro Codex v issue #17](https://github.com/zaplikj30-ui/Zamerovac-android/issues/17). **Zatím schváleno k implementaci, nikoli hotovo; samostatná plná přepínací témata podle systému / světlý / tmavý zde nejsou automaticky schválena.**
 
 ### Zákaznický export: ZIP s PDF fotografiemi a zapečenými kótami (námět 4. 11. 2026)
 
@@ -58,7 +58,7 @@ Praktická samostatná Android aplikace pro zaměřování zakázkového nábytk
 - Při přípravě implementace doladit **rozvržení výstupu**: jedno PDF za fotografii versus jeden společný PDF dokument (v obou případech výstupní ZIP), řazení stránek/fotografií, názvy souborů, rozlišení a zda přidávat datum, název zakázky či jiné údaje. Nevkládat automaticky osobní nebo interní informace.
 - **Regresní požadavky pro pozdější realizaci:** zákaznický export nepoškodí uložená data ani stávající ZIP pro obnovu; exportované PDF skutečně ukazuje všechny zvolené fotografie a správně vykreslené, jasně čitelné kóty i popisky; skutečný výstup prověřit v běžném PDF prohlížeči a ZIP lze normálně rozbalit.
 
-**Stav:** schválené k **evidenci jako nápad do budoucna**, nikoli autorizace okamžité implementace, změny stávajícího exportu nebo nové APK. Konkrétní podobu a zařazení do aktualizace musí uživatel schválit později.
+**Nové rozhodnutí uživatele 4. 11. 2026:** schváleno zařazení do **jedné nejbližší společné aktualizace** v bezpečně vymezené základní podobě: **jedno PDF se zapečeným vzhledem na jednu fotografii, více PDF v zákaznickém ZIP, bez interních editovatelných dat**. Původní zálohovací ZIP a jeho obnova zůstávají zcela beze změny; nesmí dojít ke ztrátě nebo změně kót. Přesné zadání a regresní testy: [issue #17](https://github.com/zaplikj30-ui/Zamerovac-android/issues/17). **Schváleno k implementaci, nikoli implementováno nebo sestaveno.**
 
 ## 3. Co má umět – cílový funkční celek
 - **Zakázky a data:** vytvořit zakázku a adresu, členit do složek, ukládat původní fotografie/PDF/video a editovatelné anotace, hledat, zálohovat, exportovat/importovat včetně podsložek; přežít restart a aktualizaci.
