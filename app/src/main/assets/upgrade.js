@@ -639,7 +639,7 @@ updateDrawingToolButton=function(){
  highlightCurrentTool();
 };
 updateDrawingToolButton();
-let laserState='off',laserName='';
+let laserState='off',laserName='',activeLaserHistoryId='',activeLaserHistoryName='';
 function renderBluetooth(){
  const b=$('bluetoothBtn');
  b.classList.toggle('connecting',laserState==='connecting');
@@ -652,7 +652,16 @@ function renderBluetooth(){
  b.setAttribute('aria-label',b.title);
 }
 window.onLaserStatus=(json)=>{
- try{const data=JSON.parse(json);laserState=data.status||'off';laserName=data.name||'';renderBluetooth();logEvent('bluetooth',laserState)}catch(e){}
+ try{
+  const data=JSON.parse(json);
+  laserState=data.status||'off';laserName=data.name||'';
+  if(['connected','receiving'].includes(laserState)&&/^meter-[a-f0-9]{24}$/.test(data.deviceId||'')){
+   activeLaserHistoryId=data.deviceId;activeLaserHistoryName=laserName||'Laser';
+  }else if(laserState==='off'){
+   activeLaserHistoryId='';activeLaserHistoryName='';
+  }
+  renderBluetooth();logEvent('bluetooth',laserState);
+ }catch(e){}
 };
 renderBluetooth();
 $('bluetoothBtn').onclick=()=>{
@@ -678,17 +687,29 @@ const originalLaser=window.onLaserValue;
 const readings=[];
 try{
  const saved=JSON.parse(localStorage.getItem('zamerovac-bosch-readings-v1')||'[]');
- if(Array.isArray(saved))for(const x of saved.slice(0,40)){
-  if(x&&typeof x.value==='string'&&typeof x.unit==='string'&&typeof x.time==='string')
-   readings.push({value:x.value,unit:x.unit,time:x.time});
+ if(Array.isArray(saved))for(const x of saved.slice(0,200)){
+  if(x&&typeof x.value==='string'&&typeof x.unit==='string'&&typeof x.time==='string'){
+   // Keep pre-update entries unchanged: their meter is unknown, not guessed.
+   const record={value:x.value,unit:x.unit,time:x.time};
+   if(/^meter-[a-f0-9]{24}$/.test(x.deviceId||'')){
+    record.deviceId=x.deviceId;
+    record.deviceName=String(x.deviceName||'Laser').slice(0,80);
+   }
+   readings.push(record);
+  }
  }
 }catch(e){}
-window.__boschHistoryReadings=()=>readings.map(x=>({...x}));
+window.__boschHistoryReadings=()=>readings.slice(0,40).map(x=>({...x}));
 window.onLaserValue=function(value,unit){
  const live=$('experimentalLiveReading');
  if(live&&experimentalEnabled('boschLive'))live.textContent=String(value)+' '+String(unit||'mm');
- readings.unshift({value:String(value),unit:String(unit||'mm'),time:new Date().toISOString()});
- if(readings.length>40)readings.pop();
+ const reading={value:String(value),unit:String(unit||'mm'),time:new Date().toISOString()};
+ if(activeLaserHistoryId){
+  reading.deviceId=activeLaserHistoryId;
+  reading.deviceName=activeLaserHistoryName;
+ }
+ readings.unshift(reading);
+ if(readings.length>200)readings.pop();
  try{localStorage.setItem('zamerovac-bosch-readings-v1',JSON.stringify(readings))}catch(e){}
  // The dialog must show this fresh reading without requiring close/reopen.
  window.__refreshOpenBoschHistory?.();
@@ -696,18 +717,62 @@ window.onLaserValue=function(value,unit){
  if(!handled)originalLaser(value,unit);
  logEvent('bluetooth','Přijata hodnota z laseru');
 };
-function showLaserHistory(){
- modal('Historie měření z Bosch','<p>Posledních 40 hodnot. Vyber hodnotu pro právě upravovanou kótu.</p>'+
- (readings.length?readings.map((r,i)=>'<div class="historyLine"><span>'+esc(r.value)+' '+esc(r.unit)+' <small>'+esc(new Date(r.time).toLocaleTimeString('cs-CZ'))+'</small></span><button data-reading="'+i+'">Použít</button></div>').join(''):'<p>Žádné naměřené hodnoty</p>')+
- '<button class="outline" id="clearReadings">Vymazat historii</button>',()=>true,'Zavřít');
+// A single recognized meter stays simple. The filter appears only after at
+// least two distinct meters have actually contributed readings.
+function boschHistoryGroups(){
+ const groups=new Map();
+ for(const reading of readings){
+  if(!reading.deviceId)continue;
+  if(!groups.has(reading.deviceId))
+   groups.set(reading.deviceId,reading.deviceName||'Laser');
+ }
+ return groups;
+}
+function showLaserHistory(filter='all'){
+ const groups=boschHistoryGroups();
+ const multi=groups.size>1;
+ const hasLegacy=readings.some(r=>!r.deviceId);
+ const choices=multi?
+  '<label for="laserHistoryFilter">Zobrazit měření</label><select id="laserHistoryFilter">'+
+  '<option value="all">Všechny měřáky</option>'+
+  [...groups].map(([id,name])=>'<option value="'+esc(id)+'">'+esc(name)+'</option>').join('')+
+  (hasLegacy?'<option value="legacy">Starší měření bez přiřazení</option>':'')+
+  '</select>':'';
+ if(!multi)filter='all';
+ const chosen=readings.filter(r=>filter==='all'||(filter==='legacy'?!r.deviceId:r.deviceId===filter)).slice(0,40);
+ const html=choices+
+  '<p>Posledních 40 hodnot'+(multi?' ve vybraném přehledu':'')+'. Vyber hodnotu pro právě upravovanou kótu.</p>'+
+  (chosen.length?chosen.map((r,i)=>'<div class="historyLine"><span>'+esc(r.value)+' '+esc(r.unit)+
+   ' <small>'+esc(new Date(r.time).toLocaleTimeString('cs-CZ'))+'</small>'+
+   (r.deviceName&&filter==='all'?'<small> · '+esc(r.deviceName)+'</small>':'')+
+   '</span><button data-reading="'+i+'">Použít</button></div>').join(''):
+   '<p>Žádné naměřené hodnoty</p>')+
+  '<button class="outline" id="clearReadings">'+(filter==='all'?'Vymazat všechna měření':'Vymazat vybranou historii')+'</button>';
+ modal('Historie měření z Bosch',html,()=>true,'Zavřít');
+ const selector=$('laserHistoryFilter');
+ if(selector){selector.value=filter;selector.onchange=()=>showLaserHistory(selector.value)}
  $('modalBody').querySelectorAll('[data-reading]').forEach(b=>b.onclick=()=>{
-  const r=readings[Number(b.dataset.reading)];
+  const r=chosen[Number(b.dataset.reading)];
+  if(!r)return;
   $('modal').hidden=true;
   if(typeof window.__applyLaserMeasurement==='function')
-    window.__applyLaserMeasurement(r.value,r.unit,{fromHistory:true});
+   window.__applyLaserMeasurement(r.value,r.unit,{fromHistory:true});
   else notify('Otevři fotografii a vyber kótu');
  });
- $('clearReadings').onclick=()=>{readings.length=0;try{localStorage.removeItem('zamerovac-bosch-readings-v1')}catch(e){};$('modal').hidden=true;notify('Historie měření vymazána')};
+ $('clearReadings').onclick=()=>{
+  const what=filter==='all'?'veškerou historii měření':'měření z vybraného měřáku';
+  modal('Potvrdit vymazání historie','<p>Opravdu chceš vymazat '+what+'? Akci nepůjde vrátit.</p>',()=>{
+   if(filter==='all')readings.length=0;
+   else for(let i=readings.length-1;i>=0;i--){
+    if(filter==='legacy'?!readings[i].deviceId:readings[i].deviceId===filter)readings.splice(i,1);
+   }
+   try{
+    if(readings.length)localStorage.setItem('zamerovac-bosch-readings-v1',JSON.stringify(readings));
+    else localStorage.removeItem('zamerovac-bosch-readings-v1');
+   }catch(e){}
+   notify('Vybraná historie měření byla vymazána');
+  },'Vymazat');
+ };
 }
 const oldBluetoothLong=$('bluetoothBtn');
 oldBluetoothLong.addEventListener('contextmenu',e=>{e.preventDefault();showLaserHistory()});
