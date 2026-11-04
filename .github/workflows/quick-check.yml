@@ -16,6 +16,8 @@ on:
       - 'tools/check-orientation-browser.cjs'
       - 'tools/check-loupe-exit-browser.cjs'
       - 'tools/e2e/**'
+      - 'tools/qa/**'
+      - 'qa/**'
       - '.github/workflows/quick-check.yml'
   pull_request:
     branches: [main]
@@ -30,6 +32,8 @@ on:
       - 'tools/check-orientation-browser.cjs'
       - 'tools/check-loupe-exit-browser.cjs'
       - 'tools/e2e/**'
+      - 'tools/qa/**'
+      - 'qa/**'
       - '.github/workflows/quick-check.yml'
 
 permissions:
@@ -73,7 +77,7 @@ jobs:
           node-version: '20'
       - name: Připravit izolovaný prohlížeč
         run: |
-          npm install --no-save --package-lock=false playwright
+          npm install --no-save --package-lock=false playwright@1.62.1
           npx playwright install --with-deps chromium
       - name: Skutečné kliknutí, dotyk, persistence a exportní vstupy
         shell: bash
@@ -100,7 +104,7 @@ jobs:
           node-version: '20'
       - name: Připravit Chromium
         run: |
-          npm install --no-save --package-lock=false playwright
+          npm install --no-save --package-lock=false playwright@1.62.1
           npx playwright install --with-deps chromium
       - name: Kreslení, hodnoty, úchopy, Undo/Redo, pixely a persistence
         shell: bash
@@ -111,6 +115,8 @@ jobs:
           trap 'kill "$SERVER_PID"' EXIT
           export CHROMIUM_PATH="$(node -p "require('playwright').chromium.executablePath()")"
           node tools/e2e/drawing.cjs
+          node tools/e2e/workflows.cjs
+          node tools/e2e/interactions.cjs
       - uses: actions/upload-artifact@v4
         if: always()
         with:

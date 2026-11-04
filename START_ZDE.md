@@ -4,6 +4,8 @@
 >
 > Poslední dohoda o způsobu práce: **4. listopadu 2026**. Tento dokument je živý, stav níže se musí při dalších krocích aktualizovat.
 
+**Průběžná implementace #28 v PR #27:** první checkpoint `f50c7d9` má obě CI success. Navazuje šest skutečných UI workflow, tři interakční regrese a nativní ochrana originálů/obnov/souběhů; dva odhalené importní problémy opraveny. Podrobnosti a poctivé mezery v [AUTOMATICKE_TESTY_28.md](AUTOMATICKE_TESTY_28.md). Rozpracovaný další krok: tříúrovňové spouštění, jediný strojový registr všech funkcí, rozšiřitelné jazykové kontroly a finální úplné ověření. APK/emulátor/request/merge zakázané.
+
 ## 0. Společná práce přes ChatGPT i Codex
 
 **Závazné upřesnění předávání Codexu (4. 11. 2026):** ChatGPT sám rozhoduje, které úpravy provede a které zadá Codexu. **Pokud vybere Codex, musí uživateli rovnou poslat celý připravený text ke zkopírování do Codexu** včetně repozitáře, rozsahu, odkazů na schválené issues, pravidel ochrany dat a testů. Uživatel jej pouze vloží; nepřipravuje zadání ani nerozhoduje o dělbě práce. GitHub záznam není spuštění Codexu; teprve po skutečném provedení zkontrolovat jeho výsledky. Stejné pravidlo doporučit vložit do Pokynů projektu Zaměřování v ChatGPT; GitHub tyto pokyny sám nemění. Detail viz [AGENTS.md](AGENTS.md#rozdělení-práce-mezi-chatgpt-a-codex--rozhoduje-asistent).

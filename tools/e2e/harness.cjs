@@ -4,8 +4,9 @@ const base=process.env.ZAMEROVAC_BASE_URL||process.argv[2]||'http://127.0.0.1:87
 async function suite(name,body){
  const directory=path.resolve(process.env.ZAMEROVAC_E2E_DIR||'test-artifacts',name);fs.mkdirSync(directory,{recursive:true});
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',args:['--no-sandbox']});
- const report={suite:name,syntheticOnly:true,cases:[]};let failed=0;
+ const report={suite:name,sha:require('node:child_process').execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),startedAt:new Date().toISOString(),syntheticOnly:true,cases:[]};let failed=0;
  try{await body(async(title,test)=>{
+  if(process.env.ZAMEROVAC_CASES&&!process.env.ZAMEROVAC_CASES.split(',').includes(title))return;
   const slug=title.replace(/[^a-z0-9_-]/gi,'_'),context=await browser.newContext({viewport:{width:600,height:950},hasTouch:true});
   await context.tracing.start({screenshots:true,snapshots:true,sources:true});const page=await context.newPage(),errors=[],logs=[];
   page.setDefaultTimeout(7000);page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')logs.push(m.text())});
@@ -25,6 +26,7 @@ async function suite(name,body){
    console.error('FAIL '+name+'/'+title+' at '+result.steps.at(-1)+': '+error.message);
   }finally{await context.close();fs.writeFileSync(path.join(directory,'report.json'),JSON.stringify(report,null,2))}
  })}finally{await browser.close()}
+ assert(report.cases.length>0,'No matching test cases');
  assert.equal(failed,0,name+': failed '+failed+' cases; see '+directory);
 }
 async function createCanvas(page,name){
