@@ -519,3 +519,20 @@ body[data-background-pattern="Jemná mřížka"] #browserView{background-image:l
 
 button.danger{color:#ffb4ab;border-color:#ff7066}
 button.primary.danger{background:#aa2922;color:#fff}
+
+/* #31 – čitelná historie skutečných verzí na mobilu i tabletu. */
+.releaseTimeline{padding:0;overflow:hidden;background:#36363c}
+.releaseSummary{cursor:pointer;display:flex;flex-direction:column;gap:4px;
+ padding:13px 14px;min-height:53px;line-height:1.4;list-style-position:inside}
+.releaseSummary b{font-size:15px}
+.releaseSummary span{color:#d0c6d9;font-size:13px}
+.releaseTimeline[open] .releaseSummary{border-bottom:1px solid #60516c;background:#45404b}
+.releaseContent{padding:8px 14px 12px}
+.releaseGroup h3{font-size:13px;line-height:1.5;margin:11px 0 2px;color:#ddd3eb}
+.releaseGroup .releaseFeature{align-items:flex-start;line-height:1.55}
+.releaseGroup .releaseFeature span{font-size:14px;white-space:normal;overflow-wrap:anywhere}
+.releaseGroup .releaseFeature button{min-height:38px;font-size:12px;white-space:nowrap}
+.releaseTimeline summary:focus-visible,.releaseFeature button:focus-visible{
+ outline:2px solid #eacf64;outline-offset:2px}
+@media(max-width:360px){.releaseGroup .releaseFeature{flex-wrap:wrap}
+ .releaseGroup .releaseFeature button{margin-left:auto}}
