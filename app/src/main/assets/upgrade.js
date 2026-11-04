@@ -656,9 +656,20 @@ window.onLaserStatus=(json)=>{
 };
 renderBluetooth();
 $('bluetoothBtn').onclick=()=>{
- modal('Měřič Bosch','<p>'+esc($('bluetoothBtn').title)+'</p><p>Po připojení čeká Zaměřovač na první naměřenou hodnotu. Teprve potom potvrdí příjem měření.</p><button class="outline" id="laserConnect" >Připojit můj laser Bosch</button><button class="outline" id="laserOther" type="button">Vybrat jiný měřič</button>',()=>true,'Zavřít');
+ const canDisconnect=['connecting','connected','receiving'].includes(laserState);
+ const disconnectLabel=laserState==='connecting'?'Zrušit připojování':'Odpojit měřák';
+ modal('Měřič Bosch','<p>'+esc($('bluetoothBtn').title)+'</p><p>Po připojení čeká Zaměřovač na první naměřenou hodnotu. Teprve potom potvrdí příjem měření.</p><button class="outline" id="laserConnect" type="button">Připojit můj laser Bosch</button><button class="outline" id="laserOther" type="button">Vybrat jiný měřič</button>'+
+ (canDisconnect?'<button class="outline" id="laserDisconnect" type="button">'+disconnectLabel+'</button>':''),
+ ()=>true,'Zavřít');
  $('laserConnect').onclick=()=>{if(native){$('modal').hidden=true;laserState='connecting';laserName='vyhledávání Bosch';renderBluetooth();Native.connectLaser()}else notify('Vyžaduje Android')};
-  $('laserOther').onclick=()=>{if(native&&Native.chooseOtherLaser){$('modal').hidden=true;laserState='connecting';laserName='ruční výběr';renderBluetooth();Native.chooseOtherLaser()}else notify('Vyžaduje aktualizovanou Android aplikaci')};
+ $('laserOther').onclick=()=>{if(native&&Native.chooseOtherLaser){$('modal').hidden=true;laserState='connecting';laserName='ruční výběr';renderBluetooth();Native.chooseOtherLaser()}else notify('Vyžaduje aktualizovanou Android aplikaci')};
+ const disconnect=$('laserDisconnect');
+ if(disconnect)disconnect.onclick=()=>{
+  if(!native||typeof Native.disconnectLaser!=='function'){notify('Odpojení vyžaduje novější Android aplikaci');return}
+  Native.disconnectLaser();
+  $('modal').hidden=true;laserState='off';laserName='';renderBluetooth();
+  notify('Bluetooth spojení ukončeno. Měřák zůstává zapamatovaný.');
+ };
 };
 window.onExperimentalLaserTrigger=function(status){
  if(status==='sent')notify('Zkušební příkaz spouště odeslán. Zkontroluj laser; úspěšné měření zatím není potvrzené.');
