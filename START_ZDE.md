@@ -8,20 +8,21 @@
 
 | Oblast | Aktuální stav | Kde je podrobnost |
 |---|---|---|
+| Název aplikace | **Aktuální název pro uživatele: Zaměřovač**, bez přídomku „TEST“. Označení „testovací verze“ patří jen k typu vydání, **nikoli k názvu aplikace**. Budoucí nový název vymyslíme a schválíme později; zatím nic nepřejmenovávat v balíčku ani nepřepisovat uživatelská data. | [Sestavení](.github/workflows/build-apk.yml) · [Android konfigurace](app/build.gradle) |
 | Rekonstrukce starých testů 1–28 | **Všech 28 je rozepsáno z hlavního videa včetně pozdějších dodatků** do tří částí. Nejde o doslovně ověřený kompletní přepis každého znaku, ani ověření aktuální APK. | [1–10](REKONSTRUKCE_TESTU_01_10.md) · [11–20](REKONSTRUKCE_TESTU_11_20.md) · [21–28](REKONSTRUKCE_TESTU_21_28.md) |
 | Přílohy k testování | Hlavní video `1000093687.mp4` určuje číslování; ostatní videa/fotky byly přiřazeny podle obsahu. Původní číselná jména videí nejsou vždy 1:1 prokázána. | [Důkazní mapa](ROZHODNUTI_A_NAPADY_Z_TESTU.md#4-přehled-důkazů-a-dosud-nepotvrzených-identit-videí) · [Index médií](TESTOVANI_MEDIA_INDEX.md) |
 | Základní sada požadavků | 49 položek z dřívějšího seznamu; jejich stav nelze automaticky považovat za splněný. | [Seznam úprav #12](https://github.com/zaplikj30-ui/Zamerovac-android/issues/12) |
 | Dlouhodobá představa | Vzhled, schopnosti, možnosti „možná později“; lze měnit. | [Vize a plán](VIZE_A_PLAN.md) |
 | Statický audit kódu proti 28 testům | **Dokončen** s odkazy na konkrétní zdrojové soubory. **Není to test funkčnosti na telefonu.** | [AUDIT_KODU_PROTI_28_TESTUM.md](AUDIT_KODU_PROTI_28_TESTUM.md) |
-| Další aktualizace APK | **Zatím není sestavena**. Audit je podkladem pro jednu společnou aktualizaci všech schválených oprav a nové česky-only Nastavení jazyka. Až po ní testovat další práci v dávkách cca pěti. | [Audit](AUDIT_KODU_PROTI_28_TESTUM.md) · [Plán #13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13) |
+| Společná aktualizace podle 28 kontrol | **TEST 1.2.147 sestavena a vydána**; automatické kontroly a podpis prošly, **fyzické testy na telefonu/tabletu teprve čekají**. Pokračovat po cca pěti krocích, každý výsledek hned zapisovat. | [APK 1.2.147](https://github.com/zaplikj30-ui/Zamerovac-android/releases/tag/test-v1.2.147) · [Mapa implementace](IMPLEMENTACE_A_TESTOVANI_28.md) · [Testy #13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13) |
 | Sjednocená dlouhodobá vize včetně průvodce zaměřením | **Devět oblastí zkontrolováno.** Průvodce zaměřením a kontroly úplnosti kót jsou pouze budoucí možnost; propojení s Konfigurátorem a Windows není nynější implementace. | [Stav a rozcestník devíti oblastí](VIZE_A_PLAN.md#kontrola-sjednocení-dlouhodobých-požadavků--co-platí-nyní-a-co-později) · [Vize Konfigurátoru](https://github.com/zaplikj30-ui/Konfigurator-Narezak-Android/blob/main/VIZE_A_PLAN.md) |
 | Budoucí iPhone/iPad | **Nezávazná možnost.** Nyní pouze Android; přenositelné datové modely a oddělené systémové adaptéry mají případnou iOS/iPadOS verzi umožnit bez nutnosti dnešního přepisu. | [VIZE_A_PLAN.md](VIZE_A_PLAN.md) · [Datový formát](DATOVY_FORMAT_A_PC_KOMPATIBILITA.md) |
 | Evidence kompatibility Android | **Nové testy tím nejsou prokázány.** Registr rozlišuje skutečné testy, předpoklad a nekompatibilitu. | [KOMPATIBILITA_ZARIZENI.md](KOMPATIBILITA_ZARIZENI.md) |
 | Budoucí plnohodnotná PC verze | **Dlouhodobý směr, nikoliv zahájený vývoj.** Windows 11 má později pracovat se stejnými editovatelnými zakázkami a bezpečně přenášet změny mezi PC a Androidem. | [Vize](VIZE_A_PLAN.md) · [Datový formát a PC kompatibilita](DATOVY_FORMAT_A_PC_KOMPATIBILITA.md) |
-| Verze APK | Reálnou **aktuálně používanou** verzi ověřit před dalším cyklem; historický screenshot není důkaz aktuálního vydání. | [GitHub Releases](https://github.com/zaplikj30-ui/Zamerovac-android/releases) |
+| Verze APK | Na GitHubu **vydána testovací sestava 1.2.147**. Zda je nainstalována a co skutečně funguje, ověřit na zařízení; historický screenshot není důkaz. | [GitHub Releases](https://github.com/zaplikj30-ui/Zamerovac-android/releases) |
 
 
-- **Příprava na vícejazyčnost (schválená, zatím bez změny kódu):** [Plán lokalizace](LOKALIZACE_PLAN.md) · [Úkol #14](https://github.com/zaplikj30-ui/Zamerovac-android/issues/14). Nyní zůstává vše v češtině; jazykové klíče se budou bezpečně přidávat jen k nově opravovaným funkcím. **Nově schválená položka Nastavení „Jazyk aplikace“** nabídne pouze „🇨🇿 Čeština“; architektura musí podporovat desítky jazyků, budoucí vyhledávání a RTL, ale další jazyky a skutečné přepínání nejsou nyní v rozsahu.
+- **Příprava na vícejazyčnost (první česká implementace ve v1.2.147, čeká na ověření na zařízení):** [Plán lokalizace](LOKALIZACE_PLAN.md) · [Úkol #14](https://github.com/zaplikj30-ui/Zamerovac-android/issues/14). Nyní zůstává vše v češtině; jazykové klíče se budou bezpečně přidávat jen k nově opravovaným funkcím. **Nově implementovaná položka Nastavení „Jazyk aplikace“** má nabídnout pouze „🇨🇿 Čeština“; architektura musí podporovat desítky jazyků, budoucí vyhledávání a RTL, ale další jazyky a skutečné přepínání nejsou nyní v rozsahu.
 
 ## Dokončené podklady k původní sadě 28 testů
 
@@ -30,7 +31,7 @@
 - **[Testy 21–28 – přesné požadavky, průběh a důkazy](REKONSTRUKCE_TESTU_21_28.md)**
 - **[Samostatné schválené změny, odložené nápady a mapování příloh](ROZHODNUTI_A_NAPADY_Z_TESTU.md)**
 
-**Dále:** [statický audit současného kódu proti všem 28 testům už je dokončen](AUDIT_KODU_PROTI_28_TESTUM.md). Na jeho základě připravit opravy, český výběr jazyka a zpětnou kompatibilitu; po sestavení ověřit na zařízení. Nejasné části nepovažovat za hotové. Ověření nového APK na telefonu je jiný krok než přepis historického chatu. Bez důkazu neoznačovat opravy za hotové.
+**Dále:** [statický audit původního kódu proti všem 28 testům](AUDIT_KODU_PROTI_28_TESTUM.md) vedl ke [společné implementaci](IMPLEMENTACE_A_TESTOVANI_28.md) a vydání 1.2.147. **Následuje reálné ověření funkcí na telefonu/tabletu a případné opravy podle výsledků**, zejména bezpečnosti dat. Nejasné části nepovažovat za hotové; zelené automatické testy nenahrazují fyzické.
 
 ## 2. Nejdůležitější pravidlo: ukládat průběžně, nikoli zpětně
 
