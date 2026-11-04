@@ -4,7 +4,8 @@
  let active=false,lastFolder=null;
  const selectedIds=new Set();
  const list=()=>[...selectedIds].map(id=>recById(id)).filter(Boolean);
- const hasLocked=()=>list().some(r=>window.isRecordLocked?.(r));
+ const hasLocked=()=>list().some(r=>window.isRecordLocked?.(r)||
+   state.records.some(x=>!x.deleted&&x.id!==r.id&&folderContains(r.id,x.id)&&window.isRecordLocked?.(x)));
  function onlyRoots(){
    const ids=new Set(selectedIds);
    return list().filter(r=>{
@@ -59,7 +60,7 @@
      const copy=JSON.parse(JSON.stringify(r));
      copy.id=ids.get(r.id);
      copy.parentId=ids.get(r.parentId)||(roots.some(root=>root.id===r.id)?destination:r.parentId);
-     if(copy.kind==='folder'||copy.kind==='photo'||copy.kind==='note')copy.title='Kopie – '+copy.title;
+     if(roots.some(root=>root.id===r.id))copy.title='Kopie – '+copy.title;
      if(Array.isArray(copy.items))copy.items.forEach(item=>{
        if(item.id)item.id=uid();
        if(Array.isArray(item.detailItems))item.detailItems.forEach(child=>{if(child.id)child.id=uid()});
