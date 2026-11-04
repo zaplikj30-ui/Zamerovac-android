@@ -1,5 +1,11 @@
 # Zaměřovač – Android aplikace pro zaměřování nábytku
 
+## Rychlý přehled projektu a průběžné ukládání dohod
+
+**[▶ START ZDE – aktuální stav Zaměřovače, dohodnuté kroky a další práce](START_ZDE.md)**
+
+Zde začínej při navazování v novém chatu. Každou významnou dohodu, zjištění, chybu, výsledek testu, plánovaný krok a nápad „možná do budoucna“ zaznamenávat průběžně na GitHub **hned po upřesnění**, ne až na konci dlouhého testování. Ověřit úspěšný zápis a uživateli potvrdit odkazem. Testy a rozhodnutí: [deník #13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13), představa aplikace: [VIZE_A_PLAN.md](VIZE_A_PLAN.md).
+
 **Samostatná originální aplikace inspirovaná ovládáním ImageMeteru**, nikoli jeho upravená kopie.
 Projekt neobsahuje cizí APK, grafiku ani zdrojový kód ImageMeteru.
 
