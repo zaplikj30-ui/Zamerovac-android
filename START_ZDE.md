@@ -8,12 +8,21 @@
 
 | Oblast | Aktuální stav | Kde je podrobnost |
 |---|---|---|
-| Obnova starých testů 1–28 | **Probíhá, neúplné.** Neslučovat staré chyby s aktuálními bez důkazu. | [Deník testování #13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13) |
-| Přílohy k testování | Videa a screenshoty slouží ke kontrolám 1–28; mohou být duplicitní. První video `1000093687.mp4` je záznam chatu, hlavní vodítko pro číslování. | [Index médií](TESTOVANI_MEDIA_INDEX.md) |
+| Rekonstrukce starých testů 1–28 | **Všech 28 je rozepsáno z hlavního videa včetně pozdějších dodatků** do tří částí. Nejde o doslovně ověřený kompletní přepis každého znaku, ani ověření aktuální APK. | [1–10](REKONSTRUKCE_TESTU_01_10.md) · [11–20](REKONSTRUKCE_TESTU_11_20.md) · [21–28](REKONSTRUKCE_TESTU_21_28.md) |
+| Přílohy k testování | Hlavní video `1000093687.mp4` určuje číslování; ostatní videa/fotky byly přiřazeny podle obsahu. Původní číselná jména videí nejsou vždy 1:1 prokázána. | [Důkazní mapa](ROZHODNUTI_A_NAPADY_Z_TESTU.md#4-přehled-důkazů-a-dosud-nepotvrzených-identit-videí) · [Index médií](TESTOVANI_MEDIA_INDEX.md) |
 | Základní sada požadavků | 49 položek z dřívějšího seznamu; jejich stav nelze automaticky považovat za splněný. | [Seznam úprav #12](https://github.com/zaplikj30-ui/Zamerovac-android/issues/12) |
 | Dlouhodobá představa | Vzhled, schopnosti, možnosti „možná později“; lze měnit. | [Vize a plán](VIZE_A_PLAN.md) |
-| Další aktualizace APK | **Zatím nespouštět.** Nejprve doplnit a roztřídit 28 testů, společně vybrat první malou dávku. | [Dohodnutý postup #13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13) |
+| Další aktualizace APK | **Zatím není sestavena**. Následuje audit požadavků proti aktuálnímu kódu a plán jedné společné aktualizace podle všech 28 výsledků. **Až po této aktualizaci** testovat další práci v malých dávkách kolem pěti úkolů. | [Plán a deník #13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13) |
 | Verze APK | Reálnou **aktuálně používanou** verzi ověřit před dalším cyklem; historický screenshot není důkaz aktuálního vydání. | [GitHub Releases](https://github.com/zaplikj30-ui/Zamerovac-android/releases) |
+
+## Dokončené podklady k původní sadě 28 testů
+
+- **[Testy 1–10 – přesné požadavky, průběh a důkazy](REKONSTRUKCE_TESTU_01_10.md)**
+- **[Testy 11–20 – přesné požadavky, průběh a důkazy](REKONSTRUKCE_TESTU_11_20.md)**
+- **[Testy 21–28 – přesné požadavky, průběh a důkazy](REKONSTRUKCE_TESTU_21_28.md)**
+- **[Samostatné schválené změny, odložené nápady a mapování příloh](ROZHODNUTI_A_NAPADY_Z_TESTU.md)**
+
+**Dále:** projít poslední stav kódu aplikace proti každé detailní dohodě, vyznačit implementováno/chybí/neověřeno, dořešit jen skutečné nečitelnosti, teprve pak připravit společnou aktualizaci. Ověření nového APK na telefonu je jiný krok než přepis historického chatu. Bez důkazu neoznačovat opravy za hotové.
 
 ## 2. Nejdůležitější pravidlo: ukládat průběžně, nikoli zpětně
 
@@ -57,7 +66,7 @@ GitHub změny uchovává v historii; starší rozhodnutí u významnějších zm
 5. Uživatel provede krátké testy na zařízení; zaznamenat výsledek každého úkolu. Chyby se opraví, neověřené věci zůstanou otevřené.
 6. Před další dávkou nebo změnou chatu aktualizovat tento soubor: **poslední verze, co je hotové, chyby, rozdělaná práce, následující úkol**.
 
-Nedělat znovu jednu velkou sérii 28 kontrol s výsledky jen v chatu.
+**Výjimka pro nynější obnovu historie:** všech 28 existujících testů rekonstruovat najednou a promítnout do příští společné aktualizace; až další testovací cykly po aktualizaci vést po zhruba pěti. Nikdy nezůstávat u výsledků jen v chatu.
 
 ## 4. Jak rychle pokračovat v úplně novém chatu
 
@@ -70,6 +79,8 @@ Nemusí se znovu kopírovat celý původní chat. Neznámé informace ověřit z
 - **[Jednotlivé testy a opravy](TESTY_A_OPRAVY.md):** test 1 → domluva → okamžitý zápis; poté test 2 → domluva → zápis; postupně každý další test. Při každém testu zapisovat výsledky, opravy, nápady i důkazy.
 
 - **Tento soubor:** aktuální stav a rozcestník. Musí se aktualizovat při změně fáze, zvolené dávky nebo důležitého rozhodnutí.
+- **[Podrobná rekonstrukce 1–10](REKONSTRUKCE_TESTU_01_10.md), [11–20](REKONSTRUKCE_TESTU_11_20.md), [21–28](REKONSTRUKCE_TESTU_21_28.md):** aktuální podklady pro pozdější audit zdrojového kódu.
+- **[Katalog dohodnutých změn a nápadů](ROZHODNUTI_A_NAPADY_Z_TESTU.md):** schválené novinky i nápady „možná později“.
 - **[Testovací deník #13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13):** výsledky kontrol, průběžné dohody a konkrétní kroky; během rekonstrukce 28 testů primární evidence.
 - **[49 původních úprav #12](https://github.com/zaplikj30-ui/Zamerovac-android/issues/12):** původní základní zadání; nesmazat jen proto, že už vznikla další evidence.
 - **[Vize a plán](VIZE_A_PLAN.md):** dlouhodobý vzhled a funkce, budoucí a zatím nezávazné nápady.
@@ -80,4 +91,4 @@ Nemusí se znovu kopírovat celý původní chat. Neznámé informace ověřit z
 
 **4. 11. 2026 – uživatel:** „Důležité je ukládat všechny kroky na GitHub ... co budeme dělat, chceme dělat, nebo na čem jsme se dohodli ... a rychle dohledatelné.“
 
-**Výsledek:** Tento rozcestník a pravidlo okamžitého průběžného zápisu; nevydávat ChatGPT paměť za spolehlivé úložiště projektu. Při dalších fázích aktualizovat přehled i příslušné issues.
+**Výsledek:** Tento rozcestník a pravidlo okamžitého průběžného zápisu; nevydávat ChatGPT paměť za spolehlivé úložiště projektu. **Tentýž den dokončena podrobná rekonstrukce všech testů 1–28 z videa a dostupných příloh**, včetně katalogu samostatných nápadů; **implementace a aktuální retest ještě nejsou zkontrolované**. Při dalších fázích aktualizovat přehled i příslušné issues.
