@@ -6,7 +6,7 @@
 'use strict';
 (function(){
  const units={mm:1,cm:10,m:1000,in:25.4};
- const linearTypes=new Set(['dimension','chain','cumulative']);
+ const linearTypes=new Set(['dimension','chain','cumulative','polyline','line','arrow','circle','ellipse','rect','target','angle','area']);
  function parseDistance(value,unit){
   const raw=String(value??'').trim().replace(',','.');
   const u=String(unit||'mm').trim().toLowerCase();
@@ -51,6 +51,35 @@
   const item=(current.items||[]).find(x=>x.id===selected);
   if(!item||!linearTypes.has(item.type)){
    notify('Bosch: hodnota uložena do historie. Nejdřív označ kótu a potom změř.');
+   return true;
+  }
+  if(['polyline','angle','area','rect'].includes(item.type)){
+   const count=item.type==='area'?4:item.type==='angle'?2:item.type==='rect'?2:Math.max(1,(item.points?.length||2)-1);
+   const index=Math.max(0,Math.min(count-1,Number(item.activeSegmentIndex)||0));
+   const text=asText(reading.millimeters,'mm');
+   if(item.type==='rect'){
+    const field=index===0?'dimW':'dimH';
+    if(item[field]===text){notify('Bosch: hodnota už je u strany');return true}
+    checkpoint();item[field]=text;item.lastMeasuredAt=new Date().toISOString();commitEditor();
+    const input=$(index===0?'rectWidth':'rectHeight');if(input&&$('modal')&&!$('modal').hidden)input.value=text;
+   }else if(item.type==='area'){
+    if(!Array.isArray(item.sideMeasures))item.sideMeasures=['','','',''];
+    if(item.sideMeasures[index]===text){notify('Bosch: hodnota už je u strany');return true}
+    checkpoint();item.sideMeasures[index]=text;
+    const area=typeof quadAreaFromMeasures==='function'?quadAreaFromMeasures(item):null;
+    if(area!==null)item.measure=String(Number(area.toFixed(5))).replace('.',',');
+    commitEditor();
+    const input=$('areaSide'+index);if(input&&$('modal')&&!$('modal').hidden)input.value=text;
+   }else{
+    if(!Array.isArray(item.segmentData))item.segmentData=[];
+    const segment=item.segmentData[index]||{measure:'',text:'',unit:'mm'};
+    if(segment.measure===text&&segment.unit==='mm'){notify('Bosch: hodnota už je u ramene');return true}
+    checkpoint();item.segmentData[index]={...segment,measure:text,unit:'mm',laserMeasuredMm:String(reading.millimeters)};
+    commitEditor();
+    const input=$(item.type==='angle'?'angleLength'+index:'segmentMeasure'+index);
+    if(input&&$('modal')&&!$('modal').hidden)input.value=text;
+   }
+   notify('✓ Bosch: '+text+' mm zapsáno do '+(item.type==='angle'?'ramene':'strany/úseku')+' '+(index+1));
    return true;
   }
   const destUnit=Object.prototype.hasOwnProperty.call(units,item.unit)?item.unit:
