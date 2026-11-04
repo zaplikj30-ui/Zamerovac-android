@@ -1163,6 +1163,7 @@ public class MainActivity extends Activity {
                     if(generation!=laserConnectionGeneration)return;
                     if("connected".equals(status)||"receiving".equals(status))
                         settings.edit().putString("preferredLaserAddress",device.getAddress()).apply();
+                    if("off".equals(status)){classic=null;activeLaserHistoryId="";}
                     laserStatus(status,name);
                 }));
             laserStatus("connecting",name);

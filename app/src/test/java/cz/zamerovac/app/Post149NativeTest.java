@@ -104,7 +104,9 @@ public class Post149NativeTest {
             info.onInfo(null,MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START,0);
             Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(21));assertFalse((boolean)field(activity,"failed"));
             info.onInfo(null,MediaPlayer.MEDIA_INFO_BUFFERING_START,0);
-            controller.pause();Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(21));
+            controller.pause();
+            info.onInfo(null,MediaPlayer.MEDIA_INFO_BUFFERING_START,0);
+            Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(21));
             assertFalse((boolean)field(activity,"failed"));controller.resume();
             Shadows.shadowOf(Looper.getMainLooper()).idleFor(Duration.ofSeconds(21));assertTrue((boolean)field(activity,"failed"));
             assertTrue(((TextView)field(activity,"status")).getText().toString().contains("včas"));

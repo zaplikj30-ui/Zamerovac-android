@@ -26,7 +26,7 @@ jobs:
         run: gradle --no-daemon :app:compilePreviewJavaWithJavac :app:testPreviewUnitTest
       - name: Nezávisle parsovat a vykreslit zákaznické PDF
         run: |
-          python3 -m pip install 'pypdf>=5,<7' 'pymupdf>=1.24,<2'
+          python3 -m pip install 'pypdf[image]>=5,<7' 'pymupdf>=1.24,<2'
           python3 tools/check-customer-pdf.py app/build/customer-pdf-1.zip app/build/customer-pdf-3.zip app/build/customer-pdf-multipage.zip
       - uses: actions/upload-artifact@v4
         if: always()

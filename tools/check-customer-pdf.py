@@ -5,7 +5,7 @@ Requires pypdf, pymupdf; intended for the development workspace.
 import io
 import sys
 import zipfile
-import fitz
+import pymupdf as fitz
 from pypdf import PdfReader
 
 for path in sys.argv[1:]:

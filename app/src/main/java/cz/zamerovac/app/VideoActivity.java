@@ -17,7 +17,7 @@ public final class VideoActivity extends Activity {
     private final Handler handler=new Handler(Looper.getMainLooper());
     private VideoView video;
     private TextView status;
-    private boolean failed,paused,rendered,buffering;
+    private boolean failed,paused,prepared,rendered,buffering;
     private int position;
     private Uri uri;
     private String mime;
@@ -33,7 +33,12 @@ public final class VideoActivity extends Activity {
         position=saved==null?0:saved.getInt("position",0);
         LinearLayout layout=new LinearLayout(this);layout.setOrientation(LinearLayout.VERTICAL);
         layout.setBackgroundColor(Color.BLACK);
-        video=new VideoView(this);layout.addView(video,new LinearLayout.LayoutParams(-1,0,1));
+        video=new VideoView(this){
+            @Override public void start(){
+                if(!failed&&!rendered){status.setText("Načítám video…");armTimeout();}
+                super.start();
+            }
+        };layout.addView(video,new LinearLayout.LayoutParams(-1,0,1));
         status=new TextView(this);status.setTextColor(Color.WHITE);status.setGravity(Gravity.CENTER);
         status.setPadding(16,16,16,16);status.setText("Načítám video…");layout.addView(status);
         Button external=new Button(this);external.setText("Otevřít v jiném přehrávači");
@@ -49,14 +54,14 @@ public final class VideoActivity extends Activity {
         video.setOnErrorListener((player,what,extra)->{failPlayback("Video nelze přehrát. Formát nebo kodek nemusí být podporován.");return true;});
         video.setOnPreparedListener(player->{
             if(failed)return;
-            status.setText("Načítám video…");
+            prepared=true;handler.removeCallbacks(timeout);status.setText("Video připraveno.");
             if(position>0)video.seekTo(position);
             if(!paused)video.start();
         });
-        video.setOnCompletionListener(player->{handler.removeCallbacks(timeout);status.setText("Video skončilo.");});
+        video.setOnCompletionListener(player->{if(!failed){handler.removeCallbacks(timeout);status.setText("Video skončilo.");}});
         video.setOnInfoListener((player,what,extra)->{
             if(failed)return true;
-            if(what==MediaPlayer.MEDIA_INFO_BUFFERING_START){buffering=true;status.setText("Načítám video…");armTimeout();}
+            if(what==MediaPlayer.MEDIA_INFO_BUFFERING_START){if(!buffering)armTimeout();buffering=true;status.setText("Načítám video…");}
             if(what==MediaPlayer.MEDIA_INFO_BUFFERING_END||what==MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START){
                 if(what==MediaPlayer.MEDIA_INFO_VIDEO_RENDERING_START)rendered=true;
                 buffering=false;handler.removeCallbacks(timeout);status.setText("");
@@ -65,7 +70,7 @@ public final class VideoActivity extends Activity {
         });
         armTimeout();video.setVideoURI(uri);
     }
-    private void armTimeout(){handler.removeCallbacks(timeout);if(!failed)handler.postDelayed(timeout,20000);}
+    private void armTimeout(){handler.removeCallbacks(timeout);if(!failed&&!paused)handler.postDelayed(timeout,20000);}
     private void failPlayback(String message){
         if(failed)return;failed=true;handler.removeCallbacks(timeout);
         if(video!=null)video.stopPlayback();if(status!=null)status.setText(message);
@@ -74,7 +79,7 @@ public final class VideoActivity extends Activity {
         paused=true;if(video!=null){position=video.getCurrentPosition();video.pause();}
         handler.removeCallbacks(timeout);super.onPause();
     }
-    @Override protected void onResume(){super.onResume();paused=false;if(video!=null&&!failed&&(!rendered||buffering))armTimeout();}
+    @Override protected void onResume(){super.onResume();paused=false;if(video!=null&&!failed&&(!prepared||buffering))armTimeout();}
     @Override protected void onSaveInstanceState(Bundle saved){
         saved.putInt("position",video==null?position:video.getCurrentPosition());super.onSaveInstanceState(saved);
     }
