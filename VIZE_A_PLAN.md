@@ -86,6 +86,15 @@ Tento seznam obsahuje dříve zmíněné nebo odložené směry. O přesném pro
 
 **Stav:** **záměr funkce a princip jemného narovnávání jsou zaznamenané**, ale **neexistuje schválený termín, finální UX ani přesná technická specifikace pro okamžitou implementaci**. V tomto kroku se **nemění Android kód, nevytváří nová APK a nezasahuje do probíhajících oprav ani do starých zakázek**. Před implementací bude potřeba samostatně dohodnout podrobnosti interakce a otestovat přesnost na prstu i stylusu.
 
+### Chytré rozmístění kót a textové / AI pokyny – budoucí námět
+
+**Nápad uživatele 4. 11. 2026, podrobnosti v [Issue #16](https://github.com/zaplikj30-ui/Zamerovac-android/issues/16). Stav: NÁPAD, ne schválená implementace.**
+
+- **Jedno tlačítko:** z nákresu/půdorysu místnosti navrhnout přehledné umístění kót nahoře, dole, vlevo a vpravo (případně jednotlivé úseky), bez překryvů; uživatel poté doplní skutečné naměřené rozměry ručně nebo Bosch laserem.
+- **Textový pokyn, případně AI:** uživatel napíše např. „Celkovou šířku okótuj nahoře, jednotlivé úseky dole, délku vlevo“ a aplikace navrhne rozvržení kót. Rozpoznání jednoduchých povelů offline vs. volnější AI, případný cloud, cena i soukromí se musí posoudit až při rozhodnutí o vývoji.
+- **Povinná bezpečnost:** nikdy neodhadovat skutečné milimetry z pixelů, nevymýšlet naměřené hodnoty, nezasahovat bez potvrzení do stávajících kót nebo geometrie. Náhled před potvrzením, vrácení změny a všechny nové kóty samostatně editovatelné. Neodesílat zákaznická data externím AI službám bez výslovného rozhodnutí a vhodné ochrany soukromí.
+- **Návaznost:** může jednou doplnit plánovaný modul Půdorys a nápad Průvodce zaměřením; nenahrazuje je a automaticky nespouští vývoj, slučování projektů ani nové APK.
+
 ### Průvodce zaměřením – budoucí možnost, nikoli současná úprava
 
 **Stav: NÁPAD / BUDOUCÍ MOŽNOST K POZDĚJŠÍMU ROZHODNUTÍ.** Není to potvrzená funkce stávající APK, nepatří automaticky do nejbližší aktualizace a neznamená příkaz nyní vytvořit novou obrazovku. Doplňuje již zaznamenanou budoucí možnost automatických kontrol chyb při zaměření a navrhování nábytku.
