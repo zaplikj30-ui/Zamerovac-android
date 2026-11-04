@@ -312,6 +312,18 @@ Tato část **zpřesňuje již existující požadavek**, nezakládá druhé nez
 
 **Současný postup:** pouze zaznamenat dlouhodobý směr. Pokračovat v domluvených opravách, testování a rozvoji současných aplikací se zásadní prioritou spolehlivost → bezpečnost dat → přesnost a funkčnost → jednoduché ovládání. Bez nových modulů, přepisování frameworku, vývoje iOS/PC, změn cenové politiky nebo samostatného APK buildu kvůli tomuto zápisu.
 
+### Možná budoucí monetizace reklamou (pouze otevřená možnost)
+
+**4. 11. 2026 – NEROZHODNUTÁ DLOUHODOBÁ MOŽNOST.** K dříve zaznamenaným otevřeným otázkám (zdarma, jednorázová platba, předplatné, případně placené funkce či moduly) přibývá také **možnost financování aplikace reklamou**. Zatím není schváleno, že reklamy v aplikaci budou; není určený poskytovatel, formát, četnost, umístění, příjmový cíl ani kombinace s ostatními modely. Veřejné vydání také není rozhodnuté. **Reklama není požadavek na nynější ani příští aktualizaci.**
+
+- **Varianty k pozdějšímu zvážení:** nenápadné bannery, případně dobrovolné odměňované reklamy, reklamy pouze v bezplatné variantě, bezreklamová varianta nebo žádné reklamy. Tyto varianty jsou možnosti k vyhodnocení, **nikoli odsouhlasené návrhy rozhraní či omezení funkcí**.
+- **Nezasahovat do práce:** případná reklama nesmí překrývat pracovní fotografie, kóty, 2D/3D návrhy, ovládací úchopy, důležité dialogy a výrobní rozměry; nesmí blokovat měření, přenos z Bluetooth laseru, ukládání, export ani práci v dílně. Vyhnout se nečekaným celoplošným reklamám a náhodným kliknutím.
+- **Offline a data:** veškerá základní práce má zůstat funkční bez internetu, bez načtené reklamy či nedostupného reklamního serveru. **Údaje o zákaznících, zakázkách, fotografie, poznámky, kóty ani kusovníky se nesmějí bez odpovídajícího právního základu a výslovného rozhodnutí sdílet s reklamními službami**; přístup reklamních knihoven k citlivým datům minimalizovat a posoudit soukromí.
+- **Právní a technické předpoklady před případným zavedením:** aktualizovaná pravidla Google Play / Apple App Store, požadavky ochrany osobních údajů a souhlasů v EU (včetně vhodné CMP pro relevantní způsoby reklamního zpracování), údaje o sběru dat a zabezpečení, odpovědnost za reklamní SDK a jejich kompatibilitu.
+- **Rozhodnout až podle reality:** před implementací vyhodnotit skutečnou cílovou skupinu, dopad reklam na profesionální a hobby používání, přínos oproti ostatním modelům, technické náklady a testy. Příjem z reklam **není garantovaný**.
+
+**Nyní nedělat:** nezakládat reklamní účty, nepřidávat reklamní SDK, tracking, souhlasové dialogy, bannery ani omezení funkcí, nepřipravovat placené tarify, neměnit existující ukládání či ovládání a nespouštět sestavení APK pouze kvůli tomuto zápisu. Stávající priority oprav a bezpečnosti dat zůstávají.
+
 ### Kontrola sjednocení dlouhodobých požadavků – co platí nyní a co později
 
 **Kontrola proti devíti bodům uživatele ze 4. 11. 2026.** Tato tabulka **jen rozcestníkem propojuje existující podrobné dohody**; nenahrazuje je a neotvírá nové implementační úkoly.
