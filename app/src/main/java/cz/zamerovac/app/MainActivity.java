@@ -954,7 +954,7 @@ public class MainActivity extends Activity {
                 }
                 if(devices.isEmpty()){
                     laserStatus("off","");
-                    error("Nenalezen laser Bosch. Zapni laser a zkus hledat znovu; jiný měřič lze vybrat ručně.");
+                    error(getString(R.string.bluetooth_laser_missing));
                     return;
                 }
                 String[] labels=new String[devices.size()];
@@ -967,7 +967,7 @@ public class MainActivity extends Activity {
                 }
                 laserStatus("off","");
                 new AlertDialog.Builder(this)
-                    .setTitle(showAllDevices?"Vybrat jiné Bluetooth zařízení":"Vybrat laser Bosch")
+                    .setTitle(showAllDevices?getString(R.string.bluetooth_choose_other):getString(R.string.bluetooth_choose_bosch))
                     .setItems(labels,(dialog,index)->{
                         BluetoothDevice d=devices.get(index);
                         if(leAddresses.contains(d.getAddress()))connectGatt(d);
