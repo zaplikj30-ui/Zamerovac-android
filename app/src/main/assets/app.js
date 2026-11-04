@@ -60,13 +60,15 @@ function browserEntryIcon(r){
     return '<div class="entry-icon folder"><svg viewBox="0 0 52 44" width="51" height="43" aria-label="Složka"><path d="M2 11V7c0-2 2-3 4-3h16l5 5h20c2 0 3 1 3 3v28H2Z" fill="#dfb65d" stroke="#242424" stroke-width="2"/><path d="M2 15h48v25H2Z" fill="#ffd17a" stroke="#222" stroke-width="2"/></svg></div>';
   }
   const fallback=({photo:'▧',canvas:'▦',note:'▤',video:'▶',audio:'♫',file:'▣'}[r.kind]||'▣');
-  const id=r.kind==='photo'&&Array.isArray(r.media)?r.media[0]:null;
+  const id=['photo','video'].includes(r.kind)&&Array.isArray(r.media)?r.media[0]:null;
   const badge=photoEditedBadge(r);
+  const videoMark=r.kind==='video'?'<span class="video-thumb-play" aria-hidden="true">▶</span>':'';
+  const videoFallback=r.kind==='video'?'▶':'▧';
   if(native&&id&&/^[a-zA-Z0-9_-]{3,120}$/.test(id)){
     const url='https://appassets.androidplatform.net/thumb/'+encodeURIComponent(id);
-    return '<div class="entry-icon photo-preview"><img class="entry-thumb" src="'+url+'" alt="" loading="lazy"><span class="thumb-fallback" hidden>▧</span>'+badge+'</div>';
+    return '<div class="entry-icon photo-preview'+(r.kind==='video'?' video-preview':'')+'"><img class="entry-thumb" src="'+url+'" alt="" loading="lazy"><span class="thumb-fallback" hidden>'+videoFallback+'</span>'+videoMark+badge+'</div>';
   }
-  if(r.kind==='photo')return '<div class="entry-icon photo-preview"><span class="thumb-fallback">▧</span>'+badge+'</div>';
+  if(['photo','video'].includes(r.kind))return '<div class="entry-icon photo-preview'+(r.kind==='video'?' video-preview':'')+'"><span class="thumb-fallback">'+videoFallback+'</span>'+videoMark+badge+'</div>';
   return '<div class="entry-icon">'+fallback+'</div>';
 }
 function applyBackgroundPattern(){document.body.dataset.backgroundPattern=prefs.backgroundPattern||'Vypnuto'}
