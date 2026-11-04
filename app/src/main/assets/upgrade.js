@@ -730,6 +730,7 @@ function boschHistoryGroups(){
 }
 function showLaserHistory(filter='all'){
  const groups=boschHistoryGroups();
+ const orderedGroups=[...groups].sort((a,b)=>a[0].localeCompare(b[0]));
  const multi=groups.size>1;
  const hasLegacy=readings.some(r=>!r.deviceId);
  const nameCounts=new Map();
@@ -738,7 +739,7 @@ function showLaserHistory(filter='all'){
  const choices=multi?
   '<label for="laserHistoryFilter">Zobrazit měření</label><select id="laserHistoryFilter">'+
   '<option value="all">Všechny měřáky</option>'+
-  [...groups].map(([id,name])=>{
+  orderedGroups.map(([id,name])=>{
    const count=(seenNames.get(name)||0)+1;seenNames.set(name,count);
    const label=nameCounts.get(name)>1?name+' · měřák '+count:name;
    return '<option value="'+esc(id)+'">'+esc(label)+'</option>';
