@@ -236,6 +236,7 @@ public class MainActivity extends Activity {
      * The media file itself is never modified.
      */
     private InputStream photoThumbnail(String id) throws IOException {
+        synchronized(TrashPurger.LOCK){
         File source=mediaFile(id);
         if(!source.isFile())return null;
         File dir=new File(getCacheDir(),"photo-thumbs");
@@ -291,6 +292,7 @@ public class MainActivity extends Activity {
             }
         }
         return new FileInputStream(cached);
+        }
     }
 
     private boolean validId(String s){return s.matches("[a-zA-Z0-9_-]{3,120}");}
@@ -487,11 +489,13 @@ public class MainActivity extends Activity {
             final Uri origin=data.getData();
             new Thread(()->{
                 try{
+                    synchronized(TrashPurger.LOCK){
                     String existingText=readDb();
                     JSONObject existing=existingText.isEmpty()?new JSONObject().put("schema",1).put("records",new JSONArray()).put("prefs",new JSONObject()):new JSONObject(existingText);
                     BackupImporter.Result restored=BackupImporter.importZip(this,origin,existing,settings);
                     writeDb(restored.data.toString());
                     onSyncResult("Obnoveno "+restored.recordCount+" záznamů jako nové zakázky",restored.data);
+                    }
                 }catch(Exception e){error("Obnova ZIP: "+e.getMessage());}
             },"ZamerovacRestore").start();
             return;
@@ -698,6 +702,20 @@ public class MainActivity extends Activity {
             }
         }
         @JavascriptInterface public String loadData(){try{return readDb();}catch(Exception e){return "{\"_loadError\":true}";}}
+        @JavascriptInterface public int trashCleanupCount(){
+            synchronized(TrashPurger.LOCK){try{return new TrashPurger(getFilesDir(),getCacheDir(),settings).pendingCount();}catch(Exception e){return -1;}}
+        }
+        @JavascriptInterface public String purgeTrash(String expected,String desired,String ids){
+            synchronized(TrashPurger.LOCK){
+                try{
+                    if(activeUpload!=null||recorder!=null)throw new IOException("Nejdříve dokonči přidávání souborů nebo nahrávání.");
+                    String saved=readDb();
+                    if(!saved.equals(expected))throw new IOException("Zakázky se mezitím změnily. Zavři a znovu otevři aplikaci a potvrď aktuální koš.");
+                    return new TrashPurger(getFilesDir(),getCacheDir(),settings)
+                        .purge(desired,desired,new JSONArray(ids),MainActivity.this::writeDb).toString();
+                }catch(Exception e){try{return new JSONObject().put("error",e.getMessage()).toString();}catch(JSONException ignored){return "{}";}}
+            }
+        }
         @JavascriptInterface public void saveData(String text){try{JSONObject j=new JSONObject(text);if(j.optInt("schema")!=1)throw new Exception("Unsupported schema");writeDb(text);}catch(Exception e){error("Uložení: "+e.getMessage());}}
         @JavascriptInterface public void beginMedia(String id,String mime,String name){try{if(!validId(id))return;closeUpload();activeUpload=new FileOutputStream(mediaFile(id));activeUploadId=id;settings.edit().putString("mime-"+id,mime).putString("name-"+id,name).apply();}catch(Exception e){error(e.toString());}}
         @JavascriptInterface public void appendMedia(String id,String chunk){try{if(activeUpload!=null&&id.equals(activeUploadId))activeUpload.write(Base64.decode(chunk,Base64.DEFAULT));}catch(Exception e){error(e.toString());}}
@@ -864,7 +882,8 @@ public class MainActivity extends Activity {
         }
     }
     private void closeUpload(){try{if(activeUpload!=null)activeUpload.close();}catch(Exception ignored){}activeUpload=null;activeUploadId=null;}
-    private synchronized String readDb() throws IOException {
+    private String readDb() throws IOException {
+        synchronized(TrashPurger.LOCK){
         File db=new File(getFilesDir(),"projects.json"),backup=new File(getFilesDir(),"projects.bak");
         if(!db.exists()&&!backup.exists()&&!databaseReadFailed)return ""; // First installation only.
         try{String data=readValidJson(db);databaseReadFailed=false;return data;}
@@ -878,6 +897,7 @@ public class MainActivity extends Activity {
                 throw new IOException("Uložené zakázky nelze načíst; původní soubory zůstaly beze změny",primary);
             }
         }
+        }
     }
     private String readValidJson(File file) throws IOException {
         try(InputStream in=new FileInputStream(file)){
@@ -888,7 +908,8 @@ public class MainActivity extends Activity {
             return data;
         }
     }
-    private synchronized void writeDb(String data) throws IOException {
+    private void writeDb(String data) throws IOException {
+        synchronized(TrashPurger.LOCK){
         if(databaseReadFailed)throw new IOException("Zápis zablokován: uložené zakázky nebyly bezpečně načteny");
         File next=new File(getFilesDir(),"projects.tmp"),dest=new File(getFilesDir(),"projects.json");
         File backup=new File(getFilesDir(),"projects.bak");
@@ -906,6 +927,7 @@ public class MainActivity extends Activity {
                 java.nio.file.StandardCopyOption.ATOMIC_MOVE,java.nio.file.StandardCopyOption.REPLACE_EXISTING);}
         catch(java.nio.file.AtomicMoveNotSupportedException e){
             java.nio.file.Files.move(next.toPath(),dest.toPath(),java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        }
         }
     }
     private void syncCloud(){if(syncRunning){onSyncResult("Synchronizace již probíhá",null);return;}syncRunning=true;new Thread(()->{try{SyncEngine.Result result=new SyncEngine(this,settings).sync();onSyncResult(result.message,result.data);}catch(Exception e){error("Synchronizace: "+e.getMessage());}finally{syncRunning=false;}},"DriveSync").start();}

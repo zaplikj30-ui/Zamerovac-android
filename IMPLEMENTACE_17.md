@@ -38,3 +38,23 @@ Zadání: [#17](https://github.com/zaplikj30-ui/Zamerovac-android/issues/17), d�
 ## Fyzické kontroly po vydání
 
 Neoznačovat jako provedené: instalace nad 1.2.147 se zachováním skutečných dat, lichoběžník při původní situaci, krátké úchopy prstem a S Penem s magnetem i bez něj, čitelnost exportních PDF, skutečný přenos Bosch do konkrétního úseku s vlastní jednotkou a do šířky/výšky, **offline test 29**. Testy se uživateli zadávají jednotlivě podle AGENTS.md.
+
+## Následná společná aktualizace po 1.2.148 (E + F + G)
+
+Rozpracováno z `f646a87` ve `feature/post148-trash-menus`. Původní body A–C zůstávají.
+- E: nativní mazání výhradně potvrzených smazaných ID. Aktivní potomci se nemažou.
+  Sdílená média chrání i reference v historii a neznámých vnořených polích.
+  Nejdřív trvalý zápis databáze a konzistentní recovery kopie, pak soubory a miniatury.
+  Seznam nedokončeného úklidu přežije restart; Koš nabízí opakování a hlásí chyby.
+  Souběžné změny se ověřují proti poslednímu známému uloženému snímku, zápis/sync/import
+  sdílí zámek. Volitelné `trashPurgedIds` obsahuje jen ID a brání návratu starých smazaných
+  záznamů ze synchronizace; aktivní vzdálená obnova se zachovává. Schéma zůstává 1.
+  Externí záložní ZIP a původní soubory mimo privátní média/cache aplikace se nemažou.
+- F: zachycení celého vnějšího pointer/touch/click gesta před obsluhou plátna.
+  Obvyklá menu a rozšířená lišta se zavírají, formuláře a potvrzení mají dosavadní pravidla.
+  Pouze výběrový dialog akcí položky (⋮) má výslovně označené zavírání mimo.
+- G: přesný text na fotografii, složce, v editoru a hromadném výběru; exportní algoritmy nezměněny.
+- Dodatečný pokyn uživatele: značka pravítka vlevo nahoře a dále menší (15×15, SVG 11×11), kontrast zachován.
+
+Dosavadní regrese: 13 JS, Python 41 (1 skip bez SDK), původní celý Chromium průchod úspěšné.
+Nové nativní/browser testy zatím probíhají. Žádná nová APK ani fyzické ověření se tímto netvrdí.

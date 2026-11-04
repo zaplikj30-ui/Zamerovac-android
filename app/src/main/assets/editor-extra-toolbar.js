@@ -126,13 +126,14 @@
  });
  const more=$('editorMore');
  function setExpanded(open){
+  if(open)closeMenus();
   panel.hidden=!open;
   document.body.classList.toggle('editor-extra-open',open);
   more.classList.remove('tool-active'); // Three dots open the toolbar; not an active drawing tool.
   more.setAttribute('aria-expanded',String(open));
   more.title=open?'Sbalit další nástroje':'Rozbalit další nástroje';
   more.setAttribute('aria-label',more.title);
-  if(open){closeMenus();update()}
+  if(open)update();
   resizeEditor();
  }
  more.onclick=()=>setExpanded(panel.hidden);

@@ -8,12 +8,14 @@ on:
     paths:
       - 'app/src/main/assets/**'
       - 'tests/**'
+      - 'tools/check-post*-browser.cjs'
       - '.github/workflows/quick-check.yml'
   pull_request:
     branches: [main]
     paths:
       - 'app/src/main/assets/**'
       - 'tests/**'
+      - 'tools/check-post*-browser.cjs'
       - '.github/workflows/quick-check.yml'
 
 permissions:
@@ -45,3 +47,27 @@ jobs:
             node "$script"
           done
           python3 -m unittest discover -s tests -p 'test_*.py' -v
+
+  browser-check:
+    name: Chromium – nabídky, rozpracované kóty a bezpečný koš
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Připravit izolovaný prohlížeč
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - name: Skutečné kliknutí, dotyk, persistence a exportní vstupy
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 8765 --directory app/src/main/assets > /tmp/zamerovac-browser-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID"' EXIT
+          export CHROMIUM_PATH="$(node -p "require('playwright').chromium.executablePath()")"
+          node tools/check-post17-browser.cjs
+          node tools/check-post148-browser.cjs
