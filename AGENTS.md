@@ -92,6 +92,14 @@ Uživatel vyrábí zakázkový nábytek. Vyvíjíme vlastní Android aplikaci na
 
 ## Rozdělení práce mezi ChatGPT a Codex – rozhoduje asistent
 
+**Výslovné doplnění uživatele 4. 11. 2026 – text pro Codex musí připravit ChatGPT:** Uživatel řekl: „Ulož si, že mi dáš pokyn a text a já to vložím do Codexu. Bavili jsme se, že takhle budeme fungovat, že rozhodneš, jestli to máš udělat ty nebo Codex. Akorát mi to musíš poslat text, co mám vložit do Codexu.“ Tato dohoda je závazná pro další chaty.
+
+- **Vždy rozhoduje ChatGPT** na základě rizika, rozsahu a aktuálních možností, ne uživatel. Rozhodnutí stručně oznámí.
+- **Když ChatGPT zvolí Codex a v tomto chatu nemá přímo dostupnou akci ke spuštění Codexu, sám sepíše kompletní, konkrétní a ihned použitelný český prompt ve zkopírovatelném bloku.** Zahrne repozitář, přesné zadání a schválený rozsah, odkazy na související issues / commity, ochranu dat a přesnosti, testy, pravidla společné APK a požadovaný výsledek (commity / PR / kontrola). Uživatel jen tento text vloží do Codexu, bez dalšího vymýšlení nebo vyhledávání podkladů.
+- **Nelze tvrdit, že Codex běží, že dostal zadání nebo že je práce předaná, dokud uživatel tento prompt skutečně neodešle nebo dostupný nástroj spuštění nepotvrdí.** GitHub issue je podklad pro předání, nikoliv samo o sobě spuštění Codexu.
+- ChatGPT může předem zapsat schválený požadavek a odkazy na GitHub. Po skutečném dokončení Codexem kontroluje nové commity, změny, testy a případné kolize a až potom řídí jediné společné vydání APK. Není povinností uživatele posuzovat technický výsledek.
+- **Nezapomeň připravit také návrh jednořádkového doplnění Pokynů projektu ChatGPT**, které si může vložit uživatel; GitHub sám tyto Pokyny neupravuje.
+
 **Dohoda s uživatelem 4. 11. 2026:** Uživatel není programátor a **nemá sám posuzovat**, zda úprava patří klasickému ChatGPT, nebo Codexu. **Koordinující ChatGPT sám zhodnotí složitost, riziko, dostupné nástroje, aktuální souběžnou práci a omezený limit Codexu** a zvolí nejlepší cestu. Zbytečně se na toto rozdělení uživatele neptá.
 
 - **Klasický ChatGPT přednostně provádí** bezpečně zvládnutelné menší opravy, jednoduché úpravy textů či UI, kontrolu GitHubu, dokumentaci, cílené testy a kontrolu výsledků, pokud má potřebné nástroje a přístup. Nezůstává pouze u plánování, když může změnu skutečně dokončit.
