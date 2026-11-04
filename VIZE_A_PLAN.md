@@ -312,6 +312,18 @@ Tato část **zpřesňuje již existující požadavek**, nezakládá druhé nez
 
 **Současný postup:** pouze zaznamenat dlouhodobý směr. Pokračovat v domluvených opravách, testování a rozvoji současných aplikací se zásadní prioritou spolehlivost → bezpečnost dat → přesnost a funkčnost → jednoduché ovládání. Bez nových modulů, přepisování frameworku, vývoje iOS/PC, změn cenové politiky nebo samostatného APK buildu kvůli tomuto zápisu.
 
+### Volba jazyka podle systému s ručním přepsáním (budoucí chování)
+
+**Upřesnění uživatele 4. 11. 2026 – až bude skutečně k dispozici více překladů; nikoliv požadavek na další jazyk v aktuální APK.**
+
+- **Výchozí nastavení „Podle systému“:** při prvním spuštění a dokud si uživatel ručně neurčí jazyk, volit podle jazykových preferencí telefonu/tabletu (preferenční pořadí, dostupné překlady a vhodný jazykový fallback). Změnu jazyka zařízení za běhu či po dalším spuštění respektovat, když zůstává nastaveno „Podle systému“.
+- **Ruční výběr v „Nastavení → Jazyk aplikace“:** uživatel může kdykoliv zvolit některý ze skutečně podporovaných jazyků; ruční volba má přednost před jazykem telefonu a zůstane uložená i po restartu. Volbou „Podle systému“ se zase vrátí automatické sledování zařízení.
+- **Nepodporovaný jazyk telefonu:** bezpečně použít vhodný dostupný překlad, v první etapě **češtinu**. Nezobrazovat chybějící překlady, technické klíče ani falešně nabízené jazyky; nikdy nestahovat překlad kvůli běžnému offline ovládání.
+- **Oddělit nastavení jazyka od projektových dat:** přepnutí nezmění hodnoty měření, anotace, uživatelské texty, název souborů, ZIP ani uložená čísla; nemá ztratit rozpracovanou práci.
+- **Přechodné období:** v nejbližší aktualizaci Zaměřovače je stále jediný dostupný jazyk **🇨🇿 Čeština**, i na telefonu s jiným systémovým jazykem. Samotnou možnost „Podle systému“ v UI lze zobrazit až tehdy, kdy má skutečný význam a jsou schváleny alespoň dva funkční překlady. Neměnit dříve schválený jednoduchý výběr pouze češtiny.
+
+**Stav:** zapsáno jako pravidlo pro budoucí skutečné vícejazyčné vydání. Nyní jen dokumentace, ne zadání k implementaci a ne nové APK.
+
 ### Možná budoucí monetizace reklamou (pouze otevřená možnost)
 
 **4. 11. 2026 – NEROZHODNUTÁ DLOUHODOBÁ MOŽNOST.** K dříve zaznamenaným otevřeným otázkám (zdarma, jednorázová platba, předplatné, případně placené funkce či moduly) přibývá také **možnost financování aplikace reklamou**. Zatím není schváleno, že reklamy v aplikaci budou; není určený poskytovatel, formát, četnost, umístění, příjmový cíl ani kombinace s ostatními modely. Veřejné vydání také není rozhodnuté. **Reklama není požadavek na nynější ani příští aktualizaci.**
