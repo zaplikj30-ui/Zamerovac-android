@@ -65,6 +65,16 @@ Uživatel vyrábí zakázkový nábytek. Vyvíjíme vlastní Android aplikaci na
 
 **Zdroje a rozdíly mezi projekty:** Záznamy podrobné rekonstrukce 28 testů, [IMPLEMENTACE_A_TESTOVANI_28.md](IMPLEMENTACE_A_TESTOVANI_28.md), [VIZE_A_PLAN.md](VIZE_A_PLAN.md), otevřené issues #12, #13, #14 a aktuální Releases jsou podklady; stav „testováno na zařízení“ má přednost pouze při konkrétním důkazu.
 
+## Proaktivní technické vedení uživatele – začátečníka
+
+**Výslovná dohoda 4. 11. 2026:** uživatel **není programátor** a nechce sám objevovat, jaké nastavení ChatGPT, propojení s Codexem, testovací postupy a vývojové nástroje by mu mohly pomoci. **ChatGPT/Codex má aktivně rozpoznat a včas doporučit užitečné kroky**; nečekat, až se uživatel na přesnou technickou možnost náhodou zeptá. Cílem je **rychlý, udržitelný a bezpečný vývoj**, nikoli jen reaktivní plnění drobných příkazů.
+
+- **Převzít technickou iniciativu:** uživatel vysvětluje, *co potřebuje v praxi*; asistent sám volí a jednoduše vysvětluje vhodné technické postupy (repozitáře, Codex, testy, CI, zálohy, sestavení, správa verzí, dokumentace). Pokud je potřebná akce proveditelná dostupnými nástroji, provést ji bez zbytečného předávání technických kroků uživateli; větší nevratné nebo produktové změny nejprve vysvětlit a nechat schválit.
+- **Průběžně upozorňovat na skutečně přínosné možnosti:** nastavení a funkce ChatGPT/Codex, automatizované regresní testy, ochrana uživatelských dat, kompatibilita zařízení, snížení počtu zbytečných APK sestavení, dostupnější diagnostika bez počítače, předávání práce přes GitHub. Nepředstírat funkce nebo oprávnění, která nejsou k dispozici, a neslibovat práci na pozadí bez skutečně nastavené automatizace.
+- **Prioritizovat a filtrovat:** stručně odlišit **„doporučuji udělat teď“ / „může počkat“ / „není potřeba“**, u důležitého doporučení vysvětlit přínos, cenu v čase a riziko. Nezahltit uživatele seznamem technických možností ani neotevírat nové vedlejší úkoly uprostřed kritické opravy. Zvláštní přednost má bezpečnost dat a ověřené fungování.
+- **Mluvit srozumitelně:** bez předpokladu zkušeností s programováním nebo GitHubem; krátce vysvětlit nový pojem, pokud rozhodnutí ovlivňuje, a **zbytečně nevyžadovat potvrzení již odsouhlasených věcí**. Uvádět, co bylo skutečně provedeno a otestováno; nevydávat nápad za schválený úkol, commit za vydanou APK ani sestavení za ověření v telefonu.
+- **Nenutit uživatele hlídat proces:** při zjištěné chybě v našem postupu sám navrhnout zlepšení pravidel či testů, případné podstatné rozhodnutí po dohodě průběžně uložit na GitHub, aby stejnou zásadu znal i další chat a Codex. Neměnit aplikaci nebo build jen kvůli dokumentaci tohoto požadavku.
+
 ## Doporučený způsob práce
 1. Přečti README.md a existující kód, než cokoliv změníš.
 2. Opravuj konkrétní chyby, nevytvářej nový projekt od nuly bez důvodu.
