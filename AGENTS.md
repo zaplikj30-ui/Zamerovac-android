@@ -75,6 +75,16 @@ Uživatel vyrábí zakázkový nábytek. Vyvíjíme vlastní Android aplikaci na
 - **Mluvit srozumitelně:** bez předpokladu zkušeností s programováním nebo GitHubem; krátce vysvětlit nový pojem, pokud rozhodnutí ovlivňuje, a **zbytečně nevyžadovat potvrzení již odsouhlasených věcí**. Uvádět, co bylo skutečně provedeno a otestováno; nevydávat nápad za schválený úkol, commit za vydanou APK ani sestavení za ověření v telefonu.
 - **Nenutit uživatele hlídat proces:** při zjištěné chybě v našem postupu sám navrhnout zlepšení pravidel či testů, případné podstatné rozhodnutí po dohodě průběžně uložit na GitHub, aby stejnou zásadu znal i další chat a Codex. Neměnit aplikaci nebo build jen kvůli dokumentaci tohoto požadavku.
 
+## Rozdělení práce mezi ChatGPT a Codex – rozhoduje asistent
+
+**Dohoda s uživatelem 4. 11. 2026:** Uživatel není programátor a **nemá sám posuzovat**, zda úprava patří klasickému ChatGPT, nebo Codexu. **Koordinující ChatGPT sám zhodnotí složitost, riziko, dostupné nástroje, aktuální souběžnou práci a omezený limit Codexu** a zvolí nejlepší cestu. Zbytečně se na toto rozdělení uživatele neptá.
+
+- **Klasický ChatGPT přednostně provádí** bezpečně zvládnutelné menší opravy, jednoduché úpravy textů či UI, kontrolu GitHubu, dokumentaci, cílené testy a kontrolu výsledků, pokud má potřebné nástroje a přístup. Nezůstává pouze u plánování, když může změnu skutečně dokončit.
+- **Codex přednostně dostává** náročnější, rozsáhlejší nebo více soubory zasahující implementace, složité ladění a změny, kde jeho vývojové prostředí přinese skutečný přínos. **Riziko má přednost před velikostí:** i malý zásah do mazání zakázek, ukládání dat, přesnosti kót nebo exportů může vyžadovat silnější kontrolu.
+- **Kombinovaný postup** je vítaný: ChatGPT s uživatelem vyjasní zadání a uloží je na GitHub, podle potřeby předá práci Codexu, ověří jeho commity/PR a připraví společné fyzické testování. Nepředávat Codexu každou drobnost jen ze zvyku; šetřit jeho limit, ale nikoli na úkor kvality.
+- **Souběh:** před vlastní implementací zkontrolovat rozpracovanou práci/PR Codexu a do stejného místa bez koordinace nezasahovat. Pokud potřebné nástroje chybějí, oznámit omezení a nabídnout věcně připravené předání. Respektovat výslovnou volbu uživatele.
+- V obou variantách platí **GitHub jako zdroj pravdy**, skutečné změny a testy, průběžné ukládání, jediná APK až po dokončení schválené aktualizace a oddělení úspěšného buildu od ověření na zařízení.
+
 ## Doporučený způsob práce
 1. Přečti README.md a existující kód, než cokoliv změníš.
 2. Opravuj konkrétní chyby, nevytvářej nový projekt od nuly bez důvodu.
