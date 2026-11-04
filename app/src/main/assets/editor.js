@@ -420,6 +420,44 @@ function labelInfo(item){
   const off=['line','arrow'].includes(item.type)?((flipped?1:-1)*((Number(item.fontSize)||Number(prefs.fontSize)||17)*.85+4)):((item.offset??0)-Math.max(26,(Number(item.fontSize)||Number(prefs.fontSize)||17)*1.5)),t=Number(item.labelT)||0;
   return {x:(a.x+b.x)/2-uy*off+dx*t,y:(a.y+b.y)/2+ux*off+dy*t,ux,uy,d};
 }
+function segmentLineScreen(item,index){
+ const pts=item.points||[];
+ if(['chain','cumulative','polyline'].includes(item.type)){
+  if(index<0||index>=pts.length-1)return null;
+  const projected=item.type==='cumulative'&&typeof cumulativeSegment==='function'?cumulativeSegment(item,index):null;
+  return {a:projected?.from||worldToScreen(pts[index]),b:projected?.to||worldToScreen(pts[index+1])};
+ }
+ if(item.type==='angle'&&pts.length>=3)return {a:worldToScreen(pts[1]),b:worldToScreen(pts[index===0?0:2])};
+ if(item.type==='area'){
+  const corners=quadCorners(item);return {a:worldToScreen(corners[index]),b:worldToScreen(corners[(index+1)%4])};
+ }
+ return null;
+}
+function nearestSegmentLabel(point){
+ for(const item of [...(current.items||[])].reverse()){
+  if(!['chain','cumulative','polyline','angle','area'].includes(item.type))continue;
+  const count=item.type==='area'?4:item.type==='angle'?2:Math.max(0,(item.points?.length||0)-1);
+  for(let i=0;i<count;i++){
+   const line=segmentLineScreen(item,i);if(!line)continue;
+   const row=item.segmentData?.[i]||{},hasCaption=item.type==='area'?
+    Boolean(item.sideMeasures?.[i]||item.sideTexts?.[i]):
+    ['chain','cumulative'].includes(item.type)||Boolean(row.measure||row.text);
+   if(!hasCaption)continue;
+   const dx=line.b.x-line.a.x,dy=line.b.y-line.a.y,d=Math.hypot(dx,dy)||1;
+   let x=(line.a.x+line.b.x)/2,y=(line.a.y+line.b.y)/2;
+   if(item.type==='angle')y-=18;
+   else if(['chain','cumulative'].includes(item.type)){
+    const offset=(Number(item.offset)||0)+i*(item.type==='cumulative'?26:0);
+    x+=-dy/d*offset;y+=dx/d*offset;
+   }
+   const t=Number(item.type==='area'?item.sideLabelT?.[i]:row.labelT)||0;
+   x+=dx*t;y+=dy*t;
+   if(Math.abs(point.x-x)<Math.max(35,(item.fontSize||17)*2)&&Math.abs(point.y-y)<18)
+    return {item,kind:'segment-label',index:i};
+  }
+ }
+ return null;
+}
 function nearestLabel(point){
   for(const item of [...(current.items||[])].reverse()){
     const p=labelInfo(item);if(!p)continue;
@@ -533,6 +571,8 @@ function hitAnnotation(point){
  }
  const label=nearestLabel(point);
  if(label?.item)return label.item;
+ const segment=typeof nearestSegmentLabel==='function'?nearestSegmentLabel(point):null;
+ if(segment?.item)return segment.item;
  return nearestItem(point);
 }
 function selectAnnotation(item){
@@ -615,12 +655,14 @@ function stageDown(e){
   // Rozlišení klepnutí a tahu zajistí initialSelection v stageUp.
   const grip=nearestHandle(s);
   const label=nearestLabel(s);
+  const segmentLabel=typeof nearestSegmentLabel==='function'?nearestSegmentLabel(s):null;
   let hit;
   if(wantsCaption)hit={item:candidate,kind:'note-caption'};
    else if(grip?.item.id===candidate.id)hit=grip;
    else if(candidate.type==='target'&&candidate.b&&Math.hypot(s.x-worldToScreen(candidate.b).x,s.y-worldToScreen(candidate.b).y)<40)
     hit={item:candidate,kind:'target-caption'};
-   else if(label?.item.id===candidate.id)hit=label;
+   else if(segmentLabel?.item.id===candidate.id)hit=segmentLabel;
+    else if(label?.item.id===candidate.id)hit=label;
    else if(['chain','cumulative','angle','area'].includes(candidate.type)&&candidate.points?.length>1)
     hit={item:candidate,kind:'move-polyline'};
    else if(['dimension','chain','cumulative','line','arrow','angle','target','rect','circle','ellipse'].includes(candidate.type))
@@ -639,9 +681,11 @@ function stageDown(e){
    if(hit.kind==='note-caption')
    hit.startPoint={...(hit.item.captionMoved&&hit.item.b?hit.item.b:hit.item.a)};
   if(hit.kind==='move-polyline')hit.startPoints=candidate.points.map(p=>({...p}));
-  hit.startLabelT=Number(hit.item.labelT)||0;
+  hit.startLabelT=hit.kind==='segment-label'?
+    Number(hit.item.type==='area'?hit.item.sideLabelT?.[hit.index]:hit.item.segmentData?.[hit.index]?.labelT)||0:
+    Number(hit.item.labelT)||0;
   hit.dragged=false;
-  if(['point','shape-resize','label','note-caption','target-caption','move-dimension','move-polyline'].includes(hit.kind))checkpoint();
+  if(['point','shape-resize','label','note-caption','target-caption','segment-label','move-dimension','move-polyline'].includes(hit.kind))checkpoint();
   magnifierPoint=hit.kind==='point'?hit.point:null;
   paint();return;
  }
@@ -719,6 +763,21 @@ if(['polyline','chain','cumulative','angle'].includes(mode)&&polylineDraft.lengt
     });
     selectedHandle.item.captionMoved=true;
     magnifierPoint=null;
+  }else if(selectedHandle.kind==='segment-label'){
+    const item=selectedHandle.item,index=selectedHandle.index,line=segmentLineScreen(item,index);
+    if(line){
+     const dx=line.b.x-line.a.x,dy=line.b.y-line.a.y,den=dx*dx+dy*dy||1;
+     const delta=((s.x-selectedHandle.startScreen.x)*dx+(s.y-selectedHandle.startScreen.y)*dy)/den;
+     const t=Math.max(-.9,Math.min(.9,selectedHandle.startLabelT+delta));
+     if(item.type==='area'){
+      if(!Array.isArray(item.sideLabelT))item.sideLabelT=[0,0,0,0];
+      item.sideLabelT[index]=t;
+     }else{
+      if(!Array.isArray(item.segmentData))item.segmentData=[];
+      item.segmentData[index]={...(item.segmentData[index]||{}),labelT:t};
+     }
+    }
+    magnifierPoint=null;
   }else if(selectedHandle.kind==='label'){
     const info=labelInfo(selectedHandle.item);
     if(info&&info.d>0){
@@ -763,11 +822,11 @@ function stageUp(e){
   selectedHandle=null;magnifierPoint=null;loupeSide=null;
   if(handle.kind==='select-only'){paint();return}
   if(!moved){
-   if((['point','shape-resize','label','note-caption','target-caption','move-dimension','move-polyline'].includes(handle.kind))&&editStack.length)editStack.pop();
+   if((['point','shape-resize','label','note-caption','target-caption','segment-label','move-dimension','move-polyline'].includes(handle.kind))&&editStack.length)editStack.pop();
    if(handle.initialSelection){paint();return}
    // Druhé samostatné klepnutí otevře úpravu bez časového limitu.
    editItem(item);
-  }else if(['point','shape-resize','label','note-caption','target-caption','move-dimension','move-polyline'].includes(handle.kind)){
+  }else if(['point','shape-resize','label','note-caption','target-caption','segment-label','move-dimension','move-polyline'].includes(handle.kind)){
    touch(item);commitEditor();
   }else paint();
   return;
