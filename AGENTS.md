@@ -4,6 +4,18 @@
 Tento repozitář je SAMOSTATNÝ projekt `Zamerovac-android`. Neměň repozitář `Prevadec-spojitosti`.
 Uživatel vyrábí zakázkový nábytek. Vyvíjíme vlastní Android aplikaci na zaměřování zakázek, inspirovanou pracovním postupem ImageMeteru. Nejde o kopii původního kódu, designových prostředků ani o obcházení jeho licence. Komunikuj česky a používej jednoduché vysvětlení, nevyžaduj znovu už schválené volby.
 
+## Povinné testování selhání a ochrany dat u každé změny (5. 11. 2026)
+
+**Výslovně schválené trvalé pravidlo uživatele:** Nesmíme ověřovat pouze to, že nová či upravená funkce v běžném scénáři funguje. **Před dokončením každé významné změny podle rizika zkontroluj také, jak funkce selže, co přitom zobrazí uživateli a zda zachová původní data a správnost rozměrů.** Testování chybových cest je součástí zadání, implementace i kontroly výsledku — není až volitelnou dodatečnou revizí.
+
+- **Uložení, import, export, záloha a obnova:** selhání zápisu/čtení, nedostatek místa, neúplný či poškozený soubor, chybějící médium, nepovolený přístup a přerušení operace. Při neúspěchu nesmí funkce klamně hlásit úspěch, přepsat novější data ani zničit poslední bezpečně uloženou kopii.
+- **Synchronizace a souběh:** offline stav, timeout, odpojení, pomalý přenos velkého souboru, současná změna lokálně i na jiném zařízení, odložený callback, návrat do aplikace a čištění koše. Nekontrolovat jen výsledná data, ale také zamykání, odezvu uživatelského rozhraní a zachování obou konfliktních změn.
+- **Editor a Bosch:** neplatný či hraniční údaj, různá jednotka, desetinná čárka, příliš krátká kóta, zoom, otočení, přerušení tahu a výpadek Bluetooth. Hodnoty měření se nikdy nesmějí měnit či odvozovat z pixelů bez výslovného požadavku; chránit již uložené údaje.
+- **Bezpečnost:** v každé relevantní změně posoudit nedůvěryhodné vstupy, cizí webový obsah, oprávnění, práci s citlivými údaji a zpřístupněné nativní rozhraní. Nezaměňovat úspěšný build nebo funkční test s bezpečnostním auditem.
+- **Evidence a priorita:** ke konkrétní funkci doplň příslušný pozitivní i negativní regresní test do existujícího registru [#28](https://github.com/zaplikj30-ui/Zamerovac-android/issues/28), výsledek, zbývající riziko a jasně označené neprovedené fyzické testy. **Nepředstírat 100% ověření** ani zbytečně neblokovat opravou nekritické QA infrastruktury bezpečně dokončenou testovací aktualizaci. Kritické nevyřešené riziko ztráty dat, chybného měření nebo přístupu k zákaznickým datům před skutečným ostrým použitím vyřešit.
+
+**Poučení z nezávislého auditu:** běžné úspěšné E2E testy přehlédly důležité chybové scénáře. Konkrétní zjištění a testovací podmínky viz [#33](https://github.com/zaplikj30-ui/Zamerovac-android/issues/33). Tento odstavec mění *pravidla další práce*, **není to hotová oprava #33**. Samotná změna dokumentace nespouští sestavení APK.
+
 ## Povinná historie změn podle skutečného vydání (5. 11. 2026)
 
 **Schválené trvalé pravidlo:** Zaměřovač má pro uživatele přehledný offline **changelog** (nové funkce, opravené chyby, vylepšení) v hlavním menu a v Nastavení. Každá funkční aktualizace musí společně s kódem a nápovědou aktualizovat `app/src/main/assets/release-history.js`: nová položka pro **skutečné vydání** a přesný popis změn, rozdělený do správných kategorií. Text odvozovat z ověřených commitů/issues/PR a výsledků testování; nesmí se zaměňovat implementace, automatické ověření a fyzické ověření na zařízení. Nesmí se automaticky přejmenovat starší novinky na `appVersionShort`.
