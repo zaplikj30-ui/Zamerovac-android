@@ -1078,6 +1078,18 @@ function editSegmentedItem(item){
  };
  protectAnnotationModalOnBack();
 }
+// Refresh the currently open history picker as soon as Bosch delivers a value.
+function refreshOpenBoschHistory(){
+ const chooser=$('boschReadingSelection');
+ if(!chooser||$('modal').hidden)return;
+ const history=window.__boschHistoryReadings?.()||[];
+ chooser.innerHTML='<option value="">Vybrat naměřenou hodnotu…</option>'+
+  history.slice(0,40).map((reading,index)=>
+   '<option value="'+index+'">'+escapeHtml(reading.value)+' '+escapeHtml(reading.unit)+
+   ' · '+escapeHtml(new Date(reading.time).toLocaleTimeString('cs-CZ'))+'</option>').join('');
+ chooser.value='';
+}
+window.__refreshOpenBoschHistory=refreshOpenBoschHistory;
 function editItem(item){
  if(['polyline','chain','cumulative'].includes(item.type)&&item.points?.length>1){editSegmentedItem(item);return}
  if(item.type==='area'){
@@ -1150,10 +1162,12 @@ function editItem(item){
   );
   const chooser=$('boschReadingSelection');
   if(chooser)chooser.onchange=()=>{
+   // The list can be refreshed during an open dialog by a new Bluetooth reading.
+   const history=window.__boschHistoryReadings?.()||[];
    const index=Number(chooser.value);
-   if(chooser.value===''||!previous[index])return;
-   $('measureInput').value=previous[index].value;
-   $('measureUnit').value=previous[index].unit;
+   if(chooser.value===''||!history[index])return;
+   $('measureInput').value=history[index].value;
+   $('measureUnit').value=history[index].unit;
   };
  }else if(['line','arrow','circle','ellipse','rect','target'].includes(item.type)){
   const kind=item.type;
