@@ -977,15 +977,18 @@ function editItem(item){
    $('measureInput').value=previous[index].value;
    $('measureUnit').value=previous[index].unit;
   };
- }else if(['line','arrow','circle','ellipse','rect'].includes(item.type)){
+ }else if(['line','arrow','circle','ellipse','rect','target'].includes(item.type)){
   const kind=item.type;
   const isRound=kind==='circle'||kind==='ellipse';
   const roundFields=isRound?'<label>Značení rozměru</label><select id="measureKind"><option value="diameter">Ø Průměr</option><option value="radius">R Poloměr</option></select>':'';
   const rectFields=kind==='rect'?'<label>Šířka (mm)</label><input id="rectWidth" type="text" value="'+escapeHtml(item.dimW||'')+'"><label>Výška (mm)</label><input id="rectHeight" type="text" value="'+escapeHtml(item.dimH||'')+'">':'';
+  const history=window.__boschHistoryReadings?.()||[];
+  const historyField=history.length?'<label>Historie měření Bosch</label><select id="simpleBOSCH"><option value="">Vybrat naměřenou hodnotu…</option>'+
+    history.slice(0,40).map((r,i)=>'<option value="'+i+'">'+escapeHtml(r.value+' '+r.unit)+'</option>').join('')+'</select>':'';
   modal(kind==='line'?'Upravit čáru':kind==='arrow'?'Upravit šipku':kind==='rect'?'Upravit obdélník':'Upravit tvar',
    '<label>'+(isRound?'Rozměr kruhu / elipsy':'Kóta / rozměr (volitelné)')+'</label><input id="measureInput" type="text" value="'+escapeHtml(item.measure||'')+'" placeholder="Např. 1250">'+
    '<label>Jednotka</label><select id="measureUnit">'+['mm','cm','m','in'].map(u=>'<option '+(u===(item.unit||prefs.unit)?'selected':'')+'>'+u+'</option>').join('')+'</select>'+
-   roundFields+rectFields+
+   roundFields+rectFields+historyField+
    '<label>Textový popisek</label><input id="drawText" value="'+escapeHtml(item.text||'')+'" placeholder="Např. přívod vody">'+
    '<div class="row"><button id="removeItem" class="outline">Smazat prvek</button></div>',
    ()=>{checkpoint();item.measure=$('measureInput').value.trim();item.unit=$('measureUnit').value;item.text=$('drawText').value.trim();
@@ -995,6 +998,16 @@ function editItem(item){
    }
   );
   if(isRound)$('measureKind').value=item.measureKind||'diameter';
+  const chooser=$('simpleBOSCH');
+  if(chooser)chooser.onchange=()=>{
+    if(chooser.value==='')return;
+    const r=history[Number(chooser.value)];
+    if(r){$('measureInput').value=r.value;$('measureUnit').value=r.unit}
+  };
+  if(kind==='rect'){
+    $('rectWidth').onfocus=()=>{item.activeSegmentIndex=0};
+    $('rectHeight').onfocus=()=>{item.activeSegmentIndex=1};
+  }
  }else if(item.type==='note'){openRichNote(item,false);return}
  else modal('Upravit prvek',
   '<label>Text</label><input id="drawText" value="'+escapeHtml(item.text||'')+'"><div class="row"><button id="removeItem" class="outline">Smazat prvek</button></div>',
@@ -1028,11 +1041,13 @@ $('styleTool').onclick=()=>{
   const font=item?.fontSize||prefs.fontSize;
   modal('Vzhled kóty',`<label>Tloušťka čáry</label><input id="styleWidth" type="number" min="1" max="15" value="${width}">
     <label>Velikost textu</label><input id="styleFont" type="number" min="8" max="80" value="${font}">
+    <label>Barva vybraného prvku</label><input id="styleColor" type="color" value="${escapeHtml(item?.color||prefs.color)}">
     <div class="muted">${item?'Styl vybraného prvku':'Výchozí styl pro nové prvky'}</div>`,()=>{
       const w=Math.max(1,Math.min(15,Number($('styleWidth').value)||2));
       const fs=Math.max(8,Math.min(80,Number($('styleFont').value)||17));
-      if(item){checkpoint();item.width=w;item.fontSize=fs;commitEditor()}
-      else{prefs.lineWidth=w;prefs.fontSize=fs;save();paint()}
+      const color=$('styleColor').value;
+      if(item){checkpoint();item.width=w;item.fontSize=fs;item.color=color;commitEditor()}
+      else{prefs.lineWidth=w;prefs.fontSize=fs;prefs.color=color;save();paint()}
   });
 };
 stageCanvas.addEventListener('pointerdown',stageDown);stageCanvas.addEventListener('pointermove',stageMove);stageCanvas.addEventListener('pointerup',stageUp);stageCanvas.addEventListener('pointercancel',e=>{pointers.delete(e.pointerId);magnifierPoint=null;drawStart=null;selectedHandle=null;paint()});stageCanvas.addEventListener('wheel',e=>{e.preventDefault();const p=eventPoint(e);zoomAt(e.deltaY<0?1.1:.9,p.x,p.y)},{passive:false});
