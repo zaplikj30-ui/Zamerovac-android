@@ -12,7 +12,13 @@
 
 **Předávání bez kopírování chatu:** přesné nové dohody, schválené úpravy, výsledky testů, rozpracovaný kód, otevřené blokátory i nezávazné nápady průběžně hned ukládat ke správnému issue nebo dokumentu. V tomto souboru udržovat **hotovo / zbývá / nerozhodnuto / další konkrétní krok** a odkazy. Odlišit **nápad → schválené → v kódu → APK vydaná → fyzicky ověřená**. Samotný commit, zelené CI ani APK neprokazují reálné ověření.
 
-## Dokončeno v kódu po 1.2.148 – E + F + G a značka miniatury
+## Aktuální stav: vydána APK 1.2.149 (ověřeno 4. 11. 2026)
+
+- **Poslední skutečné vydání:** [Zaměřovač 1.2.149](https://github.com/zaplikj30-ui/Zamerovac-android/releases/tag/test-v1.2.149) · [přímá APK](https://github.com/zaplikj30-ui/Zamerovac-android/releases/download/test-v1.2.149/Zamerovac-v1.2.149.apk) · [jediný vydávací běh](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/41878662758), commit `23a21c5`, tag `test-v1.2.149`. GitHub API ještě uvádělo `queued`, avšak skutečný log obsahuje úspěšný build a zveřejnění vydání; Release i APK existují.
+- **Kontrola vydání:** balíček `cz.zamerovac.app.preview`, `versionCode 1149`, `versionName 1.2.149-test`. Podpisový certifikát SHA-256 `c828c96739e554e8da4f5851913356134f1359a98d5013772ad5587e74a2d229` je shodný s 1.2.148. SHA-256 APK v sestavení `b5be9ab4a35b88cf3dfdbe1cfb0bbb26567b9e3e7c8f9e78a0581af76695180d` odpovídá vydanému souboru podle GitHub Release. Vydání obsahuje změny E/F/G a menší pravítko z PR #19.
+- **Fyzicky stále NEOVĚŘENO:** před instalací bezpečně uchovat původní záložní ZIP; APK instalovat přes dosavadní testovací aplikaci, **neodinstalovávat a nemazat data**. Nejprve na zkušebních zakázkách ověřit zachování dat; teprve potom jednotlivě Koš, nabídky, export ZIP/PDF, úchopy, lichoběžník, Bosch Bluetooth a offline test 29. Každý finální výsledek zapisovat do [deníku #13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13) až po uživatelových doplněních. **Nové sestavení nyní nevyvolávat.**
+
+## Historie implementace po 1.2.148 – E + F + G a značka miniatury
 
 [PR #19](https://github.com/zaplikj30-ui/Zamerovac-android/pull/19) sloučen do main `aab455a`.
 Implementováno: bezpečné vysypání koše, zavírání běžných nabídek klepnutím mimo bez
@@ -27,14 +33,13 @@ dva celé Chromium průchody ([CI 41877272197](https://github.com/zaplikj30-ui/Z
 Skutečné PDF artefakty s 1 a 3 snímky nezávisle prošly parserem pypdf a renderem PyMuPDF.
 Podrobnosti: [IMPLEMENTACE_17.md](IMPLEMENTACE_17.md#následná-společná-aktualizace-po-12148-e--f--g).
 
-**Další krok:** jediné společné vydání vyšší APK, kontrola původního podpisu, balíčku,
-verze a staženého souboru. Žádné fyzické ověření se netvrdí. Po vydání instalovat jako
+**Vydání dokončeno jako APK 1.2.149;** podpis, balíček, verze a SHA-256 byly ověřeny v GitHub Actions a Release. Žádné fyzické ověření se netvrdí. Po vydání instalovat jako
 aktualizaci se zachováním původní zálohy; bezpečnost dat a dotyky otestovat společně
 na zkušebních zakázkách. Neodinstalovávat a nemazat data aplikace.
 
-**Aktuální vydání společné aktualizace #17: [Zaměřovač 1.2.148 – stáhnout APK](https://github.com/zaplikj30-ui/Zamerovac-android/releases/download/test-v1.2.148/Zamerovac-v1.2.148.apk).** [Release](https://github.com/zaplikj30-ui/Zamerovac-android/releases/tag/test-v1.2.148) · [úspěšné jediné sestavení #148](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/41870681150) · [přesná mapa všech změn a kontrol](IMPLEMENTACE_17.md). Opravy i vymezená vylepšení jsou sloučené do main, APK vydaná, podpis a balíček zachovány, `versionCode 1148` > `1147`. Stažená vydaná APK má shodný SHA-256 s buildem a stejné upravené assets jako ověřený kód.
+**Předchozí vydání společné aktualizace #17: [Zaměřovač 1.2.148 – stáhnout APK](https://github.com/zaplikj30-ui/Zamerovac-android/releases/download/test-v1.2.148/Zamerovac-v1.2.148.apk).** [Release](https://github.com/zaplikj30-ui/Zamerovac-android/releases/tag/test-v1.2.148) · [úspěšné jediné sestavení #148](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/41870681150) · [přesná mapa všech změn a kontrol](IMPLEMENTACE_17.md). Opravy i vymezená vylepšení jsou sloučené do main, APK vydaná, podpis a balíček zachovány, `versionCode 1148` > `1147`. Stažená vydaná APK má shodný SHA-256 s buildem a stejné upravené assets jako ověřený kód.
 
-**Další jediný krok: fyzicky ověřit aktualizaci z 1.2.147 na zkušebních zakázkách a zachování dat po opětovném otevření; předtím uchovat původní zálohovací ZIP.** Aplikaci neodinstalovávat ani nevymazávat její data. Teprve po jednotlivých výsledcích pokračovat dalšími cílenými retesty podle #13. Nová APK není důkazem fyzického ověření: stále čeká původní případ lichoběžníku, prst/S Pen a úchopy, zákaznické PDF na telefonu, reálné Bluetooth měření Bosch v konkrétních úsecích/jednotkách a **offline test 29**. Rozsáhlé dlouhodobé nápady AI/iOS/Windows/cloud/Samsung Notes nebyly přidány.
+**Další jediný krok: fyzicky ověřit aktualizaci na 1.2.149 na zkušebních zakázkách a zachování dat po opětovném otevření; předtím uchovat původní zálohovací ZIP.** Aplikaci neodinstalovávat ani nevymazávat její data. Teprve po jednotlivých výsledcích pokračovat dalšími cílenými retesty podle #13. Nová APK není důkazem fyzického ověření: stále čeká původní případ lichoběžníku, prst/S Pen a úchopy, zákaznické PDF na telefonu, reálné Bluetooth měření Bosch v konkrétních úsecích/jednotkách a **offline test 29**. Rozsáhlé dlouhodobé nápady AI/iOS/Windows/cloud/Samsung Notes nebyly přidány.
 
 ## Aktuální implementace issue #17 – 4. 11. 2026
 
@@ -59,7 +64,7 @@ na zkušebních zakázkách. Neodinstalovávat a nemazat data aplikace.
 | Budoucí iPhone/iPad | **Nezávazná možnost.** Nyní pouze Android; přenositelné datové modely a oddělené systémové adaptéry mají případnou iOS/iPadOS verzi umožnit bez nutnosti dnešního přepisu. | [VIZE_A_PLAN.md](VIZE_A_PLAN.md) · [Datový formát](DATOVY_FORMAT_A_PC_KOMPATIBILITA.md) |
 | Evidence kompatibility Android | **Nové testy tím nejsou prokázány.** Registr rozlišuje skutečné testy, předpoklad a nekompatibilitu. | [KOMPATIBILITA_ZARIZENI.md](KOMPATIBILITA_ZARIZENI.md) |
 | Budoucí plnohodnotná PC verze | **Dlouhodobý směr, nikoliv zahájený vývoj.** Windows 11 má později pracovat se stejnými editovatelnými zakázkami a bezpečně přenášet změny mezi PC a Androidem. | [Vize](VIZE_A_PLAN.md) · [Datový formát a PC kompatibilita](DATOVY_FORMAT_A_PC_KOMPATIBILITA.md) |
-| Verze APK | Na GitHubu **vydána testovací sestava 1.2.148**. Zda je nainstalována a co skutečně funguje, ověřit na zařízení; historický screenshot není důkaz. | [GitHub Releases](https://github.com/zaplikj30-ui/Zamerovac-android/releases) |
+| Verze APK | Na GitHubu **vydána testovací sestava 1.2.149**. Zda je nainstalována a co skutečně funguje, ověřit na zařízení; historický screenshot není důkaz. | [GitHub Releases](https://github.com/zaplikj30-ui/Zamerovac-android/releases) |
 
 
 - **Příprava na vícejazyčnost (první česká implementace ve v1.2.147, čeká na ověření na zařízení):** [Plán lokalizace](LOKALIZACE_PLAN.md) · [Úkol #14](https://github.com/zaplikj30-ui/Zamerovac-android/issues/14). Nyní zůstává vše v češtině; jazykové klíče se budou bezpečně přidávat jen k nově opravovaným funkcím. **Nově implementovaná položka Nastavení „Jazyk aplikace“** má nabídnout pouze „🇨🇿 Čeština“; architektura musí podporovat desítky jazyků, budoucí vyhledávání a RTL, ale další jazyky a skutečné přepínání nejsou nyní v rozsahu.
