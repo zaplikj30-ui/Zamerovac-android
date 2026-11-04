@@ -42,9 +42,9 @@ function folderContains(folderId,otherId){
 function newRecord(kind,title,parentId=currentFolder){return {id:uid(),kind,title,parentId,createdAt:stamp(),updatedAt:stamp(),rev:uid(),media:[],items:[],text:'',checks:[],width:1400,height:900,deleted:false}}
 function addRecord(r){if(!canWriteToFolder(r.parentId)){notify('Nejdříve odemkněte složku.');return null}state.records.push(r);save();showFolder();return r}
 function closeMenus(){for(let id of ['toolMenu','newMenu','navMenu','overflowMenu','editorOverflow'])$(id).hidden=true;if($('editorExtraToolbar')?.hidden===false)window.setEditorExtraToolbarExpanded?.(false)}
-function modal(title,markup,cb,okText='Uložit'){closeMenus();delete $('modal').dataset.actionMenu;$('okModal').classList.remove('danger');$('modalTitle').textContent=title;$('modalBody').innerHTML=markup;$('modal').hidden=false;$('okModal').textContent=okText;$('cancelModal').hidden=okText==='Zavřít';window.modalOK=cb;setTimeout(()=>$('modalBody').querySelector('input,textarea')?.focus(),90)}
-$('okModal').onclick=()=>{try{if(window.modalOK?.()!==false){$('modal').hidden=true;window.modalOK=null}}catch(e){notify('Chyba: '+e.message)}};
-$('cancelModal').onclick=()=>{$('modal').hidden=true;window.modalOK=null};
+function modal(title,markup,cb,okText='Uložit'){closeMenus();delete $('modal').dataset.actionMenu;$('okModal').classList.remove('danger');$('modalTitle').textContent=title;$('modalBody').innerHTML=markup;$('modal').hidden=false;$('okModal').textContent=okText;$('cancelModal').hidden=okText==='Zavřít';window.modalOK=cb;window.modalBackHandler=null;document.getElementById('editorUnsavedConfirm')?.remove();setTimeout(()=>$('modalBody').querySelector('input,textarea')?.focus(),90)}
+$('okModal').onclick=()=>{try{if(window.modalOK?.()!==false){$('modal').hidden=true;window.modalOK=null;window.modalBackHandler=null}}catch(e){notify('Chyba: '+e.message)}};
+$('cancelModal').onclick=()=>{$('modal').hidden=true;window.modalOK=null;window.modalBackHandler=null;document.getElementById('editorUnsavedConfirm')?.remove()};
 function promptText(title,label,initial,done){modal(title,`<label>${escapeHtml(label)}</label><input id="promptValue" value="${escapeHtml(initial)}">`,()=>{let v=$('promptValue').value.trim();if(!v){notify('Vyplň hodnotu');return false}done(v)})}
 // ImageMeter-style browser previews. Android loads only cached small JPEG
 // thumbnails from /thumb/<id>, never the original full-size camera image.
@@ -283,7 +283,7 @@ window.onLaserValue=(value,unit)=>{
 };
 window.onNativeError=message=>notify('Chyba: '+message);
 window.handleAndroidBack=()=>{
-  if(!$('modal').hidden){$('modal').hidden=true;window.modalOK=null;return 'handled';}
+  if(!$('modal').hidden){if(typeof window.modalBackHandler==='function'){window.modalBackHandler();return 'handled'}$('modal').hidden=true;window.modalOK=null;return 'handled';}
   if(!$('settingsPanel').hidden){$('settingsPanel').hidden=true;return 'handled';}
   for(const id of ['toolMenu','newMenu','navMenu','overflowMenu','editorOverflow'])if(!$(id).hidden){$(id).hidden=true;return 'handled';}
   if(screen==='editor'){exitEditor();return 'handled';}
