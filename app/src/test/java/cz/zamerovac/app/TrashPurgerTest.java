@@ -33,8 +33,8 @@ public class TrashPurgerTest {
     String read(File file) throws Exception{return new String(Files.readAllBytes(file.toPath()),StandardCharsets.UTF_8);}
     JSONArray targets() throws Exception{return new JSONArray("[\"deleted-folder\",\"deleted-photo\"]");}
     @Test public void purgeRemovesOnlyDeletedRecordsAndExclusiveNestedMediaAndSurvivesRestart() throws Exception {
-        JSONObject db=fixture();String active=db.getJSONArray("records").getJSONObject(0).toString();
-        for(String id:new String[]{"active-media","shared-media","history-photo","trash-media","note-audio","detail-photo","child-media","unrelated"})file(id);
+        JSONObject db=fixture();db.getJSONArray("records").getJSONObject(2).getJSONArray("media").put("deleted-photo");String active=db.getJSONArray("records").getJSONObject(0).toString();
+        for(String id:new String[]{"active-media","shared-media","history-photo","trash-media","note-audio","detail-photo","child-media","unrelated","deleted-photo"})file(id);
         File thumb=new File(cache,"photo-thumbs/trash-media.jpg");Files.write(thumb.toPath(),new byte[]{5});
         File temporaryThumb=new File(cache,"photo-thumbs/trash-media.tmp");Files.write(temporaryThumb.toPath(),new byte[]{6});
         persist(db.toString());JSONObject result=purger.purge(db.toString(),db.toString(),targets(),this::persist);
@@ -45,7 +45,7 @@ public class TrashPurgerTest {
         assertEquals("active-child",reloaded.getJSONArray("records").getJSONObject(1).getString("id"));
         assertEquals(reloaded.toString(),read(new File(home,"projects.bak")));
         for(String id:new String[]{"active-media","shared-media","history-photo","child-media","unrelated"})assertTrue(id,new File(home,"media/"+id).isFile());
-        for(String id:new String[]{"trash-media","note-audio","detail-photo"}){assertFalse(new File(home,"media/"+id).exists());assertFalse(prefs.contains("mime-"+id));}
+        for(String id:new String[]{"trash-media","note-audio","detail-photo","deleted-photo"}){assertFalse(new File(home,"media/"+id).exists());assertFalse(prefs.contains("mime-"+id));}
         assertFalse(thumb.exists());assertFalse(temporaryThumb.exists());assertEquals(0,new TrashPurger(home,cache,prefs).pendingCount());
         // Safe repeated empty purge; no broad media garbage collection.
         purger.purge(reloaded.toString(),reloaded.toString(),new JSONArray(),this::persist);

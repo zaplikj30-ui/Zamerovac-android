@@ -70,7 +70,9 @@ final class TrashPurger {
         // Keep only IDs, never removed payloads. Sync must not reintroduce old deleted records.
         Set<String> purged=purgedIds(db);purged.addAll(ids);
         db.put("trashPurgedIds",new JSONArray(purged));
-        Set<String> protectedIds=new HashSet<>();strings(db,protectedIds);candidates.removeAll(protectedIds);
+        Set<String> protectedIds=new HashSet<>();
+        JSONObject live=new JSONObject(db.toString());live.remove("trashPurgedIds");
+        strings(live,protectedIds);candidates.removeAll(protectedIds);
         // Save the cleanup intent first. A failure here cannot change records or media.
         atomic(pendingFile(),new JSONArray(candidates).toString());
         String next=db.toString();
