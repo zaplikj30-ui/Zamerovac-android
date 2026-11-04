@@ -628,8 +628,9 @@ window.onLaserStatus=(json)=>{
 };
 renderBluetooth();
 $('bluetoothBtn').onclick=()=>{
- modal('Měřič Bosch','<p>'+esc($('bluetoothBtn').title)+'</p><p>Po připojení čeká Zaměřovač na první naměřenou hodnotu. Teprve potom potvrdí příjem měření.</p><button class="outline" id="laserConnect" >Vyhledat zařízení</button>',()=>true,'Zavřít');
- $('laserConnect').onclick=()=>{if(native){$('modal').hidden=true;laserState='connecting';laserName='vyhledávání okolních zařízení';renderBluetooth();Native.connectLaser()}else notify('Vyžaduje Android')};
+ modal('Měřič Bosch','<p>'+esc($('bluetoothBtn').title)+'</p><p>Po připojení čeká Zaměřovač na první naměřenou hodnotu. Teprve potom potvrdí příjem měření.</p><button class="outline" id="laserConnect" >Připojit můj laser Bosch</button><button class="outline" id="laserOther" type="button">Vybrat jiný měřič</button>',()=>true,'Zavřít');
+ $('laserConnect').onclick=()=>{if(native){$('modal').hidden=true;laserState='connecting';laserName='vyhledávání Bosch';renderBluetooth();Native.connectLaser()}else notify('Vyžaduje Android')};
+  $('laserOther').onclick=()=>{if(native&&Native.chooseOtherLaser){$('modal').hidden=true;laserState='connecting';laserName='ruční výběr';renderBluetooth();Native.chooseOtherLaser()}else notify('Vyžaduje aktualizovanou Android aplikaci')};
 };
 window.onExperimentalLaserTrigger=function(status){
  if(status==='sent')notify('Zkušební příkaz spouště odeslán. Zkontroluj laser; úspěšné měření zatím není potvrzené.');
