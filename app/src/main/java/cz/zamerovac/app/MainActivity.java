@@ -236,6 +236,7 @@ public class MainActivity extends Activity {
      * The media file itself is never modified.
      */
     private InputStream photoThumbnail(String id) throws IOException {
+        synchronized(TrashPurger.LOCK){
         File source=mediaFile(id);
         if(!source.isFile())return null;
         File dir=new File(getCacheDir(),"photo-thumbs");
@@ -291,6 +292,7 @@ public class MainActivity extends Activity {
             }
         }
         return new FileInputStream(cached);
+        }
     }
 
     private boolean validId(String s){return s.matches("[a-zA-Z0-9_-]{3,120}");}

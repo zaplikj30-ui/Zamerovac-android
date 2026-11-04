@@ -36,6 +36,7 @@ public class TrashPurgerTest {
         JSONObject db=fixture();String active=db.getJSONArray("records").getJSONObject(0).toString();
         for(String id:new String[]{"active-media","shared-media","history-photo","trash-media","note-audio","detail-photo","child-media","unrelated"})file(id);
         File thumb=new File(cache,"photo-thumbs/trash-media.jpg");Files.write(thumb.toPath(),new byte[]{5});
+        File temporaryThumb=new File(cache,"photo-thumbs/trash-media.tmp");Files.write(temporaryThumb.toPath(),new byte[]{6});
         persist(db.toString());JSONObject result=purger.purge(db.toString(),db.toString(),targets(),this::persist);
         assertEquals(0,result.getInt("pending"));assertEquals("",result.getString("warning"));
         JSONObject reloaded=new JSONObject(read(new File(home,"projects.json")));
@@ -45,7 +46,7 @@ public class TrashPurgerTest {
         assertEquals(reloaded.toString(),read(new File(home,"projects.bak")));
         for(String id:new String[]{"active-media","shared-media","history-photo","child-media","unrelated"})assertTrue(id,new File(home,"media/"+id).isFile());
         for(String id:new String[]{"trash-media","note-audio","detail-photo"}){assertFalse(new File(home,"media/"+id).exists());assertFalse(prefs.contains("mime-"+id));}
-        assertFalse(thumb.exists());assertEquals(0,new TrashPurger(home,cache,prefs).pendingCount());
+        assertFalse(thumb.exists());assertFalse(temporaryThumb.exists());assertEquals(0,new TrashPurger(home,cache,prefs).pendingCount());
         // Safe repeated empty purge; no broad media garbage collection.
         purger.purge(reloaded.toString(),reloaded.toString(),new JSONArray(),this::persist);
         assertTrue(new File(home,"media/unrelated").isFile());
@@ -99,6 +100,27 @@ public class TrashPurgerTest {
         assertEquals(2,new JSONObject(read(db)).getJSONArray("records").length());assertEquals(read(db),result.getString("snapshot"));
         // Replaying the same bridge request cannot overwrite newer records.
         assertTrue(new JSONObject(api.purgeTrash(saved,desired.toString(),targets().toString())).has("error"));
+    }
+    @Test public void backupExportAndRestoreAfterPurgeKeepActivePrecisionAndSharedMedia() throws Exception {
+        MainActivity activity=Robolectric.buildActivity(MainActivity.class).get();
+        java.lang.reflect.Field field=MainActivity.class.getDeclaredField("settings");field.setAccessible(true);field.set(activity,prefs);
+        JSONObject original=fixture();String saved=original.toString();
+        File mediaDir=new File(activity.getFilesDir(),"media");mediaDir.mkdirs();
+        byte[] photo={11,22,33};
+        for(String id:new String[]{"active-media","shared-media","child-media","trash-media"})Files.write(new File(mediaDir,id).toPath(),photo);
+        Files.write(new File(activity.getFilesDir(),"projects.json").toPath(),saved.getBytes(StandardCharsets.UTF_8));
+        JSONObject result=new JSONObject(activity.new JsApi().purgeTrash(saved,saved,targets().toString()));assertFalse(result.toString(),result.has("error"));
+        java.lang.reflect.Method export=MainActivity.class.getDeclaredMethod("exportArchive",OutputStream.class,String.class);export.setAccessible(true);
+        ByteArrayOutputStream bytes=new ByteArrayOutputStream();export.invoke(activity,bytes,null);
+        Map<String,byte[]> entries=new HashMap<>();
+        try(java.util.zip.ZipInputStream zip=new java.util.zip.ZipInputStream(new ByteArrayInputStream(bytes.toByteArray()))){java.util.zip.ZipEntry entry;while((entry=zip.getNextEntry())!=null)entries.put(entry.getName(),zip.readAllBytes());}
+        assertArrayEquals(photo,entries.get("media/shared-media"));assertArrayEquals(photo,entries.get("media/active-media"));assertFalse(entries.containsKey("media/trash-media"));
+        JSONObject backed=new JSONObject(new String(entries.get("projects.json"),StandardCharsets.UTF_8));
+        assertEquals(original.getJSONArray("records").getJSONObject(0).getJSONArray("items").toString(),backed.getJSONArray("records").getJSONObject(0).getJSONArray("items").toString());
+        File archive=File.createTempFile("after-purge-", ".zip",activity.getCacheDir());Files.write(archive.toPath(),bytes.toByteArray());
+        BackupImporter.Result restored=BackupImporter.importZip(activity,android.net.Uri.fromFile(archive),backed,prefs);
+        assertEquals(5,restored.data.getJSONArray("records").length());
+        assertEquals(backed.getJSONArray("records").getJSONObject(0).getJSONArray("items").toString(),restored.data.getJSONArray("records").getJSONObject(3).getJSONArray("items").toString());
     }
     @Test public void syncDoesNotResurrectPurgedTrashButPreservesRemoteActiveRecord() throws Exception {
         JSONObject original=fixture();String db=original.toString();
