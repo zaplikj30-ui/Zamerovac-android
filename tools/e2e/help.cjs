@@ -48,13 +48,13 @@ const {suite,assert,createCanvas}=require('./harness.cjs');
   const before=await page.evaluate(()=>JSON.stringify(state));
   await step('Global search finds records, not help articles',async()=>{
    await page.click('#searchBtn');
-   assert.equal(await page.locator('#modalTitle').innerText(),'Hledat zakázku');
-   await page.fill('#promptValue','Bosch');
-   await page.click('#okModal');
-   assert(await page.locator('.entry-title',{hasText:'Bosch – zkušební soubor'}).isVisible(),
+   assert.equal(await page.locator('#modalTitle').innerText(),'Hledat zakázky a poznámky');
+   await page.fill('#searchAll','Bosch');
+   assert(await page.locator('#searchResults .search-hit',{hasText:'Bosch – zkušební soubor'}).isVisible(),
     'Global search should find a matching actual record');
    assert.equal(await page.locator('#helpPanel').count(),0,
     'Global search must not open or search the help');
+   await page.click('#cancelModal');
   });
   for(const viewport of [{width:320,height:568},{width:1000,height:750}]){
    await step('Help on '+viewport.width+'px display',async()=>{
