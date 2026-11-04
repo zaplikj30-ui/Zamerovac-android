@@ -57,6 +57,23 @@ public class Post147DataTest {
         try{BackupImporter.importZip(context,Uri.fromFile(archive(unsupported,true)),existing,context.getSharedPreferences("test",0));fail("Unknown schema must fail");}catch(IOException expected){}
         assertEquals(before,existing.toString());
     }
+    @Test public void unreadableDatabaseNeverBecomesWritableEmptyState()throws Exception {
+        MainActivity activity=org.robolectric.Robolectric.buildActivity(MainActivity.class).get();
+        File primary=new File(activity.getFilesDir(),"projects.json"),backup=new File(activity.getFilesDir(),"projects.bak");
+        java.nio.file.Files.writeString(primary.toPath(),"broken-primary");
+        java.nio.file.Files.writeString(backup.toPath(),"broken-backup");
+        String loaded=activity.new JsApi().loadData();assertTrue(new JSONObject(loaded).getBoolean("_loadError"));
+        java.lang.reflect.Method write=MainActivity.class.getDeclaredMethod("writeDb",String.class);write.setAccessible(true);
+        try{write.invoke(activity,"{\"schema\":1,\"records\":[]}");fail("Write after failed load must be blocked");}
+        catch(java.lang.reflect.InvocationTargetException expected){assertTrue(expected.getCause() instanceof IOException);}
+        assertEquals("broken-primary",java.nio.file.Files.readString(primary.toPath()));
+        assertEquals("broken-backup",java.nio.file.Files.readString(backup.toPath()));
+        String recovered=legacy().toString();java.nio.file.Files.writeString(backup.toPath(),recovered);
+        assertEquals(recovered,activity.new JsApi().loadData());
+        write.invoke(activity,recovered);
+        assertEquals(recovered,java.nio.file.Files.readString(primary.toPath()));
+        assertEquals(recovered,java.nio.file.Files.readString(backup.toPath()));
+    }
     @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
     public void customerZipContainsOnlyRasterPdfForOneAndMultiplePhotos()throws Exception {
         Bitmap image=Bitmap.createBitmap(160,90,Bitmap.Config.ARGB_8888);image.eraseColor(Color.YELLOW);

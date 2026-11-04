@@ -27,7 +27,7 @@ Zadání: [#17](https://github.com/zaplikj30-ui/Zamerovac-android/issues/17), d�
 - Lokálně: 13 spustitelných JS regresních skriptů; Python 41 testů, 1 přeskočen kvůli chybějícímu lokálnímu Android SDK; syntaxe všech JS; git diff --check.
 - Celý web: `tools/check-post17-browser.cjs` s Chromium, syntetická data, žádné zákaznické snímky; bez runtime chyb. Není to Android/S Pen/Bluetooth test.
 - Nativní testy `Post147DataTest`: izolovaný import starých dat s přesným řetězcem a neznámými poli, neplatné ZIP, vlastní PDF ZIP s jedním/třemi snímky, neplatný obrázek. Běží v PR #18 před jedinou APK. První kompilace odhalila PdfDocument bez AutoCloseable, opraveno explicitním close.
-- Bez migrace databáze, existující neznámá pole zachována. Prohlížeč ověřuje save/reload starého schema:1. Aktualizace skutečné instalace se starými zakázkami musí být ověřena na telefonu a s původní zálohou.
+- Navíc opraveno nebezpečné chování při selhání čtení: nečitelná primární databáze i záloha už nesmí vrátit prázdný editovatelný stav; zápis se zablokuje. Při obnově ze záložní kopie se její obsah nepřepíše vadnou primární databází. Bez migrace databáze, existující neznámá pole zachována. Prohlížeč ověřuje save/reload starého schema:1. Aktualizace skutečné instalace se starými zakázkami musí být ověřena na telefonu a s původní zálohou.
 - APK se spustí až po úspěšných kontrolách a sloučení. Zatím nevydána; finální odkaz bude v START_ZDE.md a #17.
 
 ## Fyzické kontroly po vydání

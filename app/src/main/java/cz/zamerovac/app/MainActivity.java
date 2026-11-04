@@ -111,6 +111,7 @@ public class MainActivity extends Activity {
     private BluetoothGattCharacteristic boschCommand;
     private volatile boolean boschStreamEnabled=false;
     private volatile boolean syncRunning=false;
+    private volatile boolean databaseReadFailed=false;
     private String recordingId;
     private String pendingMediaType="media";
     private String pendingIssueZipId;
@@ -696,7 +697,7 @@ public class MainActivity extends Activity {
                 return "nezjištěna";
             }
         }
-        @JavascriptInterface public String loadData(){try{return readDb();}catch(Exception e){return "";}}
+        @JavascriptInterface public String loadData(){try{return readDb();}catch(Exception e){return "{\"_loadError\":true}";}}
         @JavascriptInterface public void saveData(String text){try{JSONObject j=new JSONObject(text);if(j.optInt("schema")!=1)throw new Exception("Unsupported schema");writeDb(text);}catch(Exception e){error("Uložení: "+e.getMessage());}}
         @JavascriptInterface public void beginMedia(String id,String mime,String name){try{if(!validId(id))return;closeUpload();activeUpload=new FileOutputStream(mediaFile(id));activeUploadId=id;settings.edit().putString("mime-"+id,mime).putString("name-"+id,name).apply();}catch(Exception e){error(e.toString());}}
         @JavascriptInterface public void appendMedia(String id,String chunk){try{if(activeUpload!=null&&id.equals(activeUploadId))activeUpload.write(Base64.decode(chunk,Base64.DEFAULT));}catch(Exception e){error(e.toString());}}
@@ -863,33 +864,44 @@ public class MainActivity extends Activity {
         }
     }
     private void closeUpload(){try{if(activeUpload!=null)activeUpload.close();}catch(Exception ignored){}activeUpload=null;activeUploadId=null;}
-    private String readDb() throws IOException {
-        File db=new File(getFilesDir(),"projects.json");if(!db.isFile())return "";
-        try{return readValidJson(db);}
-        catch(Exception primary){
-            File backup=new File(getFilesDir(),"projects.bak");
-            if(!backup.isFile())throw new IOException("Databáze není čitelná",primary);
-            String data=readValidJson(backup);
-            android.util.Log.w("Zamerovac","Recovered last valid local backup",primary);
-            return data;
+    private synchronized String readDb() throws IOException {
+        File db=new File(getFilesDir(),"projects.json"),backup=new File(getFilesDir(),"projects.bak");
+        if(!db.exists()&&!backup.exists()&&!databaseReadFailed)return ""; // First installation only.
+        try{String data=readValidJson(db);databaseReadFailed=false;return data;}
+        catch(IOException primary){
+            try{
+                String data=readValidJson(backup);databaseReadFailed=false;
+                android.util.Log.w("Zamerovac","Recovered last valid local backup",primary);
+                return data;
+            }catch(IOException secondary){
+                databaseReadFailed=true;
+                throw new IOException("Uložené zakázky nelze načíst; původní soubory zůstaly beze změny",primary);
+            }
         }
     }
     private String readValidJson(File file) throws IOException {
         try(InputStream in=new FileInputStream(file)){
             java.io.ByteArrayOutputStream o=new java.io.ByteArrayOutputStream();copy(in,o);
             String data=o.toString("UTF-8");
-            try{if(new JSONObject(data).optInt("schema")!=1)throw new IOException("Unsupported schema");}
+            try{JSONObject json=new JSONObject(data);if(json.optInt("schema")!=1||json.optJSONArray("records")==null)throw new IOException("Unsupported schema");}
             catch(JSONException e){throw new IOException("Invalid JSON",e);}
             return data;
         }
     }
     private synchronized void writeDb(String data) throws IOException {
+        if(databaseReadFailed)throw new IOException("Zápis zablokován: uložené zakázky nebyly bezpečně načteny");
         File next=new File(getFilesDir(),"projects.tmp"),dest=new File(getFilesDir(),"projects.json");
         File backup=new File(getFilesDir(),"projects.bak");
         try(FileOutputStream out=new FileOutputStream(next)){
             out.write(data.getBytes(StandardCharsets.UTF_8));out.getFD().sync();
         }
-        if(dest.isFile())java.nio.file.Files.copy(dest.toPath(),backup.toPath(),java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        if(dest.isFile()){
+            // Never replace the valid recovery copy with an unreadable primary.
+            boolean validPrimary=true;
+            try{readValidJson(dest);}
+            catch(IOException invalid){validPrimary=false;android.util.Log.w("Zamerovac","Keeping existing recovery backup",invalid);}
+            if(validPrimary)java.nio.file.Files.copy(dest.toPath(),backup.toPath(),java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        }
         try{java.nio.file.Files.move(next.toPath(),dest.toPath(),
                 java.nio.file.StandardCopyOption.ATOMIC_MOVE,java.nio.file.StandardCopyOption.REPLACE_EXISTING);}
         catch(java.nio.file.AtomicMoveNotSupportedException e){

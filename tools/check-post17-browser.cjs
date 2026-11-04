@@ -61,5 +61,8 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
  assert.equal(await page.locator('body').getAttribute('data-background-pattern'),'Jemné tečky');
  await page.screenshot({path:'/tmp/post17-browser.png'});
  assert.deepEqual(errors,[],'No runtime errors');
+ await page.evaluate(()=>localStorage.setItem('zamerovac-data','broken-original'));await page.reload();
+ assert.equal(await page.locator('[role=alert]').count(),1);
+ await page.evaluate(()=>save());assert.equal(await page.evaluate(()=>localStorage.getItem('zamerovac-data')),'broken-original');
  await browser.close();console.log('OK: full browser menus/Back/draft/units/persistence/trash/customer render/background, no JS runtime errors');
 })().catch(e=>{console.error(e);process.exit(1)});

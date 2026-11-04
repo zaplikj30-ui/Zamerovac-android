@@ -23,3 +23,9 @@ jobs:
           gradle-version: '8.10.2'
       - name: Ověřit Java a Android zdroje bez vydání APK
         run: gradle --no-daemon :app:compilePreviewJavaWithJavac :app:testPreviewUnitTest
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Native-regression-results
+          path: app/build/test-results/testPreviewUnitTest/
+          retention-days: 14
