@@ -13,7 +13,7 @@ function scenario(item,selected=true){
   prefs:{fontSize:17,lineWidth:2,color:'#fbd000',unit:'mm',snapGrid:false},
   view:{zoom:1,dx:0,dy:0},ctx:{save(){},restore(){},font:'',measureText:t=>({width:String(t).length*8})},
   worldToScreen:x=>({...x}),screenToWorld:x=>({...x}),eventPoint:e=>({x:e.x,y:e.y}),
-  snap:p=>({...p}),paint(){},checkpoint(){env.undo++},commitEditor(){env.commits++},
+  snap:p=>({...p}),paint(){},touch(){},checkpoint(){env.undo++},commitEditor(){env.commits++},
   editItem(){env.edits++},setTool(name){env.mode=name},notify(){},
   editStack:[],redoStack:[],undo:0,commits:0,edits:0,console,Math,Number,String,window:{},
   boundsPoint:p=>({x:Math.max(0,Math.min(1000,p.x)),y:Math.max(0,Math.min(800,p.y))})
