@@ -41,7 +41,7 @@ Neoznačovat jako provedené: instalace nad 1.2.147 se zachováním skutečných
 
 ## Následná společná aktualizace po 1.2.148 (E + F + G)
 
-Rozpracováno z `f646a87` ve `feature/post148-trash-menus`. Původní body A–C zůstávají.
+Dokončeno z `f646a87` v [PR #19](https://github.com/zaplikj30-ui/Zamerovac-android/pull/19), main `aab455a`. Původní body A–C zůstávají.
 - E: nativní mazání výhradně potvrzených smazaných ID. Aktivní potomci se nemažou.
   Sdílená média chrání i reference v historii a neznámých vnořených polích.
   Nejdřív trvalý zápis databáze a konzistentní recovery kopie, pak soubory a miniatury.
@@ -56,5 +56,14 @@ Rozpracováno z `f646a87` ve `feature/post148-trash-menus`. Původní body A–C
 - G: přesný text na fotografii, složce, v editoru a hromadném výběru; exportní algoritmy nezměněny.
 - Dodatečný pokyn uživatele: značka pravítka vlevo nahoře a dále menší (15×15, SVG 11×11), kontrast zachován.
 
-Dosavadní regrese: 13 JS, Python 41 (1 skip bez SDK), původní celý Chromium průchod úspěšné.
-Nové nativní/browser testy zatím probíhají. Žádná nová APK ani fyzické ověření se tímto netvrdí.
+**Ověřeno před společným vydáním:**
+- 15 JS skriptů, syntaxe všech assets, Python 41 kontrol (lokálně 1 skip bez SDK), diff --check.
+- Původní a nový skutečný Chromium průchod, také v [CI 41877272197](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/41877272197). Myš, touch a simulované pointerType=pen, žádný průchod do plátna, zachování draftu a následné uložení/reload; storno/Zpět a chyba ukládání; přesné texty všech exportních vstupů; pozice a rozměr pravítka.
+- [Nativní kompilace a 15 testů 41877272191](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/41877272191): 6 původních dat/exportů a 9 nových testů koše. Sdílené/vnořené/historické přílohy, zamčená aktivní data i aktivní potomek, přesné rozměry, trvalost po restartu, selhání zápisu databáze/zálohy/mazání, opakování úklidu, souběžný starý snapshot a opakovaný požadavek přes JsApi, ochrana před návratem starého koše ze sync.
+- Samostatný průchod původní zálohou po purge: uložená přesná data a původní média, nová importní ID bez přepsání existujících záznamů. První test měl nesprávné očekávání původního ID v nové kopii, opraveno na kontrolu hodnot a bajtů; produkční import se neměnil.
+- PDF ZIP 1 a 3 snímků skutečně staženy z nativního CI a ověřeny pypdf/PyMuPDF: jedna rastrová stránka na snímek, bez projektových dat/textu/příloh/metadat, správný poměr stran a barva.
+- Nativní výsledek zachovává živé reference otevřeného editoru/poznámky; samostatný JS test chrání další ukládání po purge. Současně odstraněné dočasné miniatury; vytváření cache sdílí zámek s purge.
+
+**Fyzické ověření čeká.** Automatické události pera nejsou Samsung S Pen ani prst na telefonu. Externí zálohy se nemažou; skutečné zakázky se nepoužily k destruktivním testům.
+
+Finální kontroly 812ad32 byly ověřeny přímo v dokončených logách a stažených XML artefaktech; souhrnná metadata Actions API nadále zobrazovala zastaralé `queued`. Nešlo o čekající nebo neprovedené testy.

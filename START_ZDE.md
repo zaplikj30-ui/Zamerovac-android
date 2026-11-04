@@ -12,19 +12,25 @@
 
 **Předávání bez kopírování chatu:** přesné nové dohody, schválené úpravy, výsledky testů, rozpracovaný kód, otevřené blokátory i nezávazné nápady průběžně hned ukládat ke správnému issue nebo dokumentu. V tomto souboru udržovat **hotovo / zbývá / nerozhodnuto / další konkrétní krok** a odkazy. Odlišit **nápad → schválené → v kódu → APK vydaná → fyzicky ověřená**. Samotný commit, zelené CI ani APK neprokazují reálné ověření.
 
-## Rozpracováno po 1.2.148 – E + F + G a značka miniatury
+## Dokončeno v kódu po 1.2.148 – E + F + G a značka miniatury
 
-Zahájeno 4. 11. 2026 z `f646a87`, bez otevřených PR. Větev `feature/post148-trash-menus`.
-Schválené: bezpečně vysypat koš, zavírat běžná menu dotykem mimo bez průchodu do editoru,
-text všech vstupů „Export pro zákazníka: ZIP s PDF“. Uživatel následně schválil přesun
-značky pravítka vlevo nahoru **a další mírné zmenšení**: 17 → 15 px, symbol 12 → 11 px.
-[Zahájení #17](https://github.com/zaplikj30-ui/Zamerovac-android/issues/17#issuecomment-6636851681).
-První implementace a cílené testy v pracovní větvi; dosavadních 13 JS skriptů,
-Python 41 kontrol (1 skip bez SDK) a původní Chromium průchod prošly.
-Nové nativní a browser regrese jsou rozpracované. APK zatím nebyla vyvolána.
-Další krok: dokončit nové bezpečnostní testy, nativní CI v PR a kontrolu změn;
-potom sloučit a **jednou** vydat vyšší testovací verzi s původním podpisem.
-Fyzické ověření na telefonu stále čeká, skutečná data se k destruktivním testům nepoužívají.
+[PR #19](https://github.com/zaplikj30-ui/Zamerovac-android/pull/19) sloučen do main `aab455a`.
+Implementováno: bezpečné vysypání koše, zavírání běžných nabídek klepnutím mimo bez
+průchodu do plátna, přesný text všech vstupů **„Export pro zákazníka: ZIP s PDF“**.
+Dodatečný pokyn uživatele: pravítko v miniatuře **vlevo nahoře a dále mírně menší**,
+17 → 15 px (SVG 12 → 11), kontrast zachován.
+Souběžné dokumentační commity `0069fa9`, `a1b19f8` a `69049c3` přečteny a zachovány.
+
+**Automaticky ověřeno:** 15 JS skriptů, Python 41 kontrol (lokálně 1 skip bez SDK),
+dva celé Chromium průchody ([CI 41877272197](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/41877272197)),
+15 nativních testů, bez selhání/skipů ([CI 41877272191](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/41877272191)).
+Skutečné PDF artefakty s 1 a 3 snímky nezávisle prošly parserem pypdf a renderem PyMuPDF.
+Podrobnosti: [IMPLEMENTACE_17.md](IMPLEMENTACE_17.md#následná-společná-aktualizace-po-12148-e--f--g).
+
+**Další krok:** jediné společné vydání vyšší APK, kontrola původního podpisu, balíčku,
+verze a staženého souboru. Žádné fyzické ověření se netvrdí. Po vydání instalovat jako
+aktualizaci se zachováním původní zálohy; bezpečnost dat a dotyky otestovat společně
+na zkušebních zakázkách. Neodinstalovávat a nemazat data aplikace.
 
 **Aktuální vydání společné aktualizace #17: [Zaměřovač 1.2.148 – stáhnout APK](https://github.com/zaplikj30-ui/Zamerovac-android/releases/download/test-v1.2.148/Zamerovac-v1.2.148.apk).** [Release](https://github.com/zaplikj30-ui/Zamerovac-android/releases/tag/test-v1.2.148) · [úspěšné jediné sestavení #148](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/41870681150) · [přesná mapa všech změn a kontrol](IMPLEMENTACE_17.md). Opravy i vymezená vylepšení jsou sloučené do main, APK vydaná, podpis a balíček zachovány, `versionCode 1148` > `1147`. Stažená vydaná APK má shodný SHA-256 s buildem a stejné upravené assets jako ověřený kód.
 
@@ -149,3 +155,5 @@ Nemusí se znovu kopírovat celý původní chat. Neznámé informace ověřit z
 **Výsledek:** Tento rozcestník a pravidlo okamžitého průběžného zápisu; nevydávat ChatGPT paměť za spolehlivé úložiště projektu. **Tentýž den dokončena rekonstrukce všech testů 1–28 i [statický audit zdrojového kódu](AUDIT_KODU_PROTI_28_TESTUM.md)**. Opravy podle auditu, český výběr jazyka, sestavení a fyzický retest ještě neproběhly. Schváleno: lokalizační architektura pro desítky jazyků; aktivní pouze čeština. Další dlouhodobé cíle: možné veřejné vydání na Google Play a **možná plnohodnotná Windows 11 aplikace** s editovatelnými společnými zakázkami; ani jedno se nyní nevyvíjí. Při dalších fázích aktualizovat přehled i příslušné issues.
 
 **Pozdější ověřený stav (4. 11. 2026):** Následující původní historický zápis zachycuje stav *před* společnou aktualizací; nenechat se zmást tvrzením, že kód ani APK nebyly sestaveny. Vydání **test-v1.2.147 již existuje**, změny podle 28 testů jsou v kódu, ale **jejich fyzické ověření na telefonu/tabletu stále není doloženo**. Nové návrhy půdorysu a případných profilů ovládání/vykreslování jsou v [VIZE_A_PLAN.md](VIZE_A_PLAN.md), zatím nejsou povel k implementaci. **Další krok:** pokračovat testy a zápisem výsledků do #13, přičemž před prací kontrolovat novější commity druhého chatu/Codexu.
+
+Finální kontroly 812ad32 byly ověřeny přímo v dokončených logách a stažených XML artefaktech; souhrnná metadata Actions API nadále zobrazovala zastaralé `queued`. Nešlo o čekající nebo neprovedené testy.
