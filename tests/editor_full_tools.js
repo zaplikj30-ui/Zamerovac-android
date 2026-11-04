@@ -7,7 +7,7 @@ assert(a>=0&&b>a,'Drawing function must remain accessible');
 const drawSource=editor.slice(a,b);
 const labels=[],arrows=[];
 const graphics={save(){},restore(){},beginPath(){},moveTo(){},lineTo(){},stroke(){},
- strokeRect(){},arc(){},ellipse(){},fill(){},fillRect(){},translate(){},rotate(){},
+ strokeRect(){},closePath(){},arc(){},ellipse(){},fill(){},fillRect(){},translate(){},rotate(){},
  setLineDash(){},measureText:()=>({width:10})};
 const env={prefs:{unit:'mm',color:'#ffe000',lineWidth:2,fontSize:17},
  worldToScreen:p=>({...p}),canvasText:(text)=>labels.push(text),
