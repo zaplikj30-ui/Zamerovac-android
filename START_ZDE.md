@@ -4,6 +4,16 @@
 >
 > Poslední dohoda o způsobu práce: **4. listopadu 2026**. Tento dokument je živý, stav níže se musí při dalších krocích aktualizovat.
 
+## 0. Společná práce přes ChatGPT i Codex
+
+**Závazný postup je v [AGENTS.md](AGENTS.md#společný-pracovní-protokol-chatgpt--codex--github-závazné).** Na projektu se střídají klasické chaty ChatGPT i Codex. **GitHub je jediný sdílený trvalý zdroj aktuálního stavu**; nepočítat s tím, že druhý chat vidí náš rozhovor.
+
+**Než kdokoli začne další práci**, musí znovu ověřit tento rozcestník, `AGENTS.md`, poslední commity a aktivní PR, relevantní issues **včetně nových komentářů** (zejména #13, #12, #14), aktuální stav Actions a Releases. Před zápisem znovu ověřit změněné soubory/SHA, aby se nepřepsala práce druhého chatu nebo Codexu.
+
+**Předávání bez kopírování chatu:** přesné nové dohody, schválené úpravy, výsledky testů, rozpracovaný kód, otevřené blokátory i nezávazné nápady průběžně hned ukládat ke správnému issue nebo dokumentu. V tomto souboru udržovat **hotovo / zbývá / nerozhodnuto / další konkrétní krok** a odkazy. Odlišit **nápad → schválené → v kódu → APK vydaná → fyzicky ověřená**. Samotný commit, zelené CI ani APK neprokazují reálné ověření.
+
+**Současný další konkrétní krok:** navázat na [testovací deník #13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13) a na [mapu 28 testů](IMPLEMENTACE_A_TESTOVANI_28.md), bezpečně ověřovat vydání [v1.2.147](https://github.com/zaplikj30-ui/Zamerovac-android/releases/tag/test-v1.2.147) po menších dávkách; nejprve záloha testovacích dat. **Půdorys, profily ovládání a výkonu jsou dosud návrhy k pozdějšímu rozhodnutí**, ne automaticky aktuální programovací úkoly.
+
 ## 1. Co právě řešíme
 
 | Oblast | Aktuální stav | Kde je podrobnost |
@@ -77,9 +87,9 @@ GitHub změny uchovává v historii; starší rozhodnutí u významnějších zm
 
 **Výjimka pro nynější obnovu historie:** všech 28 existujících testů rekonstruovat najednou a promítnout do příští společné aktualizace; až další testovací cykly po aktualizaci vést po zhruba pěti. Nikdy nezůstávat u výsledků jen v chatu.
 
-## 4. Jak rychle pokračovat v úplně novém chatu
+## 4. Jak rychle pokračovat v úplně novém chatu nebo Codexu
 
-> „Pracujeme na Zaměřovači. Otevři `START_ZDE.md`, deník #13 a příslušná issues na GitHubu. Připomeň poslední stav a pokračuj dalším úkolem. Nové dohody hned zapisuj na GitHub.“
+> „Pracujeme na Zaměřovači. Nejdřív načti aktuální `AGENTS.md`, `START_ZDE.md`, poslední commity/PR, issues včetně komentářů a nejnovější Releases. Zkontroluj, co mezitím změnil jiný chat nebo Codex. Připomeň skutečný stav, otevřené otázky a jediný další krok. Každou ujasněnou dohodu a výsledek ihned ulož na GitHub.“
 
 Nemusí se znovu kopírovat celý původní chat. Neznámé informace ověřit z primárních zdrojů nebo se zeptat; nevymýšlet.
 
@@ -98,8 +108,10 @@ Nemusí se znovu kopírovat celý původní chat. Neznámé informace ověřit z
 - **[Seznam mediálních důkazů](TESTOVANI_MEDIA_INDEX.md):** názvy a záznamy souborů, deduplikace; originální soukromé přílohy nepublikovat do repozitáře.
 - **[Vydání APK](https://github.com/zaplikj30-ui/Zamerovac-android/releases):** skutečně sestavené verze.
 
-## 6. Poslední zapsaná dohoda
+## 6. Historie dohod a poslední předání
 
 **4. 11. 2026 – uživatel:** „Důležité je ukládat všechny kroky na GitHub ... co budeme dělat, chceme dělat, nebo na čem jsme se dohodli ... a rychle dohledatelné.“
 
 **Výsledek:** Tento rozcestník a pravidlo okamžitého průběžného zápisu; nevydávat ChatGPT paměť za spolehlivé úložiště projektu. **Tentýž den dokončena rekonstrukce všech testů 1–28 i [statický audit zdrojového kódu](AUDIT_KODU_PROTI_28_TESTUM.md)**. Opravy podle auditu, český výběr jazyka, sestavení a fyzický retest ještě neproběhly. Schváleno: lokalizační architektura pro desítky jazyků; aktivní pouze čeština. Další dlouhodobé cíle: možné veřejné vydání na Google Play a **možná plnohodnotná Windows 11 aplikace** s editovatelnými společnými zakázkami; ani jedno se nyní nevyvíjí. Při dalších fázích aktualizovat přehled i příslušné issues.
+
+**Pozdější ověřený stav (4. 11. 2026):** Následující původní historický zápis zachycuje stav *před* společnou aktualizací; nenechat se zmást tvrzením, že kód ani APK nebyly sestaveny. Vydání **test-v1.2.147 již existuje**, změny podle 28 testů jsou v kódu, ale **jejich fyzické ověření na telefonu/tabletu stále není doloženo**. Nové návrhy půdorysu a případných profilů ovládání/vykreslování jsou v [VIZE_A_PLAN.md](VIZE_A_PLAN.md), zatím nejsou povel k implementaci. **Další krok:** pokračovat testy a zápisem výsledků do #13, přičemž před prací kontrolovat novější commity druhého chatu/Codexu.
