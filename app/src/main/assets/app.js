@@ -188,7 +188,7 @@ function openRecord(id){let r=recById(id);if(!r)return;if(r.kind==='folder'){cur
 function showNewMenu(){if(!$('newMenu').hidden){closeMenus();return}if(!canWriteToFolder(currentFolder)){notify('Nejdříve odemkněte složku.');return}closeMenus();$('newMenu').hidden=false;const choices=[
 ['📷','Pořídit fotografii',()=>pickMedia('camera')],
 ['🖼️','Importovat obrázek / PDF / video',()=>pickMedia('media')],
-['🎨','Nové plátno',()=>promptText('Nové plátno','Název','Nový náčrt',name=>addRecord(newRecord('canvas',name)))],
+['<svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h9l5 5v12H5z" fill="#f3f0e7" stroke="#a8a0ba" stroke-width="1.5"/><path d="M14 3v5h5" stroke="#a8a0ba" stroke-width="1.5"/><path d="m9 16 7.6-7.6 2.4 2.4-7.6 7.6-3.4 1z" fill="#d7c2ff" stroke="#9263d5" stroke-width="1.6"/><path d="m15.2 9.8 2.4 2.4" stroke="#9263d5" stroke-width="1.6"/></svg>','Nový náčrt',()=>promptText('Nový náčrt','Název','Nový náčrt',name=>addRecord(newRecord('canvas',name)))],
 ['📝','Nová textová poznámka',()=>{let r=newRecord('note','Nová poznámka');if(!canWriteToFolder(r.parentId)){notify('Nejdříve odemkněte složku.');return}state.records.push(r);save();openNote(r)}],
 ['📁','Nová složka',()=>promptText('Nová složka','Jméno zákazníka nebo místnosti','',name=>addRecord(newRecord('folder',name)))],
 ['🎤','Hlasová poznámka',()=>recordVoice()],
