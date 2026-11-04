@@ -1,6 +1,7 @@
 """Regression tests for the compact, single-choice editor toolbar."""
 from pathlib import Path
 import subprocess
+import re
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -42,6 +43,19 @@ class EditorToolbarTests(unittest.TestCase):
         self.assertIn("Vzhled kóty – pravítko a tužka",script)
         self.assertIn("$('styleTool').setAttribute('aria-label'",script)
         self.assertIn("$('deleteTool').innerHTML='<svg",script)
+
+    def test_undo_and_redo_icons_are_exact_mirrors(self):
+        html=(ASSETS/'index.html').read_text(encoding='utf-8')
+        extra=(ASSETS/'editor-extra-toolbar.js').read_text(encoding='utf-8')
+        undo=re.search(r'<button[^>]*id="undo"[^>]*>(.*?)</button>', html, re.S)
+        self.assertIsNotNone(undo)
+        self.assertIn('transform="translate(24 0) scale(-1 1)"', undo.group(1))
+        self.assertIn('viewBox="0 0 24 24"', undo.group(1))
+        self.assertIn('stroke-width="1.75"', undo.group(1))
+        self.assertEqual(re.findall(r'<path d="([^"]+)"', undo.group(1)),
+                         re.findall(r'<path d="([^"]+)"', re.search(r"redo:'([^']+)'", extra).group(1)))
+        self.assertIn("['redo','Znovu poslední úpravu']", extra)
+        self.assertIn('id="undo" title="Zpět"', html)
 
     def test_existing_tools_and_repeat_mode_still_available(self):
         editor=(ASSETS/'editor.js').read_text(encoding='utf-8')
