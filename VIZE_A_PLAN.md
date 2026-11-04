@@ -38,6 +38,44 @@ Tento seznam obsahuje dříve zmíněné nebo odložené směry. O přesném pro
 - Lepší práce s poznámkami/S Pen a hledání možností propojení se Samsung Notes, pouze pokud to dostupná rozhraní umožní.
 - Vylepšené srozumitelné popisky/editor a změna názvu aplikace/složek, pokud se na tom dohodneme.
 
+### Dlouhodobý směr: propojení Zaměřovače a Konfigurátoru–Nářezáku
+
+**Dohoda 4. 11. 2026. Stav: DLOUHODOBÁ VIZE, nikoli schválení slučování aplikací či okamžité implementace.** Zaměřovač a [Konfigurátor – Nářezák Android](https://github.com/zaplikj30-ui/Konfigurator-Narezak-Android) jsou **dva samostatné projekty**, které se nyní vyvíjejí, testují, ukládají a aktualizují nezávisle. Nezaměňovat je ani s projektem „Převaděč spojitosti“. Cílovou možností je **jeden profesionální systém pro zakázkovou výrobu nábytku**, na Androidu (telefon/tablet) a Windows PC. O skutečném sloučení, technologii a termínu se rozhodne později.
+
+#### Jedna zakázka – od zaměření po výrobu
+V jednom přehledném uživatelském celku má být možné:
+1. **Zaměření:** založit zakázku, vytvořit strukturu prostorů a složek, uložit původní fotografie, kóty, rozměry, náčrty, poznámky, přílohy a měření laserem.
+2. **Návrh:** na základě zvolených zaměřených rozměrů navrhovat a dále upravovat jednotlivé skříňky a další nábytek (rozměry, konstrukce, dveře, zásuvky, návaznosti na místnost).
+3. **Kusovník:** z platné konstrukce získat přesné jednotlivé dílce, množství, materiály, tloušťky, hrany, směr dekoru, kování a další potřebný materiál.
+4. **Nářezák:** převzít schválené dílce do nářezového plánu, kontrolovat a optimalizovat formáty tabulí, prořez, orientaci dekoru a proveditelnost skutečného řezání.
+5. **Výrobní dokumentace:** vygenerovat či exportovat přehledné podklady pro výrobu a montáž včetně rozměrů, kusovníku, hranování a nářezů; zachovat vazby na konkrétní revizi konstrukce.
+6. **Pokračovat na stejném projektu** z telefonu, tabletu a později i plnohodnotného Windows PC editoru, nikoli pouze prohlížeče či exportéru.
+
+**Princip modulárního uživatelského řešení:** možné budoucí oblasti **Zaměření / Návrh / Kusovník / Nářezák**, propojené přes jednu zakázku a jasně definované datové vazby. Výsledné UI může být jiné na telefonu, tabletu a PC; funkční význam a editovatelnost údajů zůstávají stejné. **Toto není rozhodnutí, že se musejí oba současné repozitáře nebo kódy nyní spojit.**
+
+#### Závazné zásady už při současných opravách
+- **Zachovat oba programy samostatné a funkční.** Bez přímé runtime závislosti na druhé aplikaci, bez společného balíčku, předčasného API či přesunu zdrojového kódu jen kvůli možné integraci.
+- **Sdílený koncept zakázky a stabilní identity – pouze návrhové pravidlo do budoucna.** Zakázka, místnost, zaměřený bod, fotografie, anotace, návrh skříňky, dílec, materiál, kování a výrobní výstup mají být jednoznačně identifikovatelné a provázané. Současná data **nepřečíslovávat** bez samostatně schválené a otestované migrace.
+- **Otevřené, dokumentované a verzované datové kontrakty:** přenositelné schéma bez závislosti na Android UI nebo budoucím Windows UI. Jasné jednotky, souřadnicové systémy, význam rozměrů (nominální/skutečné, čisté/hraněné), materiály a orientace dílců. Nepředpokládat, že geometrická vzdálenost v pixelech fotografie = skutečný výrobní rozměr.
+- **Přenos bez ztráty editovatelnosti:** zachovat originální fotografie, geometrické objekty, jejich ID/souřadnice/kóty, poznámky, přílohy i změnové údaje. Měřené hodnoty se případně přenášejí s kontextem, jednotkou, zdrojem a návazností na konkrétní návrh, nikoli jako neidentifikovaný řetězec.
+- **Jasná hranice mezi měřením, návrhem a výrobou:** použití rozměru z fotografie pro skříňku musí být **vědomá uživatelská volba**; pozdější změna zaměření **nesmí bez potvrzení** přepočítat hotovou skříňku, kusovník, nářez či exportovanou výrobní dokumentaci. Před případným přepočtem ukázat dopad a zachovat předchozí revizi.
+- **Bezpečná obousměrná práce Android ↔ PC a offline:** návrh do budoucna počítá se synchronizací, přerušeným přenosem, konflikty, verzováním, kontrolou úplnosti a prevencí tichého přepsání souběžných změn. **Konkrétní cloud/LAN/offline protokol a způsob řešení konfliktů zatím nevybrán.**
+- **Kompatibilita:** při změně interních datových struktur dnešních aplikací zachovat čtení starých projektů a ZIP záloh; nové přenosy/závislosti vyžadují testy a bezpečnou migraci. Žádné rozsáhlé zásahy do hotových funkcí bez skutečné potřeby.
+- **Výrobní bezpečnost:** automatické kusovníky a nářezy nesmějí být označené za správné bez rozměrových kontrol, referenčních modelů, reálné proveditelnosti a uživatelského ověření; propojení samo o sobě správnost výroby nedokazuje.
+
+#### Co dnes existuje a co je zatím představa
+| Oblast | Stav |
+|---|---|
+| Zaměřovač na Androidu, editovatelné anotace, JSON `schema: 1`, ZIP zálohy | **Existující kód**, konkrétní známé chyby a chybějící funkce popsány v [auditu 28 testů](AUDIT_KODU_PROTI_28_TESTUM.md); není vše dozkoušené na zařízení |
+| Konfigurátor–Nářezák Android | **Samostatně rozvíjený projekt**; [vlastní vize](https://github.com/zaplikj30-ui/Konfigurator-Narezak-Android/blob/main/VIZE_A_PLAN.md) a README výslovně neoznačují výrobní výpočty a nářezák za ověřené |
+| Společné datové schéma a identita stejné zakázky v obou aplikacích | **NENAVRŽENO jako hotový závazný kontrakt, NEIMPLEMENTOVÁNO** |
+| Automatické předávání kót → skříněk → dílců → nářezů | **BUDOUCÍ VIZE, NEIMPLEMENTOVÁNO** |
+| Jeden integrovaný program/moduly, Windows PC editor a společná synchronizace | **BUDOUCÍ VIZE, NEIMPLEMENTOVÁNO** |
+
+**Podrobnosti k současnému JSON/ZIP a budoucím vazbám:** [DATOVY_FORMAT_A_PC_KOMPATIBILITA.md](DATOVY_FORMAT_A_PC_KOMPATIBILITA.md). **Druhý samostatný projekt:** [Konfigurátor – Nářezák Android](https://github.com/zaplikj30-ui/Konfigurator-Narezak-Android).
+
+**Povinnost upozornit:** Když při nynějších opravách narazíme na návrh, který by zásadně komplikoval budoucí propojení (např. přepis původních fotografií, ztráta identity/editovatelnosti, nedefinované jednotky, nevratné exporty, tichá změna hotového nářezu), vysvětlit konkrétní riziko a navrhnout přiměřenou variantu. **Současná priorita zůstává stabilita, bezpečnost dat a dokončení schválených oprav každé aplikace.**
+
 ### Dlouhodobý směr: plnohodnotný Zaměřovač pro Windows 11 a společné zakázky
 
 **Zapsáno 4. 11. 2026. Stav: SCHVÁLENÁ DLOUHODOBÁ VIZE / SMĚR, NIKOLI SCHVÁLENÉ ZAHÁJENÍ VÝVOJE PC APLIKACE.** Cílová platforma je primárně **Windows 11**. Konkrétní technický stack, rozsah první PC verze, metoda synchronizace a termín se rozhodnou až později. **Nyní se PC aplikace nezačíná vyvíjet a Android se kvůli ní zásadně nepřepisuje.**
@@ -116,8 +154,8 @@ Tento seznam obsahuje dříve zmíněné nebo odložené směry. O přesném pro
 | 2026-11-04 | Schválena bezpečná příprava vícejazyčnosti, řádek „Jazyk aplikace“ s jedinou volbou 🇨🇿 Čeština; bez samostatné APK. [Issue #14](https://github.com/zaplikj30-ui/Zamerovac-android/issues/14). |
 | 2026-11-04 | Nové upřesnění: škálovat na desítky jazyků, vyhledávání, autonyma, různé skripty/formáty a RTL; v příští aktualizaci pouze česká volba, ostatní opravy mají přednost. |
 | 2026-11-04 | Možné budoucí vydání na Google Play pouze jako nezávazný směr. Vývoj má přednostně zajistit spolehlivost, bezpečnost dat, přesnost, jednoduché ovládání a kompatibilitu; bez termínu, reklamy, registrace nebo zbytečných změn kvůli publikování. |
-
 | 2026-11-04 | Doplněna plnohodnotná budoucí PC verze pro Windows 11, stejná editovatelná data a bezpečná obousměrná výměna zakázek. Jde o dlouhodobý směr bez zahájení vývoje, technologického rozhodnutí či termínu. [Technický podklad](DATOVY_FORMAT_A_PC_KOMPATIBILITA.md). |
+| 2026-11-04 | Doplněna dlouhodobá vize propojení samostatných projektů Zaměřovač a Konfigurátor–Nářezák do modulárního systému Zaměření → Návrh → Kusovník → Nářezák pro Android i PC. Bez nynějšího slučování či vývoje společné aplikace; důraz na data, jednotky, editovatelnost, bezpečné předávání a ruční schválení změn hotové výroby. |
 
 ## 8. Další dohledané drobné náměty a ověřované detaily z testování
 Tyto body jsou rozdělené podle původního kontextu; **nesmí se automaticky vydávat za hotové**.
