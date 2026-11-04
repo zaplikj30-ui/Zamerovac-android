@@ -85,7 +85,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class MainActivity extends Activity {
-    private static final int REQUEST_FILE=20,REQUEST_TREE=21,REQUEST_CAMERA=22,REQUEST_EXPORT=23,REQUEST_PERMISSIONS=24,REQUEST_ATTACH=25,REQUEST_CAMERA_PERMISSION=26,REQUEST_PHOTO_LOCATION=27,REQUEST_BACKUP=28,REQUEST_IMPORT_BACKUP=29,REQUEST_ISSUE_EXPORT=30,REQUEST_BLUETOOTH_PERMISSION=31;
+    private static final int REQUEST_FILE=20,REQUEST_TREE=21,REQUEST_CAMERA=22,REQUEST_EXPORT=23,REQUEST_PERMISSIONS=24,REQUEST_ATTACH=25,REQUEST_CAMERA_PERMISSION=26,REQUEST_PHOTO_LOCATION=27,REQUEST_BACKUP=28,REQUEST_IMPORT_BACKUP=29,REQUEST_ISSUE_EXPORT=30,REQUEST_BLUETOOTH_PERMISSION=31,REQUEST_CUSTOMER_EXPORT=32;
     private WebView web;
     private FrameLayout root;
     private View statusFill;
@@ -111,9 +111,12 @@ public class MainActivity extends Activity {
     private BluetoothGattCharacteristic boschCommand;
     private volatile boolean boschStreamEnabled=false;
     private volatile boolean syncRunning=false;
+    private volatile boolean databaseReadFailed=false;
     private String recordingId;
     private String pendingMediaType="media";
     private String pendingIssueZipId;
+    private CustomerPdfExport customerExport;
+    private File pendingCustomerZip;
 
     @Override public void onCreate(Bundle saved){super.onCreate(saved);
         settings=getSharedPreferences("zamerovac",MODE_PRIVATE);
@@ -312,6 +315,10 @@ public class MainActivity extends Activity {
         });
     }
     private void selectCloud(){Intent i=new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_WRITE_URI_PERMISSION|Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);startActivityForResult(i,REQUEST_TREE);}
+    private synchronized void clearCustomerExport(){
+        if(customerExport!=null)customerExport.close();
+        customerExport=null;pendingCustomerZip=null;
+    }
     private void exportPng(String name,String b64){exportBase64=b64;Intent i=new Intent(Intent.ACTION_CREATE_DOCUMENT).setType("image/png").addCategory(Intent.CATEGORY_OPENABLE).putExtra(Intent.EXTRA_TITLE,name);startActivityForResult(i,REQUEST_EXPORT);}
     @Override public void onRequestPermissionsResult(int requestCode,String[] permissions,int[] grantResults){
         super.onRequestPermissionsResult(requestCode,permissions,grantResults);
@@ -433,6 +440,7 @@ public class MainActivity extends Activity {
             if(request==REQUEST_ATTACH)js("window.onNativeMediaDone?.()");
             if(request==REQUEST_CAMERA){discardPendingCamera();js("window.onNativeMediaDone?.()");}
             if(request==REQUEST_ISSUE_EXPORT)pendingIssueZipId=null;
+            if(request==REQUEST_CUSTOMER_EXPORT)clearCustomerExport();
             return;
         }
         if(request==REQUEST_ATTACH&&data!=null){int done=0;try{
@@ -453,6 +461,16 @@ public class MainActivity extends Activity {
             return;
         }
         if(request==REQUEST_TREE&&data!=null&&data.getData()!=null){Uri uri=data.getData();try{getContentResolver().takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_WRITE_URI_PERMISSION);settings.edit().putString("treeUri",uri.toString()).apply();scheduleSync();syncCloud();}catch(Exception e){error("Nelze použít vybranou složku: "+e.getMessage());}return;}
+        if(request==REQUEST_CUSTOMER_EXPORT){
+            if(pendingCustomerZip!=null&&data!=null&&data.getData()!=null){
+                try(InputStream in=new FileInputStream(pendingCustomerZip);
+                    OutputStream out=getContentResolver().openOutputStream(data.getData(),"w")){
+                    if(out==null)throw new IOException("Nelze otevřít výstup");
+                    copy(in,out);onSyncResult("Zákaznický ZIP s PDF uložen",null);
+                }catch(Exception ex){error("Zákaznický export: "+ex.getMessage());}
+            }
+            clearCustomerExport();return;
+        }
         if(request==REQUEST_ISSUE_EXPORT){
             String id=pendingIssueZipId;pendingIssueZipId=null;
             if(id!=null&&data!=null&&data.getData()!=null){
@@ -679,7 +697,7 @@ public class MainActivity extends Activity {
                 return "nezjištěna";
             }
         }
-        @JavascriptInterface public String loadData(){try{return readDb();}catch(Exception e){return "";}}
+        @JavascriptInterface public String loadData(){try{return readDb();}catch(Exception e){return "{\"_loadError\":true}";}}
         @JavascriptInterface public void saveData(String text){try{JSONObject j=new JSONObject(text);if(j.optInt("schema")!=1)throw new Exception("Unsupported schema");writeDb(text);}catch(Exception e){error("Uložení: "+e.getMessage());}}
         @JavascriptInterface public void beginMedia(String id,String mime,String name){try{if(!validId(id))return;closeUpload();activeUpload=new FileOutputStream(mediaFile(id));activeUploadId=id;settings.edit().putString("mime-"+id,mime).putString("name-"+id,name).apply();}catch(Exception e){error(e.toString());}}
         @JavascriptInterface public void appendMedia(String id,String chunk){try{if(activeUpload!=null&&id.equals(activeUploadId))activeUpload.write(Base64.decode(chunk,Base64.DEFAULT));}catch(Exception e){error(e.toString());}}
@@ -688,6 +706,31 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void selectFiles(String type){runOnUiThread(()->chooseAttachments(type));}
         @JavascriptInterface public void selectCloudFolder(){runOnUiThread(()->selectCloud());}
         @JavascriptInterface public void syncCloud(){MainActivity.this.syncCloud();}
+        @JavascriptInterface public synchronized String beginCustomerExport(){
+            if(customerExport!=null)return "Jiný zákaznický export právě probíhá";
+            try{customerExport=new CustomerPdfExport(getCacheDir());return "";}
+            catch(Exception ex){return ex.getMessage();}
+        }
+        @JavascriptInterface public synchronized String addCustomerPdf(String title,String png){
+            try{
+                if(customerExport==null)throw new IOException("Export není připraven");
+                customerExport.add(title,png);return "";
+            }catch(Exception ex){clearCustomerExport();return ex.getMessage();}
+        }
+        @JavascriptInterface public synchronized void cancelCustomerExport(){clearCustomerExport();}
+        @JavascriptInterface public synchronized void saveCustomerExport(){
+            try{
+                if(customerExport==null)throw new IOException("Export není připraven");
+                pendingCustomerZip=customerExport.archive();
+                runOnUiThread(()->{
+                    try{
+                        Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT).setType("application/zip")
+                            .addCategory(Intent.CATEGORY_OPENABLE).putExtra(Intent.EXTRA_TITLE,"Zakaznicke-PDF.zip");
+                        startActivityForResult(intent,REQUEST_CUSTOMER_EXPORT);
+                    }catch(Exception ex){clearCustomerExport();error("Zákaznický export: "+ex.getMessage());}
+                });
+            }catch(Exception ex){clearCustomerExport();error("Zákaznický export: "+ex.getMessage());}
+        }
         @JavascriptInterface public void exportPng(String name,String b64){runOnUiThread(()->exportPng(name,b64));}
         @JavascriptInterface public void printPdf(){runOnUiThread(()->{PrintManager manager=(PrintManager)getSystemService(PRINT_SERVICE);manager.print("Zaměření",web.createPrintDocumentAdapter("Zaměření"),null);});}
         @JavascriptInterface public void openMedia(String id){runOnUiThread(()->{try{Uri uri=new Uri.Builder().scheme("content").authority(getPackageName()+".files").appendPath(id).build();Intent i=new Intent(Intent.ACTION_VIEW).setDataAndType(uri,mediaMime(id)).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);startActivity(Intent.createChooser(i,"Otevřít přílohu"));}catch(Exception e){error("Pro tento formát není dostupný prohlížeč");}});}
@@ -821,33 +864,44 @@ public class MainActivity extends Activity {
         }
     }
     private void closeUpload(){try{if(activeUpload!=null)activeUpload.close();}catch(Exception ignored){}activeUpload=null;activeUploadId=null;}
-    private String readDb() throws IOException {
-        File db=new File(getFilesDir(),"projects.json");if(!db.isFile())return "";
-        try{return readValidJson(db);}
-        catch(Exception primary){
-            File backup=new File(getFilesDir(),"projects.bak");
-            if(!backup.isFile())throw new IOException("Databáze není čitelná",primary);
-            String data=readValidJson(backup);
-            android.util.Log.w("Zamerovac","Recovered last valid local backup",primary);
-            return data;
+    private synchronized String readDb() throws IOException {
+        File db=new File(getFilesDir(),"projects.json"),backup=new File(getFilesDir(),"projects.bak");
+        if(!db.exists()&&!backup.exists()&&!databaseReadFailed)return ""; // First installation only.
+        try{String data=readValidJson(db);databaseReadFailed=false;return data;}
+        catch(IOException primary){
+            try{
+                String data=readValidJson(backup);databaseReadFailed=false;
+                android.util.Log.w("Zamerovac","Recovered last valid local backup",primary);
+                return data;
+            }catch(IOException secondary){
+                databaseReadFailed=true;
+                throw new IOException("Uložené zakázky nelze načíst; původní soubory zůstaly beze změny",primary);
+            }
         }
     }
     private String readValidJson(File file) throws IOException {
         try(InputStream in=new FileInputStream(file)){
             java.io.ByteArrayOutputStream o=new java.io.ByteArrayOutputStream();copy(in,o);
             String data=o.toString("UTF-8");
-            try{if(new JSONObject(data).optInt("schema")!=1)throw new IOException("Unsupported schema");}
+            try{JSONObject json=new JSONObject(data);if(json.optInt("schema")!=1||json.optJSONArray("records")==null)throw new IOException("Unsupported schema");}
             catch(JSONException e){throw new IOException("Invalid JSON",e);}
             return data;
         }
     }
     private synchronized void writeDb(String data) throws IOException {
+        if(databaseReadFailed)throw new IOException("Zápis zablokován: uložené zakázky nebyly bezpečně načteny");
         File next=new File(getFilesDir(),"projects.tmp"),dest=new File(getFilesDir(),"projects.json");
         File backup=new File(getFilesDir(),"projects.bak");
         try(FileOutputStream out=new FileOutputStream(next)){
             out.write(data.getBytes(StandardCharsets.UTF_8));out.getFD().sync();
         }
-        if(dest.isFile())java.nio.file.Files.copy(dest.toPath(),backup.toPath(),java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        if(dest.isFile()){
+            // Never replace the valid recovery copy with an unreadable primary.
+            boolean validPrimary=true;
+            try{readValidJson(dest);}
+            catch(IOException invalid){validPrimary=false;android.util.Log.w("Zamerovac","Keeping existing recovery backup",invalid);}
+            if(validPrimary)java.nio.file.Files.copy(dest.toPath(),backup.toPath(),java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        }
         try{java.nio.file.Files.move(next.toPath(),dest.toPath(),
                 java.nio.file.StandardCopyOption.ATOMIC_MOVE,java.nio.file.StandardCopyOption.REPLACE_EXISTING);}
         catch(java.nio.file.AtomicMoveNotSupportedException e){

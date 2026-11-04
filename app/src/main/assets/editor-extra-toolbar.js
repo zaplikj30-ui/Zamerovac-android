@@ -194,6 +194,7 @@
  };
  const previousBack=window.handleAndroidBack;
  window.handleAndroidBack=()=>{
+  if(['toolMenu','newMenu','navMenu','overflowMenu','editorOverflow','modal'].some(id=>$(id)?.hidden===false))return previousBack();
   if(screen==='editor'&&!panel.hidden){setExpanded(false);return 'handled'}
   return previousBack();
  };

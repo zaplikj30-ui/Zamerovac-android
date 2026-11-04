@@ -23,3 +23,14 @@ assert.equal(items[0].measure,'2123');assert.equal(commits,3);
 assert.equal(undosteps,3);
 app.screen='browser';assert.equal(m('100','mm'),false);
 console.log('OK: Bosch měří přímo vybranou kótu, bezpečný převod a uložení');
+// Software-only protocol test: each segment keeps its own chosen unit.
+app.screen='editor';locked=false;
+for(const type of ['chain','cumulative','polyline']){
+ const segmented={id:'segments',type,unit:'mm',points:[{x:0,y:0},{x:100,y:0},{x:200,y:0}],activeSegmentIndex:1,
+ segmentData:[{measure:'100,123456',unit:'in',text:'untouched'},{measure:'',unit:'cm',text:'destination'}]};
+ app.current.items=[segmented];selected='segments';
+ m('2.437','m');
+ assert.equal(segmented.segmentData[1].measure,'243,7');assert.equal(segmented.segmentData[1].unit,'cm');
+ assert.equal(segmented.segmentData[0].measure,'100,123456');assert.equal(segmented.segmentData[0].unit,'in');
+ assert.equal(segmented.segmentData[1].text,'destination');assert.equal(segmented.segmentData[1].laserMeasuredMm,'2437');
+}

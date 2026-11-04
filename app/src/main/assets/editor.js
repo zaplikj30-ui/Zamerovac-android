@@ -3,7 +3,7 @@ const toolGroups=[{title:'Měřicí nástroje',tools:[['dimension','↔','Rozmě
 const allTools=toolGroups.flatMap(g=>g.tools);
 let drawStart=null,drawCurrent=null,stroke=[],polylineDraft=[],drawPointerId=null,selectedHandle=null,lastTap=0,lastTapAt=null,gesture=null;
 let lastDrawingTool='dimension',suppressToolClick=false,repeatPressTimer=null,loupeSide=null;
-function openEditor(r){loupeSide=null;screen='editor';document.body.classList.add('in-editor');closeMenus();$('editorHint').hidden=true;current=r;selected=null;mode='dimension';lastDrawingTool='dimension';updateDrawingToolButton();$('browserView').hidden=true;$('browserFoot').hidden=true;$('noteView').hidden=true;$('editorView').hidden=false;$('editorTitle').textContent=r.title;const photoMeta=$('editorPhotoMeta');if(photoMeta){photoMeta.textContent=photoDetailsText(r);photoMeta.title=photoMeta.textContent;}photoSize={w:r.width||1400,h:r.height||900};stageImg=null;selectedHandle=null;editStack=[];redoStack=[];if(r.kind==='photo'&&r.media?.[0]){assetUrl(r.media[0]).then(url=>{let img=new Image();img.onload=()=>{stageImg=img;photoSize={w:img.naturalWidth,h:img.naturalHeight};r.width=photoSize.w;r.height=photoSize.h;initialImageView();paint()};img.onerror=()=>notify('Nepodařilo se načíst fotografii');img.src=url})}resizeEditor();initialImageView();paint();}
+function openEditor(r){polylineDraft=[];stroke=[];drawStart=null;drawCurrent=null;lastTap=0;lastTapAt=null;loupeSide=null;screen='editor';document.body.classList.add('in-editor');closeMenus();$('editorHint').hidden=true;current=r;selected=null;mode='dimension';lastDrawingTool='dimension';updateDrawingToolButton();$('browserView').hidden=true;$('browserFoot').hidden=true;$('noteView').hidden=true;$('editorView').hidden=false;$('editorTitle').textContent=r.title;const photoMeta=$('editorPhotoMeta');if(photoMeta){photoMeta.textContent=photoDetailsText(r);photoMeta.title=photoMeta.textContent;}photoSize={w:r.width||1400,h:r.height||900};stageImg=null;selectedHandle=null;editStack=[];redoStack=[];if(r.kind==='photo'&&r.media?.[0]){assetUrl(r.media[0]).then(url=>{let img=new Image();img.onload=()=>{stageImg=img;photoSize={w:img.naturalWidth,h:img.naturalHeight};r.width=photoSize.w;r.height=photoSize.h;initialImageView();paint()};img.onerror=()=>notify('Nepodařilo se načíst fotografii');img.src=url})}resizeEditor();initialImageView();paint();}
 function exitEditor(){finishPendingPath();magnifierPoint=null;loupeSide=null;$('loupe').hidden=true;current=null;screen='browser';showFolder()}
 $('editorBack').onclick=exitEditor;
 $('fitBtn').onclick=fitImage;$('zoomIn').onclick=()=>{const p=centerPoint();zoomAt(1.25,p.x,p.y)};$('zoomOut').onclick=()=>{const p=centerPoint();zoomAt(.8,p.x,p.y)};
@@ -62,7 +62,7 @@ $('undo').onclick=undoEditor;$('redo').onclick=redoEditor;$('selectTool').onclic
 function updateDrawingToolButton(){
   const t=allTools.find(x=>x[0]===lastDrawingTool);
   const b=$('activeTool');
-  b.textContent=(t?.[1]||'↔')+(prefs.repeatDrawing?'∞':'¹');
+  b.innerHTML=toolIcon(t?.[0],t?.[1]||'↔')+(prefs.repeatDrawing?'∞':'¹');
   b.title=(t?.[2]||'Nástroj')+(prefs.repeatDrawing?' – opakovaně':' – jedna kóta')+' · dlouhé podržení přepíná režim';
   b.classList.toggle('inactive',mode==='select'||mode==='pan');
 }
@@ -98,7 +98,11 @@ function matchesSymbolSearch(label,query){
  if(name.includes(q))return true;
  return name.split(/\s+/).some(word=>symbolSearchNear(word,q));
 }
-function showTools(){const open=!$('toolMenu').hidden;closeMenus();if(open)return;$('toolMenu').hidden=false;let html='<div class="toolList">';for(let group of toolGroups){html+=`<div class="sectionLabel">${group.title}</div>`;for(let [key,icon,label] of group.tools)html+=`<button class="choice" data-tool="${key}"><strong>${icon}</strong>${label}</button>`}html+='</div>';$('toolMenu').innerHTML=html;$('toolMenu').querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{setTool(b.dataset.tool);closeMenus()})}
+function toolIcon(key,fallback){
+ if(key!=='chain')return escapeHtml(fallback);
+ return '<svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17 9 6l5 12 7-12M3 12v5h5M16 6h5v5"/></svg>';
+}
+function showTools(){const open=!$('toolMenu').hidden;closeMenus();if(open)return;$('toolMenu').hidden=false;let html='<div class="toolList">';for(let group of toolGroups){html+=`<div class="sectionLabel">${group.title}</div>`;for(let [key,icon,label] of group.tools)html+=`<button class="choice" data-tool="${key}"><strong>${toolIcon(key,icon)}</strong>${label}</button>`}html+='</div>';$('toolMenu').innerHTML=html;$('toolMenu').querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{setTool(b.dataset.tool);closeMenus()})}
 function finishPendingPath(){
  if(['polyline','chain','cumulative'].includes(mode)&&polylineDraft.length>=2)completePolyline(mode,false);
 }
@@ -109,7 +113,7 @@ function updateChainHint(){
  if(mode==='cumulative')hint.textContent=polylineDraft.length?'Klepni pro další kótu':'Označ výchozí bod';
 }
 function setTool(key,keepSelection=false){
- if(key!==mode)finishPendingPath();
+ finishPendingPath();
  mode=key;selectedHandle=null;if(!keepSelection)selected=null;
  drawStart=null;drawCurrent=null;stroke=[];polylineDraft=[];lastTap=0;lastTapAt=null;
  if(key!=='select'&&key!=='pan')lastDrawingTool=key;
@@ -450,7 +454,10 @@ function segmentLineScreen(item,index){
  if(['chain','cumulative','polyline'].includes(item.type)){
   if(index<0||index>=pts.length-1)return null;
   const projected=item.type==='cumulative'&&typeof cumulativeSegment==='function'?cumulativeSegment(item,index):null;
-  return {a:projected?.from||worldToScreen(pts[index]),b:projected?.to||worldToScreen(pts[index+1])};
+  const a=projected?.from||worldToScreen(pts[index]),b=projected?.to||worldToScreen(pts[index+1]);
+  const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1;
+  const off=['chain','cumulative'].includes(item.type)?(Number(item.offset)||0)+(item.type==='cumulative'?index*26:0):0;
+  return {a:{x:a.x-dy/d*off,y:a.y+dx/d*off},b:{x:b.x-dy/d*off,y:b.y+dx/d*off}};
  }
  if(item.type==='angle'&&pts.length>=3)return {a:worldToScreen(pts[1]),b:worldToScreen(pts[index===0?0:2])};
  if(item.type==='area'){
@@ -476,10 +483,7 @@ function nearestSegmentLabel(point){
    let x=(line.a.x+line.b.x)/2,y=(line.a.y+line.b.y)/2;
    if(item.type==='angle')y-=18;
    if(item.type==='rect'){if(i===0)y+=14;else x+=20}
-   else if(['chain','cumulative'].includes(item.type)){
-    const offset=(Number(item.offset)||0)+i*(item.type==='cumulative'?26:0);
-    x+=-dy/d*offset;y+=dx/d*offset;
-   }
+
    const t=Number(item.type==='area'?item.sideLabelT?.[i]:item.type==='rect'?item.rectLabelT?.[i]:row.labelT)||0;
    x+=dx*t;y+=dy*t;
    if(Math.abs(point.x-x)<Math.max(35,(item.fontSize||17)*2)&&Math.abs(point.y-y)<18)
@@ -517,7 +521,11 @@ function nearestHandle(point,onlyItem=null){
   if(['polyline','chain','cumulative','angle'].includes(item.type)&&Array.isArray(item.points)&&item.points.length>1){
    item.points.forEach((vertex,index)=>{
     const p=worldToScreen(vertex),d=Math.hypot(point.x-p.x,point.y-p.y);
-    if(d<dist){best={item,key:'points',point:vertex,pointIndex:index,kind:'point'};dist=d}
+    const endpointZone=[item.points[index-1],item.points[index+1]].filter(Boolean).every(neighbor=>{
+     const q=worldToScreen(neighbor),dx=q.x-p.x,dy=q.y-p.y;
+     return ((point.x-p.x)*dx+(point.y-p.y)*dy)/(dx*dx+dy*dy||1)<=.30;
+    });
+    if(endpointZone&&d<dist){best={item,key:'points',point:vertex,pointIndex:index,kind:'point'};dist=d}
    });continue;
   }
   if(item.type==='freehand')continue;
@@ -558,7 +566,8 @@ function nearestItem(point){
   }
   if((['polyline','chain','cumulative','angle','freehand'].includes(item.type))&&Array.isArray(item.points)&&item.points.length>1){
    for(let i=1;i<item.points.length;i++){
-    const a=item.points[i-1],b=item.points[i],dx=b.x-a.x,dy=b.y-a.y;
+    const line=['chain','cumulative'].includes(item.type)?segmentLineScreen(item,i-1):null;
+    const a=line?screenToWorld(line.a):item.points[i-1],b=line?screenToWorld(line.b):item.points[i],dx=b.x-a.x,dy=b.y-a.y;
     const t=Math.max(0,Math.min(1,((world.x-a.x)*dx+(world.y-a.y)*dy)/(dx*dx+dy*dy||1)));
     const d=Math.hypot(world.x-a.x-t*dx,world.y-a.y-t*dy);
     if(d<distance){best=item;distance=d}
@@ -620,6 +629,7 @@ function hitAnnotation(point){
 }
 function selectAnnotation(item){
  if(!item)return;
+ window.ensureAnnotationVisible?.(item.type);
  selected=item.id;
  if(mode!=='select')setTool('select',true);
  paint();
@@ -992,6 +1002,7 @@ function editSegmentedItem(item){
    text:$('segmentText'+i).value.trim(),unit:$('segmentUnit'+i).value
   }));
  }
+ for(let i=0;i<count;i++)for(const prefix of ['segmentMeasure','segmentText','segmentUnit'])$(prefix+i).onfocus=()=>{item.activeSegmentIndex=i};
  $('modalBody').querySelectorAll('[data-segment-reading]').forEach(select=>select.onchange=()=>{
   if(select.value==='')return;
   const r=readings[Number(select.value)],i=Number(select.dataset.segmentReading);
@@ -1108,7 +1119,7 @@ function editItem(item){
   modal(kind==='line'?'Upravit čáru':kind==='arrow'?'Upravit šipku':kind==='rect'?'Upravit obdélník':'Upravit tvar',
    (kind==='rect'?'':'<label>'+(isRound?'Rozměr kruhu / elipsy':'Kóta / rozměr (volitelné)')+'</label><div class="measure-with-unit"><input id="measureInput" type="text" value="'+escapeHtml(item.measure||'')+'" placeholder="Např. 1250">'+
    '<select aria-label="Jednotka rozměru" id="measureUnit">'+['mm','cm','m','in'].map(u=>'<option '+(u===(item.unit||prefs.unit)?'selected':'')+'>'+u+'</option>').join('')+'</select></div>')+
-   roundFields+rectFields+historyField+
+   roundFields+rectFields+(kind==='rect'?'<small id="rectBoschTarget">Bosch → šířka (mm). Klepnutím do šířky nebo výšky zvolíš cíl měření.</small>':'')+historyField+
    '<label>Textový popisek</label><input id="drawText" value="'+escapeHtml(item.text||'')+'" placeholder="Např. přívod vody">'+
    '<div class="row"><button id="removeItem" class="outline">Smazat prvek</button></div>',
    ()=>{checkpoint();if(kind!=='rect'){item.measure=$('measureInput').value.trim();item.unit=$('measureUnit').value}item.text=$('drawText').value.trim();
@@ -1131,8 +1142,10 @@ function editItem(item){
     }
   };
   if(kind==='rect'){
-    $('rectWidth').onfocus=()=>{item.activeSegmentIndex=0};
-    $('rectHeight').onfocus=()=>{item.activeSegmentIndex=1};
+    const setTarget=index=>{item.activeSegmentIndex=index;$('rectBoschTarget').textContent='Bosch → '+(index===0?'šířka':'výška')+' (mm). Klepnutím do šířky nebo výšky zvolíš cíl měření.'};
+    for(const id of ['rectWidth','rectWidthText'])$(id).onfocus=()=>setTarget(0);
+    for(const id of ['rectHeight','rectHeightText'])$(id).onfocus=()=>setTarget(1);
+    setTarget(item.activeSegmentIndex===1?1:0);
   }
  }else if(item.type==='note'){openRichNote(item,false);return}
  else modal('Upravit prvek',

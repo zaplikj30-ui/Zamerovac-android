@@ -13,7 +13,7 @@ const code=[
 const dim={id:'d1',type:'dimension',a:{x:100,y:200},b:{x:300,y:200},
  measure:'200',unit:'mm',offset:0,fontSize:17};
 const ctx={
- current:{items:[dim]},photoSize:{w:600,h:600},screen:'editor',mode:'select',selected:null,
+ window:{},current:{items:[dim]},photoSize:{w:600,h:600},screen:'editor',mode:'select',selected:null,
  selectedHandle:null,pointers:new Map(),stageCanvas:{setPointerCapture(){},releasePointerCapture(){}},
  gesture:null,drawStart:null,drawCurrent:null,drag:null,drawPointerId:null,
  magnifierPoint:null,loupeSide:null,stroke:[],prefs:{fontSize:17,unit:'mm'},

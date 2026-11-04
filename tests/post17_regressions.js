@@ -57,3 +57,17 @@ for(const type of ['line','arrow','dimension'])for(const length of [20,60,200]){
  assert.equal(item.measure,'1250,123');
 }
 console.log('OK: #17 transformed contours, area, readable text, finish/persist paths, exact hints, short/long grip zones');
+// Short segmented tools follow the same end/middle rule.
+for(const type of ['chain','cumulative','polyline','angle']){
+ env.current.items=[{id:type,type,points:[{x:50,y:100},{x:70,y:100}]}];
+ assert.equal(env.nearestHandle({x:60,y:100}),null,type+' short midpoint');
+ assert.equal(env.nearestHandle({x:52,y:100}).pointIndex,0,type+' first endpoint');
+}
+vm.runInContext(part('function labelInfo(', 'function nearestSegmentLabel('),env);
+const cumulative={type:'cumulative',points:[{x:0,y:0},{x:100,y:0},{x:200,y:0}],offset:5};
+assert.equal(env.segmentLineScreen(cumulative,0).a.y,5);
+assert.equal(env.segmentLineScreen(cumulative,1).a.y,31,'Hit areas match the actual staggered cumulative lines');
+// Preserve legitimate identical dimensions; never deduplicate measured values.
+cumulative.segmentData=[{measure:'100,000123',unit:'cm'},{measure:'100,000123',unit:'cm'}];
+const reloaded=JSON.parse(JSON.stringify(cumulative));assert.equal(reloaded.segmentData.length,2);
+assert.equal(reloaded.segmentData[1].measure,'100,000123');

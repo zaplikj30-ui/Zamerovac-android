@@ -19,7 +19,7 @@ const methods=[
 const note={id:'note-1',type:'note',a:{x:100,y:100},b:{x:100,y:100},text:'Zásuvka',fontSize:17};
 const stageCanvas={setPointerCapture(){},releasePointerCapture(){}};
 const sandbox={
- current:{id:'photo',items:[note]},screen:'editor',mode:'select',selected:null,
+ window:{},current:{id:'photo',items:[note]},screen:'editor',mode:'select',selected:null,
  selectedHandle:null,pointers:new Map(),stageCanvas,
  gesture:null,drawStart:null,drawCurrent:null,drag:null,drawPointerId:null,
  magnifierPoint:null,loupeSide:null,stroke:[],prefs:{fontSize:17},

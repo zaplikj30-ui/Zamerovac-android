@@ -6,7 +6,7 @@ const a=src.indexOf('function rectCorners(item){'),b=src.indexOf('function editI
 assert.ok(a>=0&&b>a);
 function scenario(item,selected=true){
  const env={
-  current:{id:'photo',items:[item]},photoSize:{w:1000,h:800},screen:'editor',mode:'select',
+  window:{},current:{id:'photo',items:[item]},photoSize:{w:1000,h:800},screen:'editor',mode:'select',
   selected:selected?item.id:null,selectedHandle:null,pointers:new Map(),gesture:null,
   stageCanvas:{setPointerCapture(){},releasePointerCapture(){}},drawStart:null,drawCurrent:null,drag:null,drawPointerId:null,
   magnifierPoint:null,loupeSide:null,stroke:[],polylineDraft:[],lastTapAt:null,lastTap:0,

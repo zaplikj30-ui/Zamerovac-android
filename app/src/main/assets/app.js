@@ -7,14 +7,14 @@ const appVersionShort=appVersion.replace(/-test$/,'');
 const uid=()=>crypto.randomUUID?crypto.randomUUID():('id-'+Date.now()+'-'+Math.random().toString(36).slice(2));
 const initialPrefs={unit:'mm',decimals:0,laserDecimals:'auto',laserRounding:'none',color:'#f7dc27',lineWidth:2,fontSize:17,loupe:true,loupeZoom:2,repeatDrawing:false,snapGrid:false,showGrid:false,gridStep:40,snapPoints:true,snapHorizontal:true,snapCorners:true,snapContours:true,snapRightAngle:true,keepAwake:false,vibration:true,fullScreen:false,autoText:true,autoSync:true,wifiOnly:false,moveSensitivity:1,presets:'Zásuvka;Voda;Odpad;Elektro;Výška parapetu',toolOrder:'',uiLanguage:'cs',backgroundPattern:'Vypnuto'};
 const initial={schema:1,records:[],prefs:{...initialPrefs},created:new Date().toISOString()};
-let state=initial;
-try{const saved=native?Native.loadData():localStorage.getItem('zamerovac-data');if(saved)state={...initial,...JSON.parse(saved)};}catch(e){console.warn('Cannot load database',e)}
+let state=initial,dataLoadFailed=false;
+try{const saved=native?Native.loadData():localStorage.getItem('zamerovac-data');if(saved){const loaded=JSON.parse(saved);if(loaded.schema!==1||!Array.isArray(loaded.records))throw new Error('Neplatná databáze');state={...initial,...loaded}};}catch(e){dataLoadFailed=true;console.warn('Cannot load database',e)}
 state.prefs={...initialPrefs,...(state.prefs||{})};
 const prefs=state.prefs;
 let sortAsc=true;let currentFolder=null,screen='browser',current=null,noteActive=null,mode='dimension',selected=null,stagedFileHandler=null,editStack=[],redoStack=[],lineDraft=[],stageImg=null,photoSize={w:1400,h:900},view={zoom:1,dx:0,dy:0},drag=null,pointers=new Map(),magnifierPoint=null,stageCanvas=$('drawCanvas'),ctx=stageCanvas.getContext('2d'),loupeCtx=$('loupe').getContext('2d'),autoSaving=false;
 const stamp=()=>new Date().toISOString();
 function touch(rec){rec.rev=uid();rec.updatedAt=stamp();}
-function save(){if(native){Native.saveData(JSON.stringify(state));}else{localStorage.setItem('zamerovac-data',JSON.stringify(state));}}
+function save(){if(dataLoadFailed){notify('Zakázky nelze načíst. Zápis je zablokovaný, původní data zůstávají chráněná.');return false}if(native){Native.saveData(JSON.stringify(state));}else{localStorage.setItem('zamerovac-data',JSON.stringify(state));}}
 function notify(msg){const el=$('toast');el.textContent=msg;el.hidden=false;clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>el.hidden=true,3000)}
 function dateText(s){return s?new Date(s).toLocaleDateString('cs-CZ'):''}
 function photoDateText(value){
@@ -33,7 +33,7 @@ function photoDetailsText(r){
 }
 function escapeHtml(t){return String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function recById(id,includeDeleted=false){return state.records.find(r=>r.id===id&&(includeDeleted||!r.deleted))}
-function canWriteToFolder(id){if(!id)return true;const folder=recById(id);return !!folder&&folder.kind==='folder'&&!window.isRecordLocked?.(folder)}
+function canWriteToFolder(id){if(dataLoadFailed)return false;if(!id)return true;const folder=recById(id);return !!folder&&folder.kind==='folder'&&!window.isRecordLocked?.(folder)}
 function folderContains(folderId,otherId){
  let node=recById(otherId),seen=new Set();
  while(node&&!seen.has(node.id)){if(node.id===folderId)return true;seen.add(node.id);node=node.parentId?recById(node.parentId):null}
@@ -73,6 +73,7 @@ function applyBackgroundPattern(){document.body.dataset.backgroundPattern=prefs.
 function showFolder(){applyBackgroundPattern();screen='browser';current=null;document.body.classList.remove('in-editor','in-note');closeMenus();$('browserView').hidden=false;$('browserFoot').hidden=false;$('editorView').hidden=true;$('noteView').hidden=true;$('back').textContent='☰';$('screenTitle').innerHTML=`<span class="app-title">Zaměřovač</span><small class="app-version">verze ${escapeHtml(appVersionShort)}</small>`;let path=[];let walk=currentFolder;let guard=0;while(walk&&guard++<50){let r=recById(walk);if(!r)break;path.unshift(r);walk=r.parentId;}
 $('breadcrumbs').innerHTML=`<button class="crumb" data-nav="root">⌂ Domů</button>`+path.map(r=>`<span>›</span><button class="crumb" data-nav="${r.id}">${escapeHtml(r.title)}</button>`).join('');
 $('breadcrumbs').querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>{currentFolder=b.dataset.nav==='root'?null:b.dataset.nav;showFolder()});
+if(dataLoadFailed){$('items').innerHTML='<div class="empty" role="alert">Uložené zakázky se nepodařilo načíst. Zápis je zablokovaný, původní soubory zůstávají beze změny. Aplikaci nemaž ani nevymazávej její data. Zavři ji a zkus otevřít znovu; pokud chyba trvá, požádej o pomoc s obnovou zálohy.</div>';return}
 let list=state.records.filter(r=>!r.deleted&&r.parentId===currentFolder).sort((a,b)=>(a.kind==='folder'?0:1)-(b.kind==='folder'?0:1)||(sortAsc?1:-1)*a.title.localeCompare(b.title,'cs'));
 $('items').innerHTML=list.length?list.map(r=>`<div class="entry" data-id="${r.id}">${browserEntryIcon(r)}<div class="entry-info"><div class="entry-title">${escapeHtml(r.title)}${(r.locked||window.isRecordLocked?.(r))?' <span class="entry-lock" title="Uzamčeno" aria-label="Uzamčeno">🔒</span>':''}</div><div class="entry-date">${r.photoTakenAt?'Pořízeno: '+escapeHtml(photoDateText(r.photoTakenAt)):dateText(r.updatedAt)}${r.conflict?' · KONFLIKTNÍ KOPIE':''}</div>${r.photoTakenAt||r.photoAddress?'<div class="entry-place" title="'+escapeHtml(photoAddressText(r))+'">📍 '+escapeHtml(photoAddressText(r))+'</div>':''}</div><button class="entry-more" data-more="${r.id}">⋮</button></div>`).join(''):`<div class="empty"><div class="big">▤</div>Zatím prázdné.<br>Pomocí ＋ vytvoříš složku, fotografii nebo poznámku.</div>`;
 $('items').querySelectorAll('.entry').forEach(el=>el.onclick=(e)=>{if(e.target.closest('[data-more]')){recordActions(el.dataset.id);return}openRecord(el.dataset.id)});
@@ -254,7 +255,7 @@ window.handleAndroidBack=()=>{
   if(currentFolder){currentFolder=recById(currentFolder)?.parentId||null;showFolder();return 'handled';}
   return 'root';
 };
-window.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('modal').hidden)$('modal').hidden=true;else if(screen==='editor')exitEditor();else if(screen==='note')saveNote();else if(currentFolder){currentFolder=recById(currentFolder)?.parentId||null;showFolder()}}if(e.ctrlKey&&e.key==='z'&&screen==='editor'){e.preventDefault();undoEditor()}if(e.ctrlKey&&e.key==='y'&&screen==='editor'){e.preventDefault();redoEditor()}});
+window.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();window.handleAndroidBack()}if(e.ctrlKey&&e.key==='z'&&screen==='editor'){e.preventDefault();undoEditor()}if(e.ctrlKey&&e.key==='y'&&screen==='editor'){e.preventDefault();redoEditor()}});
 // Editor functions supplied by editor.js below.
 $('lineColor').value=prefs.color;
 showFolder();applyNativePrefs();

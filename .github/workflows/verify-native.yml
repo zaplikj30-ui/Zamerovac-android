@@ -6,6 +6,8 @@ on:
       - 'app/src/main/java/**'
       - 'app/src/main/AndroidManifest.xml'
       - 'app/src/main/res/**'
+      - 'app/src/test/**'
+      - 'app/build.gradle'
       - '.github/workflows/verify-native.yml'
 jobs:
   compile:
@@ -20,4 +22,12 @@ jobs:
         with:
           gradle-version: '8.10.2'
       - name: Ověřit Java a Android zdroje bez vydání APK
-        run: gradle --no-daemon :app:compilePreviewJavaWithJavac
+        run: gradle --no-daemon :app:compilePreviewJavaWithJavac :app:testPreviewUnitTest
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: Native-regression-results
+          path: |
+            app/build/test-results/testPreviewUnitTest/
+            app/build/customer-pdf-*.zip
+          retention-days: 14
