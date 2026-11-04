@@ -34,6 +34,7 @@ $('back').onclick=()=>showAppMenu('navMenu',[
  ['🧪  Experimentální funkce',openExperimentalSettings],
  ['🗑️  Koš',showTrash],
  ['❔  Nápověda',()=>window.openZamerovacHelp?.()],
+ ['📋  Historie změn',showChanges],
  ['☁  Google Disk',chooseCloud],
  ['ⓘ  O Zaměřovači',()=>modal('O Zaměřovači','<p>Vlastní aplikace pro zaměřování nábytku.</p><p>Verze: <b>'+esc(appVersion)+'</b></p>',()=>true,'Zavřít')]
 ]);
@@ -865,7 +866,7 @@ renderSettings=function(){
  
  '<div class="setGroup">Informace a údržba</div>'+
  '<button class="setting" id="openDiagnostics" style="width:100%">Diagnostika a sdílení logu</button>'+
- '<button class="setting" id="openHistory" style="width:100%">Novinky a historie aktualizací</button>'+
+ '<button class="setting" id="openHistory" style="width:100%">Novinky a historie změn</button>'+
  '<button class="setting" id="openReadings" style="width:100%">Historie měření z laseru</button>'+
  '<button class="setting" id="openFeedbackReports" style="width:100%">Moje připomínky – chyby a požadavky</button>'+
 
@@ -885,37 +886,10 @@ renderSettings=function(){
  wrapper.querySelector('#backupAll').onclick=()=>native?Native.exportBackup():notify('Export ZIP je dostupný v Android verzi');
  wrapper.querySelector('#restoreAll').onclick=()=>native?Native.importBackup():notify('Obnova ZIP je dostupná v Android verzi');
 };
-const releases=[
- {version:appVersionShort,title:'Ovládání podle ImageMeteru a Bosch',items:[
-  ['Další dvě řady nástrojů – vysunutí tahem nahoru','extraToolbar'],
-  ['Bosch automaticky změří vybranou kótu','laserTap'],
-  ['Číslo domu u fotografií a doplnění z RÚIAN','photoAddress'],
-  ['Nová přehledná ikona Bluetooth','readings'],
-  ['Ikona galerie fotografií','gallery']
- ]},
- {version:'1.2',title:'Velká aktualizace Zaměřovače',items:[
-  ['Galerie a listování fotografiemi','gallery'],
-  ['Video a zvuk přímo v aplikaci','media'],
-  ['Rozšířené hledání zakázek','search'],
-  ['Přesné adresní místo v RÚIAN','address'],
-  ['Zámek dokončených zakázek','lock'],
-  ['Historie úprav fotografií','versions'],
-  ['Kontrola součtu kót','sum'],
-  ['Vrstvy anotací a nástroje pod +','layers'],
-  ['Text, hlas a detailní fotografie v poznámce','notes'],
-  ['Editovatelná kóta s popiskem v detailu','notes'],
-  ['Diagnostika a sdílení logu','diagnostics'],
-  ['Bosch měření a indikátor stavu','readings'],
-  ['Fialový vzhled a volitelná barva','theme'],
-  ['Zálohování a obnovení zakázek ZIP','backup'],
-  ['Skici pomocí S Pen','sketch']
- ]},
- {version:'1.1',title:'Základní funkce Zaměřovače',items:[
-  ['Zakázky a složky','browser'],['Fotografie s kótami','editor'],
-  ['Textové poznámky a přílohy','notes'],['Export PNG/PDF','editor'],
-  ['Výběr cloudové složky','settings']
- ]}
-];
+// Release notes are versioned independently of the installed app version.
+// Never label older features with appVersionShort (issue #31).
+const releases=window.ZamerovacReleaseHistory?.releases||[];
+
 function navigateToFeature(key){
  $('modal').hidden=true;
  $('settingsPanel').hidden=true;
@@ -931,6 +905,8 @@ function navigateToFeature(key){
   const target=$(targetId);if(target)target.scrollIntoView({block:'center',behavior:'smooth'});
  }
  switch(key){
+  case 'help':showFolder();window.openZamerovacHelp?.();break;
+  case 'helpSearch':showFolder();window.openZamerovacHelp?.();$('helpSearchToggle')?.click();break;
   case 'extraToolbar':if(editor())$('editorMore').click();break;
   case 'laserTap':if(editor())notify('Nejdřív označ kótu, potom měř Boschem. Hodnota se uloží sama.');break;
   case 'gallery':showFolder();openGallery(0);break;
@@ -954,13 +930,30 @@ function navigateToFeature(key){
  }
 }
 function showChanges(){
- modal('Novinky a historie aktualizací','<p>Instalovaná verze: <b>'+esc(appVersion)+'</b></p>'+
- releases.map((r,i)=>'<section class="releaseItem"><b>Verze '+esc(r.version)+'</b><p>'+esc(r.title)+'</p>'+
- r.items.map((t,j)=>'<div class="releaseFeature"><span>'+esc(t[0])+'</span><button class="outline" data-release="'+i+'" data-feature="'+j+'">Ukázat, kde to najdu</button></div>').join('')+'</section>').join('')+
- '<p class="muted">Zobrazují se novinky z verze 1.2 a ověřené základní změny verze 1.1. Datum a číslo konkrétní APK určuje GitHub vydání.</p>',()=>true,'Zavřít');
- $('modalBody').querySelectorAll('[data-release]').forEach(b=>b.onclick=()=>{
-  const i=Number(b.dataset.release),j=Number(b.dataset.feature);
-  navigateToFeature(releases[i].items[j][1]);
+ const catalog=window.ZamerovacReleaseHistory;
+ const visible=catalog?.forVersion(appVersionShort)||[];
+ const installedKnown=catalog?.hasReleaseNotes(appVersionShort);
+ const introduction='<p>Instalovaná verze: <b>'+esc(appVersion)+'</b></p>'+
+  '<p class="muted">Co v jednotlivých vydáních přibylo, co se opravilo a co jsme vylepšili. Klepni na verzi pro podrobnosti.</p>';
+ const missing=appVersionShort==='web'?'':installedKnown?'':
+  '<p class="muted">Pro tuto konkrétní verzi zatím nejsou sepsané vlastní poznámky. Níže jsou dostupná starší vydání.</p>';
+ const historyHtml=visible.map((release,i)=>
+  '<details class="releaseItem releaseTimeline" '+(i===0?'open':'')+'><summary class="releaseSummary"><b>Verze '+esc(release.version)+'</b><span>'+esc(release.title)+'</span></summary>'+
+  '<div class="releaseContent">'+release.groups.map((group,g)=>
+   '<section class="releaseGroup"><h3>'+esc(group.kind)+'</h3>'+
+   group.items.map((item,j)=>
+    '<div class="releaseFeature"><span>'+esc(item.text)+'</span>'+
+    (item.feature?'<button class="outline" data-release="'+i+'" data-group="'+g+'" data-feature="'+j+'">Ukázat</button>':'')+
+    '</div>'
+   ).join('')+'</section>'
+  ).join('')+'</div></details>'
+ ).join('');
+ modal('Novinky a historie změn',introduction+missing+historyHtml+
+  '<p class="muted">U některých starších testovacích verzí nemáme podrobný spolehlivý seznam změn. Historie neznamená ověření všech funkcí na skutečném telefonu.</p>',()=>true,'Zavřít');
+ $('modalBody').querySelectorAll('[data-release]').forEach(button=>button.onclick=()=>{
+  const entry=visible[Number(button.dataset.release)];
+  const item=entry?.groups[Number(button.dataset.group)]?.items[Number(button.dataset.feature)];
+  if(item?.feature)navigateToFeature(item.feature);
  });
 }
 function openDiagnostics(){
