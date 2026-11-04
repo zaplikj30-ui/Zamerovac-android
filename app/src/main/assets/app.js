@@ -254,7 +254,7 @@ window.handleAndroidBack=()=>{
   if(currentFolder){currentFolder=recById(currentFolder)?.parentId||null;showFolder();return 'handled';}
   return 'root';
 };
-window.addEventListener('keydown',e=>{if(e.key==='Escape'){if(!$('modal').hidden)$('modal').hidden=true;else if(screen==='editor')exitEditor();else if(screen==='note')saveNote();else if(currentFolder){currentFolder=recById(currentFolder)?.parentId||null;showFolder()}}if(e.ctrlKey&&e.key==='z'&&screen==='editor'){e.preventDefault();undoEditor()}if(e.ctrlKey&&e.key==='y'&&screen==='editor'){e.preventDefault();redoEditor()}});
+window.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();window.handleAndroidBack()}if(e.ctrlKey&&e.key==='z'&&screen==='editor'){e.preventDefault();undoEditor()}if(e.ctrlKey&&e.key==='y'&&screen==='editor'){e.preventDefault();redoEditor()}});
 // Editor functions supplied by editor.js below.
 $('lineColor').value=prefs.color;
 showFolder();applyNativePrefs();

@@ -3,7 +3,7 @@ const toolGroups=[{title:'Měřicí nástroje',tools:[['dimension','↔','Rozmě
 const allTools=toolGroups.flatMap(g=>g.tools);
 let drawStart=null,drawCurrent=null,stroke=[],polylineDraft=[],drawPointerId=null,selectedHandle=null,lastTap=0,lastTapAt=null,gesture=null;
 let lastDrawingTool='dimension',suppressToolClick=false,repeatPressTimer=null,loupeSide=null;
-function openEditor(r){loupeSide=null;screen='editor';document.body.classList.add('in-editor');closeMenus();$('editorHint').hidden=true;current=r;selected=null;mode='dimension';lastDrawingTool='dimension';updateDrawingToolButton();$('browserView').hidden=true;$('browserFoot').hidden=true;$('noteView').hidden=true;$('editorView').hidden=false;$('editorTitle').textContent=r.title;const photoMeta=$('editorPhotoMeta');if(photoMeta){photoMeta.textContent=photoDetailsText(r);photoMeta.title=photoMeta.textContent;}photoSize={w:r.width||1400,h:r.height||900};stageImg=null;selectedHandle=null;editStack=[];redoStack=[];if(r.kind==='photo'&&r.media?.[0]){assetUrl(r.media[0]).then(url=>{let img=new Image();img.onload=()=>{stageImg=img;photoSize={w:img.naturalWidth,h:img.naturalHeight};r.width=photoSize.w;r.height=photoSize.h;initialImageView();paint()};img.onerror=()=>notify('Nepodařilo se načíst fotografii');img.src=url})}resizeEditor();initialImageView();paint();}
+function openEditor(r){polylineDraft=[];stroke=[];drawStart=null;drawCurrent=null;lastTap=0;lastTapAt=null;loupeSide=null;screen='editor';document.body.classList.add('in-editor');closeMenus();$('editorHint').hidden=true;current=r;selected=null;mode='dimension';lastDrawingTool='dimension';updateDrawingToolButton();$('browserView').hidden=true;$('browserFoot').hidden=true;$('noteView').hidden=true;$('editorView').hidden=false;$('editorTitle').textContent=r.title;const photoMeta=$('editorPhotoMeta');if(photoMeta){photoMeta.textContent=photoDetailsText(r);photoMeta.title=photoMeta.textContent;}photoSize={w:r.width||1400,h:r.height||900};stageImg=null;selectedHandle=null;editStack=[];redoStack=[];if(r.kind==='photo'&&r.media?.[0]){assetUrl(r.media[0]).then(url=>{let img=new Image();img.onload=()=>{stageImg=img;photoSize={w:img.naturalWidth,h:img.naturalHeight};r.width=photoSize.w;r.height=photoSize.h;initialImageView();paint()};img.onerror=()=>notify('Nepodařilo se načíst fotografii');img.src=url})}resizeEditor();initialImageView();paint();}
 function exitEditor(){finishPendingPath();magnifierPoint=null;loupeSide=null;$('loupe').hidden=true;current=null;screen='browser';showFolder()}
 $('editorBack').onclick=exitEditor;
 $('fitBtn').onclick=fitImage;$('zoomIn').onclick=()=>{const p=centerPoint();zoomAt(1.25,p.x,p.y)};$('zoomOut').onclick=()=>{const p=centerPoint();zoomAt(.8,p.x,p.y)};
@@ -62,7 +62,7 @@ $('undo').onclick=undoEditor;$('redo').onclick=redoEditor;$('selectTool').onclic
 function updateDrawingToolButton(){
   const t=allTools.find(x=>x[0]===lastDrawingTool);
   const b=$('activeTool');
-  b.textContent=(t?.[1]||'↔')+(prefs.repeatDrawing?'∞':'¹');
+  b.innerHTML=toolIcon(t?.[0],t?.[1]||'↔')+(prefs.repeatDrawing?'∞':'¹');
   b.title=(t?.[2]||'Nástroj')+(prefs.repeatDrawing?' – opakovaně':' – jedna kóta')+' · dlouhé podržení přepíná režim';
   b.classList.toggle('inactive',mode==='select'||mode==='pan');
 }
@@ -98,7 +98,11 @@ function matchesSymbolSearch(label,query){
  if(name.includes(q))return true;
  return name.split(/\s+/).some(word=>symbolSearchNear(word,q));
 }
-function showTools(){const open=!$('toolMenu').hidden;closeMenus();if(open)return;$('toolMenu').hidden=false;let html='<div class="toolList">';for(let group of toolGroups){html+=`<div class="sectionLabel">${group.title}</div>`;for(let [key,icon,label] of group.tools)html+=`<button class="choice" data-tool="${key}"><strong>${icon}</strong>${label}</button>`}html+='</div>';$('toolMenu').innerHTML=html;$('toolMenu').querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{setTool(b.dataset.tool);closeMenus()})}
+function toolIcon(key,fallback){
+ if(key!=='chain')return escapeHtml(fallback);
+ return '<svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 17 9 6l5 12 7-12M3 12v5h5M16 6h5v5"/></svg>';
+}
+function showTools(){const open=!$('toolMenu').hidden;closeMenus();if(open)return;$('toolMenu').hidden=false;let html='<div class="toolList">';for(let group of toolGroups){html+=`<div class="sectionLabel">${group.title}</div>`;for(let [key,icon,label] of group.tools)html+=`<button class="choice" data-tool="${key}"><strong>${toolIcon(key,icon)}</strong>${label}</button>`}html+='</div>';$('toolMenu').innerHTML=html;$('toolMenu').querySelectorAll('[data-tool]').forEach(b=>b.onclick=()=>{setTool(b.dataset.tool);closeMenus()})}
 function finishPendingPath(){
  if(['polyline','chain','cumulative'].includes(mode)&&polylineDraft.length>=2)completePolyline(mode,false);
 }
@@ -109,7 +113,7 @@ function updateChainHint(){
  if(mode==='cumulative')hint.textContent=polylineDraft.length?'Klepni pro další kótu':'Označ výchozí bod';
 }
 function setTool(key,keepSelection=false){
- if(key!==mode)finishPendingPath();
+ finishPendingPath();
  mode=key;selectedHandle=null;if(!keepSelection)selected=null;
  drawStart=null;drawCurrent=null;stroke=[];polylineDraft=[];lastTap=0;lastTapAt=null;
  if(key!=='select'&&key!=='pan')lastDrawingTool=key;

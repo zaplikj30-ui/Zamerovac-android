@@ -32,6 +32,7 @@
     '<button type="button" data-bulk="copy">Kopírovat</button>'+
     '<button type="button" data-bulk="delete">Smazat</button>'+
     '<button type="button" data-bulk="zip">Exportovat do ZIP</button>'+
+    '<button type="button" data-bulk="customer">Pro zákazníka: PDF ZIP</button>'+
     '<button type="button" data-bulk="cancel">Zrušit</button>';
    toolbar.querySelectorAll('[data-bulk]').forEach(b=>b.onclick=()=>handle(b.dataset.bulk));
  }
@@ -77,6 +78,7 @@
      active=selectedIds.size>0;showFolder();return;
    }
    if(!selectedIds.size){notify('Nejdřív označ soubory');return}
+   if(action==='customer'){window.openCustomerExport?.(onlyRoots().map(r=>r.id));return}
    if(hasLocked()){
      notify('Nejdříve odemkněte složku.');return;
    }
