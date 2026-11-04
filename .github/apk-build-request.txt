@@ -2,5 +2,5 @@
 # Běžné změny kódu APK nesestavují. Teprve změna tohoto souboru spustí workflow build-apk.yml.
 # Při požadavku na sestavení uprav číslo a popis níže, commitni do main.
 
-request: 7
-reason: jedina spolecna aktualizace issue 17 po 1.2.147; vsechny opravy, kompaktni jednotky, zakaznicky PDF ZIP, ochrana dat; PR18 sloucen, JS Python browser nativni regrese uspesne
+request: 8
+reason: jedina spolecna aktualizace po 1.2.148; issue17 E F G + mensi pravitko vlevo nahore; PR19 sloucen; 15 JS 41 Python 2 Chromium 15 nativnich testu a PDF artefakty overeny
