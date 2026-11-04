@@ -636,6 +636,12 @@ function build(){
  back.setAttribute('aria-label','Zavřít nápovědu');
  back.addEventListener('click',close);
  header.append(back,el('h1','','Nápověda'));
+ const searchButton=el('button','z-help-search-button','🔍');
+ searchButton.id='helpSearchToggle';searchButton.type='button';
+ searchButton.setAttribute('aria-label','Hledat v nápovědě');
+ searchButton.setAttribute('title','Vyhledat téma');
+ searchButton.addEventListener('click',()=>{search.focus();search.select();});
+ header.append(searchButton);
  const top=el('div','z-help-search');
  const label=el('label','','Hledat v nápovědě');label.htmlFor='helpSearch';
  search=el('input');search.id='helpSearch';search.type='search';
