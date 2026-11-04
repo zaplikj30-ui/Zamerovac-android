@@ -84,7 +84,6 @@ Tento seznam obsahuje dříve zmíněné nebo odložené směry. O přesném pro
 | 2026-11-04 | Udržovat také dlouhodobou podobu aplikace, budoucí nápady, plánované změny a rozhodnutí. Vize se může měnit. |
 | 2026-11-04 | Schválena bezpečná příprava vícejazyčnosti, řádek „Jazyk aplikace“ s jedinou volbou 🇨🇿 Čeština; bez samostatné APK. [Issue #14](https://github.com/zaplikj30-ui/Zamerovac-android/issues/14). |
 | 2026-11-04 | Nové upřesnění: škálovat na desítky jazyků, vyhledávání, autonyma, různé skripty/formáty a RTL; v příští aktualizaci pouze česká volba, ostatní opravy mají přednost. |
-
 | 2026-11-04 | Možné budoucí vydání na Google Play pouze jako nezávazný směr. Vývoj má přednostně zajistit spolehlivost, bezpečnost dat, přesnost, jednoduché ovládání a kompatibilitu; bez termínu, reklamy, registrace nebo zbytečných změn kvůli publikování. |
 
 ## 8. Další dohledané drobné náměty a ověřované detaily z testování
