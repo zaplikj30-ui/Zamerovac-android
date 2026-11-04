@@ -146,7 +146,13 @@ function drawSelectedGrips(c){
  c.save();
  c.fillStyle='rgba(255,255,255,.14)';
  c.strokeStyle='rgba(255,255,255,.78)';c.lineWidth=1.6;
- if(item.type==='note'&&!item.media?.length){
+ if(['area','rect','circle','ellipse'].includes(item.type)){
+  for(const vertex of resizePoints(item)||[]){
+   const p=worldToScreen(vertex);c.beginPath();c.arc(p.x,p.y,14,0,Math.PI*2);c.fill();c.stroke();
+  }
+ }else if(item.type==='target'){
+  // Fixed-size marker: no resize grips.
+ }else if(item.type==='note'&&!item.media?.length){
   const p=noteCaptionScreen(item),anchor=worldToScreen(item.a||{x:0,y:0});
   c.strokeRect(p.x-14,p.y-14,28,28);
   if(selectedHandle?.item?.id===item.id&&selectedHandle.kind==='point'&&selectedHandle.dragged){c.beginPath();c.arc(anchor.x,anchor.y,14,0,Math.PI*2);c.fill();c.stroke();}
@@ -218,7 +224,6 @@ function resizePoints(item){
    const {cx,cy,rx,ry}=ellipseGeometry(item);
    return [{x:cx-rx,y:cy},{x:cx+rx,y:cy},{x:cx,y:cy-ry},{x:cx,y:cy+ry}];
  }
- if(item.type==='target')return [item.a].filter(Boolean);
  return null;
 }
 function cumulativeSegment(item,index){
@@ -427,6 +432,15 @@ function nearestHandle(point){
    });continue;
   }
   if(item.type==='freehand')continue;
+  const corners=resizePoints(item);
+  if(corners){
+   corners.forEach((vertex,index)=>{
+    const p=worldToScreen(vertex),d=Math.hypot(point.x-p.x,point.y-p.y);
+    if(d<dist){best={item,key:'shape',point:vertex,pointIndex:index,kind:'shape-resize'};dist=d}
+   });
+   continue;
+  }
+  if(item.type==='target')continue;
   for(const key of ['a','b'])if(item[key]&&!(item.type==='note'&&key==='b')){
    const p=worldToScreen(item[key]),d=Math.hypot(point.x-p.x,point.y-p.y);
    if(d<dist){best={item,key,point:item[key],kind:'point'};dist=d}
@@ -454,6 +468,28 @@ function nearestItem(point){
     if(d<distance){best=item;distance=d}
    }
    continue;
+  }
+  if(item.type==='circle'||item.type==='ellipse'){
+   const g=ellipseGeometry(item),dx=world.x-g.cx,dy=world.y-g.cy;
+   const norm=Math.sqrt(dx*dx/(g.rx*g.rx)+dy*dy/(g.ry*g.ry));
+   const d=norm<.32?Math.hypot(dx,dy):Math.abs(norm-1)*Math.min(g.rx,g.ry);
+   if(d<distance){best=item;distance=d}continue;
+  }
+  if(item.type==='area'||item.type==='rect'){
+   const corners=(item.type==='area'?quadCorners(item):rectCorners(item));
+   let inside=false,edgeDist=Infinity;
+   for(let i=0,j=corners.length-1;i<corners.length;j=i++){
+    const a=corners[j],b=corners[i],dx=b.x-a.x,dy=b.y-a.y;
+    if(((a.y>world.y)!=(b.y>world.y))&&(world.x<(b.x-a.x)*(world.y-a.y)/(b.y-a.y)+a.x))inside=!inside;
+    const t=Math.max(0,Math.min(1,((world.x-a.x)*dx+(world.y-a.y)*dy)/(dx*dx+dy*dy||1)));
+    edgeDist=Math.min(edgeDist,Math.hypot(world.x-a.x-t*dx,world.y-a.y-t*dy));
+   }
+   if(inside||edgeDist<distance){best=item;distance=0}continue;
+  }
+  if(item.type==='target'&&item.a){
+   const center=item.a,label=item.b||{x:center.x+30,y:center.y};
+   const d=Math.min(Math.hypot(world.x-center.x,world.y-center.y),Math.hypot(world.x-label.x,world.y-label.y));
+   if(d<distance){best=item;distance=d}continue;
   }
   const a=item.a,b=item.b;
   if(a&&b){
