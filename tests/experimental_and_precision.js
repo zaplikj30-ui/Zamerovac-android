@@ -7,12 +7,16 @@ const java=fs.readFileSync('app/src/main/java/cz/zamerovac/app/MainActivity.java
 const protocol=fs.readFileSync('app/src/main/java/cz/zamerovac/app/BoschBleProtocol.java','utf8');
 for(const [name,icon] of [
  ['Importovat obrázek / PDF / video','🖼️'],
- ['Nové plátno','🎨'],['Nová textová poznámka','📝'],
+ ['Nová textová poznámka','📝'],
  ['Hlasová poznámka','🎤'],['Přidat další soubor','📎'],
  ['Pořídit fotografii','📷'],['Nová složka','📁']
 ]){
  assert.ok(app.includes("['"+icon+"','"+name+"'"),name+' must have recognizable colored icon');
 }
+// Approved menu label and icon share the same paper/pencil style as other actions.
+assert.ok(app.includes("'Nový náčrt',()=>promptText('Nový náčrt'"),'New sketch must use approved label');
+assert.ok(app.includes('m9 16 7.6-7.6'),'New sketch must use a matching colored SVG pencil icon');
+assert.ok(!app.includes("['🎨','Nové plátno'"),'Old canvas label/icon must not return');
 assert.ok(app.includes("laserRounding:'none'"),'Default must preserve measurement');
 assert.ok(app.includes("laserDecimals:'auto'"),'Default decimals must preserve precision');
 assert.ok(upgrade.includes('Experimentální funkce'));
