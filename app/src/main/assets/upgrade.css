@@ -458,3 +458,26 @@ body.in-editor #editorExtraToolbar > #editorMore.tool-active{
 .trash-entry strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .trash-entry small{display:block;color:#bbb;margin-top:3px}
 .trash-entry button{padding:8px 5px;font-size:13px}
+
+
+/* Small ruler badge: visible over bright, dark and colorful thumbnails. */
+.entry-icon.photo-preview{position:relative}
+.photo-edited-badge{
+  position:absolute;right:2px;top:2px;z-index:2;
+  width:21px;height:21px;box-sizing:border-box;border:1.5px solid #f7cd30;
+  border-radius:6px;background:rgba(17,20,24,.94);color:#fff;
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 1px 4px rgba(0,0,0,.75);pointer-events:none
+}
+.photo-edited-badge svg{display:block;flex-shrink:0}
+.search-results button.search-hit{
+  display:flex;flex-direction:row;align-items:center;gap:11px;width:100%;text-align:left
+}
+.search-results .search-hit-body{
+  display:flex;flex-direction:column;min-width:0;gap:4px;flex:1;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap
+}
+.search-results .search-hit-body>span,.search-results .search-hit-body>small{
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap
+}
+.search-results .entry-icon.photo-preview{flex:0 0 48px}
