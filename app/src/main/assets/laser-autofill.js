@@ -53,6 +53,9 @@
    notify('Bosch: hodnota uložena do historie. Nejdřív označ kótu a potom změř.');
    return true;
   }
+  if(item.type==='angle'&&(!Array.isArray(item.points)||item.points.length<3)){
+   notify('Bosch: nejdřív vytvoř celý úhel se dvěma rameny');return true;
+  }
   if(['polyline','angle','area','rect'].includes(item.type)){
    const count=item.type==='area'?4:item.type==='angle'?2:item.type==='rect'?2:Math.max(1,(item.points?.length||2)-1);
    const index=Math.max(0,Math.min(count-1,Number(item.activeSegmentIndex)||0));
