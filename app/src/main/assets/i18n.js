@@ -6,6 +6,8 @@
   ]);
   const strings=Object.freeze({
     'language.setting':'Jazyk aplikace',
+    'language.group':'Jazyk',
+    'language.czech':'🇨🇿 Čeština',
     'language.title':'Jazyk aplikace',
     'language.selected':'Vybráno',
     'language.search':'Vyhledat jazyk',
