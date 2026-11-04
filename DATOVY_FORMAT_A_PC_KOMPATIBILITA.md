@@ -92,4 +92,35 @@ Zdroj: [BackupImporter.java](app/src/main/java/cz/zamerovac/app/BackupImporter.j
 
 **Závěr:** Dostupné JSON + oddělená média dávají dobrý základ pro editovatelnost, ale **současná ZIP obnova kopie není synchronizace**, `schema: 1` zatím nemá migrační kontrakt a budoucí PC verze vyžaduje přesnou specifikaci objektů a konfliktů. Tuto hranici zachovávat ve všech dalších rozhodnutích, aby později nevznikly tiché ztráty zakázek.
 
+## 6. Budoucí datové propojení Zaměřovače s Konfigurátorem–Nářezákem
+
+**Přidáno 4. 11. 2026. Status: KONCEPCE / TECHNICKÉ POŽADAVKY DO BUDOUCNA, žádné nové produkční API, migrace ani synchronizace nyní.** Dva samostatné repozitáře: [Zaměřovač](https://github.com/zaplikj30-ui/Zamerovac-android) a [Konfigurátor – Nářezák](https://github.com/zaplikj30-ui/Konfigurator-Narezak-Android). Dohody a úplný uživatelský postup jsou popsány také v [obou](VIZE_A_PLAN.md) [vizích](https://github.com/zaplikj30-ui/Konfigurator-Narezak-Android/blob/main/VIZE_A_PLAN.md).
+
+### Navržené vrstvy budoucího výměnného kontraktu – NEIMPLEMENTOVÁNO
+| Entita/modul | Minimální vztahy a vlastnosti, které bude nutné definovat | Poznámka |
+|---|---|---|
+| **Zakázka** | Stabilní globální identita, název, zákaznická metadata dle rozsahu, struktura místností/složek, revize a verze dat | Dnes jde primárně o záznamy `records` s `id/parentId`; **neexistuje ověřená sdílená identita obou aplikací** |
+| **Zaměření** | Fotografie/media ID, originál, identifikátor/editovatelný typ anotace, jednotka, přesně definovaný bod/strana/osa, souřadnicový systém, ruční či přístrojový původ hodnoty | Hodnota ze snímku nebo Bluetooth se nepřenáší jako číslo bez kontextu; grafika musí zůstat editovatelná |
+| **Návrh skříňky** | Vlastní stabilní ID, příslušnost k zakázce, revize, geometrické parametry, konstrukční pravidla, zdrojové reference na **uživatelem vybraná** měření | Geometrické pixely na fotografii nejsou výrobní délky; uživatelské přijetí hodnot je oddělené |
+| **Materiály/kování** | ID a označení položky, tloušťka, dekor/směr, norma a konkrétní výrobní pravidla, verze parametrů | Nezaměňovat výchozí technologickou hodnotu za univerzální výrobní normu |
+| **Kusovník a dílec** | Jednoznačné ID dílce, vazba na skříňku/revizi, délka, šířka, tloušťka, množství, jednotky, hrany po **konkrétních stranách**, orientace dekoru | **Nikdy svévolně neotáčet délku/šířku ani orientaci hran**; případná optimalizace řezů musí respektovat materiál a potvrzení |
+| **Nářezový plán** | Vazba na konkrétní revizi kusovníku, formáty tabulí, prořez, orientace, pořadí a ruční korekce, aktuální schválení | Nesmí se tiše přepsat při změně zaměření nebo skříňky |
+| **Výrobní dokumentace** | Odvození z konkrétní schválené revize, čas/identita vytvoření a výstupy ke kontrole | Starší vydaný výstup zachovat nebo jasně označit jako neaktuální, **nepřepisovat bez souhlasu** |
+
+**Tato tabulka není hotové JSON schéma.** Před implementací se musí dohodnout povinná pole, typy dat, jednotky, souřadnicové a rozměrové systémy, oprávnění, vazby, verze, pravidla změny a migrace. Neměnit nynější `schema: 1` ani `records/items` jen proto, aby odpovídaly tabulce.
+
+### Bezpečný budoucí tok změny
+1. Zaměřovač uloží nebo změní rozměr; **vlastní editor a jeho data zůstávají beze změny a samostatně použitelná**.
+2. Uživatel v modulu Návrh **výslovně vybere**, které měření chce převzít a k čemu se má vztahovat. Převod jednotky je doložený a ověřený; uloží se původ a revize zdroje.
+3. Pokud se zdroj později změní, cílový návrh může **upozornit na rozdíl**, ale nesmí samovolně změnit hotovou konstrukci.
+4. Před přepočtem konstrukce, kusovníku nebo nářezů je nutné **zobrazit dopad a získat potvrzení**. Nová revize se odliší od staré; výrobní dokumentace se nesmí tiše přepsat.
+5. Přenos Android ↔ Windows musí počítat se současnými offline úpravami a přerušenými zápisy: **bez ztráty dat nebo tichého přepsání konfliktu**. Konkrétní algoritmus slučování není zatím vybrán.
+
+### Stav připravenosti
+- **Skutečně existuje v Zaměřovači:** JSON `schema:1`, hierarchie záznamů, samostatné editovatelné `items` a původní média + ZIP balení; viz oddíl 1. Neznamená to již kompatibilní výměnu s Konfigurátorem.
+- **Samostatný projekt Konfigurátoru existuje:** vlastní plán a raná Android implementace; přesnost kusovníků/nářezů nebyla tímto rozborem ověřena.
+- **Není hotové:** společná zakázka, kompatibilní univerzální ID napříč aplikacemi, přenos hodnot do návrhu, revize odvozených výrobních výstupů, automatický kusovník navázaný na zaměření, synchronizace ani Windows integrovaný systém.
+- **Nynější povinnost:** neblokovat budoucí rozšíření, chránit původní soubory a editační data, písemně zachytit každou změnu formátu a ověřit staré ZIP. **Nyní žádný společný build, synchronizace nebo migrace.**
+
+
 [**Vize a plán**](VIZE_A_PLAN.md) · [**START ZDE**](START_ZDE.md) · [**Audit kódu**](AUDIT_KODU_PROTI_28_TESTUM.md)
