@@ -2,7 +2,7 @@
 'use strict';
 const assert=require('assert'),fs=require('fs'),vm=require('vm');
 const editor=fs.readFileSync('app/src/main/assets/editor.js','utf8');
-const a=editor.indexOf('function drawItem(c,item){'),b=editor.indexOf('function drawLoupe(){',a);
+const a=editor.indexOf('function rectCorners(item){'),b=editor.indexOf('function drawLoupe(){',a);
 assert(a>=0&&b>a,'Drawing function must remain accessible');
 const drawSource=editor.slice(a,b);
 const labels=[],arrows=[];
