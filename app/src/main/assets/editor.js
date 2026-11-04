@@ -262,6 +262,11 @@ if(item.type==='angle'&&pts.length>=3){
  const mid=a1+angle/2;
  canvasText((item.measure||degrees.toFixed(1))+'°',
   {x:vertex.x+Math.cos(mid)*(radius+25),y:vertex.y+Math.sin(mid)*(radius+25)},color,fs);
+ for(let i=0;i<2;i++){
+  const end=i===0?p:q,row=item.segmentData?.[i]||{};
+  const caption=[row.measure?row.measure+' '+(row.unit||'mm'):'',row.text||''].filter(Boolean).join(' · ');
+  if(caption)canvasText(caption,{x:(end.x+vertex.x)/2,y:(end.y+vertex.y)/2-18},color,fs);
+ }
 }
 else if(['chain','cumulative'].includes(item.type)&&pts.length>1){
  for(let i=0;i<pts.length-1;i++){
@@ -900,18 +905,51 @@ function editSegmentedItem(item){
 function editItem(item){
  if(['polyline','chain','cumulative'].includes(item.type)&&item.points?.length>1){editSegmentedItem(item);return}
  if(item.type==='area'){
-  modal('Plocha – rozměry a obsah',
-   '<p class="muted">Zadej šířku a výšku v mm. Obsah v m² spočítáme automaticky; nebo můžeš zadat obsah ručně.</p>'+
-   '<label>Šířka (mm)</label><input id="areaWidth" inputmode="decimal" value="'+escapeHtml(item.areaWidth||'')+'">'+
-   '<label>Výška (mm)</label><input id="areaHeight" inputmode="decimal" value="'+escapeHtml(item.areaHeight||'')+'">'+
-   '<label>Plocha (m²)</label><input id="areaMeasure" inputmode="decimal" value="'+escapeHtml(item.measure||'')+'">'+
-   '<label>Popisek</label><input id="areaCaption" value="'+escapeHtml(item.text||'')+'">'+
-   '<button id="removeItem" class="outline">Smazat plochu</button>',
-   ()=>{checkpoint();item.areaWidth=$('areaWidth').value.trim();item.areaHeight=$('areaHeight').value.trim();
-    const w=Number(item.areaWidth.replace(',','.')),h=Number(item.areaHeight.replace(',','.'));
-    item.measure=w>0&&h>0?String(Number((w*h/1000000).toFixed(5))).replace('.',','):$('areaMeasure').value.trim();
-    item.text=$('areaCaption').value.trim();item.unit='m²';commitEditor();
+  const sides=Array.isArray(item.sideMeasures)?item.sideMeasures:['','','',''];
+  const captions=Array.isArray(item.sideTexts)?item.sideTexts:['','','',''];
+  const readings=window.__boschHistoryReadings?.()||[];
+  const labels=['Horní','Pravá','Dolní','Levá'];
+  const fields=labels.map((name,i)=>
+    '<div class="segment-row"><strong>'+name+' strana</strong><label>Rozměr (mm)</label><input id="areaSide'+i+'" value="'+escapeHtml(sides[i]||'')+'">'+
+    (readings.length?'<select data-area-reading="'+i+'"><option value="">Vybrat hodnotu Bosch…</option>'+
+      readings.slice(0,40).map((r,j)=>'<option value="'+j+'">'+escapeHtml(r.value+' '+r.unit)+'</option>').join('')+'</select>':'')+
+    '<label>Popisek strany</label><input id="areaText'+i+'" value="'+escapeHtml(captions[i]||'')+'"></div>').join('');
+  modal('Lichoběžník – čtyři strany',
+   '<p>Každý roh můžeš přesunout zvlášť. Přesný obsah vyžaduje také úhlopříčku mezi horním levým a dolním pravým rohem.</p>'+fields+
+   '<label>Úhlopříčka (mm)</label><input id="areaDiagonal" value="'+escapeHtml(item.diagonal||'')+'">'+
+   '<label>Obsah (m²) – ručně, není-li měřena úhlopříčka</label><input id="areaMeasure" value="'+escapeHtml(item.measure||'')+'">'+
+   '<button id="removeItem" class="outline">Smazat lichoběžník</button>',
+   ()=>{
+     const values=labels.map((_,i)=>$('areaSide'+i).value.trim()),diag=$('areaDiagonal').value.trim();
+     const computed=quadAreaFromMeasures({sideMeasures:values,diagonal:diag});
+     if(diag&&computed===null){notify('Rozměry a úhlopříčka netvoří platný čtyřúhelník');return false}
+     checkpoint();item.points=quadCorners(item).map(p=>({...p}));
+     item.sideMeasures=values;item.sideTexts=labels.map((_,i)=>$('areaText'+i).value.trim());
+     item.diagonal=diag;item.measure=computed!==null?String(Number(computed.toFixed(5))).replace('.',','):$('areaMeasure').value.trim();
+     item.unit='m²';commitEditor();
    },'Uložit');
+  $('modalBody').querySelectorAll('[data-area-reading]').forEach(el=>el.onchange=()=>{
+    if(el.value==='')return;
+    const reading=readings[Number(el.value)],i=Number(el.dataset.areaReading),factor={mm:1,cm:10,m:1000,in:25.4};
+    if(reading&&factor[reading.unit])$('areaSide'+i).value=String(Number(String(reading.value).replace(',','.'))*factor[reading.unit]).replace('.',',');
+  });
+  labels.forEach((_,i)=>$('areaSide'+i).onfocus=()=>{item.activeSegmentIndex=i});
+  $('removeItem').onclick=()=>{checkpoint();current.items=current.items.filter(x=>x.id!==item.id);selected=null;$('modal').hidden=true;commitEditor()};
+  return;
+ }
+ if(item.type==='angle'&&item.points?.length>=3){
+  const readings=window.__boschHistoryReadings?.()||[];
+  const old=item.segmentData||[{},{}];
+  const fields=[0,1].map(i=>'<div class="segment-row"><strong>Rameno '+(i+1)+'</strong><label>Délka (mm)</label><input id="angleLength'+i+'" value="'+escapeHtml(old[i]?.measure||'')+'"><label>Popisek ramene</label><input id="angleText'+i+'" value="'+escapeHtml(old[i]?.text||'')+'">'+
+    (readings.length?'<select data-angle-reading="'+i+'"><option value="">Vybrat z historie Bosch…</option>'+readings.slice(0,40).map((r,j)=>'<option value="'+j+'">'+escapeHtml(r.value+' '+r.unit)+'</option>').join('')+'</select>':'')+'</div>').join('');
+  modal('Úhel – stupně a obě ramena','<p>Stupně se počítají automaticky z tří bodů. Každé rameno má vlastní měřenou délku.</p>'+fields+
+   '<button id="removeItem" class="outline">Smazat úhel</button>',
+   ()=>{checkpoint();item.segmentData=[0,1].map(i=>({measure:$('angleLength'+i).value.trim(),text:$('angleText'+i).value.trim(),unit:'mm'}));commitEditor()},'Uložit');
+  $('modalBody').querySelectorAll('[data-angle-reading]').forEach(el=>el.onchange=()=>{
+    const r=readings[Number(el.value)],i=Number(el.dataset.angleReading),unit={mm:1,cm:10,m:1000,in:25.4};
+    if(el.value!==''&&r&&unit[r.unit])$('angleLength'+i).value=String(Number(String(r.value).replace(',','.'))*unit[r.unit]).replace('.',',');
+  });
+  [0,1].forEach(i=>$('angleLength'+i).onfocus=()=>{item.activeSegmentIndex=i});
   $('removeItem').onclick=()=>{checkpoint();current.items=current.items.filter(x=>x.id!==item.id);selected=null;$('modal').hidden=true;commitEditor()};
   return;
  }
