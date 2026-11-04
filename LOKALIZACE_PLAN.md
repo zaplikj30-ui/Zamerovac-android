@@ -33,6 +33,28 @@ Oproti původnímu plánu bez viditelného přepínače je **nově schválená o
 
 **Stav:** dohodnuto a popsáno, zatím **NENAPROGRAMOVÁNO, NESestaveno ani NETESTOVÁNO**.
 
+## Škálování na desítky jazyků – závazné rozšíření architektury
+
+**4. 11. 2026 – pozdější schválené upřesnění:** cs/en/de/sk jsou **pouze příklady**. Schéma, API a obrazovka výběru nesmí být pevně omezené na čtyři jazyky. Příští vydání ale zobrazí výhradně **🇨🇿 Čeština** a prioritu mají opravy Zaměřovače. Podrobné akceptační podmínky v [Issue #14](https://github.com/zaplikj30-ui/Zamerovac-android/issues/14).
+
+### Datový a prezentační model
+- **Katalog**: každý jazyk má BCP 47 tag, vlastní název v daném jazyce/autonym, příp. název v aktuálním UI jazyce, informaci o směru písma `ltr|rtl`, locale pro formáty a stav *překlad opravdu dostupný*. Jazykové katalogy jsou oddělené od funkcí a neměnné formáty uložených dat.
+- **Jedna obecná komponenta jazykového výběru** čte seznam z registru, zobrazuje aktuální hodnotu, zvládá desítky položek, posun, návrat, vybraný stav, přístupnost, dlouhé vlastní názvy a budoucí textové vyhledávání. Názvy nabídky jsou ve **vlastním jazyce/písmu**. Výběr se nevyrábí větvením `if (language === 'en')` v jednotlivých obrazovkách.
+- **Budoucí vyhledávání** nad autonymem, českým/lokalizovaným názvem a případnými aliasy, s rozumnou Unicode/diakritickou normalizací a deterministickým tříděním. Pro jedinou češtinu může být vyhledávací pole skryté, ale logika seznamu musí být připravená k rozšíření.
+- **Vizuální odolnost**: variabilní délka řetězce, různá písma, zalamování, systémová velikost písma, čtečky obrazovky; nefixovat šířku každého názvu. Preferovat pružný layout a CSS logical properties.
+- **RTL**: data obsahují směr, textové bloky a položky používají vhodný `dir`, bidi izolaci a logické začátky/konce. Při reálném zavedení RTL ověřit navigaci i screenshoty. *Zrcadlení ovládání nesmí nikdy překroutit fyzické rozměry, polohy anotací, souřadnice fotky nebo názvy souborů.*
+- **Formátování + gramatika**: oddělit prezentační `Intl` / Android locale od perzistentních čísel a jednotek. Počítat s plurálovými zprávami a proměnnými, zachovat JSON schéma, historii Bosch a kompatibilitu ZIP.
+- **Publikace nového jazyka**: do výběru jej pustit až po dodání lokalizačních řetězců a odpovídajících testů; **žádné prázdné ani nefunkční jazyky**. Vše offline.
+
+### Rozdělení prací
+**Teď v příští společné aktualizaci:** malý český katalog + jazykové klíče v upravovaných částech, univerzální registr s jedinou dostupnou položkou `cs`, funkční obrazovka Nastavení s „Jazyk aplikace / 🇨🇿 Čeština“, případná preference, bez restartu a bez zásahu do projektových dat. Navrhnout rozhraní seznamu a filtrů bez vazby na počet položek, ale **nepřidávat nyní rozsáhlou implementaci vícejazyčnosti jen kvůli daleké budoucnosti**.
+
+**Později při skutečném rozšíření:** zapnout viditelné vyhledávání, přidávat pouze hotové jazyky, lokalizovat širší oblast aplikace, otestovat různé skripty, RTL, delší texty a místní formáty.
+
+**Testovací scénáře teď:** jediná dostupná čeština, předvybraná možnost, žádný restart při opakované volbě, persistence, offline a data beze změny. **Komponentové testy na syntetickém registru například 60 jazyků** mohou prokázat rozšiřitelnost, přesto v produkčním UI smí být pouze `cs`. Testy RTL a dalších jazyků **neoznačovat za provedené, pokud nebyly skutečně spuštěny**.
+
+**Stav:** zadání schváleno, implementace nezahájena, APK nevytvořena, testy nespouštěny.
+
 ## Bezpečná první etapa v příští aktualizaci
 - Vybrat první **malou logickou sadu právě upravovaných funkcí** z opravných testů 1–28.
 - Přidat malý český katalog + malé rozhraní pro JS a Android, soubory lokality jen v rozsahu skutečně dotčených textů.
@@ -44,7 +66,7 @@ Oproti původnímu plánu bez viditelného přepínače je **nově schválená o
 | Prvek | Stav k 4. 11. 2026 |
 |---|---|
 | Požadavek a zákaz plošné změny | **Schváleno** |
-| Rozsah jazyků cs/en/de/sk do budoucna | **Schválené směřování**, zatím jen cs |
+| Rozsah desítky+ jazyků a regionálních variant (cs/en/de/sk jsou pouze příklady) | **Schválený dlouhodobý požadavek**, dostupná zatím jen cs |
 | Konkrétní jména klíčů a technický způsob sdílení | **Návrh**, bude doladěn při vývoji |
 | Katalog překladů a JS/Android rozhraní | **Neimplementováno** |
 | Výběr jazyka v Nastavení – pouze 🇨🇿 Čeština | **Schváleno pro nadcházející aktualizaci; neimplementováno** |
