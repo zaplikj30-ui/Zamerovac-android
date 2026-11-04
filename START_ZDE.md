@@ -14,6 +14,13 @@
 
 **Současný další konkrétní krok – AKTUALIZACE SCHVÁLENA 4. 11. 2026:** uživatel po dokončení testů 1–9 a souvisejících fyzických kontrol rozhodl **„Teď bych ale provedl aktualizaci už“** a **„Neuděláme i ty nápady ... rovnou?“**. Implementovat souhrnný aktualizační úkol [**issue #17 – společná aktualizace oprav a UX i vymezených nápadů**](https://github.com/zaplikj30-ui/Zamerovac-android/issues/17): přesná zadání a regresní kritéria jsou v issue #17, podrobné důkazy v [issue #13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13). **Jedna společná APK až po dokončení všech dohodnutých úprav a kontrolách.** Výchozí vydání [v1.2.147](https://github.com/zaplikj30-ui/Zamerovac-android/releases/tag/test-v1.2.147); **nová APK dosud neexistuje**. Před prací znovu ověřit AGENTS, START, commity, issues/PR, Actions a stav druhého chatu/Codexu; nepřepisovat novější práci. **Neověřené mimo tuto sérii**: samostatný [test 29 – offline](https://github.com/zaplikj30-ui/Zamerovac-android/blob/main/REKONSTRUKCE_TESTU_21_28.md#co-následuje-po-historické-kontrole-28), reálné Bluetooth měření Bosch (4. 11. nebylo použito), některé další body původních 28 kontrol/#12. Nenahrazovat fyzický test zeleným buildem; po nové APK cíleně otestovat i regresi dat. **Rozsáhlé dlouhodobé nápady AI/iOS/Windows/cloud/Samsung Notes nejsou součástí schválené aktualizace.**
 
+## Aktuální implementace issue #17 – 4. 11. 2026
+
+- Výchozí main `474c841`; při zahájení žádné otevřené PR, poslední vydaná APK 1.2.147, vydávací Actions úspěšné. Schválená společná aktualizace je rozpracovaná, nová APK zatím nevydána.
+- **Nová dohoda o jednotkách nahrazuje předchozí přesun dolů:** malé rozbalovací políčko s aktuální jednotkou (mm/cm/m/in, u příslušných typů m²/°) **vedle pole Rozměr**, které zabere většinu řádku. U každého úseku samostatně. Zachovat uložené hodnoty, jednotky, přesnost i napojení Bosch.
+- [Zápis rozhodnutí a zahájení v issue #17](https://github.com/zaplikj30-ui/Zamerovac-android/issues/17#issuecomment-6635760943).
+- Další krok: dokončit kód a cílené regrese celé #17, průběžně uložit, až poté jedna APK. Bosch a offline test 29 nejsou fyzicky ověřené.
+
 ## 1. Co právě řešíme
 
 | Oblast | Aktuální stav | Kde je podrobnost |
