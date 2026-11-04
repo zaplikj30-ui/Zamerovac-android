@@ -57,6 +57,14 @@ class EditorToolbarTests(unittest.TestCase):
         self.assertIn("['redo','Znovu poslední úpravu']", extra)
         self.assertIn('id="undo" title="Zpět"', html)
 
+    def test_new_sketch_menu_uses_consistent_name_and_icon(self):
+        app=(ASSETS/'app.js').read_text(encoding='utf-8')
+        # A blank canvas remains the same record type, only its visible label/icon changes.
+        self.assertIn("'Nový náčrt',()=>promptText('Nový náčrt','Název','Nový náčrt'", app)
+        self.assertIn("newRecord('canvas',name)", app)
+        self.assertIn('m9 16 7.6-7.6', app)  # pencil drawn on the paper SVG
+        self.assertNotIn("['🎨','Nové plátno'", app)
+
     def test_existing_tools_and_repeat_mode_still_available(self):
         editor=(ASSETS/'editor.js').read_text(encoding='utf-8')
         self.assertIn("['note'",editor)
