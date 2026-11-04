@@ -24,6 +24,20 @@
 - **Další stav:** čeká na opravu / implementováno / vydáno v APK / uživatelem potvrzeno
 - **Další krok / historie případné změny dohody**
 
+
+## Podrobnost evidence – zachovat každý relevantní detail
+
+**Dohoda z 4. 11. 2026:** „Každý detail se může hodit.“ Při rekonstrukci i nových testech neukládat jen krátké „funguje/nefunguje“ nebo finální opravu. Uložit všechny **věcně relevantní podrobnosti**, které pomohou pochopit problém a předejít jeho návratu:
+
+- Přesné kroky testu a co se stalo proti očekávání; pokud je něco vidět jen částečně, přiznat nejistotu.
+- Drobnosti vzhledu a ovládání: ikony, rozložení, velikost, barva, průhlednost, texty, umístění, reakce na dotyk/S Pen, gesta, lupu, přesouvání a přichytávání.
+- Navržené varianty, proč se nějaká líbila nebo nelíbila, následná doplnění i opravy původní dohody **kdekoli dále v celém záznamu**.
+- Rozlišit, zda jde o potvrzenou chybu, schválené vylepšení, nový schválený prvek, nápad „možná do budoucna“, nebo nejasnost k doptání.
+- Ke každému zjištění **odkaz na důkaz**: číslo testu, název videa/fotky, čas ve videu, případně citaci krátké klíčové formulace ze záznamu. Neukládat soukromé fotografie nebo videa přímo do veřejné dokumentace bez potřeby.
+- Po jednotlivých testech průběžně ukládat závěry na GitHub, nikoli až po všech 28; před označením za finální projít pozdější dodatky v celém videu.
+
+**Cíl:** z příštího záznamu musí být možné změnu přesně implementovat a otestovat, aniž bychom znovu četli původní dlouhý chat. Současně nevydávat neověřený odhad za fakt.
+
 ## Stav rekonstrukce historických 28 kontrol (4. 11. 2026)
 
 **Dosud NEUZAVŘENO.** V deníku [#13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13) existuje předběžná rekonstrukce některých čísel, která je ještě nutné porovnat s videem původního chatu. Zde nebudeme vymýšlet, že už jsou kompletně hotové.
