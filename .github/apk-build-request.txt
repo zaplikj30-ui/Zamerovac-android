@@ -2,5 +2,5 @@
 # Běžné změny kódu APK nesestavují. Teprve změna tohoto souboru spustí workflow build-apk.yml.
 # Při požadavku na sestavení uprav číslo a popis níže, commitni do main.
 
-request: 5
-reason: editor kóty a popisky čar a šipek, vícenásobné řetězce, úhel, plocha, volná ruka, vlastní lišta, ZIP import, poznámky, zámky, koš, hledání; Google Disk odložen
+request: 6
+reason: jedina spolecna aktualizace vsech 28 historickych testu a schvalenych doplnku, cesky jazykovy system; regresni test na telefonu nasleduje
