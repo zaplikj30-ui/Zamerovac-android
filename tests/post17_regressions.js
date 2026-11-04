@@ -79,10 +79,18 @@ for(const type of ['line','arrow','dimension'])for(const length of [20,60,200]){
  assert.equal(env.nearestHandle({x:50+length*.5,y:100}),null,'Middle must remain move zone even on short lines');
  assert.equal(env.nearestHandle({x:50+length*.1,y:100}).key,'a');
  assert.equal(env.nearestHandle({x:50+length*.9,y:100}).key,'b');
- assert.equal(env.nearestHandle({x:50+length*.26,y:100}).key,'a',type+' near endpoint');
+ // The 31px grip radius also applies: on long segments 26% may lie outside it.
+ const nearStart=env.nearestHandle({x:50+length*.26,y:100});
+ const nearEnd=env.nearestHandle({x:50+length*.74,y:100});
+ if(length*.26<31){
+  assert.equal(nearStart.key,'a',type+' near endpoint');
+  assert.equal(nearEnd.key,'b',type+' opposite near endpoint');
+ }else{
+  assert.equal(nearStart,null,type+' long line outside fixed grip radius');
+  assert.equal(nearEnd,null,type+' opposite long line outside fixed grip radius');
+ }
  assert.equal(env.nearestHandle({x:50+length*.29,y:100}),null,type+' slight margin now moves whole object');
  assert.equal(env.nearestHandle({x:50+length*.71,y:100}),null,type+' mirrored move margin');
- assert.equal(env.nearestHandle({x:50+length*.74,y:100}).key,'b',type+' opposite near endpoint');
  assert.equal(item.measure,'1250,123');
 }
 console.log('OK: #17 transformed contours, area, readable text, finish/persist paths, exact hints, short/long grip zones');
