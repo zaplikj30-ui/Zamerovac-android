@@ -49,7 +49,7 @@
 | Hromadné označování souborů | **CHYBÍ** datový výběrový režim a nástroje | Vytvořit výběr dlouhým stiskem, akce Přesunout/Kopírovat/Smazat/ZIP/Vybrat vše, počet, bezpečnost zámku a undo/obnova dle typu akce. |
 | Značka upravené fotografie | **PŘÍTOMNA** v běžném seznamu a výsledcích hledání | Dokončit grafickou kontrolu podle odsouhlasených proporcí a kontrastu; nepřidávat duplicitní implementaci. |
 | Více fotografií v jedné poznámce | **PŘÍTOMNY** stoh + číselný odznak v kreslení | Dopracovat pouze prokázané odchylky od původních přehnutých rohů a otestovat, že se vše posouvá správně. |
-| **Jazyk aplikace** – 🇨🇿 Čeština | **SCHVÁLENO, dosud neimplementováno** | Podle [Issue #14](https://github.com/zaplikj30-ui/Zamerovac-android/issues/14) a [LOKALIZACE_PLAN.md](LOKALIZACE_PLAN.md). V nejbližší společné aktualizaci přidat položku v Nastavení s jedinou funkční vybranou češtinou, bez restartu či překladu; postupně jazykové klíče jen u upravovaných částí, bez samostatné APK. |
+| **Jazyk aplikace** – 🇨🇿 Čeština | **SCHVÁLENO, dosud neimplementováno** | Podle [Issue #14](https://github.com/zaplikj30-ui/Zamerovac-android/issues/14) a [LOKALIZACE_PLAN.md](LOKALIZACE_PLAN.md). Do Nastavení dát jedinou aktivní češtinu bez restartu; architektura pro **desítky jazyků**, budoucí hledání, autonyma, místní formáty a případné RTL. **Neaktivovat další jazyk**, nepředělávat stabilní funkce; bez samostatné APK. |
 
 ## Priorita podle rizika, ne podle čísla testu
 
