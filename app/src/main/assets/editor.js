@@ -265,7 +265,7 @@ if(item.type==='angle'&&pts.length>=3){
  for(let i=0;i<2;i++){
   const end=i===0?p:q,row=item.segmentData?.[i]||{};
   const caption=[row.measure?row.measure+' '+(row.unit||'mm'):'',row.text||''].filter(Boolean).join(' · ');
-  if(caption)canvasText(caption,{x:(end.x+vertex.x)/2,y:(end.y+vertex.y)/2-18},color,fs);
+  if(caption)canvasText(caption,{x:(end.x+vertex.x)/2+(end.x-vertex.x)*(Number(row.labelT)||0),y:(end.y+vertex.y)/2-18+(end.y-vertex.y)*(Number(row.labelT)||0)},color,fs);
  }
 }
 else if(['chain','cumulative'].includes(item.type)&&pts.length>1){
@@ -341,7 +341,8 @@ else if(item.type==='rect'||item.type==='area'){
      corners.forEach((p,i)=>{
        const q=corners[(i+1)%4],info=item.sideMeasures?.[i]||'';
        const txt=[info?info+' mm':'',item.sideTexts?.[i]||''].filter(Boolean).join(' · ');
-       if(txt)canvasText(txt,{x:(p.x+q.x)/2,y:(p.y+q.y)/2},color,Math.max(11,fs*.8));
+       const t=Number(item.sideLabelT?.[i])||0;
+       if(txt)canvasText(txt,{x:(p.x+q.x)/2+(q.x-p.x)*t,y:(p.y+q.y)/2+(q.y-p.y)*t},color,Math.max(11,fs*.8));
      });
    }else{
      if(item.dimW)canvasText(item.dimW+' mm',{x:(corners[0].x+corners[1].x)/2,y:corners[0].y+14},color,Math.max(11,fs*.8));
@@ -356,7 +357,7 @@ else if(item.type==='ellipse'||item.type==='circle'){
  const label=[item.measure?(item.measureKind==='radius'?'R ':'Ø ')+item.measure+' '+(item.unit||'mm'):'',item.text||''].filter(Boolean).join(' · ');
  if(label)canvasText(label,{x:cx+Number(item.labelDx||0),y:cy+Number(item.labelDy||0)},color,fs);
 }
-else if(item.type==='freehand'||item.type==='polyline'){if(pts.length){c.beginPath();c.moveTo(pts[0].x,pts[0].y);for(let p of pts.slice(1))c.lineTo(p.x,p.y);c.stroke();if(item.type==='polyline')for(let i=0;i<pts.length-1;i++){const row=item.segmentData?.[i]||{};const text=[row.measure?row.measure+' '+(row.unit||item.unit||'mm'):'',row.text||''].filter(Boolean).join(' · ');if(text)canvasText(text,{x:(pts[i].x+pts[i+1].x)/2,y:(pts[i].y+pts[i+1].y)/2},color,fs)}}}
+else if(item.type==='freehand'||item.type==='polyline'){if(pts.length){c.beginPath();c.moveTo(pts[0].x,pts[0].y);for(let p of pts.slice(1))c.lineTo(p.x,p.y);c.stroke();if(item.type==='polyline')for(let i=0;i<pts.length-1;i++){const row=item.segmentData?.[i]||{};const text=[row.measure?row.measure+' '+(row.unit||item.unit||'mm'):'',row.text||''].filter(Boolean).join(' · ');if(text)canvasText(text,{x:(pts[i].x+pts[i+1].x)/2+(pts[i+1].x-pts[i].x)*(Number(row.labelT)||0),y:(pts[i].y+pts[i+1].y)/2+(pts[i+1].y-pts[i].y)*(Number(row.labelT)||0)},color,fs)}}}
 else if(item.type==='note'||item.type==='symbol'){if(a){if(item.type==='note'){drawNoteLeader(c,item,color);(noteDisplayedCaption(item)&&canvasText(noteDisplayedCaption(item),noteCaptionScreen(item),color,fs))}else canvasText((item.icon||'⚑')+' '+(item.text||''),a,color,fs)}}
 c.restore();}
 function drawLoupe(){
@@ -627,7 +628,26 @@ function stageDown(e){
  if(candidate){
   // U řetězců si pamatuj konkrétní úsek, kterého se uživatel dotkl.
   // Další odečet z Bosche vyplní právě tento úsek, nikoli celý řetězec.
-  if(['chain','cumulative'].includes(candidate.type)&&candidate.points?.length>1){
+  if(['chain','cumulative','polyline','area','angle','rect'].includes(candidate.type)){
+    const count=candidate.type==='area'||candidate.type==='rect'?4:
+     candidate.type==='angle'?2:Math.max(0,(candidate.points?.length||0)-1);
+    let nearest=0,dist=Infinity;
+    for(let i=0;i<count;i++){
+      let line=null;
+      if(candidate.type==='rect'){
+        const corners=rectCorners(candidate).map(worldToScreen);
+        line={a:corners[i],b:corners[(i+1)%4]};
+      }else if(typeof segmentLineScreen==='function')line=segmentLineScreen(candidate,i);
+      if(!line)continue;
+      const a=line.a,b=line.b,dx=b.x-a.x,dy=b.y-a.y;
+      const t=Math.max(0,Math.min(1,((s.x-a.x)*dx+(s.y-a.y)*dy)/(dx*dx+dy*dy||1)));
+      const d=Math.hypot(s.x-a.x-t*dx,s.y-a.y-t*dy);
+      if(d<dist){dist=d;nearest=i}
+    }
+    candidate.activeSegmentIndex=candidate.type==='rect'?nearest%2:nearest;
+   }
+   /* Earlier chain hit-testing used raw fan coordinates; displayed geometry above is authoritative. */
+   if(false&&['chain','cumulative'].includes(candidate.type)&&candidate.points?.length>1){
    const w=screenToWorld(s);
    let nearest=0,dist=Infinity;
    for(let i=0;i<candidate.points.length-1;i++){
