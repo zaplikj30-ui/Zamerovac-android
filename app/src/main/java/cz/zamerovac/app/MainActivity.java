@@ -105,7 +105,8 @@ public class MainActivity extends Activity {
     private final ArrayList<BluetoothDevice> scanned =new ArrayList<>();
     private final Map<String,String> scannedNames=new HashMap<>();
     private BluetoothLeScanner scanner;
-    private BluetoothGatt gatt;
+    private volatile BluetoothGatt gatt;
+    private int laserScanGeneration=0;
     private BoschClassicReader classic;
     private ScanCallback scanCallback;
     private BluetoothGattCharacteristic boschCommand;
@@ -799,6 +800,7 @@ public class MainActivity extends Activity {
         }
         @JavascriptInterface public void connectLaser(){runOnUiThread(()->startScan(false));}
         @JavascriptInterface public void chooseOtherLaser(){runOnUiThread(()->startScan(true));}
+        @JavascriptInterface public void disconnectLaser(){runOnUiThread(()->stopLaserConnection());}
         @JavascriptInterface public void triggerLaser(){runOnUiThread(()->sendExperimentalLaserTrigger());}
         @JavascriptInterface public void setAccent(String color){
             if(color==null||!color.matches("#[0-9a-fA-F]{6}"))return;
@@ -974,10 +976,28 @@ public class MainActivity extends Activity {
     // The GLM 100-25 C is Bluetooth LE. Show ALL nearby LE advertisements (like
     // ImageMeter), preferring Bosch entries but not hiding unknown device names.
     private void stopLaserScan(){
+        laserScanGeneration++; // Invalidate any delayed result from this scan.
         if(scanner!=null&&scanCallback!=null){
             try{scanner.stopScan(scanCallback);}catch(Exception ignored){}
             scanCallback=null;
         }
+    }
+    /** End an in-progress scan or live connection without forgetting the paired meter. */
+    private void stopLaserConnection(){
+        stopLaserScan();
+        boschStreamEnabled=false;
+        boschCommand=null;
+        if(classic!=null){
+            try{classic.close();}catch(Exception ignored){}
+            classic=null;
+        }
+        BluetoothGatt previous=gatt;
+        gatt=null; // Late callbacks must not revive the connection in the UI.
+        if(previous!=null){
+            try{previous.disconnect();}catch(Exception ignored){}
+            try{previous.close();}catch(Exception ignored){}
+        }
+        laserStatus("off","");
     }
     private void startScan(){startScan(false);}
     private void startScan(boolean showAllDevices){
@@ -997,6 +1017,7 @@ public class MainActivity extends Activity {
             return;
         }
         stopLaserScan();
+        final int scanGeneration=laserScanGeneration;
         scanner=adapter.getBluetoothLeScanner();
         if(scanner==null){error("Bluetooth LE není dostupné");laserStatus("off","");return;}
         scanned.clear();
@@ -1008,6 +1029,7 @@ public class MainActivity extends Activity {
                 if(device==null)return;
                 String advertised=result.getScanRecord()==null?null:result.getScanRecord().getDeviceName();
                 runOnUiThread(()->{
+                    if(scanGeneration!=laserScanGeneration)return;
                     if(!scanned.contains(device))scanned.add(device);
                     if(advertised!=null&&!advertised.trim().isEmpty()){
                         String prior=scannedNames.get(device.getAddress());
@@ -1017,13 +1039,13 @@ public class MainActivity extends Activity {
                 });
             }
             @Override public void onScanFailed(int code){
-                runOnUiThread(()->{stopLaserScan();laserStatus("off","");error("Vyhledávání Bluetooth se nezdařilo ("+code+")");});
+                runOnUiThread(()->{if(scanGeneration!=laserScanGeneration)return;stopLaserScan();laserStatus("off","");error("Vyhledávání Bluetooth se nezdařilo ("+code+")");});
             }
         };
         try{
             scanner.startScan(scanCallback);
             handler.postDelayed(()->{
-                if(scanCallback==null)return; // scan cancelled or failed
+                if(scanCallback==null||scanGeneration!=laserScanGeneration)return; // scan cancelled or superseded
                 stopLaserScan();
                 ArrayList<BluetoothDevice> devices=new ArrayList<>(scanned);
                 java.util.Set<String> leAddresses=new java.util.HashSet<>();
@@ -1155,7 +1177,9 @@ public class MainActivity extends Activity {
             laserStatus("connecting",deviceName);
             gatt=device.connectGatt(this,false,new BluetoothGattCallback(){
                 @Override public void onConnectionStateChange(BluetoothGatt connection,int status,int newState){
+                    if(connection!=gatt){connection.close();return;}
                     if(status!=BluetoothGatt.GATT_SUCCESS){
+                        gatt=null;
                         laserStatus("off",deviceName);
                         error("Spojení Bluetooth selhalo ("+status+"). Zkus měřič znovu.");
                         connection.close();
@@ -1168,12 +1192,14 @@ public class MainActivity extends Activity {
                             error("Laser neumožnil načíst služby Bluetooth");
                         }
                     }else if(newState==android.bluetooth.BluetoothProfile.STATE_DISCONNECTED){
+                        gatt=null;
                         boschStreamEnabled=false;
                         laserStatus("off",deviceName);
                         connection.close();
                     }
                 }
                 @Override public void onServicesDiscovered(BluetoothGatt connection,int status){
+                    if(connection!=gatt)return;
                     if(status!=BluetoothGatt.GATT_SUCCESS){
                         laserStatus("off",deviceName);
                         error("Nepodařilo se načíst služby laseru");
@@ -1215,6 +1241,7 @@ public class MainActivity extends Activity {
                 }
                 @Override public void onDescriptorWrite(BluetoothGatt connection,
                         BluetoothGattDescriptor descriptor,int status){
+                    if(connection!=gatt)return;
                     if(!BoschBleProtocol.CCCD_UUID.equals(descriptor.getUuid()))return;
                     if(status!=BluetoothGatt.GATT_SUCCESS){
                         laserStatus("off",deviceName);
@@ -1241,6 +1268,7 @@ public class MainActivity extends Activity {
                 }
                 @Override public void onCharacteristicWrite(BluetoothGatt connection,
                         BluetoothGattCharacteristic characteristic,int status){
+                    if(connection!=gatt)return;
                     if(!BoschBleProtocol.MEASUREMENT_UUID.equals(characteristic.getUuid()))return;
                     if(java.util.Arrays.equals(characteristic.getValue(),BoschBleProtocol.REMOTE_TRIGGER)){
                         if(status!=BluetoothGatt.GATT_SUCCESS)
@@ -1259,6 +1287,7 @@ public class MainActivity extends Activity {
                 }
                 @Override public void onCharacteristicChanged(BluetoothGatt connection,
                         BluetoothGattCharacteristic characteristic){
+                    if(connection!=gatt)return;
                     if(!BoschBleProtocol.MEASUREMENT_UUID.equals(characteristic.getUuid()))return;
                     String mm=BoschBleProtocol.millimetersText(characteristic.getValue());
                     if(mm==null)return;
