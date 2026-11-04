@@ -18,7 +18,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
   for(const touch of [false,true]){
    await page.click('#'+button);assert(await page.locator('#'+menu).isVisible());
    const before=await page.evaluate(()=>JSON.stringify(state));
-   if(touch)await page.touchscreen.tap(210,230);else await page.mouse.click(210,230);
+   if(touch)await page.touchscreen.tap(2,400);else await page.mouse.click(2,400);
    assert.equal(await page.locator('#'+menu).isVisible(),false);assert.equal(await page.evaluate(()=>JSON.stringify(state)),before);
    await page.click('#'+button);await page.click('#'+button);assert.equal(await page.locator('#'+menu).isVisible(),false);
    await page.click('#'+button);await page.evaluate(()=>window.handleAndroidBack());assert.equal(await page.locator('#'+menu).isVisible(),false);
@@ -60,7 +60,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
  for(const [button,menu] of [['toolsToggle','toolMenu'],['editorTopMenu','editorOverflow'],['editorMore','editorExtraToolbar']]){
   for(const pointer of ['mouse','touch','pen']){
    await page.click('#'+button);assert(await page.locator('#'+menu).isVisible());
-   const x=box.x+110,y=box.y+110;
+   const x=box.x+3,y=box.y+10;
    if(pointer==='touch')await page.touchscreen.tap(x,y);
    else if(pointer==='pen'){
     for(const type of ['pointerdown','pointermove','pointerup','click'])await page.locator('#drawCanvas').dispatchEvent(type,{pointerId:9,pointerType:'pen',clientX:x,clientY:y,bubbles:true,cancelable:true});
@@ -70,5 +70,24 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
    assert.deepEqual(await page.evaluate(()=>({items:current.items,draft:polylineDraft,mode})),JSON.parse(before), 'Outside must preserve draft and saved objects');
   }
  }
+ // Menu controls still execute, switches close the previous panel, Back/toggle preserve draft.
+ await page.click('#toolsToggle');await page.click('#editorTopMenu');
+ assert.equal(await page.locator('#toolMenu').isVisible(),false);
+ await page.click('#editorTopMenu');assert.equal(await page.locator('#editorOverflow').isVisible(),false);
+ await page.click('#editorMore');await page.evaluate(()=>window.handleAndroidBack());assert.equal(await page.locator('#editorExtraToolbar').isVisible(),false);
+ await page.click('#toolsToggle');await page.locator('#toolMenu [data-tool="chain"]').click();
+ assert.equal(await page.locator('#toolMenu').isVisible(),false);
+ // Explicit finish persists the chain; reopen/reload preserves the exact geometry.
+ await page.click('#activeTool');
+ const saved=await page.evaluate(()=>{commitEditor();return JSON.stringify(current.items)});
+ assert.equal(JSON.parse(saved).length,1);
+ await page.evaluate(()=>{current.kind='photo';current.media=['synthetic-photo'];showEditorOverflow()});
+ assert.equal(await page.locator('#editorOverflow').getByText('Export pro zákazníka: ZIP s PDF',{exact:true}).count(),1);
+ assert.equal(await page.locator('#editorOverflow').getByText('▣ Export všech zakázek do ZIP',{exact:true}).count(),1);
+ await page.evaluate(()=>closeMenus());await page.reload();
+ assert.equal(await page.evaluate(()=>JSON.stringify(state.records.find(r=>r.title==='Rozpracovaná kóta').items)),saved);
+ // A queued old sync result cannot resurrect a record already purged locally.
+ await page.evaluate(()=>{state.trashPurgedIds=['previously-purged'];save();window.onNativeSync(JSON.stringify({data:{...state,trashPurgedIds:[],records:[...state.records,{id:'previously-purged',deleted:true}]}}))});
+ assert.equal(await page.evaluate(()=>state.records.some(r=>r.id==='previously-purged')),false);
  await browser.close();assert.deepEqual(errors,[]);console.log('OK: post148 real mouse/touch/pen-event menus, cancellation/storage failure/restart, exact export entries, smaller upper-left badge');
 })().catch(e=>{console.error(e);process.exit(1)});

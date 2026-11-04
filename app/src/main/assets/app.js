@@ -129,8 +129,8 @@ function purgeTrashRecords(ids){
 }
 function confirmTrashPurge(ids,all){
  if(trashBusy)return;
- modal(all?'Vysypat koš?':'Trvale odstranit?',
-  all?'<p>Opravdu vysypat koš? Všechny položky v koši budou trvale odstraněny a nebude možné je obnovit.</p>':
+ modal(!ids.length?'Dokončit úklid koše?':all?'Vysypat koš?':'Trvale odstranit?',
+  !ids.length?'<p>Zopakovat trvalé odstranění souborů dříve vysypaného koše? Aktivně používané a sdílené soubory zůstanou zachované.</p>':all?'<p>Opravdu vysypat koš? Všechny položky v koši budou trvale odstraněny a nebude možné je obnovit.</p>':
   '<p>Vybraná položka v koši a její smazané podsložky budou trvale odstraněny a nebude možné je obnovit.</p>',
   ()=>purgeTrashRecords(ids),'Trvale odstranit');
  $('okModal').classList.add('danger');
@@ -272,7 +272,7 @@ window.onNativePhotoAddress=(mediaId,address)=>{
   }
 };
 window.onNativeMediaDone=()=>{stagedFileHandler=null;save()};
-window.onNativeSync=(text)=>{try{let s=JSON.parse(text);if(s.data){if(screen==='browser'){state=s.data;Object.assign(prefs,state.prefs||{});state.prefs=prefs;save();showFolder()}else{const activeIds=new Set([current?.id,noteActive?.id].filter(Boolean));const active=state.records.filter(r=>activeIds.has(r.id));let incoming=s.data.records||[];for(const r of active){let at=incoming.findIndex(x=>x.id===r.id);if(at>=0)incoming[at]=r;else incoming.push(r)}state.records=incoming;save();} }notify(s.message||'Synchronizace dokončena')}catch(e){notify(text)}};
+window.onNativeSync=(text)=>{try{let s=JSON.parse(text);if(s.data){const purged=new Set([...(state.trashPurgedIds||[]),...(s.data.trashPurgedIds||[])]);s.data.trashPurgedIds=[...purged];s.data.records=(s.data.records||[]).filter(r=>!r.deleted||!purged.has(r.id));if(screen==='browser'){state=s.data;Object.assign(prefs,state.prefs||{});state.prefs=prefs;save();showFolder()}else{const activeIds=new Set([current?.id,noteActive?.id].filter(Boolean));const active=state.records.filter(r=>activeIds.has(r.id));let incoming=s.data.records||[];for(const r of active){let at=incoming.findIndex(x=>x.id===r.id);if(at>=0)incoming[at]=r;else incoming.push(r)}state.records=incoming;save();} }notify(s.message||'Synchronizace dokončena')}catch(e){notify(text)}};
 window.onLaserValue=(value,unit)=>{
  // Přenos mimo editor: uložit poslední přijatou hodnotu do paměti.
  // V editoru provede přímý zápis __handleLaserAuto v upgrade.js.

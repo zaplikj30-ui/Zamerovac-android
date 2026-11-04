@@ -87,6 +87,19 @@ public class TrashPurgerTest {
         purger.purge(updated.toString(),updated.toString(),new JSONArray(),this::persist);
         assertTrue(new File(home,"media/trash-media").exists());
     }
+    @Test public void nativeBridgeChecksDiskSnapshotAndKeepsLegacyUnsavedDefaults() throws Exception {
+        MainActivity activity=Robolectric.buildActivity(MainActivity.class).get();
+        java.lang.reflect.Field field=MainActivity.class.getDeclaredField("settings");field.setAccessible(true);field.set(activity,prefs);
+        String saved=fixture().toString();File db=new File(activity.getFilesDir(),"projects.json");
+        Files.write(db.toPath(),saved.getBytes(StandardCharsets.UTF_8));
+        MainActivity.JsApi api=activity.new JsApi();
+        JSONObject error=new JSONObject(api.purgeTrash(saved+" ",saved,targets().toString()));assertTrue(error.has("error"));assertEquals(saved,read(db));
+        JSONObject desired=new JSONObject(saved).put("prefs",new JSONObject().put("unit","mm"));
+        JSONObject result=new JSONObject(api.purgeTrash(saved,desired.toString(),targets().toString()));assertFalse(result.toString(),result.has("error"));
+        assertEquals(2,new JSONObject(read(db)).getJSONArray("records").length());assertEquals(read(db),result.getString("snapshot"));
+        // Replaying the same bridge request cannot overwrite newer records.
+        assertTrue(new JSONObject(api.purgeTrash(saved,desired.toString(),targets().toString())).has("error"));
+    }
     @Test public void syncDoesNotResurrectPurgedTrashButPreservesRemoteActiveRecord() throws Exception {
         JSONObject original=fixture();String db=original.toString();
         JSONObject local=purger.purge(db,db,targets(),this::persist).getJSONObject("data");
