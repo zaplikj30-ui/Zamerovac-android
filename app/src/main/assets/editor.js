@@ -265,10 +265,11 @@ if(item.type==='angle'&&pts.length>=3){
 }
 else if(['chain','cumulative'].includes(item.type)&&pts.length>1){
  for(let i=0;i<pts.length-1;i++){
-  const from=item.type==='cumulative'?pts[0]:pts[i],to=pts[i+1];
+  const projected=item.type==='cumulative'?cumulativeSegment(item,i):null;
+   const from=projected?.from||pts[i],to=projected?.to||pts[i+1];
   const data=item.segmentData?.[i]||{};
   const dx=to.x-from.x,dy=to.y-from.y,d=Math.hypot(dx,dy)||1;
-  const nx=-dy/d,ny=dx/d,offset=(Number(item.offset)||0)+i*(item.type==='cumulative'?10:0);
+  const nx=-dy/d,ny=dx/d,offset=(Number(item.offset)||0)+i*(item.type==='cumulative'?26:0);
   const p={x:from.x+nx*offset,y:from.y+ny*offset};
   const q={x:to.x+nx*offset,y:to.y+ny*offset};
   c.beginPath();
@@ -280,7 +281,7 @@ else if(['chain','cumulative'].includes(item.type)&&pts.length>1){
   drawArrow(c,p,q,9);drawArrow(c,q,p,9);
   const caption=[data.measure?data.measure+' '+(data.unit||item.unit||'mm'):'?',data.text||''].filter(Boolean).join(' · ');
   let angle=Math.atan2(dy,dx);if(angle>Math.PI/2||angle< -Math.PI/2)angle+=Math.PI;
-  canvasText(caption,{x:(p.x+q.x)/2,y:(p.y+q.y)/2},color,fs,angle);
+  canvasText(caption,{x:(p.x+q.x)/2+(q.x-p.x)*(Number(data.labelT)||0),y:(p.y+q.y)/2+(q.y-p.y)*(Number(data.labelT)||0)},color,fs,angle);
  }
 }
 else if(item.type==='dimension'||item.type==='chain'||item.type==='cumulative'){if(a&&b){let dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1;let nx=-dy/d,ny=dx/d;let off=item.offset??0;let ao={x:a.x+nx*off,y:a.y+ny*off},bo={x:b.x+nx*off,y:b.y+ny*off};c.beginPath();c.moveTo(a.x+nx*(off-11),a.y+ny*(off-11));c.lineTo(a.x+nx*(off+11),a.y+ny*(off+11));c.moveTo(b.x+nx*(off-11),b.y+ny*(off-11));c.lineTo(b.x+nx*(off+11),b.y+ny*(off+11));c.moveTo(ao.x,ao.y);c.lineTo(bo.x,bo.y);c.stroke();drawArrow(c,ao,bo,9);drawArrow(c,bo,ao,9);let label=item.measure?`${item.measure} ${item.unit||'mm'}`:'?';if(item.text)label+=' · '+item.text;let ang=Math.atan2(dy,dx);if(ang>Math.PI/2||ang< -Math.PI/2)ang+=Math.PI;canvasText(label,{x:(ao.x+bo.x)/2+(bo.x-ao.x)*(Number(item.labelT)||0),y:(ao.y+bo.y)/2+(bo.y-ao.y)*(Number(item.labelT)||0)},color,fs,ang)}}
@@ -296,7 +297,7 @@ else if(item.type==='line'||item.type==='arrow'||item.type==='angle'){
  if(a&&b){
   seg();
   if(item.type==='arrow')drawArrow(c,b,a,15);
-  if(item.type==='target'){c.beginPath();c.arc(b.x,b.y,12,0,Math.PI*2);c.stroke()}
+  /* Fixed target has its own drawing branch above. */
   if(item.type==='angle'){
    const degree=(Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI+360)%360;
    canvasText((item.measure||degree.toFixed(0))+'°',{x:(a.x+b.x)/2,y:(a.y+b.y)/2-23},color,fs);
@@ -308,8 +309,8 @@ else if(item.type==='line'||item.type==='arrow'||item.type==='angle'){
     let angle=Math.atan2(dy,dx);
     if(angle>Math.PI/2||angle< -Math.PI/2)angle+=Math.PI;
     const gap=(Number(fs)||17)*.85+4;
-    canvasText(label,{x:(a.x+b.x)/2+Math.sin(angle)*gap,
-      y:(a.y+b.y)/2-Math.cos(angle)*gap},color,fs,angle);
+    canvasText(label,{x:(a.x+b.x)/2+Math.sin(angle)*gap+(b.x-a.x)*(Number(item.labelT)||0),
+      y:(a.y+b.y)/2-Math.cos(angle)*gap+(b.y-a.y)*(Number(item.labelT)||0)},color,fs,angle);
    }
   }
  }
@@ -403,10 +404,11 @@ function drawLoupe(){
   loupeCtx.restore();
 }
 function labelInfo(item){
-  if(!item||!['dimension','chain','cumulative'].includes(item.type)||!item.a||!item.b||(['chain','cumulative'].includes(item.type)&&item.points?.length>1))return null;
+  if(!item||!['dimension','chain','cumulative','line','arrow'].includes(item.type)||!item.a||!item.b||(['chain','cumulative'].includes(item.type)&&item.points?.length>1))return null;
   const a=worldToScreen(item.a),b=worldToScreen(item.b);
   const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1,ux=dx/d,uy=dy/d;
-  const off=item.offset??0,t=Number(item.labelT)||0;
+  const angle=Math.atan2(dy,dx),flipped=angle>Math.PI/2||angle< -Math.PI/2;
+  const off=['line','arrow'].includes(item.type)?((flipped?1:-1)*((Number(item.fontSize)||Number(prefs.fontSize)||17)*.85+4)):(item.offset??0),t=Number(item.labelT)||0;
   return {x:(a.x+b.x)/2-uy*off+dx*t,y:(a.y+b.y)/2+ux*off+dy*t,ux,uy,d};
 }
 function nearestLabel(point){
