@@ -69,4 +69,32 @@ assert.equal(sandbox.selected,note.id,'First tap must select the inset');
 assert.equal(sandbox.opens.length,0,'First tap may not open nested editor');
 pointer('pointerdown',...center);pointer('pointerup',...center);
 assert.deepEqual(sandbox.opens,['note:note-1'],'Second separate tap opens full note');
+// One visible sheet per attached photograph, with the original inset above them.
+{
+ const image=sandbox.window.__detailPhotoCache['detail-1'];
+ const drawn=[];
+ const c={
+  save(){},restore(){},translate(){},rotate(){},
+  beginPath(){},moveTo(){},lineTo(){},closePath(){},fill(){},stroke(){},
+  arc(){},setLineDash(){},strokeRect(){},drawImage(){},
+  fillText(){},measureText(t){return {width:String(t).length*9}},
+  fillRect(x,y,w,h){drawn.push({x,y,w,h,fill:this.fillStyle})}
+ };
+ note.text='';sandbox.selected=null;
+ for(const count of [1,2,3,4,7]){
+  note.media=Array.from({length:count},(_,i)=>'detail-'+(i+1));
+  drawn.length=0;
+  sandbox.window.renderPhotoInset(c,note,image,()=>{});
+  const sheets=drawn.filter(x=>x.fill==='#282c36');
+  assert.equal(sheets.length,count-1,count+' photos must produce '+(count-1)+' rear sheets');
+  if(count>=2){
+   assert.ok(sheets.every(x=>x.y<note.insetY),'All back sheets should peek above the photo');
+   assert.ok(sheets.every(x=>x.x>note.insetX),'All back sheets should peek from the right');
+   const offsets=sheets.map(x=>Math.round(x.x-note.insetX));
+   assert.equal(new Set(offsets).size,sheets.length,'Every sheet should be visibly separate');
+  }
+ }
+ note.media=['detail-1'];
+ note.text='Detail zásuvky';
+}
 console.log('OK: move outside photo, independent arrow anchor, caption, resize, persistence');
