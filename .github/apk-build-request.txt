@@ -2,5 +2,5 @@
 # Běžné změny kódu APK nesestavují. Teprve změna tohoto souboru spustí workflow build-apk.yml.
 # Při požadavku na sestavení uprav číslo a popis níže, commitni do main.
 
-request: 6
-reason: jedina spolecna aktualizace vsech 28 historickych testu a schvalenych doplnku, cesky jazykovy system; regresni test na telefonu nasleduje
+request: 7
+reason: jedina spolecna aktualizace issue 17 po 1.2.147; vsechny opravy, kompaktni jednotky, zakaznicky PDF ZIP, ochrana dat; PR18 sloucen, JS Python browser nativni regrese uspesne
