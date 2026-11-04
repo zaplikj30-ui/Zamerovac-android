@@ -732,10 +732,17 @@ function showLaserHistory(filter='all'){
  const groups=boschHistoryGroups();
  const multi=groups.size>1;
  const hasLegacy=readings.some(r=>!r.deviceId);
+ const nameCounts=new Map();
+ for(const name of groups.values())nameCounts.set(name,(nameCounts.get(name)||0)+1);
+ const seenNames=new Map();
  const choices=multi?
   '<label for="laserHistoryFilter">Zobrazit měření</label><select id="laserHistoryFilter">'+
   '<option value="all">Všechny měřáky</option>'+
-  [...groups].map(([id,name])=>'<option value="'+esc(id)+'">'+esc(name)+'</option>').join('')+
+  [...groups].map(([id,name])=>{
+   const count=(seenNames.get(name)||0)+1;seenNames.set(name,count);
+   const label=nameCounts.get(name)>1?name+' · měřák '+count:name;
+   return '<option value="'+esc(id)+'">'+esc(label)+'</option>';
+  }).join('')+
   (hasLegacy?'<option value="legacy">Starší měření bez přiřazení</option>':'')+
   '</select>':'';
  if(!multi)filter='all';
