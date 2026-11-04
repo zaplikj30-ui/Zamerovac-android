@@ -88,6 +88,8 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 #bluetoothBtn.connected {color:#60a5fa}
 #bluetoothBtn.connecting {color:#60a5fa;animation:none}
 #bluetoothBtn .bt-overlay {position:absolute;right:4px;bottom:3px;font-size:13px;font-weight:800;line-height:14px;border-radius:50%;background:#323334;text-align:center}
+/* Small uppercase H balances the lower-right connection cross/check. */
+#bluetoothBtn .bt-history-mark {position:absolute;left:4px;top:2px;font-size:12px;font-weight:800;line-height:14px;color:#d8c5ec;background:#323334;border-radius:3px;padding:0 2px;pointer-events:none}
 #bluetoothBtn .bt-check {color:#60a5fa}
 #bluetoothBtn .bt-off {color:#abb3bf}
 #bluetoothBtn .bt-spinner {width:13px;height:13px;border:2px solid #60a5fa;border-top-color:transparent;animation:btSpin .85s linear infinite}
