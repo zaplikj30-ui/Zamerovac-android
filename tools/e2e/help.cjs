@@ -43,7 +43,19 @@ const {suite,assert,createCanvas}=require('./harness.cjs');
   evidence({topics:25,offline:true,search:true,androidBack:true,dataUnchanged:true});
  });
  await test('overflow_menu_and_small_large_screens',async({page,step,evidence})=>{
+  await createCanvas(page,'Bosch – zkušební soubor');
+  await page.click('#editorBack');
   const before=await page.evaluate(()=>JSON.stringify(state));
+  await step('Global search finds records, not help articles',async()=>{
+   await page.click('#searchBtn');
+   assert.equal(await page.locator('#modalTitle').innerText(),'Hledat zakázku');
+   await page.fill('#promptValue','Bosch');
+   await page.click('#okModal');
+   assert(await page.locator('.entry-title',{hasText:'Bosch – zkušební soubor'}).isVisible(),
+    'Global search should find a matching actual record');
+   assert.equal(await page.locator('#helpPanel').count(),0,
+    'Global search must not open or search the help');
+  });
   for(const viewport of [{width:320,height:568},{width:1000,height:750}]){
    await step('Help on '+viewport.width+'px display',async()=>{
     await page.setViewportSize(viewport);
