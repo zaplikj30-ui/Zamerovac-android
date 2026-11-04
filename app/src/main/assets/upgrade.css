@@ -89,7 +89,10 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 #bluetoothBtn.connecting {color:#60a5fa;animation:none}
 #bluetoothBtn .bt-overlay {position:absolute;right:4px;bottom:3px;font-size:13px;font-weight:800;line-height:14px;border-radius:50%;background:#323334;text-align:center}
 /* Small uppercase H balances the lower-right connection cross/check. */
-#bluetoothBtn .bt-history-mark {position:absolute;left:4px;top:2px;font-size:12px;font-weight:800;line-height:14px;color:#d8c5ec;background:#323334;border-radius:3px;padding:0 2px;pointer-events:none}
+/* Separate laser meter: compact drawing, comfortably tappable button. */
+.bottom #boschHistoryBtn {width:42px;min-width:42px;height:43px;border:0;color:#d5c1ee;display:flex;align-items:center;justify-content:center;padding:0}
+#boschHistoryBtn svg {display:block;flex-shrink:0}
+#boschHistoryBtn:focus-visible {outline:2px solid #d5c1ee;outline-offset:-2px;border-radius:5px}
 #bluetoothBtn .bt-check {color:#60a5fa}
 #bluetoothBtn .bt-off {color:#abb3bf}
 #bluetoothBtn .bt-spinner {width:13px;height:13px;border:2px solid #60a5fa;border-top-color:transparent;animation:btSpin .85s linear infinite}
