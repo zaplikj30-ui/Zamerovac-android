@@ -5,7 +5,7 @@ const native=!!window.Native;
 const appVersion=native&&typeof Native.getAppVersion==='function'?Native.getAppVersion():'web';
 const appVersionShort=appVersion.replace(/-test$/,'');
 const uid=()=>crypto.randomUUID?crypto.randomUUID():('id-'+Date.now()+'-'+Math.random().toString(36).slice(2));
-const initialPrefs={unit:'mm',decimals:0,laserDecimals:'auto',laserRounding:'none',color:'#f7dc27',lineWidth:2,fontSize:17,loupe:true,loupeZoom:2,repeatDrawing:false,snapGrid:false,gridStep:40,snapPoints:true,snapHorizontal:true,snapCorners:true,snapContours:true,snapRightAngle:true,keepAwake:false,vibration:true,fullScreen:false,autoText:true,autoSync:true,wifiOnly:false,moveSensitivity:1,presets:'Zásuvka;Voda;Odpad;Elektro;Výška parapetu',toolOrder:''};
+const initialPrefs={unit:'mm',decimals:0,laserDecimals:'auto',laserRounding:'none',color:'#f7dc27',lineWidth:2,fontSize:17,loupe:true,loupeZoom:2,repeatDrawing:false,snapGrid:false,showGrid:false,gridStep:40,snapPoints:true,snapHorizontal:true,snapCorners:true,snapContours:true,snapRightAngle:true,keepAwake:false,vibration:true,fullScreen:false,autoText:true,autoSync:true,wifiOnly:false,moveSensitivity:1,presets:'Zásuvka;Voda;Odpad;Elektro;Výška parapetu',toolOrder:'',uiLanguage:'cs'};
 const initial={schema:1,records:[],prefs:{...initialPrefs},created:new Date().toISOString()};
 let state=initial;
 try{const saved=native?Native.loadData():localStorage.getItem('zamerovac-data');if(saved)state={...initial,...JSON.parse(saved)};}catch(e){console.warn('Cannot load database',e)}
@@ -32,9 +32,15 @@ function photoDetailsText(r){
   return photoDateText(r.photoTakenAt)+' · '+photoAddressText(r);
 }
 function escapeHtml(t){return String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
-function recById(id){return state.records.find(r=>r.id===id&&!r.deleted)}
+function recById(id,includeDeleted=false){return state.records.find(r=>r.id===id&&(includeDeleted||!r.deleted))}
+function canWriteToFolder(id){if(!id)return true;const folder=recById(id);return !!folder&&folder.kind==='folder'&&!window.isRecordLocked?.(folder)}
+function folderContains(folderId,otherId){
+ let node=recById(otherId),seen=new Set();
+ while(node&&!seen.has(node.id)){if(node.id===folderId)return true;seen.add(node.id);node=node.parentId?recById(node.parentId):null}
+ return false;
+}
 function newRecord(kind,title,parentId=currentFolder){return {id:uid(),kind,title,parentId,createdAt:stamp(),updatedAt:stamp(),rev:uid(),media:[],items:[],text:'',checks:[],width:1400,height:900,deleted:false}}
-function addRecord(r){state.records.push(r);save();showFolder();return r}
+function addRecord(r){if(!canWriteToFolder(r.parentId)){notify('Nejdříve odemkněte složku.');return null}state.records.push(r);save();showFolder();return r}
 function closeMenus(){for(let id of ['toolMenu','newMenu','navMenu','overflowMenu','editorOverflow'])$(id).hidden=true}
 function modal(title,markup,cb,okText='Uložit'){$('modalTitle').textContent=title;$('modalBody').innerHTML=markup;$('modal').hidden=false;$('okModal').textContent=okText;$('cancelModal').hidden=okText==='Zavřít';window.modalOK=cb;setTimeout(()=>$('modalBody').querySelector('input,textarea')?.focus(),90)}
 $('okModal').onclick=()=>{try{if(window.modalOK?.()!==false){$('modal').hidden=true;window.modalOK=null}}catch(e){notify('Chyba: '+e.message)}};
@@ -72,6 +78,7 @@ $('items').querySelectorAll('.entry').forEach(el=>el.onclick=(e)=>{if(e.target.c
 $('items').querySelectorAll('.entry-thumb').forEach(img=>img.addEventListener('error',()=>{img.hidden=true;img.nextElementSibling.hidden=false},{once:true}));
 }
 function promptRenameRecord(r){
+ if(window.isRecordLocked?.(r)){notify('Nejdříve odemkněte složku.');return}
  const match=['photo','video','audio','file'].includes(r.kind)?String(r.title).match(/^(.*?)(\.[A-Za-z0-9]{1,8})$/):null;
  const base=match?match[1]:r.title,suffix=match?match[2]:'';
  modal('Přejmenovat','<label>Název</label><div class="rename-inline"><input id="renameBase" value="'+escapeHtml(base)+'" autocomplete="off">'+
@@ -82,10 +89,12 @@ function promptRenameRecord(r){
  });
  setTimeout(()=>{const input=$('renameBase');if(input){input.focus();input.setSelectionRange(input.value.length,input.value.length)}},120);
 }
-function restoreDeleted(id){
- const r=recById(id);if(!r)return;
- r.deleted=false;touch(r);
- for(const child of state.records.filter(x=>x.parentId===id&&x.deleted))restoreDeleted(child.id);
+function restoreDeleted(id,seen=new Set()){
+ const r=recById(id,true);
+ if(!r||!r.deleted||seen.has(id))return false;
+ seen.add(id);r.deleted=false;touch(r);
+ for(const child of state.records.filter(x=>x.parentId===id&&x.deleted))restoreDeleted(child.id,seen);
+ return true;
 }
 function removeDeletedForever(id){
  const children=new Set([id]);
@@ -99,18 +108,18 @@ function showTrash(){
  closeMenus();
  const root=state.records.filter(r=>r.deleted&&!state.records.some(p=>p.id===r.parentId&&p.deleted));
  const body=root.length?root.map(r=>
-  '<div class="trash-entry"><div><strong>'+escapeHtml(r.title)+'</strong><small>'+escapeHtml(r.kind)+'</small></div>'+
+  '<div class="trash-entry">'+browserEntryIcon(r)+'<div><strong>'+escapeHtml(r.title)+'</strong><small>'+escapeHtml(r.kind)+'</small></div>'+
   '<button class="outline" data-restore="'+escapeHtml(r.id)+'">Obnovit</button>'+
   '<button class="outline" data-purge="'+escapeHtml(r.id)+'">Odstranit</button></div>'
  ).join(''):'<p class="muted">Koš je prázdný.</p>';
  modal('🗑️ Koš',body,()=>true,'Zavřít');
  $('modalBody').querySelectorAll('[data-restore]').forEach(b=>b.onclick=()=>{
-  restoreDeleted(b.dataset.restore);
+  if(!restoreDeleted(b.dataset.restore)){notify('Položku se nepodařilo obnovit');return}
   const r=recById(b.dataset.restore);if(r&&r.parentId&&!recById(r.parentId))r.parentId=null;
   save();showTrash();notify('Položka obnovena');
  });
  $('modalBody').querySelectorAll('[data-purge]').forEach(b=>b.onclick=()=>{
-  const r=recById(b.dataset.purge);
+  const r=recById(b.dataset.purge,true);
   if(!r)return;
   $('modal').hidden=true;
   modal('Trvale odstranit?', '<p>Odstranit „'+escapeHtml(r.title)+'“ ze seznamu bez možnosti obnovení?</p>',()=>{
@@ -118,14 +127,31 @@ function showTrash(){
   },'Odstranit');
  });
 }
-function recordActions(id){let r=recById(id);modal(r.title,`<div class="message">${escapeHtml(r.kind)} · ${dateText(r.updatedAt)}</div><div class="row wrap" style="margin-top:20px"><button class="outline" id="renameOne">Přejmenovat</button><button class="outline" id="moveOne">Přesunout</button><button class="outline" id="deleteOne">Smazat</button>${r.kind==='folder'?'<button class="outline" id="exportFolderOne">Exportovat složku ZIP</button>':''}</div>`,()=>true,'Zavřít');const folderExport=$('exportFolderOne');if(folderExport)folderExport.onclick=()=>{if(native){$('modal').hidden=true;Native.exportFolder(r.id)}else notify('Export složky do ZIP vyžaduje Android aplikaci')};$('renameOne').onclick=()=>{ $('modal').hidden=true;promptRenameRecord(r)};$('deleteOne').onclick=()=>{$('modal').hidden=true;modal('Odstranit?',`<p>Přesunout „${escapeHtml(r.title)}“ do koše? Záznam se při synchronizaci označí jako odstraněný.</p>`,()=>{markDeleted(r.id);save();showFolder()},'Odstranit')};$('moveOne').onclick=()=>{$('modal').hidden=true;let folders=state.records.filter(x=>x.kind==='folder'&&!x.deleted&&x.id!==r.id);modal('Přesunout do složky',`<select id="moveWhere"><option value="">Kořen</option>${folders.map(f=>`<option value="${f.id}">${escapeHtml(f.title)}</option>`).join('')}</select>`,()=>{r.parentId=$('moveWhere').value||null;touch(r);save();showFolder()})};}
-function markDeleted(id){let r=recById(id);if(!r)return;r.deleted=true;touch(r);for(let child of state.records.filter(x=>x.parentId===id&&!x.deleted))markDeleted(child.id)}
+function recordActions(id){let r=recById(id);modal(r.title,`<div class="message">${escapeHtml(r.kind)} · ${dateText(r.updatedAt)}</div><div class="row wrap" style="margin-top:20px"><button class="outline" id="renameOne">Přejmenovat</button><button class="outline" id="moveOne">Přesunout</button><button class="outline" id="deleteOne">Smazat</button>${r.kind==='folder'?'<button class="outline" id="exportFolderOne">Exportovat složku ZIP</button>':''}${r.kind==='photo'?'<button class="outline" id="exportPhotoOne">Exportovat fotografii ZIP</button>':''}</div>`,()=>true,'Zavřít');const folderExport=$('exportFolderOne');if(folderExport)folderExport.onclick=()=>{
+ $('modal').hidden=true;
+ let count=state.records.filter(x=>!x.deleted&&x.kind==='photo'&&(x.parentId===r.id||folderContains(r.id,x.parentId))).length;
+ modal('Exportovat složku','<p>Exportovat složku <strong>'+escapeHtml(r.title)+'</strong> – '+count+' fotografií včetně podsložek, kót a příloh?</p>',()=>{
+   if(native&&typeof Native.exportFolder==='function')Native.exportFolder(r.id);
+   else notify('Export ZIP vyžaduje Android aplikaci');
+ },'Exportovat do ZIP');
+};const photoExport=$('exportPhotoOne');if(photoExport)photoExport.onclick=()=>{
+ $('modal').hidden=true;
+ modal('Exportovat fotografii','<p>Exportovat fotografii <strong>'+escapeHtml(r.title)+'</strong> včetně původního snímku, editovatelných kót a poznámek?</p>',()=>{
+   if(native&&typeof Native.exportPhoto==='function')Native.exportPhoto(r.id);
+   else notify('Export fotografie ZIP vyžaduje aktualizovanou Android aplikaci');
+ },'Exportovat do ZIP');
+};$('renameOne').onclick=()=>{ $('modal').hidden=true;promptRenameRecord(r)};$('deleteOne').onclick=()=>{$('modal').hidden=true;modal('Odstranit?',`<p>Přesunout „${escapeHtml(r.title)}“ do koše? Záznam se při synchronizaci označí jako odstraněný.</p>`,()=>{markDeleted(r.id);save();showFolder()},'Odstranit')};$('moveOne').onclick=()=>{if(window.isRecordLocked?.(r)){notify('Nejdříve odemkněte složku.');return}$('modal').hidden=true;let folders=state.records.filter(x=>x.kind==='folder'&&!x.deleted&&x.id!==r.id&&!folderContains(r.id,x.id));modal('Přesunout do složky',`<select id="moveWhere"><option value="">Kořen</option>${folders.map(f=>`<option value="${f.id}" ${window.isRecordLocked?.(f)?'disabled':''}>${escapeHtml(f.title)}${window.isRecordLocked?.(f)?' 🔒':''}</option>`).join('')}</select>`,()=>{const destination=$('moveWhere').value||null;if(!canWriteToFolder(destination)||window.isRecordLocked?.(r)){notify('Nejdříve odemkněte složku.');return false}if(destination&&folderContains(r.id,destination)){notify('Složku nelze přesunout do sebe');return false}r.parentId=destination;touch(r);save();showFolder()})};}
+function markDeleted(id){let r=recById(id);
+ if(!r||window.isRecordLocked?.(r)||state.records.some(x=>!x.deleted&&x.id!==id&&window.isRecordLocked?.(x)&&folderContains(id,x.id))){
+  notify('Nejdříve odemkněte složku.');return false;
+ }
+ r.deleted=true;touch(r);for(let child of state.records.filter(x=>x.parentId===id&&!x.deleted))markDeleted(child.id)}
 function openRecord(id){let r=recById(id);if(!r)return;if(r.kind==='folder'){currentFolder=id;showFolder();return}if(r.kind==='photo'||r.kind==='canvas'){openEditor(r);return}if(r.kind==='note'){openNote(r);return}if(r.kind==='audio'||r.kind==='video'||r.kind==='file'){openAttachment(r.media[0]);return}}
-function showNewMenu(){closeMenus();$('newMenu').hidden=false;const choices=[
+function showNewMenu(){if(!canWriteToFolder(currentFolder)){notify('Nejdříve odemkněte složku.');return}closeMenus();$('newMenu').hidden=false;const choices=[
 ['📷','Pořídit fotografii',()=>pickMedia('camera')],
 ['🖼️','Importovat obrázek / PDF / video',()=>pickMedia('media')],
 ['🎨','Nové plátno',()=>promptText('Nové plátno','Název','Nový náčrt',name=>addRecord(newRecord('canvas',name)))],
-['📝','Nová textová poznámka',()=>{let r=newRecord('note','Nová poznámka');state.records.push(r);save();openNote(r)}],
+['📝','Nová textová poznámka',()=>{let r=newRecord('note','Nová poznámka');if(!canWriteToFolder(r.parentId)){notify('Nejdříve odemkněte složku.');return}state.records.push(r);save();openNote(r)}],
 ['📁','Nová složka',()=>promptText('Nová složka','Jméno zákazníka nebo místnosti','',name=>addRecord(newRecord('folder',name)))],
 ['🎤','Hlasová poznámka',()=>recordVoice()],
 ['📎','Přidat další soubor',()=>pickMedia('file')],
@@ -134,7 +160,7 @@ function showNewMenu(){closeMenus();$('newMenu').hidden=false;const choices=[
 $('newMenu').innerHTML=choices.map((a,i)=>`<button class="choice" data-i="${i}"><strong>${a[0]}</strong>${a[1]}</button>`).join('');$('newMenu').querySelectorAll('button').forEach(b=>b.onclick=()=>{closeMenus();choices[+b.dataset.i][2]()})}
 function pickMedia(type,handler=null){stagedFileHandler=handler;if(native&&type==='camera'){Native.takePhoto();return}if(native){Native.selectFiles(type);return}const inp=$('filePick');inp.value='';inp.accept=type==='camera'?'image/*':type==='file'?'*/*':'image/*,video/*,application/pdf,audio/*';inp.multiple=type==='file'||type==='media';if(type==='camera')inp.setAttribute('capture','environment');else inp.removeAttribute('capture');inp.click()}
 $('filePick').addEventListener('change',async(e)=>{for(let file of e.target.files){let mediaId=await storeMedia(file);if(stagedFileHandler)stagedFileHandler(mediaId,file);else addMediaRecord(mediaId,file.name,file.type)}stagedFileHandler=null});
-async function addMediaRecord(id,name,mime,takenAt=null){const kind=mime.startsWith('image/')?'photo':mime.startsWith('video/')?'video':mime.startsWith('audio/')?'audio':'file';let r=newRecord(kind,name);r.media=[id];if(kind==='photo'&&takenAt)r.photoTakenAt=takenAt;addRecord(r);if(kind==='photo')openEditor(r)}
+async function addMediaRecord(id,name,mime,takenAt=null){if(!canWriteToFolder(currentFolder)){notify('Nejdříve odemkněte složku.');return}const kind=mime.startsWith('image/')?'photo':mime.startsWith('video/')?'video':mime.startsWith('audio/')?'audio':'file';let r=newRecord(kind,name);r.media=[id];if(kind==='photo'&&takenAt)r.photoTakenAt=takenAt;addRecord(r);if(kind==='photo')openEditor(r)}
 async function storeMedia(file){const id=uid(),mime=file.type||'application/octet-stream';if(native){let bytes=new Uint8Array(await file.arrayBuffer());const chunkSize=48*1024;Native.beginMedia(id,mime,file.name||'soubor');for(let off=0;off<bytes.length;off+=chunkSize){let sub=bytes.subarray(off,off+chunkSize);let s='';for(let b of sub)s+=String.fromCharCode(b);Native.appendMedia(id,btoa(s));}Native.finishMedia(id);}
 else{const db=await mediaDb();await new Promise((resolve,reject)=>{let tx=db.transaction('files','readwrite');tx.objectStore('files').put(file,id);tx.oncomplete=resolve;tx.onerror=reject})}return id}
 let idb=null;function mediaDb(){if(!idb)idb=new Promise((res,rej)=>{let req=indexedDB.open('zamerovac-media',1);req.onupgradeneeded=()=>req.result.createObjectStore('files');req.onsuccess=()=>res(req.result);req.onerror=rej});return idb}
@@ -170,8 +196,26 @@ function showOverflow(){showAppMenu('overflowMenu',[
 $('settingsBtn').onclick=showOverflow;$('searchBtn').onclick=()=>promptText('Hledat zakázku','Název','',val=>{let found=state.records.find(r=>!r.deleted&&r.title.toLocaleLowerCase('cs').includes(val.toLocaleLowerCase('cs')));if(found){currentFolder=found.parentId;showFolder();document.querySelector(`.entry[data-id="${found.id}"]`)?.scrollIntoView()}else notify('Nenašel jsem žádnou odpovídající položku')});
 function toggleSettings(){$('settingsPanel').hidden=!$('settingsPanel').hidden;if(!$('settingsPanel').hidden)renderSettings()}
 $('closeSettings').onclick=toggleSettings;
-function renderSettings(){const spec=[['Editor','Lupa při posouvání bodů','loupe','bool'],['Editor','Zvětšení lupy','loupeZoom','num',2,6],['Editor','Přichytávání k existujícím bodům','snapPoints','bool'],['Editor','Pomocný rastr','snapGrid','bool'],['Editor','Rozestup rastru (obrazové body)','gridStep','num',5,300],['Editor','Přichytávání vodorovně / svisle','snapHorizontal','bool'],['Editor','Přichytávání k rohům','snapCorners','bool'],['Editor','Přichytávání k obrysům','snapContours','bool'],['Editor','Přichytávání na pravý úhel','snapRightAngle','bool'],['Editor','Citlivost přesouvání','moveSensitivity','num',0.2,3],['Rozměry','Jednotky','unit','select',['mm','cm','m','in']],['Rozměry','Desetinná místa','decimals','num',0,3],['Vzhled','Barva nástrojů','color','color'],['Vzhled','Tloušťka čar','lineWidth','num',1,12],['Vzhled','Velikost textu','fontSize','num',10,42],['Vzhled','Vibrace při delším podržení','vibration','bool'],['Vzhled','Trvale zapnutý displej','keepAwake','bool'],['Vzhled','Celá obrazovka','fullScreen','bool'],['Vzhled','Přednastavené texty','presets','text'],['Vzhled','Otevřít klávesnici u nové poznámky','autoText','bool'],['Cloud','Automatická synchronizace','autoSync','bool'],['Cloud','Synchronizovat pouze na Wi-Fi','wifiOnly','bool']];let category='';$('settingsContent').innerHTML=spec.map(row=>{let [group,label,key,type]=row;let head=group!==category?`<div class="setGroup">${group}</div>`:'';category=group;let v=prefs[key];let control=type==='bool'?`<input type="checkbox" data-setting="${key}" ${v?'checked':''}>`:type==='select'?`<select data-setting="${key}">${row[4].map(s=>`<option ${v===s?'selected':''}>${s}</option>`).join('')}</select>`:type==='color'?`<input type="color" data-setting="${key}" value="${v}">`:type==='text'?`<input type="text" data-setting="${key}" value="${escapeHtml(v)}">`:`<input type="number" data-setting="${key}" min="${row[4]}" max="${row[5]}" step="any" value="${v}">`;return head+`<label class="setting"><span>${label}</span>${control}</label>`}).join('')+`<div class="setGroup">Cloud – Google Disk</div><button class="setting" style="width:100%" id="chooseCloud">Vybrat složku Google Disku</button><button class="setting" style="width:100%" id="syncCloud">Synchronizovat nyní</button><div class="setGroup">Bluetooth</div><button class="setting" style="width:100%" id="chooseLaser">Připojit měřič</button><div class="setGroup">O aplikaci</div><div class="setting" id="appVersionInfo"><span>Verze Zaměřovače</span><strong>${escapeHtml(appVersion)}</strong></div><div style="height:40px"></div>`;
-$('settingsContent').querySelectorAll('[data-setting]').forEach(el=>el.onchange=()=>{let key=el.dataset.setting;prefs[key]=el.type==='checkbox'?el.checked:el.type==='number'?Number(el.value):el.value;save();applyNativePrefs();if(key==='color')$('lineColor').value=prefs.color;if(screen==='editor')paint()});$('chooseCloud').onclick=chooseCloud;$('syncCloud').onclick=syncCloud;$('chooseLaser').onclick=()=>native?Native.connectLaser():notify('Bluetooth laser vyžaduje Android aplikaci')}
+function renderSettings(){const spec=[['Editor','Lupa při posouvání bodů','loupe','bool'],['Editor','Zvětšení lupy','loupeZoom','num',2,6],['Editor','Přichytávání k existujícím bodům','snapPoints','bool'],['Editor','Pomocný rastr','snapGrid','bool'],['Editor','Zobrazit mřížku','showGrid','bool'],['Editor','Rozestup rastru (obrazové body)','gridStep','num',5,300],['Editor','Přichytávání vodorovně / svisle','snapHorizontal','bool'],['Editor','Přichytávání k rohům','snapCorners','bool'],['Editor','Přichytávání k obrysům','snapContours','bool'],['Editor','Přichytávání na pravý úhel','snapRightAngle','bool'],['Editor','Citlivost přesouvání','moveSensitivity','num',0.2,3],['Rozměry','Jednotky','unit','select',['mm','cm','m','in']],['Rozměry','Desetinná místa','decimals','num',0,3],['Vzhled','Barva nástrojů','color','color'],['Vzhled','Tloušťka čar','lineWidth','num',1,12],['Vzhled','Velikost textu','fontSize','num',10,42],['Vzhled','Vibrace při delším podržení','vibration','bool'],['Vzhled','Trvale zapnutý displej','keepAwake','bool'],['Vzhled','Celá obrazovka','fullScreen','bool'],['Vzhled','Přednastavené texty','presets','text'],['Vzhled','Otevřít klávesnici u nové poznámky','autoText','bool'],['Cloud','Automatická synchronizace','autoSync','bool'],['Cloud','Synchronizovat pouze na Wi-Fi','wifiOnly','bool']];let category='';$('settingsContent').innerHTML=spec.map(row=>{let [group,label,key,type]=row;let head=group!==category?`<div class="setGroup">${group}</div>`:'';category=group;let v=prefs[key];let control=type==='bool'?`<input type="checkbox" data-setting="${key}" ${v?'checked':''}>`:type==='select'?`<select data-setting="${key}">${row[4].map(s=>`<option ${v===s?'selected':''}>${s}</option>`).join('')}</select>`:type==='color'?`<input type="color" data-setting="${key}" value="${v}">`:type==='text'?`<input type="text" data-setting="${key}" value="${escapeHtml(v)}">`:`<input type="number" data-setting="${key}" min="${row[4]}" max="${row[5]}" step="any" value="${v}">`;return head+`<label class="setting"><span>${label}</span>${control}</label>`}).join('')+`<div class="setGroup">Cloud – Google Disk</div><button class="setting" style="width:100%" id="chooseCloud">Vybrat složku Google Disku</button><button class="setting" style="width:100%" id="syncCloud">Synchronizovat nyní</button><div class="setGroup">Bluetooth</div><button class="setting" style="width:100%" id="chooseLaser">Připojit měřič</button><div class="setGroup">${window.ZamerovacI18n.t('language.group')}</div><button class="setting" style="width:100%" id="appLanguageSetting" type="button" aria-label="${window.ZamerovacI18n.t('language.setting')}, ${window.ZamerovacI18n.t('language.czech')}"><span>🌐 ${window.ZamerovacI18n.t('language.setting')}</span><strong>${window.ZamerovacI18n.t('language.czech')}</strong></button><div class="setGroup">O aplikaci</div><div class="setting" id="appVersionInfo"><span>Verze Zaměřovače</span><strong>${escapeHtml(appVersion)}</strong></div><div style="height:40px"></div>`;
+$('settingsContent').querySelectorAll('[data-setting]').forEach(el=>el.onchange=()=>{let key=el.dataset.setting;prefs[key]=el.type==='checkbox'?el.checked:el.type==='number'?Number(el.value):el.value;save();applyNativePrefs();if(key==='color')$('lineColor').value=prefs.color;if(screen==='editor')paint()});$('chooseCloud').onclick=chooseCloud;$('syncCloud').onclick=syncCloud;$('chooseLaser').onclick=()=>native?Native.connectLaser():notify('Bluetooth laser vyžaduje Android aplikaci');$('appLanguageSetting').onclick=showLanguagePicker}
+/* Data-backed locale list, with only Czech available until translations are real. */
+function showLanguagePicker(){
+ const api=window.ZamerovacI18n;
+ const langs=api?.availableLanguages()||[{tag:'cs',autonym:'Čeština',flag:'🇨🇿',dir:'ltr'}];
+ const selectedTag=api?.normalizeLanguage(prefs.uiLanguage)||'cs';
+ modal(window.ZamerovacI18n.t('language.title'),'<div id="languageSearchWrap" '+(langs.length<5?'hidden':'')+'><label for="languageSearch">'+window.ZamerovacI18n.t('language.search')+'</label><input id="languageSearch" type="search"></div><div id="languageOptions" role="radiogroup" aria-label="'+window.ZamerovacI18n.t('language.setting')+'"></div>',()=>true,'Zavřít');
+ const results=$('languageOptions'),search=$('languageSearch');
+ const render=()=>{
+   const found=api?.findLanguages(search?.value||'')||langs;
+   results.innerHTML=found.map(l=>'<button type="button" class="setting language-option" data-language="'+escapeHtml(l.tag)+'" role="radio" aria-checked="'+(l.tag===selectedTag?'true':'false')+'" dir="'+escapeHtml(l.dir||'ltr')+'"><span>'+escapeHtml((l.flag||'')+' '+l.autonym)+'</span><strong>'+(l.tag===selectedTag?'✓ '+window.ZamerovacI18n.t('language.selected'):'')+'</strong></button>').join('')||'<p>'+window.ZamerovacI18n.t('language.empty')+'</p>';
+   results.querySelectorAll('[data-language]').forEach(btn=>btn.onclick=()=>{
+     const tag=btn.dataset.language;if(!langs.some(l=>l.tag===tag))return;
+     if(prefs.uiLanguage!==tag){prefs.uiLanguage=tag;save()}
+     $('modal').hidden=true;
+   });
+ };
+ if(search)search.oninput=render;render();
+}
 function applyNativePrefs(){if(native)Native.configure(JSON.stringify({keepAwake:prefs.keepAwake,fullscreen:prefs.fullScreen,wifiOnly:prefs.wifiOnly,autoSync:prefs.autoSync}))}
 function chooseCloud(){if(native)Native.selectCloudFolder();else notify('Google Disk nastavíš v Android verzi přes systémový výběr složky.')}
 function syncCloud(){if(native){Native.syncCloud();notify('Spouštím synchronizaci…')}else notify('Synchronizace Google Disku vyžaduje Android verzi.')}

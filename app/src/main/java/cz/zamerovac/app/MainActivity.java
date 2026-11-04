@@ -96,6 +96,7 @@ public class MainActivity extends Activity {
     private String pendingPhotoLocationId;
     private String exportBase64;
     private String pendingArchiveFolderId;
+    private Set<String> pendingArchiveSelectionIds;
     private MediaRecorder recorder;
     private FileOutputStream activeUpload;
     private String activeUploadId;
@@ -428,7 +429,7 @@ public class MainActivity extends Activity {
     @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);
         if(request==REQUEST_FILE){if(fileCallback!=null){Uri[] resultUris=null;if(result==RESULT_OK&&data!=null){if(data.getClipData()!=null){int n=data.getClipData().getItemCount();resultUris=new Uri[n];for(int i=0;i<n;i++)resultUris[i]=data.getClipData().getItemAt(i).getUri();}else if(data.getData()!=null)resultUris=new Uri[]{data.getData()};}fileCallback.onReceiveValue(resultUris);fileCallback=null;}return;}
         if(result!=RESULT_OK){
-            if(request==REQUEST_BACKUP)pendingArchiveFolderId=null;
+            if(request==REQUEST_BACKUP){pendingArchiveFolderId=null;pendingArchiveSelectionIds=null;}
             if(request==REQUEST_ATTACH)js("window.onNativeMediaDone?.()");
             if(request==REQUEST_CAMERA){discardPendingCamera();js("window.onNativeMediaDone?.()");}
             if(request==REQUEST_ISSUE_EXPORT)pendingIssueZipId=null;
@@ -480,11 +481,12 @@ public class MainActivity extends Activity {
         if(request==REQUEST_BACKUP&&data!=null&&data.getData()!=null){
             final Uri destination=data.getData();
             final String folderId=pendingArchiveFolderId;
-            pendingArchiveFolderId=null;
+            final Set<String> selectionIds=pendingArchiveSelectionIds;
+            pendingArchiveFolderId=null;pendingArchiveSelectionIds=null;
             new Thread(()->{
                 try(OutputStream stream=getContentResolver().openOutputStream(destination,"w")){
                     if(stream==null)throw new IOException("Nelze otevřít soubor");
-                    exportArchive(stream,folderId);
+                    exportArchive(stream,folderId,selectionIds);
                     onSyncResult("ZIP záloha zakázek a původních médií byla uložena",null);
                 }catch(Exception e){error("Záloha ZIP: "+e.getMessage());}
             },"ZamerovacBackup").start();
@@ -492,7 +494,28 @@ public class MainActivity extends Activity {
         }
         if(request==REQUEST_EXPORT&&data!=null&&data.getData()!=null&&exportBase64!=null){try(OutputStream out=getContentResolver().openOutputStream(data.getData(),"w")){out.write(Base64.decode(exportBase64,Base64.DEFAULT));exportBase64=null;onSyncResult("Obrázek uložen",null);}catch(Exception e){error("Export: "+e.getMessage());}}
     }
+    /** Human-readable filename follows the current application label and selected record. */
+    private String suggestArchiveName(String recordId){
+        String appName=String.valueOf(getApplicationInfo().loadLabel(getPackageManager()));
+        String detail=recordId==null?"zaloha":"zakazka";
+        if(recordId!=null)try{
+            JSONObject db=new JSONObject(readDb());
+            JSONArray records=db.optJSONArray("records");
+            if(records!=null)for(int i=0;i<records.length();i++){
+                JSONObject r=records.optJSONObject(i);
+                if(r!=null&&recordId.equals(r.optString("id"))){
+                    detail=r.optString("title","zakazka");break;
+                }
+            }
+        }catch(Exception ignored){}
+        String name=(appName+"-"+detail).replaceAll("[\\\\/:*?\\\"<>|\\p{Cntrl}]","_").trim();
+        if(name.length()>100)name=name.substring(0,100);
+        return (name.isEmpty()?"Zamerovac-zaloha":name)+".zip";
+    }
     private void exportArchive(OutputStream destination,String folderId) throws IOException{
+        exportArchive(destination,folderId,null);
+    }
+    private void exportArchive(OutputStream destination,String folderId,Set<String> selectionIds) throws IOException{
         String json=readDb();
         if(json.isEmpty())throw new IOException("Databáze je prázdná");
         JSONObject parsed;
@@ -500,17 +523,22 @@ public class MainActivity extends Activity {
         catch(JSONException e){throw new IOException("Poškozená databáze",e);}
         Set<String> mediaIds=new HashSet<>();
         JSONArray records=parsed.optJSONArray("records");
-        if(folderId!=null){
-            if(records==null)throw new IOException("Složka neexistuje");
+        if(folderId!=null||selectionIds!=null){
+            if(records==null)throw new IOException("Složka ani výběr neexistuje");
             Set<String> included=new HashSet<>();
             boolean found=false;
             for(int i=0;i<records.length();i++){
                 JSONObject r=records.optJSONObject(i);
-                if(r!=null&&folderId.equals(r.optString("id"))&&"folder".equals(r.optString("kind"))&&!r.optBoolean("deleted")){
-                    included.add(folderId);found=true;break;
+                if(r==null||r.optBoolean("deleted"))continue;
+                String id=r.optString("id");
+                if(selectionIds!=null){
+                    if(selectionIds.contains(id)){included.add(id);found=true;}
+                }else if(folderId.equals(id)&&
+                    ("folder".equals(r.optString("kind"))||"photo".equals(r.optString("kind")))){
+                    included.add(id);found=true;break;
                 }
             }
-            if(!found)throw new IOException("Vybraná složka neexistuje");
+            if(!found)throw new IOException("Žádné platné soubory k exportu");
             boolean expanded=true;
             while(expanded){
                 expanded=false;
@@ -673,7 +701,8 @@ public class MainActivity extends Activity {
                 catch(Exception ex){error("Vyhledávání adres: "+ex.getMessage());}
             },"AddressRUIAN").start();
         }
-        @JavascriptInterface public void connectLaser(){runOnUiThread(()->startScan());}
+        @JavascriptInterface public void connectLaser(){runOnUiThread(()->startScan(false));}
+        @JavascriptInterface public void chooseOtherLaser(){runOnUiThread(()->startScan(true));}
         @JavascriptInterface public void triggerLaser(){runOnUiThread(()->sendExperimentalLaserTrigger());}
         @JavascriptInterface public void setAccent(String color){
             if(color==null||!color.matches("#[0-9a-fA-F]{6}"))return;
@@ -732,25 +761,60 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void importBackup(){
             runOnUiThread(()->{
                 Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
-                    .setType("application/zip").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    .setType("*/*").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                 // Some Android document providers mislabel .zip (e.g. application/octet-stream).
+                 // Let the user select it; BackupImporter strictly validates ZIP structure/content.
                 try{startActivityForResult(intent,REQUEST_IMPORT_BACKUP);}
                 catch(Exception e){error("Obnova zálohy: "+e.getMessage());}
             });
         }
+        /** Export one photo with its editable annotations and all nested attachments. */
+        /** One archive for selected files and their entire nested folder subtrees. */
+        @JavascriptInterface public void exportSelection(String idsJson){
+            final Set<String> ids=new HashSet<>();
+            try{
+                JSONArray requested=new JSONArray(idsJson);
+                if(requested.length()<1||requested.length()>1000)throw new JSONException("Neplatný počet");
+                for(int i=0;i<requested.length();i++){
+                    String id=requested.getString(i);
+                    if(!validId(id))throw new JSONException("Neplatný identifikátor");
+                    ids.add(id);
+                }
+            }catch(Exception e){error("Hromadný export: neplatný výběr");return;}
+            runOnUiThread(()->{
+                pendingArchiveSelectionIds=ids;
+                pendingArchiveFolderId=null;
+                String filename=String.valueOf(getApplicationInfo().loadLabel(getPackageManager()))+"-vyber.zip";
+                Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+                    .setType("application/zip").putExtra(Intent.EXTRA_TITLE,filename);
+                try{startActivityForResult(intent,REQUEST_BACKUP);}
+                catch(Exception e){pendingArchiveSelectionIds=null;error("Hromadný ZIP: "+e.getMessage());}
+            });
+        }
+        @JavascriptInterface public void exportPhoto(String photoId){
+            if(photoId==null||!photoId.matches("[a-zA-Z0-9_-]{1,100}")){error("Neplatná fotografie");return;}
+            runOnUiThread(()->{
+                pendingArchiveFolderId=photoId;pendingArchiveSelectionIds=null;
+                Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+                    .setType("application/zip").putExtra(Intent.EXTRA_TITLE,suggestArchiveName(photoId));
+                try{startActivityForResult(intent,REQUEST_BACKUP);}
+                catch(Exception e){pendingArchiveFolderId=null;error("Export fotografie: "+e.getMessage());}
+            });
+        }
         @JavascriptInterface public void exportBackup(){
             runOnUiThread(()->{
-                pendingArchiveFolderId=null;
+                pendingArchiveFolderId=null;pendingArchiveSelectionIds=null;
                 Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
-                    .setType("application/zip").putExtra(Intent.EXTRA_TITLE,"Zamerovac-zaloha.zip");
+                    .setType("application/zip").putExtra(Intent.EXTRA_TITLE,suggestArchiveName(null));
                 try{startActivityForResult(intent,REQUEST_BACKUP);}catch(Exception e){error("Záloha: "+e.getMessage());}
             });
         }
         @JavascriptInterface public void exportFolder(String folderId){
             if(folderId==null||!folderId.matches("[a-zA-Z0-9_-]{1,100}")){error("Neplatná složka");return;}
             runOnUiThread(()->{
-                pendingArchiveFolderId=folderId;
+                pendingArchiveFolderId=folderId;pendingArchiveSelectionIds=null;
                 Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
-                    .setType("application/zip").putExtra(Intent.EXTRA_TITLE,"Zamerovac-slozka.zip");
+                    .setType("application/zip").putExtra(Intent.EXTRA_TITLE,suggestArchiveName(folderId));
                 try{startActivityForResult(intent,REQUEST_BACKUP);}
                 catch(Exception e){pendingArchiveFolderId=null;error("Export složky: "+e.getMessage());}
             });
@@ -804,7 +868,8 @@ public class MainActivity extends Activity {
             scanCallback=null;
         }
     }
-    private void startScan(){
+    private void startScan(){startScan(false);}
+    private void startScan(boolean showAllDevices){
         if(Build.VERSION.SDK_INT>=31&&
            (checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN)!=PackageManager.PERMISSION_GRANTED||
             checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT)!=PackageManager.PERMISSION_GRANTED)){
@@ -866,9 +931,30 @@ public class MainActivity extends Activity {
                     boolean y=bb.contains("BOSCH")||bb.contains("GLM");
                     return x==y?aa.compareTo(bb):(x?-1:1);
                 });
+                // Only start scanning when user explicitly requests it.
+                String remembered=settings.getString("preferredLaserAddress","");
+                if(!showAllDevices&&!remembered.isEmpty()){
+                    for(BluetoothDevice device:devices){
+                        if(remembered.equals(device.getAddress())){
+                            if(leAddresses.contains(device.getAddress())){connectGatt(device);return;}
+                            String name=String.valueOf(device.getName()).toUpperCase(java.util.Locale.ROOT).replace(" ","");
+                            if((name.contains("GLM50C")||name.contains("GLM100C"))&&!name.contains("100-25")){
+                                connectClassicBosch(device);return;
+                            }
+                        }
+                    }
+                }
+                if(!showAllDevices){
+                    devices.removeIf(device->{
+                        String advertised=scannedNames.containsKey(device.getAddress())?
+                            scannedNames.get(device.getAddress()):device.getName();
+                        String name=String.valueOf(advertised).toUpperCase(java.util.Locale.ROOT);
+                        return !(name.contains("BOSCH")||name.contains("GLM"));
+                    });
+                }
                 if(devices.isEmpty()){
                     laserStatus("off","");
-                    error("Nenašel jsem žádné LE zařízení. Zapni Bluetooth na laseru a vypni spojení v ImageMeteru.");
+                    error(getString(R.string.bluetooth_laser_missing));
                     return;
                 }
                 String[] labels=new String[devices.size()];
@@ -881,7 +967,7 @@ public class MainActivity extends Activity {
                 }
                 laserStatus("off","");
                 new AlertDialog.Builder(this)
-                    .setTitle("Bluetooth zařízení – Bosch GLM vyber nahoře")
+                    .setTitle(showAllDevices?getString(R.string.bluetooth_choose_other):getString(R.string.bluetooth_choose_bosch))
                     .setItems(labels,(dialog,index)->{
                         BluetoothDevice d=devices.get(index);
                         if(leAddresses.contains(d.getAddress()))connectGatt(d);
@@ -909,7 +995,11 @@ public class MainActivity extends Activity {
             String name=device.getName();
             classic=new BoschClassicReader(device,
                 value->js("window.onLaserValue("+JSONObject.quote(value)+","+JSONObject.quote("mm")+")"),
-                this::error,status->laserStatus(status,name));
+                this::error,status->{
+                    if("connected".equals(status)||"receiving".equals(status))
+                        settings.edit().putString("preferredLaserAddress",device.getAddress()).apply();
+                    laserStatus(status,name);
+                });
             laserStatus("connecting",name);
             classic.start();
         }catch(Exception ex){laserStatus("off","");error("Bosch Classic: "+ex.getMessage());}
@@ -1034,6 +1124,7 @@ public class MainActivity extends Activity {
                         connection.disconnect();
                     }else if(characteristic.getWriteType()==BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE){
                         boschStreamEnabled=true;
+                        settings.edit().putString("preferredLaserAddress",device.getAddress()).apply();
                         laserStatus("connected",deviceName);
                     }
                 }
@@ -1047,6 +1138,7 @@ public class MainActivity extends Activity {
                     }
                     if(status==BluetoothGatt.GATT_SUCCESS){
                         boschStreamEnabled=true;
+                        settings.edit().putString("preferredLaserAddress",device.getAddress()).apply();
                         laserStatus("connected",deviceName);
                     }else{
                         laserStatus("off",deviceName);

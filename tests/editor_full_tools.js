@@ -2,14 +2,14 @@
 'use strict';
 const assert=require('assert'),fs=require('fs'),vm=require('vm');
 const editor=fs.readFileSync('app/src/main/assets/editor.js','utf8');
-const a=editor.indexOf('function drawItem(c,item){'),b=editor.indexOf('function drawLoupe(){',a);
+const a=editor.indexOf('function rectCorners(item){'),b=editor.indexOf('function drawLoupe(){',a);
 assert(a>=0&&b>a,'Drawing function must remain accessible');
 const drawSource=editor.slice(a,b);
 const labels=[],arrows=[];
 const graphics={save(){},restore(){},beginPath(){},moveTo(){},lineTo(){},stroke(){},
- strokeRect(){},arc(){},ellipse(){},fill(){},fillRect(){},translate(){},rotate(){},
+ strokeRect(){},closePath(){},arc(){},ellipse(){},fill(){},fillRect(){},translate(){},rotate(){},
  setLineDash(){},measureText:()=>({width:10})};
-const env={prefs:{unit:'mm',color:'#ffe000',lineWidth:2,fontSize:17},
+const env={view:{zoom:1,dx:0,dy:0},prefs:{unit:'mm',color:'#ffe000',lineWidth:2,fontSize:17},
  worldToScreen:p=>({...p}),canvasText:(text)=>labels.push(text),
  drawArrow:(...args)=>arrows.push(args),drawNoteLeader:()=>{},
  noteDisplayedCaption:()=>'',noteCaptionScreen:()=>({x:0,y:0}),

@@ -128,7 +128,7 @@
  function setExpanded(open){
   panel.hidden=!open;
   document.body.classList.toggle('editor-extra-open',open);
-  more.classList.toggle('tool-active',open);
+  more.classList.remove('tool-active'); // Three dots open the toolbar; not an active drawing tool.
   more.setAttribute('aria-expanded',String(open));
   more.title=open?'Sbalit další nástroje':'Rozbalit další nástroje';
   more.setAttribute('aria-label',more.title);

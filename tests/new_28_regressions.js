@@ -1,0 +1,44 @@
+/* Regression checks for approved historic improvements. Not a device/BT integration test. */
+'use strict';
+const fs=require('node:fs'),assert=require('node:assert/strict'),vm=require('node:vm');
+const base='app/src/main/assets/';
+const i18n=require('../app/src/main/assets/i18n.js');
+assert.deepEqual(i18n.availableLanguages().map(x=>x.tag),['cs'],'Only Czech is available');
+assert.equal(i18n.normalizeLanguage('fr'),'cs','Unknown language falls back to Czech');
+assert.equal(i18n.t('language.setting'),'Jazyk aplikace');
+assert.equal(i18n.findLanguages('ces')[0].tag,'cs');
+const fake=Array.from({length:60},(_,i)=>({tag:'test-'+i,autonym:'Jazyk '+i,name:'Example '+i,dir:'ltr',available:true}));
+assert.equal(i18n.availableLanguages(fake).length,60,'List is not capped at four locales');
+assert.equal(i18n.findLanguages('example 35',fake).length,1,'Scalable search');
+const editor=fs.readFileSync(base+'editor.js','utf8');
+const a=editor.indexOf('function rectCorners(item){'),b=editor.indexOf('function drawItem(c,item){',a);
+assert(a>=0&&b>a);
+const ctx={worldToScreen:x=>x,Math,Number,String,console};
+vm.createContext(ctx);vm.runInContext(editor.slice(a,b),ctx);
+const rect={type:'rect',a:{x:10,y:20},b:{x:200,y:300}};
+assert.equal(ctx.rectCorners(rect).length,4);
+const area={type:'area',points:[{x:10,y:20},{x:200,y:20},{x:200,y:300},{x:10,y:300}]};
+assert.equal(ctx.quadCorners(area)[3].x,10);
+assert.equal(ctx.resizePoints(area).length,4);
+const d=1000*Math.SQRT2;
+assert.ok(Math.abs(ctx.quadAreaFromMeasures({sideMeasures:['1000','1000','1000','1000'],diagonal:String(d)})-1)<1e-9);
+assert.equal(ctx.quadAreaFromMeasures({sideMeasures:['1000','1000','1000','1000'],diagonal:''}),null,'No fake area from four sides alone');
+for(const type of ['circle','ellipse']){
+ const obj={type,a:{x:20,y:50},b:{x:200,y:170}},g=ctx.ellipseGeometry(obj);
+ const rings=ctx.resizePoints(obj);
+ for(const p of rings)assert.ok(Math.abs((p.x-g.cx)**2/(g.rx**2)+(p.y-g.cy)**2/(g.ry**2)-1)<1e-9,type+' handle on contour');
+}
+const app=fs.readFileSync(base+'app.js','utf8');
+const native=fs.readFileSync('app/src/main/java/cz/zamerovac/app/MainActivity.java','utf8');
+const bulk=fs.readFileSync(base+'bulk-actions.js','utf8');
+const upgrade=fs.readFileSync(base+'upgrade.js','utf8');
+assert.ok(app.includes('recById(id,true)'),'Trash restore must include deleted records');
+assert.ok(app.includes('canWriteToFolder(destination)'),'Move cannot target locked folder');
+assert.ok(app.includes('appLanguageSetting'),'Czech settings option present');
+assert.ok(bulk.includes('pointerdown')&&bulk.includes('Exportovat do ZIP'),'Multi-selection enabled by long press');
+assert.ok(native.includes('exportSelection(String idsJson)')&&native.includes('exportPhoto(String photoId)'));
+assert.ok(native.includes('setType("*/*")'),'Samsung-compatible ZIP document picker');
+assert.ok(native.includes('suggestArchiveName(folderId)'),'ZIP name follows current folder');
+assert.ok(upgrade.includes('searchReturnState'),'Search state survives return from photograph');
+assert.ok(!upgrade.includes('id="previousPhoto"'),'No redundant photo switch arrow');
+console.log('OK: locale registry, quadrilateral area, grip contours, archive/lock/search source contracts');
