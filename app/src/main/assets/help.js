@@ -624,7 +624,9 @@ function open(){
  search.value='';
  render();
  panel.querySelector('details[data-help-topic="start"]').open=true;
- search.focus();
+ // Browsing the guide must not summon Android keyboard on every open.
+ // The magnifier in the header explicitly focuses the search input.
+ panel.querySelector('#helpBack').focus();
 }
 function build(){
  panel=el('section','z-help-panel');
