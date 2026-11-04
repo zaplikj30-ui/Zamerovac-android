@@ -432,7 +432,7 @@ function nearestHandle(point){
    });continue;
   }
   if(item.type==='freehand')continue;
-  const corners=resizePoints(item);
+  const corners=typeof resizePoints==='function'?resizePoints(item):null;
   if(corners){
    corners.forEach((vertex,index)=>{
     const p=worldToScreen(vertex),d=Math.hypot(point.x-p.x,point.y-p.y);
