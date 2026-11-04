@@ -2,7 +2,7 @@
 
 **Rozhodnutí ze 4. listopadu 2026. Stav: SCHVÁLENO PRO POSTUPNOU PŘÍPRAVU, NEIMPLEMENTOVÁNO.**
 
-[Samostatný GitHub úkol #14](https://github.com/zaplikj30-ui/Zamerovac-android/issues/14). Příprava se má provádět **jen současně s nadcházejícími schválenými opravami**. Není zadán překlad, jazykový přepínač ani plošný refactoring.
+[Samostatný GitHub úkol #14](https://github.com/zaplikj30-ui/Zamerovac-android/issues/14). Příprava se má provádět **jen současně s nadcházejícími schválenými opravami**. Není zadán překlad dalších jazyků ani plošný refactoring. **NOVÉ UPŘESNĚNÍ:** v nejbližší společné aktualizaci přibude do Nastavení výběr jazyka, zatím pouze 🇨🇿 Čeština.
 
 ## Tvrdé podmínky
 - **Aplikace zůstane výhradně česky.** Nezáleží na systémovém jazyku telefonu, který se může lišit.
@@ -17,9 +17,21 @@
 2. **Česká lokalizace** jako jediná dodávaná lokalizace v první etapě. Možný zdroj `i18n/cs.json`; název a formát vybrat tak, aby se bezpečně dostal do WebView `assets` i do nativních Android resources. Dva nezávislé ručně synchronizované seznamy nejsou cílové řešení; pokud je potřeba rozdílný formát, zajistit kontrolu konzistence.
 3. **JavaScript/HTML:** funkce `t(key, variables)` (nebo adekvátní lehké API) vrací text na základě českého katalogu. Při chybějícím klíči je chyba viditelná vývojáři; nesmí se na uživatele zobrazit samotný technický klíč či tichý nesmyslný překlad. Při interpolaci nepoužívat nezabezpečený `innerHTML` pro uživatelské hodnoty. Přednostně `textContent` a `setAttribute`.
 4. **Nativní Android:** `res/values/strings.xml` a `getString(R.string...) ` pro názvy aplikace, dialogy, chyby, statusy Bluetooth, ZIP a popisky přístupnosti. Zvážit malý deterministický postup pro generování z téhož českého registru bez rozbíjení sestavení.
-5. **Formáty:** používat pro *zobrazení* lokalizované formáty (čísla, datum, čas, názvy jednotek), zatím vše v `cs-CZ`. Rozlišit **kanonická data** od **formátované hodnoty**: neměnit `measurementMm`, uložené `unit`, souřadnice, přesnost ani serializaci. Budoucí překlady a přepínač až v samostatné etapě.
+5. **Formáty:** používat pro *zobrazení* lokalizované formáty (čísla, datum, čas, názvy jednotek), zatím vše v `cs-CZ`. Rozlišit **kanonická data** od **formátované hodnoty**: neměnit `measurementMm`, uložené `unit`, souřadnice, přesnost ani serializaci. Další překlady a skutečné přepínání mezi různými jazyky až v samostatné etapě; základní obrazovka výběru pouze češtiny již v nejbližší aktualizaci.
 6. **A11y:** včetně HTML `aria-label`/`title`/`placeholder` a Android `contentDescription`/TalkBack – žádný text neponechat skrytě mimo plán.
 7. **Offline:** katalog je součástí aplikace, žádný síťový request kvůli zobrazení českého tlačítka nebo hlášky.
+
+## Potvrzená změna zadání: vstup do výběru jazyka (4. 11. 2026)
+
+Oproti původnímu plánu bez viditelného přepínače je **nově schválená obrazovka „Jazyk aplikace“** v Nastavení už v nejbližší společné aktualizaci, ale stále **jediná dostupná volba: 🇨🇿 Čeština**. **Žádný další jazyk a žádná samostatná APK.** Podrobná akceptační kritéria a historie dohody viz [Issue #14](https://github.com/zaplikj30-ui/Zamerovac-android/issues/14).
+
+**Vzhled a ovládání:** přehledná řádka s jazykovou ikonou, hlavním textem **Jazyk aplikace** a sekundární hodnotou **🇨🇿 Čeština**; klepnutím otevřít výběr s jedinou položkou **🇨🇿 Čeština – vybrána**. Vybrání aktuální češtiny smí potvrdit stav a zavřít dialog, ale **nesmí restartovat aplikaci ani měnit data**. Respektovat běžnou navigaci Zpět, různé šířky displeje a přístupnost.
+
+**Budoucí rozšíření:** jediné datové pole `availableLanguages` / odpovídající registr dostupných locale, zatím jen `cs`; nové podporované jazyky se později objeví až po dodání jejich **skutečných** překladů. Preference jazykového kódu se ukládá odděleně od zákaznických dat, stávající instalace nemají povinnou migraci a při chybě se použije `cs`.
+
+**Povinné testy první etapy:** otevření nastavení, jediná položka, správně vybraný stav, výběr aktuální češtiny bez reloadu/restartu, návrat, uložení a přežití restartu, offline provoz, S24 Ultra i Tab S11 Ultra, TalkBack/větší písmo, zachování ostatních nastavení, kót, poznámek, fotek a ZIP kompatibility. Automatické jednotkové testy klíčů, jediné dostupné volby, fallbacku a ukládání. Neoznačovat za hotové bez testů.
+
+**Stav:** dohodnuto a popsáno, zatím **NENAPROGRAMOVÁNO, NESestaveno ani NETESTOVÁNO**.
 
 ## Bezpečná první etapa v příští aktualizaci
 - Vybrat první **malou logickou sadu právě upravovaných funkcí** z opravných testů 1–28.
@@ -35,7 +47,8 @@
 | Rozsah jazyků cs/en/de/sk do budoucna | **Schválené směřování**, zatím jen cs |
 | Konkrétní jména klíčů a technický způsob sdílení | **Návrh**, bude doladěn při vývoji |
 | Katalog překladů a JS/Android rozhraní | **Neimplementováno** |
-| Přepínání jazyků, en/de/sk překlady | **Záměrně mimo současnou aktualizaci** |
+| Výběr jazyka v Nastavení – pouze 🇨🇿 Čeština | **Schváleno pro nadcházející aktualizaci; neimplementováno** |
+| Skutečné přepínání mezi jazyky, en/de/sk překlady | **Záměrně mimo současnou aktualizaci** |
 | Automatické regresní testy lokalizace | **Neprovedeny** |
 | Test na Samsungu s novým APK | **Neproveden** |
 
