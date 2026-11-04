@@ -67,6 +67,8 @@ Nemusí se znovu kopírovat celý původní chat. Neznámé informace ověřit z
 
 ## 5. Přímé odkazy a rozdělení odpovědností
 
+- **[Jednotlivé testy a opravy](TESTY_A_OPRAVY.md):** test 1 → domluva → okamžitý zápis; poté test 2 → domluva → zápis; postupně každý další test. Při každém testu zapisovat výsledky, opravy, nápady i důkazy.
+
 - **Tento soubor:** aktuální stav a rozcestník. Musí se aktualizovat při změně fáze, zvolené dávky nebo důležitého rozhodnutí.
 - **[Testovací deník #13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13):** výsledky kontrol, průběžné dohody a konkrétní kroky; během rekonstrukce 28 testů primární evidence.
 - **[49 původních úprav #12](https://github.com/zaplikj30-ui/Zamerovac-android/issues/12):** původní základní zadání; nesmazat jen proto, že už vznikla další evidence.
