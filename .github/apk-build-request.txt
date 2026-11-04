@@ -2,5 +2,5 @@
 # Běžné změny kódu APK nesestavují. Teprve změna tohoto souboru spustí workflow build-apk.yml.
 # Při požadavku na sestavení uprav číslo a popis níže, commitni do main.
 
-request: 9
-reason: jedna spolecna testovaci APK po 1.2.149; PR27 overeny a sloucen e6fa383; video PDF BLE fotografie otaceni a kriticke regresni testy vcetne pinch/zoom/rastru; fyzicky Samsung a Bosch teprve overit
+request: 10
+reason: jedina prohlizeci APK po otestovani PR30; 25 kapitol ceske offline napovedy, lupa vyhledavani jen v napovede, hlavni vyhledavani zakazek zustava oddelene; bez zasahu do dat a kot; UI testy uspesne
