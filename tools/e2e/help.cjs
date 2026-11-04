@@ -54,7 +54,7 @@ const {suite,assert,createCanvas}=require('./harness.cjs');
     'Global search should find a matching actual record');
    assert.equal(await page.locator('#helpPanel').count(),0,
     'Global search must not open or search the help');
-   await page.click('#cancelModal');
+   await page.click('#okModal');
   });
   for(const viewport of [{width:320,height:568},{width:1000,height:750}]){
    await step('Help on '+viewport.width+'px display',async()=>{
