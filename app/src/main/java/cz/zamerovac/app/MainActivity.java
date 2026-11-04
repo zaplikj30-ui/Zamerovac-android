@@ -936,9 +936,11 @@ public class MainActivity extends Activity {
                 if(!showAllDevices&&!remembered.isEmpty()){
                     for(BluetoothDevice device:devices){
                         if(remembered.equals(device.getAddress())){
-                            if(leAddresses.contains(device.getAddress()))connectGatt(device);
-                            else connectClassicBosch(device);
-                            return;
+                            if(leAddresses.contains(device.getAddress())){connectGatt(device);return;}
+                            String name=String.valueOf(device.getName()).toUpperCase(java.util.Locale.ROOT).replace(" ","");
+                            if((name.contains("GLM50C")||name.contains("GLM100C"))&&!name.contains("100-25")){
+                                connectClassicBosch(device);return;
+                            }
                         }
                     }
                 }
@@ -990,11 +992,14 @@ public class MainActivity extends Activity {
         try{
             if(gatt!=null){gatt.disconnect();gatt.close();gatt=null;}
             if(classic!=null)classic.close();
-            settings.edit().putString("preferredLaserAddress",device.getAddress()).apply();
             String name=device.getName();
             classic=new BoschClassicReader(device,
                 value->js("window.onLaserValue("+JSONObject.quote(value)+","+JSONObject.quote("mm")+")"),
-                this::error,status->laserStatus(status,name));
+                this::error,status->{
+                    if("connected".equals(status)||"receiving".equals(status))
+                        settings.edit().putString("preferredLaserAddress",device.getAddress()).apply();
+                    laserStatus(status,name);
+                });
             laserStatus("connecting",name);
             classic.start();
         }catch(Exception ex){laserStatus("off","");error("Bosch Classic: "+ex.getMessage());}
