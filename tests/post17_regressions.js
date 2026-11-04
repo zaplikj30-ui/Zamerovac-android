@@ -30,6 +30,31 @@ for(const [a,b] of [[{x:0,y:0},{x:100,y:80}],[{x:100,y:80},{x:0,y:0}],[{x:0,y:0}
  assert.equal(labels[0][0],'500,125 mm · Ahoj');
  const angle=labels[0][4];assert(Math.abs(angle)<=Math.PI/2);assert.notEqual(angle,0);
 }
+// Unitless caption mode must hide only text, never corrupt real measurement units.
+assert.equal(env.measureDisplay('1250','mm',true),'1250');
+assert.equal(env.measureDisplay('1250','cm',false),'1250 cm');
+labels.length=0;
+env.drawItem(c,{type:'dimension',a:{x:0,y:0},b:{x:100,y:0},
+ measure:'1250',unit:'cm',hideUnit:true});
+assert.equal(labels.at(-1)[0],'1250');
+labels.length=0;
+env.drawItem(c,{type:'polyline',points:[{x:0,y:0},{x:120,y:0}],
+ segmentData:[{measure:'500',unit:'mm',hideUnit:true,text:'Voda'}]});
+assert.equal(labels[0][0],'500 · Voda');
+labels.length=0;
+env.drawItem(c,{type:'circle',a:{x:0,y:0},b:{x:50,y:50},
+ measure:'48',measureKind:'diameter',unit:'mm',hideUnit:true});
+assert.equal(labels[0][0],'Ø 48');
+const savedNoUnit=JSON.parse(JSON.stringify({measure:'1250',unit:'cm',hideUnit:true}));
+assert.equal(savedNoUnit.unit,'cm');
+assert.equal(savedNoUnit.hideUnit,true);
+assert.equal((src.match(/option value="none"/g)||[]).length,3,
+ 'The dimension, line/shape and segmented measurement pickers must offer Bez jednotky');
+assert(src.includes("hideUnit:chosen==='none'"),
+ 'Segmented units must preserve the numeric value and hide only the caption suffix');
+const css=fs.readFileSync('app/src/main/assets/upgrade.css','utf8');
+assert(css.includes('#editorHint{top:auto;bottom:24px;'),
+ 'Chain/cumulative hint must stay above the expandable toolbar handle');
 // Real setTool/completePolyline code must commit once, then survive serialization.
 const elements={editorHint:{},activeTool:{}};
 Object.assign(env,{mode:'chain',selected:null,selectedHandle:null,drawStart:null,drawCurrent:null,stroke:[],
