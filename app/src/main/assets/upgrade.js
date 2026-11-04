@@ -226,7 +226,8 @@ showFolder=function(){
 function openGlobalSearch(resume=null){
   modal('Hledat zakázky a poznámky','<label for="searchAll">Hledat v zakázkách</label><input id="searchAll" type="search" placeholder="Zákazník, adresa, místnost, poznámka"><div id="searchResults" class="search-results"></div><button class="outline" id="searchRuian">📍 Vyhledat adresu v RÚIAN</button>',()=>true,'Zavřít');
   $('modal').classList.add('search-open');
-  $('searchRuian').onclick=openAddressSearch;
+  $('searchRuian').onclick=()=>{$('modal').classList.remove('search-open');openAddressSearch()};
+  for(const key of ['cancelModal','okModal'])$(key)?.addEventListener('click',()=>{$('modal').classList.remove('search-open')},{once:true});
   const input=$('searchAll'),result=$('searchResults');
   if(resume)input.value=resume.query;
   const update=()=>{
@@ -250,8 +251,8 @@ function openGlobalSearch(resume=null){
       $('modal').hidden=true;$('modal').classList.remove('search-open');
       currentFolder=record.parentId||null;
       showFolder();
-      searchReturnState=resumeState;
       openRecord(id);
+      searchReturnState=resumeState;
     });
     result.querySelectorAll('.entry-thumb').forEach(img=>img.addEventListener('error',()=>{img.hidden=true;if(img.nextElementSibling)img.nextElementSibling.hidden=false},{once:true}));
   };
