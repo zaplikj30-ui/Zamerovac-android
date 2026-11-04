@@ -38,6 +38,32 @@
 
 **Cíl:** z příštího záznamu musí být možné změnu přesně implementovat a otestovat, aniž bychom znovu četli původní dlouhý chat. Současně nevydávat neověřený odhad za fakt.
 
+## Povinná kontrola úplnosti před označením testu za dokončený
+
+**Závazná metodika z 4. 11. 2026 po zjištění nepřesností v předběžných výtazích.** Dříve použitý stručný popis **není technická specifikace**. Žádný ze starých 28 testů neoznačovat jako plně zrekonstruovaný, dokud není splněno vše níže.
+
+1. **Primární zdroj**: celé video záznamu chatu `1000093687.mp4`, nikoli volná interpretace předchozího shrnutí. V případě potřeby kontrolovat jednotlivé snímky ve větším rozlišení. Nečitelný úsek označit s časem a vyžádat si původní screenshot či video.
+2. **Dvě průchodové fáze**: (A) souvisle identifikovat všech 28 testů a všechny další samostatné nápady v celém videu, (B) *pro každý test znovu projít celý záznam* a vyhledat každý pozdější návrat, doplněk, změnu či zrušení dohody. Neuzavírat test po prvním výskytu.
+3. **Podrobný důkazní zápis**: zachovat věcné formulace v jejich významu; u podstatných sporných detailů případně krátkou přesnou citaci. Uložit časový úsek, číslo testu a konkrétní název videosouboru/fotografie odkazované v záznamu. Soubory spárovat se skutečnými přílohami a neodvozovat souvislosti jen z podobného tématu.
+4. **Úplnost funkce**: vypsat (a) existující a fungující chování, které se nesmí rozbít, (b) jednotlivé pozorované závady, (c) cílové chování *každého* úchopu, gesta, popisku, tvaru, velikosti a nastavení, (d) vyzkoušené/nevyzkoušené okrajové situace, (e) jednotlivé navržené alternativy, (f) **poslední platnou dohodu**.
+5. **Přesnost názvů a rozsahu**: používat uživatelem opravené označení **„Směřovat“**, nikoli „Směrovat“. Problém s úchopy se týkal **kruhu i elipsy**, ne pouze elipsy. To jsou již známé chyby původní sumarizace; všechny ostatní záznamy proto také znovu ověřit a nebrat je automaticky za správné.
+6. **Rozlišit jednotlivé stavy**: historické pozorování ≠ dohodnutý požadavek ≠ nápad možná později ≠ commit ≠ vydané APK ≠ otestováno a funguje na zařízení. Neodhadovat verzi APK ani datum implementace.
+7. **Kontrola proti kódu**: až po sestavení skutečné specifikace dohledat odpovídající implementaci/commity a výslovně popsat, zda požadavek už kód pokrývá, částečně pokrývá, nebo stav nelze potvrdit. Zároveň neplést technické statické testy s uživatelským testem.
+8. **Samostatné návrhy mimo čísla testů**: zachytit každou relevantní změnu ikony, textu, zobrazení a přidanou funkci; u nejasného „změníme ikonu“ dohledat *kterou* ikonu a *jak*, jinak otevřenou otázku. Neztrácet nápady zvažované pro budoucnost.
+9. **Zápis a kontrola**: u každého dokončeného testu uložit podrobnou kapitolu na GitHub, zkontrolovat obsah zápisu po uložení a poslat uživateli odkaz. **Nepřipravovat zjednodušené zadání k implementaci, dokud nebude tato úplnost potvrzena.**
+
+### Kontrolní karta pro každý z 28 testů
+- [ ] Původní zadání, přesné číslo a název doložené videem
+- [ ] Všechny výskyty v celém hlavním videu dohledané, včetně pozdějších doplnění
+- [ ] Odpovídající externí videa/fotky propojené názvem, obsahem a časem, pokud existují
+- [ ] Podrobné očekávané a skutečné chování rozepsané včetně toho, co funguje
+- [ ] Každý návrh/alternativa a konečná dohoda oddělené
+- [ ] Stav implementace vyhodnocený samostatně, bez neověřeného tvrzení
+- [ ] Nejasnosti pojmenované; nečitelný snímek určen časem pro opětovné dodání
+- [ ] Zápis GitHubu zkontrolován a propojen s odpovídajícím issue
+
+**Poznámka k nynějším předběžným souhrnům:** Některá starší přiřazení čísel a závěrů se již ukázala chybná. Považovat je pouze za pracovní stopy, **ne za schválené kompletní výsledky**.
+
 ## Stav rekonstrukce historických 28 kontrol (4. 11. 2026)
 
 **Dosud NEUZAVŘENO.** V deníku [#13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13) existuje předběžná rekonstrukce některých čísel, která je ještě nutné porovnat s videem původního chatu. Zde nebudeme vymýšlet, že už jsou kompletně hotové.
