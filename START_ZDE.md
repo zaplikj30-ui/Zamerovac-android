@@ -80,7 +80,7 @@ GitHub změny uchovává v historii; starší rozhodnutí u významnějších zm
 
 ### Testování 1.2.147 – vždy jeden test
 
-Dohoda 4. 11. 2026: Uživatel chce dostat vždy pouze jeden konkrétní test s krátkým návodem a možností odeslat výsledek a poznámku. Asistent zapíše výsledek ihned do issue #13, ověří zápis a pošle odkaz. Až potom předloží další jediný test. Při neúspěšném zápisu jasně upozorní. Dávky pěti úkolů se týkají vývoje, nikoli zobrazení uživatelských testů. První test: 22 – obnova z Koše ve verzi 1.2.147.
+Upřesněná dohoda 4. 11. 2026: Ukazovat vždy **jen jeden konkrétní test** s krátkým návodem a výběrem **Funguje správně / Nefunguje – chyba / Funguje částečně / Nešlo vyzkoušet**. **Nenabízet ani nevyžadovat pole pro ručně psané poznámky.** Po odeslání samotného výsledku asistent **počká**: uživatel následně poskytne video, hlasové vysvětlení nebo další zprávy. **Nepřecházet na další test a neuzavírat finální záznam podle samotné volby.** Teprve až uživatel dokončí předání podkladů, asistent výsledek i zjištěné chování shrne, uloží do existujícího issue #13, ověří zápis, pošle odkaz a až potom zadá další jediný test. Při neúspěšném zápisu na to výslovně upozornit. Dávky pěti úkolů patří vývoji, nikoli zobrazení uživatelských testů. **Aktuálně otevřený test: 22 – Koš, v1.2.147, předběžné hodnocení Částečně; hlášeno, že obnova fotografie se zobrazí ve složce až po odchodu a opětovném návratu. Uživatel doplňuje podklady, závěr testu zatím neuzavírat.**
 
 
 
