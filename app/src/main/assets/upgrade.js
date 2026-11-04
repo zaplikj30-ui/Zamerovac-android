@@ -208,10 +208,32 @@ async function openMediaPlayer(r){
  const tag=r.kind==='video'?'video':'audio';
  el.innerHTML='<div class="mediaTop"><strong>'+esc(r.title)+'</strong><button id="mediaClose" aria-label="Zavřít">✕</button></div>'+
  '<'+tag+' controls playsinline preload="metadata" id="playInline"></'+tag+'>'+
- '<p>Přehrávání přímo v Zaměřovači</p>';
+ '<p class="mediaStatus" role="status">Načítám '+(r.kind==='video'?'video':'zvuk')+'…</p>'+
+ '<button class="outline mediaFallback" hidden type="button">Otevřít v jiné aplikaci</button>';
  document.body.append(el);
- const player=el.querySelector('#playInline');player.src=url;
- el.querySelector('#mediaClose').onclick=()=>{player.pause();el.remove();if(!native)URL.revokeObjectURL(url)};
+ const player=el.querySelector('#playInline');
+ const status=el.querySelector('.mediaStatus');
+ const fallback=el.querySelector('.mediaFallback');
+ const close=()=>{
+  clearTimeout(timeout);
+  player.pause();player.removeAttribute('src');player.load();el.remove();
+  if(!native)URL.revokeObjectURL(url);
+ };
+ const showProblem=()=>{
+  if(!el.isConnected)return;
+  status.textContent='Soubor nelze přehrát přímo v Zaměřovači. Zkus otevření v jiné aplikaci.';
+  fallback.hidden=false;
+ };
+ const timeout=setTimeout(()=>{if(player.readyState<2)showProblem()},12000);
+ player.addEventListener('loadeddata',()=>{
+  clearTimeout(timeout);
+  if(el.isConnected){status.textContent='Přehrávání přímo v Zaměřovači';fallback.hidden=true}
+ });
+ player.addEventListener('error',()=>{clearTimeout(timeout);showProblem()});
+ fallback.onclick=()=>{if(native)Native.openMedia(id);else window.open(url,'_blank')};
+ el.querySelector('#mediaClose').onclick=close;
+ if(native&&r.kind==='video')player.poster='https://appassets.androidplatform.net/thumb/'+encodeURIComponent(id);
+ player.src=url;player.load();
  logEvent('média','Otevřeno vestavěné přehrávání');
 }
 let searchReturnState=null;
