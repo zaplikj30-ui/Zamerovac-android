@@ -41,6 +41,25 @@ Praktická samostatná Android aplikace pro zaměřování zakázkového nábytk
 
 **Stav:** požadavek do dlouhodobé vize, **není schváleno automatické zařazení do nyní rozpracované aktualizace**. Nejdříve navrhnout rozsah a rizika, vyžádat potvrzení pro konkrétní implementaci, před vydáním otestovat editor, ukládání, offline práci a přepínání motivů. **Nyní pouze dokumentace, bez sestavení APK.**
 
+### Jemný vzor pozadí jako volitelná úprava vzhledu (námět 4. 11. 2026)
+
+**Přání uživatele:** kromě dříve plánovaných možností „Podle systému / Tmavý / Světlý“ mít případně **volitelný jednoduchý, jemný vzor či decentní pozadí v prostředí aplikace**. Nejde o přikreslování vzoru do zdrojových zaměřovacích fotografií, exportů ani do podkladů zákazníka. Konkrétní vzhled a umístění vzoru doladit až před realizací podle uživatelových ukázek.
+
+**Důležité:** zachovat čitelnost textů, náhledů, kót, ikon a ovládání; žádná ztráta dat ani změna skutečných rozměrů. **JEN NÁMĚT NA POZDĚJI, není schváleno programování ani sestavení APK.**
+
+### Zákaznický export: ZIP s PDF fotografiemi a zapečenými kótami (námět 4. 11. 2026)
+
+**Uživatelský nápad (4. 11. 2026):** přidat **samostatný typ exportu pro zákazníka**, který uživatel jednoduše pošle jako **ZIP obsahující fotografie ve formátu PDF**, s viditelnými rozměry/kótami, čárami a případnými popisky. **Zákazník nemá dostat editovatelné projekty Zaměřovače** a nemá v aplikaci měnit kóty ani jiné anotace.
+
+**Rozlišení dvou různých exportů, zásadní kvůli datům:**
+- **Stávající zálohovací / přenosový ZIP Zaměřovače:** ponechat zachovanou plnohodnotnou obnovu dat a editovatelnost. Nezměnit význam současného tlačítka/exportu ani strukturu zálohy.
+- **Nový zákaznický export do ZIP:** PDF se **sloučeným („zapečeným“) výsledným vzhledem** fotografie a všech viditelných anotací, bez vnitřního editovatelného JSON, historie měření, interních poznámek nebo zdrojových projektových dat. Fotografie a kóty mají být v PDF v takové podobě, jak je uživatel schválil k předání. Nesmí dojít ke změně číselných hodnot, jednotek, orientace ani rozložení anotací.
+- **Pozor na výraz „nepůjde upravovat“:** znamená **bez editovatelných objektů Zaměřovače**, nikoliv absolutní nemožnost upravit PDF v externím editoru. Nepřislibovat technicky nemožnou ochranu proti všem úpravám souborů.
+- Při přípravě implementace doladit **rozvržení výstupu**: jedno PDF za fotografii versus jeden společný PDF dokument (v obou případech výstupní ZIP), řazení stránek/fotografií, názvy souborů, rozlišení a zda přidávat datum, název zakázky či jiné údaje. Nevkládat automaticky osobní nebo interní informace.
+- **Regresní požadavky pro pozdější realizaci:** zákaznický export nepoškodí uložená data ani stávající ZIP pro obnovu; exportované PDF skutečně ukazuje všechny zvolené fotografie a správně vykreslené, jasně čitelné kóty i popisky; skutečný výstup prověřit v běžném PDF prohlížeči a ZIP lze normálně rozbalit.
+
+**Stav:** schválené k **evidenci jako nápad do budoucna**, nikoli autorizace okamžité implementace, změny stávajícího exportu nebo nové APK. Konkrétní podobu a zařazení do aktualizace musí uživatel schválit později.
+
 ## 3. Co má umět – cílový funkční celek
 - **Zakázky a data:** vytvořit zakázku a adresu, členit do složek, ukládat původní fotografie/PDF/video a editovatelné anotace, hledat, zálohovat, exportovat/importovat včetně podsložek; přežít restart a aktualizaci.
 - **Kótování a kreslení:** běžné kóty, čáry, šipky, nepravidelná plocha, obdélník, kruh/elipsa, lomená čára, volná ruka, úhly, dimenzní i kumulativní řetězce; S Pen, přesné posouvání a přichytávání s možností úplného vypnutí.
