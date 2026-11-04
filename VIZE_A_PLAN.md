@@ -14,6 +14,9 @@ Praktická samostatná Android aplikace pro zaměřování zakázkového nábytk
 - Název případné cílové složky pro export či zálohu nemá být natvrdo „Zaměřovač“; má vycházet z aktuálního názvu aplikace (příklad při přejmenování: „Měřák – Zapletal“). Návrh do budoucna, vyžaduje návrh migrace/potvrzení.
 - Funkce mají být vysvětlené srozumitelnými názvy/popisky, ne jen nejasnými ikonami.
 
+
+- **Příprava na vícejazyčnost (schválená, zatím bez změny kódu):** [Plán lokalizace](LOKALIZACE_PLAN.md) · [Úkol #14](https://github.com/zaplikj30-ui/Zamerovac-android/issues/14). Nyní zůstává vše v češtině; jazykové klíče se budou bezpečně přidávat jen k nově opravovaným funkcím. Přepínač a překlady en/de/sk nejsou nyní v rozsahu.
+
 ## 3. Co má umět – cílový funkční celek
 - **Zakázky a data:** vytvořit zakázku a adresu, členit do složek, ukládat původní fotografie/PDF/video a editovatelné anotace, hledat, zálohovat, exportovat/importovat včetně podsložek; přežít restart a aktualizaci.
 - **Kótování a kreslení:** běžné kóty, čáry, šipky, nepravidelná plocha, obdélník, kruh/elipsa, lomená čára, volná ruka, úhly, dimenzní i kumulativní řetězce; S Pen, přesné posouvání a přichytávání s možností úplného vypnutí.
@@ -38,7 +41,7 @@ Tento seznam obsahuje dříve zmíněné nebo odložené směry. O přesném pro
 ## 5. Aktuálně zaznamenané otevřené body a testování
 - Podrobný kontrolní seznam 49 úprav: [Issue #12](https://github.com/zaplikj30-ui/Zamerovac-android/issues/12).
 - Průběžný testovací deník: [Issue #13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13).
-- Převod výsledků přibližně 28 starších praktických testů z chatu dosud **není kompletní**; výsledky nevymýšlet.
+- Rekonstrukce 28 historických testů je dokončena ve třech souborech; implementaci a funkčnost aktuální APK je potřeba ověřit samostatným auditem a retestem.
 - K dalšímu praktickému testu byl domluven **test 29 – offline**.
 - Při dosavadním zkoušení bylo hlášeno, že ZIP není vidět ve výběru importu; zapsat jako otevřený problém k ověření/opravě, nikoliv jako hotovou opravu.
 
