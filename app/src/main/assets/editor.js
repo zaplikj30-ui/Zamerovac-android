@@ -3,12 +3,61 @@ const toolGroups=[{title:'Měřicí nástroje',tools:[['dimension','↔','Rozmě
 const allTools=toolGroups.flatMap(g=>g.tools);
 let drawStart=null,drawCurrent=null,stroke=[],polylineDraft=[],drawPointerId=null,selectedHandle=null,lastTap=0,lastTapAt=null,gesture=null;
 let lastDrawingTool='dimension',suppressToolClick=false,repeatPressTimer=null,loupeSide=null;
-function openEditor(r){polylineDraft=[];stroke=[];drawStart=null;drawCurrent=null;lastTap=0;lastTapAt=null;loupeSide=null;screen='editor';document.body.classList.add('in-editor');closeMenus();$('editorHint').hidden=true;current=r;selected=null;mode='dimension';lastDrawingTool='dimension';updateDrawingToolButton();$('browserView').hidden=true;$('browserFoot').hidden=true;$('noteView').hidden=true;$('editorView').hidden=false;$('editorTitle').textContent=r.title;const photoMeta=$('editorPhotoMeta');if(photoMeta){photoMeta.textContent=photoDetailsText(r);photoMeta.title=photoMeta.textContent;}photoSize={w:r.width||1400,h:r.height||900};stageImg=null;selectedHandle=null;editStack=[];redoStack=[];if(r.kind==='photo'&&r.media?.[0]){assetUrl(r.media[0]).then(url=>{let img=new Image();img.onload=()=>{if(current!==r||screen!=='editor')return;stageImg=img;photoSize={w:img.naturalWidth,h:img.naturalHeight};r.width=photoSize.w;r.height=photoSize.h;initialImageView();paint()};img.onerror=()=>{if(current===r)notify('Nepodařilo se načíst fotografii')};img.src=url})}resizeEditor();initialImageView();paint();}
-function exitEditor(){finishPendingPath();magnifierPoint=null;loupeSide=null;$('loupe').hidden=true;current=null;screen='browser';showFolder()}
+let photoLoadGeneration=0,photoLoadTimer=null,photoLoadFailed=false,editorViewport=null;
+function openEditor(r){
+ hideEditorLoupe();
+ editorViewport=null;
+ polylineDraft=[];stroke=[];drawStart=null;drawCurrent=null;lastTap=0;lastTapAt=null;loupeSide=null;
+ screen='editor';document.body.classList.add('in-editor');closeMenus();$('editorHint').hidden=true;
+ current=r;selected=null;mode='dimension';lastDrawingTool='dimension';updateDrawingToolButton();
+ $('browserView').hidden=true;$('browserFoot').hidden=true;$('noteView').hidden=true;
+ $('editorView').hidden=false;$('editorTitle').textContent=r.title;
+ const photoMeta=$('editorPhotoMeta');
+ if(photoMeta){photoMeta.textContent=photoDetailsText(r);photoMeta.title=photoMeta.textContent}
+ photoSize={w:r.width||1400,h:r.height||900};stageImg=null;selectedHandle=null;editStack=[];redoStack=[];
+ const generation=++photoLoadGeneration;photoLoadFailed=false;clearTimeout(photoLoadTimer);
+ if(r.kind==='photo'&&r.media?.[0]){
+  const active=()=>generation===photoLoadGeneration&&current===r&&screen==='editor';
+  const failed=()=>{
+   if(!active())return;clearTimeout(photoLoadTimer);photoLoadFailed=true;
+   notify('Nepodařilo se načíst fotografii');paint();
+  };
+  photoLoadTimer=setTimeout(failed,20000);
+  assetUrl(r.media[0]).then(url=>{
+   const img=new Image();
+   const release=()=>{if(url.startsWith('blob:'))URL.revokeObjectURL(url)};
+   img.onload=()=>{
+    release();if(!active())return;clearTimeout(photoLoadTimer);photoLoadFailed=false;stageImg=img;
+    photoSize={w:img.naturalWidth,h:img.naturalHeight};r.width=photoSize.w;r.height=photoSize.h;
+    initialImageView();paint();
+   };
+   img.onerror=()=>{release();failed()};img.src=url;
+  }).catch(failed);
+ }
+ resizeEditor();initialImageView();paint();
+}
+function hideEditorLoupe(){
+ magnifierPoint=null;loupeSide=null;$('loupe').hidden=true;
+ for(const id of pointers.keys())try{stageCanvas.releasePointerCapture(id)}catch(error){}
+ pointers.clear();
+}
+function exitEditor(){hideEditorLoupe();if(selectedHandle?.dragged)commitEditor();selectedHandle=null;finishPendingPath();current=null;screen='browser';showFolder()}
 $('editorBack').onclick=exitEditor;
+// Hide before the Back click, and retire captured pointers before any queued move.
+$('editorBack').addEventListener('pointerdown',hideEditorLoupe,{capture:true});
 $('fitBtn').onclick=fitImage;$('zoomIn').onclick=()=>{const p=centerPoint();zoomAt(1.25,p.x,p.y)};$('zoomOut').onclick=()=>{const p=centerPoint();zoomAt(.8,p.x,p.y)};
 function centerPoint(){return{x:stageCanvas.clientWidth/2,y:stageCanvas.clientHeight/2}}
-function resizeEditor(){if(screen!=='editor')return;let el=$('stage'),dpr=window.devicePixelRatio||1;stageCanvas.width=Math.max(1,Math.floor(el.clientWidth*dpr));stageCanvas.height=Math.max(1,Math.floor(el.clientHeight*dpr));ctx.setTransform(dpr,0,0,dpr,0,0);paint()}
+function resizeEditor(){
+ if(screen!=='editor')return;
+ const el=$('stage'),dpr=window.devicePixelRatio||1,w=el.clientWidth,h=el.clientHeight;
+ // Preserve zoom and the world point at the centre, including unsaved drafts.
+ if(editorViewport?.record===current&&w>0&&h>0){
+  view.dx+=(w-editorViewport.w)/2;view.dy+=(h-editorViewport.h)/2;
+ }
+ editorViewport={record:current,w,h};
+ stageCanvas.width=Math.max(1,Math.floor(w*dpr));stageCanvas.height=Math.max(1,Math.floor(h*dpr));
+ ctx.setTransform(dpr,0,0,dpr,0,0);paint();
+}
 window.addEventListener('resize',resizeEditor);
 function fitImage(){let w=stageCanvas.clientWidth,h=stageCanvas.clientHeight;if(!w||!h)return;view.zoom=Math.min((w-24)/photoSize.w,(h-24)/photoSize.h);view.dx=(w-photoSize.w*view.zoom)/2;view.dy=(h-photoSize.h*view.zoom)/2;paint()}
 function initialImageView(){fitImage();const p=centerPoint();zoomAt(1.15,p.x,p.y)}
@@ -120,7 +169,7 @@ function setTool(key,keepSelection=false){
  updateDrawingToolButton();updateChainHint();paint();
 }
 function drawGrid(){if(!prefs.showGrid)return;let spacing=Math.max(5,prefs.gridStep)*view.zoom;if(spacing<8)return;ctx.save();ctx.strokeStyle='#eeeeee28';ctx.lineWidth=1;const left=Math.max(0,Math.ceil(-view.dx/spacing)),right=Math.min(Math.ceil(photoSize.w/prefs.gridStep),Math.ceil((stageCanvas.clientWidth-view.dx)/spacing));const top=Math.max(0,Math.ceil(-view.dy/spacing)),bottom=Math.min(Math.ceil(photoSize.h/prefs.gridStep),Math.ceil((stageCanvas.clientHeight-view.dy)/spacing));ctx.beginPath();for(let i=left;i<=right;i++){const x=view.dx+i*spacing;ctx.moveTo(x,0);ctx.lineTo(x,stageCanvas.clientHeight)}for(let j=top;j<=bottom;j++){const y=view.dy+j*spacing;ctx.moveTo(0,y);ctx.lineTo(stageCanvas.clientWidth,y)}ctx.stroke();ctx.restore()}
-function paint(){if(screen!=='editor'||!current)return;let w=stageCanvas.clientWidth,h=stageCanvas.clientHeight;ctx.clearRect(0,0,w,h);if(current.kind==='photo'&&!stageImg){ctx.fillStyle='#202123';ctx.fillRect(0,0,w,h);ctx.fillStyle='#ddd';ctx.font='14px sans-serif';ctx.textAlign='center';ctx.fillText('Načítám fotografii…',w/2,h/2);return}ctx.save();ctx.fillStyle='#202123';ctx.fillRect(0,0,w,h);ctx.translate(view.dx,view.dy);ctx.scale(view.zoom,view.zoom);if(stageImg)ctx.drawImage(stageImg,0,0,photoSize.w,photoSize.h);else{ctx.fillStyle='#36383a';ctx.fillRect(0,0,photoSize.w,photoSize.h);ctx.strokeStyle='#4b4e50';ctx.lineWidth=3/view.zoom;ctx.strokeRect(0,0,photoSize.w,photoSize.h)}ctx.restore();drawGrid();for(let item of current.items||[]){if(item.id===selected)drawSelectedOutline(ctx,item);drawItem(ctx,item);}if(drawStart&&drawCurrent){let mock={type:mode,a:drawStart,b:drawCurrent,points:stroke,measure:'',unit:prefs.unit,color:prefs.color,width:prefs.lineWidth,fontSize:prefs.fontSize};drawItem(ctx,mock,false)}drawSelectedGrips(ctx);if(magnifierPoint&&prefs.loupe)drawLoupe();else $('loupe').hidden=true;}
+function paint(){if(screen!=='editor'||!current)return;let w=stageCanvas.clientWidth,h=stageCanvas.clientHeight;ctx.clearRect(0,0,w,h);if(current.kind==='photo'&&!stageImg){ctx.fillStyle='#202123';ctx.fillRect(0,0,w,h);ctx.fillStyle='#ddd';ctx.font='14px sans-serif';ctx.textAlign='center';ctx.fillText(photoLoadFailed?'Fotografii nelze načíst. Zavři ji a otevři znovu.':'Načítám fotografii…',w/2,h/2);return}ctx.save();ctx.fillStyle='#202123';ctx.fillRect(0,0,w,h);ctx.translate(view.dx,view.dy);ctx.scale(view.zoom,view.zoom);if(stageImg)ctx.drawImage(stageImg,0,0,photoSize.w,photoSize.h);else{ctx.fillStyle='#36383a';ctx.fillRect(0,0,photoSize.w,photoSize.h);ctx.strokeStyle='#4b4e50';ctx.lineWidth=3/view.zoom;ctx.strokeRect(0,0,photoSize.w,photoSize.h)}ctx.restore();drawGrid();for(let item of current.items||[]){if(item.id===selected)drawSelectedOutline(ctx,item);drawItem(ctx,item);}if(drawStart&&drawCurrent){let mock={type:mode,a:drawStart,b:drawCurrent,points:stroke,measure:'',unit:prefs.unit,color:prefs.color,width:prefs.lineWidth,fontSize:prefs.fontSize};drawItem(ctx,mock,false)}drawSelectedGrips(ctx);if(magnifierPoint&&prefs.loupe)drawLoupe();else $('loupe').hidden=true;}
 
 /* ImageMeter-like selection: the translucent white contour is drawn
    BEFORE the original colored annotation. No white stroke covers the
@@ -197,7 +246,7 @@ function drawSelectedGrips(c){
    U starších záznamů bez captionMoved zůstává vzhled beze změny. */
 function noteDisplayedCaption(item){
  const voice=Array.isArray(item.audioMedia)&&item.audioMedia.length?'🎙 ':'';
- const body=item.text||((item.media?.length)?'':'Klikněte pro zadání textu');
+ const body=item.text||((item.media?.length||window.__exportingAnnotations)?'':'Klikněte pro zadání textu');
  return voice+body;
 }
 function noteCaptionScreen(item){
@@ -394,7 +443,7 @@ else if(item.type==='freehand'||item.type==='polyline'){if(pts.length){c.beginPa
 else if(item.type==='note'||item.type==='symbol'){if(a){if(item.type==='note'){drawNoteLeader(c,item,color);(noteDisplayedCaption(item)&&canvasText(noteDisplayedCaption(item),noteCaptionScreen(item),color,fs))}else canvasText((item.icon||'⚑')+' '+(item.text||''),a,color,fs)}}
 c.restore();}
 function drawLoupe(){
-  if(!magnifierPoint)return;
+  if(screen!=='editor'||!current||!magnifierPoint||pointers.size===0){$('loupe').hidden=true;return;}
   const pointer=worldToScreen(magnifierPoint);
   const canvas=$('loupe');
   const width=Math.max(1,stageCanvas.clientWidth);
@@ -650,6 +699,7 @@ function completePolyline(kind='polyline',finish=true){
  checkpoint();current.items.push(item);commitEditor();if(finish)finishDraw(item);updateChainHint();
 }
 function stageDown(e){
+ if(current?.kind==='photo'&&!stageImg)return;
  if(screen!=='editor')return;
  e.preventDefault();
  stageCanvas.setPointerCapture(e.pointerId);
@@ -904,7 +954,7 @@ if(['polyline','chain','cumulative','angle'].includes(mode)&&polylineDraft.lengt
 if(drag&&mode==='pan'){view.dx=drag.dx+(s.x-drag.screen.x);view.dy=drag.dy+(s.y-drag.screen.y);paint();return}
 if(drawStart&&drawPointerId===e.pointerId){drawCurrent=mode==='freehand'?boundsPoint(screenToWorld(s)):snap(screenToWorld(s),drawStart);magnifierPoint=drawCurrent;if(mode==='freehand')stroke.push({...drawCurrent});paint()}}
 function stageUp(e){
- if(screen!=='editor')return;
+ if(screen!=='editor'||!pointers.has(e.pointerId))return;
  const wasTwo=pointers.size===2;
  pointers.delete(e.pointerId);
  if(wasTwo){
@@ -1268,6 +1318,6 @@ $('styleTool').onclick=()=>{
       else{prefs.lineWidth=w;prefs.fontSize=fs;prefs.color=color;save();paint()}
   });
 };
-stageCanvas.addEventListener('pointerdown',stageDown);stageCanvas.addEventListener('pointermove',stageMove);stageCanvas.addEventListener('pointerup',stageUp);stageCanvas.addEventListener('pointercancel',e=>{pointers.delete(e.pointerId);magnifierPoint=null;drawStart=null;selectedHandle=null;paint()});stageCanvas.addEventListener('wheel',e=>{e.preventDefault();const p=eventPoint(e);zoomAt(e.deltaY<0?1.1:.9,p.x,p.y)},{passive:false});
+stageCanvas.addEventListener('pointerdown',stageDown);stageCanvas.addEventListener('pointermove',stageMove);stageCanvas.addEventListener('pointerup',stageUp);stageCanvas.addEventListener('pointercancel',e=>{if(screen!=='editor'||!pointers.has(e.pointerId))return;pointers.delete(e.pointerId);magnifierPoint=null;drawStart=null;selectedHandle=null;paint()});stageCanvas.addEventListener('wheel',e=>{e.preventDefault();const p=eventPoint(e);zoomAt(e.deltaY<0?1.1:.9,p.x,p.y)},{passive:false});
 $('exportBtn').onclick=()=>{modal('Export',`<div class="row wrap"><button id="exportPng" class="outline">Export PNG</button><button id="exportPdf" class="outline">Export PDF</button></div><div class="muted">Originální soubor a editovatelné kóty se zachovávají zvlášť.</div>`,()=>true,'Zavřít');$('exportPng').onclick=()=>{exportPng();$('modal').hidden=true};$('exportPdf').onclick=()=>{if(native)Native.printPdf();else window.print();$('modal').hidden=true}};
 function exportPng(){let o=document.createElement('canvas');o.width=photoSize.w;o.height=photoSize.h;let c=o.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,o.width,o.height);if(stageImg)c.drawImage(stageImg,0,0,o.width,o.height);let oldCtx=ctx,oldView={...view};ctx=c;view={zoom:1,dx:0,dy:0};for(let item of current.items||[])drawItem(c,item,false);ctx=oldCtx;view=oldView;const data=o.toDataURL('image/png');if(native)Native.exportPng((current.title||'zamerovani')+'.png',data.slice(data.indexOf(',')+1));else{let a=document.createElement('a');a.download='zamerovani.png';a.href=data;a.click()}notify('Export obrázku připraven')}

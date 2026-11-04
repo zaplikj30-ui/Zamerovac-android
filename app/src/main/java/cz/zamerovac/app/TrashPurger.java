@@ -84,7 +84,7 @@ final class TrashPurger {
             Set<String> failed=new TreeSet<>();
             for(String id:candidates){
                 File source=new File(home,"media/"+id),thumb=new File(cache,"photo-thumbs/"+id+".jpg");
-                boolean ok=removeFile(source)&&removeFile(thumb)&&removeFile(new File(cache,"photo-thumbs/"+id+".tmp"));
+                boolean ok=removeFile(source)&&removeFile(thumb)&&removeFile(new File(cache,"photo-thumbs/"+id+".tmp"))&&removeFile(new File(cache,"photo-thumbs/"+id+".failed"));
                 if(ok){if(!prefs.edit().remove("mime-"+id).remove("name-"+id).commit())ok=false;}
                 if(!ok)failed.add(id);
             }

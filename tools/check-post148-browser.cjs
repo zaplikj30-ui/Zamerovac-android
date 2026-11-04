@@ -46,7 +46,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
  await page.evaluate(()=>showTrash());assert(await page.locator('#emptyTrash').isDisabled());await page.click('#okModal');
  // Badge position/size in actual layout, after the requested additional reduction.
  const badge=await page.locator('.photo-edited-badge').first().evaluate(el=>{const s=getComputedStyle(el),p=el.parentElement.getBoundingClientRect(),r=el.getBoundingClientRect();return {left:r.x-p.x,top:r.y-p.y,width:r.width,height:r.height,color:s.color}});
- assert.equal(badge.width,15);assert.equal(badge.height,15);assert(badge.left<=4&&badge.top<=4);assert.equal(badge.color,'rgb(255, 255, 255)');
+ assert.equal(badge.width,13);assert.equal(badge.height,13);assert(badge.left<=4&&badge.top<=4);assert.equal(badge.color,'rgb(255, 255, 255)');
  // Correct exact wording at photo, folder, bulk and editor entries. Backup actions remain.
  await page.locator('[data-more="active"]').click();assert.equal(await page.getByText('Export pro zákazníka: ZIP s PDF',{exact:true}).count(),1);assert.equal(await page.getByText('Exportovat fotografii ZIP',{exact:true}).count(),1);await page.click('#okModal');
  await page.evaluate(()=>{const f=newRecord('folder','Složka');state.records.push(f);showFolder();recordActions(f.id)});

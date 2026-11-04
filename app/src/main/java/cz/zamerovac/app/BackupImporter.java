@@ -87,7 +87,10 @@ final class BackupImporter {
             JSONObject rec=records.optJSONObject(i);
             if(rec==null||rec.optBoolean("deleted"))continue;
             String id=rec.optString("id");
-            if(!id.isEmpty())recIds.put(id,UUID.randomUUID().toString());
+            if(!id.isEmpty()){
+                if(recIds.containsKey(id))throw new IOException("Záloha obsahuje duplicitní identifikátor zakázky");
+                recIds.put(id,UUID.randomUUID().toString());
+            }
         }
         ArrayList<JSONObject> newRecords=new ArrayList<>();
         for(int i=0;i<records.length();i++){
@@ -146,15 +149,16 @@ final class BackupImporter {
         if(first.length()>100)first=first.substring(0,100);
         return first+(names.size()>1?" a další ("+names.size()+")":"");
     }
-    private static void rewriteMedia(JSONArray media,Map<String,String> mapping)throws JSONException{
+    private static void rewriteMedia(JSONArray media,Map<String,String> mapping)throws JSONException,IOException{
         if(media==null)return;
         for(int i=0;i<media.length();i++){
             String id=media.optString(i);
-            if(id.matches("[a-zA-Z0-9_-]{3,120}"))
-                media.put(i,mapping.computeIfAbsent(id,k->UUID.randomUUID().toString()));
+            if(!(media.opt(i) instanceof String)||!id.matches("[a-zA-Z0-9_-]{3,120}"))
+                throw new IOException("Neplatný identifikátor přílohy v záloze");
+            media.put(i,mapping.computeIfAbsent(id,k->UUID.randomUUID().toString()));
         }
     }
-    private static void rewriteItems(JSONArray items,Map<String,String> mapping)throws JSONException{
+    private static void rewriteItems(JSONArray items,Map<String,String> mapping)throws JSONException,IOException{
         if(items==null)return;
         for(int i=0;i<items.length();i++){
             JSONObject item=items.optJSONObject(i);if(item==null)continue;

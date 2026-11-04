@@ -223,6 +223,7 @@
   return null;
  }
  function down(e){
+  if(current?.kind==='photo'&&!stageImg)return;
   if(screen!=='editor'||!current||e.button!==0||window.isRecordLocked?.(current))return;
   if(active){e.preventDefault();e.stopImmediatePropagation();return}
   const at=eventPoint(e),hit=hitTest(at);

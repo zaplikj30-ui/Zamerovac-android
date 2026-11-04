@@ -202,7 +202,9 @@ openRecord=function(id){
  oldOpenRecord(id);
 };
 async function openMediaPlayer(r){
- const id=r.media?.[0],url=await assetUrl(id);
+ const id=r.media?.[0];
+ if(native&&r.kind==='video'){Native.openVideo(id);return}
+ const url=await assetUrl(id);
  if(!url){notify('Soubor nelze otevřít');return}
  const el=document.createElement('div');el.className='mediaOverlay';
  const tag=r.kind==='video'?'video':'audio';
@@ -314,14 +316,13 @@ const browseGallery=document.createElement('button');
 browseGallery.id='browseGallery';browseGallery.className='ico';browseGallery.innerHTML='<svg viewBox="0 0 24 24" width="27" height="27" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="6" width="15" height="15" rx="2"/><path d="M3 16V5a2 2 0 0 1 2-2h11"/><circle cx="16" cy="10" r="1.5"/><path d="m7 18 4-4 3 3 2-2 4 4"/></svg>';browseGallery.title='Galerie fotografií';browseGallery.setAttribute('aria-label','Galerie fotografií');
 $('browserFoot').insertBefore(browseGallery,$('bluetoothBtn'));
 browseGallery.onclick=()=>openGallery(0);
-let gallery=null,galleryList=[],galleryIndex=0,galleryStart=null;
+let gallery=null,galleryList=[],galleryIndex=0,galleryStart=null,galleryRenderGeneration=0;
 function galleryPhotos(){return state.records.filter(r=>!r.deleted&&r.kind==='photo'&&r.parentId===currentFolder).sort((a,b)=>a.createdAt.localeCompare(b.createdAt))}
 async function renderGallery(){
  if(!gallery)return;
- const display=gallery,r=galleryList[galleryIndex];
+ const generation=++galleryRenderGeneration,display=gallery,r=galleryList[galleryIndex];
  if(!r){closeGallery();return}
  const canvas=display.querySelector('.gallery-img');
- canvas.style.transform='none';
  display.querySelector('.gallery-title').textContent=r.title+' · '+(galleryIndex+1)+'/'+galleryList.length;
  try{
   const url=await assetUrl(r.media?.[0]);
@@ -342,11 +343,11 @@ async function renderGallery(){
     });
    }catch(err){/* Přílohou může být i audio; nemění zobrazení ostatních poznámek. */}
   }));
-  if(gallery!==display||galleryList[galleryIndex]?.id!==r.id)return;
+  if(generation!==galleryRenderGeneration||gallery!==display||galleryList[galleryIndex]?.id!==r.id)return;
   const available=display.querySelector('.gallery-content');
   const density=Math.min(2,window.devicePixelRatio||1);
-  const maxW=Math.max(240,(available.clientWidth||500)*density);
-  const maxH=Math.max(240,(available.clientHeight||650)*density);
+  const maxW=Math.max(1,(available.clientWidth||500)*density);
+  const maxH=Math.max(1,(available.clientHeight||650)*density);
   // Include insets dragged outside the original photo. Gallery must use
   // the whole annotated workspace, not clip at the original image edges.
   let minX=0,minY=0,maxX=image.naturalWidth,maxY=image.naturalHeight;
@@ -393,6 +394,11 @@ async function renderGallery(){
   }
  }catch(err){notify('Fotografii v galerii se nepodařilo zobrazit');}
 }
+let galleryResizeFrame=null;
+window.addEventListener('resize',()=>{
+ if(!gallery)return;cancelAnimationFrame(galleryResizeFrame);
+ galleryResizeFrame=requestAnimationFrame(()=>{if(gallery)renderGallery()});
+});
 function openGallery(index,records=null){
  galleryList=records||galleryPhotos();galleryIndex=Math.min(Math.max(index,0),galleryList.length-1);
  if(!galleryList.length){notify('Ve složce nejsou fotografie');return}
