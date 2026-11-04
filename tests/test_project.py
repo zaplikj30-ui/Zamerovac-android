@@ -35,9 +35,9 @@ class SourceSmokeTest(unittest.TestCase):
     def test_photo_waits_before_drawing_annotations(self):
         editor=(ASSETS/'editor.js').read_text('utf-8')
         self.assertIn("if(current.kind==='photo'&&!stageImg)",editor)
-        self.assertIn("fillText('Načítám fotografii…',w/2,h/2);return",editor)
-        self.assertIn("if(current!==r||screen!=='editor')return;stageImg=img",editor)
-        self.assertIn("if(current===r)notify('Nepodařilo se načíst fotografii')",editor)
+        self.assertIn("photoLoadFailed?'Fotografii nelze načíst. Zavři ji a otevři znovu.':'Načítám fotografii…'",editor)
+        self.assertIn("if(!active())return;clearTimeout(photoLoadTimer);photoLoadFailed=false;stageImg=img",editor)
+        self.assertIn("generation===photoLoadGeneration&&current===r&&screen==='editor'",editor)
 
     def test_reference_magnifier_geometry(self):
         editor=(ASSETS/'editor.js').read_text()

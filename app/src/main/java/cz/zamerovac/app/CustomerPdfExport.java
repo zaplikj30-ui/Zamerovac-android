@@ -10,13 +10,28 @@ import java.util.zip.*;
 /** Separate customer archive: only flattened PDF pages, never a project backup. */
 final class CustomerPdfExport {
     private final File directory;
-    private int count;
+    private int count,pages;
+    private OutputStream documentOutput;
+    private RasterPdfWriter.Document document;
     CustomerPdfExport(File cache) throws IOException {
         directory=new File(cache,"customer-"+UUID.randomUUID());
         if(!directory.mkdirs())throw new IOException("Nelze připravit zákaznický export");
     }
     synchronized void add(String title,String png) throws IOException {
-        if(count>=200||png==null||png.length()>32*1024*1024)throw new IOException("Export je příliš velký");
+        begin(title);addPage(png);end();
+    }
+    synchronized void begin(String title)throws IOException {
+        if(document!=null||count>=200)throw new IOException("Nedokončený nebo příliš velký export");
+        File output=new File(directory,String.format(Locale.ROOT,"%03d-",count+1)+safeName(title)+".pdf");
+        documentOutput=new BufferedOutputStream(new FileOutputStream(output));
+        document=new RasterPdfWriter.Document(documentOutput);pages=0;
+    }
+    synchronized void end()throws IOException {
+        if(document==null)throw new IOException("PDF není připraveno");
+        document.finish();documentOutput.close();documentOutput=null;document=null;count++;
+    }
+    synchronized void addPage(String png) throws IOException {
+        if(document==null||pages>=200||png==null||png.length()>32*1024*1024)throw new IOException("Export je příliš velký");
         byte[] bytes;
         try{bytes=Base64.decode(png,Base64.DEFAULT);}catch(IllegalArgumentException ex){throw new IOException("Neplatný obrázek",ex);}
         BitmapFactory.Options bounds=new BitmapFactory.Options();bounds.inJustDecodeBounds=true;
@@ -28,13 +43,11 @@ final class CustomerPdfExport {
         try{
             ByteArrayOutputStream jpeg=new ByteArrayOutputStream();
             if(!bitmap.compress(Bitmap.CompressFormat.JPEG,94,jpeg))throw new IOException("Fotografii nelze převést do PDF");
-            File output=new File(directory,String.format(Locale.ROOT,"%03d-",count+1)+safeName(title)+".pdf");
-            try(OutputStream out=new FileOutputStream(output)){RasterPdfWriter.write(out,bitmap.getWidth(),bitmap.getHeight(),jpeg.toByteArray());}
-            count++;
+            document.add(bitmap.getWidth(),bitmap.getHeight(),jpeg.toByteArray());pages++;
         }finally{bitmap.recycle();}
     }
     synchronized File archive() throws IOException {
-        if(count==0)throw new IOException("Vyber alespoň jednu fotografii");
+        if(document!=null||count==0)throw new IOException("Vyber alespoň jednu fotografii");
         File target=new File(directory,"Zakaznicke-PDF.zip");
         File[] pages=directory.listFiles((dir,name)->name.endsWith(".pdf"));
         if(pages==null||pages.length!=count)throw new IOException("Neúplný PDF export");
@@ -50,6 +63,8 @@ final class CustomerPdfExport {
         return target;
     }
     synchronized void close(){
+        if(documentOutput!=null)try{documentOutput.close();}catch(IOException ignored){}
+        documentOutput=null;document=null;
         File[] files=directory.listFiles();if(files!=null)for(File f:files)f.delete();
         directory.delete();
     }

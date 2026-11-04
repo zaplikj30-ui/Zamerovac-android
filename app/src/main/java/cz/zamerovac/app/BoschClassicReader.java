@@ -19,10 +19,13 @@ public final class BoschClassicReader {
     private final BluetoothDevice device;
     private final Consumer<String> onRead,onError,onStatus;
     private volatile BluetoothSocket socket;
+    private volatile boolean closed,connected;
     public BoschClassicReader(BluetoothDevice d,Consumer<String> measurement,Consumer<String> error,Consumer<String> status){device=d;onRead=measurement;onError=error;onStatus=status;}
     public void start(){new Thread(()->{
         try{
-            BluetoothSocket s=device.createRfcommSocketToServiceRecord(SPP);socket=s;s.connect();onStatus.accept("connected");
+            BluetoothSocket s=device.createRfcommSocketToServiceRecord(SPP);
+            synchronized(this){if(closed){s.close();return;}socket=s;}
+            s.connect();if(closed)return;connected=true;onStatus.accept("connected");
             OutputStream out=s.getOutputStream();out.write(new byte[]{(byte)0xc0,0x55,0x02,0x01,0x00,0x1a});out.flush();
             InputStream in=s.getInputStream();byte[] data=new byte[20];
             int state=0,n=0;
@@ -32,7 +35,7 @@ public final class BoschClassicReader {
                 else if(state==2){if(v==0x10){data[2]=(byte)v;n=3;state=3;}else state=0;}
                 else{data[n++]=(byte)v;if(n==20){decode(data);state=0;}}
             }
-        }catch(Exception e){onError.accept("Bosch Bluetooth Classic: "+e.getMessage());}
+        }catch(Exception e){if(!closed)onError.accept("Bosch Bluetooth Classic: "+e.getMessage());}
         finally{close();onStatus.accept("off");}
     },"BoschGLM-Classic").start();}
     private void decode(byte[] data){
@@ -46,5 +49,6 @@ public final class BoschClassicReader {
             }
         }catch(Exception e){Log.w("Zamerovac","Invalid Bosch frame",e);}
     }
-    public void close(){BluetoothSocket s=socket;socket=null;if(s!=null)try{s.close();}catch(Exception ignored){}}
+    public boolean isConnected(){return connected&&!closed;}
+    public synchronized void close(){closed=true;connected=false;BluetoothSocket s=socket;socket=null;if(s!=null)try{s.close();}catch(Exception ignored){}}
 }

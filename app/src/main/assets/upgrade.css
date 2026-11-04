@@ -472,12 +472,12 @@ body.in-editor #editorExtraToolbar > #editorMore.tool-active{
 .entry-icon.photo-preview{position:relative}
 .photo-edited-badge{
   position:absolute;left:2px;top:2px;z-index:2;
-  width:15px;height:15px;box-sizing:border-box;border:1.5px solid #f7cd30;
+  width:13px;height:13px;box-sizing:border-box;border:1.5px solid #f7cd30;
   border-radius:6px;background:rgba(17,20,24,.94);color:#fff;
   display:flex;align-items:center;justify-content:center;
   box-shadow:0 1px 4px rgba(0,0,0,.75);pointer-events:none
 }
-.photo-edited-badge svg{display:block;flex-shrink:0;width:11px;height:11px}
+.photo-edited-badge svg{display:block;flex-shrink:0;width:9px;height:9px}
 .search-results button.search-hit{
   display:flex;flex-direction:row;align-items:center;gap:11px;width:100%;text-align:left
 }
