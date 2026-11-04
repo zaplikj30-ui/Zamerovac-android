@@ -17,6 +17,19 @@ Praktická samostatná Android aplikace pro zaměřování zakázkového nábytk
 
 - **Příprava na vícejazyčnost (schválená, zatím bez změny kódu):** [Plán lokalizace](LOKALIZACE_PLAN.md) · [Úkol #14](https://github.com/zaplikj30-ui/Zamerovac-android/issues/14). Nyní zůstává vše v češtině; jazykové klíče se budou bezpečně přidávat jen k nově opravovaným funkcím. **Nově schválená položka Nastavení „Jazyk aplikace“** nabídne pouze „🇨🇿 Čeština“, ale architektura bude připravena na desítky jazyků v jejich vlastních názvech a písmech, vyhledávání, různá locale a případné RTL. Další jazyky nyní nejsou dostupné.
 
+### Nastavení vzhledu: podle systému / tmavý / světlý (nový požadavek k pozdějšímu naplánování)
+
+**Přání uživatele 4. 11. 2026:** Aplikace má v budoucnu nabídnout v Nastavení přepínání mezi **Podle systému**, **Tmavý režim** a **Světlý režim**. Volba **Podle systému** má reagovat na aktuální světlý/tmavý režim zařízení (i při změně za běhu, pokud to platforma podporuje); ruční volba má mít před systémem přednost. Nastavení se má zachovat při dalším spuštění.
+
+**Bezpečnost a ovládání:**
+- Přepnutí motivu **nesmí mazat data, restartovat rozpracovaný editor ani měnit hodnoty kót, výroby, fotografie, jejich obsah, barvy původních snímků nebo význam uložených anotací**. Uživatelské barvy a dobře viditelné pracovní čáry musí zůstat čitelné na každém pozadí.
+- Zajistit dobrý kontrast textů, ikon, dialogů a kót, včetně viditelnosti ovládacích úchopů, podporovaných systémových lišt, velkého písma a různých telefonů/tabletů.
+- Vizuální barvy oddělovat od výpočtů, uložených zakázek a funkční logiky; používat udržovatelné sdílené barevné role místo nahodilých pevných barev.
+- **Současný osvědčený tmavý vzhled nezměnit nečekaně** při aktualizaci. Výchozí chování pro nové a stávající instalace (případně nejprve tmavý pro stávající, systémový pro nové) zvolit až při přípravě implementace a otestovat.
+- Postupovat s ohledem na budoucí různé platformy, ale bez vynuceného přepisu rámce či současného kódu.
+
+**Stav:** požadavek do dlouhodobé vize, **není schváleno automatické zařazení do nyní rozpracované aktualizace**. Nejdříve navrhnout rozsah a rizika, vyžádat potvrzení pro konkrétní implementaci, před vydáním otestovat editor, ukládání, offline práci a přepínání motivů. **Nyní pouze dokumentace, bez sestavení APK.**
+
 ## 3. Co má umět – cílový funkční celek
 - **Zakázky a data:** vytvořit zakázku a adresu, členit do složek, ukládat původní fotografie/PDF/video a editovatelné anotace, hledat, zálohovat, exportovat/importovat včetně podsložek; přežít restart a aktualizaci.
 - **Kótování a kreslení:** běžné kóty, čáry, šipky, nepravidelná plocha, obdélník, kruh/elipsa, lomená čára, volná ruka, úhly, dimenzní i kumulativní řetězce; S Pen, přesné posouvání a přichytávání s možností úplného vypnutí.
