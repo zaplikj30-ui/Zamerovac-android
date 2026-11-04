@@ -15,6 +15,11 @@ const {suite,assert,createCanvas}=require('./harness.cjs');
   });
   await step('Search Czech text including diacritic-free query',async()=>{
    const search=page.locator('#helpSearch');
+   const magnifier=page.locator('#helpSearchToggle');
+   assert.equal(await magnifier.getAttribute('aria-label'),'Hledat v nápovědě');
+   await search.fill('něco');
+   await magnifier.click();
+   assert.equal(await search.evaluate(el=>document.activeElement===el),true,'Magnifier must focus search field');
    await search.fill('mrizka');
    assert(await page.locator('#helpPanel details[data-help-topic="zoom"]').isVisible());
    assert.equal(await page.locator('#helpPanel details[data-help-topic="backup"]').isVisible(),false);
