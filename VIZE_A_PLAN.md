@@ -23,8 +23,10 @@ Praktická samostatná Android aplikace pro zaměřování zakázkového nábytk
 - **Offline a synchronizace:** plně použitelné bez internetu; možnost přenášet zakázky mezi telefonem a tabletem bezpečným způsobem, bez ztráty místních úprav. Google Disk vyžaduje samostatné ověření přenosu.
 - **Další aplikace:** S Pen poznámky/skici uvnitř Zaměřovače; uživatel by ideálně chtěl kontinuitu se Samsung Notes, avšak plná obousměrná automatická synchronizace není potvrzena jako technicky dostupná.
 
-## 4. Nápady na později (NEJSOU automaticky schválené k implementaci)
+## 4. Možná do budoucna – dobrý nápad, rozhodneme později
 Tento seznam obsahuje dříve zmíněné nebo odložené směry. O přesném provedení a prioritě rozhodneme zvlášť.
+**Význam této kategorie:** „Možná dobrý nápad“, „uvidíme“, „necháme na později“, „zatím se nerozhodnu“. Tyto položky **nejsou ani zamítnuté, ani schválené pro vývoj**. Žádný termín ani automatické programování. U každé větší možnosti uvést varianty, klady/zápory a poslední doslovně podloženou dohodu. Až uživatel rozhodne, přesunout do schváleného plánu.
+
 - Propojení fotografií s půdorysem místnosti.
 - Porovnávání dvou fotografií vedle sebe.
 - Šablony zakázek, karta zákazníka.
@@ -52,3 +54,11 @@ Tento seznam obsahuje dříve zmíněné nebo odložené směry. O přesném pro
 | Datum | Co bylo dohodnuto |
 |---|---|
 | 2026-11-04 | Udržovat také dlouhodobou podobu aplikace, budoucí nápady, plánované změny a rozhodnutí. Vize se může měnit. |
+
+## 8. Další dohledané drobné náměty a ověřované detaily z testování
+Tyto body jsou rozdělené podle původního kontextu; **nesmí se automaticky vydávat za hotové**.
+- **Návrh na vylepšení:** barevná ikona výběru fotografie v poznámce; při více fotografiích ukázat první a části dalších náhledů pod ní (test 16).
+- **Dohodnuté očekávané ovládání:** samostatně přesouvat text/rozměr při práci se šipkou, nezávisle přesouvat rám poznámky a hrot, mít jemné průhledné označení kóty.
+- **K opravě/ověření:** pohyb volné kresby, úchopy kruhu a elipsy, lupa s vycentrovaným bodem, černá plocha při hlášení chyby, import ZIP.
+- **Plánovaný test:** obousměrná synchronizace Google Disk, reálný offline provoz a navazující test 29.
+- Podrobné výsledky podle čísel jsou pouze v [deníku #13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13), který bude aktualizován po porovnání s videem.
