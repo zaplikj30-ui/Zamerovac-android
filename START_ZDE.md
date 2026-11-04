@@ -1,5 +1,7 @@
 # Zaměřovač – START ZDE (aktuální stav, rozhodnutí a další práce)
 
+**Rozcestník komplexního testování:** [issue #28 – automatické testy všech funkcí](https://github.com/zaplikj30-ui/Zamerovac-android/issues/28), zejména [trvalá mapa funkcí → specifikace → testy → výsledky](https://github.com/zaplikj30-ui/Zamerovac-android/issues/28#issuecomment-6642585299). Pro všechny nové i upravené funkce se průběžně doplňují testy; další chat či nástroj musí načíst i nejnovější komentáře #28 a aktuální [PR #27](https://github.com/zaplikj30-ui/Zamerovac-android/pull/27). Rozlišení hotových, selhaných a zatím neprovedených kontrol je povinné. Podrobná trvalá pravidla v [AGENTS.md](AGENTS.md#trvalá-předávka-a-automatické-testy-napříč-nástroji-4-11-2026). Rozpracovanou práci Codexu nepřepisovat, APK sestavit až po dokončení schválené aktualizace.
+
 > **Jediný rozcestník pro navázání v novém chatu.** GitHub je trvalý pracovní záznam. Nespoléhat na paměť ChatGPT ani nutnost znovu procházet dlouhé chaty.
 >
 > Poslední dohoda o způsobu práce: **4. listopadu 2026**. Tento dokument je živý, stav níže se musí při dalších krocích aktualizovat.
