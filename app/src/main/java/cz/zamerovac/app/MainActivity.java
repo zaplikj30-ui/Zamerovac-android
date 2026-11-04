@@ -692,7 +692,8 @@ public class MainActivity extends Activity {
                 catch(Exception ex){error("Vyhledávání adres: "+ex.getMessage());}
             },"AddressRUIAN").start();
         }
-        @JavascriptInterface public void connectLaser(){runOnUiThread(()->startScan());}
+        @JavascriptInterface public void connectLaser(){runOnUiThread(()->startScan(false));}
+        @JavascriptInterface public void chooseOtherLaser(){runOnUiThread(()->startScan(true));}
         @JavascriptInterface public void triggerLaser(){runOnUiThread(()->sendExperimentalLaserTrigger());}
         @JavascriptInterface public void setAccent(String color){
             if(color==null||!color.matches("#[0-9a-fA-F]{6}"))return;
@@ -836,7 +837,8 @@ public class MainActivity extends Activity {
             scanCallback=null;
         }
     }
-    private void startScan(){
+    private void startScan(){startScan(false);}
+    private void startScan(boolean showAllDevices){
         if(Build.VERSION.SDK_INT>=31&&
            (checkSelfPermission(Manifest.permission.BLUETOOTH_SCAN)!=PackageManager.PERMISSION_GRANTED||
             checkSelfPermission(Manifest.permission.BLUETOOTH_CONNECT)!=PackageManager.PERMISSION_GRANTED)){
@@ -898,9 +900,28 @@ public class MainActivity extends Activity {
                     boolean y=bb.contains("BOSCH")||bb.contains("GLM");
                     return x==y?aa.compareTo(bb):(x?-1:1);
                 });
+                // Only start scanning when user explicitly requests it.
+                String remembered=settings.getString("preferredLaserAddress","");
+                if(!showAllDevices&&!remembered.isEmpty()){
+                    for(BluetoothDevice device:devices){
+                        if(remembered.equals(device.getAddress())){
+                            if(leAddresses.contains(device.getAddress()))connectGatt(device);
+                            else connectClassicBosch(device);
+                            return;
+                        }
+                    }
+                }
+                if(!showAllDevices){
+                    devices.removeIf(device->{
+                        String advertised=scannedNames.containsKey(device.getAddress())?
+                            scannedNames.get(device.getAddress()):device.getName();
+                        String name=String.valueOf(advertised).toUpperCase(java.util.Locale.ROOT);
+                        return !(name.contains("BOSCH")||name.contains("GLM"));
+                    });
+                }
                 if(devices.isEmpty()){
                     laserStatus("off","");
-                    error("Nenašel jsem žádné LE zařízení. Zapni Bluetooth na laseru a vypni spojení v ImageMeteru.");
+                    error("Nenalezen laser Bosch. Zapni laser a zkus hledat znovu; jiný měřič lze vybrat ručně.");
                     return;
                 }
                 String[] labels=new String[devices.size()];
@@ -913,7 +934,7 @@ public class MainActivity extends Activity {
                 }
                 laserStatus("off","");
                 new AlertDialog.Builder(this)
-                    .setTitle("Bluetooth zařízení – Bosch GLM vyber nahoře")
+                    .setTitle(showAllDevices?"Vybrat jiné Bluetooth zařízení":"Vybrat laser Bosch")
                     .setItems(labels,(dialog,index)->{
                         BluetoothDevice d=devices.get(index);
                         if(leAddresses.contains(d.getAddress()))connectGatt(d);
@@ -938,6 +959,7 @@ public class MainActivity extends Activity {
         try{
             if(gatt!=null){gatt.disconnect();gatt.close();gatt=null;}
             if(classic!=null)classic.close();
+            settings.edit().putString("preferredLaserAddress",device.getAddress()).apply();
             String name=device.getName();
             classic=new BoschClassicReader(device,
                 value->js("window.onLaserValue("+JSONObject.quote(value)+","+JSONObject.quote("mm")+")"),
@@ -1066,6 +1088,7 @@ public class MainActivity extends Activity {
                         connection.disconnect();
                     }else if(characteristic.getWriteType()==BluetoothGattCharacteristic.WRITE_TYPE_NO_RESPONSE){
                         boschStreamEnabled=true;
+                        settings.edit().putString("preferredLaserAddress",device.getAddress()).apply();
                         laserStatus("connected",deviceName);
                     }
                 }
@@ -1079,6 +1102,7 @@ public class MainActivity extends Activity {
                     }
                     if(status==BluetoothGatt.GATT_SUCCESS){
                         boschStreamEnabled=true;
+                        settings.edit().putString("preferredLaserAddress",device.getAddress()).apply();
                         laserStatus("connected",deviceName);
                     }else{
                         laserStatus("off",deviceName);
