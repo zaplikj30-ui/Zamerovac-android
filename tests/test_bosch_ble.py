@@ -10,6 +10,12 @@ SOURCE = ROOT / 'app/src/main/java/cz/zamerovac/app/BoschBleProtocol.java'
 ACTIVITY = ROOT / 'app/src/main/java/cz/zamerovac/app/MainActivity.java'
 
 class BoschBleTests(unittest.TestCase):
+    def test_meter_menu_explains_hidden_history(self):
+        ui=(ROOT/'app/src/main/assets/upgrade.js').read_text(encoding='utf-8')
+        self.assertIn('Historii měření otevřeš dlouhým podržením ikony Bluetooth.',ui)
+        self.assertIn("oldBluetoothLong.addEventListener('contextmenu'",ui)
+        self.assertIn("window.__boschHistoryReadings=()",ui)
+
     def test_protocol_integration(self):
         java = ACTIVITY.read_text(encoding='utf-8')
         self.assertIn('BoschBleProtocol.MEASUREMENT_UUID', java)
