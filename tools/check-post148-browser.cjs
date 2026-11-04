@@ -20,6 +20,9 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
    const before=await page.evaluate(()=>JSON.stringify(state));
    if(touch)await page.touchscreen.tap(2,400);else await page.mouse.click(2,400);
    assert.equal(await page.locator('#'+menu).isVisible(),false);assert.equal(await page.evaluate(()=>JSON.stringify(state)),before);
+   assert.equal(await page.locator('#modal').isVisible(),false,
+    'Outside gesture must not activate modal: '+button+' / '+menu+
+    ' / '+await page.evaluate(()=>document.getElementById('modalTitle').textContent));
    await page.click('#'+button);await page.click('#'+button);assert.equal(await page.locator('#'+menu).isVisible(),false);
    await page.click('#'+button);await page.evaluate(()=>window.handleAndroidBack());assert.equal(await page.locator('#'+menu).isVisible(),false);
   }
