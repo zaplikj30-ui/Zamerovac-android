@@ -11,7 +11,7 @@ const {suite,assert,createCanvas}=require('./harness.cjs');
    assert.equal(await page.locator('#modalTitle').innerText(),'Novinky a historie změn');
    assert.equal(await page.locator('details.releaseTimeline').count(),8);
    assert(await page.locator('details.releaseTimeline').first().getByText('Verze 1.2.152').isVisible());
-   assert(await page.locator('details.releaseTimeline').first().innerText().then(t=>t.includes('chybného přiřazování')));
+   assert(await page.locator('details.releaseTimeline').first().innerText().then(t=>t.includes('chybné přiřazování')));
    assert.equal(await page.locator('details.releaseTimeline').first().locator('h3').first().innerText(),'Opraveno');
    await page.locator('details.releaseTimeline').nth(2).locator('summary').click();
    assert((await page.locator('details.releaseTimeline').nth(2).innerText()).includes('Bluetooth Bosch'));
