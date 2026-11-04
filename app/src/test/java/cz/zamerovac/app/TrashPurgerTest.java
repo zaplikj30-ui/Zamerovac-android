@@ -120,7 +120,11 @@ public class TrashPurgerTest {
         File archive=File.createTempFile("after-purge-", ".zip",activity.getCacheDir());Files.write(archive.toPath(),bytes.toByteArray());
         BackupImporter.Result restored=BackupImporter.importZip(activity,android.net.Uri.fromFile(archive),backed,prefs);
         assertEquals(5,restored.data.getJSONArray("records").length());
-        assertEquals(backed.getJSONArray("records").getJSONObject(0).getJSONArray("items").toString(),restored.data.getJSONArray("records").getJSONObject(3).getJSONArray("items").toString());
+        JSONObject copied=restored.data.getJSONArray("records").getJSONObject(3).getJSONArray("items").getJSONObject(0);
+        assertEquals("1250,123456789",copied.getString("measure"));assertEquals("in",copied.getString("unit"));
+        String copiedPhoto=copied.getJSONArray("detailItems").getJSONObject(0).getJSONArray("media").getString(0);
+        assertNotEquals("shared-media",copiedPhoto);assertArrayEquals(photo,Files.readAllBytes(new File(mediaDir,copiedPhoto).toPath()));
+        assertEquals(backed.getJSONArray("records").getJSONObject(0).toString(),restored.data.getJSONArray("records").getJSONObject(0).toString());
     }
     @Test public void syncDoesNotResurrectPurgedTrashButPreservesRemoteActiveRecord() throws Exception {
         JSONObject original=fixture();String db=original.toString();
