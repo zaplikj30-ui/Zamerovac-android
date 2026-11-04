@@ -67,3 +67,12 @@ Dokončeno z `f646a87` v [PR #19](https://github.com/zaplikj30-ui/Zamerovac-andr
 **Fyzické ověření čeká.** Automatické události pera nejsou Samsung S Pen ani prst na telefonu. Externí zálohy se nemažou; skutečné zakázky se nepoužily k destruktivním testům.
 
 Finální kontroly 812ad32 byly ověřeny přímo v dokončených logách a stažených XML artefaktech; souhrnná metadata Actions API nadále zobrazovala zastaralé `queued`. Nešlo o čekající nebo neprovedené testy.
+
+### Jediné společné vydání po dokončení E + F + G
+
+- **[APK 1.2.149](https://github.com/zaplikj30-ui/Zamerovac-android/releases/download/test-v1.2.149/Zamerovac-v1.2.149.apk)**, [release](https://github.com/zaplikj30-ui/Zamerovac-android/releases/tag/test-v1.2.149), [vydávací běh #149](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/41878662758). Požadavek `8`, zdroj `23a21c5`, po sloučení PR #19 `aab455a`. Další vydávací sestavení nebylo vyvoláno.
+- Log skutečně obsahuje `BUILD SUCCESSFUL`, kontrolu podpisu a package/version a zveřejnění APK. Souhrnný stav API byl zastaralý; proto ověřeny samotné dokončené logy, release a stažený soubor.
+- Nezávisle stažena původní 1.2.148 a nová 1.2.149. Oficiální `apksigner` ověřil obě podpisy: stejný certifikát SHA-256 `c828c96739e554e8da4f5851913356134f1359a98d5013772ad5587e74a2d229`. `aapt` potvrdil `cz.zamerovac.app.preview`, `versionName 1.2.149-test`, `versionCode 1149 > 1148`.
+- **SHA-256 APK `b5be9ab4a35b88cf3dfdbe1cfb0bbb26567b9e3e7c8f9e78a0581af76695180d`**, shoda s logem i digestem release. Velikost 196 564 bajtů. Všech 19 assets v APK se bajtově shoduje s main, včetně nového menu-dismiss.js; nativní purge kód ověřen v multidex obsahu. Při nezávislé kontrole byly opraveny předpoklady pomocného parseru o názvech polí manifestu a jediném DEX; APK se kvůli tomu neměnila ani znovu nesestavovala.
+- Release má konkrétní přehled všech čtyř schválených úprav a rozsahu testů. Původní zálohovací ZIP, soukromí zákaznického exportu, identita aplikace a datové schéma zachované.
+- **Fyzické ověření na telefonu stále čeká.** Instalovat jako aktualizaci, předtím uchovat původní zálohu. Neodinstalovávat, nemazat uživatelská data, pro vysypání koše použít výhradně zkušební položky. Další kontroly provádět společně po jedné podle #13.
