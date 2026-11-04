@@ -45,4 +45,34 @@ pointer('Up',160,210);
 assert.deepEqual([dim.a.x,dim.a.y,dim.b.x,dim.b.y],[160,210,340,240]);
 assert.equal(ctx.commits,2);
 assert.equal(ctx.edits,0);
-console.log('OK: dragging center moves whole dimension, dragging tip moves one endpoint');
+
+// Issue #23: a tap can emit a tiny pointermove. Even when an aggressive snap
+// would target another endpoint, selecting/editing may NEVER mutate geometry.
+ctx.editStack=[];
+ctx.checkpoint=()=>{ctx.checkpoints++;ctx.editStack.push(JSON.stringify(ctx.current.items))};
+for(const kind of ['dimension','line']){
+ const annotation={id:'stable-'+kind,type:kind,
+  a:{x:100,y:120},b:{x:300,y:120},
+  measure:kind==='dimension'?'1585,8':'',unit:'mm'};
+ ctx.current.items=[annotation];ctx.selected=null;ctx.mode='select';
+ // Simulate a magnet offering the opposite point of this annotation.
+ ctx.snap=()=>({...annotation.b});
+ const original=JSON.stringify(annotation);
+ for(let n=0;n<2;n++){
+  pointer('Down',100,120);
+  pointer('Move',102,121); // Android touch jitter below 7 px
+  assert.equal(JSON.stringify(annotation),original,kind+' tap jitter changed coordinates');
+  pointer('Up',102,121);
+  assert.equal(JSON.stringify(annotation),original,kind+' double tap changed coordinates');
+ }
+ // A meaningful drag may not collapse the same annotation to zero length.
+ pointer('Down',100,120);pointer('Move',135,120);pointer('Up',135,120);
+ assert.equal(JSON.stringify(annotation),original,kind+' snapped endpoint collapsed its own line');
+ // Genuine dragging must still work when snapping does not create a collapse.
+ ctx.snap=p=>({...p});
+ pointer('Down',100,120);pointer('Move',125,140);pointer('Up',125,140);
+ assert.equal(annotation.a.x,125,kind+' valid endpoint drag must remain possible');
+ assert.equal(annotation.a.y,140,kind+' valid endpoint drag must remain possible');
+ assert.equal(annotation.b.x,300,kind+' opposite endpoint must remain fixed');
+}
+console.log('OK: dragging endpoints works, tiny double taps never change or collapse dimensions/lines');
