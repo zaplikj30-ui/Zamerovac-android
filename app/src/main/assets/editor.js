@@ -606,28 +606,31 @@ function stageDown(e){
   const label=nearestLabel(s);
   let hit;
   if(wantsCaption)hit={item:candidate,kind:'note-caption'};
-  else if(grip?.item.id===candidate.id)hit=grip;
-  else if(['chain','cumulative','angle'].includes(candidate.type)&&candidate.points?.length>1)
-   hit={item:candidate,kind:'move-polyline'};
-  else if(['dimension','chain','cumulative','line','arrow','angle','target'].includes(candidate.type))
-   hit={item:candidate,kind:'move-dimension'};
-  else if(candidate.type==='polyline'||candidate.type==='freehand')hit={item:candidate,kind:'move-polyline'};
-  else if(label?.item.id===candidate.id)hit=label;
-  else hit={item:candidate,kind:'open-selected'};
-  selectedHandle=hit;
+   else if(grip?.item.id===candidate.id)hit=grip;
+   else if(candidate.type==='target'&&candidate.b&&Math.hypot(s.x-worldToScreen(candidate.b).x,s.y-worldToScreen(candidate.b).y)<40)
+    hit={item:candidate,kind:'target-caption'};
+   else if(label?.item.id===candidate.id)hit=label;
+   else if(['chain','cumulative','angle','area'].includes(candidate.type)&&candidate.points?.length>1)
+    hit={item:candidate,kind:'move-polyline'};
+   else if(['dimension','chain','cumulative','line','arrow','angle','target','rect','circle','ellipse'].includes(candidate.type))
+    hit={item:candidate,kind:'move-dimension'};
+   else if(candidate.type==='polyline'||candidate.type==='freehand')hit={item:candidate,kind:'move-polyline'};
+   else hit={item:candidate,kind:'open-selected'};
+   selectedHandle=hit;
   hit.startScreen={...s};
   hit.initialSelection=!alreadySelected;
-  if(hit.kind==='point')hit.startPoint={...hit.point};
+  if(hit.kind==='point'||hit.kind==='shape-resize')hit.startPoint={...hit.point};
   if(hit.kind==='move-dimension'){
    hit.startA={...candidate.a};
    hit.startB={...candidate.b};
   }
-  if(hit.kind==='note-caption')
+  if(hit.kind==='target-caption')hit.startPoint={...candidate.b};
+   if(hit.kind==='note-caption')
    hit.startPoint={...(hit.item.captionMoved&&hit.item.b?hit.item.b:hit.item.a)};
   if(hit.kind==='move-polyline')hit.startPoints=candidate.points.map(p=>({...p}));
   hit.startLabelT=Number(hit.item.labelT)||0;
   hit.dragged=false;
-  if(hit.kind==='point'||hit.kind==='label'||hit.kind==='note-caption'||hit.kind==='move-dimension'||hit.kind==='move-polyline')checkpoint();
+  if(['point','shape-resize','label','note-caption','target-caption','move-dimension','move-polyline'].includes(hit.kind))checkpoint();
   magnifierPoint=hit.kind==='point'?hit.point:null;
   paint();return;
  }
@@ -672,6 +675,31 @@ if(['polyline','chain','cumulative','angle'].includes(mode)&&polylineDraft.lengt
       selectedHandle.item.b={x:b.x+dx,y:b.y+dy};
     }
     magnifierPoint=null;
+  }else if(selectedHandle.kind==='shape-resize'){
+   if(selectedHandle.dragged){
+    const item=selectedHandle.item,index=selectedHandle.pointIndex;
+    const origin=worldToScreen(selectedHandle.startPoint);
+    const target=boundsPoint(screenToWorld({x:origin.x+s.x-selectedHandle.startScreen.x,y:origin.y+s.y-selectedHandle.startScreen.y}));
+    if(item.type==='area'){
+     const points=quadCorners(item).map(p=>({...p}));
+     points[index]=target;item.points=points;item.a={...points[0]};item.b={...points[2]};
+    }else if(item.type==='rect'){
+     const corners=rectCorners(item),opposite=corners[(index+2)%4];
+     item.a={x:Math.min(target.x,opposite.x),y:Math.min(target.y,opposite.y)};
+     item.b={x:Math.max(target.x,opposite.x),y:Math.max(target.y,opposite.y)};
+    }else{
+     const g=ellipseGeometry(item);let rx=g.rx,ry=g.ry;
+     if(item.type==='circle'){const radius=Math.max(1,index<2?Math.abs(target.x-g.cx):Math.abs(target.y-g.cy));rx=radius;ry=radius;}
+     else if(index<2)rx=Math.max(1,Math.abs(target.x-g.cx));
+     else ry=Math.max(1,Math.abs(target.y-g.cy));
+     item.a={x:g.cx-rx,y:g.cy-ry};item.b={x:g.cx+rx,y:g.cy+ry};
+    }
+   }
+   magnifierPoint=null;
+  }else if(selectedHandle.kind==='target-caption'){
+   const origin=worldToScreen(selectedHandle.startPoint);
+   selectedHandle.item.b=boundsPoint(screenToWorld({x:origin.x+s.x-selectedHandle.startScreen.x,y:origin.y+s.y-selectedHandle.startScreen.y}));
+   magnifierPoint=null;
   }else if(selectedHandle.kind==='note-caption'){
     const origin=worldToScreen(selectedHandle.startPoint);
     selectedHandle.item.b=screenToWorld({
@@ -724,16 +752,17 @@ function stageUp(e){
   selectedHandle=null;magnifierPoint=null;loupeSide=null;
   if(handle.kind==='select-only'){paint();return}
   if(!moved){
-   if((handle.kind==='point'||handle.kind==='label'||handle.kind==='note-caption'||handle.kind==='move-dimension'||handle.kind==='move-polyline')&&editStack.length)editStack.pop();
+   if((['point','shape-resize','label','note-caption','target-caption','move-dimension','move-polyline'].includes(handle.kind))&&editStack.length)editStack.pop();
    if(handle.initialSelection){paint();return}
    // Druhé samostatné klepnutí otevře úpravu bez časového limitu.
    editItem(item);
-  }else if(handle.kind==='point'||handle.kind==='label'||handle.kind==='note-caption'||handle.kind==='move-dimension'||handle.kind==='move-polyline'){
+  }else if(['point','shape-resize','label','note-caption','target-caption','move-dimension','move-polyline'].includes(handle.kind)){
    touch(item);commitEditor();
   }else paint();
   return;
  }
- if(drag){drag=null;return}if(!drawStart||drawPointerId!==e.pointerId)return;const a=drawStart,b=drawCurrent||drawStart;drawStart=null;drawCurrent=null;magnifierPoint=null;loupeSide=null;drawPointerId=null;if(Math.hypot(a.x-b.x,a.y-b.y)<3/view.zoom&&mode!=='note'&&mode!=='symbol'){paint();return}let item={id:uid(),type:mode,a,b,color:prefs.color,width:prefs.lineWidth,fontSize:prefs.fontSize,unit:mode==='area'?'m²':prefs.unit,measure:'',text:'',points:(mode==='freehand'||mode==='polyline')?[...stroke]:[]};stroke=[];
+ if(drag){drag=null;return}if(!drawStart||drawPointerId!==e.pointerId)return;const a=drawStart,b=drawCurrent||drawStart;drawStart=null;drawCurrent=null;magnifierPoint=null;loupeSide=null;drawPointerId=null;if(Math.hypot(a.x-b.x,a.y-b.y)<3/view.zoom&&mode!=='note'&&mode!=='symbol'&&mode!=='target'){paint();return}if(mode==='target'&&Math.hypot(a.x-b.x,a.y-b.y)<3/view.zoom)b={x:a.x+36/view.zoom,y:a.y+12/view.zoom};let item={id:uid(),type:mode,a,b,color:prefs.color,width:prefs.lineWidth,fontSize:prefs.fontSize,unit:mode==='area'?'m²':prefs.unit,measure:'',text:'',points:(mode==='freehand'||mode==='polyline')?[...stroke]:[]};stroke=[];
+if(mode==='area'){item.points=rectCorners(item);item.sideMeasures=['','','',''];item.sideTexts=['','','',''];}
 if(['dimension','chain','cumulative','area'].includes(mode)){
   // Follow the reference video: lay down the geometry first, adjust endpoints,
   // and enter the actual laser/manual value later by tapping its '?' label.
