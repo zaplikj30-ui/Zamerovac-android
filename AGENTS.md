@@ -43,6 +43,12 @@ Uživatel vyrábí zakázkový nábytek. Vyvíjíme vlastní Android aplikaci na
 4. Počítadlo objektů.
 5. Výsledková listina.
 
+## Současný testovací režim – zálohy nejsou podmínkou (výslovné upřesnění uživatele 4. 11. 2026)
+
+**Zaměřovač je zatím výhradně zkušební aplikace a uživatel ji NEPOUŽÍVÁ při skutečné práci ani pro ostré zákaznické zakázky.** Všechna současná data v aplikaci jsou pro něj postradatelná; výslovně akceptuje jejich případnou ztrátu. **Nemá zálohu a nechce být před dalšími běžnými testy ani instalacemi opakovaně dotazován na její vytvoření.** Nenuť jej zálohovat ani neblokuj postup testů požadavkem na záložní ZIP. Zálohu lze zmínit jen jako nepovinnou možnost, nikoli nutnou podmínku.
+
+**Rozlišení:** Tento souhlas se ztrátou vlastních *testovacích* dat neznamená souhlas se zhoršením ochrany dat v aplikaci: nadále vyvíjet a ověřovat bezpečné zachování dat při aktualizaci, importu a mazání. Pro destruktivní scénáře dál používat testovací položky, bez zásahu do jiných aplikací. Jakmile uživatel oznámí přechod na skutečné zakázky, společně znovu zavést přiměřená pravidla záloh a ochrany reálných dat. Nespouštět žádné další APK jen kvůli této dokumentační změně.
+
 ## Stav projektu a omezení
 - Projekt obsahuje Android Java shell/WebView a HTML/JS editor v `app/src/main/assets/`, Android nativní most v `app/src/main/java/cz/zamerovac/app/`.
 - GitHub Actions workflow `.github/workflows/build-apk.yml` sestavuje a vydává testovací APK **pouze na vyžádání**: tlačítkem Actions → Run workflow nebo zvláštním commitem, který změní `.github/apk-build-request.txt`. Workflow je nastavené na `push` jen pro tuto cestu; **běžné commity na main sestavení NESPOUŠTĚJÍ**. Emulátor `.github/workflows/emulator-smoke.yml` se spouští výhradně ručně. Při vydání zachovej kontrolu podpisu a jednoznačné verze. Zachování uživatelských dat při aktualizaci musí být navíc ověřeno na skutečném zařízení, nelze jej odvozovat pouze z úspěšného sestavení. Úspěšný build NENÍ ověření správného fungování.
