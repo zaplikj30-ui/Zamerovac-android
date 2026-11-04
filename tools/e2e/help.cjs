@@ -12,6 +12,8 @@ const {suite,assert,createCanvas}=require('./harness.cjs');
    assert.equal(await page.locator('#helpPanel').getAttribute('role'),'dialog');
    assert.equal(await page.locator('#helpPanel').getAttribute('aria-modal'),'true');
    assert.equal(await page.locator('#helpPanel details[data-help-topic]').count(),25);
+   assert.equal(await page.locator('#helpSearch').evaluate(el=>document.activeElement===el),false,
+    'Help should open for browsing, without automatically showing keyboard');
   });
   await step('Search Czech text including diacritic-free query',async()=>{
    const search=page.locator('#helpSearch');
