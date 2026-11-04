@@ -214,26 +214,51 @@ async function openMediaPlayer(r){
  el.querySelector('#mediaClose').onclick=()=>{player.pause();el.remove();if(!native)URL.revokeObjectURL(url)};
  logEvent('média','Otevřeno vestavěné přehrávání');
 }
-const oldSearch=$('searchBtn').onclick;
-$('searchBtn').onclick=()=>{
- modal('Hledat zakázky a poznámky','<input id="searchAll" type="search" placeholder="Zákazník, adresa, místnost, poznámka"><div id="searchResults" class="search-results"></div><button class="outline" id="searchRuian">📍 Vyhledat adresu v RÚIAN</button>',()=>true,'Zavřít');
- $('searchRuian').onclick=openAddressSearch;
- const input=$('searchAll'),result=$('searchResults');
- const update=()=>{
-  const q=input.value.trim().toLocaleLowerCase('cs');
-  if(q.length<2){result.innerHTML='<p>Prohledají se názvy, adresy a texty poznámek.</p>';return}
-  const found=state.records.filter(r=>!r.deleted&&[r.title,r.photoAddress,r.text,...(r.items||[]).map(x=>x.text||''),...(r.checks||[]).map(x=>x.text||'')].join(' ').toLocaleLowerCase('cs').includes(q))
-   .sort((a,b)=>{
-    const rank=r=>{const title=r.title.toLocaleLowerCase('cs');
-      return title===q?0:title.startsWith(q)?1:title.includes(q)?2:3};
-    return rank(a)-rank(b)||a.title.localeCompare(b.title,'cs');
-   }).slice(0,60);
-  result.innerHTML=found.length?found.map(r=>'<button class="search-hit" data-found="'+esc(r.id)+'">'+browserEntryIcon(r)+'<span class="search-hit-body"><span>'+esc(r.title)+'</span><small>'+esc(r.kind)+' · '+esc(r.photoAddress||'')+'</small></span></button>').join(''):'<p>Nic nenalezeno</p>';
-  result.querySelectorAll('[data-found]').forEach(b=>b.onclick=()=>{$('modal').hidden=true;currentFolder=recById(b.dataset.found)?.parentId||null;showFolder();openRecord(b.dataset.found)});
-  result.querySelectorAll('.entry-thumb').forEach(img=>img.addEventListener('error',()=>{img.hidden=true;if(img.nextElementSibling)img.nextElementSibling.hidden=false},{once:true}));
- };
- input.addEventListener('input',update);update();
+let searchReturnState=null;
+const priorShowFolderForSearch=showFolder;
+showFolder=function(){
+  priorShowFolderForSearch();
+  if(searchReturnState&&screen==='browser'){
+    const resume=searchReturnState;searchReturnState=null;
+    openGlobalSearch(resume);
+  }
 };
+function openGlobalSearch(resume=null){
+  modal('Hledat zakázky a poznámky','<label for="searchAll">Hledat v zakázkách</label><input id="searchAll" type="search" placeholder="Zákazník, adresa, místnost, poznámka"><div id="searchResults" class="search-results"></div><button class="outline" id="searchRuian">📍 Vyhledat adresu v RÚIAN</button>',()=>true,'Zavřít');
+  $('modal').classList.add('search-open');
+  $('searchRuian').onclick=openAddressSearch;
+  const input=$('searchAll'),result=$('searchResults');
+  if(resume)input.value=resume.query;
+  const update=()=>{
+    const q=input.value.trim().toLocaleLowerCase('cs');
+    if(q.length<2){result.innerHTML='<p>Prohledají se názvy, adresy a texty poznámek.</p>';return}
+    const records=state.records.filter(r=>!r.deleted&&[r.title,r.photoAddress,r.text,...(r.items||[]).map(x=>x.text||''),...(r.checks||[]).map(x=>x.text||'')].join(' ').toLocaleLowerCase('cs').includes(q));
+    const found=records.sort((a,b)=>{
+      const rank=r=>{const title=r.title.toLocaleLowerCase('cs');return title===q?0:title.startsWith(q)?1:title.includes(q)?2:3};
+      return rank(a)-rank(b)||a.title.localeCompare(b.title,'cs');
+    }).slice(0,60);
+    const snippet=r=>{
+      const text=[r.text,...(r.items||[]).map(x=>x.text||''),...(r.checks||[]).map(x=>x.text||'')].find(t=>String(t||'').toLocaleLowerCase('cs').includes(q));
+      if(!text)return r.photoAddress||'';
+      const pos=String(text).toLocaleLowerCase('cs').indexOf(q);
+      return String(text).slice(Math.max(0,pos-28),Math.min(String(text).length,pos+q.length+44));
+    };
+    result.innerHTML=found.length?found.map(r=>'<button class="search-hit" data-found="'+esc(r.id)+'">'+browserEntryIcon(r)+'<span class="search-hit-body"><span>'+esc(r.title)+'</span><small>'+esc(r.kind)+' · '+esc(snippet(r))+'</small></span></button>').join(''):'<p>Nic nenalezeno</p>';
+    result.querySelectorAll('[data-found]').forEach(b=>b.onclick=()=>{
+      const id=b.dataset.found,record=recById(id);if(!record)return;
+      const resumeState={query:input.value,scroll:result.scrollTop};
+      $('modal').hidden=true;$('modal').classList.remove('search-open');
+      currentFolder=record.parentId||null;
+      showFolder();
+      searchReturnState=resumeState;
+      openRecord(id);
+    });
+    result.querySelectorAll('.entry-thumb').forEach(img=>img.addEventListener('error',()=>{img.hidden=true;if(img.nextElementSibling)img.nextElementSibling.hidden=false},{once:true}));
+  };
+  input.addEventListener('input',update);update();
+  if(resume)result.scrollTop=resume.scroll||0;
+}
+$('searchBtn').onclick=()=>openGlobalSearch();
 
 function openAddressSearch(){
  modal('Vyhledat přesnou adresu','<label>Adresa v České republice</label><input id="ruianQuery" value="Jezernice 54" placeholder="Obec a číslo domu"><p class="muted">Dotaz se odešle veřejné geokódovací službě RÚIAN (ČÚZK). Výsledky vyber podle skutečného čísla domu.</p><button class="outline" id="ruianFind">Vyhledat adresu</button><div id="ruianResults"></div>',()=>true,'Zavřít');
@@ -405,13 +430,9 @@ function openGallery(index,records=null){
 function closeGallery(){gallery?.remove();gallery=null}
 function renderEditorNavigation(){
  let nav=$('photoNavigation');
- if(!nav){nav=document.createElement('div');nav.id='photoNavigation';nav.innerHTML='<button id="previousPhoto" title="Předchozí fotografie">‹</button><button id="nextPhoto" title="Další fotografie">›</button><button id="galleryMode" title="Prohlížet fotografie"><img class="editor-gallery-thumbnail" alt="" draggable="false"></button>';const head=document.querySelector('.editor-head');head.insertBefore(nav,$('editorTopMenu'))}
+ if(!nav){nav=document.createElement('div');nav.id='photoNavigation';nav.innerHTML='<button id="galleryMode" title="Prohlížet fotografie"><img class="editor-gallery-thumbnail" alt="" draggable="false"></button>';const head=document.querySelector('.editor-head');head.insertBefore(nav,$('editorTopMenu'))}
  const photos=galleryPhotos();const at=photos.findIndex(r=>r.id===current?.id);
  nav.hidden=current?.kind!=='photo'||!!current?._detailTemporary;
- nav.querySelector('#previousPhoto').disabled=at<=0;
- nav.querySelector('#nextPhoto').disabled=at<0||at>=photos.length-1;
- nav.querySelector('#previousPhoto').onclick=()=>{if(at>0)openEditor(photos[at-1])};
- nav.querySelector('#nextPhoto').onclick=()=>{if(at>=0&&at<photos.length-1)openEditor(photos[at+1])};
  nav.querySelector('#galleryMode').onclick=()=>{if(at>=0)openGallery(at,photos)};
  const thumbnail=nav.querySelector('.editor-gallery-thumbnail');
  if(thumbnail){
