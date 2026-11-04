@@ -208,6 +208,21 @@ Kontrola má **upozornit a vysvětlit konkrétní nesrovnalost**. Bez výslovné
 
 **Aktuální priorita:** opravit a otestovat domluvených 28 kontrol Zaměřovače a schválené doplňky, bezpečně zachovat data a češtinu. **Žádný PC build, synchronizační služba ani nový datový formát nejsou tímto zadáním schválené k okamžité implementaci.**
 
+### Široká kompatibilita Android telefonů a tabletů – průřezový požadavek
+
+**Upřesnění 4. 11. 2026. Stav: SCHVÁLENÝ SMĚR A PRAVIDLO PŘI BĚŽNÝCH ÚPRAVÁCH; NEZNAMENÁ OVĚŘENOU PODPORU VŠECH ZAŘÍZENÍ.** Cílem je, aby aplikace nebyla svázaná pouze s aktuálně používaným Samsungem, ale byla dlouhodobě dobře použitelná na **širokém spektru Android telefonů a tabletů různých výrobců, velikostí i výkonnostních tříd**. Přesný seznam podporovaných modelů a verzí Androidu bude stanoven a ověřován postupně, podle reálných testů a požadavků aplikace; nyní jej nevymýšlet.
+
+- **Výrobci a Android:** navrhovat s využitím standardních Android API, bez zbytečné závislosti na Samsung/One UI; počítat s různými nadstavbami, správci souborů, oprávněními a chováním systémových dialogů. Kompatibilitu uvádět pouze pro skutečně ověřené kombinace zařízení a OS.
+- **Rozmanité displeje:** responzivní a přístupné rozhraní pro menší i větší telefon, kompaktní i velký tablet, portrét/krajinu, různá rozlišení, poměry stran, hustoty pixelů, systémové měřítko a velikost písma; důležité prvky a dialogy se nesmějí ztrácet, překrývat nebo vyžadovat konkrétní rozlišení.
+- **Způsoby ovládání:** plná základní použitelnost **prstem**, s podporou pera tam, kde je dostupné (S Pen či jiný kompatibilní stylus). Pero a specifické Samsung funkce nesmějí být podmínkou základních operací; na budoucím PC zvlášť myš/klávesnice.
+- **Výkon a stabilita:** přiměřená spotřeba paměti a energie, plynulé práce s většími fotografiemi a zakázkami i na méně výkonném zařízení; při větší paměťové zátěži bezpečně zachovat rozpracovaná data. Nezavádět zbytečná omezení či výkonově náročný systém kvůli hypotetické univerzální kompatibilitě.
+- **Bluetooth a okolní služby:** počítat s různými implementacemi Bluetooth, oprávnění a správci připojení; jednotlivé značky/modely měřáků mohou používat jiné protokoly. **Funkčnost konkrétního laseru a telefonu potvrdit pouze po reálném testu**; při nepodporované funkci nesmí přestat fungovat ruční zadávání.
+- **Souborové operace a data:** import/export, ZIP, fotografie, oprávnění úložiště, sdílení, obnovení dat a případné aktualizace nesmějí předpokládat jeden konkrétní systémový dialog nebo jediného výrobce. Testy chrání editovatelnost i zpětnou kompatibilitu na různých zařízeních.
+- **Postupné testování:** budovat matici **model × verze Androidu × velikost displeje × důležité funkce**, automatické UI/regresní testy, emulátory pro různé konfigurace a fyzické ověření vybraných zařízení. **Test emulátoru ani statická kontrola kódu nesmějí být uváděny jako potvrzený test konkrétního telefonu/tabletu**.
+- **Rozsah nyní:** při schválených opravách předcházet pevně zakódovaným rozměrům obrazovek a jednovýrobcovým závislostem a otestovat dotčené části na dostupných zařízení. **Nezahajovat plošný redesign ani hromadné přepisování stabilního kódu pouze kvůli této vizi**.
+
+**Priorita:** spolehlivost, ochrana dat, přesnost měření/výpočtů a jednoduché používání mají přednost před honbou za maximálním počtem podporovaných modelů bez testů. Tento cíl sám **neznamená vydání na Google Play ani podporu již neověřených zařízení**.
+
 ### Možný dlouhodobý cíl: veřejné vydání na Google Play (nezávazné)
 
 **Zapsáno 4. 11. 2026. Stav: MOŽNOST DO BUDOUCNA – NENÍ SCHVÁLENÉ VYDÁNÍ, TERMÍN, PRIORITA ANI ZÁVAZEK.** Smyslem projektu je především **profesionální, stabilní, přesný a spolehlivý Zaměřovač pro zaměřování nábytku**, vhodný i pro každodenní vlastní práci. Veřejné vydání na **Google Play** je pouze jedna z možností, o které se může uživatel rozhodnout až později. Neusilovat o vydání za každou cenu ani pod časovým tlakem.
@@ -277,6 +292,7 @@ Kontrola má **upozornit a vysvětlit konkrétní nesrovnalost**. Bez výslovné
 | 2026-11-04 | Doplněna dlouhodobá vize propojení samostatných projektů Zaměřovač a Konfigurátor–Nářezák do modulárního systému Zaměření → Návrh → Kusovník → Nářezák pro Android i PC. Bez nynějšího slučování či vývoje společné aplikace; důraz na data, jednotky, editovatelnost, bezpečné předávání a ruční schválení změn hotové výroby. |
 | 2026-11-04 | Rozšířena vize společného systému: jedna zakázka zahrnuje zaměření, 2D/3D a pohledy na stěny, návrh, kusovník, nářez, nastavitelnou kalkulaci ceny, revize, výrobu/montáž a automatické kontroly; beze změn stávajících aplikací a dat, bez schválení implementace těchto budoucích modulů. |
 | 2026-11-04 | Sjednocena kontrola devíti dlouhodobých oblastí; již existující dohody zachovány a propojeny. **Nově jako samostatný nezávazný nápad** evidován průvodce zaměřením pro chybějící měření a kontroly součtů kót. Nejbližší aktualizace nadále řeší dohodnuté opravy a českou přípravu lokalizace. |
+| 2026-11-04 | Schválen široký cílový rozsah Android telefonů a tabletů různých výrobců, velikostí a výkonnostních tříd; postupné testování skutečné kompatibility, bez tvrzení, že všechny modely již fungují, a bez plošného přepisu aplikace. |
 
 ## 8. Další dohledané drobné náměty a ověřované detaily z testování
 Tyto body jsou rozdělené podle původního kontextu; **nesmí se automaticky vydávat za hotové**.
