@@ -15,6 +15,7 @@ on:
       - 'tools/check-post*-browser.cjs'
       - 'tools/check-orientation-browser.cjs'
       - 'tools/check-loupe-exit-browser.cjs'
+      - 'tools/e2e/**'
       - '.github/workflows/quick-check.yml'
   pull_request:
     branches: [main]
@@ -28,6 +29,7 @@ on:
       - 'tools/check-post*-browser.cjs'
       - 'tools/check-orientation-browser.cjs'
       - 'tools/check-loupe-exit-browser.cjs'
+      - 'tools/e2e/**'
       - '.github/workflows/quick-check.yml'
 
 permissions:
@@ -86,3 +88,32 @@ jobs:
           node tools/check-post149-browser.cjs
           node tools/check-orientation-browser.cjs
           node tools/check-loupe-exit-browser.cjs
+
+  practical-e2e:
+    name: Praktické UI a barevné pixely (syntetická data)
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Připravit Chromium
+        run: |
+          npm install --no-save --package-lock=false playwright
+          npx playwright install --with-deps chromium
+      - name: Kreslení, hodnoty, úchopy, Undo/Redo, pixely a persistence
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 8765 --directory app/src/main/assets > /tmp/zamerovac-e2e-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID"' EXIT
+          export CHROMIUM_PATH="$(node -p "require('playwright').chromium.executablePath()")"
+          node tools/e2e/drawing.cjs
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: practical-e2e-diagnostics
+          path: test-artifacts/
+          retention-days: 14

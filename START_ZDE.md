@@ -16,6 +16,10 @@
 
 **Upřesnění režimu testování (4. 11. 2026):** Uživatel opakovaně potvrdil, že Zaměřovač je zatím pouze zkušební aplikace, nepoužívá ji na zakázkách a na současných datech mu nezáleží. Nemá zálohu a **nepřeje si další opakované dotazy ani povinné zálohování**. U 1.2.149 lze přímo pokračovat instalací a zkouškami; stále ověřit zachování dat jako vlastnost aplikace. Při budoucím použití pro skutečné zakázky ochranu a zálohy řešit znovu. Viz [AGENTS.md](AGENTS.md#současný-testovací-režim--zálohy-nejsou-podmínkou-výslovné-upřesnění-uživatele-4-11-2026).
 
+## Automatické testování celé aplikace #28 – rozpracováno
+
+Uživatel schválil širokou praktickou matici v [#28](https://github.com/zaplikj30-ui/Zamerovac-android/issues/28) včetně šesti kontrol životního cyklu/souběhu/integrity. Práce navazuje na zkontrolované opravy `50414b5` ve stejném PR #27. První skutečná E2E sada pro všech 15 kreslicích/kótovacích nástrojů prošla lokálně, včetně obrysových pixelů a negativní kontroly bez kresby, dialogů, přesnosti, tahů, Undo/Redo a persistence. Rozšiřují se workflow, chyby a mapa neověřených funkcí. [Průběžný stav a diagnostika](AUTOMATICKE_TESTY_28.md). Nezaměňovat za kompletně ověřenou aplikaci. Stále zákaz APK, změny requestu a merge; emulátorová instalace zatím pouze připravovaná.
+
 ## Aktivní společná aktualizace po 1.2.149 – implementace Codexu
 
 Uživatel skutečně předal zadání Codexu 4. 11. 2026. Práce je na vlastní větvi **`codex/post-149-completion`**, [PR #27](https://github.com/zaplikj30-ui/Zamerovac-android/pull/27), výchozí main `fafcd0f`; [rozsah #17](https://github.com/zaplikj30-ui/Zamerovac-android/issues/17#issuecomment-6640394013). **Žádná nová APK se nesestavuje, build request se nemění.**
