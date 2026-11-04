@@ -12,11 +12,12 @@
 | Přílohy k testování | Hlavní video `1000093687.mp4` určuje číslování; ostatní videa/fotky byly přiřazeny podle obsahu. Původní číselná jména videí nejsou vždy 1:1 prokázána. | [Důkazní mapa](ROZHODNUTI_A_NAPADY_Z_TESTU.md#4-přehled-důkazů-a-dosud-nepotvrzených-identit-videí) · [Index médií](TESTOVANI_MEDIA_INDEX.md) |
 | Základní sada požadavků | 49 položek z dřívějšího seznamu; jejich stav nelze automaticky považovat za splněný. | [Seznam úprav #12](https://github.com/zaplikj30-ui/Zamerovac-android/issues/12) |
 | Dlouhodobá představa | Vzhled, schopnosti, možnosti „možná později“; lze měnit. | [Vize a plán](VIZE_A_PLAN.md) |
-| Další aktualizace APK | **Zatím není sestavena**. Následuje audit požadavků proti aktuálnímu kódu a plán jedné společné aktualizace podle všech 28 výsledků. **Až po této aktualizaci** testovat další práci v malých dávkách kolem pěti úkolů. | [Plán a deník #13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13) |
+| Statický audit kódu proti 28 testům | **Dokončen** s odkazy na konkrétní zdrojové soubory. **Není to test funkčnosti na telefonu.** | [AUDIT_KODU_PROTI_28_TESTUM.md](AUDIT_KODU_PROTI_28_TESTUM.md) |
+| Další aktualizace APK | **Zatím není sestavena**. Audit je podkladem pro jednu společnou aktualizaci všech schválených oprav a nové česky-only Nastavení jazyka. Až po ní testovat další práci v dávkách cca pěti. | [Audit](AUDIT_KODU_PROTI_28_TESTUM.md) · [Plán #13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13) |
 | Verze APK | Reálnou **aktuálně používanou** verzi ověřit před dalším cyklem; historický screenshot není důkaz aktuálního vydání. | [GitHub Releases](https://github.com/zaplikj30-ui/Zamerovac-android/releases) |
 
 
-- **Příprava na vícejazyčnost (schválená, zatím bez změny kódu):** [Plán lokalizace](LOKALIZACE_PLAN.md) · [Úkol #14](https://github.com/zaplikj30-ui/Zamerovac-android/issues/14). Nyní zůstává vše v češtině; jazykové klíče se budou bezpečně přidávat jen k nově opravovaným funkcím. **Nově schválená položka Nastavení „Jazyk aplikace“** nabídne pouze „🇨🇿 Čeština“; další jazyky a skutečné přepínání nejsou nyní v rozsahu.
+- **Příprava na vícejazyčnost (schválená, zatím bez změny kódu):** [Plán lokalizace](LOKALIZACE_PLAN.md) · [Úkol #14](https://github.com/zaplikj30-ui/Zamerovac-android/issues/14). Nyní zůstává vše v češtině; jazykové klíče se budou bezpečně přidávat jen k nově opravovaným funkcím. **Nově schválená položka Nastavení „Jazyk aplikace“** nabídne pouze „🇨🇿 Čeština“; architektura musí podporovat desítky jazyků, budoucí vyhledávání a RTL, ale další jazyky a skutečné přepínání nejsou nyní v rozsahu.
 
 ## Dokončené podklady k původní sadě 28 testů
 
@@ -25,7 +26,7 @@
 - **[Testy 21–28 – přesné požadavky, průběh a důkazy](REKONSTRUKCE_TESTU_21_28.md)**
 - **[Samostatné schválené změny, odložené nápady a mapování příloh](ROZHODNUTI_A_NAPADY_Z_TESTU.md)**
 
-**Dále:** projít poslední stav kódu aplikace proti každé detailní dohodě, vyznačit implementováno/chybí/neověřeno, dořešit jen skutečné nečitelnosti, teprve pak připravit společnou aktualizaci. Ověření nového APK na telefonu je jiný krok než přepis historického chatu. Bez důkazu neoznačovat opravy za hotové.
+**Dále:** [statický audit současného kódu proti všem 28 testům už je dokončen](AUDIT_KODU_PROTI_28_TESTUM.md). Na jeho základě připravit opravy, český výběr jazyka a zpětnou kompatibilitu; po sestavení ověřit na zařízení. Nejasné části nepovažovat za hotové. Ověření nového APK na telefonu je jiný krok než přepis historického chatu. Bez důkazu neoznačovat opravy za hotové.
 
 ## 2. Nejdůležitější pravidlo: ukládat průběžně, nikoli zpětně
 
@@ -84,6 +85,7 @@ Nemusí se znovu kopírovat celý původní chat. Neznámé informace ověřit z
 - **Tento soubor:** aktuální stav a rozcestník. Musí se aktualizovat při změně fáze, zvolené dávky nebo důležitého rozhodnutí.
 - **[Podrobná rekonstrukce 1–10](REKONSTRUKCE_TESTU_01_10.md), [11–20](REKONSTRUKCE_TESTU_11_20.md), [21–28](REKONSTRUKCE_TESTU_21_28.md):** aktuální podklady pro pozdější audit zdrojového kódu.
 - **[Katalog dohodnutých změn a nápadů](ROZHODNUTI_A_NAPADY_Z_TESTU.md):** schválené novinky i nápady „možná později“.
+- **[Statický audit 28 testů](AUDIT_KODU_PROTI_28_TESTUM.md):** konkrétní rozdíly v kódu a priorita oprav před vydáním APK.
 - **[Testovací deník #13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13):** výsledky kontrol, průběžné dohody a konkrétní kroky; během rekonstrukce 28 testů primární evidence.
 - **[49 původních úprav #12](https://github.com/zaplikj30-ui/Zamerovac-android/issues/12):** původní základní zadání; nesmazat jen proto, že už vznikla další evidence.
 - **[Vize a plán](VIZE_A_PLAN.md):** dlouhodobý vzhled a funkce, budoucí a zatím nezávazné nápady.
@@ -94,4 +96,4 @@ Nemusí se znovu kopírovat celý původní chat. Neznámé informace ověřit z
 
 **4. 11. 2026 – uživatel:** „Důležité je ukládat všechny kroky na GitHub ... co budeme dělat, chceme dělat, nebo na čem jsme se dohodli ... a rychle dohledatelné.“
 
-**Výsledek:** Tento rozcestník a pravidlo okamžitého průběžného zápisu; nevydávat ChatGPT paměť za spolehlivé úložiště projektu. **Tentýž den dokončena podrobná rekonstrukce všech testů 1–28 z videa a dostupných příloh**, včetně katalogu samostatných nápadů; **implementace a aktuální retest ještě nejsou zkontrolované**. Při dalších fázích aktualizovat přehled i příslušné issues.
+**Výsledek:** Tento rozcestník a pravidlo okamžitého průběžného zápisu; nevydávat ChatGPT paměť za spolehlivé úložiště projektu. **Tentýž den dokončena rekonstrukce všech testů 1–28 i [statický audit zdrojového kódu](AUDIT_KODU_PROTI_28_TESTUM.md)**. Opravy podle auditu, český výběr jazyka, sestavení a fyzický retest ještě neproběhly. Schváleno: lokalizační architektura pro desítky jazyků; aktivní pouze čeština. Při dalších fázích aktualizovat přehled i příslušné issues.
