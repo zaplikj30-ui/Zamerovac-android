@@ -8,6 +8,9 @@ const extract=(a,b)=>{
  return src.slice(i,j);
 };
 const code=[
+ // The label-hit test executes editor methods in isolation; include their shared
+ // caption formatter just as the full editor does.
+ extract('function measureDisplay(', 'function drawItem('),
  extract('function labelInfo(item){','function editItem(item){')
 ];
 const dim={id:'d1',type:'dimension',a:{x:100,y:200},b:{x:300,y:200},
