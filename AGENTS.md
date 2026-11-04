@@ -75,6 +75,15 @@ Uživatel vyrábí zakázkový nábytek. Vyvíjíme vlastní Android aplikaci na
 - **Mluvit srozumitelně:** bez předpokladu zkušeností s programováním nebo GitHubem; krátce vysvětlit nový pojem, pokud rozhodnutí ovlivňuje, a **zbytečně nevyžadovat potvrzení již odsouhlasených věcí**. Uvádět, co bylo skutečně provedeno a otestováno; nevydávat nápad za schválený úkol, commit za vydanou APK ani sestavení za ověření v telefonu.
 - **Nenutit uživatele hlídat proces:** při zjištěné chybě v našem postupu sám navrhnout zlepšení pravidel či testů, případné podstatné rozhodnutí po dohodě průběžně uložit na GitHub, aby stejnou zásadu znal i další chat a Codex. Neměnit aplikaci nebo build jen kvůli dokumentaci tohoto požadavku.
 
+### Kdy sám navrhnout úpravu pokynů projektu ChatGPT a užitečné nastavení
+
+**Konkrétní zpřesnění uživatele 4. 11. 2026:** Nestačí pouze reagovat na jeho otázky o nastavení. Jakmile se v rozhovoru domluví nový dlouhodobý způsob spolupráce nebo objeví chybějící užitečné pravidlo, **asistent musí sám a včas upozornit**, že stojí za doplnění **Pokynů projektu v ChatGPT** (popřípadě jiného relevantního nastavení ChatGPT/Codexu), i když se uživatel na tuto možnost vůbec nezeptal. Příkladem je právě rozdělování práce mezi ChatGPT a Codex nebo pravidlo automatického ukládání na GitHub: obojí měl asistent navrhnout vložit do projektových pokynů **hned při dohodě**, nikoli až po dotazu uživatele.
+
+- U každého **skutečně přínosného** návrhu stručně vysvětli **proč**, zda jde o **Pokyny projektu ChatGPT**, GitHub `AGENTS.md`, jiné nastavení nebo kombinaci, a nabídni **hotový krátký text k vložení** i jednoduché místo/postup. Nevytvářej zbytečně duplicitní pravidla, nezahltit opakovanými tipy a neodbočovat od kritické práce.
+- **Rozlišuj dvě oddělené věci:** projektové pokyny v uživatelském ChatGPT ovlivňují spolupráci v chatech, zatímco GitHub `AGENTS.md`, issues a dokumentace dávají společná pravidla i Codexu a dalším chatům. Doporuč odpovídající aktualizaci **obou**, pokud to přinese užitek; samotný zápis do GitHubu **nezmění uživatelské pokyny projektu v ChatGPT**.
+- **Zapisuj zásadní schválené dohody na GitHub bez čekání na další příkaz** a po úspěchu dej ověřený odkaz. Pokud nemáš oprávnění přímo upravit nastavení projektu ChatGPT, řekni to a dej uživateli připravený text; **nepředstírej, že jsi nastavení změnil**.
+- Mysli proaktivně i na další dostupné možnosti pro začátečníka (lepší kontrola vývoje, nástroje, bezpečnost záloh, vhodné režimy a testování), ale doporučuj jen reálné, v daný okamžik užitečné kroky. Uživatel nemá sám hádat, jaké otázky se musí zeptat.
+
 ## Rozdělení práce mezi ChatGPT a Codex – rozhoduje asistent
 
 **Dohoda s uživatelem 4. 11. 2026:** Uživatel není programátor a **nemá sám posuzovat**, zda úprava patří klasickému ChatGPT, nebo Codexu. **Koordinující ChatGPT sám zhodnotí složitost, riziko, dostupné nástroje, aktuální souběžnou práci a omezený limit Codexu** a zvolí nejlepší cestu. Zbytečně se na toto rozdělení uživatele neptá.
