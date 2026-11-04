@@ -5,6 +5,9 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
  const page=await browser.newPage({viewport:{width:412,height:850}}),errors=[];
  page.on('pageerror',e=>errors.push(e.message));
  await page.goto(process.argv[2]||'http://127.0.0.1:8765');
+ await page.click('#createBtn');assert.equal(await page.locator('#newMenu').isVisible(),true);
+ await page.click('#createBtn');assert.equal(await page.locator('#newMenu').isVisible(),false);
+ await page.click('#createBtn');await page.evaluate(()=>window.handleAndroidBack());assert.equal(await page.locator('#newMenu').isVisible(),false);
  await page.evaluate(()=>{
   const r=newRecord('canvas','Regrese #17');state.records.push(r);openEditor(r);
  });
@@ -31,6 +34,21 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
  await page.reload();
  assert.equal(await page.evaluate(()=>state.records[0].items[0].segmentData[0].measure),'123,456789');
  assert.equal(await page.evaluate(()=>state.records[0].items[0].segmentData[0].unit),'cm');
+ // All simple edit forms keep exact numeric strings and units on no-op save.
+ for(const type of ['dimension','line','arrow','circle','ellipse','target','rect']){
+  await page.evaluate(type=>{
+   openEditor(state.records[0]);const item={id:'form-test',type,a:{x:80,y:100},b:{x:300,y:250},measure:'999,000123',unit:'in',text:'caption',dimW:'1000,000123',dimH:'500,000123'};
+   current.items.push(item);selected=item.id;editItem(item);
+  },type);
+  if(type==='rect'){
+   assert.equal(await page.locator('#measureInput').count(),0);
+   await page.focus('#rectHeight');assert((await page.locator('#rectBoschTarget').innerText()).includes('výška'));
+  }else assert.equal(await page.locator('#measureUnit').inputValue(),'in');
+  await page.click('#okModal');
+  assert.equal(await page.evaluate(()=>current.items.find(x=>x.id==='form-test').measure),'999,000123');
+  assert.equal(await page.evaluate(()=>current.items.find(x=>x.id==='form-test').unit),'in');
+  await page.evaluate(()=>{current.items=current.items.filter(x=>x.id!=='form-test');commitEditor();exitEditor()});
+ }
  // Old schema plus arbitrary project/note/history fields must survive save/reload.
  await page.evaluate(()=>{state.records[0].legacyUnknown={precision:'0.000000123',notes:'Soukromé'};state.records[0].versionHistory=[{items:'opaque'}];save()});
  await page.reload();

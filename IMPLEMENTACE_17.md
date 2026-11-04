@@ -28,7 +28,9 @@ Zadání: [#17](https://github.com/zaplikj30-ui/Zamerovac-android/issues/17), d�
 - Celý web: `tools/check-post17-browser.cjs` s Chromium, syntetická data, žádné zákaznické snímky; bez runtime chyb. Není to Android/S Pen/Bluetooth test.
 - Nativní testy `Post147DataTest`: izolovaný import starých dat s přesným řetězcem a neznámými poli, neplatné ZIP, vlastní PDF ZIP s jedním/třemi snímky, neplatný obrázek. Běží v PR #18 před jedinou APK. První kompilace odhalila PdfDocument bez AutoCloseable, opraveno explicitním close.
 - Navíc opraveno nebezpečné chování při selhání čtení: nečitelná primární databáze i záloha už nesmí vrátit prázdný editovatelný stav; zápis se zablokuje. Při obnově ze záložní kopie se její obsah nepřepíše vadnou primární databází. Bez migrace databáze, existující neznámá pole zachována. Prohlížeč ověřuje save/reload starého schema:1. Aktualizace skutečné instalace se starými zakázkami musí být ověřena na telefonu a s původní zálohou.
-- APK se spustí až po úspěšných kontrolách a sloučení. Zatím nevydána; finální odkaz bude v START_ZDE.md a #17.
+- **Nativní kontrola [41869651694](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/41869651694) úspěšná:** kompilace a všech 6 Robolectric testů, včetně ochrany nečitelné databáze a skutečného export/import průchodu původním zálohovacím ZIP. PDF část používá jednoduchý vlastní zápis obrazového PDF; `PdfDocument` nemá v Robolectric funkční implementaci. Testy se neobchází falešným PDF.
+- **Nezávislá kontrola skutečných artefaktů tohoto běhu:** `tools/check-customer-pdf.py`, striktní parser pypdf a render PyMuPDF; ZIP s 1 i 3 PDF, každé má právě jednu stránku a rastrový obrázek, správný poměr stran a vykreslenou barvu testovacího obrázku; bez textových objektů, formulářů, příloh a metadat.
+- APK se spustí až po poslední kontrole a sloučení. Zatím nevydána; finální odkaz bude v START_ZDE.md a #17.
 
 ## Fyzické kontroly po vydání
 

@@ -1119,7 +1119,7 @@ function editItem(item){
   modal(kind==='line'?'Upravit čáru':kind==='arrow'?'Upravit šipku':kind==='rect'?'Upravit obdélník':'Upravit tvar',
    (kind==='rect'?'':'<label>'+(isRound?'Rozměr kruhu / elipsy':'Kóta / rozměr (volitelné)')+'</label><div class="measure-with-unit"><input id="measureInput" type="text" value="'+escapeHtml(item.measure||'')+'" placeholder="Např. 1250">'+
    '<select aria-label="Jednotka rozměru" id="measureUnit">'+['mm','cm','m','in'].map(u=>'<option '+(u===(item.unit||prefs.unit)?'selected':'')+'>'+u+'</option>').join('')+'</select></div>')+
-   roundFields+rectFields+historyField+
+   roundFields+rectFields+(kind==='rect'?'<small id="rectBoschTarget">Bosch → šířka (mm). Klepnutím do šířky nebo výšky zvolíš cíl měření.</small>':'')+historyField+
    '<label>Textový popisek</label><input id="drawText" value="'+escapeHtml(item.text||'')+'" placeholder="Např. přívod vody">'+
    '<div class="row"><button id="removeItem" class="outline">Smazat prvek</button></div>',
    ()=>{checkpoint();if(kind!=='rect'){item.measure=$('measureInput').value.trim();item.unit=$('measureUnit').value}item.text=$('drawText').value.trim();
@@ -1142,8 +1142,10 @@ function editItem(item){
     }
   };
   if(kind==='rect'){
-    $('rectWidth').onfocus=()=>{item.activeSegmentIndex=0};
-    $('rectHeight').onfocus=()=>{item.activeSegmentIndex=1};
+    const setTarget=index=>{item.activeSegmentIndex=index;$('rectBoschTarget').textContent='Bosch → '+(index===0?'šířka':'výška')+' (mm). Klepnutím do šířky nebo výšky zvolíš cíl měření.'};
+    for(const id of ['rectWidth','rectWidthText'])$(id).onfocus=()=>setTarget(0);
+    for(const id of ['rectHeight','rectHeightText'])$(id).onfocus=()=>setTarget(1);
+    setTarget(item.activeSegmentIndex===1?1:0);
   }
  }else if(item.type==='note'){openRichNote(item,false);return}
  else modal('Upravit prvek',
