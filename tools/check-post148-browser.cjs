@@ -26,7 +26,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
    if(touch)await page.touchscreen.tap(px,py);else await page.mouse.click(px,py);
    assert.equal(await page.locator('#'+menu).isVisible(),false);assert.equal(await page.evaluate(()=>JSON.stringify(state)),before);
    if(await page.locator('#modal').isVisible()){
-    const info=await page.evaluate(({button,menu,touch})=>({
+    const info=await page.evaluate(({button,menu,touch,px,py})=>({
      button,menu,touch,modalTitle:document.getElementById('modalTitle').textContent,
      menuRect:(()=>{const r=document.getElementById(menu).getBoundingClientRect();return{x:r.x,y:r.y,w:r.width,h:r.height}})(),
      menuItems:[...document.querySelectorAll('#'+menu+' button')].map(b=>({text:b.textContent,rect:(()=>{const r=b.getBoundingClientRect();return{x:r.x,y:r.y,w:r.width,h:r.height}})()})),
