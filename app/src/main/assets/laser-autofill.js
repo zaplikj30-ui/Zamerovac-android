@@ -61,13 +61,14 @@
    const index=Math.max(0,Math.min(count-1,Number(item.activeSegmentIndex)||0));
    const oldSegment=item.segmentData?.[index]||{};
    const formUnit=$('modal')&&!$('modal').hidden?$('segmentUnit'+index)?.value:null;
-   const segmentUnit=item.type==='polyline'&&units[formUnit||oldSegment.unit]?(formUnit||oldSegment.unit):'mm';
+   const chosenUnit=formUnit==='none'?oldSegment.unit:(formUnit||oldSegment.unit);
+   const segmentUnit=item.type==='polyline'&&units[chosenUnit]?chosenUnit:'mm';
    const text=asText(reading.millimeters,segmentUnit);
    if(item.type==='rect'){
     const field=index===0?'dimW':'dimH';
     if(item[field]===text){notify('Bosch: hodnota už je u strany');return true}
     checkpoint();item[field]=text;item.lastMeasuredAt=new Date().toISOString();commitEditor();
-    const input=$(index===0?'rectWidth':'rectHeight');if(input&&$('modal')&&!$('modal').hidden){input.value=text;const chooser=$('segmentUnit'+index);if(chooser)chooser.value=segmentUnit}
+    const input=$(index===0?'rectWidth':'rectHeight');if(input&&$('modal')&&!$('modal').hidden){input.value=text;const chooser=$('segmentUnit'+index);if(chooser&&chooser.value!=='none')chooser.value=segmentUnit}
    }else if(item.type==='area'){
     if(!Array.isArray(item.sideMeasures))item.sideMeasures=['','','',''];
     if(item.sideMeasures[index]===text){notify('Bosch: hodnota už je u strany');return true}
@@ -75,7 +76,7 @@
     const area=typeof quadAreaFromMeasures==='function'?quadAreaFromMeasures(item):null;
     if(area!==null)item.measure=String(Number(area.toFixed(5))).replace('.',',');
     commitEditor();
-    const input=$('areaSide'+index);if(input&&$('modal')&&!$('modal').hidden){input.value=text;const chooser=$('segmentUnit'+index);if(chooser)chooser.value=segmentUnit}
+    const input=$('areaSide'+index);if(input&&$('modal')&&!$('modal').hidden){input.value=text;const chooser=$('segmentUnit'+index);if(chooser&&chooser.value!=='none')chooser.value=segmentUnit}
    }else{
     if(!Array.isArray(item.segmentData))item.segmentData=[];
     const segment=item.segmentData[index]||{measure:'',text:'',unit:'mm'};
@@ -83,7 +84,7 @@
     checkpoint();item.segmentData[index]={...segment,measure:text,unit:segmentUnit,laserMeasuredMm:String(reading.millimeters)};
     commitEditor();
     const input=$(item.type==='angle'?'angleLength'+index:'segmentMeasure'+index);
-    if(input&&$('modal')&&!$('modal').hidden){input.value=text;const chooser=$('segmentUnit'+index);if(chooser)chooser.value=segmentUnit}
+    if(input&&$('modal')&&!$('modal').hidden){input.value=text;const chooser=$('segmentUnit'+index);if(chooser&&chooser.value!=='none')chooser.value=segmentUnit}
    }
    notify('✓ Bosch: '+text+' '+segmentUnit+' zapsáno do '+(item.type==='angle'?'ramene':'strany/úseku')+' '+(index+1));
    return true;
@@ -92,7 +93,7 @@
   const rowUnit=['chain','cumulative'].includes(item.type)&&item.points?.length>1?item.segmentData?.[activeIndex]?.unit:null;
   const dialogUnit=$('modal')&&!$('modal').hidden?
    (rowUnit?$('segmentUnit'+activeIndex)?.value:$('measureUnit')?.value):null;
-  const preferredUnit=dialogUnit||rowUnit||item.unit;
+  const preferredUnit=dialogUnit==='none'?(rowUnit||item.unit):(dialogUnit||rowUnit||item.unit);
   const destUnit=Object.prototype.hasOwnProperty.call(units,preferredUnit)?preferredUnit:
     Object.prototype.hasOwnProperty.call(units,prefs.unit)?prefs.unit:'mm';
   const result=asText(reading.millimeters,destUnit);
@@ -109,7 +110,7 @@
    commitEditor();
    const input=$('segmentMeasure'+index),unitInput=$('segmentUnit'+index);
    if(input&&$('modal')&&!$('modal').hidden){
-    input.value=result;if(unitInput)unitInput.value=destUnit;
+    input.value=result;if(unitInput&&unitInput.value!=='none')unitInput.value=destUnit;
    }
    notify('✓ Bosch: '+result+' '+destUnit+' zapsáno do úseku '+(index+1));
    return true;
@@ -128,7 +129,7 @@
   const dialog=$('modal'),input=$('measureInput'),unitInput=$('measureUnit');
   if(dialog&&!dialog.hidden&&input){
    input.value=result;
-   if(unitInput)unitInput.value=destUnit;
+   if(unitInput&&unitInput.value!=='none')unitInput.value=destUnit;
   }
   notify('✓ Bosch: '+result+' '+destUnit+' zapsáno přímo do kóty');
   return true;
