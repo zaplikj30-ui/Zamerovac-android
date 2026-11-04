@@ -118,18 +118,21 @@
   if(show)connector(c,g);
   c.save();
   c.translate(g.cx,g.cy);c.rotate(g.angle);c.translate(-g.cx,-g.cy);
-  // U více fotografií je vidět první v plné ploše. Zadní snímky
-  // naznačují pouze vykukující rohy (bez zásahu do obsahu náhledu).
+  // Every attached photograph gets its own visible sheet. Draw the back
+  // sheets before the front photograph, without changing selection or touch areas.
   const imageCount=(it.media||[]).filter(id=>!(it.audioMedia||[]).includes(id)).length;
+  // Leave a clear 10px reveal for common stacks of 2–4 photographs.
+  // For unusually large stacks reduce the gap, so the sheets stay close to the inset.
+  const stackStep=Math.min(10,72/Math.max(1,imageCount-1));
   if(imageCount>1){
-   for(let layer=Math.min(imageCount-1,3);layer>=1;layer--){
-    const offset=layer*5;
+   for(let layer=imageCount-1;layer>=1;layer--){
+    const offset=layer*stackStep;
     c.fillStyle='#282c36';
     c.strokeStyle='#d8be6f';
     c.lineWidth=1.7;
     c.fillRect(g.x+offset,g.y-offset,g.w,g.h);
     c.strokeRect(g.x+offset,g.y-offset,g.w,g.h);
-    // The rear photo sheets have subtle folded corners.
+    // Fold the upper-right corner of every visible sheet.
     const x=g.x+offset+g.w,y=g.y-offset;
     c.fillStyle='#e9debf';c.beginPath();
     c.moveTo(x-14,y);c.lineTo(x,y+14);c.lineTo(x-14,y+14);c.closePath();c.fill();
@@ -152,7 +155,7 @@
    c.font='bold 12px sans-serif';
    c.textAlign='center';c.textBaseline='middle';
    c.fillStyle='#d7b4ff';c.strokeStyle='#31253b';c.lineWidth=2;
-   const px=g.x+g.w+15,py=g.y-11;
+   const px=g.x+g.w+stackStep*(imageCount-1)+15,py=g.y-stackStep*(imageCount-1)-11;
    c.beginPath();c.arc(px,py,13,0,Math.PI*2);c.fill();c.stroke();
    c.fillStyle='#271c35';c.fillText(String(imageCount),px,py+.5);
    c.restore();
