@@ -17,6 +17,17 @@ Praktická samostatná Android aplikace pro zaměřování zakázkového nábytk
 
 - **Příprava na vícejazyčnost (schválená, zatím bez změny kódu):** [Plán lokalizace](LOKALIZACE_PLAN.md) · [Úkol #14](https://github.com/zaplikj30-ui/Zamerovac-android/issues/14). Nyní zůstává vše v češtině; jazykové klíče se budou bezpečně přidávat jen k nově opravovaným funkcím. **Nově schválená položka Nastavení „Jazyk aplikace“** nabídne pouze „🇨🇿 Čeština“, ale architektura bude připravena na desítky jazyků v jejich vlastních názvech a písmech, vyhledávání, různá locale a případné RTL. Další jazyky nyní nejsou dostupné.
 
+### Budoucí samostatné nastavení složitosti ovládání a výkonu vykreslování (námět, nikoli hotová funkce)
+
+**Námět uživatele 4. 11. 2026:** Dva **nezávislé** přepínače v Nastavení, aby budoucí rozsáhlé aplikace vyhovovaly začátečníkům, pokročilým uživatelům i profesionálům a současně výkonným i slabším telefonům. Přesné názvy a počty stupňů se rozhodnou až při návrhu UX.
+
+1. **Složitost ovládání (např. Jednoduché / Běžné / Pokročilé; uživatelská alternativa „amatér / střední / profesionál“):** mění pouze přehlednost, počet zobrazených pokročilých nástrojů, rozsah nápovědy a způsob nabídky funkcí. Nejde o hodnocení schopností člověka, automatické zařazování uživatelů ani o cenový tarif. **Neměnit výpočty, přesnost, obsah zakázek či uložená data.** Pokročilé funkce mají být dostupné na vyžádání a přechod mezi režimy nesmí ztratit nebo skrýt editovatelná data tak, že je nepůjde bezpečně upravovat. Nabídnout jednoduchý přechod bez zakládání nové zakázky a bez restartu, pokud je to technicky možné.
+2. **Kvalita / náročnost vykreslování (např. Automaticky [výchozí] / Úsporně / Vyváženě / Vysoká kvalita):** nezávisle na úrovni ovládání dovolí nastavit zátěž 2D/3D vykreslování, náhledů, animací a detailů. Automatika volí rozumné zatížení podle reálných schopností a aktuálních podmínek zařízení (paměť, plynulost, případně teplota/úsporný režim, pokud je lze bezpečně zjistit); neodvozovat výkon jen z označení nebo ceny telefonu. Ruční volba může snížit grafickou náročnost, ale nesmí obejít bezpečnostní limity zařízení ani způsobit pád kvůli vysokému nastavení.
+3. **Co se nikdy nesmí změnit:** naměřené délky, rozměry dílců, hrany, orientace dekoru, přesnost kót, výstupy kusovníku/nářezu, originály fotografií, exporty, rozpracované změny a bezpečnost ukládání. Úsporný režim může zjednodušit **pouze vizuální zobrazení**, nikoli výpočet či obsah výrobní dokumentace.
+4. **Společné testování v budoucnu:** různé výkonnostní třídy telefonů/tabletů; velké fotky, dlouhé projekty, přepnutí úrovně ovládání i grafiky u otevřené zakázky, restart/obnovení, offline provoz, zachování přiblížení a dat; automatika vs. ruční předvolba a reakce na nedostatek paměti. Obě nastavení ukládat zvlášť mimo zakázková data.
+
+**Stav: jen návrh k pozdějšímu posouzení, žádné aktuální programování, povinné omezení funkcí, rozdělení podle ceny ani sestavení APK.** Zatím zachovat současné jednoduché ovládání a postupné opravy. Budoucí propojení samostatných aplikací je stále pouze vize.
+
 ### Nastavení vzhledu: podle systému / tmavý / světlý (nový požadavek k pozdějšímu naplánování)
 
 **Přání uživatele 4. 11. 2026:** Aplikace má v budoucnu nabídnout v Nastavení přepínání mezi **Podle systému**, **Tmavý režim** a **Světlý režim**. Volba **Podle systému** má reagovat na aktuální světlý/tmavý režim zařízení (i při změně za běhu, pokud to platforma podporuje); ruční volba má mít před systémem přednost. Nastavení se má zachovat při dalším spuštění.
