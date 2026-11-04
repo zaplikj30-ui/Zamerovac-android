@@ -38,6 +38,37 @@ Tento seznam obsahuje dříve zmíněné nebo odložené směry. O přesném pro
 - Lepší práce s poznámkami/S Pen a hledání možností propojení se Samsung Notes, pouze pokud to dostupná rozhraní umožní.
 - Vylepšené srozumitelné popisky/editor a změna názvu aplikace/složek, pokud se na tom dohodneme.
 
+### Dlouhodobý směr: plnohodnotný Zaměřovač pro Windows 11 a společné zakázky
+
+**Zapsáno 4. 11. 2026. Stav: SCHVÁLENÁ DLOUHODOBÁ VIZE / SMĚR, NIKOLI SCHVÁLENÉ ZAHÁJENÍ VÝVOJE PC APLIKACE.** Cílová platforma je primárně **Windows 11**. Konkrétní technický stack, rozsah první PC verze, metoda synchronizace a termín se rozhodnou až později. **Nyní se PC aplikace nezačíná vyvíjet a Android se kvůli ní zásadně nepřepisuje.**
+
+#### Co znamená „plnohodnotná PC verze“
+1. **Stejné zakázky** jako na Android telefonu či tabletu: otevření celé stromové struktury složek, názvů, fotografií, médií a dalších příloh.
+2. **Skutečný editor, ne prohlížeč:** na PC vytvářet a upravovat nové i převzaté fotografie a jejich kóty, čáry, šipky, kruhy, elipsy, texty, poznámky, symboly a další grafické prvky.
+3. **Zachování editovatelnosti:** každá kóta a anotace zůstane samostatným objektem, nikoli vypálenou vrstvou do obrázku. Lze zadat či změnit hodnotu, posouvat jednotlivý bod i celý objekt, doplnit, odstranit či změnit vzhled; zachovat správnou geometrii i informaci o rozměrech.
+4. **Samostatná práce na PC:** zakládat nové zakázky a složky a přidávat fotografie a přílohy přímo z Windows.
+5. **Obousměrný přenos:** změny provedené na PC se musí dát přenést do Androidu a opačně; neztratit původní snímek, editovatelné vrstvy, kóty, poznámky, historii a přílohy, které jsou součástí zakázky.
+6. **Cílově co nejméně ručních kroků:** do budoucna preferovat synchronizaci bez opakovaného exportu/importu. Cloud, lokální síť, souborové balíčky, účet a případná šifrování/technologie **zatím nejsou rozhodnuté**.
+7. **Práce offline:** Android i PC musí umět bezpečně pokračovat bez internetu a později přenést vlastní změny.
+8. **Žádné tiché přepsání nebo ztráta práce:** počítat se současnými změnami stejné zakázky na více zařízeních, konflikty, neúplnými přenosy, duplicitami a rozdílnými verzemi aplikace. Neřešit je naivně pravidlem „poslední přepis vyhrává“ bez bezpečnostních opatření.
+9. **Rozdílné ovládání je v pořádku:** PC může mít myš/klávesnici a jiné rozložení než dotykové zařízení/S Pen. Obě aplikace však musejí **stejná data interpretovat stejně**; přesnost kót a geometrie nesmí záviset na platformě.
+10. **Není cílem jen export hotového JPG/PDF:** bitmapové nebo tiskové výstupy jsou doplňkem, nesmějí nahradit editovatelné údaje zakázky.
+
+#### Pravidla pro dnešní vývoj Androidu, která pomohou bez velkého přepisování
+- **Datový formát nezávislý na Androidu:** ukládat originální fotografie odděleně od editovatelných prvků; používat přenositelné a zdokumentované struktury a jasně definované jednotky, souřadnicové systémy, typy a vlastnosti objektů.
+- **Stabilní identita:** zakázky, složky, fotografie, anotace i přílohy mají mít jednoznačné a při budoucí výměně dohledatelné identifikátory. Na PC musí být možné rozhodnout, zda jde o tentýž objekt nebo o nezávislou kopii.
+- **Verzování a migrace:** vést verzi datového formátu, držet zpětnou kompatibilitu, testovat otevření starších projektů a nikdy neměnit význam polí tiše. **Neměnit současné `schema: 1` bez návrhu otestované migrace.**
+- **Přenos a bezpečnost:** vždy chránit strukturu složek, metadata, kompletní mediální vazby a všechny úpravy; ověřovat konzistenci a použitelnost záloh a později i obnovu po přerušeném přenosu.
+- **Budoucí souběh úprav:** nyní pouze neblokovat možnost bezpečné synchronizace, teprve později rozhodnout postup detekce a řešení konfliktů, slučování a historie změn.
+- **Nezaměňovat import zálohy a synchronizaci:** současný import ZIP na Androidu vytváří nové identifikátory a obnovenou kopii. To je **jiná operace** než pozdější aktualizace stejné zakázky mezi zařízeními. Nesmí se bez návrhu pokoušet obě funkce ztotožnit.
+- **Průběžná dokumentace a testy:** při skutečně prováděné změně datového formátu zkontrolovat staré projekty a export/import; zapisovat změnu do [DATOVY_FORMAT_A_PC_KOMPATIBILITA.md](DATOVY_FORMAT_A_PC_KOMPATIBILITA.md). Připravovat přenositelnost postupně, zejména při současných opravách ZIP, poznámek, objektů a obnovy.
+
+**Technická poznámka k dnešnímu stavu (statická inspekce):** [DATOVY_FORMAT_A_PC_KOMPATIBILITA.md](DATOVY_FORMAT_A_PC_KOMPATIBILITA.md) rozlišuje současnou podobu `schema: 1`, `records`, `items` a ZIP `projects.json` / `media-meta.json` / `media/` od **nedořešených** podmínek budoucího PC přenosu. Není to ještě standard synchronizace ani hotový veřejný formát.
+
+**Pravidlo upozornění:** Pokud při opravách Androidu vznikne návrh, který by zásadně blokoval přesnou editaci na PC, společné zakázky, bezpečnou migraci či obousměrný přenos, **upozornit předem** na konkrétní riziko a nabídnout kompatibilní variantu s rozumným rozsahem zásahu. Nevydávat budoucí PC verzi za důvod k rozsáhlému současnému přepisu.
+
+**Aktuální priorita:** opravit a otestovat domluvených 28 kontrol Zaměřovače a schválené doplňky, bezpečně zachovat data a češtinu. **Žádný PC build, synchronizační služba ani nový datový formát nejsou tímto zadáním schválené k okamžité implementaci.**
+
 ### Možný dlouhodobý cíl: veřejné vydání na Google Play (nezávazné)
 
 **Zapsáno 4. 11. 2026. Stav: MOŽNOST DO BUDOUCNA – NENÍ SCHVÁLENÉ VYDÁNÍ, TERMÍN, PRIORITA ANI ZÁVAZEK.** Smyslem projektu je především **profesionální, stabilní, přesný a spolehlivý Zaměřovač pro zaměřování nábytku**, vhodný i pro každodenní vlastní práci. Veřejné vydání na **Google Play** je pouze jedna z možností, o které se může uživatel rozhodnout až později. Neusilovat o vydání za každou cenu ani pod časovým tlakem.
@@ -85,6 +116,8 @@ Tento seznam obsahuje dříve zmíněné nebo odložené směry. O přesném pro
 | 2026-11-04 | Schválena bezpečná příprava vícejazyčnosti, řádek „Jazyk aplikace“ s jedinou volbou 🇨🇿 Čeština; bez samostatné APK. [Issue #14](https://github.com/zaplikj30-ui/Zamerovac-android/issues/14). |
 | 2026-11-04 | Nové upřesnění: škálovat na desítky jazyků, vyhledávání, autonyma, různé skripty/formáty a RTL; v příští aktualizaci pouze česká volba, ostatní opravy mají přednost. |
 | 2026-11-04 | Možné budoucí vydání na Google Play pouze jako nezávazný směr. Vývoj má přednostně zajistit spolehlivost, bezpečnost dat, přesnost, jednoduché ovládání a kompatibilitu; bez termínu, reklamy, registrace nebo zbytečných změn kvůli publikování. |
+
+| 2026-11-04 | Doplněna plnohodnotná budoucí PC verze pro Windows 11, stejná editovatelná data a bezpečná obousměrná výměna zakázek. Jde o dlouhodobý směr bez zahájení vývoje, technologického rozhodnutí či termínu. [Technický podklad](DATOVY_FORMAT_A_PC_KOMPATIBILITA.md). |
 
 ## 8. Další dohledané drobné náměty a ověřované detaily z testování
 Tyto body jsou rozdělené podle původního kontextu; **nesmí se automaticky vydávat za hotové**.
