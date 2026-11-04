@@ -355,7 +355,7 @@ else if(item.type==='ellipse'||item.type==='circle'){
  const {cx,cy,rx,ry}=ellipseGeometry(item);
  c.beginPath();c.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);c.stroke();
  const label=[item.measure?(item.measureKind==='radius'?'R ':'Ø ')+item.measure+' '+(item.unit||'mm'):'',item.text||''].filter(Boolean).join(' · ');
- if(label)canvasText(label,{x:cx+Number(item.labelDx||0),y:cy+Number(item.labelDy||0)},color,fs);
+ if(label)canvasText(label,{x:cx+Number(item.labelDx||0)*view.zoom,y:cy-28+Number(item.labelDy||0)*view.zoom},color,fs);
 }
 else if(item.type==='freehand'||item.type==='polyline'){if(pts.length){c.beginPath();c.moveTo(pts[0].x,pts[0].y);for(let p of pts.slice(1))c.lineTo(p.x,p.y);c.stroke();if(item.type==='polyline')for(let i=0;i<pts.length-1;i++){const row=item.segmentData?.[i]||{};const text=[row.measure?row.measure+' '+(row.unit||item.unit||'mm'):'',row.text||''].filter(Boolean).join(' · ');if(text)canvasText(text,{x:(pts[i].x+pts[i+1].x)/2+(pts[i+1].x-pts[i].x)*(Number(row.labelT)||0),y:(pts[i].y+pts[i+1].y)/2+(pts[i+1].y-pts[i].y)*(Number(row.labelT)||0)},color,fs)}}}
 else if(item.type==='note'||item.type==='symbol'){if(a){if(item.type==='note'){drawNoteLeader(c,item,color);(noteDisplayedCaption(item)&&canvasText(noteDisplayedCaption(item),noteCaptionScreen(item),color,fs))}else canvasText((item.icon||'⚑')+' '+(item.text||''),a,color,fs)}}
@@ -461,6 +461,15 @@ function nearestSegmentLabel(point){
 }
 function nearestLabel(point){
   for(const item of [...(current.items||[])].reverse()){
+    if(['circle','ellipse'].includes(item.type)&&(item.measure||item.text)){
+      const g=ellipseGeometry(item);
+      const x=g.cx+(Number(item.labelDx)||0)*view.zoom,y=g.cy-28+(Number(item.labelDy)||0)*view.zoom;
+      const label=[item.measure?item.measure+' '+(item.unit||'mm'):'',item.text||''].filter(Boolean).join(' · ');
+      ctx.save();ctx.font='600 '+(item.fontSize||prefs.fontSize)+'px sans-serif';
+      const width=ctx.measureText(label).width;ctx.restore();
+      if(Math.abs(point.x-x)<=Math.max(20,width/2+10)&&Math.abs(point.y-y)<=Math.max(12,(item.fontSize||prefs.fontSize)*.75))
+        return {item,kind:'round-label'};
+    }
     const p=labelInfo(item);if(!p)continue;
     const along=Math.abs((point.x-p.x)*p.ux+(point.y-p.y)*p.uy);
     const across=Math.abs((point.x-p.x)*(-p.uy)+(point.y-p.y)*p.ux);
@@ -564,7 +573,7 @@ function hitAnnotation(point){
  // Při překrývajících se přichycených koncích dát přednost vybrané kótě:
  // společné souřadnice neznamenají, že se dva samostatné prvky spojily.
  const activeItem=(current?.items||[]).find(item=>item.id===selected);
- if(activeItem&&activeItem.type!=='note'){
+ if(activeItem&&!['note','rect','area','circle','ellipse','target'].includes(activeItem.type)){
   for(const p of [activeItem.a,activeItem.b]){
    if(p&&Math.hypot(point.x-worldToScreen(p).x,point.y-worldToScreen(p).y)<24)
     return activeItem;
@@ -688,11 +697,15 @@ function stageDown(e){
    if(hit.kind==='note-caption')
    hit.startPoint={...(hit.item.captionMoved&&hit.item.b?hit.item.b:hit.item.a)};
   if(hit.kind==='move-polyline')hit.startPoints=candidate.points.map(p=>({...p}));
-  hit.startLabelT=hit.kind==='segment-label'?
+  if(hit.kind==='round-label'){
+    hit.startLabelDx=Number(hit.item.labelDx)||0;
+    hit.startLabelDy=Number(hit.item.labelDy)||0;
+   }
+   hit.startLabelT=hit.kind==='segment-label'?
     Number(hit.item.type==='area'?hit.item.sideLabelT?.[hit.index]:hit.item.segmentData?.[hit.index]?.labelT)||0:
     Number(hit.item.labelT)||0;
   hit.dragged=false;
-  if(['point','shape-resize','label','note-caption','target-caption','segment-label','move-dimension','move-polyline'].includes(hit.kind))checkpoint();
+  if(['point','shape-resize','label','note-caption','target-caption','segment-label','round-label','move-dimension','move-polyline'].includes(hit.kind))checkpoint();
   magnifierPoint=hit.kind==='point'?hit.point:null;
   paint();return;
  }
@@ -770,6 +783,10 @@ if(['polyline','chain','cumulative','angle'].includes(mode)&&polylineDraft.lengt
     });
     selectedHandle.item.captionMoved=true;
     magnifierPoint=null;
+  }else if(selectedHandle.kind==='round-label'){
+    selectedHandle.item.labelDx=selectedHandle.startLabelDx+(s.x-selectedHandle.startScreen.x)/view.zoom;
+    selectedHandle.item.labelDy=selectedHandle.startLabelDy+(s.y-selectedHandle.startScreen.y)/view.zoom;
+    magnifierPoint=null;
   }else if(selectedHandle.kind==='segment-label'){
     const item=selectedHandle.item,index=selectedHandle.index,line=segmentLineScreen(item,index);
     if(line){
@@ -829,11 +846,11 @@ function stageUp(e){
   selectedHandle=null;magnifierPoint=null;loupeSide=null;
   if(handle.kind==='select-only'){paint();return}
   if(!moved){
-   if((['point','shape-resize','label','note-caption','target-caption','segment-label','move-dimension','move-polyline'].includes(handle.kind))&&editStack.length)editStack.pop();
+   if((['point','shape-resize','label','note-caption','target-caption','segment-label','round-label','move-dimension','move-polyline'].includes(handle.kind))&&editStack.length)editStack.pop();
    if(handle.initialSelection){paint();return}
    // Druhé samostatné klepnutí otevře úpravu bez časového limitu.
    editItem(item);
-  }else if(['point','shape-resize','label','note-caption','target-caption','segment-label','move-dimension','move-polyline'].includes(handle.kind)){
+  }else if(['point','shape-resize','label','note-caption','target-caption','segment-label','round-label','move-dimension','move-polyline'].includes(handle.kind)){
    touch(item);commitEditor();
   }else paint();
   return;
