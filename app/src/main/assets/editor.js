@@ -454,7 +454,10 @@ function segmentLineScreen(item,index){
  if(['chain','cumulative','polyline'].includes(item.type)){
   if(index<0||index>=pts.length-1)return null;
   const projected=item.type==='cumulative'&&typeof cumulativeSegment==='function'?cumulativeSegment(item,index):null;
-  return {a:projected?.from||worldToScreen(pts[index]),b:projected?.to||worldToScreen(pts[index+1])};
+  const a=projected?.from||worldToScreen(pts[index]),b=projected?.to||worldToScreen(pts[index+1]);
+  const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1;
+  const off=['chain','cumulative'].includes(item.type)?(Number(item.offset)||0)+(item.type==='cumulative'?index*26:0):0;
+  return {a:{x:a.x-dy/d*off,y:a.y+dx/d*off},b:{x:b.x-dy/d*off,y:b.y+dx/d*off}};
  }
  if(item.type==='angle'&&pts.length>=3)return {a:worldToScreen(pts[1]),b:worldToScreen(pts[index===0?0:2])};
  if(item.type==='area'){
@@ -480,10 +483,7 @@ function nearestSegmentLabel(point){
    let x=(line.a.x+line.b.x)/2,y=(line.a.y+line.b.y)/2;
    if(item.type==='angle')y-=18;
    if(item.type==='rect'){if(i===0)y+=14;else x+=20}
-   else if(['chain','cumulative'].includes(item.type)){
-    const offset=(Number(item.offset)||0)+i*(item.type==='cumulative'?26:0);
-    x+=-dy/d*offset;y+=dx/d*offset;
-   }
+
    const t=Number(item.type==='area'?item.sideLabelT?.[i]:item.type==='rect'?item.rectLabelT?.[i]:row.labelT)||0;
    x+=dx*t;y+=dy*t;
    if(Math.abs(point.x-x)<Math.max(35,(item.fontSize||17)*2)&&Math.abs(point.y-y)<18)
@@ -521,7 +521,11 @@ function nearestHandle(point,onlyItem=null){
   if(['polyline','chain','cumulative','angle'].includes(item.type)&&Array.isArray(item.points)&&item.points.length>1){
    item.points.forEach((vertex,index)=>{
     const p=worldToScreen(vertex),d=Math.hypot(point.x-p.x,point.y-p.y);
-    if(d<dist){best={item,key:'points',point:vertex,pointIndex:index,kind:'point'};dist=d}
+    const endpointZone=[item.points[index-1],item.points[index+1]].filter(Boolean).every(neighbor=>{
+     const q=worldToScreen(neighbor),dx=q.x-p.x,dy=q.y-p.y;
+     return ((point.x-p.x)*dx+(point.y-p.y)*dy)/(dx*dx+dy*dy||1)<=.30;
+    });
+    if(endpointZone&&d<dist){best={item,key:'points',point:vertex,pointIndex:index,kind:'point'};dist=d}
    });continue;
   }
   if(item.type==='freehand')continue;
@@ -562,7 +566,8 @@ function nearestItem(point){
   }
   if((['polyline','chain','cumulative','angle','freehand'].includes(item.type))&&Array.isArray(item.points)&&item.points.length>1){
    for(let i=1;i<item.points.length;i++){
-    const a=item.points[i-1],b=item.points[i],dx=b.x-a.x,dy=b.y-a.y;
+    const line=['chain','cumulative'].includes(item.type)?segmentLineScreen(item,i-1):null;
+    const a=line?screenToWorld(line.a):item.points[i-1],b=line?screenToWorld(line.b):item.points[i],dx=b.x-a.x,dy=b.y-a.y;
     const t=Math.max(0,Math.min(1,((world.x-a.x)*dx+(world.y-a.y)*dy)/(dx*dx+dy*dy||1)));
     const d=Math.hypot(world.x-a.x-t*dx,world.y-a.y-t*dy);
     if(d<distance){best=item;distance=d}
@@ -624,6 +629,7 @@ function hitAnnotation(point){
 }
 function selectAnnotation(item){
  if(!item)return;
+ window.ensureAnnotationVisible?.(item.type);
  selected=item.id;
  if(mode!=='select')setTool('select',true);
  paint();
@@ -996,6 +1002,7 @@ function editSegmentedItem(item){
    text:$('segmentText'+i).value.trim(),unit:$('segmentUnit'+i).value
   }));
  }
+ for(let i=0;i<count;i++)for(const prefix of ['segmentMeasure','segmentText','segmentUnit'])$(prefix+i).onfocus=()=>{item.activeSegmentIndex=i};
  $('modalBody').querySelectorAll('[data-segment-reading]').forEach(select=>select.onchange=()=>{
   if(select.value==='')return;
   const r=readings[Number(select.value)],i=Number(select.dataset.segmentReading);

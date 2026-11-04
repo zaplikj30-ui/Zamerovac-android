@@ -20,7 +20,7 @@
 - **Nová dohoda o jednotkách nahrazuje předchozí přesun dolů:** malé rozbalovací políčko s aktuální jednotkou (mm/cm/m/in, u příslušných typů m²/°) **vedle pole Rozměr**, které zabere většinu řádku. U každého úseku samostatně. Zachovat uložené hodnoty, jednotky, přesnost i napojení Bosch.
 - [Zápis rozhodnutí a zahájení v issue #17](https://github.com/zaplikj30-ui/Zamerovac-android/issues/17#issuecomment-6635760943).
 - **První část v kódu:** ukládání rozpracovaných řetězců, přesné nápovědy, kompaktní jednotky u rozměru, souřadnice kruhu/elipsy, orientace lomené čáry, priority úchopů, přepínání +, refresh koše, názvy importní kopie, volitelné pozadí. Lichoběžník: obrys při správné vrstvě v prohlížeči funguje; nástroj nově aktivuje svou skrytou vrstvu (reprodukované úchopy bez obrysu). Původní příčina na telefonu není prokázaná. Dosavadní JS testy a cílené nové regrese prošly, fyzický retest čeká.
-- Další krok: doplnit zákaznický PDF ZIP a celkové automatické kontroly celé #17, průběžně uložit, až poté jedna APK. Bosch a offline test 29 nejsou fyzicky ověřené.
+- **Dokončení v [PR #18](https://github.com/zaplikj30-ui/Zamerovac-android/pull/18):** samostatný zákaznický PDF ZIP, nativní regresní testy starých dat a PDF, plný browser test. [Přesná mapa všech 17 bodů a omezení](IMPLEMENTACE_17.md). První nativní kompilace našla chybné použití PdfDocument v try-with-resources; oprava explicitním close. Další krok: úspěšné nativní kontroly, kontrola souběžných změn, sloučení a jediná APK. Bosch a offline test 29 nejsou fyzicky ověřené.
 
 ## 1. Co právě řešíme
 

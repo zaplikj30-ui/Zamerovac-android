@@ -26,14 +26,15 @@ final class CustomerPdfExport {
             throw new IOException("Neplatné rozlišení exportu");
         Bitmap bitmap=BitmapFactory.decodeByteArray(bytes,0,bytes.length);
         if(bitmap==null)throw new IOException("Fotografii nelze vykreslit");
-        try(PdfDocument pdf=new PdfDocument()){
+        PdfDocument pdf=new PdfDocument();
+        try{
             PdfDocument.Page page=pdf.startPage(new PdfDocument.PageInfo.Builder(bitmap.getWidth(),bitmap.getHeight(),1).create());
             page.getCanvas().drawBitmap(bitmap,0,0,null);
             pdf.finishPage(page);
             File output=new File(directory,String.format(Locale.ROOT,"%03d-",count+1)+safeName(title)+".pdf");
             try(OutputStream out=new FileOutputStream(output)){pdf.writeTo(out);}
             count++;
-        }finally{bitmap.recycle();}
+        }finally{try{pdf.close();}finally{bitmap.recycle();}}
     }
     synchronized File archive() throws IOException {
         if(count==0)throw new IOException("Vyber alespoň jednu fotografii");

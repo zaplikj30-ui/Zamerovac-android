@@ -578,10 +578,13 @@ showTools=function(){
  }
  highlightCurrentTool();
 };
-const originalSetTool=setTool;
-setTool=function(key,keepSelection=false){
+window.ensureAnnotationVisible=key=>{
  const group=Object.entries(grouped).find(([,types])=>types.includes(key))?.[0];
  if(group&&prefs.layerVisible[group]===false){prefs.layerVisible[group]=true;save()}
+};
+const originalSetTool=setTool;
+setTool=function(key,keepSelection=false){
+ window.ensureAnnotationVisible(key);
  originalSetTool(key,keepSelection);
  highlightCurrentTool();
 };
