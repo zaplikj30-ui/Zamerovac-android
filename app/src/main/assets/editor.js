@@ -199,6 +199,50 @@ function drawNoteLeader(c,item,color){
 }
 function canvasText(text,p,color,size,angle=0){ctx.save();ctx.translate(p.x,p.y);ctx.rotate(angle);ctx.font=`600 ${size}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';let width=ctx.measureText(text).width;ctx.fillStyle='#222d';ctx.fillRect(-width/2-5,-size*.67,width+10,size*1.4);ctx.fillStyle=color;ctx.fillText(text,0,0);ctx.restore()}
 function drawArrow(c,point,to,size=10){let a=Math.atan2(point.y-to.y,point.x-to.x);c.beginPath();c.moveTo(point.x,point.y);c.lineTo(point.x-size*Math.cos(a-.48),point.y-size*Math.sin(a-.48));c.moveTo(point.x,point.y);c.lineTo(point.x-size*Math.cos(a+.48),point.y-size*Math.sin(a+.48));c.stroke()}
+function rectCorners(item){
+ const a=item.a||{x:0,y:0},b=item.b||a;
+ const x1=Math.min(a.x,b.x),x2=Math.max(a.x,b.x),y1=Math.min(a.y,b.y),y2=Math.max(a.y,b.y);
+ return [{x:x1,y:y1},{x:x2,y:y1},{x:x2,y:y2},{x:x1,y:y2}];
+}
+function quadCorners(item){return item.type==='area'&&item.points?.length===4?item.points:rectCorners(item)}
+function ellipseGeometry(item){
+ const a=item.a||{x:0,y:0},b=item.b||a;
+ const cx=(a.x+b.x)/2,cy=(a.y+b.y)/2,rx=Math.abs(a.x-b.x)/2;
+ const ry=item.type==='circle'?rx:Math.abs(a.y-b.y)/2;
+ return {cx,cy,rx:Math.max(1,rx),ry:Math.max(1,ry)};
+}
+function resizePoints(item){
+ if(item.type==='area')return quadCorners(item);
+ if(item.type==='rect')return rectCorners(item);
+ if(item.type==='circle'||item.type==='ellipse'){
+   const {cx,cy,rx,ry}=ellipseGeometry(item);
+   return [{x:cx-rx,y:cy},{x:cx+rx,y:cy},{x:cx,y:cy-ry},{x:cx,y:cy+ry}];
+ }
+ if(item.type==='target')return [item.a].filter(Boolean);
+ return null;
+}
+function cumulativeSegment(item,index){
+ const pts=item.points||[];
+ if(pts.length<2)return null;
+ const origin=worldToScreen(pts[0]),first=worldToScreen(pts[1]);
+ const dx=first.x-origin.x,dy=first.y-origin.y,d=Math.hypot(dx,dy)||1;
+ const ux=dx/d,uy=dy/d;
+ const point=worldToScreen(pts[index+1]||pts[1]);
+ const distance=(point.x-origin.x)*ux+(point.y-origin.y)*uy;
+ return {from:origin,to:{x:origin.x+ux*distance,y:origin.y+uy*distance}};
+}
+function triangleArea(a,b,c){
+ const v=[a,b,c].map(x=>Number(String(x||'').replace(',','.')));
+ if(v.some(x=>!Number.isFinite(x)||x<=0))return null;
+ const p=(v[0]+v[1]+v[2])/2;
+ const t=p*(p-v[0])*(p-v[1])*(p-v[2]);
+ return t>0?Math.sqrt(t):null;
+}
+function quadAreaFromMeasures(item){
+ const sides=item.sideMeasures||[],diag=item.diagonal||'';
+ const first=triangleArea(sides[0],sides[1],diag),second=triangleArea(sides[2],sides[3],diag);
+ return first!==null&&second!==null?(first+second)/1000000:null;
+}
 function drawItem(c,item){let a=item.a&&worldToScreen(item.a),b=item.b&&worldToScreen(item.b);let pts=(item.points||[]).map(worldToScreen);const color=item.color||prefs.color,fw=(item.width||prefs.lineWidth),fs=(item.fontSize||prefs.fontSize);c.save();c.strokeStyle=color;c.fillStyle=color;c.lineWidth=fw;c.lineJoin='round';c.lineCap='round';
 function seg(){c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.stroke()};
 if(item.type==='angle'&&pts.length>=3){
@@ -235,7 +279,15 @@ else if(['chain','cumulative'].includes(item.type)&&pts.length>1){
  }
 }
 else if(item.type==='dimension'||item.type==='chain'||item.type==='cumulative'){if(a&&b){let dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1;let nx=-dy/d,ny=dx/d;let off=item.offset??0;let ao={x:a.x+nx*off,y:a.y+ny*off},bo={x:b.x+nx*off,y:b.y+ny*off};c.beginPath();c.moveTo(a.x+nx*(off-11),a.y+ny*(off-11));c.lineTo(a.x+nx*(off+11),a.y+ny*(off+11));c.moveTo(b.x+nx*(off-11),b.y+ny*(off-11));c.lineTo(b.x+nx*(off+11),b.y+ny*(off+11));c.moveTo(ao.x,ao.y);c.lineTo(bo.x,bo.y);c.stroke();drawArrow(c,ao,bo,9);drawArrow(c,bo,ao,9);let label=item.measure?`${item.measure} ${item.unit||'mm'}`:'?';if(item.text)label+=' · '+item.text;let ang=Math.atan2(dy,dx);if(ang>Math.PI/2||ang< -Math.PI/2)ang+=Math.PI;canvasText(label,{x:(ao.x+bo.x)/2+(bo.x-ao.x)*(Number(item.labelT)||0),y:(ao.y+bo.y)/2+(bo.y-ao.y)*(Number(item.labelT)||0)},color,fs,ang)}}
-else if(item.type==='line'||item.type==='arrow'||item.type==='angle'||item.type==='target'){
+else if(item.type==='target'){
+ if(a){
+   c.beginPath();c.arc(a.x,a.y,10,0,Math.PI*2);c.moveTo(a.x-14,a.y);c.lineTo(a.x+14,a.y);
+   c.moveTo(a.x,a.y-14);c.lineTo(a.x,a.y+14);c.stroke();
+   const text=[item.measure?item.measure+' '+(item.unit||'mm'):'',item.text||''].filter(Boolean).join(' · ');
+   if(text)canvasText(text,b||{x:a.x+35,y:a.y+12},color,fs);
+ }
+}
+else if(item.type==='line'||item.type==='arrow'||item.type==='angle'){
  if(a&&b){
   seg();
   if(item.type==='arrow')drawArrow(c,b,a,15);
@@ -258,27 +310,38 @@ else if(item.type==='line'||item.type==='arrow'||item.type==='angle'||item.type=
  }
 }
 else if(item.type==='rect'||item.type==='area'){
- if(a&&b){
-  const x=Math.min(a.x,b.x),y=Math.min(a.y,b.y),w=Math.abs(a.x-b.x),h=Math.abs(a.y-b.y);
-  c.strokeRect(x,y,w,h);
-  if(item.type==='area'&&item.measure)canvasText(item.measure+' '+(item.unit||'m²'),{x:x+w/2,y:y+h/2},color,fs);
-  if(item.type==='rect'&&item.text)canvasText(item.text,{x:x+w/2,y:y+h/2},color,fs);
-  const width=item.type==='area'?item.areaWidth:item.dimW;
-  const height=item.type==='area'?item.areaHeight:item.dimH;
-  if(width)canvasText(width+' mm',{x:x+w/2,y:y+14},color,Math.max(11,fs*.8));
-  if(height)canvasText(height+' mm',{x:x+35,y:y+h/2},color,Math.max(11,fs*.8));
+ const corners=(item.type==='area'?quadCorners(item):rectCorners(item)).map(worldToScreen);
+ if(corners.length===4){
+   c.beginPath();c.moveTo(corners[0].x,corners[0].y);
+   corners.slice(1).forEach(p=>c.lineTo(p.x,p.y));c.closePath();c.stroke();
+   const center={x:corners.reduce((sum,p)=>sum+p.x,0)/4,y:corners.reduce((sum,p)=>sum+p.y,0)/4};
+   let measure=item.measure;
+   if(item.type==='rect'&&item.dimW&&item.dimH){
+     const w=Number(String(item.dimW).replace(',','.')),h=Number(String(item.dimH).replace(',','.'));
+     if(w>0&&h>0)measure=(w*h/1000000).toFixed(4).replace('.',',');
+   }
+   if(item.type==='area'){const calculated=quadAreaFromMeasures(item);if(calculated!==null)measure=calculated.toFixed(4).replace('.',',')}
+   if(measure)canvasText(measure+' m²',center,color,fs);
+   if(item.type==='area'){
+     corners.forEach((p,i)=>{
+       const q=corners[(i+1)%4],info=item.sideMeasures?.[i]||'';
+       const txt=[info?info+' mm':'',item.sideTexts?.[i]||''].filter(Boolean).join(' · ');
+       if(txt)canvasText(txt,{x:(p.x+q.x)/2,y:(p.y+q.y)/2},color,Math.max(11,fs*.8));
+     });
+   }else{
+     if(item.dimW)canvasText(item.dimW+' mm',{x:(corners[0].x+corners[1].x)/2,y:corners[0].y+14},color,Math.max(11,fs*.8));
+     if(item.dimH)canvasText(item.dimH+' mm',{x:corners[1].x+20,y:(corners[1].y+corners[2].y)/2},color,Math.max(11,fs*.8));
+     if(item.text)canvasText(item.text,{x:center.x,y:center.y+fs*1.5},color,fs);
+   }
  }
 }
 else if(item.type==='ellipse'||item.type==='circle'){
- if(a&&b){
-  const cx=(a.x+b.x)/2,cy=(a.y+b.y)/2;
-  const rx=Math.abs(a.x-b.x)/2,ry=item.type==='circle'?rx:Math.abs(a.y-b.y)/2;
-  c.beginPath();c.ellipse(cx,cy,Math.max(1,rx),Math.max(1,ry),0,0,Math.PI*2);c.stroke();
-  const label=[item.measure?(item.measureKind==='radius'?'R ':'Ø ')+item.measure+' '+(item.unit||'mm'):'',item.text||''].filter(Boolean).join(' · ');
-  if(label)canvasText(label,{x:cx,y:cy},color,fs);
- }
+ const {cx,cy,rx,ry}=ellipseGeometry(item);
+ c.beginPath();c.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);c.stroke();
+ const label=[item.measure?(item.measureKind==='radius'?'R ':'Ø ')+item.measure+' '+(item.unit||'mm'):'',item.text||''].filter(Boolean).join(' · ');
+ if(label)canvasText(label,{x:cx+Number(item.labelDx||0),y:cy+Number(item.labelDy||0)},color,fs);
 }
-else if(item.type==='freehand'||item.type==='polyline'){if(pts.length){c.beginPath();c.moveTo(pts[0].x,pts[0].y);for(let p of pts.slice(1))c.lineTo(p.x,p.y);c.stroke()}}
+else if(item.type==='freehand'||item.type==='polyline'){if(pts.length){c.beginPath();c.moveTo(pts[0].x,pts[0].y);for(let p of pts.slice(1))c.lineTo(p.x,p.y);c.stroke();if(item.type==='polyline')for(let i=0;i<pts.length-1;i++){const row=item.segmentData?.[i]||{};const text=[row.measure?row.measure+' '+(row.unit||item.unit||'mm'):'',row.text||''].filter(Boolean).join(' · ');if(text)canvasText(text,{x:(pts[i].x+pts[i+1].x)/2,y:(pts[i].y+pts[i+1].y)/2},color,fs)}}}
 else if(item.type==='note'||item.type==='symbol'){if(a){if(item.type==='note'){drawNoteLeader(c,item,color);(noteDisplayedCaption(item)&&canvasText(noteDisplayedCaption(item),noteCaptionScreen(item),color,fs))}else canvasText((item.icon||'⚑')+' '+(item.text||''),a,color,fs)}}
 c.restore();}
 function drawLoupe(){
