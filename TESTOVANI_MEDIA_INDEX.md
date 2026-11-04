@@ -31,3 +31,34 @@ Kontrolní otisk je prvních 16 znaků SHA-256 aktuálního obsahu dostupného v
 2. Zapsat nové soubory do této tabulky, staré neduplikovat a u každého zjistit vazbu na test jen když je z obsahu průkazná.
 3. Věci z historických videí porovnat s [testovacím deníkem #13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13), [49 úpravami #12](https://github.com/zaplikj30-ui/Zamerovac-android/issues/12) a relevantními commity. Rozlišit historickou chybu od právě otevřené chyby.
 4. Tato evidence není automatické úložiště originálních videí: ty existují jen jako přílohy uživatelských konverzací, pokud jsou dostupné. Pro trvalé uchování originálů je třeba jiné úložiště.
+
+
+## Nové samostatné nahrávky a snímky doplněné 4. 11. 2026
+
+Přibylo **6 různě pojmenovaných videí** a **10 JPG snímků** z původního testování. Součet nyní evidovaných **20 jedinečných videonázvů a 10 obrázků** (nejde o originální trvalé uložení médií do GitHubu; zde jsou jen metainformace a odkazy na příslušné textové testy). Otisk prvních 16 znaků SHA-256 nyní dostupných souborů; při opětovném poslání jej lze použít pro deduplikaci.
+
+| Video | Délka | SHA-256 (začátek) | Přiřazení podle obsahu |
+|---|---:|---|---|
+| `Screen_Recording_20261104_020258.mp4` | 0:44 | `a64f3223d943d915` | Fotografie a editace, testy 19–20 |
+| `Screen_Recording_20261104_021857.mp4` | 0:17 | `59752b1da843c767` | Koš, test 22 |
+| `Screen_Recording_20261104_022456.mp4` | 0:31 | `d3a7e2a9413007a3` | Vyhledávání, test 23 |
+| `Screen_Recording_20261104_023025.mp4` | 0:09 | `6316ef6c55a1e613` | Soubory/přesun, test 25 |
+| `Screen_Recording_20261104_024728_My Files.mp4` | 2:08 | `1ff09965edf395ce` | Export ZIP, test 26 |
+| `Screen_Recording_20261104_030119_My Files.mp4` | 1:16 | `e1540b8fd2b12d1b` | Výběr ZIP při importu, test 27 |
+
+| Fotografie/screenshot | SHA-256 (začátek) | Test / význam |
+|---|---|---|
+| `1000093519.jpg` | `795d4343686faf06` | 7 – plocha a rohové úchopy |
+| `1000093546.jpg` | `3d54b171cd2bc943` | 19 – referenční fotografie |
+| `1000093548.jpg` | `4c273efc1c9be04e` | 20 – horní šipky |
+| `1000093549.jpg` | `db5253f3d10be16b` | 22 – Koš |
+| `1000093552.jpg` | `1530f1ddbd389012` | 23 – hledání „Bla“ |
+| `1000093557.jpg` | `bc84feae589b604e` | 26 – ZIP struktura |
+| `1000093570.jpg` | `922b0e9e18bbee0e` | 26 – media/ a JSON |
+| `1000093572.jpg` | `70aca14c12d919b8` | 26 – obsah media |
+| `1000093574.jpg` | `a3571540d15ead1d` | 21/25 – zámky |
+| `1000093683.jpg` | `a5da6d358ae7fd0b` | Zdrojový záběr místnosti, nedokazuje fungování app |
+
+**Přesná důkazní mapa podle čísel 1–28:** [ROZHODNUTI_A_NAPADY_Z_TESTU.md](ROZHODNUTI_A_NAPADY_Z_TESTU.md). **Úplné výsledky:** [1–10](REKONSTRUKCE_TESTU_01_10.md), [11–20](REKONSTRUKCE_TESTU_11_20.md), [21–28](REKONSTRUKCE_TESTU_21_28.md).
+
+**Poznámka:** U historických příloh označených `100009xxxx.mp4` v chatu nebyla ještě prokázána totožnost s jinak pojmenovanou nahrávkou `Screen_Recording_*.mp4`. Přiřazení podle obsahu je užitečné, ale **není rovnocenné shodě SHA-256 originálů**. Případné nevysvětlené odchylky neřešit domněnkou.
