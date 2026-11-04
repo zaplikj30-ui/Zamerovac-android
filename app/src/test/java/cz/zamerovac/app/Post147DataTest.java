@@ -115,7 +115,10 @@ public class Post147DataTest {
                     found++;
                 }
             }
-            assertEquals(count,found);export.close();assertFalse(zip.exists());
+            assertEquals(count,found);
+            File fixture=new File("build/customer-pdf-"+count+".zip");fixture.getParentFile().mkdirs();
+            java.nio.file.Files.copy(zip.toPath(),fixture.toPath(),java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            export.close();assertFalse(zip.exists());
         }
     }
     @Test public void emptyExportAndInvalidImagesFailWithoutDatabaseWrites()throws Exception {

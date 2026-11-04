@@ -27,5 +27,7 @@ jobs:
         if: always()
         with:
           name: Native-regression-results
-          path: app/build/test-results/testPreviewUnitTest/
+          path: |
+            app/build/test-results/testPreviewUnitTest/
+            app/build/customer-pdf-*.zip
           retention-days: 14
