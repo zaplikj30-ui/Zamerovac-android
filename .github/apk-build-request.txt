@@ -2,5 +2,5 @@
 # Běžné změny kódu APK nesestavují. Teprve změna tohoto souboru spustí workflow build-apk.yml.
 # Při požadavku na sestavení uprav číslo a popis níže, commitni do main.
 
-request: 10
-reason: jedina prohlizeci APK po otestovani PR30; 25 kapitol ceske offline napovedy, lupa vyhledavani jen v napovede, hlavni vyhledavani zakazek zustava oddelene; bez zasahu do dat a kot; UI testy uspesne
+request: 11
+reason: jedna spolecna TEST APK 1.2.152 po issue31: pravdiva historie novinek oprav a vylepseni podle skutecnych vydani, hlavni menu a Nastaveni, offline a beze zmen zakaznickych dat; vsechny tri skupiny CI uspesne v PR32
