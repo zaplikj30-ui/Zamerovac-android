@@ -492,6 +492,24 @@ public class MainActivity extends Activity {
         }
         if(request==REQUEST_EXPORT&&data!=null&&data.getData()!=null&&exportBase64!=null){try(OutputStream out=getContentResolver().openOutputStream(data.getData(),"w")){out.write(Base64.decode(exportBase64,Base64.DEFAULT));exportBase64=null;onSyncResult("Obrázek uložen",null);}catch(Exception e){error("Export: "+e.getMessage());}}
     }
+    /** Human-readable filename follows the current application label and selected record. */
+    private String suggestArchiveName(String recordId){
+        String appName=String.valueOf(getApplicationInfo().loadLabel(getPackageManager()));
+        String detail=recordId==null?"zaloha":"zakazka";
+        if(recordId!=null)try{
+            JSONObject db=new JSONObject(readDb());
+            JSONArray records=db.optJSONArray("records");
+            if(records!=null)for(int i=0;i<records.length();i++){
+                JSONObject r=records.optJSONObject(i);
+                if(r!=null&&recordId.equals(r.optString("id"))){
+                    detail=r.optString("title","zakazka");break;
+                }
+            }
+        }catch(Exception ignored){}
+        String name=(appName+"-"+detail).replaceAll("[\\\\/:*?\\\"<>|\\p{Cntrl}]","_").trim();
+        if(name.length()>100)name=name.substring(0,100);
+        return (name.isEmpty()?"Zamerovac-zaloha":name)+".zip";
+    }
     private void exportArchive(OutputStream destination,String folderId) throws IOException{
         String json=readDb();
         if(json.isEmpty())throw new IOException("Databáze je prázdná");
@@ -506,7 +524,8 @@ public class MainActivity extends Activity {
             boolean found=false;
             for(int i=0;i<records.length();i++){
                 JSONObject r=records.optJSONObject(i);
-                if(r!=null&&folderId.equals(r.optString("id"))&&"folder".equals(r.optString("kind"))&&!r.optBoolean("deleted")){
+                if(r!=null&&folderId.equals(r.optString("id"))&&
+                    ("folder".equals(r.optString("kind"))||"photo".equals(r.optString("kind")))&&!r.optBoolean("deleted")){
                     included.add(folderId);found=true;break;
                 }
             }
@@ -732,16 +751,29 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void importBackup(){
             runOnUiThread(()->{
                 Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
-                    .setType("application/zip").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                    .setType("*/*").addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+                 // Some Android document providers mislabel .zip (e.g. application/octet-stream).
+                 // Let the user select it; BackupImporter strictly validates ZIP structure/content.
                 try{startActivityForResult(intent,REQUEST_IMPORT_BACKUP);}
                 catch(Exception e){error("Obnova zálohy: "+e.getMessage());}
+            });
+        }
+        /** Export one photo with its editable annotations and all nested attachments. */
+        @JavascriptInterface public void exportPhoto(String photoId){
+            if(photoId==null||!photoId.matches("[a-zA-Z0-9_-]{1,100}")){error("Neplatná fotografie");return;}
+            runOnUiThread(()->{
+                pendingArchiveFolderId=photoId;
+                Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
+                    .setType("application/zip").putExtra(Intent.EXTRA_TITLE,suggestArchiveName(photoId));
+                try{startActivityForResult(intent,REQUEST_BACKUP);}
+                catch(Exception e){pendingArchiveFolderId=null;error("Export fotografie: "+e.getMessage());}
             });
         }
         @JavascriptInterface public void exportBackup(){
             runOnUiThread(()->{
                 pendingArchiveFolderId=null;
                 Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
-                    .setType("application/zip").putExtra(Intent.EXTRA_TITLE,"Zamerovac-zaloha.zip");
+                    .setType("application/zip").putExtra(Intent.EXTRA_TITLE,suggestArchiveName(null));
                 try{startActivityForResult(intent,REQUEST_BACKUP);}catch(Exception e){error("Záloha: "+e.getMessage());}
             });
         }
@@ -750,7 +782,7 @@ public class MainActivity extends Activity {
             runOnUiThread(()->{
                 pendingArchiveFolderId=folderId;
                 Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT).addCategory(Intent.CATEGORY_OPENABLE)
-                    .setType("application/zip").putExtra(Intent.EXTRA_TITLE,"Zamerovac-slozka.zip");
+                    .setType("application/zip").putExtra(Intent.EXTRA_TITLE,suggestArchiveName(folderId));
                 try{startActivityForResult(intent,REQUEST_BACKUP);}
                 catch(Exception e){pendingArchiveFolderId=null;error("Export složky: "+e.getMessage());}
             });
