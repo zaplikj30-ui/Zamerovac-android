@@ -40,10 +40,9 @@
    photoSize={w:image.naturalWidth,h:image.naturalHeight};selected=null;
    prefs.layerVisible={dimensions:true,drawing:true,notes:options.notes};
    window.__exportingAnnotations=true;
-   // Native resolution appearance: captions and strokes scale with the photo.
-   c.save();c.scale(scale,scale);view={zoom:1,dx:0,dy:0};
+   // Use the same screen-space labels/strokes as the editor. Downsampling a
+   // large camera photo must not shrink a 17 px caption into unreadable pixels.
    for(const item of items)drawItem(c,item);
-   c.restore();
    return canvas.toDataURL('image/png').split(',')[1];
   }finally{
    ctx=old.ctx;view=old.view;current=old.current;photoSize=old.photoSize;selected=old.selected;

@@ -60,19 +60,19 @@ public class Post147DataTest {
     @Test public void unreadableDatabaseNeverBecomesWritableEmptyState()throws Exception {
         MainActivity activity=org.robolectric.Robolectric.buildActivity(MainActivity.class).get();
         File primary=new File(activity.getFilesDir(),"projects.json"),backup=new File(activity.getFilesDir(),"projects.bak");
-        java.nio.file.Files.writeString(primary.toPath(),"broken-primary");
-        java.nio.file.Files.writeString(backup.toPath(),"broken-backup");
+        java.nio.file.Files.write(primary.toPath(),"broken-primary".getBytes(StandardCharsets.UTF_8));
+        java.nio.file.Files.write(backup.toPath(),"broken-backup".getBytes(StandardCharsets.UTF_8));
         String loaded=activity.new JsApi().loadData();assertTrue(new JSONObject(loaded).getBoolean("_loadError"));
         java.lang.reflect.Method write=MainActivity.class.getDeclaredMethod("writeDb",String.class);write.setAccessible(true);
         try{write.invoke(activity,"{\"schema\":1,\"records\":[]}");fail("Write after failed load must be blocked");}
         catch(java.lang.reflect.InvocationTargetException expected){assertTrue(expected.getCause() instanceof IOException);}
-        assertEquals("broken-primary",java.nio.file.Files.readString(primary.toPath()));
-        assertEquals("broken-backup",java.nio.file.Files.readString(backup.toPath()));
-        String recovered=legacy().toString();java.nio.file.Files.writeString(backup.toPath(),recovered);
+        assertEquals("broken-primary",new String(java.nio.file.Files.readAllBytes(primary.toPath()),StandardCharsets.UTF_8));
+        assertEquals("broken-backup",new String(java.nio.file.Files.readAllBytes(backup.toPath()),StandardCharsets.UTF_8));
+        String recovered=legacy().toString();java.nio.file.Files.write(backup.toPath(),recovered.getBytes(StandardCharsets.UTF_8));
         assertEquals(recovered,activity.new JsApi().loadData());
         write.invoke(activity,recovered);
-        assertEquals(recovered,java.nio.file.Files.readString(primary.toPath()));
-        assertEquals(recovered,java.nio.file.Files.readString(backup.toPath()));
+        assertEquals(recovered,new String(java.nio.file.Files.readAllBytes(primary.toPath()),StandardCharsets.UTF_8));
+        assertEquals(recovered,new String(java.nio.file.Files.readAllBytes(backup.toPath()),StandardCharsets.UTF_8));
     }
     @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
     public void customerZipContainsOnlyRasterPdfForOneAndMultiplePhotos()throws Exception {
