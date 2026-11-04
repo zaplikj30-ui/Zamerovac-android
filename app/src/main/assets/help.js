@@ -472,6 +472,7 @@ const chapters=[
       "V Editoru nastav lupu, přichytávání bodů/rastru, mřížku, odstup rastru a citlivost přesouvání.",
       "V Rozměrech nastav výchozí jednotky a počet zobrazovaných desetinných míst.",
       "Ve Vzhledu nastav barvu, tloušťku čar, velikost textu, zobrazení a další běžné chování.",
+      "V hlavním menu ☰ → Historie změn nebo v Nastavení → Novinky a historie změn si zobrazíš skutečné novinky, opravené chyby a vylepšení podle verzí.",
       "Jazyk aplikace zatím nabízí pouze 🇨🇿 Čeština; další překlady nejsou hotové."
     ],
     "notes": [
@@ -486,6 +487,11 @@ const chapters=[
       "barvy",
       "jazyk",
       "font",
+      "historie změn",
+      "changelog",
+      "opravené chyby",
+      "novinky",
+      "verze",
       "nastavení"
     ]
   },
