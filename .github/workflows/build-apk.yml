@@ -1,4 +1,4 @@
-name: Sestavit a vydat Zaměřovač TEST
+name: Sestavit a vydat Zaměřovač (testovací verze)
 # APK spustit jen rucne nebo zmenou vyhrazeneho spousteciho souboru.
 # Obycejne commity na main nesestavuji aplikaci.
 on:
@@ -43,7 +43,7 @@ jobs:
           node tests/laser_auto_interaction.js
           node tests/extra_toolbar_interaction.js
           python3 -m unittest discover -s tests -p "test_*.py" -v
-      - name: Sestavit pouze instalacni variantu Zaměřovač TEST
+      - name: Sestavit testovací variantu aplikace Zaměřovač
         run: gradle --no-daemon assemblePreview
       - name: Ověřit podpis a jednoznačnou verzi testovací APK
         shell: bash
@@ -70,7 +70,7 @@ jobs:
           sha256sum dist/*.apk
       - uses: actions/upload-artifact@v4
         with:
-          name: Zamerovac-TEST-APK
+          name: Zamerovac-testovaci-APK
           path: dist/*.apk
           retention-days: 30
       - name: Vydat APK přímo do GitHub Releases (bez ZIP)
@@ -94,7 +94,7 @@ jobs:
                   --repo "$GITHUB_REPOSITORY" \
                   --target "$GITHUB_SHA" \
                   --title "Zaměřovač 1.2.${GITHUB_RUN_NUMBER}" \
-                  --notes "Testovací verze pro Android. Aktualizuje nainstalovaný Zaměřovač TEST bez smazání dat. Původní Zaměřovač zůstává nedotčený. Otevři APK přímo ze Stažených souborů." \
+                  --notes "Testovací sestavení aplikace Zaměřovač pro Android. Aktualizuje pouze dřívější testovací instalaci (balíček cz.zamerovac.app.preview) při zachování jejích dat; běžnou instalaci aplikace Zaměřovač nemění. Otevři APK přímo ze Stažených souborů." \
                   --latest; then
                 exit 0
               fi
