@@ -9,7 +9,7 @@ const labels=[],arrows=[];
 const graphics={save(){},restore(){},beginPath(){},moveTo(){},lineTo(){},stroke(){},
  strokeRect(){},closePath(){},arc(){},ellipse(){},fill(){},fillRect(){},translate(){},rotate(){},
  setLineDash(){},measureText:()=>({width:10})};
-const env={prefs:{unit:'mm',color:'#ffe000',lineWidth:2,fontSize:17},
+const env={view:{zoom:1,dx:0,dy:0},prefs:{unit:'mm',color:'#ffe000',lineWidth:2,fontSize:17},
  worldToScreen:p=>({...p}),canvasText:(text)=>labels.push(text),
  drawArrow:(...args)=>arrows.push(args),drawNoteLeader:()=>{},
  noteDisplayedCaption:()=>'',noteCaptionScreen:()=>({x:0,y:0}),
