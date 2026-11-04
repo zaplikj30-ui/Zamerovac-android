@@ -273,6 +273,11 @@ function quadAreaFromMeasures(item){
  const first=triangleArea(sides[0],sides[1],diag),second=triangleArea(sides[2],sides[3],diag);
  return first!==null&&second!==null?(first+second)/1000000:null;
 }
+// Unitless captions hide only the suffix; item.unit remains unchanged for measurements.
+function measureDisplay(value,unit,hideUnit=false){
+ const text=String(value??'');
+ return !text||hideUnit?text:text+' '+(unit||'mm');
+}
 function drawItem(c,item){let a=item.a&&worldToScreen(item.a),b=item.b&&worldToScreen(item.b);let pts=(item.points||[]).map(worldToScreen);const color=item.color||prefs.color,fw=(item.width||prefs.lineWidth),fs=(item.fontSize||prefs.fontSize);c.save();c.strokeStyle=color;c.fillStyle=color;c.lineWidth=fw;c.lineJoin='round';c.lineCap='round';
 function seg(){c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.stroke()};
 if(item.type==='angle'&&pts.length>=3){
@@ -285,11 +290,11 @@ if(item.type==='angle'&&pts.length>=3){
   Math.hypot(q.x-vertex.x,q.y-vertex.y)*.4));
  c.beginPath();c.arc(vertex.x,vertex.y,radius,a1,a1+angle,angle<0);c.stroke();
  const mid=a1+angle/2;
- canvasText((item.measure||degrees.toFixed(1))+'°',
+ canvasText((item.measure||degrees.toFixed(1))+(item.hideUnit?'':'°'),
   {x:vertex.x+Math.cos(mid)*(radius+25),y:vertex.y+Math.sin(mid)*(radius+25)},color,fs);
  for(let i=0;i<2;i++){
   const end=i===0?p:q,row=item.segmentData?.[i]||{};
-  const caption=[row.measure?row.measure+' '+(row.unit||'mm'):'',row.text||''].filter(Boolean).join(' · ');
+  const caption=[row.measure?measureDisplay(row.measure,row.unit,row.hideUnit):'',row.text||''].filter(Boolean).join(' · ');
   if(caption)canvasText(caption,{x:(end.x+vertex.x)/2+(end.x-vertex.x)*(Number(row.labelT)||0),y:(end.y+vertex.y)/2-18+(end.y-vertex.y)*(Number(row.labelT)||0)},color,fs);
  }
 }
@@ -309,17 +314,17 @@ else if(['chain','cumulative'].includes(item.type)&&pts.length>1){
   c.lineTo(to.x+nx*(offset+9),to.y+ny*(offset+9));
   c.moveTo(p.x,p.y);c.lineTo(q.x,q.y);c.stroke();
   drawArrow(c,p,q,9);drawArrow(c,q,p,9);
-  const caption=[data.measure?data.measure+' '+(data.unit||item.unit||'mm'):'?',data.text||''].filter(Boolean).join(' · ');
+  const caption=[data.measure?measureDisplay(data.measure,data.unit||item.unit,data.hideUnit):'?',data.text||''].filter(Boolean).join(' · ');
   let angle=Math.atan2(dy,dx);if(angle>Math.PI/2||angle< -Math.PI/2)angle+=Math.PI;
   canvasText(caption,{x:(p.x+q.x)/2+(q.x-p.x)*(Number(data.labelT)||0),y:(p.y+q.y)/2+(q.y-p.y)*(Number(data.labelT)||0)},color,fs,angle);
  }
 }
-else if(item.type==='dimension'||item.type==='chain'||item.type==='cumulative'){if(a&&b){let dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1;let nx=-dy/d,ny=dx/d;let off=item.offset??0;let ao={x:a.x+nx*off,y:a.y+ny*off},bo={x:b.x+nx*off,y:b.y+ny*off};c.beginPath();c.moveTo(a.x+nx*(off-11),a.y+ny*(off-11));c.lineTo(a.x+nx*(off+11),a.y+ny*(off+11));c.moveTo(b.x+nx*(off-11),b.y+ny*(off-11));c.lineTo(b.x+nx*(off+11),b.y+ny*(off+11));c.moveTo(ao.x,ao.y);c.lineTo(bo.x,bo.y);c.stroke();drawArrow(c,ao,bo,9);drawArrow(c,bo,ao,9);let label=item.measure?`${item.measure} ${item.unit||'mm'}`:'?';if(item.text)label+=' · '+item.text;let ang=Math.atan2(dy,dx);if(ang>Math.PI/2||ang< -Math.PI/2)ang+=Math.PI;canvasText(label,{x:(ao.x+bo.x)/2+nx*(-Math.max(26,fs*1.5))+(bo.x-ao.x)*(Number(item.labelT)||0),y:(ao.y+bo.y)/2+ny*(-Math.max(26,fs*1.5))+(bo.y-ao.y)*(Number(item.labelT)||0)},color,fs,ang)}}
+else if(item.type==='dimension'||item.type==='chain'||item.type==='cumulative'){if(a&&b){let dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1;let nx=-dy/d,ny=dx/d;let off=item.offset??0;let ao={x:a.x+nx*off,y:a.y+ny*off},bo={x:b.x+nx*off,y:b.y+ny*off};c.beginPath();c.moveTo(a.x+nx*(off-11),a.y+ny*(off-11));c.lineTo(a.x+nx*(off+11),a.y+ny*(off+11));c.moveTo(b.x+nx*(off-11),b.y+ny*(off-11));c.lineTo(b.x+nx*(off+11),b.y+ny*(off+11));c.moveTo(ao.x,ao.y);c.lineTo(bo.x,bo.y);c.stroke();drawArrow(c,ao,bo,9);drawArrow(c,bo,ao,9);let label=item.measure?measureDisplay(item.measure,item.unit,item.hideUnit):'?';if(item.text)label+=' · '+item.text;let ang=Math.atan2(dy,dx);if(ang>Math.PI/2||ang< -Math.PI/2)ang+=Math.PI;canvasText(label,{x:(ao.x+bo.x)/2+nx*(-Math.max(26,fs*1.5))+(bo.x-ao.x)*(Number(item.labelT)||0),y:(ao.y+bo.y)/2+ny*(-Math.max(26,fs*1.5))+(bo.y-ao.y)*(Number(item.labelT)||0)},color,fs,ang)}}
 else if(item.type==='target'){
  if(a){
    c.beginPath();c.arc(a.x,a.y,10,0,Math.PI*2);c.moveTo(a.x-14,a.y);c.lineTo(a.x+14,a.y);
    c.moveTo(a.x,a.y-14);c.lineTo(a.x,a.y+14);c.stroke();
-   const text=[item.measure?item.measure+' '+(item.unit||'mm'):'',item.text||''].filter(Boolean).join(' · ');
+   const text=[item.measure?measureDisplay(item.measure,item.unit,item.hideUnit):'',item.text||''].filter(Boolean).join(' · ');
    if(text)canvasText(text,b||{x:a.x+35,y:a.y+12},color,fs);
  }
 }
@@ -330,10 +335,10 @@ else if(item.type==='line'||item.type==='arrow'||item.type==='angle'){
   /* Fixed target has its own drawing branch above. */
   if(item.type==='angle'){
    const degree=(Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI+360)%360;
-   canvasText((item.measure||degree.toFixed(0))+'°',{x:(a.x+b.x)/2,y:(a.y+b.y)/2-23},color,fs);
+   canvasText((item.measure||degree.toFixed(0))+(item.hideUnit?'':'°'),{x:(a.x+b.x)/2,y:(a.y+b.y)/2-23},color,fs);
   }else if(item.type==='line'||item.type==='arrow'){
    // Stejný postup pro čáru i šipku: libovolný text a/nebo kóta.
-   const label=[item.measure?item.measure+' '+(item.unit||'mm'):'',item.text||''].filter(Boolean).join(' · ');
+   const label=[item.measure?measureDisplay(item.measure,item.unit,item.hideUnit):'',item.text||''].filter(Boolean).join(' · ');
    if(label){
     const dx=b.x-a.x,dy=b.y-a.y;
     let angle=Math.atan2(dy,dx);
@@ -382,10 +387,10 @@ else if(item.type==='ellipse'||item.type==='circle'){
  const g=ellipseGeometry(item),center=worldToScreen({x:g.cx,y:g.cy});
  const cx=center.x,cy=center.y,rx=g.rx*view.zoom,ry=g.ry*view.zoom;
  c.beginPath();c.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);c.stroke();
- const label=[item.measure?(item.measureKind==='radius'?'R ':'Ø ')+item.measure+' '+(item.unit||'mm'):'',item.text||''].filter(Boolean).join(' · ');
+ const label=[item.measure?(item.measureKind==='radius'?'R ':'Ø ')+measureDisplay(item.measure,item.unit,item.hideUnit):'',item.text||''].filter(Boolean).join(' · ');
  if(label)canvasText(label,{x:cx+Number(item.labelDx||0)*view.zoom,y:cy-28+Number(item.labelDy||0)*view.zoom},color,fs);
 }
-else if(item.type==='freehand'||item.type==='polyline'){if(pts.length){c.beginPath();c.moveTo(pts[0].x,pts[0].y);for(let p of pts.slice(1))c.lineTo(p.x,p.y);c.stroke();if(item.type==='polyline')for(let i=0;i<pts.length-1;i++){const row=item.segmentData?.[i]||{};const text=[row.measure?row.measure+' '+(row.unit||item.unit||'mm'):'',row.text||''].filter(Boolean).join(' · ');if(text)canvasText(text,{x:(pts[i].x+pts[i+1].x)/2+(pts[i+1].x-pts[i].x)*(Number(row.labelT)||0),y:(pts[i].y+pts[i+1].y)/2+(pts[i+1].y-pts[i].y)*(Number(row.labelT)||0)},color,fs,readableSegmentAngle(pts[i],pts[i+1]))}}}
+else if(item.type==='freehand'||item.type==='polyline'){if(pts.length){c.beginPath();c.moveTo(pts[0].x,pts[0].y);for(let p of pts.slice(1))c.lineTo(p.x,p.y);c.stroke();if(item.type==='polyline')for(let i=0;i<pts.length-1;i++){const row=item.segmentData?.[i]||{};const text=[row.measure?measureDisplay(row.measure,row.unit||item.unit,row.hideUnit):'',row.text||''].filter(Boolean).join(' · ');if(text)canvasText(text,{x:(pts[i].x+pts[i+1].x)/2+(pts[i+1].x-pts[i].x)*(Number(row.labelT)||0),y:(pts[i].y+pts[i+1].y)/2+(pts[i+1].y-pts[i].y)*(Number(row.labelT)||0)},color,fs,readableSegmentAngle(pts[i],pts[i+1]))}}}
 else if(item.type==='note'||item.type==='symbol'){if(a){if(item.type==='note'){drawNoteLeader(c,item,color);(noteDisplayedCaption(item)&&canvasText(noteDisplayedCaption(item),noteCaptionScreen(item),color,fs))}else canvasText((item.icon||'⚑')+' '+(item.text||''),a,color,fs)}}
 c.restore();}
 function drawLoupe(){
@@ -497,7 +502,7 @@ function nearestLabel(point){
     if(['circle','ellipse'].includes(item.type)&&(item.measure||item.text)){
       const g=ellipseGeometry(item);
       const x=g.cx+(Number(item.labelDx)||0)*view.zoom,y=g.cy-28+(Number(item.labelDy)||0)*view.zoom;
-      const label=[item.measure?item.measure+' '+(item.unit||'mm'):'',item.text||''].filter(Boolean).join(' · ');
+      const label=[item.measure?measureDisplay(item.measure,item.unit,item.hideUnit):'',item.text||''].filter(Boolean).join(' · ');
       ctx.save();ctx.font='600 '+(item.fontSize||prefs.fontSize)+'px sans-serif';
       const width=ctx.measureText(label).width;ctx.restore();
       if(Math.abs(point.x-x)<=Math.max(20,width/2+10)&&Math.abs(point.y-y)<=Math.max(12,(item.fontSize||prefs.fontSize)*.75))
@@ -507,7 +512,7 @@ function nearestLabel(point){
     const along=Math.abs((point.x-p.x)*p.ux+(point.y-p.y)*p.uy);
     const across=Math.abs((point.x-p.x)*(-p.uy)+(point.y-p.y)*p.ux);
     ctx.save();ctx.font='600 '+(item.fontSize||prefs.fontSize)+'px sans-serif';
-    const width=ctx.measureText((item.measure?(item.measure+' '+(item.unit||'mm')):'?')+(item.text?' · '+item.text:'')).width;ctx.restore();
+    const width=ctx.measureText((item.measure?(measureDisplay(item.measure,item.unit,item.hideUnit)):'?')+(item.text?' · '+item.text:'')).width;ctx.restore();
     if(along<=Math.max(28,width/2+15)&&across<=Math.max(11,(item.fontSize||prefs.fontSize)*.65)){
       return {item,kind:'label'};
     }
@@ -979,12 +984,12 @@ function editSegmentedItem(item){
  const readings=window.__boschHistoryReadings?.()||[];
  const header=item.type==='chain'?'Dimenzní řetězec':item.type==='cumulative'?'Kumulativní řetězec':'Lomená čára';
  const fields=saved.map((row,i)=>{
-  const selectedUnit=row.unit||item.unit||prefs.unit;
+  const selectedUnit=row.hideUnit?'none':(row.unit||item.unit||prefs.unit);
   const readingField=readings.length?'<select data-segment-reading="'+i+'"><option value="">Použít hodnotu z laseru…</option>'+
    readings.slice(0,30).map((reading,index)=>'<option value="'+index+'">'+escapeHtml(reading.value)+' '+escapeHtml(reading.unit)+'</option>').join('')+'</select>':'';
   return '<div class="segment-row"><strong>'+(item.type==='cumulative'?'Od začátku k bodu ':'Úsek ')+(i+1)+'</strong>'+
    '<label>Rozměr</label><div class="measure-with-unit"><input id="segmentMeasure'+i+'" type="text" value="'+escapeHtml(row.measure||'')+'" placeholder="Hodnota z laseru nebo ručně">'+
-   '<select aria-label="Jednotka úseku" id="segmentUnit'+i+'">'+['mm','cm','m','in'].map(u=>'<option '+(u===selectedUnit?'selected':'')+'>'+u+'</option>').join('')+'</select></div>'+
+   '<select aria-label="Jednotka úseku" id="segmentUnit'+i+'"><option value="none" '+(selectedUnit==='none'?'selected':'')+'>Bez jednotky</option>'+['mm','cm','m','in'].map(u=>'<option '+(u===selectedUnit?'selected':'')+'>'+u+'</option>').join('')+'</select></div>'+
    readingField+'<label>Popisek</label><input id="segmentText'+i+'" value="'+escapeHtml(row.text||'')+'" placeholder="Volitelný text"></div>';
  }).join('');
  const insertOptions=Array.from({length:count},(_,i)=>'<option value="'+i+'">Za úsek '+(i+1)+'</option>').join('');
@@ -997,10 +1002,17 @@ function editSegmentedItem(item){
    '<button class="outline" id="removeItem">Smazat celý prvek</button>',
    ()=>{checkpoint();readSegmentFields(item);commitEditor()},'Uložit');
  function readSegmentFields(target){
-  target.segmentData=Array.from({length:count},(_,i)=>({
-   measure:$('segmentMeasure'+i).value.trim(),
-   text:$('segmentText'+i).value.trim(),unit:$('segmentUnit'+i).value
-  }));
+  const previous=target.segmentData||[];
+  target.segmentData=Array.from({length:count},(_,i)=>{
+   const chosen=$('segmentUnit'+i).value;
+   return {
+    measure:$('segmentMeasure'+i).value.trim(),
+    text:$('segmentText'+i).value.trim(),
+    // The real unit is retained for Bosch readings; only the visible suffix is hidden.
+    unit:chosen==='none'?(previous[i]?.unit||target.unit||prefs.unit):chosen,
+    hideUnit:chosen==='none'
+   };
+  });
  }
  for(let i=0;i<count;i++)for(const prefix of ['segmentMeasure','segmentText','segmentUnit'])$(prefix+i).onfocus=()=>{item.activeSegmentIndex=i};
  $('modalBody').querySelectorAll('[data-segment-reading]').forEach(select=>select.onchange=()=>{
@@ -1095,11 +1107,11 @@ function editItem(item){
    '</select><small class="bosch-history-hint">Výběrem hodnoty se vyplní rozměr. Potvrď tlačítkem Uložit.</small>':'';
   modal('Upravit hodnotu',
    '<label>Rozměr</label><div class="measure-with-unit"><input id="measureInput" type="text" value="'+escapeHtml(item.measure||'')+'">'+
-   '<select aria-label="Jednotka rozměru" id="measureUnit">'+['mm','cm','m','in','m²','°'].map(u=>'<option '+(u===(item.unit||prefs.unit)?'selected':'')+'>'+u+'</option>').join('')+'</select></div>'+
+   '<select aria-label="Jednotka rozměru" id="measureUnit"><option value="none" '+(item.hideUnit?'selected':'')+'>Bez jednotky</option>'+['mm','cm','m','in','m²','°'].map(u=>'<option '+(!item.hideUnit&&u===(item.unit||prefs.unit)?'selected':'')+'>'+u+'</option>').join('')+'</select></div>'+
    historyMarkup+
    '<label>Popisek ke kótě (volitelné)</label><input id="dimensionCaption" value="'+escapeHtml(item.text||'')+'" placeholder="Např. přívod vody">'+
    '<div class="row wrap"><button id="removeItem" class="outline">Smazat kótu</button></div>',
-   ()=>{checkpoint();item.measure=$('measureInput').value;item.unit=$('measureUnit').value;item.text=$('dimensionCaption').value.trim();commitEditor()}
+   ()=>{checkpoint();item.measure=$('measureInput').value;const unit=$('measureUnit').value;item.hideUnit=unit==='none';if(!item.hideUnit)item.unit=unit;else if(!item.unit)item.unit=prefs.unit;item.text=$('dimensionCaption').value.trim();commitEditor()}
   );
   const chooser=$('boschReadingSelection');
   if(chooser)chooser.onchange=()=>{
@@ -1118,11 +1130,11 @@ function editItem(item){
     history.slice(0,40).map((r,i)=>'<option value="'+i+'">'+escapeHtml(r.value+' '+r.unit)+'</option>').join('')+'</select>':'';
   modal(kind==='line'?'Upravit čáru':kind==='arrow'?'Upravit šipku':kind==='rect'?'Upravit obdélník':'Upravit tvar',
    (kind==='rect'?'':'<label>'+(isRound?'Rozměr kruhu / elipsy':'Kóta / rozměr (volitelné)')+'</label><div class="measure-with-unit"><input id="measureInput" type="text" value="'+escapeHtml(item.measure||'')+'" placeholder="Např. 1250">'+
-   '<select aria-label="Jednotka rozměru" id="measureUnit">'+['mm','cm','m','in'].map(u=>'<option '+(u===(item.unit||prefs.unit)?'selected':'')+'>'+u+'</option>').join('')+'</select></div>')+
+   '<select aria-label="Jednotka rozměru" id="measureUnit"><option value="none" '+(item.hideUnit?'selected':'')+'>Bez jednotky</option>'+['mm','cm','m','in'].map(u=>'<option '+(!item.hideUnit&&u===(item.unit||prefs.unit)?'selected':'')+'>'+u+'</option>').join('')+'</select></div>')+
    roundFields+rectFields+(kind==='rect'?'<small id="rectBoschTarget">Bosch → šířka (mm). Klepnutím do šířky nebo výšky zvolíš cíl měření.</small>':'')+historyField+
    '<label>Textový popisek</label><input id="drawText" value="'+escapeHtml(item.text||'')+'" placeholder="Např. přívod vody">'+
    '<div class="row"><button id="removeItem" class="outline">Smazat prvek</button></div>',
-   ()=>{checkpoint();if(kind!=='rect'){item.measure=$('measureInput').value.trim();item.unit=$('measureUnit').value}item.text=$('drawText').value.trim();
+   ()=>{checkpoint();if(kind!=='rect'){item.measure=$('measureInput').value.trim();const unit=$('measureUnit').value;item.hideUnit=unit==='none';if(!item.hideUnit)item.unit=unit;else if(!item.unit)item.unit=prefs.unit}item.text=$('drawText').value.trim();
      if(isRound)item.measureKind=$('measureKind').value;
      if(kind==='rect'){item.dimW=$('rectWidth').value.trim();item.dimH=$('rectHeight').value.trim();item.widthText=$('rectWidthText').value.trim();item.heightText=$('rectHeightText').value.trim()}
      commitEditor();
