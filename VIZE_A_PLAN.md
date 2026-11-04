@@ -51,6 +51,22 @@ Tento seznam obsahuje dříve zmíněné nebo odložené směry. O přesném pro
 - Lepší práce s poznámkami/S Pen a hledání možností propojení se Samsung Notes, pouze pokud to dostupná rozhraní umožní.
 - Vylepšené srozumitelné popisky/editor a změna názvu aplikace/složek, pokud se na tom dohodneme.
 
+### Samostatný půdorys v zakázce – kreslení rukou s jemným inteligentním narovnáním
+
+**Dohoda k návrhu funkce (4. 11. 2026):** Uživatel chce **samostatnou položku „Půdorys“** ve struktuře zakázky, vedle fotografií, poznámek a složek (např. **+ → Vytvořit půdorys**). V půdorysu má jít kreslit místnost **volně prstem nebo perem** a následně stěny **okótovat ručním zadáním i Bluetooth laserem Bosch**. Podrobně upřesněné pravidlo je **kompromis mezi volným tahem a pomáháním s rovností a pravými úhly** — nikoli násilná změna všech stěn na pravoúhlé.
+
+**Požadované chování narovnávání (výslovně odsouhlasený směr):**
+
+1. **Narovnat nepřesný tah na čistou úsečku**, ale ponechat její **směr a přibližné umístění podle skutečného kreslení**. Volně vedená šikmá stěna zůstane šikmá; narovnání čáry není totéž jako narovnání úhlu na 90°.
+2. **Jemné přichytávání k vodorovné, svislé a pravému úhlu:** pokud je záměr z tahu zřejmý a odchylka opravdu malá, aplikace může nenápadně pomoci. Pokud je kresba očividně šikmá nebo je změna směru výraznější, **nesmí ji násilně přetočit**.
+3. **Žádné samovolné podstatné zkreslení obrysu:** aplikace nesmí kvůli pravoúhlosti přetáhnout stěnu na nechtěné místo, vytvořit jiné proporce, zrušit šikminu nebo ztratit důležité rohy. Pokud je geometrie nejasná, dát přednost věrnému narovnání jednotlivých tahů před agresivní automatickou úpravou celého půdorysu.
+4. **Oprava po nakreslení:** zůstanou editovatelné koncové body, rohy a stěny. Uživatel může změnit konkrétní úhel či bod; vhodný je vypínatelný/přepínatelný jemný magnet. Přesná citlivost přichytávání (úhlový práh, toleranci v pixelech, případně chování při zoomu) se **rozhodne podle prototypu a reálného testování**, nejde o schválené pevné číslo.
+5. **Rozměry oddělené od kreslicí nepřesnosti:** ke konkrétní stěně/kótě lze zadat skutečnou délku **ručně nebo přes Bosch**; nerozhodovat o reálných milimetrech pouze podle délky čáry na displeji. Případné automatické přepočítávání geometrie půdorysu podle zadaného rozměru musí být **kontrolované a nesmí bez potvrzení nechtěně přemístit ostatní stěny**.
+6. **Samostatný editovatelný dokument:** uložit půdorys jako položku zakázky, se strukturou bodů, stěn, jejich vztahů, rozměrů, kót a případných poznámek; **ne jako jediný nevratný obrázek**. Uložená data musí být přenositelná a připravená k budoucímu použití v návrháři nábytku a na PC.
+7. **Budoucí rozšíření (nyní nerozhodnutý rozsah):** dveře, okna, zásuvky, voda, odpad, překážky, pomůcky při zaměřování a pozdější napojení na 2D/3D návrh a Konfigurátor–Nářezák. Nezaměňovat s již schválenou implementací těchto modulů.
+
+**Stav:** **záměr funkce a princip jemného narovnávání jsou zaznamenané**, ale **neexistuje schválený termín, finální UX ani přesná technická specifikace pro okamžitou implementaci**. V tomto kroku se **nemění Android kód, nevytváří nová APK a nezasahuje do probíhajících oprav ani do starých zakázek**. Před implementací bude potřeba samostatně dohodnout podrobnosti interakce a otestovat přesnost na prstu i stylusu.
+
 ### Průvodce zaměřením – budoucí možnost, nikoli současná úprava
 
 **Stav: NÁPAD / BUDOUCÍ MOŽNOST K POZDĚJŠÍMU ROZHODNUTÍ.** Není to potvrzená funkce stávající APK, nepatří automaticky do nejbližší aktualizace a neznamená příkaz nyní vytvořit novou obrazovku. Doplňuje již zaznamenanou budoucí možnost automatických kontrol chyb při zaměření a navrhování nábytku.
@@ -385,6 +401,8 @@ Tato část **zpřesňuje již existující požadavek**, nezakládá druhé nez
 | 2026-11-04 | Přidána nezávazná možnost budoucí podpory iPhone/iPad (iOS/iPadOS), přenositelné logiky a dat a případného Apple App Store; bez zahájení iOS vývoje, změny frameworku či oslabení Androidu. |
 
 | 2026-11-04 | Upřesněn nezávazný dlouhodobý směr širší dostupnosti pro různá řemesla a zahraniční uživatele, volitelných samostatných modulů a přehledného ovládání. **Finanční model není rozhodnutý** (zdarma / jednorázová platba / předplatné / volitelné placené funkce či jinak); žádná varianta není schválena ani vyloučena. Pouze dokumentace, bez změn kódu. |
+
+| 2026-11-04 | Nový budoucí samostatný typ položky „Půdorys“: volné kreslení rukou/perem s inteligentním **jemným narovnáním** jednotlivých stěn, které zachová jejich skutečně nakreslený směr; 90° jen při malé odchylce, bez násilného přetáčení šikmin. Rohy editovatelné, kóty ručně/Bosch, přenosná editovatelná data. Nejde o pokyn ihned implementovat či sestavit APK. |
 
 ## 8. Další dohledané drobné náměty a ověřované detaily z testování
 Tyto body jsou rozdělené podle původního kontextu; **nesmí se automaticky vydávat za hotové**.
