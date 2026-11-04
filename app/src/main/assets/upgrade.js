@@ -33,6 +33,7 @@ $('back').onclick=()=>showAppMenu('navMenu',[
  ['⚙  Nastavení',()=>toggleSettings()],
  ['🧪  Experimentální funkce',openExperimentalSettings],
  ['🗑️  Koš',showTrash],
+ ['❔  Nápověda',()=>window.openZamerovacHelp?.()],
  ['☁  Google Disk',chooseCloud],
  ['ⓘ  O Zaměřovači',()=>modal('O Zaměřovači','<p>Vlastní aplikace pro zaměřování nábytku.</p><p>Verze: <b>'+esc(appVersion)+'</b></p>',()=>true,'Zavřít')]
 ]);
