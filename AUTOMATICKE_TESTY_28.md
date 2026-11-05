@@ -61,3 +61,7 @@ Specifikace #38/#34/#33 → PeerCoordinator/PeerDiscovery/PeerWifiDirect/MainAct
 ## Poskytovatel ignorující timeout – etapa 15
 
 #33/#38/#40 → ProviderIo a oba Document adaptéry → ProviderIoTest: skutečné čekající read/write/close ignorují interrupt, volající se vrátí po deadline, další worker funguje, původní caller buffer je chráněný, stream po selhání nepokračuje a opožděný resource se zavře právě jednou. Úspěšné byte/offset/EOF/close kontrakty zůstávají. DocumentBackupStoreTest dál ověřuje null/denied/duplicitní provider, nyní veřejnou query s CancellationSignal. Výsledek nového nativního CI teprve ověřit; skutečný Google provider/Binder a fyzické timeouty nejsou testovány.
+
+## Durable cloud inbox – etapa 16
+
+#33/#38 → CloudInbox/SafSyncV2/SyncStore.namespace → CloudInboxTest + nový SafSyncV2Test. Pozitivní: skutečný DB commit, ztracená publikace ACK, restart, nové podepsané ACK a nulové opakované čtení starých incoming zpráv; druhá instance uvidí potvrzený zápis. Negativní: jiná instalace/úložiště není důkazem lokálního commitu, odmítnutý AtomicFile zápis nemůže změnit ack cache, bez uloženého commitu nebo při změně hash/size nelze potvrdit. Nativní výsledek nové etapy teprve Actions. Zbývající control-frame/list režie a opakované source ověřování popsány v docs/update-39-progress.md.

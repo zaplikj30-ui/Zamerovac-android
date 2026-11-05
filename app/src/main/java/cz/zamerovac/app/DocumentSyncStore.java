@@ -11,6 +11,7 @@ import java.util.*;
 final class DocumentSyncStore implements SyncStore {
     private final ContentResolver resolver;private final Uri tree;private final ProviderIo io=ProviderIo.SHARED;
     DocumentSyncStore(Context context,String uri)throws IOException{if(uri==null||uri.isEmpty())throw new IOException("Nejdříve vyber složku historických synchronizace.");tree=Uri.parse(uri);if(!"content".equals(tree.getScheme())||!DocumentsContract.isTreeUri(tree))throw new IOException("Neplatná složka synchronizace");resolver=context.getContentResolver();}
+    @Override public String namespace(){return tree.toString();}
     private static final class Child {final Uri uri;final String name;final boolean directory;final long size;Child(Uri uri,String name,boolean directory,long size){this.uri=uri;this.name=name;this.directory=directory;this.size=size;}}
     private List<Child> children(Uri parent)throws Exception{
         Uri query=DocumentsContract.buildChildDocumentsUriUsingTree(tree,DocumentsContract.getDocumentId(parent));android.os.CancellationSignal signal=new android.os.CancellationSignal();

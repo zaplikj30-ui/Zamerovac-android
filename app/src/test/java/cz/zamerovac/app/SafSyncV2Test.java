@@ -12,11 +12,12 @@ import static org.junit.Assert.*;
 @RunWith(RobolectricTestRunner.class) @Config(sdk=35)
 public class SafSyncV2Test {
  static class Store extends BackupHistoryTest.FilesStore implements SyncStore {
-  int readsOfLarge;String largeHash="";int writes;boolean failTwentieth;
+  int readsOfLarge,messageReads;String largeHash="",watchedMessages="";int writes;boolean failTwentieth,failAck;
   Store(File root){super(root);}
+  @Override public String namespace(){return root.getAbsolutePath();}
   @Override File file(String path)throws Exception{SyncStore.parts(path);return new File(root,path);}
-  @Override public InputStream open(String path)throws Exception{if(!largeHash.isEmpty()&&path.contains(largeHash))readsOfLarge++;return super.open(path);}
-  @Override public OutputStream create(String path)throws Exception{OutputStream out=super.create(path);if(path.startsWith("sync/v2/blobs/")&&++writes==20&&failTwentieth){failTwentieth=false;return new FilterOutputStream(out){@Override public void write(byte[] bytes,int offset,int length)throws IOException{out.write(bytes,offset,Math.min(17,length));throw new IOException("synthetic twentieth blob disconnected");}};}return out;}
+  @Override public InputStream open(String path)throws Exception{if(!largeHash.isEmpty()&&path.contains(largeHash))readsOfLarge++;if(!watchedMessages.isEmpty()&&path.startsWith(watchedMessages))messageReads++;return super.open(path);}
+  @Override public OutputStream create(String path)throws Exception{OutputStream out=super.create(path);if(path.startsWith("sync/v2/acks/")&&failAck){failAck=false;return new FilterOutputStream(out){@Override public void write(byte[] bytes,int offset,int length)throws IOException{out.write(bytes,offset,Math.min(17,length));throw new IOException("synthetic lost ACK publication");}};}if(path.startsWith("sync/v2/blobs/")&&++writes==20&&failTwentieth){failTwentieth=false;return new FilterOutputStream(out){@Override public void write(byte[] bytes,int offset,int length)throws IOException{out.write(bytes,offset,Math.min(17,length));throw new IOException("synthetic twentieth blob disconnected");}};}return out;}
  }
  PeerTransferTest.Device a,b;SyncTls ai,bi,rogue;SyncPeerRegistry ar,br;Store store;String aid,bid;JSONObject original;
  @Before public void setup()throws Exception{
@@ -37,6 +38,9 @@ public class SafSyncV2Test {
  @Test public void meteredMetadataUsesExistingOriginalButMissingLargePhotoWaits()throws Exception{
   files(1,1500000);store.largeHash=PeerMedia.inspect(new File(a.home,"media/original-0")).getString("hash");assertTrue(sync(a,ai,true).sync().pending);assertTrue(sync(b,bi,true).sync().pending);assertEquals(0,new JSONObject(LocalDatabase.read(b.home)).getJSONArray("records").length());assertEquals(0,store.readsOfLarge);converge();store.readsOfLarge=0;
   JSONObject fresh=new JSONObject(LocalDatabase.read(a.home)),record=fresh.getJSONArray("records").getJSONObject(0);record.getJSONArray("items").getJSONObject(0).put("measure","0,000000000123456789");record.put("syncClock",CausalClock.advance(CausalClock.clock(record),aid));LocalDatabase.write(a.home,fresh.toString());for(int i=0;i<3;i++){sync(a,ai,true).sync();sync(b,bi,true).sync();}assertEquals("0,000000000123456789",new JSONObject(LocalDatabase.read(b.home)).getJSONArray("records").getJSONObject(0).getJSONArray("items").getJSONObject(0).getString("measure"));assertEquals(0,store.readsOfLarge);
+ }
+ @Test public void committedInboxSurvivesLostAckAndAvoidsReadingOldMessagesAfterRestart()throws Exception{
+  files(1,4000);store.watchedMessages="sync/v2/messages/"+bid+"/"+aid+"/";sync(a,ai,false).sync();store.failAck=true;SafSyncV2.Result interrupted=sync(b,bi,false).sync();assertTrue(interrupted.pending);assertTrue(interrupted.message.contains("synthetic lost ACK"));assertEquals(1,new JSONObject(LocalDatabase.read(b.home)).getJSONArray("records").length());store.messageReads=0;sync(b,bi,false).sync();assertEquals(0,store.messageReads);converge();store.messageReads=0;sync(b,bi,true).sync();assertEquals(0,store.messageReads);assertEquals(0,new PeerOutbox(a,a.prefs,ar).pending(bid));
  }
  @Test public void signedBodyCannotBeChangedReaddressedOrUsedAsAnotherProofKind()throws Exception{
   String hash="a".repeat(64);JSONObject envelope=CloudProof.sign(CloudProof.body(CloudProof.MESSAGE,aid,bid,hash,100),ai);CloudProof.verify(envelope,ai.certificate(),CloudProof.MESSAGE,aid,bid);

@@ -11,6 +11,7 @@ const pendingChanges={issue:39,released:false,groups:[{kind:'Nové funkce',items
  {text:'Potvrzované uložení, zachování souběžných změn a ochrana proti opožděnému výsledku synchronizace.'},
  {text:'Odmítnutí poškozených znaků Unicode bez tiché změny uloženého textu.'},
  {text:'Odmítnutí neúplné ZIP zálohy, kontrolní součty při obnově, potvrzované přílohy a bezpečné ukončení chybného hlasového záznamu.'},
+ {text:'Trvalý index již přijatých cloudových zpráv a pokračování potvrzení po výpadku bez opakování příloh či importu.'},
  {text:'Časově omezené operace systémového poskytovatele při záloze i synchronizaci; opožděné odpovědi a částečné zápisy se nepotvrzují.'},
  {text:'Živá cloudová cesta místo společného projects.json používá neměnné podepsané zprávy, ověřované originály a potvrzení příjemce. Přenos Diskem stále závisí na systémovém poskytovateli a čeká na fyzické ověření.'},
  {text:'Společné atomické ukládání a místní práce během pomalého SAF přenosu; novější změny zůstávají čekající.'},
