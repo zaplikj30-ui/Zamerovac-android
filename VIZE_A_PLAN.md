@@ -15,6 +15,14 @@
 
 **Stav:** schválený dlouhodobý technický směr a pracovní pravidla. **Žádný nový kód, migrace frameworku, rozsáhlý přepis ani APK nejsou touto dohodou samostatně spuštěné.** Cílem je nižší riziko regresí, ochrana reálných dat a dobře udržovatelný základ pro Android, Windows i iPhone/iPad.
 
+### Připravenost na budoucí nové technologie a funkce (upřesnění 5. 11. 2026)
+
+**Požadovaný výsledek:** Nové funkce, technologické výměny nebo další platformy mají být dlouhodobě přidatelné **bez zbytečných regresí, datových ztrát a plošného přepisování**. Není reálné zaručit nulový problém při každé migraci; cílem je promyšlená stavba aplikace, která takové změny usnadní a dovolí bezpečně otestovat i vrátit. Společné datové formáty, kóty, rozměry a pravidla musí zůstat přenositelné mezi Androidem, Windows a iPhone/iPadem; části ovládání nebo připojení k zařízení mohou mít jiné provedení.
+
+**Jak poznáme dobrý návrh:** Nový modul má jasnou odpovědnost; lze ho samostatně otestovat a případně vyměnit; nemění bez důvodu jiné funkce; staré zakázky dál načítá; důležité společné scénáře (uložení, návrat, změna hodnot, export, synchronizace, výpadek) procházejí pozitivními i negativními kontrolami. Technologie volit podle reálné použitelnosti, ne módy. V případě prokázaných zásadních slabin je možné po samostatném odsouhlasení připravit i větší přepracování se záložní cestou a opakovanými testy.
+
+**Stav:** dlouhodobá zásada, ne povel k okamžité migraci ani k vytvoření nové APK. Navazuje na [pravidla kvality #42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42).
+
 ## 1. Hlavní smysl
 Praktická samostatná Android aplikace pro zaměřování zakázkového nábytku: od založení zakázky přes fotografie, kóty a poznámky až po předání podkladů pro návrh a výrobu. Minimalizovat přepínání mezi aplikacemi, neztrácet naměřená data a udržet snadné ovládání přímo na stavbě/montáži.
 
