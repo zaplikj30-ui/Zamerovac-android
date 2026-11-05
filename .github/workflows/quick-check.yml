@@ -97,6 +97,7 @@ jobs:
           node tools/check-orientation-browser.cjs
           node tools/check-loupe-exit-browser.cjs
           node tools/check-address-map-browser.cjs
+          node tools/check-untrusted-ids-browser.cjs
 
   practical-e2e:
     name: Praktické UI a barevné pixely (syntetická data)
