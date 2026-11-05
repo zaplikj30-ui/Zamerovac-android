@@ -64,6 +64,7 @@ const chapters=[
     "notes": [
       "Původní fotografie se kvůli nakresleným kótám nemá přepisovat; anotace jsou uložené odděleně.",
       "Při chybě načtení fotografii zavři a otevři znovu. U důležitých dat neodinstalovávej aplikaci jako první způsob opravy.",
+      "Náhledy v přehledu se vytvářejí se zmenšeným dekódováním mimo zámek místní databáze, aby načítání fotografie neblokovalo ukládání. U náhledu se respektuje otočení i zrcadlení EXIF; originál zůstává beze změny. Při chybě nebo odstranění fotografie se nepublikuje opožděný náhled.",
       "Opakované otevření stejné fotografie využívá omezenou paměťovou mezipaměť dekódovaných obrázků. Po úplném restartu se originál načítá znovu. Při načítání nebo chybě se samostatné kóty nezobrazují na prázdném podkladu; originály ani hodnoty se nemění.",
       "Příloha se připojí až po potvrzení celého zápisu. Při přerušení se nedokončený soubor odmítne a existující originál se nepřepíše."
     ],

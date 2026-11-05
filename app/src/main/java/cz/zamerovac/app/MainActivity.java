@@ -125,6 +125,7 @@ public class MainActivity extends Activity {
     private String recordingId;
     private String pendingMediaType="media";
     private String pendingIssueZipId;
+    private final PhotoThumbnails photoThumbnails=new PhotoThumbnails();
     private final VideoThumbnails videoThumbnails=new VideoThumbnails();
     private CustomerPdfExport customerExport;
     private File pendingCustomerZip;
@@ -248,63 +249,7 @@ public class MainActivity extends Activity {
      */
     private InputStream photoThumbnail(String id) throws IOException {
         if(mediaMime(id).startsWith("video/"))return videoThumbnails.open(mediaFile(id),new File(getCacheDir(),"photo-thumbs"));
-        synchronized(TrashPurger.LOCK){
-        File source=mediaFile(id);
-        if(!source.isFile())return null;
-        File dir=new File(getCacheDir(),"photo-thumbs");
-        if(!dir.isDirectory()&&!dir.mkdirs())throw new IOException("Cannot create thumbnails cache");
-        File cached=new File(dir,id+".jpg");
-        if(!cached.isFile()||cached.lastModified()<source.lastModified()){
-            BitmapFactory.Options bounds=new BitmapFactory.Options();
-            bounds.inJustDecodeBounds=true;
-            BitmapFactory.decodeFile(source.getAbsolutePath(),bounds);
-            if(bounds.outWidth<=0||bounds.outHeight<=0)return null;
-            int sample=1;
-            while(Math.max(bounds.outWidth/sample,bounds.outHeight/sample)>512)sample*=2;
-            BitmapFactory.Options options=new BitmapFactory.Options();
-            options.inSampleSize=sample;
-            options.inPreferredConfig=Bitmap.Config.RGB_565;
-            Bitmap decoded=BitmapFactory.decodeFile(source.getAbsolutePath(),options);
-            if(decoded==null)return null;
-            Bitmap oriented=decoded,thumb=null;
-            try {
-                int orientation=ExifInterface.ORIENTATION_NORMAL;
-                try {
-                    orientation=new ExifInterface(source.getAbsolutePath()).getAttributeInt(
-                        ExifInterface.TAG_ORIENTATION,ExifInterface.ORIENTATION_NORMAL);
-                } catch(Exception e){android.util.Log.d("Zamerovac","Thumbnail EXIF unavailable",e);}
-                int angle=orientation==ExifInterface.ORIENTATION_ROTATE_90?90:
-                    orientation==ExifInterface.ORIENTATION_ROTATE_180?180:
-                    orientation==ExifInterface.ORIENTATION_ROTATE_270?270:0;
-                if(angle!=0){
-                    Matrix matrix=new Matrix();matrix.postRotate(angle);
-                    oriented=Bitmap.createBitmap(decoded,0,0,decoded.getWidth(),decoded.getHeight(),matrix,true);
-                }
-                int size=144;thumb=Bitmap.createBitmap(size,size,Bitmap.Config.RGB_565);
-                Canvas canvas=new Canvas(thumb);
-                Paint paint=new Paint(Paint.ANTI_ALIAS_FLAG|Paint.FILTER_BITMAP_FLAG);
-                float side=Math.min(oriented.getWidth(),oriented.getHeight());
-                Rect src=new Rect(
-                    (int)((oriented.getWidth()-side)/2f),(int)((oriented.getHeight()-side)/2f),
-                    (int)((oriented.getWidth()+side)/2f),(int)((oriented.getHeight()+side)/2f));
-                canvas.drawBitmap(oriented,src,new RectF(0,0,size,size),paint);
-                File tmp=new File(dir,id+".tmp");
-                try(FileOutputStream out=new FileOutputStream(tmp)){
-                    if(!thumb.compress(Bitmap.CompressFormat.JPEG,82,out))
-                        throw new IOException("Cannot encode thumbnail");
-                }
-                if(!tmp.renameTo(cached)){
-                    if(!cached.delete()||!tmp.renameTo(cached))
-                        throw new IOException("Cannot save thumbnail");
-                }
-            } finally {
-                if(thumb!=null)thumb.recycle();
-                if(oriented!=decoded)oriented.recycle();
-                decoded.recycle();
-            }
-        }
-        return new FileInputStream(cached);
-        }
+        return photoThumbnails.open(mediaFile(id),new File(getCacheDir(),"photo-thumbs"));
     }
 
     private boolean validId(String s){return s!=null&&s.matches("[a-zA-Z0-9_-]{3,120}");}
