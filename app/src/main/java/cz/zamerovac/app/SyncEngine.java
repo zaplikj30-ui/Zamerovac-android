@@ -73,7 +73,7 @@ public class SyncEngine {
         Set<String> all=new HashSet<>();all.addAll(l.keySet());all.addAll(r.keySet());
         JSONObject tombstones=CausalClock.tombstones(local.optJSONObject("syncTombstones"),remote.optJSONObject("syncTombstones"));
         for(String id:purged)if(!tombstones.has(id))tombstones.put(id,new JSONObject());
-        Set<String> generatedConflicts=new HashSet<>();
+        Set<String> generatedConflicts=new HashSet<>(),knownConflictSources=new HashSet<>();for(JSONObject record:l.values())if(record.has("conflictSource"))knownConflictSources.add(record.optString("conflictSource"));for(JSONObject record:r.values())if(record.has("conflictSource"))knownConflictSources.add(record.optString("conflictSource"));
         JSONArray merged=new JSONArray();JSONObject nextBase=new JSONObject();
         // Deterministic order keeps generated JSON stable.
         ArrayList<String> sorted=new ArrayList<>(all);java.util.Collections.sort(sorted);
@@ -82,8 +82,8 @@ public class SyncEngine {
                 for(JSONObject record:new JSONObject[]{lv,rv})if(record!=null&&!record.optBoolean("deleted")){
                     JSONObject clock=CausalClock.clock(record);String relation=CausalClock.compare(clock,tombstones.getJSONObject(id));
                     if(clock.length()==0||"after".equals(relation)||"concurrent".equals(relation)){
-                        String source="purge:"+id+":"+CausalClock.canonical(record);String copyId=UUID.nameUUIDFromBytes(source.getBytes(StandardCharsets.UTF_8)).toString();
-                        if(!l.containsKey(copyId)&&!r.containsKey(copyId)&&generatedConflicts.add(copyId))merged.put(new JSONObject(record.toString()).put("id",copyId).put("conflict",true).put("conflictOf",id).put("conflictSource",source).put("title",record.optString("title","Položka")+" (změna po vysypání koše)").put("syncClock",CausalClock.merge(clock,tombstones.getJSONObject(id))));
+                        JSONObject copy=SyncConflicts.purged(id,record,tombstones.getJSONObject(id));String copyId=copy.getString("id"),source=copy.getString("conflictSource");
+                        if(!knownConflictSources.contains(source)&&!tombstones.has(copyId)&&!l.containsKey(copyId)&&!r.containsKey(copyId)&&generatedConflicts.add(copyId))merged.put(copy);
                     }
                 }
                 continue;
@@ -106,12 +106,8 @@ public class SyncEngine {
                 else if(!(lc.length()>0&&rc.length()>0)&&known!=null&&!lrev.equals(rrev)&&known.equals(rrev))chosen=lv;
                 else {
                     // Preserve independent edits; do not discard either side.
-                    boolean localNewer=CausalClock.canonical(lv).compareTo(CausalClock.canonical(rv))<=0;
-                    chosen=localNewer?lv:rv;
-                    JSONObject losing=new JSONObject((localNewer?rv:lv).toString());
-                    String conflictHash=PeerWire.hash(CausalClock.canonical(new JSONObject().put("id",id).put("record",losing)).getBytes(StandardCharsets.UTF_8));String conflictId="conflict-"+conflictHash;losing.put("id",conflictId).put("conflictOf",id).put("conflictSource","revision:"+conflictHash);losing.put("title",losing.optString("title","Položka")+" (konflikt synchronizace)");
-                    losing.put("conflict",true);
-                    if(!l.containsKey(conflictId)&&!r.containsKey(conflictId))merged.put(losing);
+                    JSONObject conflict=SyncConflicts.normal(lv,rv);chosen="local".equals(conflict.getString("winner"))?lv:rv;JSONObject losing=conflict.getJSONObject("copy");String conflictId=losing.getString("id");
+                    if(!tombstones.has(conflictId)&&!l.containsKey(conflictId)&&!r.containsKey(conflictId))merged.put(losing);
                 }
             }
             merged.put(chosen);nextBase.put(id,chosen.optString("rev",""));

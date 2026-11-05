@@ -25,7 +25,7 @@ function openEditor(r){
   photoLoadTimer=setTimeout(failed,20000);
   loadPhotoImage(r.media[0]).then(img=>{
    if(!active())return;clearTimeout(photoLoadTimer);photoLoadFailed=false;stageImg=img;
-   photoSize={w:img.naturalWidth,h:img.naturalHeight};r.width=photoSize.w;r.height=photoSize.h;
+   photoSize={w:img.naturalWidth,h:img.naturalHeight};
    initialImageView();paint();
   }).catch(failed);
  }
@@ -93,7 +93,7 @@ function snap(p,ref=null,ignore=null){
  return boundsPoint(p);
 }
 function checkpoint(){editStack.push(JSON.stringify(current.items||[]));if(editStack.length>50)editStack.shift();redoStack=[]}
-function commitEditor(){touch(current);const confirmed=save();paint();return confirmed}
+function commitEditor(){if(current?.kind==='photo'&&stageImg){current.width=photoSize.w;current.height=photoSize.h;}touch(current);const confirmed=save();paint();return confirmed}
 function undoEditor(){if(!editStack.length)return;redoStack.push(JSON.stringify(current.items));current.items=JSON.parse(editStack.pop());commitEditor()}
 function redoEditor(){if(!redoStack.length)return;editStack.push(JSON.stringify(current.items));current.items=JSON.parse(redoStack.pop());commitEditor()}
 $('undo').onclick=undoEditor;$('redo').onclick=redoEditor;$('selectTool').onclick=()=>setTool('select');$('toolsToggle').onclick=()=>showTools();$('activeTool').onclick=()=>{

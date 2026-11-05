@@ -29,6 +29,12 @@ function mediaReferences(value,result=new Set(),depth=0){
  }
  return result;
 }
+async function resolveConflict(a,b,hash){
+ if(a.id!==b.id)throw Error('Different conflict source IDs');
+ const first=canonical(a)<=canonical(b),losing=clone(first?b:a),digest=await hash(new TextEncoder().encode(canonical({id:a.id,record:losing})));
+ if(!HASH.test(digest))throw Error('Invalid digest implementation');
+ return {winner:first?'local':'remote',copy:{...losing,id:'conflict-'+digest,conflict:true,conflictOf:a.id,conflictSource:'revision:'+digest,title:String(losing.title??'Položka')+' (konflikt synchronizace)'}};
+}
 async function mergeData(left,right,hash){
  validateData(left);validateData(right);
  const l=new Map(left.records.map(r=>[r.id,r])),r=new Map(right.records.map(r=>[r.id,r])),result=new Map();
@@ -38,12 +44,8 @@ async function mergeData(left,right,hash){
   const order=vectors.compare(a.syncClock||{},b.syncClock||{});
   if(order==='after'||order==='before'){result.set(id,clone(order==='after'?a:b));continue}
   // Equal clocks with different content are also unsafe to collapse.
-  const ordered=[a,b].sort((x,y)=>canonical(x)<canonical(y)?-1:canonical(x)>canonical(y)?1:0);
-  result.set(id,clone(ordered[0]));
-  const digest=await hash(new TextEncoder().encode(canonical({id,record:ordered[1]})));
-  if(!HASH.test(digest))throw Error('Invalid digest implementation');
-  const copy={...clone(ordered[1]),id:'conflict-'+digest,conflict:true,conflictOf:id};
-  if(!l.has(copy.id)&&!r.has(copy.id))result.set(copy.id,copy);
+  const conflict=await resolveConflict(a,b,hash);result.set(id,clone(conflict.winner==='local'?a:b));
+  if(!l.has(conflict.copy.id)&&!r.has(conflict.copy.id))result.set(conflict.copy.id,conflict.copy);
  }
  return {...clone(left),records:[...result.values()].sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0)};
 }
@@ -123,4 +125,4 @@ async function restoreBackup({store,hash,path}){
  const required=mediaReferences(data.records);if(required.size!==media.size||[...required].some(id=>!media.has(id)))throw Error('Incomplete backup');
  return {data,media,manifest}; // Caller must stage copies and CAS-commit; never overwrite the active database here.
 }
-module.exports={canonical,validateData,mediaReferences,mergeData,routesFor,jobId,PersistentQueue,createBackup,restoreBackup};
+module.exports={canonical,validateData,mediaReferences,resolveConflict,mergeData,routesFor,jobId,PersistentQueue,createBackup,restoreBackup};

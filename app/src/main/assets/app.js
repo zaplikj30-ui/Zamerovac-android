@@ -47,7 +47,7 @@ function reconcileSavedState(base,local,remote){
     if(record===l&&!sameSavedValue(record,o)&&sameSavedValue(record.syncClock,o?.syncClock))record={...record,syncClock:advanceSyncClock(record.syncClock||{})};
     if(!Object.keys(record.syncClock||{}).length||['after','concurrent'].includes(compareSyncClocks(record.syncClock||{},tombstones[id]))){
      const source='purge:'+id+':'+canonicalSavedValue(record);
-     if(!conflicts.has(source)){records.push({...record,id:uid(),conflict:true,conflictOf:id,conflictSource:source,title:(record.title||'Položka')+' (změna po vysypání koše)',syncClock:mergeSyncClocks(record.syncClock||{},tombstones[id])});conflicts.add(source)}
+     if(!conflicts.has(source)){let copy;if(native&&typeof Native.preservePurgedEdit==='function'){copy=JSON.parse(Native.preservePurgedEdit(id,JSON.stringify(record),JSON.stringify(tombstones[id])));if(copy.error||!copy.id)throw Error('Konfliktní kopie nebyla potvrzena');}else copy={...record,id:uid(),conflict:true,conflictOf:id,conflictSource:source,title:(record.title||'Položka')+' (změna po vysypání koše)',syncClock:mergeSyncClocks(record.syncClock||{},tombstones[id])};if(!Object.hasOwn(tombstones,copy.id))records.push(copy);conflicts.add(source)}
     }
    }
    continue;
@@ -56,11 +56,16 @@ function reconcileSavedState(base,local,remote){
   if(sameSavedValue(l,d)){if(l)records.push(l);continue}
   if(sameSavedValue(l,o)){if(d)records.push(d);continue}
   if(sameSavedValue(d,o)){if(l)records.push(l);continue}
-  // A physical removal is not permission to discard an independent live edit.
-  if(l)records.push(l);else if(d)records.push(d);
-  if(l&&d){
-   const source=JSON.stringify([id,d.rev||'',d]);
-   if(!conflicts.has(source)){records.push({...d,id:uid(),title:(d.title||'Položka')+' (konflikt synchronizace)',conflict:true,conflictSource:source});conflicts.add(source)}
+  // Use the same deterministic winner and copy as native peer merge.
+  if(l&&d&&native&&typeof Native.resolveSyncConflict==='function'){
+   const result=JSON.parse(Native.resolveSyncConflict(JSON.stringify(l),JSON.stringify(d)));
+   if(result.error||!result.copy?.id||!['local','remote'].includes(result.winner))throw Error('Konfliktní kopie nebyla potvrzena');
+   records.push(result.winner==='local'?l:d);const copy=result.copy;
+   if(!conflicts.has(copy.conflictSource)&&!ours.has(copy.id)&&!theirs.has(copy.id)&&!Object.hasOwn(tombstones,copy.id)){records.push(copy);conflicts.add(copy.conflictSource)}
+  }else{
+   // Browser-only fallback has no native transport; preserve both local drafts.
+   if(l)records.push(l);else if(d)records.push(d);
+   if(l&&d){const source=JSON.stringify([id,d.rev||'',d]);if(!conflicts.has(source)){records.push({...d,id:uid(),title:(d.title||'Položka')+' (konflikt synchronizace)',conflict:true,conflictSource:source});conflicts.add(source)}}
   }
  }
  return {...remote,...local,records,trashPurgedIds:[...purged],syncTombstones:tombstones,prefs};
@@ -68,7 +73,7 @@ function reconcileSavedState(base,local,remote){
 function applySavedState(next){
  state=next;state.prefs=prefs;
  // Retain live editor/note references when a local draft wins reconciliation.
- for(const active of [current,noteActive])if(active){let at=state.records.findIndex(r=>r.id===active.id);if(at<0)at=state.records.findIndex(r=>r.conflictOf===active.id&&r.rev===active.rev);if(at>=0&&state.records[at]!==active){Object.assign(active,state.records[at]);state.records[at]=active}}
+ for(const active of [current,noteActive])if(active){let at=state.records.findIndex(r=>r.id===active.id&&r.rev===active.rev);if(at<0)at=state.records.findIndex(r=>r.conflictOf===active.id&&r.rev===active.rev);if(at<0)at=state.records.findIndex(r=>r.id===active.id);if(at>=0&&state.records[at]!==active){Object.assign(active,state.records[at]);state.records[at]=active}}
  if(typeof document!=='undefined'&&current&&screen==='editor')$('editorTitle').textContent=current.title;
 }
 function reportSaveResult(ok){

@@ -1,6 +1,6 @@
 /* Originální implementace bodových poznámek s upravitelným detailem. */
 'use strict';
-let detailEditorParent=null,detailEditorNote=null;
+let detailEditorParent=null,detailEditorNote=null,detailEditorStartItems=null;
 function openRichNote(item,isNew){
  if(!current||window.isRecordLocked?.(current)){notify('Záznam je uzamčen');return}
  const parent=current;
@@ -107,7 +107,7 @@ function openRichNote(item,isNew){
 }
 function openNestedPhoto(parent,item,mediaId){
  if(!mediaId)return;
- detailEditorParent=parent;detailEditorNote=item;
+ detailEditorParent=parent;detailEditorNote=item;detailEditorStartItems=JSON.stringify(item.detailItems||[]);
  window.__detailParent=parent;window.__detailItem=item;
  const temp={id:item.id+'-detail',kind:'photo',title:'Detail: '+(item.text||'Fotografie'),
    media:[mediaId],items:item.detailItems||[],parentId:parent.parentId,width:item.detailWidth||1400,height:item.detailHeight||900,
@@ -119,10 +119,8 @@ const previousExitEditor=exitEditor;
 exitEditor=function(){
  if(detailEditorParent){
   const parent=detailEditorParent,item=detailEditorNote;
-  item.detailItems=current.items||[];
-  item.detailWidth=photoSize.w;item.detailHeight=photoSize.h;
-  touch(parent);save();
-  detailEditorParent=null;detailEditorNote=null;
+  if(JSON.stringify(current.items||[])!==detailEditorStartItems){item.detailItems=current.items||[];item.detailWidth=photoSize.w;item.detailHeight=photoSize.h;touch(parent);save();}
+  detailEditorParent=null;detailEditorNote=null;detailEditorStartItems=null;
   window.__detailParent=null;window.__detailItem=null;
   openEditor(parent);return;
  }

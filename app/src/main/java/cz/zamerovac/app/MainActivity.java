@@ -760,6 +760,8 @@ public class MainActivity extends Activity {
                 return "nezjištěna";
             }
         }
+        @JavascriptInterface public String resolveSyncConflict(String local,String remote){try{return SyncConflicts.normal(SyncConflicts.input(local),SyncConflicts.input(remote)).toString();}catch(Exception failure){return "{\"error\":true}";}}
+        @JavascriptInterface public String preservePurgedEdit(String id,String record,String tombstone){try{JsonInput.check(tombstone);JSONObject parsed=SyncConflicts.input(record);if(!id.equals(parsed.getString("id")))throw new IOException("Odlišné ID");return SyncConflicts.purged(id,parsed,new JSONObject(tombstone)).toString();}catch(Exception failure){return "{\"error\":true}";}}
         @JavascriptInterface public void backupHistoryControl(String command,String path,boolean allowMetered){if(command!=null&&command.length()<24&&path!=null&&path.length()<200)runOnUiThread(()->historyBackup(command,path,allowMetered));}
         @JavascriptInterface public void directSyncControl(String command,String argument){if(command!=null&&command.length()<40&&argument!=null&&argument.length()<200)runOnUiThread(()->directCommand(command,argument));}
         @JavascriptInterface public String directSyncState(){try{return directCoordinator().snapshot().toString();}catch(Exception failure){return "{\"problem\":\"Stav zařízení nelze načíst. Data zůstala uložená.\"}";}}

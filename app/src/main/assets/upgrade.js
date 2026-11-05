@@ -107,6 +107,7 @@ const oldSave=save;
 save=function(){
   try{return oldSave();}catch(e){logEvent('chyba','Nepodařilo se uložit místní data');notify('Uložení se nezdařilo');throw e}
 };
+const editorHistoryBaseline=new WeakMap();
 const oldCommit=commitEditor;
 commitEditor=function(){
   if(!current)return;
@@ -114,6 +115,7 @@ commitEditor=function(){
   // Snapshot jen při změně a maximálně 12 verzí; historie je uložena se zakázkou.
   if(!record._detailTemporary){
     if(!Array.isArray(record.versionHistory))record.versionHistory=[];
+    if(!record.versionHistory.length&&editorHistoryBaseline.has(record))record.versionHistory.push(editorHistoryBaseline.get(record));
     const serialized=JSON.stringify(record.items||[]);
     const previous=record.versionHistory[record.versionHistory.length-1];
     if(!previous||previous.items!==serialized){
@@ -163,9 +165,7 @@ recordActions=function(id){
 const oldOpenEditor=openEditor;
 openEditor=function(r){
  oldOpenEditor(r);
- if(!r._detailTemporary&&(!r.versionHistory||!r.versionHistory.length)){
-   r.versionHistory=[{time:new Date().toISOString(),items:JSON.stringify(r.items||[])}];
- }
+ if(!r._detailTemporary)editorHistoryBaseline.set(r,{time:r.updatedAt||r.createdAt||new Date().toISOString(),items:JSON.stringify(r.items||[])});
  const locked=recordLocked(r);
  stageCanvas.style.pointerEvents=locked?'none':'auto';
  $('editorHint').textContent=locked?'Zakázka je uzamčena – jen prohlížení':$('editorHint').textContent;

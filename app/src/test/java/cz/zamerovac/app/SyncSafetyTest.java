@@ -69,6 +69,10 @@ public class SyncSafetyTest {
   for(int i=0;i<4;i++)transport.sync();JSONArray records=new JSONObject(LocalDatabase.read(home)).getJSONArray("records");assertEquals(1,records.length());assertNotEquals("photo",records.getJSONObject(0).getString("id"));assertEquals("photo",records.getJSONObject(0).getString("conflictOf"));assertEquals("0,000000123456789",records.getJSONObject(0).getString("measure"));
   transport.remote=version("old","999,000001",clock(1,0));transport.sync();assertEquals(1,new JSONObject(LocalDatabase.read(home)).getJSONArray("records").length());
  }
+ @Test public void purgedConflictDoesNotReviveAndLegacyCopyDoesNotMultiply()throws Exception{
+  JSONObject record=version("independent","0,000000123456789",clock(2,0)).getJSONArray("records").getJSONObject(0),copy=SyncConflicts.purged("photo",record,clock(1,1));String copyId=copy.getString("id");JSONObject local=new JSONObject().put("schema",1).put("records",new JSONArray()).put("syncTombstones",new JSONObject().put("photo",clock(1,1)).put(copyId,clock(2,2)));JSONObject remote=new JSONObject().put("schema",1).put("records",new JSONArray().put(record));assertEquals(0,new SyncEngine(context,prefs).mergePeer(local,remote).getJSONArray("records").length());
+  copy.put("id","legacy-copy");local.getJSONObject("syncTombstones").remove(copyId);local.put("records",new JSONArray().put(copy));JSONArray result=new SyncEngine(context,prefs).mergePeer(local,remote).getJSONArray("records");assertEquals(1,result.length());assertEquals("legacy-copy",result.getJSONObject(0).getString("id"));
+ }
  @Test public void durableQueueSurvivesReopenAndRejectsStaleOrInvalidRevision()throws Exception {
   SyncQueueStore store=new SyncQueueStore(home);assertEquals(0,new JSONObject(store.read()).getInt("revision"));String one="{\"version\":2,\"revision\":1,\"jobs\":[]}";assertTrue(store.save(0,one));assertEquals(one,new SyncQueueStore(home).read());assertFalse(store.save(0,one));
   try{store.save(1,"{\"version\":2,\"revision\":2.5,\"jobs\":[]}");fail("Fractional revision accepted");}catch(Exception expected){}assertEquals(one,store.read());

@@ -1,0 +1,10 @@
+'use strict';
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict'),crypto=require('node:crypto'),p=require('../sync/protocol-v2');
+const f=JSON.parse(fs.readFileSync('app/src/test/resources/sync-canonical-v2.json')),source=fs.readFileSync('app/src/main/assets/app.js','utf8');
+const a=f.conflict.a,b=f.conflict.b,hash=bytes=>crypto.createHash('sha256').update(bytes).digest('hex');
+// The fake bridge returns the shared, independently checked wire fixture.
+const ctx={syncDeviceId:'11111111-1111-4111-8111-111111111111',prefs:{},current:structuredClone(b),noteActive:null,window:{},native:true,uid:()=>{throw Error('Random conflict ID used in native path')},Native:{resolveSyncConflict:()=>JSON.stringify(f.conflict.expected)}};vm.createContext(ctx);vm.runInContext(source.slice(source.indexOf('function checkedSyncClock'),source.indexOf('function reportSaveResult')),ctx);
+const base={schema:1,records:[{id:'photo',title:'base',rev:'base',items:[]}]},local={schema:1,records:[a]},remote={schema:1,records:[b]};
+const result=ctx.reconcileSavedState(base,local,remote);assert.equal(result.records.length,2);assert.equal(result.records.find(r=>r.conflict).id,f.conflict.expected.copy.id);ctx.applySavedState(result);assert.equal(ctx.current.id,f.conflict.expected.copy.id);assert.equal(ctx.current.items[0].measure,b.items[0].measure,'active draft follows its copy instead of switching to winning original');
+assert.equal(ctx.reconcileSavedState(base,local,result).records.length,2,'existing deterministic copy is not generated twice');ctx.Native.resolveSyncConflict=()=>'{"error":true}';assert.throws(()=>ctx.reconcileSavedState(base,local,remote),/nebyla potvrzena/);
+(async()=>{const value=await p.resolveConflict(a,b,async bytes=>hash(bytes));assert.equal(p.canonical(value),p.canonical(f.conflict.expected));console.log('PASS shared deterministic conflict bridge, exact active draft, duplicate suppression and failed bridge');})().catch(e=>{console.error(e);process.exit(1)});

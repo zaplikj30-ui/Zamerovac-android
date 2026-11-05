@@ -479,7 +479,8 @@ const chapters=[
       "Pro dosavadní cloudovou cestu v Nastavení nebo nabídce Google Disk vyber složku, do které má Zaměřovač přístup pro čtení i zápis.",
       "Ruční synchronizaci spouštěj přes Synchronizovat nyní; její skutečný stav ověř ve zprávách aplikace.",
       "Offline můžeš pracovat s lokálně dostupnými projekty. Při opětovném připojení zkontroluj úspěšné provedení synchronizace.",
-      "Při souběžných změnách na více zařízeních zkontroluj konfliktní kopie, než cokoli smažeš."
+      "Při souběžných změnách na více zařízeních zkontroluj konfliktní kopie, než cokoli smažeš. Otevřený editor zůstane u své zachované změny, i když dostane nové ID kopie.",
+      "Pouhé prohlížení fotografie nebo detailu nevytváří historii ani novou revizi. Výchozí stav historie se uloží až s první skutečnou úpravou; rozměry plátna se zapíší při editaci, naměřené hodnoty se z pixelů neodvozují."
     ],
     "notes": [
       "Přímé propojení nevyžaduje internet, Google účet ani služby Samsungu. Wi-Fi Direct závisí na podpoře konkrétního Androidu a oprávněních; na starším Androidu také na zapnutém určování polohy. Při nepodpoře použij stejnou místní Wi-Fi. Rádia různých značek je stále nutné fyzicky ověřit.",

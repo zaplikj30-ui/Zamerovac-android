@@ -1,0 +1,12 @@
+'use strict';
+const {suite,assert,tool,drag,editSelected}=require('./harness.cjs');
+suite('read-only-sync',async run=>{
+ await run('view-photo-and-detail-without-revision-then-edit-with-history',async({page})=>{
+  const before=await page.evaluate(async()=>{const c=document.createElement('canvas');c.width=1800;c.height=1000;c.getContext('2d').fillRect(0,0,c.width,c.height);const blob=await new Promise(r=>c.toBlob(r)),id=await storeMedia(new File([blob],'synthetic.png',{type:'image/png'})),record=newRecord('photo','Jen prohlížení');record.media=[id];record.items=[{id:'note-fixture',type:'note',a:{x:100,y:100},text:'Detail',media:[id],detailItems:[{id:'precise',type:'dimension',a:{x:10,y:10},b:{x:500,y:10},measure:'0,000000000123456789',unit:'mm'}]}];state.records=[record];save();return JSON.stringify(record);});
+  for(let i=0;i<2;i++){await page.evaluate(()=>openEditor(state.records[0]));await page.waitForFunction(()=>stageImg&&photoSize.w===1800);assert.equal(await page.evaluate(()=>JSON.stringify(current)),before);await page.click('#editorBack');assert.equal(await page.evaluate(()=>JSON.stringify(state.records[0])),before);}
+  await page.evaluate(()=>{const parent=state.records[0];openEditor(parent);openNestedPhoto(parent,parent.items[0],parent.media[0]);});await page.waitForFunction(()=>current?._detailTemporary&&stageImg);await page.click('#editorBack');await page.waitForFunction(()=>!current?._detailTemporary&&stageImg);assert.equal(await page.evaluate(()=>JSON.stringify(current)),before);assert.equal(await page.evaluate(()=>current.versionHistory),undefined);
+  await tool(page,'dimension');await drag(page,{x:130,y:280},{x:420,y:350});await editSelected(page);await page.fill('#measureInput','1585,800001');await page.click('#okModal');
+  const after=await page.evaluate(()=>JSON.parse(JSON.stringify(current)));assert.equal(after.width,1800);assert.equal(after.height,1000);assert.notEqual(after.rev,JSON.parse(before).rev);assert(after.versionHistory.length>=2);assert.equal(after.versionHistory[0].items,JSON.stringify(JSON.parse(before).items));assert.equal(after.items.at(-1).measure,'1585,800001');assert.equal(after.items[0].detailItems[0].measure,'0,000000000123456789');
+  await page.click('#editorBack');await page.evaluate(()=>openEditor(state.records[0]));await page.waitForFunction(()=>stageImg);assert.equal(await page.evaluate(()=>current.items.at(-1).measure),'1585,800001');
+ });
+});
