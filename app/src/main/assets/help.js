@@ -477,7 +477,9 @@ const chapters=[
       "Při dostupném spojení se spárované instalace dorovnávají automaticky, když je Zaměřovač otevřený. Obrazovka ukazuje čekající potvrzení a chyby; po výpadku použij Zkusit přenos znovu.",
       "Pro odebrání důvěry zvol Odebrat párování. Tím se nemažou zakázky už uložené na druhém zařízení; zastaví se nové přenosy a odstraní místní fronta pro toto zařízení.",
       "Pro dosavadní cloudovou cestu v Nastavení nebo nabídce Google Disk vyber složku, do které má Zaměřovač přístup pro čtení i zápis.",
-      "Ruční synchronizaci spouštěj přes Synchronizovat nyní; její skutečný stav ověř ve zprávách aplikace.",
+      "Ruční cloudovou synchronizaci spouštěj přes Synchronizovat nyní. Ikona cloudu rozlišuje potvrzeno, čeká a chybu; pouhé odeslání bez potvrzení příjemce není dokončený přenos.",
+      "Před cloudem zařízení nejdříve spáruj místní cestou. Cloudové zprávy i potvrzení mají ověřovaný podpis veřejného certifikátu schválené instalace. Nová cesta nepřepisuje společný projects.json; starší vzdálené soubory zůstávají nedotčené.",
+      "Velké cloudové přílohy na měřené nebo neznámé síti čekají. Malá změna může dorazit, pokud má příjemce potřebné originály už uložené. Výjimku pro aktuální pokus povolíš přes ikonu cloudu a Jednorázově povolit velké soubory na měřené síti. Volba Synchronizovat pouze na Wi-Fi omezuje i malé automatické cloudové změny.",
       "Offline můžeš pracovat s lokálně dostupnými projekty. Při opětovném připojení zkontroluj úspěšné provedení synchronizace.",
       "Při souběžných změnách na více zařízeních zkontroluj konfliktní kopie, než cokoli smažeš. Otevřený editor zůstane u své zachované změny, i když dostane nové ID kopie.",
       "Pouhé prohlížení fotografie nebo detailu nevytváří historii ani novou revizi. Výchozí stav historie se uloží až s první skutečnou úpravou; rozměry plátna se zapíší při editaci, naměřené hodnoty se z pixelů neodvozují."
@@ -488,9 +490,10 @@ const chapters=[
       "Po uspání nebo odchodu z aplikace se místní spojení zavře; návrat pokračuje z fronty. Bez vytvořené skupiny Wi-Fi Direct může být potřeba znovu vybrat zařízení. Tato implementace zatím negarantuje nepřetržitý přenos na pozadí ani automatické přepnutí na Drive.",
       "Historické zálohy se přímou synchronizací nemažou. Obnova Android systému nekopíruje identitu ani párování/frontu do jiného zařízení; po ní párování znovu nastav.",
       "Ne každý správce Google Disku nebo souborový poskytovatel nabízí zapisovatelnou složku pro Android.",
+      "Živá cloudová synchronizace má vlastní prostor Zamerovac-sync/sync/v2, historické zálohy vlastní Zamerovac-zalohy/backups/v2. Složku cloudové synchronizace nastav na obou zařízeních na stejné úložiště. Data ve vybrané složce chrání oprávnění poskytovatele/účtu; podpis sám nešifruje jejich obsah. Nezveřejňuj tuto složku ostatním.",
       "Cloudová synchronizace není totéž jako ověřená nezávislá záloha. Před důležitými změnami si ulož ZIP.",
       "Instalace používá náhodnou vlastní identitu a čítače revizí, ne model telefonu ani jeho hodiny. Při souběhu se novější pozorovaná verze odliší od nezávislé změny.",
-      "Pomalý přenos poskytovatele nedrží zámek místní databáze. Novější místní změny při přenosu zůstávají uložené a čekají na další pokus; výpadek se neoznačí jako dokončená synchronizace. Dosavadní SAF cesta není oficiální integrace Drive API; místní přenos se ovládá samostatně přes Synchronizace zařízení."
+      "Přenos poskytovatele nedrží zámek místní databáze. Novější změny čekají ve frontě; data příjemce se sloučí teprve po ověření všech potřebných souborů. Při přímém spojení má místní přenos přednost. Otevřená aplikace opakuje cloud přibližně po minutě, Android na pozadí určuje čas sám. SAF poskytovatel může být pomalý či blokovat; tato cesta stále není oficiální Drive API/OAuth a účet Disku dosud nebyl fyzicky ověřen."
     ],
     "keywords": [
       "cloud",

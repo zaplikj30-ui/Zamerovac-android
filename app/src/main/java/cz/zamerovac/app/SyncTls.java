@@ -15,6 +15,8 @@ final class SyncTls {
     static final String ALIAS="zamerovac-sync-tls-v2";
     final PrivateKey key;final X509Certificate[] chain;
     SyncTls(PrivateKey key,X509Certificate[] chain){this.key=key;this.chain=chain.clone();}
+    X509Certificate certificate(){return chain[0];}
+    byte[] sign(byte[] message)throws Exception{java.security.Signature signer=java.security.Signature.getInstance("SHA256withECDSA");signer.initSign(key);signer.update(message);return signer.sign();}
     static SyncTls androidIdentity()throws Exception{
         KeyStore keys=KeyStore.getInstance("AndroidKeyStore");keys.load(null);
         if(!keys.containsAlias(ALIAS)){

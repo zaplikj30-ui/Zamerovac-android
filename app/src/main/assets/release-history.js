@@ -11,6 +11,7 @@ const pendingChanges={issue:39,released:false,groups:[{kind:'Nové funkce',items
  {text:'Potvrzované uložení, zachování souběžných změn a ochrana proti opožděnému výsledku synchronizace.'},
  {text:'Odmítnutí poškozených znaků Unicode bez tiché změny uloženého textu.'},
  {text:'Odmítnutí neúplné ZIP zálohy, kontrolní součty při obnově, potvrzované přílohy a bezpečné ukončení chybného hlasového záznamu.'},
+ {text:'Živá cloudová cesta místo společného projects.json používá neměnné podepsané zprávy, ověřované originály a potvrzení příjemce. Přenos Diskem stále závisí na systémovém poskytovateli a čeká na fyzické ověření.'},
  {text:'Společné atomické ukládání a místní práce během pomalého SAF přenosu; novější změny zůstávají čekající.'},
  {text:'Identita instalace a kauzální revize skutečných záznamů; vysypaný koš zachová nezávislou úpravu jako kopii.'},
  {text:'Omezení posunu galerie a úplný výřez poznámek včetně textu pod detailní fotografií.'},

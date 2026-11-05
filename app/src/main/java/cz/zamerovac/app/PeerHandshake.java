@@ -32,7 +32,7 @@ final class PeerHandshake {
         if(needsApproval){if(!pairing.getAsBoolean())throw new IOException("Párování není zapnuté");accepted=approval.approve(new Request(id,name,code));}
         PeerWire.write(out,new JSONObject().put("type","approval").put("accepted",accepted),PeerWire.MAX_HELLO);socket.setSoTimeout(130000);
         JSONObject other=PeerWire.read(in,PeerWire.MAX_HELLO);if(!"approval".equals(other.optString("type"))||!Boolean.TRUE.equals(other.opt("accepted"))||!accepted)throw new IOException("Párování nebylo potvrzeno na obou zařízeních");
-        registry.approve(id,fingerprint,name);
+        registry.approve(id,fingerprint,name);registry.rememberCertificate(id,(X509Certificate)socket.getSession().getPeerCertificates()[0]);
         PeerWire.write(out,new JSONObject().put("type","committed").put("accepted",true),PeerWire.MAX_HELLO);
         JSONObject committed=PeerWire.read(in,PeerWire.MAX_HELLO);if(!"committed".equals(committed.optString("type"))||!Boolean.TRUE.equals(committed.opt("accepted")))throw new IOException("Protistrana nepotvrdila uložení párování");
         socket.setSoTimeout(15000);return new Peer(id,name,fingerprint);

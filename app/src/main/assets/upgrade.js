@@ -80,27 +80,28 @@ const oldError=window.onNativeError;
 window.onNativeError=function(message){logEvent('chyba',String(message).split('\n')[0]);if(/synchronizac|google disk|cloud/i.test(String(message)))setCloudState('failed');oldError(message)};
 const oldSync=window.onNativeSync;
 window.onNativeSync=function(text){
-  let message='',transport='';try{const result=JSON.parse(text);message=result.message||'';transport=result.transport||'';}catch(e){}
+  let message='',transport='',pending=false;try{const result=JSON.parse(text);message=result.message||'';transport=result.transport||'';pending=result.pending===true;}catch(e){}
   const confirmed=oldSync(text);
   if(transport!=='direct'&&/synchroniz/i.test(message)){
    const failed=confirmed===false||/chyb|selhal|nelze|nepodpor/i.test(message);
-   setCloudState(failed?'failed':'ok');logEvent('cloud',failed?'Synchronizace hlásí chybu':'Synchronizace dokončena');
+   setCloudState(failed?'failed':pending?'waiting':'ok');logEvent('cloud',failed?'Synchronizace hlásí chybu':pending?'Čeká na přenos nebo potvrzení':'Synchronizace dokončena');
   }
   return confirmed;
 };
 function setCloudState(status){
  const b=$('cloudBtn');b.dataset.status=status;
- b.title=status==='running'?'Synchronizace probíhá':status==='ok'?'Poslední synchronizace dokončena':status==='failed'?'Synchronizace selhala':'Cloud zatím neověřen';
+ b.title=status==='running'?'Synchronizace probíhá':status==='ok'?'Poslední synchronizace dokončena':status==='failed'?'Synchronizace selhala':status==='waiting'?'Změny čekají na přenos nebo potvrzení druhého zařízení':'Cloud zatím neověřen';
  b.setAttribute('aria-label',b.title);
 }
 setCloudState('unknown');
 const oldSyncCloud=syncCloud;
 syncCloud=function(){setCloudState('running');logEvent('cloud','Spuštěna synchronizace');oldSyncCloud()};
 $('cloudBtn').onclick=()=>modal('Cloud – stav a synchronizace',
- '<p>'+esc($('cloudBtn').title)+'</p><p class="muted">Google Disk přes systémový výběr složky závisí na podpoře zápisu. Funkčnost je potřeba ověřit na telefonu i tabletu.</p><div class="row wrap"><button class="outline" id="setCloud">Vybrat složku</button><button class="outline" id="runCloud">Synchronizovat nyní</button></div>',
+ '<p>'+esc($('cloudBtn').title)+'</p><p class="muted">Google Disk přes systémový výběr složky závisí na podpoře zápisu. Nejdříve spáruj zařízení místní cestou. Malé změny lze přenést i na měřené síti, velké soubory čekají na neměřenou Wi-Fi a potvrzení příjemce. Skutečný Disk je potřeba ověřit na telefonu i tabletu.</p><div class="row wrap"><button class="outline" id="setCloud">Vybrat složku</button><button class="outline" id="runCloud">Synchronizovat nyní</button><button class="outline" id="runCloudMetered">Jednorázově povolit velké soubory na měřené síti</button></div>',
  ()=>true,'Zavřít');
 document.addEventListener('click',e=>{
  if(e.target?.id==='setCloud'){chooseCloud();$('modal').hidden=true}
+ if(e.target?.id==='runCloudMetered'){if(native&&typeof Native.syncCloudMetered==='function'&&window.confirm('Povolit při tomto pokusu velké soubory i přes mobilní data nebo měřený hotspot?')){setCloudState('running');Native.syncCloudMetered();$('modal').hidden=true}}
  if(e.target?.id==='runCloud'){syncCloud();$('modal').hidden=true}
 });
 const oldSave=save;

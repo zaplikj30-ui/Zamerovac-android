@@ -49,3 +49,7 @@ Specifikace #38/#34/#33 → PeerCoordinator/PeerDiscovery/PeerWifiDirect/MainAct
 ## Konzistence konfliktů a prohlížení – etapa 12
 
 #33/#38/#12/#13 → SyncConflicts + nativní bridge, applySavedState a editor/history/detail lifecycle → Java/JS sdílená fixture, `tests/sync_conflict_bridge.js`, SyncCanonicalTest/SyncSafetyTest a `tools/e2e/read-only-sync.cjs`. Pozitivní: stejný copy ID/obsah a přesná vlastní draft revize, první skutečná historie/geometrie/naměřená hodnota. Negativní: odmítnutý bridge, duplicitní/opakované sloučení, vysypaná konfliktní kopie, legacy purge source a otevření/načtení/detail/reopen bez jakékoli změny dat. Zaznamenat CI daného SHA; žádný HW/rádio/Bosch závěr.
+
+## Podepsaná cloudová synchronizace – etapa 13
+
+#33/#38 → SafSyncV2/CloudProof/CloudFiles/DocumentSyncStore + registry certifikátu po PeerHandshake → SafSyncV2Test. Pozitivní: standardní ECDSA, nativní úplný obousměrný merge a přílohy, immutable retry/restart, malá přesná změna na měřené síti bez opakovaného čtení velkého originálu. Negativní: podvržený ACK nesmí vyprázdnit frontu, odebraná důvěra/změněný podpis/druh, neúplný 19. media upload a žádný předčasný DB commit, velký chybějící soubor na metered čeká. Chromium peer-sync navíc kontroluje stav waiting a izolaci direct/cloud. Nové CI SHA ověřit; adaptér testů je skutečný lokální filesystem, nikoli Drive. Fyzické a provider cancellation/index/metered režie limity jsou přesně v docs/cloud-sync-v2.md.

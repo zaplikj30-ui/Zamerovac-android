@@ -19,8 +19,7 @@ final class PeerCoordinator implements AutoCloseable {
     private final ScheduledExecutorService ticker=Executors.newSingleThreadScheduledExecutor();
     private final ThreadPoolExecutor workers=new ThreadPoolExecutor(0,4,30,TimeUnit.SECONDS,new SynchronousQueue<>(),new ThreadPoolExecutor.AbortPolicy());
     private final Set<Socket> sockets=ConcurrentHashMap.newKeySet();private final Set<String> connecting=ConcurrentHashMap.newKeySet();
-    private static final Map<String,ReentrantLock> ALL_GATES=new ConcurrentHashMap<>();
-    private ReentrantLock gate(String peer){return ALL_GATES.computeIfAbsent(context.getNoBackupFilesDir().getAbsolutePath()+"/"+peer,key->new ReentrantLock());}
+    private ReentrantLock gate(String peer){return PeerGates.get(context,peer);}
     private final Map<String,Session> sessions=new ConcurrentHashMap<>();
     private final Map<String,JSONObject> states=new ConcurrentHashMap<>();private final Map<String,String> endpoints=new ConcurrentHashMap<>();
     private final Map<String,Long> attempted=new ConcurrentHashMap<>();private final AtomicReference<Approval> approval=new AtomicReference<>();
@@ -66,7 +65,7 @@ final class PeerCoordinator implements AutoCloseable {
             Session candidate=new Session(socket,initiator==(id.compareTo(peer.id)<0));AtomicBoolean admitted=new AtomicBoolean();
             sessions.compute(peer.id,(key,previous)->{if(previous==null||candidate.preferred&&!previous.preferred){if(previous!=null)try{previous.socket.close();}catch(IOException ignored){}admitted.set(true);return candidate;}return previous;});
             if(!admitted.get())return;session=candidate;gate=gate(peer.id);acquired=gate.tryLock(20,TimeUnit.SECONDS);if(!acquired||closed||sessions.get(peer.id)!=session)throw new IOException("Jiná relace zařízení ještě dokončuje zápis. Změny zůstávají ve frontě.");
-            status(peer.id,"connected",0,0,"");new PeerTransfer(data,(key,phase,done,total)->status(key,phase,done,total,"")).exchange(socket,peer,initiator);
+            PeerGates.direct(context,peer.id);status(peer.id,"connected",0,0,"");new PeerTransfer(data,(key,phase,done,total)->{PeerGates.direct(context,key);status(key,phase,done,total,"");}).exchange(socket,peer,initiator);
             if(beforeGeneration!=LocalDatabase.generation(context.getFilesDir()))preparedGeneration=-1;
             if(isPairing())stopPairing();publish();
         }catch(Exception failure){if(!closed)fail(peerId,failure);}finally{if(acquired)gate.unlock();if(peerId!=null&&session!=null)sessions.remove(peerId,session);sockets.remove(socket);try{socket.close();}catch(IOException ignored){}}

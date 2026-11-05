@@ -10,7 +10,7 @@ public class SyncJob extends JobService {
         cancelled=false;
         new Thread(()->{boolean retry=false;try{
             SharedPreferences prefs=getSharedPreferences("zamerovac",MODE_PRIVATE);
-            if(!cancelled&&prefs.getString("treeUri",null)!=null)new SyncEngine(this,prefs).sync();
+            if(!cancelled&&prefs.getString("treeUri",null)!=null)new SafSyncV2(this,prefs,new DocumentSyncStore(this,prefs.getString("treeUri",null)),SyncTls.androidIdentity(),bytes->BackupNetwork.allowed(this,prefs.getString("treeUri",null),false)||!prefs.getBoolean("wifiOnly",false)&&bytes<=1024*1024).sync();
         }catch(Exception ex){retry=true;android.util.Log.w("Zamerovac","Scheduled sync failed",ex);}
         finally{jobFinished(params,retry&&!cancelled);}},"ScheduledSync").start();
         return true;

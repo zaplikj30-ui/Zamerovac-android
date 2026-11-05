@@ -1,0 +1,45 @@
+package cz.zamerovac.app;
+import org.json.*;
+import org.junit.*;
+import org.junit.runner.RunWith;
+import org.robolectric.*;
+import org.robolectric.annotation.Config;
+import java.io.*;
+import java.nio.file.*;
+import java.util.*;
+import static org.junit.Assert.*;
+/** Actual signatures, media streams, immutable files and native DB/outbox. Not a Google Drive account test. */
+@RunWith(RobolectricTestRunner.class) @Config(sdk=35)
+public class SafSyncV2Test {
+ static class Store extends BackupHistoryTest.FilesStore implements SyncStore {
+  int readsOfLarge;String largeHash="";int writes;boolean failTwentieth;
+  Store(File root){super(root);}
+  @Override File file(String path)throws Exception{SyncStore.parts(path);return new File(root,path);}
+  @Override public InputStream open(String path)throws Exception{if(!largeHash.isEmpty()&&path.contains(largeHash))readsOfLarge++;return super.open(path);}
+  @Override public OutputStream create(String path)throws Exception{OutputStream out=super.create(path);if(path.startsWith("sync/v2/blobs/")&&++writes==20&&failTwentieth){failTwentieth=false;return new FilterOutputStream(out){@Override public void write(byte[] bytes,int offset,int length)throws IOException{out.write(bytes,offset,Math.min(17,length));throw new IOException("synthetic twentieth blob disconnected");}};}return out;}
+ }
+ PeerTransferTest.Device a,b;SyncTls ai,bi,rogue;SyncPeerRegistry ar,br;Store store;String aid,bid;JSONObject original;
+ @Before public void setup()throws Exception{
+  File root=Files.createTempDirectory(RuntimeEnvironment.getApplication().getCacheDir().toPath(),"cloud-sync-").toFile();a=new PeerTransferTest.Device(root,"a");b=new PeerTransferTest.Device(root,"b");ai=PeerTlsTest.material("a");bi=PeerTlsTest.material("b");rogue=PeerTlsTest.material("rogue");aid=DeviceIdentity.get(a.noBackup);bid=DeviceIdentity.get(b.noBackup);ar=new SyncPeerRegistry(a.noBackup);br=new SyncPeerRegistry(b.noBackup);ar.approve(bid,bi.fingerprint(),"B");br.approve(aid,ai.fingerprint(),"A");ar.rememberCertificate(bid,bi.certificate());br.rememberCertificate(aid,ai.certificate());store=new Store(new File(root,"provider"));original=new JSONObject().put("schema",1).put("records",new JSONArray().put(new JSONObject().put("id","photo-a").put("title","Syntetické foto").put("syncClock",new JSONObject().put(aid,1)).put("items",new JSONArray().put(new JSONObject().put("measure","1585,800001").put("unit","mm")))));
+ }
+ void files(int count,int size)throws Exception{new File(a.home,"media").mkdirs();JSONArray refs=new JSONArray();for(int i=0;i<count;i++){String id="original-"+i;byte[] bytes=new byte[size+i];Arrays.fill(bytes,(byte)(i+1));Files.write(new File(a.home,"media/"+id).toPath(),bytes);refs.put(id);}original.getJSONArray("records").getJSONObject(0).put("media",refs);LocalDatabase.write(a.home,original.toString());LocalDatabase.write(b.home,new JSONObject().put("schema",1).put("records",new JSONArray()).toString());}
+ SafSyncV2 sync(PeerTransferTest.Device device,SyncTls identity,boolean metered)throws Exception{return new SafSyncV2(device,device.prefs,store,identity,bytes->!metered||bytes<=1024*1024);}
+ void converge()throws Exception{for(int i=0;i<6;i++){sync(a,ai,false).sync();sync(b,bi,false).sync();}}
+ @Test public void signedImmutableMessagesConvergeAndNoMutableProjectsFileExists()throws Exception{
+  files(3,8000);converge();assertEquals(0,new PeerOutbox(a,a.prefs,ar).pending(bid));assertEquals(0,new PeerOutbox(b,b.prefs,br).pending(aid));JSONObject received=new JSONObject(LocalDatabase.read(b.home));assertEquals("1585,800001",received.getJSONArray("records").getJSONObject(0).getJSONArray("items").getJSONObject(0).getString("measure"));for(int i=0;i<3;i++)assertArrayEquals(Files.readAllBytes(new File(a.home,"media/original-"+i).toPath()),Files.readAllBytes(new File(b.home,"media/original-"+i).toPath()));assertFalse(new File(store.root,"projects.json").exists());assertFalse(new File(store.root,"backups").exists());
+ }
+ @Test public void interruptedBlobAndRestartResumeWithoutPublishingPartialDatabase()throws Exception{
+  files(30,4000);store.failTwentieth=true;SafSyncV2.Result first=sync(a,ai,false).sync();assertTrue(first.pending);assertTrue(first.message.contains("synthetic twentieth"));String before=LocalDatabase.read(b.home);assertTrue(sync(b,bi,false).sync().pending);assertEquals(before,LocalDatabase.read(b.home));assertTrue(new PeerOutbox(a,a.prefs,ar).pending(bid)>0);converge();assertEquals(30,new File(b.home,"media").listFiles().length);assertEquals(1,new JSONObject(LocalDatabase.read(b.home)).getJSONArray("records").length());assertEquals(0,new PeerOutbox(a,a.prefs,ar).pending(bid));
+ }
+ @Test public void forgedAcknowledgementCannotClearQueueAndRevokedAuthorCannotWrite()throws Exception{
+  files(1,4000);sync(a,ai,false).sync();JSONObject job=new PeerOutbox(a,a.prefs,ar).messages(bid).get(0);CloudFiles.publish(store,"sync/v2/acks/"+aid+"/"+bid,job.getString("hash"),CloudProof.sign(CloudProof.body(CloudProof.ACK,bid,aid,job.getString("hash"),job.getLong("size")),rogue));assertTrue(sync(a,ai,false).sync().pending);assertTrue(new PeerOutbox(a,a.prefs,ar).pending(bid)>0);String before=LocalDatabase.read(b.home);br.forget(aid);try{sync(b,bi,false).sync();fail("Revoked author accepted");}catch(IOException expected){assertTrue(expected.getMessage().contains("spáruj"));}assertEquals(before,LocalDatabase.read(b.home));
+ }
+ @Test public void meteredMetadataUsesExistingOriginalButMissingLargePhotoWaits()throws Exception{
+  files(1,1500000);store.largeHash=PeerMedia.inspect(new File(a.home,"media/original-0")).getString("hash");assertTrue(sync(a,ai,true).sync().pending);assertTrue(sync(b,bi,true).sync().pending);assertEquals(0,new JSONObject(LocalDatabase.read(b.home)).getJSONArray("records").length());assertEquals(0,store.readsOfLarge);converge();store.readsOfLarge=0;
+  JSONObject fresh=new JSONObject(LocalDatabase.read(a.home)),record=fresh.getJSONArray("records").getJSONObject(0);record.getJSONArray("items").getJSONObject(0).put("measure","0,000000000123456789");record.put("syncClock",CausalClock.advance(CausalClock.clock(record),aid));LocalDatabase.write(a.home,fresh.toString());for(int i=0;i<3;i++){sync(a,ai,true).sync();sync(b,bi,true).sync();}assertEquals("0,000000000123456789",new JSONObject(LocalDatabase.read(b.home)).getJSONArray("records").getJSONObject(0).getJSONArray("items").getJSONObject(0).getString("measure"));assertEquals(0,store.readsOfLarge);
+ }
+ @Test public void signedBodyCannotBeChangedReaddressedOrUsedAsAnotherProofKind()throws Exception{
+  String hash="a".repeat(64);JSONObject envelope=CloudProof.sign(CloudProof.body(CloudProof.MESSAGE,aid,bid,hash,100),ai);CloudProof.verify(envelope,ai.certificate(),CloudProof.MESSAGE,aid,bid);
+  try{CloudProof.verify(envelope,ai.certificate(),CloudProof.ACK,aid,bid);fail("Message used as ACK");}catch(IOException expected){}envelope.getJSONObject("body").put("hash","b".repeat(64));try{CloudProof.verify(envelope,ai.certificate(),CloudProof.MESSAGE,aid,bid);fail("Changed signed body accepted");}catch(IOException expected){assertTrue(expected.getMessage().contains("Podpis"));}
+ }
+}
