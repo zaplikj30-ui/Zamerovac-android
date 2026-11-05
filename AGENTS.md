@@ -44,6 +44,23 @@ Před zavedením nové technologie či významnější funkce vždy posoudit jej
 
 **Stav:** pravidlo pro další práci a testování, ne potvrzení současné kompatibility se všemi pery. Nespouští změnu #39/PR #41 ani APK.
 
+### Budoucí rozšiřitelnost – ovládání, integrace, obnova a diagnostika (doplněno 5. 11. 2026)
+
+**Zásada:** Nové možnosti se mají do architektury přidávat bezpečně, bez přepisování stávajících dat či vzájemných konfliktů. Níže jde o **dlouhodobé nápady**, ne příkaz zahájit implementaci; konkrétní rozsah se posoudí před vývojem.
+
+- **Vstup a displeje:** počítat s prstem, perem různých značek, myší, klávesnicí a touchpadem; podporovat změnu velikosti okna, otočení, skládací telefony a režim více oken bez ztráty rozpracované práce, kót nebo zoomu. Vstupní gesta oddělit od datového modelu a geometrie.
+- **Režimy ovládání:** budoucí nastavení **Začátečník / Střední / Expert** řídí jen přehlednost a zobrazení pokročilých nástrojů, ne práva, výpočty, kvalitu exportu či přístup k zakázkám. Všechny režimy musí zachovat editovatelnost, přesnost i bezpečnost; volba výkonu vykreslování je nezávislá. Nezavádět tři samostatné implementace editoru.
+- **Sdílení:** volitelné systémové sdílení výslovně vybraných výstupů do jiných aplikací, nezaměňovat PDF pro zákazníka za editovatelnou zálohu; neodesílat interní nebo zákaznické informace bez vědomého souhlasu.
+- **Přístroje:** umožnit rozšíření o další značky měřicích přístrojů či vhodná rozhraní (např. Bluetooth a USB) až po ověření reálných protokolů. Oddělit ovladač od přesných hodnot, jednotek a ukládání.
+- **Biometrie:** případný volitelný zámek aplikace/zakázky přes standardní rozhraní systému, bezpečné řešení dostupnosti bez senzoru; biometrie nenahrazuje ochranu dat v úložišti ani zálohy.
+- **QR kódy:** případné otevírání zakázky nebo dokumentu z QR kódu. Kód nesmí sám zveřejňovat soukromé údaje ani přístupová tajemství; validovat načítaný obsah.
+- **Nová připojení a technologie:** tisk, promítání, přenosy, externí zařízení i nové budoucí knihovny řešit přes přiměřeně oddělené části; nestavět složitou univerzální infrastrukturu dřív, než bude skutečně potřeba.
+- **Aktualizace/obnova:** verzované kompatibilní formáty, testované migrace, obnovitelné zálohy a případná návratová cesta. Starší APK nemusí umět otevřít data z novější verze – neslibovat jednoduchý downgrade bez ověření.
+- **Diagnostika:** možnost lokálních nebo výslovně povolených technických hlášení o pádech a chybách, bez zákaznických fotografií, zakázek, adres a tajných údajů; nic neposílat na server bez transparentního rozhodnutí.
+- **Nízká paměť/životní cyklus:** testovat velké zakázky, dlouhý běh, návraty z pozadí, přerušení, systémové ukončení a výpadek sítě; zachovat původní data, rozpracované změny a přesné kóty.
+
+**Priorita:** nejprve bezpečně dokončit #39/PR #41, poté přezkoumat technický základ a testy v [#42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42). Žádné nové APK kvůli této dokumentaci.
+
 ## Povinné testování selhání a ochrany dat u každé změny (5. 11. 2026)
 
 **Výslovně schválené trvalé pravidlo uživatele:** Nesmíme ověřovat pouze to, že nová či upravená funkce v běžném scénáři funguje. **Před dokončením každé významné změny podle rizika zkontroluj také, jak funkce selže, co přitom zobrazí uživateli a zda zachová původní data a správnost rozměrů.** Testování chybových cest je součástí zadání, implementace i kontroly výsledku — není až volitelnou dodatečnou revizí.
