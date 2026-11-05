@@ -413,7 +413,7 @@ const chapters=[
     "title": "18. Historické zálohy, ZIP a bezpečná obnova",
     "intro": "Historické zálohy uchovávají samostatné body telefonu a tabletu ve vybraném úložišti. ZIP zůstává přenosnou úplnou zálohou zakázek s anotacemi a soubory.",
     "steps": [
-      "Otevři ☰ → Historické zálohy nebo Nastavení → Historické zálohy a obnova. Vyber složku záloh nezávisle na synchronizaci.",
+      "Otevři ☰ → Historické zálohy nebo Nastavení → Historické zálohy a obnova. Zvol systémovou složku záloh nebo Připojit Google účet; tento výběr je nezávislý na synchronizaci.",
       "Zvol Vytvořit historickou zálohu. Všechny soubory se uloží do ověřovaných datových bloků a nový historický bod se potvrdí až po kontrole úplnosti.",
       "V přehledu najdeš oddělené historie instalací telefonu a tabletu. Stejné originály mohou sdílet neměnný blok; nový historický bod starý nepřepisuje. Přehled uvádí velikost datových bloků bez režie poskytovatele.",
       "Před obnovou můžeš zvolit Ověřit všechny soubory. Obnovit jako nové kopie znovu ověří data a přílohy a vytvoří nové identifikátory. Aktuální zakázky včetně změn provedených během stahování zůstanou zachované.",
@@ -427,14 +427,15 @@ const chapters=[
     "notes": [
       "Když poskytovatel zálohy nevrací žádná data nebo překročí povolenou délku, kontrola skončí chybou. Neúplný obsah se nepotvrdí jako historická záloha ani se nepoužije k obnově; ověř dostupnost a zkus operaci znovu.",
       "Historie používá vlastní prostor Zamerovac-zalohy a funguje i při vypnuté synchronizaci či bez párování. Odpojení složky ani změna účtu uložené body nemaže. Starší historii najdeš opětovným výběrem původní složky.",
-      "Google Disk je zatím závislý na tom, zda jeho systémový poskytovatel dovolí vybrat zapisovatelnou složku. Pokud ji nenabízí, použij místní úložiště nebo ZIP; oficiální Drive API se teprve dokončuje a nesmí se zaměnit za ověřené připojení.",
+      "Google připojení používá soukromý prostor této aplikace na vybraném účtu. Body nejsou běžnými soubory v seznamu Disku; prohlížej, ověřuj a obnovuj je zde. Připojení této verze zatím čeká na dokončení registrace a skutečný účet není fyzicky ověřen. Systémová složka nebo ZIP zůstávají samostatnou možností.",
       "Poškozený blok, chybějící příloha, odebrané oprávnění, nedostatek místa a přerušený zápis nesmějí být potvrzeny jako úplná záloha. Při chybě původní historie zůstává beze změny; poškozený existující blok se automaticky nepřepisuje.",
-      "Automatická frekvence ani automatické promazávání nejsou zapnuté. Ruční správa patří do správce souborů úložiště. Sdílené bloky nemaž bez kontroly všech historií, jinak můžeš poškodit více bodů; synchronizace je nikdy nemaže.",
+      "Automatická frekvence ani automatické promazávání nejsou zapnuté. Systémovou složku lze spravovat v jejím správci souborů; hromadné odstranění dat této aplikace v nastavení Disku smaže i její body. Sdílené bloky nemaž bez kontroly všech historií, jinak můžeš poškodit více bodů; synchronizace je nikdy nemaže.",
       "Nevyvážej pouhé zákaznické PDF, pokud chceš později upravovat kóty.",
       "Nové ZIP zálohy obsahují kontrolní součty SHA-256 a velikosti souborů. Obnova je ověří před vytvořením kopií; starší ZIP zůstávají přijímány bez této dodatečné kontroly.",
       "Chybějící nebo prázdná příloha export zálohy zastaví. Neúspěšný zápis se neoznačí jako hotová záloha; původní zakázky zůstávají zachované.",
       "Při hlášení Neuloženo zůstaň v aplikaci a uložení zopakuj. Aplikace potvrdí zápis až po úspěšném uložení; souběžné konfliktní změny uchová jako označenou kopii.",
-      "Poškozený nebo neplatný ZIP, neplatné kódování, neúplné znaky Unicode a příliš zanořená data aplikace odmítne. Pokud nelze soubor vybrat, zkontroluj filtr a umístění v systémovém správci."
+      "Poškozený nebo neplatný ZIP, neplatné kódování, neúplné znaky Unicode a příliš zanořená data aplikace odmítne. Pokud nelze soubor vybrat, zkontroluj filtr a umístění v systémovém správci.",
+      "Změna účtu nebo úložiště vyčistí pouze zobrazený seznam a dočasná označení ověření; původní historie zůstává na původním místě. Znovu ji zpřístupníš jeho výběrem. Odpojení záloh nezmění účet synchronizace ani místní zakázky."
     ],
     "keywords": [
       "archiv",
@@ -448,7 +449,9 @@ const chapters=[
       "obnova",
       "importovat",
       "záloha",
-      "kompatibilita"
+      "kompatibilita",
+      "Google účet",
+      "soukromý prostor"
     ]
   },
   {
@@ -477,14 +480,15 @@ const chapters=[
   {
     "id": "cloud",
     "title": "20. Synchronizace zařízení, Google Disk a práce offline",
-    "intro": "Přímé propojení přenáší celé zakázky mezi spárovanými Androidy v místní síti nebo přes Wi-Fi Direct. Google Disk je oddělená cesta závislá na poskytovateli složky.",
+    "intro": "Přímé propojení přenáší celé zakázky mezi spárovanými Androidy v místní síti nebo přes Wi-Fi Direct. Vzdálený přenos může použít samostatně připojený Google účet nebo systémovou složku.",
     "steps": [
-      "Otevři ☰ → Synchronizace zařízení nebo Nastavení → Místní a přímé propojení. Zapni párování na obou zařízeních.",
+      "Otevři ☰ → Synchronizace zařízení nebo Nastavení → Synchronizace zařízení – místní a Google Disk. Zapni párování na obou zařízeních.",
       "Ve stejné místní Wi-Fi vyber nalezený Zaměřovač. Bez internetu a routeru na obou spusť Hledat přes Wi-Fi Direct bez routeru a na jednom zvol druhé zařízení; systém Android může vyžádat potvrzení propojení.",
       "Porovnej celý kód na obou obrazovkách a potvrď shodu na obou zařízeních. Při odlišných kódech párování odmítni. Spárované zařízení získá všechny zakázky a přílohy.",
       "Při dostupném spojení se spárované instalace dorovnávají automaticky. Zapnutý místní přenos běží i po zavření obrazovky ve službě Androidu s oznámením; vypneš ho v Synchronizaci zařízení nebo tlačítkem v oznámení. Na Androidu 13 a novějším povol oznámení, pokud je chceš vidět v běžném seznamu. Obrazovka ukazuje čekající potvrzení a chyby; po výpadku použij Zkusit přenos znovu.",
       "Pro odebrání důvěry zvol Odebrat párování. Tím se nemažou zakázky už uložené na druhém zařízení; zastaví se nové přenosy a odstraní místní fronta pro toto zařízení.",
-      "Pro dosavadní cloudovou cestu v Nastavení nebo nabídce Google Disk vyber složku, do které má Zaměřovač přístup pro čtení i zápis.",
+      "Pro Google Disk v Synchronizaci zařízení zvol Připojit Google účet. Vyber stejný účet v telefonu i tabletu a potvrď přístup k soukromým datům této aplikace. Zrušený souhlas ponechá původní účet; změna účtu záloh je samostatná. Pokud připojení této verze čeká na dokončení nastavení, zůstává tlačítko nedostupné a místní přenos lze dál používat.",
+      "Systémovou složku lze dál vybrat v Nastavení → Systémová složka synchronizace nebo přes ikonu cloudu. Vyber na obou zařízeních stejné místo s právem číst i zapisovat. Přepnutí na složku nahradí pro synchronizaci vybraný Google účet, účet záloh tím nemění.",
       "Ruční cloudovou synchronizaci spouštěj přes Synchronizovat nyní. Ikona cloudu rozlišuje potvrzeno, čeká a chybu; pouhé odeslání bez potvrzení příjemce není dokončený přenos.",
       "Potvrzené přijaté cloudové zprávy se evidují přímo v instalaci pro konkrétní úložiště. Po návratu se jejich obsah nečte zbytečně znovu; přerušené odeslání potvrzení se dokončí z uloženého stavu bez opakování importu.",
       "Před cloudem zařízení nejdříve spáruj místní cestou. Cloudové zprávy i potvrzení mají ověřovaný podpis veřejného certifikátu schválené instalace. Nová cesta nepřepisuje společný projects.json; starší vzdálené soubory zůstávají nedotčené.",
@@ -504,10 +508,11 @@ const chapters=[
       "Párování vyžaduje otevřenou aplikaci a po odchodu z obrazovky se ukončí. Již spárovaný přenos může pokračovat na pozadí; Android či úspora baterie jej mohou omezit nebo ukončit. Po návratu se použijí potvrzená data a trvalá fronta. U dříve přímo ověřeného zařízení aplikace zkouší obnovit i zaniklou skupinu Wi-Fi Direct, pokud má oprávnění a protistrana nezměnila rádiovou adresu. Při změně adresy nebo systémovém odmítnutí znovu vyber zařízení. Nepřetržitý provoz na všech značkách ani skutečný Drive dosud nejsou fyzicky ověřeny.",
       "Historické zálohy se přímou synchronizací nemažou. Obnova Android systému nekopíruje identitu ani párování/frontu do jiného zařízení; po ní párování znovu nastav.",
       "Ne každý správce Google Disku nebo souborový poskytovatel nabízí zapisovatelnou složku pro Android.",
-      "Živá cloudová synchronizace má vlastní prostor Zamerovac-sync/sync/v2, historické zálohy vlastní Zamerovac-zalohy/backups/v2. Složku cloudové synchronizace nastav na obou zařízeních na stejné úložiště. Data ve vybrané složce chrání oprávnění poskytovatele/účtu; podpis sám nešifruje jejich obsah. Nezveřejňuj tuto složku ostatním.",
+      "Systémová složka synchronizace má prostor Zamerovac-sync/sync/v2, zálohy Zamerovac-zalohy/backups/v2. Google připojení používá oddělené sync/v2 a backups/v2 v soukromém prostoru aplikace téhož účtu. Složku cloudové synchronizace nastav na obou zařízeních na stejné úložiště. Data ve vybrané složce chrání oprávnění poskytovatele/účtu; podpis sám nešifruje jejich obsah. Nezveřejňuj tuto složku ostatním.",
       "Cloudová synchronizace není totéž jako ověřená nezávislá záloha. Před důležitými změnami si ulož ZIP.",
       "Instalace používá náhodnou vlastní identitu a čítače revizí, ne model telefonu ani jeho hodiny. Při souběhu se novější pozorovaná verze odliší od nezávislé změny.",
-      "Přenos poskytovatele nedrží zámek místní databáze. Novější změny čekají ve frontě; data příjemce se sloučí teprve po ověření všech potřebných souborů. Při přímém spojení má místní přenos přednost. Otevřená aplikace opakuje cloud přibližně po minutě, Android na pozadí určuje čas sám. Při neodpovídajícím poskytovateli se operace po časovém limitu nepotvrdí a čekající data zůstanou zachovaná; opožděná odpověď se zahodí. Tato cesta stále není oficiální Drive API/OAuth a účet Disku dosud nebyl fyzicky ověřen."
+      "Přenos poskytovatele nedrží zámek místní databáze. Novější změny čekají ve frontě; data příjemce se sloučí teprve po ověření všech potřebných souborů. Při přímém spojení má místní přenos přednost. Otevřená aplikace opakuje cloud přibližně po minutě, Android na pozadí určuje čas sám. Při neodpovídajícím poskytovateli se operace po časovém limitu nepotvrdí a čekající data zůstanou zachovaná; opožděná odpověď se zahodí. Google cesta používá vlastní API a přihlášení, ale registrace této verze aplikace a skutečný účet Disku zatím nejsou dokončené/fyzicky ověřené.",
+      "Odpojit Disk pro tuto funkci zastaví její cloudové přenosy a nepřejde samo na dřívější složku. Zakázky, párování, druhá funkce a historie se nemažou. Na pozadí se neotvírá souhlas k účtu; pokud je znovu potřeba, potvrď jej zde. Přihlašovací token se neukládá do projektu ani zálohy."
     ],
     "keywords": [
       "cloud",
@@ -520,7 +525,10 @@ const chapters=[
       "synchronizovat",
       "konflikt",
       "bez internetu",
-      "wi-fi"
+      "wi-fi",
+      "Google účet",
+      "souhlas účtu",
+      "odpojit Disk"
     ]
   },
   {

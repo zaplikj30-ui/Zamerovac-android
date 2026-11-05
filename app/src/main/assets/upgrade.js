@@ -35,7 +35,7 @@ $('back').onclick=()=>showAppMenu('navMenu',[
  ['🗑️  Koš',showTrash],
  ['❔  Nápověda',()=>window.openZamerovacHelp?.()],
  ['📋  Historie změn',showChanges],
- ['☁  Google Disk',chooseCloud],
+ ['☁  Google Disk',()=>window.openZamerovacPeers?.()],
  ['ⓘ  O Zaměřovači',()=>modal('O Zaměřovači','<p>Vlastní aplikace pro zaměřování nábytku.</p><p>Verze: <b>'+esc(appVersion)+'</b></p>',()=>true,'Zavřít')]
 ]);
 function openExperimentalAction(id){
@@ -97,7 +97,7 @@ setCloudState('unknown');
 const oldSyncCloud=syncCloud;
 syncCloud=function(){setCloudState('running');logEvent('cloud','Spuštěna synchronizace');oldSyncCloud()};
 $('cloudBtn').onclick=()=>modal('Cloud – stav a synchronizace',
- '<p>'+esc($('cloudBtn').title)+'</p><p class="muted">Google Disk přes systémový výběr složky závisí na podpoře zápisu. Nejdříve spáruj zařízení místní cestou. Malé změny lze přenést i na měřené síti, velké soubory čekají na neměřenou Wi-Fi a potvrzení příjemce. Skutečný Disk je potřeba ověřit na telefonu i tabletu.</p><div class="row wrap"><button class="outline" id="setCloud">Vybrat složku</button><button class="outline" id="runCloud">Synchronizovat nyní</button><button class="outline" id="runCloudMetered">Jednorázově povolit velké soubory na měřené síti</button></div>',
+ '<p>'+esc($('cloudBtn').title)+'</p><p class="muted">Google účet připojíš v Synchronizace zařízení, systémová složka zůstává samostatnou možností. Nejdříve spáruj zařízení místní cestou. Malé změny lze přenést i na měřené síti, velké soubory čekají na neměřenou Wi-Fi a potvrzení příjemce. Skutečný Disk je potřeba ověřit na telefonu i tabletu.</p><div class="row wrap"><button class="outline" id="openDriveSync">Google Disk a místní přenos</button><button class="outline" id="setCloud">Vybrat systémovou složku</button><button class="outline" id="runCloud">Synchronizovat nyní</button><button class="outline" id="runCloudMetered">Jednorázově povolit velké soubory na měřené síti</button></div>',
  ()=>true,'Zavřít');
 document.addEventListener('click',e=>{
  if(e.target?.id==='setCloud'){chooseCloud();$('modal').hidden=true}

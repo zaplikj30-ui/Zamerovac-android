@@ -1064,7 +1064,10 @@
       ],
       "sources": [
         "app/src/main/java/cz/zamerovac/app/DriveAuthorization.java",
-        "app/src/main/java/cz/zamerovac/app/DriveAccounts.java"
+        "app/src/main/java/cz/zamerovac/app/DriveAccounts.java",
+        "app/src/main/java/cz/zamerovac/app/DriveAccountFlow.java",
+        "app/src/main/java/cz/zamerovac/app/CloudStorage.java",
+        "app/src/main/assets/drive-accounts.js"
       ],
       "tests": [
         {
@@ -1074,15 +1077,31 @@
         {
           "path": "app/src/test/java/cz/zamerovac/app/DriveAccountsTest.java",
           "layer": "native-jvm"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/DriveAccountFlowTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/CloudStorageTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/MainCloudSelectionTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "tools/e2e/drive-accounts.cjs",
+          "layer": "chromium"
         }
       ],
       "coverage": "runtime-partial",
-      "positive": "Skutečné SDK request/task typy, připnutý zvolený účet/appdata scope, krátká memory cache, oddělené atomické sync/backup vazby.",
-      "negative": "Consent/scope/developer error, 401 jen použitého tokenu, změna účtu během SDK await, interrupt/UI thread, failed AtomicFile a vadná/Unicode vazba nesmějí potvrdit nový účet ani prozradit token.",
+      "positive": "Skutečné SDK request/task typy, připnutý zvolený účet/appdata scope, krátká memory cache, oddělené atomické sync/backup vazby. Picker/consent lifecycle, re-created Activity, factory/UI/Job a zobrazení oddělených účtů.",
+      "negative": "Consent/scope/developer error, 401 jen použitého tokenu, změna účtu během SDK await, interrupt/UI thread, failed AtomicFile a vadná/Unicode vazba nesmějí potvrdit nový účet ani prozradit token. Pozdní callback ani starý picker nesmí přepsat novější účet/složku, disconnect nesmí přejít na starou SAF; account change vyčistí jen zobrazené staré body. SDK nesmí přidat broad account/contacts/phone/SMS permission.",
       "limits": [
         "AuthorizationClient je mock; nejde o skutečné Google Play/consent/OAuth přihlášení.",
-        "Android UI/Job ještě třídy nevytvářejí; chybí skutečná registrace a veřejný Google Cloud project ID.",
-        "Fyzický OAuth účet/GMS absence/odvolání/OS lifecycle vyžadují finální aplikaci a zařízení."
+        "Fyzický OAuth účet/GMS absence/odvolání/OS lifecycle vyžadují finální aplikaci a zařízení.",
+        "UI/Job jsou zapojené, ale prázdný Google project ID brání neověřenému připojení; legitimní klient/účet ještě není k dispozici."
       ]
     }
   ],
@@ -1127,6 +1146,8 @@
     "Android Drive OAuth/UI/Job zapojení, registrace klienta a jeho skutečné chybové cesty.",
     "Živé API stránkování a ověření konzervativního HTTP budgetu; TLS/operátor nejsou přesně měřené.",
     "Low-memory/process-kill a poškození/ztráta všech kopií úložiště; fallback/inbox má od etapy 28 cílené testy.",
-    "Kompletní mapování jednotlivých starších ovládacích prvků; nyní jsou mapované funkční oblasti."
+    "Kompletní mapování jednotlivých starších ovládacích prvků; nyní jsou mapované funkční oblasti.",
+    "Ověřit publikaci celého snapshotu v novém cloud namespace i po dřívějším direct/old-store ACK; globální lastAck nesmí přeskočit novou cloudovou kopii.",
+    "Dokončit schválenou volitelnou frekvenci 15/30/60 min/ručně a audit priority nearby/LAN/cloud v Android koordinátoru."
   ]
 }

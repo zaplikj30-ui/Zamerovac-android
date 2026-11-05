@@ -20,6 +20,7 @@ function render(){if(!panel||panel.hidden)return;const active=document.activeEle
   if(!list.length)candidates.append(node('p','Zatím žádná zařízení. Ve stejné Wi-Fi se vyhledají automaticky; bez routeru spusť hledání Wi-Fi Direct na obou.'));
   for(const item of list){if(typeof item.key!=='string')continue;const row=node('div',null,'peer-row');row.append(node('span',String(item.name||'Android zařízení')+' · '+(item.route==='nearby'?'Wi-Fi Direct':'místní Wi-Fi')),button('Propojit',null,()=>command('connect',item.key)));candidates.append(row);}body.append(candidates);
  }
+ root.ZamerovacDriveAccounts?.mount(body,'sync');
  body.append(node('h3','Spárovaná zařízení'));const peers=state.peers&&typeof state.peers==='object'?Object.entries(state.peers):[];
  if(!peers.length)body.append(node('p','Zatím není spárované žádné zařízení.'));
  for(const [id,peer] of peers){const row=node('article',null,'peer-device'),progress=peer.state||{},pending=Math.max(0,Number(peer.pending)||0);row.append(node('h4',String(peer.name||'Android zařízení')),node('p',phases[progress.phase]||'Čeká na spojení'));
@@ -46,7 +47,7 @@ root.onNativePeerState=raw=>{try{state=safeState(raw);render();if(state.approval
 root.onNativePeerPairing=showApproval;
 root.onNativePeerProblem=raw=>{try{const value=safeState(raw);state.problem=String(value.problem||'Přenos se nepodařil.');render();if(!panel||panel.hidden)notify(state.problem);}catch(e){}};
 root.openZamerovacPeers=open;
-const previousSettings=renderSettings;renderSettings=function(){previousSettings();const host=document.getElementById('settingsContent');host.append(node('div','Synchronizace zařízení','setGroup'),button('Místní a přímé propojení','peerSettings',open));};
+const previousSettings=renderSettings;renderSettings=function(){previousSettings();const host=document.getElementById('settingsContent');host.append(node('div','Synchronizace zařízení','setGroup'),button('Synchronizace zařízení – místní a Google Disk','peerSettings',open));};
 const previousMenu=showAppMenu;showAppMenu=function(id,items){if(id==='navMenu'||id==='overflowMenu')items=[...items,['⇄  Synchronizace zařízení',open]];return previousMenu(id,items);};
 const previousBack=root.handleAndroidBack;root.handleAndroidBack=function(){if(request){command('reject',request.sessionId);hideApproval();return 'handled';}if(panel&&!panel.hidden){close();return 'handled';}return typeof previousBack==='function'?previousBack():'root';};
 })(window);

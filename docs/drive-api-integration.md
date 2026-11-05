@@ -1,6 +1,6 @@
 # Drive API: hranice etapy 29 a další zapojení
 
-DriveHttp/DriveApi jsou skutečný samostatný Java kód, zatím bez připojení k produkčnímu SyncStore/BackupStore/OAuth UI. Nativní testy používají řízené HTTPS odpovědi, ne účet Googlu. Před vydáním tento rozdíl zachovat v PR, nápovědě i historii.
+Aktuální stav etapy32: DriveHttp/DriveApi, capability adaptéry, SDK auth, picker/consent a CloudStorage jsou zapojené do MainActivity/SyncJob a UI. Prázdný veřejný project ID ale úmyslně blokuje neověřené Google připojení; legitimní Cloud projekt/Android registrace a živý účet nejsou dostupné. Následující etapy 29–31 jsou historická evidence původního rozdělení. Nativní testy používají řízené HTTPS odpovědi, ne účet Googlu. Před vydáním tento rozdíl zachovat v PR, nápovědě i historii.
 
 Použité oficiální zdroje (ověřeno 5. 11. 2026):
 
@@ -39,3 +39,9 @@ BuildConfig.DRIVE_CLOUD_PROJECT je veřejný Google project ID z Gradle property
 Další krok: Drive account picker/consent lifecycle, samostatná továrna sync/backup s připnutým účtem a route/policy bindingem, MainActivity/SyncJob zapojení a reálné UI/negative testy. Nedostupný Cloud Console přístup/projekt nelze nahradit účtem konektoru; žádný Google účet zatím nebyl fyzicky ověřen.
 
 Konkrétní testovací registrace, ověřeno místním keytool nad veřejným tools/debug-signing.p12.b64: package **cz.zamerovac.app.preview**, SHA1 **7D:00:35:7F:D9:50:B0:95:62:30:5C:92:86:EB:18:05:A7:F7:FB:42**, SHA256 **C8:28:C9:67:39:E5:54:E8:DA:4F:58:51:91:33:56:13:4F:13:59:A9:8D:50:13:77:2A:D5:58:7E:74:A2:D2:29**. Jsou to veřejné fingerprinty známého vývojového podpisu; neobsahují token. Samotná znalost těchto údajů nevytvořila Google Cloud projekt ani OAuth registraci a není podkladem pro budoucí produkční podpis.
+
+## Etapa 32: produkční zapojení
+
+DriveAccountFlow a CloudStorage řeší výběr/consent, lifecycle a factory/policy. MainActivity/SyncJob skutečně volí Drive nebo SAF podle potvrzeného stavu. Účet i namespace jsou připnuté pro celou operaci; disconnect nepřepne sám na starou složku. Monotónní per-feature revision odmítne i starý callback po změně tam a zpět. Aktivní kód je v UI, ale Google připojení stále vyžaduje skutečný project ID/registraci; default je poctivě nedostupný, ne falešná integrace.
+
+Další kritická kontrola: source global lastAck ze starého cloudu/direct nesmí vynechat publikaci plné kopie v novém account/store namespace. Po ní schválená frekvence a Android nearby/LAN/cloud priority. Native etapy32 CI ověřit; místní3 browser account scénáře a4 předchozí sync/backup scénáře prošly, stejně Node/Python. Reálný účet, GMS consent, OEM a rádia nejsou tímto prokázané.

@@ -129,3 +129,7 @@ DriveStoresTest (7) a BackupHistoryTest (+1). Skutečný signed DB/media/ACK, v�
 ## Etapa 31 – SDK autorizace a durable account binding
 
 DriveAuthorizationTest (5) + DriveAccountsTest (3). Skutečné Google SDK typy s mock AuthorizationClient; task/cache/account/scope/401/consent/error/interrupt/UI a confirmed AtomicFile/reopen/oddělení/vadné Unicode. Native CI musí potvrdit dependency/kompilaci/běh; skutečný GMS/OAuth účet/registrace ani UI zatím nejsou zapojené. Etapa 30 už má plné native170/quick SUCCESS v 17b8c87.
+
+## Etapa 32 – produkční účet/backend a UI
+
+CloudStorageTest4 + DriveAccountFlowTest6 + MainCloudSelectionTest2 + merged-permission test SDK. Picker/consent/lifecycle/recreated Activity, late grant a account/složka CAS, scope/cancel/offline/metered/factory a samostatné odpojení bez fallbacku. Nový browser drive-accounts3 a dosavadní peer-sync3/backup-history1 místně prošly. Node/Python47 (2skipy bez javac) prošly; novou native/quick CI ověřit. Google projekt a fyzický účet stále neověřené, current default UI tuto konfiguraci poctivě blokuje. Zvlášť ještě otestovat nový cloud namespace po globálním ACK, frekvenci a Android výběr route. Etapa31 už má178/quick SUCCESS v edab326.

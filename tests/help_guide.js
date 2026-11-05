@@ -58,3 +58,5 @@ finds('podepsanou žádostí','cloud');
 finds('starší záložní kopie','cloud');finds('ztrátu všech kopií','cloud');
 
 finds('poskytovatel zálohy','backup');
+
+finds('Google účet','cloud');finds('soukromý prostor','backup');finds('odpojit Disk','cloud');
