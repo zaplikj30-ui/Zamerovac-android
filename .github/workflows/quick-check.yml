@@ -124,6 +124,7 @@ jobs:
           node tools/e2e/workflows.cjs
           node tools/e2e/interactions.cjs
           node tools/e2e/zoom-grid.cjs
+          node tools/e2e/update39.cjs
           node tools/e2e/help.cjs
           node tools/e2e/release-history.cjs
       - uses: actions/upload-artifact@v4

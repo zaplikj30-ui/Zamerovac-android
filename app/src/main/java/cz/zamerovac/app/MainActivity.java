@@ -544,7 +544,7 @@ public class MainActivity extends Activity {
                 try(OutputStream stream=getContentResolver().openOutputStream(destination,"w")){
                     if(stream==null)throw new IOException("Nelze otevřít soubor");
                     exportArchive(stream,folderId,selectionIds);
-                }catch(Exception e){try{DocumentsContract.deleteDocument(getContentResolver(),destination);}catch(Exception ignored){}error("Záloha ZIP nebyla dokončena: "+e.getMessage());return;}
+                }catch(Exception e){try{android.provider.DocumentsContract.deleteDocument(getContentResolver(),destination);}catch(Exception ignored){}error("Záloha ZIP nebyla dokončena: "+e.getMessage());return;}
                 onSyncResult("ZIP záloha zakázek a původních médií byla uložena",null);
             },"ZamerovacBackup").start();
             return;

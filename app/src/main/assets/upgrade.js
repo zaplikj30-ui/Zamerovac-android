@@ -80,11 +80,13 @@ const oldError=window.onNativeError;
 window.onNativeError=function(message){logEvent('chyba',String(message).split('\n')[0]);if(/synchronizac|google disk|cloud/i.test(String(message)))setCloudState('failed');oldError(message)};
 const oldSync=window.onNativeSync;
 window.onNativeSync=function(text){
-  let message='Dokončená synchronizace';
-  try{message=JSON.parse(text).message||message;}catch(e){}
-  setCloudState(/chyb|selhal|nelze|nepodpor/i.test(message)?'failed':'ok');
-  logEvent('cloud',/chyb|selhal|nelze|nepodpor/i.test(message)?'Synchronizace hlásí chybu':'Synchronizace dokončena');
-  oldSync(text);
+  let message='';try{message=JSON.parse(text).message||'';}catch(e){}
+  const confirmed=oldSync(text);
+  if(/synchroniz/i.test(message)){
+   const failed=confirmed===false||/chyb|selhal|nelze|nepodpor/i.test(message);
+   setCloudState(failed?'failed':'ok');logEvent('cloud',failed?'Synchronizace hlásí chybu':'Synchronizace dokončena');
+  }
+  return confirmed;
 };
 function setCloudState(status){
  const b=$('cloudBtn');b.dataset.status=status;
@@ -103,7 +105,7 @@ document.addEventListener('click',e=>{
 });
 const oldSave=save;
 save=function(){
-  try{oldSave();}catch(e){logEvent('chyba','Nepodařilo se uložit místní data');notify('Uložení se nezdařilo');throw e}
+  try{return oldSave();}catch(e){logEvent('chyba','Nepodařilo se uložit místní data');notify('Uložení se nezdařilo');throw e}
 };
 const oldCommit=commitEditor;
 commitEditor=function(){
@@ -119,12 +121,12 @@ commitEditor=function(){
       if(record.versionHistory.length>12)record.versionHistory.shift();
     }
   }
-  oldCommit();
+  const confirmed=oldCommit();
   if(window.__detailParent && record._detailTemporary){
     window.__detailItem.detailItems=record.items;
     touch(window.__detailParent);save();
   }
-  logEvent('editor','Změna kótování uložena');
+  logEvent(confirmed===false?'chyba':'editor',confirmed===false?'Změna kótování není uložená':'Změna kótování uložena');return confirmed;
 };
 function restoreVersion(){
  if(!current||current._detailTemporary)return;
@@ -332,11 +334,7 @@ async function renderGallery(){
  const canvas=display.querySelector('.gallery-img');
  display.querySelector('.gallery-title').textContent=r.title+' · '+(galleryIndex+1)+'/'+galleryList.length;
  try{
-  const url=await assetUrl(r.media?.[0]);
-  if(!url)return;
-  const image=await new Promise((resolve,reject)=>{
-   const im=new Image();im.onload=()=>resolve(im);im.onerror=reject;im.src=url;
-  });
+  const image=await loadPhotoImage(r.media?.[0]);
   // Stejnou anotovanou podobu zobrazit i při listování; žádný prvek není dotykově aktivní.
   const details=(r.items||[]).filter(it=>it.type==='note'&&it.media?.length);
   await Promise.all(details.map(async it=>{
@@ -355,28 +353,23 @@ async function renderGallery(){
   const density=Math.min(2,window.devicePixelRatio||1);
   const maxW=Math.max(1,(available.clientWidth||500)*density);
   const maxH=Math.max(1,(available.clientHeight||650)*density);
-  // Include insets dragged outside the original photo. Gallery must use
-  // the whole annotated workspace, not clip at the original image edges.
+  // Measure the full annotated workspace using the actual inset/caption renderer.
   let minX=0,minY=0,maxX=image.naturalWidth,maxY=image.naturalHeight;
-  for(const item of details){
-   const inset=window.__detailPhotoCache?.[item.media?.[0]];
-   if(!inset?.naturalWidth||!inset?.naturalHeight)continue;
-   if(!Number.isFinite(item.insetX)||!Number.isFinite(item.insetY))continue;
-   const w=Math.max(70,Math.min(1500,Number(item.insetWidth)||220));
-   const h=w*inset.naturalHeight/inset.naturalWidth;
-   const angle=(Number(item.insetRotation)||0)*Math.PI/180;
-   const rotatedW=Math.abs(w*Math.cos(angle))+Math.abs(h*Math.sin(angle));
-   const rotatedH=Math.abs(w*Math.sin(angle))+Math.abs(h*Math.cos(angle));
-   const x=item.insetX,y=item.insetY;
-   minX=Math.min(minX,x+(w-rotatedW)/2);
-   minY=Math.min(minY,y+(h-rotatedH)/2);
-   maxX=Math.max(maxX,x+(w+rotatedW)/2);
-   maxY=Math.max(maxY,y+(h+rotatedH)/2);
-   if(item.captionMoved&&item.b){
-    minX=Math.min(minX,item.b.x-100);maxX=Math.max(maxX,item.b.x+100);
-    minY=Math.min(minY,item.b.y-35);maxY=Math.max(maxY,item.b.y+35);
+  const measure=canvas.getContext('2d'),previousView=view,previousPhoto=photoSize,previousExport=window.__exportingAnnotations;
+  try{
+   view={zoom:1,dx:0,dy:0};photoSize={w:image.naturalWidth,h:image.naturalHeight};window.__exportingAnnotations=true;
+   for(const item of r.items||[]){
+    const fs=Number(item.fontSize)||Number(prefs.fontSize)||17;
+    measure.font='600 '+fs+'px sans-serif';
+    const text=[item.text,item.measure,...(item.measures||[]),...(item.sideMeasures||[])].filter(x=>x!=null).join(' ');
+    const padding=Math.max(fs*3,measure.measureText(text).width/2+24);
+    for(const p of [item.a,item.b,...(item.points||[])])if(p&&Number.isFinite(p.x)&&Number.isFinite(p.y)){
+     minX=Math.min(minX,p.x-padding);minY=Math.min(minY,p.y-fs*3);maxX=Math.max(maxX,p.x+padding);maxY=Math.max(maxY,p.y+fs*3);
+    }
+    const bounds=item.type==='note'&&item.media?.length?window.insetAnnotationBounds?.(measure,item):null;
+    if(bounds){minX=Math.min(minX,bounds.minX);minY=Math.min(minY,bounds.minY);maxX=Math.max(maxX,bounds.maxX);maxY=Math.max(maxY,bounds.maxY)}
    }
-  }
+  }finally{view=previousView;photoSize=previousPhoto;window.__exportingAnnotations=previousExport}
   const margin=38;
   const workspaceW=maxX-minX+2*margin,workspaceH=maxY-minY+2*margin;
   const scale=Math.min(maxW/workspaceW,maxH/workspaceH,2);
@@ -384,6 +377,7 @@ async function renderGallery(){
   const height=Math.max(1,Math.round(workspaceH*scale));
   canvas.width=width;canvas.height=height;
   canvas.style.width=(width/density)+'px';canvas.style.height=(height/density)+'px';
+  display.__updateGalleryZoom?.();
   const c=canvas.getContext('2d');
   c.fillStyle='#292a2f';c.fillRect(0,0,width,height);
   const shiftX=(margin-minX)*scale,shiftY=(margin-minY)*scale;
@@ -391,12 +385,13 @@ async function renderGallery(){
   const oldCtx=ctx,oldView=view,oldCurrent=current,oldPhoto=photoSize,oldSelected=selected;
   const oldExport=window.__exportingAnnotations;
   try{
-   ctx=c;view={zoom:scale,dx:shiftX,dy:shiftY};
+   c.save();c.translate(shiftX,shiftY);c.scale(scale,scale);
+   ctx=c;view={zoom:1,dx:0,dy:0};
    current=r;photoSize={w:image.naturalWidth,h:image.naturalHeight};
    selected=null;window.__exportingAnnotations=true;
    for(const item of r.items||[])drawItem(c,item);
   }finally{
-   ctx=oldCtx;view=oldView;current=oldCurrent;photoSize=oldPhoto;selected=oldSelected;
+   c.restore();ctx=oldCtx;view=oldView;current=oldCurrent;photoSize=oldPhoto;selected=oldSelected;
    window.__exportingAnnotations=oldExport;
   }
  }catch(err){notify('Fotografii v galerii se nepodařilo zobrazit');}
@@ -410,7 +405,7 @@ function openGallery(index,records=null){
  galleryList=records||galleryPhotos();galleryIndex=Math.min(Math.max(index,0),galleryList.length-1);
  if(!galleryList.length){notify('Ve složce nejsou fotografie');return}
  gallery=document.createElement('div');gallery.className='galleryOverlay';
- gallery.innerHTML='<div class="gallery-top"><button data-action="close">←</button><strong class="gallery-title"></strong><button data-action="edit">Upravit</button></div><div class="gallery-content"><canvas class="gallery-img" role="img" aria-label="Fotografie včetně kót a poznámek"></canvas></div><div class="gallery-bottom"><span>Listuj přejetím do stran · přibliž dvěma prsty</span></div>';
+ gallery.innerHTML='<div class="gallery-top"><button data-action="close">←</button><strong class="gallery-title"></strong><button data-action="edit">Upravit</button></div><div class="gallery-content"><canvas class="gallery-img" role="img" aria-label="Fotografie včetně kót a poznámek"></canvas></div>';
  document.body.append(gallery);
  gallery.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>{
   const a=b.dataset.action;
@@ -420,7 +415,14 @@ function openGallery(index,records=null){
  });
  const image=gallery.querySelector('.gallery-img');
  let galleryZoom=1,galleryTx=0,galleryTy=0,pinch=null,pan=null;
- const updateZoom=()=>{image.style.transform='translate('+galleryTx+'px,'+galleryTy+'px) scale('+galleryZoom+')'};
+ const updateZoom=()=>{
+  const viewport=gallery?.querySelector('.gallery-content');if(!viewport)return;
+  const limitX=Math.max(0,(image.offsetWidth*galleryZoom-viewport.clientWidth)/2);
+  const limitY=Math.max(0,(image.offsetHeight*galleryZoom-viewport.clientHeight)/2);
+  galleryTx=Math.max(-limitX,Math.min(limitX,galleryTx));galleryTy=Math.max(-limitY,Math.min(limitY,galleryTy));
+  image.style.transform='translate('+galleryTx+'px,'+galleryTy+'px) scale('+galleryZoom+')';
+ };
+ gallery.__updateGalleryZoom=updateZoom;
  const resetZoom=()=>{galleryZoom=1;galleryTx=0;galleryTy=0;updateZoom()};
  const distance=(a,b)=>Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);
  const oldRender=renderGallery;
@@ -430,7 +432,8 @@ function openGallery(index,records=null){
  };
  image.addEventListener('touchstart',e=>{
   if(e.touches.length===2){
-   pinch={distance:distance(e.touches[0],e.touches[1]),scale:galleryZoom};
+   const rect=image.getBoundingClientRect(),mid={x:(e.touches[0].clientX+e.touches[1].clientX)/2,y:(e.touches[0].clientY+e.touches[1].clientY)/2};
+   pinch={distance:distance(e.touches[0],e.touches[1]),scale:galleryZoom,tx:galleryTx,ty:galleryTy,mid,cx:rect.x+rect.width/2-galleryTx,cy:rect.y+rect.height/2-galleryTy};
    galleryStart=null;pan=null;
   }else if(e.touches.length===1){
    const t=e.touches[0];
@@ -442,6 +445,9 @@ function openGallery(index,records=null){
   if(e.touches.length===2&&pinch){
    e.preventDefault();
    galleryZoom=Math.max(1,Math.min(5,pinch.scale*distance(e.touches[0],e.touches[1])/Math.max(1,pinch.distance)));
+   const factor=galleryZoom/pinch.scale,mx=(e.touches[0].clientX+e.touches[1].clientX)/2,my=(e.touches[0].clientY+e.touches[1].clientY)/2;
+   galleryTx=mx-pinch.cx-(pinch.mid.x-pinch.cx-pinch.tx)*factor;
+   galleryTy=my-pinch.cy-(pinch.mid.y-pinch.cy-pinch.ty)*factor;
    if(galleryZoom===1){galleryTx=0;galleryTy=0}
    updateZoom();
   }else if(e.touches.length===1&&pan){
@@ -457,8 +463,10 @@ function openGallery(index,records=null){
    if(Math.abs(dx)>70)galleryNavigate(dx<0?1:-1);
   }
   if(e.touches.length<2)pinch=null;
+  if(e.touches.length===1&&galleryZoom>1)pan={x:e.touches[0].clientX,y:e.touches[0].clientY,tx:galleryTx,ty:galleryTy};
   if(e.touches.length===0){pan=null;galleryStart=null}
  },{passive:true});
+ image.addEventListener('touchcancel',()=>{pinch=null;pan=null;galleryStart=null;updateZoom()});
  image.addEventListener('dblclick',()=>{if(galleryZoom>1)resetZoom();else{galleryZoom=2;updateZoom()}});
 
  renderGallery();
@@ -699,7 +707,7 @@ function renderBluetooth(){
  const icon='<svg class="bluetooth-symbol" width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7l10 10-5 4V3l5 4L7 17"/></svg>';
  const overlay=(laserState==='connected'||laserState==='receiving')?'<span class="bt-overlay bt-check" aria-hidden="true">✓</span>':laserState==='connecting'?'<span class="bt-overlay bt-spinner" aria-hidden="true"></span>':'<span class="bt-overlay bt-off" aria-hidden="true">×</span>';
  b.innerHTML=icon+overlay;
- b.title='Bosch Bluetooth: '+(laserState==='receiving'?'přenos ověřen':laserState==='connected'?'připojen – čekám na první měření':laserState==='connecting'?'připojování':'odpojen')+(laserName?' · '+laserName:'');
+ b.title='Bluetooth: '+(laserState==='receiving'?'přenos ověřen':laserState==='connected'?'připojeno – čekám na první měření':laserState==='connecting'?'připojování':'odpojeno')+(laserName?' · '+laserName:'');
  b.setAttribute('aria-label',b.title);
  renderLaserMeterIcon();
 }
@@ -719,7 +727,7 @@ renderBluetooth();
 $('bluetoothBtn').onclick=()=>{
  const canDisconnect=['connecting','connected','receiving'].includes(laserState);
  const disconnectLabel=laserState==='connecting'?'Zrušit připojování':'Odpojit měřák';
- modal('Měřič Bosch','<p>'+esc($('bluetoothBtn').title)+'</p><p>Po připojení čeká Zaměřovač na první naměřenou hodnotu. Teprve potom potvrdí příjem měření.</p><p class="muted">Historii měření otevřeš ikonou měřáku vedle Bluetooth nebo dlouhým podržením Bluetooth.</p><button class="outline" id="laserConnect" type="button">Připojit můj laser Bosch</button><button class="outline" id="laserOther" type="button">Vybrat jiný měřič</button>'+
+ modal('Bluetooth měřič','<p>'+esc($('bluetoothBtn').title)+'</p><p>Po připojení čeká Zaměřovač na první naměřenou hodnotu. Teprve potom potvrdí příjem měření.</p><p class="muted">Historii měření otevřeš ikonou měřáku vedle Bluetooth nebo dlouhým podržením Bluetooth.</p><button class="outline" id="laserConnect" type="button">Připojit můj laser Bosch</button><button class="outline" id="laserOther" type="button">Vybrat jiný měřič</button>'+
  (canDisconnect?'<button class="outline" id="laserDisconnect" type="button">'+disconnectLabel+'</button>':''),
  ()=>true,'Zavřít');
  $('laserConnect').onclick=()=>{if(native){$('modal').hidden=true;laserState='connecting';laserName='vyhledávání Bosch';renderBluetooth();Native.connectLaser()}else notify('Vyžaduje Android')};

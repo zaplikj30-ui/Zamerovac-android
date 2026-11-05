@@ -44,7 +44,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
   for(const [w,h] of icons){assert(w<=32.1&&h<=32.1);assert(Math.abs(w-h)<.2,'Square icon proportions')}
   await reachable('#editorExtraToolbar > [data-toolbar-key]:first-child');await reachable('#editorExtraToolbar > [data-toolbar-key]:last-child');
   await page.click('#toolsToggle');assert(await page.locator('#toolMenu').isVisible());
-  await reachable('#toolMenu .choice:last-child');await page.evaluate(()=>window.handleAndroidBack());
+  await reachable('#toolMenu .toolList .choice:last-child');await page.evaluate(()=>window.handleAndroidBack());
  }
  fs.mkdirSync('/tmp/zamerovac-orientation',{recursive:true});await page.screenshot({path:'/tmp/zamerovac-orientation/editor-landscape.png'});
  // Rotation with an unsaved numeric dialog must retain exactly what was typed.

@@ -37,3 +37,7 @@ assert.match(extra,/\['Nápověda'/,'Overflow menu must link to help');
 assert.doesNotMatch(src,/\bfetch\s*\(|XMLHttpRequest|localStorage\.|Native\.|state\./,'Help must not make network requests or mutate project data');
 assert.match(src,/root\.handleAndroidBack=function/,'Physical Back must close help');
 console.log('PASS full offline help: 25 chapters, Czech search, offline scripts, safe menus and Back');
+assert.deepEqual(help.matchingRanges('Kóta kóta KOTA','kota'),[[0,4],[5,9],[10,14]]);
+assert.deepEqual(help.matchingRanges('<script> & kóta','<script>'),[[0,8]]);
+assert.deepEqual(help.matchingRanges('žádný výskyt','zzzz'),[]);
+assert.deepEqual(help.matchingRanges('kóta',''),[]);

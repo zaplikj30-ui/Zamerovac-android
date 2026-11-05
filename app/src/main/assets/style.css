@@ -101,3 +101,6 @@ body.in-editor .top,body.in-note .top{display:none}
 .editor-head .editor-caption #editorTitle{display:block;flex:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #editorPhotoMeta{display:block;max-width:100%;font-size:11px;font-weight:400;color:#f1f5d8;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #editorPhotoMeta:empty{display:none}
+
+.save-error-banner{position:fixed;top:60px;left:8px;right:8px;z-index:155;display:flex;align-items:center;gap:8px;padding:10px;background:#791d25;color:white;border:2px solid #f9b3b3;border-radius:8px;font-size:14px}
+.save-error-banner span{flex:1}.save-error-banner button{min-height:44px;padding:8px;border:1px solid white;border-radius:5px}

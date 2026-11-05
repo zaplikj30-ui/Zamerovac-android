@@ -17,9 +17,10 @@ class PhotoNotesGalleryTests(unittest.TestCase):
     def test_gallery_includes_outside_insets(self):
         source=(ASSETS/'upgrade.js').read_text(encoding='utf-8')
         self.assertIn('let minX=0,minY=0,maxX=image.naturalWidth,maxY=image.naturalHeight',source)
-        self.assertIn('const rotatedW=Math.abs(w*Math.cos(angle))',source)
+        self.assertIn('window.insetAnnotationBounds?.(measure,item)',source)
         self.assertIn('const workspaceW=maxX-minX+2*margin',source)
-        self.assertIn('view={zoom:scale,dx:shiftX,dy:shiftY}',source)
+        self.assertIn('c.translate(shiftX,shiftY);c.scale(scale,scale)',source)
+        self.assertIn('view={zoom:1,dx:0,dy:0}',source)
 
     def test_camera_cancellation_cleans_state(self):
         source=JAVA.read_text(encoding='utf-8')

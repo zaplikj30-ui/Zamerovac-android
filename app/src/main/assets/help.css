@@ -49,3 +49,11 @@
  .z-help-search input{min-height:37px}
  .z-help-intro{margin-bottom:10px}
 }
+
+.z-help-match-nav{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:5px;font-size:13px}
+.z-help-match-nav button{min-height:40px;padding:5px 10px;border:1px solid #777;border-radius:5px}
+.z-help-match-nav button:disabled{opacity:.4}
+.z-help-panel mark{background:#f7dc27;color:#171717;border-radius:2px}
+.z-help-panel .z-help-active-match{background:#fff;outline:3px solid #e09f21;scroll-margin-block:20px}
+
+body.help-open #feedbackFlag{display:none!important}

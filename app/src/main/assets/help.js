@@ -18,7 +18,8 @@ const chapters=[
     ],
     "notes": [
       "Rozměry se automaticky nepočítají podle velikosti objektů na fotografii. Fotografie je pracovní podklad, skutečnou hodnotu zadáváš ty nebo měřidlo.",
-      "Před použitím při výrobě vždy zkontroluj kritické rozměry."
+      "Před použitím při výrobě vždy zkontroluj kritické rozměry.",
+      "Lupa nápovědy hledá jen zde. Tlačítka Předchozí a Další přecházejí mezi zvýrazněnými slovy; samostatná počítadla rozlišují témata a výskyty. Hledání funguje i bez diakritiky."
     ],
     "keywords": [
       "první použití",
@@ -62,7 +63,8 @@ const chapters=[
     ],
     "notes": [
       "Původní fotografie se kvůli nakresleným kótám nemá přepisovat; anotace jsou uložené odděleně.",
-      "Při chybě načtení fotografii zavři a otevři znovu. U důležitých dat neodinstalovávej aplikaci jako první způsob opravy."
+      "Při chybě načtení fotografii zavři a otevři znovu. U důležitých dat neodinstalovávej aplikaci jako první způsob opravy.",
+      "Opakované otevření stejné fotografie využívá omezenou paměťovou mezipaměť dekódovaných obrázků. Po úplném restartu se originál načítá znovu. Při načítání nebo chybě se samostatné kóty nezobrazují na prázdném podkladu; originály ani hodnoty se nemění."
     ],
     "keywords": [
       "foto",
@@ -85,7 +87,8 @@ const chapters=[
     ],
     "notes": [
       "Podpora formátů videa závisí na kodecích konkrétního telefonu. Nepodporované video může zobrazit chybu nebo náhradní miniaturu.",
-      "Přehrání videa a vytvoření miniatury nemá změnit jeho původní obsah."
+      "Přehrání videa a vytvoření miniatury nemá změnit jeho původní obsah.",
+      "V galerii se fotografie i všechny anotace posouvají jen k dostupným okrajům. Po oddálení na 1× se vycentrují; gesta zůstávají dostupná bez spodního pokynu."
     ],
     "keywords": [
       "mp4",
@@ -220,7 +223,8 @@ const chapters=[
     ],
     "notes": [
       "Jemné poklepání nemá náhodně posunout bod. Pokud se to stane, zkus Vrátit úpravu a chybu zdokumentuj.",
-      "Výběr objektu není totéž jako změna jeho skutečně naměřené číselné hodnoty."
+      "Výběr objektu není totéž jako změna jeho skutečně naměřené číselné hodnoty.",
+      "Po otevření editoru je aktivní výběr. Při tažení rohu hotového obdélníku, lichoběžníku, kruhu nebo elipsy lupa sleduje upravovaný úchop; při přesunu celého objektu se nezobrazuje."
     ],
     "keywords": [
       "úchop",
@@ -339,7 +343,8 @@ const chapters=[
     ],
     "notes": [
       "Bluetooth přenos nemusí fungovat se všemi modely Bosch; podporu ověř na vlastním přístroji.",
-      "Do výrobní dokumentace používej až rozměr, který se skutečně přenesl a který jsi zkontroloval."
+      "Do výrobní dokumentace používej až rozměr, který se skutečně přenesl a který jsi zkontroloval.",
+      "Obecný dialog se jmenuje Bluetooth měřič. Připojit můj laser Bosch používá dosavadní podporu Bosch; neutrální název neznamená podporu všech protokolů."
     ],
     "keywords": [
       "GLM",
@@ -479,7 +484,8 @@ const chapters=[
     ],
     "notes": [
       "Změna zobrazení jednotek nebo přiblížení nesmí přepočítat již uloženou naměřenou hodnotu bez tvé výslovné úpravy.",
-      "Experimentální funkce jsou v hlavní nabídce samostatné a nemusí být ověřené pro běžné zakázky."
+      "Experimentální funkce jsou v hlavní nabídce samostatné a nemusí být ověřené pro běžné zakázky.",
+      "Na výšku se lišta nemění. Na šířku se přidají vybrané nástroje podle volného místa. Nabídka nástrojů → Nastavit lištu na šířku umožní výběr a pořadí; vytahovací nabídka zůstává dostupná."
     ],
     "keywords": [
       "čeština",
@@ -597,33 +603,53 @@ function searchChapters(query=''){
  if(!needle)return chapters;
  return chapters.filter(c=>fold([c.title,c.intro,...c.steps,...c.notes,...c.keywords].join(' ')).includes(needle));
 }
-const api=Object.freeze({chapters,searchChapters});
+function matchingRanges(text,query){
+ const needle=fold(query);if(!needle)return [];
+ let normalized='',offsets=[];
+ for(let i=0;i<text.length;){const point=String.fromCodePoint(text.codePointAt(i)),part=point.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('cs-CZ');for(const char of part){normalized+=char;offsets.push([i,i+point.length])}i+=point.length;}
+ const ranges=[];for(let at=0;(at=normalized.indexOf(needle,at))>=0;at+=needle.length){ranges.push([offsets[at][0],offsets[at+needle.length-1][1]])}return ranges;
+}
+const api=Object.freeze({chapters,searchChapters,matchingRanges});
 root.ZamerovacHelp=api;
 if(typeof module!=='undefined'&&module.exports)module.exports=api;
 if(typeof document==='undefined')return;
-let panel,search,results,count,returnFocus;
+let panel,search,results,count,returnFocus,occurrenceCount,previousMatch,nextMatch,matches=[],matchIndex=-1;
 function el(tag,className,text){
  const node=document.createElement(tag);
  if(className)node.className=className;
  if(text!==undefined)node.textContent=text;
  return node;
 }
+function moveMatch(step){
+ if(!matches.length)return;
+ matches[matchIndex]?.classList.remove('z-help-active-match');matchIndex=(matchIndex+step+matches.length)%matches.length;
+ const target=matches[matchIndex];target.closest('details').open=true;target.classList.add('z-help-active-match');
+ target.scrollIntoView({block:'center',behavior:'auto'});occurrenceCount.textContent=(matchIndex+1)+' z '+matches.length+' výskytů';
+}
 function render(){
- const query=search.value;
- const filtered=new Set(searchChapters(query).map(c=>c.id));
- let shown=0;
+ for(const mark of results.querySelectorAll('mark[data-help-match]'))mark.replaceWith(document.createTextNode(mark.textContent));
+ results.normalize();matches=[];matchIndex=-1;
+ const query=search.value,filtered=new Set(searchChapters(query).map(c=>c.id));let shown=0;
  for(const card of results.querySelectorAll('details[data-help-topic]')){
-  const visible=filtered.has(card.dataset.helpTopic);
-  card.hidden=!visible;
+  const visible=filtered.has(card.dataset.helpTopic);card.hidden=!visible;
   if(visible)shown++;
-  if(query.trim())card.open=visible;
-  else if(card.dataset.helpTopic!=='start')card.open=false;
+  if(query.trim())card.open=visible;else if(card.dataset.helpTopic!=='start')card.open=false;
+  if(!visible||!fold(query))continue;
+  const walker=document.createTreeWalker(card,NodeFilter.SHOW_TEXT),nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
+  for(const node of nodes){
+   const ranges=matchingRanges(node.textContent,query);if(!ranges.length)continue;
+   const fragment=document.createDocumentFragment();let from=0;
+   for(const [start,end] of ranges){fragment.append(document.createTextNode(node.textContent.slice(from,start)));const mark=el('mark','',node.textContent.slice(start,end));mark.dataset.helpMatch='';matches.push(mark);fragment.append(mark);from=end;}
+   fragment.append(document.createTextNode(node.textContent.slice(from)));node.replaceWith(fragment);
+  }
  }
  count.textContent=shown===0?'Nic jsme nenašli. Zkus jiné slovo.':'Zobrazeno témat: '+shown+' z '+chapters.length;
+ previousMatch.disabled=nextMatch.disabled=!matches.length;occurrenceCount.textContent='0 z '+matches.length+' výskytů';
+ if(matches.length)moveMatch(1);
 }
 function close(){
  if(!panel||panel.hidden)return;
- panel.hidden=true;
+ panel.hidden=true;document.body.classList.remove('help-open');
  search.value='';
  render();
  const target=returnFocus&&returnFocus.isConnected?returnFocus:document.getElementById('back');
@@ -633,7 +659,7 @@ function open(){
  if(!panel)build();
  if(typeof closeMenus==='function')closeMenus();
  returnFocus=document.activeElement;
- panel.hidden=false;
+ panel.hidden=false;document.body.classList.add('help-open');
  search.value='';
  render();
  panel.querySelector('details[data-help-topic="start"]').open=true;
@@ -664,7 +690,11 @@ function build(){
  search.autocomplete='off';search.setAttribute('enterkeyhint','search');
  search.addEventListener('input',render);
  count=el('p','z-help-count');
- top.append(label,search,count);
+ const navigation=el('div','z-help-match-nav');
+ previousMatch=el('button','','↑ Předchozí');previousMatch.id='helpPreviousMatch';previousMatch.type='button';previousMatch.onclick=()=>moveMatch(-1);
+ nextMatch=el('button','','Další ↓');nextMatch.id='helpNextMatch';nextMatch.type='button';nextMatch.onclick=()=>moveMatch(1);
+ occurrenceCount=el('span');occurrenceCount.id='helpOccurrenceCount';occurrenceCount.setAttribute('aria-live','polite');
+ navigation.append(previousMatch,occurrenceCount,nextMatch);top.append(label,search,count,navigation);
  const scroller=el('div','z-help-scroll');
  const intro=el('p','z-help-intro','Praktický návod ke všem současným funkcím. Funguje i bez internetu. Klepni na kapitolu pro otevření a čti postupy po jednotlivých krocích.');
  results=el('div','z-help-results');

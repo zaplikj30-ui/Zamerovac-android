@@ -44,20 +44,31 @@ function applySavedState(next){
  // Retain live editor/note references when a local draft wins reconciliation.
  for(const active of [current,noteActive])if(active){const at=state.records.findIndex(r=>r.id===active.id);if(at>=0&&state.records[at]!==active){Object.assign(active,state.records[at]);state.records[at]=active}}
 }
+function reportSaveResult(ok){
+ window.__lastSaveFailed=!ok;
+ if(typeof document==='undefined')return ok;
+ let banner=$('saveErrorBanner');
+ if(ok){banner?.remove();return true}
+ if(!banner){banner=document.createElement('div');banner.id='saveErrorBanner';banner.setAttribute('role','alert');banner.className='save-error-banner';
+  const text=document.createElement('span');text.textContent='Změny nejsou uložené. Ponech aplikaci otevřenou.';
+  const retry=document.createElement('button');retry.type='button';retry.textContent='Zkusit uložit znovu';retry.onclick=()=>save();banner.append(text,retry);document.body.append(banner);
+ }
+ return false;
+}
 function save(){
  if(dataLoadFailed){notify('Zakázky nelze načíst. Zápis je zablokovaný, původní data zůstávají chráněná.');return false}
  try{
   for(let attempt=0;attempt<3;attempt++){
    const text=JSON.stringify(state);
-   if(!native){localStorage.setItem('zamerovac-data',text);persistedSnapshot=text;return true}
+   if(!native){localStorage.setItem('zamerovac-data',text);persistedSnapshot=text;return reportSaveResult(true)}
    const result=JSON.parse(Native.saveDataChecked(text,persistedSnapshot));
-   if(result.ok){persistedSnapshot=text;return true}
+   if(result.ok){persistedSnapshot=text;return reportSaveResult(true)}
    if(typeof result.current!=='string')throw new Error(result.error||'Zápis nebyl potvrzen');
    const disk=JSON.parse(result.current),base=persistedSnapshot?JSON.parse(persistedSnapshot):initial;
    applySavedState(reconcileSavedState(base,state,disk));persistedSnapshot=result.current;
   }
   throw new Error('Zakázky se právě mění. Zkus uložení znovu.');
- }catch(e){notify('Neuloženo: '+e.message);return false}
+ }catch(e){notify('Neuloženo: '+e.message);return reportSaveResult(false)}
 }
 function notify(msg){const el=$('toast');el.textContent=msg;el.hidden=false;clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>el.hidden=true,3000)}
 function dateText(s){return s?new Date(s).toLocaleDateString('cs-CZ'):''}
@@ -249,6 +260,22 @@ async function addMediaRecord(id,name,mime,takenAt=null){if(!canWriteToFolder(cu
 async function storeMedia(file){const id=uid(),mime=file.type||'application/octet-stream';if(native){let bytes=new Uint8Array(await file.arrayBuffer());const chunkSize=48*1024;Native.beginMedia(id,mime,file.name||'soubor');for(let off=0;off<bytes.length;off+=chunkSize){let sub=bytes.subarray(off,off+chunkSize);let s='';for(let b of sub)s+=String.fromCharCode(b);Native.appendMedia(id,btoa(s));}Native.finishMedia(id);}
 else{const db=await mediaDb();await new Promise((resolve,reject)=>{let tx=db.transaction('files','readwrite');tx.objectStore('files').put(file,id);tx.oncomplete=resolve;tx.onerror=reject})}return id}
 let idb=null;function mediaDb(){if(!idb)idb=new Promise((res,rej)=>{let req=indexedDB.open('zamerovac-media',1);req.onupgradeneeded=()=>req.result.createObjectStore('files');req.onsuccess=()=>res(req.result);req.onerror=rej});return idb}
+// Bounded decoded-image cache. Media IDs identify immutable originals; no edited pixels are stored here.
+const decodedPhotoCache=new Map();
+function loadPhotoImage(id){
+ if(decodedPhotoCache.has(id)){const entry=decodedPhotoCache.get(id);decodedPhotoCache.delete(id);decodedPhotoCache.set(id,entry);return entry.promise}
+ const entry={pixels:0,promise:null};
+ entry.promise=assetUrl(id).then(url=>new Promise((resolve,reject)=>{
+  if(!url){reject(new Error('Chybí fotografie'));return}
+  const image=new Image(),release=()=>{if(url.startsWith('blob:'))URL.revokeObjectURL(url)};
+  image.onload=()=>{release();entry.pixels=image.naturalWidth*image.naturalHeight;
+   while(decodedPhotoCache.size>3||[...decodedPhotoCache.values()].reduce((sum,e)=>sum+e.pixels,0)>24000000)decodedPhotoCache.delete(decodedPhotoCache.keys().next().value);
+   resolve(image);
+  };
+  image.onerror=()=>{release();reject(new Error('Fotografii nelze načíst'))};image.src=url;
+ })).catch(error=>{if(decodedPhotoCache.get(id)===entry)decodedPhotoCache.delete(id);throw error});
+ decodedPhotoCache.set(id,entry);return entry.promise;
+}
 async function assetUrl(id){if(!id)return '';if(native)return 'https://appassets.androidplatform.net/media/'+encodeURIComponent(id);let db=await mediaDb();let blob=await new Promise((res,rej)=>{let tx=db.transaction('files','readonly'),req=tx.objectStore('files').get(id);req.onsuccess=()=>res(req.result);req.onerror=rej});return blob?URL.createObjectURL(blob):''}
 async function openAttachment(id){if(!id){notify('Soubor nelze najít');return}let url=await assetUrl(id);if(native)Native.openMedia(id);else window.open(url,'_blank')}
 function openNote(r){screen='note';document.body.classList.add('in-note');noteActive=r;$('browserView').hidden=true;$('browserFoot').hidden=true;$('noteView').hidden=false;$('editorView').hidden=true;$('noteTitle').value=r.title;$('noteText').value=r.text||'';renderChecks();renderNoteAttachments()}
@@ -330,11 +357,11 @@ window.onNativeSync=(text)=>{
    if(disk.schema!==1||!Array.isArray(disk.records))throw new Error('Zakázky nelze bezpečně načíst');
    const base=persistedSnapshot?JSON.parse(persistedSnapshot):initial;
    applySavedState(reconcileSavedState(base,state,disk));persistedSnapshot=snapshot;
-   if(!save())return;
+   if(!save())return false;
    if(screen==='browser')showFolder();
   }
-  notify(result.message||'Synchronizace dokončena');
- }catch(e){notify('Synchronizace: '+e.message)}
+  notify(result.message||'Synchronizace dokončena');return true;
+ }catch(e){notify('Synchronizace: '+e.message);return false}
 };
 window.onLaserValue=(value,unit)=>{
  // Přenos mimo editor: uložit poslední přijatou hodnotu do paměti.
