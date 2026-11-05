@@ -1016,6 +1016,36 @@
       "limits": [
         "Toto je pouze statická kontrola; celý PixelCopy/ZIP/externí sdílecí UI tok není automaticky pokrytý."
       ]
+    },
+    {
+      "id": "drive-rest-boundary",
+      "issues": [
+        33,
+        38,
+        40
+      ],
+      "sources": [
+        "app/src/main/java/cz/zamerovac/app/DriveHttp.java",
+        "app/src/main/java/cz/zamerovac/app/DriveApi.java"
+      ],
+      "tests": [
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/DriveHttpTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/DriveApiTest.java",
+          "layer": "native-jvm"
+        }
+      ],
+      "coverage": "runtime-partial",
+      "positive": "Drive v3 request serialization, úplné stránkování včetně prázdné stránky a 256KiB resumable upload se skutečnými bajty.",
+      "negative": "Hostile redirect/session/header, denied/changing budget, 401/403/404/429/503, cyklický/neúplný seznam, partial/oversized source, chybný Range/předčasný final.",
+      "limits": [
+        "Connection je řízený HttpsURLConnection double na SDK26; nejde o síť vůči Googlu ani OAuth účet.",
+        "API vrstva zatím není připojená do SyncStore/BackupStore ani Android přihlašování/UI.",
+        "Rozpočet účtuje konzervativně HTTP payload/hlavičky; TLS/TCP ani účtování operátora neměří."
+      ]
     }
   ],
   "manualGates": [

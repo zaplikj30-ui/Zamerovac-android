@@ -117,3 +117,7 @@ Předběžné rozhraní/moduly/vazby a pořadí další práce v docs/architectu
 ## Etapa 28 – návrat DB proti historickému ACK
 
 #33/#38 → DatabaseRecovery/LocalDatabase/CloudInbox/PeerOutbox/PeerTransfer/SyncPeerRegistry. DatabaseRecoveryTest (3), CloudInboxTest (+1), SafSyncV2Test (+1) a PeerTransferTest (+2). Pozitivní: durable era jen jednou na fallback, re-arm další poruchy, cache a reopened inbox invalidace, opětovný cloudový import i po publikovaném finálním ACK, skutečné TLS obnovení obou rolí bez nové editace. Negativní: journal disk failure nebo vadný journal nesmějí potvrdit starší DB, smazaná DB nesmí ponechat staré receipts; originály/kóty se nezmění. Nová native CI musí potvrdit běh; není to fyzický process-kill/bit-rot audit. Etapa 27 už má obě CI SUCCESS (82eef6d, native42082852446/quick42082852438).
+
+## Etapa 29 – hranice Drive API (zatím bez aktivní integrace)
+
+DriveHttpTest (4) + DriveApiTest (5), SDK26, skutečný REST/stream kód s HttpsURLConnection double. Pozitivní i negativní kritéria v oblasti drive-rest-boundary qa/coverage-v1.json. Není to skutečný Google server, OAuth souhlas ani propojená synchronizace/záloha; nové native CI musí potvrdit kompilaci i testy. Etapa 28 už má obě CI SUCCESS v 4b87a45 (native42084505694/quick42084506171).
