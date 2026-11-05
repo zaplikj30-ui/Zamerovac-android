@@ -32,3 +32,5 @@ Budoucí 3D sken je samostatné originální médium s metadaty a verzovanými r
 Pera/myš, různé režimy ovládání, promítání a tisk mají volat stejná datová pravidla; nemají zavádět paralelní editory či měnit výpočty podle UI režimu. Nelze předem slíbit univerzální rádio/cast/tisk. Žádné SDK, oprávnění pro tyto budoucí funkce ani monetizace nebyly přidány. Současná služba/opravení médií řeší schválenou synchronizaci a bezpečnost.
 
 Strojová mapa [qa/coverage-v1.json](../qa/coverage-v1.json) rozlišuje runtime částečné pokrytí, statické kontroly, manuální brány a otevřené mezery. Ani její validace, ani zelené CI nenahrazují nezávislou revizi a fyzický test.
+
+Etapa34: SyncCadence vlastní potvrzenou lokální konfiguraci a společný durable fg/job attempt gate; sync-cadence.js vlastní volbu četnosti. MainActivity pouze přijímá ACK konfigurace a nastaví Android plánování; incoming TLS zůstává pod dosavadní autorizací. Nepřidává se plošný refaktoring ani další režim.

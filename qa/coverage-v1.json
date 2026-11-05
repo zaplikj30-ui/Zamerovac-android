@@ -1106,6 +1106,47 @@
         "Fyzický OAuth účet/GMS absence/odvolání/OS lifecycle vyžadují finální aplikaci a zařízení.",
         "UI/Job jsou zapojené, ale prázdný Google project ID brání neověřenému připojení; legitimní klient/účet ještě není k dispozici."
       ]
+    },
+    {
+      "id": "sync-frequency",
+      "issues": [
+        38,
+        39,
+        28,
+        33
+      ],
+      "sources": [
+        "app/src/main/java/cz/zamerovac/app/SyncCadence.java",
+        "app/src/main/java/cz/zamerovac/app/PeerCoordinator.java",
+        "app/src/main/java/cz/zamerovac/app/SyncJob.java",
+        "app/src/main/java/cz/zamerovac/app/MainActivity.java",
+        "app/src/main/assets/sync-cadence.js"
+      ],
+      "tests": [
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/SyncCadenceTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/SyncJobTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/MainCloudSelectionTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "tools/e2e/sync-cadence.cjs",
+          "layer": "chromium"
+        }
+      ],
+      "coverage": "runtime-partial",
+      "positive": "Auto/15/30/60/manual, durable společný foreground/job gate, změna účtu a explicitní pokus; skutečný native configure a JobScheduler interval, UI persistence.",
+      "negative": "Failed write a invalid/corrupt nastavení nesmí aktivovat novou frekvenci; souběžné enginy pouze jeden automatic claim, clock rollback/reboot, manual job nespustí engine.",
+      "limits": [
+        "Příchozí důvěryhodný direct přenos zůstává při zapnuté službě povolený; frekvence omezuje vlastní pokusy.",
+        "Skutečný Android/OEM může plánované časy prodloužit; rádio/Doze/restart fyzicky NOT RUN."
+      ]
     }
   ],
   "manualGates": [

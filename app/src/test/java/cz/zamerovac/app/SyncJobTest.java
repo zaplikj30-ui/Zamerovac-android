@@ -18,6 +18,7 @@ import static org.mockito.Mockito.*;
 public class SyncJobTest {
  public static class Holding extends SyncJob {
   final List<BooleanSupplier> cancellations=new CopyOnWriteArrayList<>();final List<Thread> workers=new CopyOnWriteArrayList<>();final CountDownLatch first=new CountDownLatch(1),second=new CountDownLatch(1),releaseFirst=new CountDownLatch(1),releaseSecond=new CountDownLatch(1);boolean fail,hold=true;
+  @Override boolean claim(SharedPreferences prefs){return true;}
   @Override void performSync(SharedPreferences prefs,BooleanSupplier cancelled)throws Exception{int index=cancellations.size();cancellations.add(cancelled);workers.add(Thread.currentThread());(index==0?first:second).countDown();if(fail)throw new IOException("synthetic scheduled failure");if(hold){CountDownLatch release=index==0?releaseFirst:releaseSecond;while(true)try{release.await();return;}catch(InterruptedException ignored){/* A provider may ignore interruption; cancellation still belongs to this attempt. */}}}
  }
  @Before public void prefs(){RuntimeEnvironment.getApplication().getSharedPreferences("zamerovac",0).edit().clear().putString("treeUri","content://synthetic/tree/root").putBoolean("autoSync",true).commit();}
@@ -30,5 +31,8 @@ public class SyncJobTest {
  }
  @Test public void disabledAutoSyncNeverCallsEngine()throws Exception{
   RuntimeEnvironment.getApplication().getSharedPreferences("zamerovac",0).edit().putBoolean("autoSync",false).commit();ServiceController<Holding> controller=Robolectric.buildService(Holding.class).create();Holding service=controller.get();try{service.onStartJob(mock(JobParameters.class));long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(2);while(!Shadows.shadowOf(service).getIsJobFinished()&&System.nanoTime()<deadline)Thread.sleep(10);assertTrue(Shadows.shadowOf(service).getIsJobFinished());assertTrue(service.cancellations.isEmpty());assertFalse(Shadows.shadowOf(service).getIsRescheduleNeeded());}finally{controller.destroy();}
+ }
+ @Test public void manualFrequencyNeverCallsEngineEvenIfLegacyAutoFlagIsTrue()throws Exception{
+  android.content.Context app=RuntimeEnvironment.getApplication();new SyncCadence(app,app.getSharedPreferences("zamerovac",0)).save("manual",true,false);ServiceController<Holding> controller=Robolectric.buildService(Holding.class).create();Holding service=controller.get();try{service.onStartJob(mock(JobParameters.class));long deadline=System.nanoTime()+TimeUnit.SECONDS.toNanos(2);while(!Shadows.shadowOf(service).getIsJobFinished()&&System.nanoTime()<deadline)Thread.sleep(10);assertTrue(Shadows.shadowOf(service).getIsJobFinished());assertTrue(service.cancellations.isEmpty());assertFalse(Shadows.shadowOf(service).getIsRescheduleNeeded());}finally{controller.destroy();}
  }
 }

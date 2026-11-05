@@ -8,7 +8,7 @@ function button(text,id,action){const el=node('button',text,'outline');el.type='
 function command(name,arg=''){if(!root.Native||typeof root.Native.directSyncControl!=='function'){if(notice)notice.textContent='Přímé propojení vyžaduje Android aplikaci s touto aktualizací.';else notify('Přímé propojení vyžaduje Android aplikaci s touto aktualizací.');return;}root.Native.directSyncControl(name,String(arg));}
 function safeState(raw){const value=typeof raw==='string'?JSON.parse(raw):raw;if(!value||typeof value!=='object')throw Error('Neplatný stav zařízení');return value;}
 function render(){if(!panel||panel.hidden)return;const active=document.activeElement?.id;body.replaceChildren();notice.textContent=String(state.problem||'');
- body.append(node('p',state.active?'Místní přenos je zapnutý. Spárovaná zařízení se při dostupném spojení dorovnávají automaticky.':'Místní přenos není aktivní. Zakázky zůstávají uložené v tomto zařízení.'));
+ body.append(node('p',state.active?'Místní přenos je zapnutý. Přenosy se řídí nastavenou frekvencí; důvěryhodné druhé zařízení může navázat příchozí spojení.':'Místní přenos není aktivní. Zakázky zůstávají uložené v tomto zařízení.'));
  body.append(node('p','Přenáší se všechny zakázky, fotografie, detailní fotografie, kóty, poznámky, videa a přílohy. Spáruj pouze vlastní nebo důvěryhodné zařízení.','muted'));
  const controls=node('div',null,'row wrap');controls.append(button(state.enabled?'Vypnout místní přenos':'Zapnout místní přenos','peerEnable',()=>command(state.enabled?'disable':'enable')),button(state.pairing?'Ukončit párování':'Spárovat další zařízení','peerPair',()=>command(state.pairing?'stopPairing':'pair')),button('Zkusit přenos znovu','peerRetry',()=>command('retry')));body.append(controls);
  if(state.pairing){body.append(node('p','Párování je otevřené ještě '+Math.max(0,Number(state.pairingSeconds)||0)+' s. Zapni ho na obou zařízeních a na jednom vyber druhé zařízení.'));
@@ -20,6 +20,7 @@ function render(){if(!panel||panel.hidden)return;const active=document.activeEle
   if(!list.length)candidates.append(node('p','Zatím žádná zařízení. Ve stejné Wi-Fi se vyhledají automaticky; bez routeru spusť hledání Wi-Fi Direct na obou.'));
   for(const item of list){if(typeof item.key!=='string')continue;const row=node('div',null,'peer-row');row.append(node('span',String(item.name||'Android zařízení')+' · '+(item.route==='nearby'?'Wi-Fi Direct':'místní Wi-Fi')),button('Propojit',null,()=>command('connect',item.key)));candidates.append(row);}body.append(candidates);
  }
+ root.ZamerovacSyncCadence?.mount(body);
  root.ZamerovacDriveAccounts?.mount(body,'sync');
  body.append(node('h3','Spárovaná zařízení'));const peers=state.peers&&typeof state.peers==='object'?Object.entries(state.peers):[];
  if(!peers.length)body.append(node('p','Zatím není spárované žádné zařízení.'));

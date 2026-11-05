@@ -62,3 +62,6 @@ finds('poskytovatel zálohy','backup');
 finds('Google účet','cloud');finds('soukromý prostor','backup');finds('odpojit Disk','cloud');
 
 finds('změně cloudového úložiště','cloud');finds('místně vyřadí','cloud');
+
+finds("frekvence","cloud");
+for(const phrase of ["15, 30 či 60 minut","Ručně zastaví vlastní automatické pokusy","příchozí místní spojení"])assert(src.includes(phrase),"Missing scheduling meaning: "+phrase);

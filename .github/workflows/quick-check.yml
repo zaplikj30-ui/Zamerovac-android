@@ -134,6 +134,7 @@ jobs:
           node tools/e2e/update39.cjs
           node tools/e2e/peer-sync.cjs
           node tools/e2e/drive-accounts.cjs
+          node tools/e2e/sync-cadence.cjs
           node tools/e2e/backup-history.cjs
           node tools/e2e/read-only-sync.cjs
           node tools/e2e/sync-edit-guard.cjs

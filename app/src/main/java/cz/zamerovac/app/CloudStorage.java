@@ -27,8 +27,8 @@ final class CloudStorage {
     String key(String kind)throws Exception{String backend=accounts.backend(kind);Account account=accounts.account(kind);String value=account==null?String.valueOf(tree(kind)):platform.project()+"/"+account.name;return backend+":"+PeerWire.hash(value.getBytes(StandardCharsets.UTF_8));}
     boolean offline(String kind){try{return "drive".equals(accounts.backend(kind))&&!platform.online();}catch(Exception invalid){return false;}}
     boolean allowed(String kind,boolean explicit,long bytes){try{
-        if(!configured(kind))return false;if(!"drive".equals(accounts.backend(kind)))return BackupNetwork.allowed(context,tree(kind),explicit)||"sync".equals(kind)&&!prefs.getBoolean("wifiOnly",false)&&bytes<=1024*1024;
-        if(!platform.online())return false;return explicit||platform.unmetered()||"sync".equals(kind)&&!prefs.getBoolean("wifiOnly",false)&&bytes<=1024*1024;
+        if(!configured(kind))return false;if(!"drive".equals(accounts.backend(kind)))return BackupNetwork.allowed(context,tree(kind),explicit)||"sync".equals(kind)&&!SyncCadence.current(context,prefs).wifiOnly&&bytes<=1024*1024;
+        if(!platform.online())return false;return explicit||platform.unmetered()||"sync".equals(kind)&&!SyncCadence.current(context,prefs).wifiOnly&&bytes<=1024*1024;
     }catch(Exception invalid){return false;}}
     private DriveObjectStore drive(String kind,boolean explicit,BooleanSupplier cancelled)throws Exception{
         Account account=accounts.account(kind);if(account==null)throw new IOException("Nejdříve připoj účet Disku");if(platform.project().isEmpty())throw new IOException("Připojení Disku čeká na dokončení nastavení aplikace");ImmutableStore.Checkpoint selected=accounts.binding(kind,account);ImmutableStore.Checkpoint binding=()->{if(cancelled.getAsBoolean()||Thread.currentThread().isInterrupted())throw new CloudScan.Deferred();selected.check();};
