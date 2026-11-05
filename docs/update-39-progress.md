@@ -84,3 +84,17 @@ Hotové kódové etapy nejsou celé zadání #39. Především:
 - **Fyzicky neprovedeno:** telefon/tablet Samsung, Xiaomi/Lenovo a jiné značky, S Pen, Bosch, skutečný Drive účet/provider, přenosová rádia, reálný výpadek/plný disk a aktualizace instalace. Windows/iOS aplikace nebyly vytvořené. Nová APK nebyla sestavená a PR se neslučuje.
 
 **Další jediný konkrétní krok:** po kontrole nejnovějšího HEAD a Actions implementovat Android adaptér identity/atomické fronty a napojení kauzálních revizí/tombstones na skutečné místní změny podle `docs/sync-v2-checkpoint.md`; teprve na tomto bezpečném základě transporty a UI. Nepřidávat zahraniční adresní službu, reklamy ani licence.
+
+## Etapa 6 – nativní základ a skutečné kauzální revize
+
+`DeviceIdentity` trvale ukládá náhodné UUID instalace; nepoužívá výrobce/model ani hardwarový identifikátor. `touch` a `newRecord` skutečné aplikace nyní vedou `syncClock` (UUID → přesný celočíselný čítač). `CausalClock` porovnává vektory v nativním SAF merge, nepovažuje hodiny telefonu za pořadí změn. Starší záznamy bez vektorů se přijímají konzervativně dosavadním mechanismem, nikoliv automatickou jistotou o jejich kauzalitě.
+
+Skutečné vysypání koše ukládá `syncTombstones` bez obsahu smazaných záznamů. Pozorovaná starší verze už nevzkřísí původní ID. Nezávislá změna vůči tombstone se zachová pod novým konfliktním ID; opakování ji nemnoží. JS callback/třícestné sloučení má stejnou ochranu a otevřený editor následuje zachovanou kopii. Browser fallback koše používá stejné čítače.
+
+`SyncQueueStore` a nativní bridge `loadSyncQueue` / `saveSyncQueue(expectedRevision,text)` poskytují skutečný souborový AtomicFile/CAS s kontrolou potvrzení, velikosti, revize a položek. **Koordinátor a transporty jej zatím nevyužívají**; není to běžící nová synchronizace. Další krok je napojit frontu, media payload streaming, transportní adaptéry a UI, ne pouze tyto metody přejmenovat za hotový produkt.
+
+Přidán `tests/causal_app_clock.js` pro skutečné JS pomocníky: čítače/overflow, souběh a koš, přesný text rozměru, ochrana klíče `constructor` a navázání živého editoru na kopii. `SyncSafetyTest` rozšířen o nativní stabilní identitu, kauzální pořadí proti chybným hodinám, opakované sloučení s košem a nativní persistentní frontu/restart/stale CAS/selhání zápisu. Všechny Node a Python kontroly prošly místně; cílené Chromium a šest workflow rovněž. Nové nativní testy čekají na Actions.
+
+Pátá etapa měla nativní CI SUCCESS; browser kontrola odhalila závod testu s asynchronním přepočtem galerie při rotaci. Galerie nyní omezí posun ihned při resize a po přepočtu; test čeká na skutečně dokončené vykreslení daného viewportu a potom ověřuje meze. Místně 11 viewportů prošlo. Toto nemění měřené hodnoty ani uloženou geometrii.
+
+**Aktualizovaná návaznost:** identita, lokální queue store a `syncClock`/tombstones už nejsou pouze návrh. Ještě je nutné je propojit s jediným běžícím synchronizačním koordinátorem, společným protokolem v2 a skutečnými autentizovanými transporty. Podmínky nehotové #38/#40 a fyzického ověření výše nadále platí.

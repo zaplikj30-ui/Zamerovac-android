@@ -31,3 +31,7 @@ Transportní atributy `authenticated/encrypted/peers` jsou požadavkem na adapt�
 6. Doplnit pravdivé počty čekajících médií a konfliktů, plánování Android/Doze, všechny přechody cest. Ověřit na fyzickém telefonu/tabletu a následně dalších značkách. Windows/iOS aplikace nevytvářet.
 
 Nejedná se o ukončení celého #39. Tato hranice záměrně zabraňuje předčasnému zapnutí nehotového transportu či záloh v aplikaci.
+
+## Navazující nativní checkpoint
+
+Aplikace už má `DeviceIdentity`, `CausalClock`, `SyncQueueStore` a příslušné Native metody. Skutečné změny vedou volitelná `syncClock` a `syncProtocol:2`; koš vede `syncTombstones` s vektory bez smazaného obsahu. Tato pole mají stejný význam v otevřeném JSON pro budoucí klienty. Nativní starší SAF merge využívá vektory, ale sdílený mutable vzdálený soubor ani celý transportní protokol tím vyřešený není. Samostatný `protocol-v2.js` stále není načtený Androidem; je třeba sjednotit jeho koordinátor, kanonické zprávy/ID konfliktů a nativní provoz, včetně importu všech médií. Nativní queue store je dostupný a testovaný odděleně, zatím není frontou používanou skutečným síťovým přenosem. Platné nové kroky jsou napojení koordinátoru/transportů/UI a fyzické testy, ne opakování vytvoření již existujících tříd.

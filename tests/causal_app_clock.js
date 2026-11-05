@@ -1,0 +1,14 @@
+'use strict';
+const fs=require('fs'),vm=require('vm'),assert=require('node:assert/strict');
+const source=fs.readFileSync('app/src/main/assets/app.js','utf8'),A='11111111-1111-4111-8111-111111111111',B='22222222-2222-4222-8222-222222222222';
+let next=0;const ctx={syncDeviceId:A,uid:()=>`copy-${++next}`,prefs:{},current:null,noteActive:null,window:{},native:false};vm.createContext(ctx);vm.runInContext(source.slice(source.indexOf('function checkedSyncClock'),source.indexOf('function reportSaveResult')),ctx);
+assert.equal(ctx.advanceSyncClock({[A]:1})[A],2);assert.equal(ctx.compareSyncClocks({[A]:1},{[B]:1}),'concurrent');assert.equal(ctx.mergeSyncClocks({[A]:2},{[B]:1})[B],1);
+assert.throws(()=>ctx.advanceSyncClock({[A]:Number.MAX_SAFE_INTEGER}));assert.throws(()=>ctx.checkedSyncClock({'constructor':1}));assert.throws(()=>ctx.checkedSyncClock({[A]:1.5}));
+const base={schema:1,records:[{id:'photo',rev:'base',syncClock:{[A]:1},items:[{measure:'1250,123456789',unit:'mm'}]}]};
+const local=structuredClone(base);local.records[0].rev='independent';local.records[0].syncClock[A]=2;local.records[0].items[0].measure='0,000000123456789';
+const remote={schema:1,records:[],trashPurgedIds:['photo'],syncTombstones:{photo:{[A]:1,[B]:1}}};
+const merged=ctx.reconcileSavedState(base,local,remote);assert.equal(merged.records.length,1);assert.notEqual(merged.records[0].id,'photo');assert.equal(merged.records[0].conflictOf,'photo');assert.equal(merged.records[0].items[0].measure,'0,000000123456789');
+ctx.current=local.records[0];ctx.applySavedState(merged);assert.equal(ctx.current.id,merged.records[0].id);assert.equal(ctx.current,ctx.state.records[0],'live editor follows the preserved copy');
+assert.equal(ctx.reconcileSavedState(base,base,remote).records.length,0,'observed old data cannot revive purged ID');
+const legacy={...base,syncTombstones:JSON.parse('{"constructor":{"'+B+'":1}}')};assert.equal(ctx.reconcileSavedState(base,base,legacy).syncTombstones.constructor[B],1,'untrusted record ID is a key, not a prototype');
+console.log('PASS actual app clock helpers: causal order, bounds, tombstone versus independent edit, no old revival and active editor copy');

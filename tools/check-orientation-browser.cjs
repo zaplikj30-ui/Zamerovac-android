@@ -73,7 +73,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
  const galleryScale=await page.locator('.gallery-img').evaluate(el=>new DOMMatrix(getComputedStyle(el).transform).a);
  for(const size of sizes){
   await page.setViewportSize(size);
-  await page.waitForFunction(()=>{const c=document.querySelector('.gallery-img'),box=document.querySelector('.gallery-content');return parseFloat(c.style.width)<=box.clientWidth+1&&parseFloat(c.style.height)<=box.clientHeight+1});
+  await page.waitForFunction(()=>{const c=document.querySelector('.gallery-img'),box=document.querySelector('.gallery-content');return c.dataset.galleryViewport===box.clientWidth+'x'+box.clientHeight&&parseFloat(c.style.width)<=box.clientWidth+1&&parseFloat(c.style.height)<=box.clientHeight+1});
   const ratio=await page.locator('.gallery-img').evaluate(el=>{const r=el.getBoundingClientRect();return {rendered:r.width/r.height,image:el.width/el.height}});
   assert(Math.abs(ratio.rendered-ratio.image)<.01,'Gallery canvas proportions');
   const position=await page.locator('.gallery-img').evaluate(el=>{const matrix=new DOMMatrix(getComputedStyle(el).transform),viewport=document.querySelector('.gallery-content');return {scale:matrix.a,x:matrix.e,y:matrix.f,limitX:Math.max(0,(el.offsetWidth*matrix.a-viewport.clientWidth)/2),limitY:Math.max(0,(el.offsetHeight*matrix.a-viewport.clientHeight)/2)}});

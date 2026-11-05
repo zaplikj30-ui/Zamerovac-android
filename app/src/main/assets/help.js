@@ -441,6 +441,7 @@ const chapters=[
       "Zámky složek slouží k ochraně před nechtěnou změnou. Před editací nebo mazáním složku podle potřeby odemkni."
     ],
     "notes": [
+      "Vysypání koše uchovává pouze identifikátory a revizi smazání. Nezávislá novější změna z jiného zařízení se může zachovat jako označená konfliktní kopie; původní vysypané ID se neobnovuje.",
       "Obnovení z koše nenahrazuje samostatnou zálohu ZIP.",
       "Trvalé odstranění a synchronizace s dalšími zařízeními mohou mít nevratné následky."
     ],
@@ -465,6 +466,7 @@ const chapters=[
     "notes": [
       "Ne každý správce Google Disku nebo souborový poskytovatel nabízí zapisovatelnou složku pro Android.",
       "Cloudová synchronizace není totéž jako ověřená nezávislá záloha. Před důležitými změnami si ulož ZIP.",
+      "Instalace používá náhodnou vlastní identitu a čítače revizí, ne model telefonu ani jeho hodiny. Při souběhu se novější pozorovaná verze odliší od nezávislé změny.",
       "Pomalý přenos poskytovatele nedrží zámek místní databáze. Novější místní změny při přenosu zůstávají uložené a čekají na další pokus; výpadek se neoznačí jako dokončená synchronizace. Dosavadní SAF cesta stále není nová přímá synchronizace ani oficiální integrace Drive API."
     ],
     "keywords": [

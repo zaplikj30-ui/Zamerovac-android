@@ -33,8 +33,8 @@ class DiskStore {
   await queue.enqueue(large);const wrongAck={...direct,id:'wrong',send:async job=>({...job,hash:'0'.repeat(64),committed:true})};await queue.flush([wrongAck],{now:200000});assert.equal((await queue.read()).jobs.length,1);
   let unauthorizedCalls=0;await queue.flush([{...direct,id:'unsafe',encrypted:false,send:async()=>{unauthorizedCalls++}}],{now:300000});assert.equal(unauthorizedCalls,0);
   const previous=JSON.stringify(await disk.readQueue());disk.denyQueue=true;await assert.rejects(queue.enqueue({peer:A,kind:'blob',hash:await hash(new Uint8Array([10])),size:1}));assert.equal(JSON.stringify(await disk.readQueue()),previous);disk.denyQueue=false;
-  const raw={schema:1,records:[{id:'photo',clock:v.advance({},A),items:[{type:'dimension',measure:'0,000000000123456789',unit:'in'}],media:['photo-001']}]};
-  const other=structuredClone(raw);other.records[0].clock=v.advance({},B);other.records[0].items[0].measure='99999999,123456789';
+  const raw={schema:1,records:[{id:'photo',syncClock:v.advance({},A),items:[{type:'dimension',measure:'0,000000000123456789',unit:'in'}],media:['photo-001']}]};
+  const other=structuredClone(raw);other.records[0].syncClock=v.advance({},B);other.records[0].items[0].measure='99999999,123456789';
   const merged=await p.mergeData(raw,other,hash),reverse=await p.mergeData(other,raw,hash);assert.equal(p.canonical(merged),p.canonical(reverse));assert.equal(merged.records.length,2);assert.equal((await p.mergeData(merged,other,hash)).records.length,2);assert.deepEqual(merged.records.map(r=>r.items[0].measure).sort(),['0,000000000123456789','99999999,123456789']);
   const deleted=structuredClone(other);deleted.records[0].deleted=true;assert.equal((await p.mergeData(raw,deleted,hash)).records.length,2,'concurrent deletion preserves edited live version');
   // Two device histories deduplicate one hundred immutable originals, then preserve both old/new versions.

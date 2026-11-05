@@ -15,7 +15,7 @@ function canonical(value,depth=0){
 const clone=value=>JSON.parse(canonical(value));
 function validateData(data){
  if(!data||data.schema!==1||!Array.isArray(data.records)||data.records.length>100000)throw Error('Invalid project data');
- const ids=new Set();for(const r of data.records){if(!r||typeof r.id!=='string'||!r.id||ids.has(r.id))throw Error('Duplicate or invalid record');ids.add(r.id);if(r.clock)vectors.compare(r.clock,{})}
+ const ids=new Set();for(const r of data.records){if(!r||typeof r.id!=='string'||!r.id||ids.has(r.id))throw Error('Duplicate or invalid record');ids.add(r.id);if(r.syncClock)vectors.compare(r.syncClock,{})}
  return data;
 }
 function mediaReferences(value,result=new Set(),depth=0){
@@ -34,7 +34,7 @@ async function mergeData(left,right,hash){
  for(const id of [...new Set([...l.keys(),...r.keys()])].sort()){
   const a=l.get(id),b=r.get(id);if(!a||!b){result.set(id,clone(a||b));continue}
   if(canonical(a)===canonical(b)){result.set(id,clone(a));continue}
-  const order=vectors.compare(a.clock||{},b.clock||{});
+  const order=vectors.compare(a.syncClock||{},b.syncClock||{});
   if(order==='after'||order==='before'){result.set(id,clone(order==='after'?a:b));continue}
   // Equal clocks with different content are also unsafe to collapse.
   const ordered=[a,b].sort((x,y)=>canonical(x)<canonical(y)?-1:canonical(x)>canonical(y)?1:0);

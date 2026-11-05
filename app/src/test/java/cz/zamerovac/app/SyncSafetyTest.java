@@ -56,4 +56,28 @@ public class SyncSafetyTest {
   assertEquals(before,LocalDatabase.read(home));JsonInput.check(new JSONObject().put("text","Brackets [ { inside string "+(char)34+"quoted"+(char)34).toString());
  }
 
+ static final String A="11111111-1111-4111-8111-111111111111",B="22222222-2222-4222-8222-222222222222";
+ JSONObject clock(long a,long b)throws Exception{JSONObject value=new JSONObject();if(a>0)value.put(A,a);if(b>0)value.put(B,b);return value;}
+ JSONObject version(String rev,String measure,JSONObject clock)throws Exception{JSONObject result=data(rev,measure);result.getJSONArray("records").getJSONObject(0).put("syncClock",clock);return result;}
+ @Test public void causalRevisionBeatsWallClockWithoutChangingMeasurement()throws Exception {
+  JSONObject local=version("local","123,000000123456789",clock(2,0)),remote=version("remote","999,000001",clock(1,0));remote.getJSONArray("records").getJSONObject(0).put("updatedAt","9999-12-31");LocalDatabase.write(home,local.toString());new Transport(remote).sync();
+  JSONArray records=new JSONObject(LocalDatabase.read(home)).getJSONArray("records");assertEquals(1,records.length());assertEquals("123,000000123456789",records.getJSONObject(0).getString("measure"));
+ }
+ @Test public void concurrentPurgeKeepsIndependentEditAsOneStableCopyAndNeverRevivesOriginal()throws Exception {
+  JSONObject local=new JSONObject().put("schema",1).put("records",new JSONArray()).put("trashPurgedIds",new JSONArray().put("photo")).put("syncTombstones",new JSONObject().put("photo",clock(1,1)));
+  LocalDatabase.write(home,local.toString());Transport transport=new Transport(version("independent","0,000000123456789",clock(2,0)));
+  for(int i=0;i<4;i++)transport.sync();JSONArray records=new JSONObject(LocalDatabase.read(home)).getJSONArray("records");assertEquals(1,records.length());assertNotEquals("photo",records.getJSONObject(0).getString("id"));assertEquals("photo",records.getJSONObject(0).getString("conflictOf"));assertEquals("0,000000123456789",records.getJSONObject(0).getString("measure"));
+  transport.remote=version("old","999,000001",clock(1,0));transport.sync();assertEquals(1,new JSONObject(LocalDatabase.read(home)).getJSONArray("records").length());
+ }
+ @Test public void durableQueueSurvivesReopenAndRejectsStaleOrInvalidRevision()throws Exception {
+  SyncQueueStore store=new SyncQueueStore(home);assertEquals(0,new JSONObject(store.read()).getInt("revision"));String one="{\"version\":2,\"revision\":1,\"jobs\":[]}";assertTrue(store.save(0,one));assertEquals(one,new SyncQueueStore(home).read());assertFalse(store.save(0,one));
+  try{store.save(1,"{\"version\":2,\"revision\":2.5,\"jobs\":[]}");fail("Fractional revision accepted");}catch(Exception expected){}assertEquals(one,store.read());
+  File blocker=new File(home,"sync-queue-v2.json.new");blocker.mkdirs();java.nio.file.Files.write(new File(blocker,"block").toPath(),new byte[]{1});
+  try{try{store.save(1,"{\"version\":2,\"revision\":2,\"jobs\":[]}");fail("Write failure hidden");}catch(IOException expected){}assertEquals(one,store.read());}finally{new File(blocker,"block").delete();blocker.delete();}
+ }
+ @Test public void installationIdentityIsStableAndVectorsValidateExactCounters()throws Exception {
+  String id=DeviceIdentity.get(prefs);assertTrue(DeviceIdentity.valid(id));assertEquals(id,DeviceIdentity.get(prefs));assertEquals("concurrent",CausalClock.compare(clock(1,0),clock(0,1)));assertEquals(2,CausalClock.advance(clock(1,0),A).getLong(A));
+  try{CausalClock.advance(new JSONObject().put(A,9007199254740991L),A);fail("Overflow accepted");}catch(IOException expected){}
+ }
+
 }

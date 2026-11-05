@@ -378,6 +378,7 @@ async function renderGallery(){
   canvas.width=width;canvas.height=height;
   canvas.style.width=(width/density)+'px';canvas.style.height=(height/density)+'px';
   display.__updateGalleryZoom?.();
+  canvas.dataset.galleryViewport=available.clientWidth+'x'+available.clientHeight;
   const c=canvas.getContext('2d');
   c.fillStyle='#292a2f';c.fillRect(0,0,width,height);
   const shiftX=(margin-minX)*scale,shiftY=(margin-minY)*scale;
@@ -398,7 +399,7 @@ async function renderGallery(){
 }
 let galleryResizeFrame=null;
 window.addEventListener('resize',()=>{
- if(!gallery)return;cancelAnimationFrame(galleryResizeFrame);
+ if(!gallery)return;gallery.__updateGalleryZoom?.();cancelAnimationFrame(galleryResizeFrame);
  galleryResizeFrame=requestAnimationFrame(()=>{if(gallery)renderGallery()});
 });
 function openGallery(index,records=null){

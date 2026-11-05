@@ -13,7 +13,9 @@ final class LocalDatabase {
         JsonInput.check(text);
         try{JSONObject db=new JSONObject(text);if(db.optInt("schema")!=1||db.optJSONArray("records")==null)throw new IOException("Neplatná databáze");
             Set<String> ids=new HashSet<>();JSONArray records=db.getJSONArray("records");
-            for(int i=0;i<records.length();i++){JSONObject record=records.optJSONObject(i);if(record==null||!(record.opt("id") instanceof String)||record.getString("id").isEmpty()||!ids.add(record.getString("id")))throw new IOException("Neplatný nebo duplicitní záznam");}
+            for(int i=0;i<records.length();i++){JSONObject record=records.optJSONObject(i);if(record==null||!(record.opt("id") instanceof String)||record.getString("id").isEmpty()||!ids.add(record.getString("id")))throw new IOException("Neplatný nebo duplicitní záznam");try{CausalClock.clock(record);}catch(Exception invalid){throw new IOException("Neplatná synchronizační revize",invalid);}}
+            JSONObject tombstones=db.optJSONObject("syncTombstones");if(db.has("syncTombstones")&&tombstones==null)throw new IOException("Neplatný koš synchronizace");
+            if(tombstones!=null)for(Iterator<String> it=tombstones.keys();it.hasNext();)try{CausalClock.validate(tombstones.getJSONObject(it.next()));}catch(Exception invalid){throw new IOException("Neplatná revize koše",invalid);}
         }catch(JSONException e){throw new IOException("Neplatná databáze",e);}
     }
     static String readFile(File file)throws IOException {

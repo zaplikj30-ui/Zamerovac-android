@@ -10,6 +10,7 @@ const pendingChanges={issue:39,released:false,groups:[{kind:'Opraveno',items:[
  {text:'Potvrzované uložení, zachování souběžných změn a ochrana proti opožděnému výsledku synchronizace.'},
  {text:'Odmítnutí neúplné ZIP zálohy, kontrolní součty při obnově, potvrzované přílohy a bezpečné ukončení chybného hlasového záznamu.'},
  {text:'Společné atomické ukládání a místní práce během pomalého SAF přenosu; novější změny zůstávají čekající.'},
+ {text:'Identita instalace a kauzální revize skutečných záznamů; vysypaný koš zachová nezávislou úpravu jako kopii.'},
  {text:'Omezení posunu galerie a úplný výřez poznámek včetně textu pod detailní fotografií.'},
  {text:'Výchozí výběr v editoru, lupa při přesunu rohů a respektování nastaveného zvětšení.'}
 ]},{kind:'Vylepšeno',items:[

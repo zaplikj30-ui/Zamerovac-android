@@ -60,16 +60,17 @@ final class TrashPurger {
         JSONArray records=db.getJSONArray("records"),kept=new JSONArray();
         Set<String> ids=new HashSet<>(),candidates=pending();
         for(int i=0;i<requested.length();i++)ids.add(requested.getString(i));
+        JSONObject tombstones=db.optJSONObject("syncTombstones");if(tombstones==null)tombstones=new JSONObject();
         int removed=0;
         for(int i=0;i<records.length();i++){
             JSONObject r=records.getJSONObject(i);
             if(ids.contains(r.getString("id"))){
                 if(!r.optBoolean("deleted"))throw new IOException("Položka již není v koši. Nic nebylo odstraněno.");
-                media(r,candidates);removed++;
+                tombstones.put(r.getString("id"),CausalClock.advance(CausalClock.merge(CausalClock.clock(r),tombstones.optJSONObject(r.getString("id"))==null?new JSONObject():tombstones.getJSONObject(r.getString("id"))),DeviceIdentity.get(prefs)));media(r,candidates);removed++;
             }else kept.put(r);
         }
         if(removed!=ids.size())throw new IOException("Obsah koše se změnil. Potvrď jej znovu.");
-        db.put("records",kept);
+        db.put("records",kept);db.put("syncTombstones",tombstones);db.put("syncProtocol",2);
         // Keep only IDs, never removed payloads. Sync must not reintroduce old deleted records.
         Set<String> purged=purgedIds(db);purged.addAll(ids);
         db.put("trashPurgedIds",new JSONArray(purged));

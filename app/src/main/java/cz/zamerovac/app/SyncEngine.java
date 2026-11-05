@@ -69,10 +69,22 @@ public class SyncEngine {
         if(b!=null)for(int i=0;i<b.length();i++){JSONObject rec=b.optJSONObject(i);if(rec!=null&&rec.has("id"))r.put(rec.getString("id"),rec);}
         Set<String> purged=TrashPurger.purgedIds(local);purged.addAll(TrashPurger.purgedIds(remote));
         Map<String,String> base=baseline();Set<String> all=new HashSet<>();all.addAll(l.keySet());all.addAll(r.keySet());
+        JSONObject tombstones=CausalClock.tombstones(local.optJSONObject("syncTombstones"),remote.optJSONObject("syncTombstones"));
+        Set<String> generatedConflicts=new HashSet<>();
         JSONArray merged=new JSONArray();JSONObject nextBase=new JSONObject();
         // Deterministic order keeps generated JSON stable.
         ArrayList<String> sorted=new ArrayList<>(all);java.util.Collections.sort(sorted);
         for(String id: sorted){JSONObject lv=l.get(id),rv=r.get(id), chosen;
+            if(tombstones.has(id)){
+                for(JSONObject record:new JSONObject[]{lv,rv})if(record!=null&&!record.optBoolean("deleted")){
+                    JSONObject clock=CausalClock.clock(record);String relation=CausalClock.compare(clock,tombstones.getJSONObject(id));
+                    if("after".equals(relation)||"concurrent".equals(relation)){
+                        String source="purge:"+id+":"+CausalClock.canonical(record);String copyId=UUID.nameUUIDFromBytes(source.getBytes(StandardCharsets.UTF_8)).toString();
+                        if(!l.containsKey(copyId)&&!r.containsKey(copyId)&&generatedConflicts.add(copyId))merged.put(new JSONObject(record.toString()).put("id",copyId).put("conflict",true).put("conflictOf",id).put("conflictSource",source).put("title",record.optString("title","Položka")+" (změna po vysypání koše)").put("syncClock",CausalClock.merge(clock,tombstones.getJSONObject(id))));
+                    }
+                }
+                continue;
+            }
             if(purged.contains(id)){
                 if(lv!=null&&lv.optBoolean("deleted"))lv=null;
                 if(rv!=null&&rv.optBoolean("deleted"))rv=null;
@@ -83,9 +95,12 @@ public class SyncEngine {
             else {
                 String lrev=lv.optString("rev",""),rrev=rv.optString("rev","");
                 String known=base.get(id);
+                JSONObject lc=CausalClock.clock(lv),rc=CausalClock.clock(rv);String order=CausalClock.compare(lc,rc);
                 if(lv.toString().equals(rv.toString()))chosen=lv;
-                else if(known!=null&&!lrev.equals(rrev)&&known.equals(lrev))chosen=rv;
-                else if(known!=null&&!lrev.equals(rrev)&&known.equals(rrev))chosen=lv;
+                else if(lc.length()>0&&rc.length()>0&&"after".equals(order))chosen=lv;
+                else if(lc.length()>0&&rc.length()>0&&"before".equals(order))chosen=rv;
+                else if(!(lc.length()>0&&rc.length()>0)&&known!=null&&!lrev.equals(rrev)&&known.equals(lrev))chosen=rv;
+                else if(!(lc.length()>0&&rc.length()>0)&&known!=null&&!lrev.equals(rrev)&&known.equals(rrev))chosen=lv;
                 else {
                     // Preserve independent edits; do not discard either side.
                     boolean localNewer=lv.toString().compareTo(rv.toString())>=0;
@@ -98,7 +113,7 @@ public class SyncEngine {
             }
             merged.put(chosen);nextBase.put(id,chosen.optString("rev",""));
         }
-        JSONObject result=new JSONObject(local.toString());result.put("records",merged);result.put("trashPurgedIds",new JSONArray(purged));
+        JSONObject result=new JSONObject(local.toString());result.put("records",merged);result.put("trashPurgedIds",new JSONArray(purged));result.put("syncTombstones",tombstones);
         // Preferences are device-local (screen size, tool order, colors). Never overwrite.
         nextBaseline=nextBase.toString();
         return result;

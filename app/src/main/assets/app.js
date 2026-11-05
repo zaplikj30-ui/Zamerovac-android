@@ -5,27 +5,52 @@ const native=!!window.Native;
 const appVersion=native&&typeof Native.getAppVersion==='function'?Native.getAppVersion():'web';
 const appVersionShort=appVersion.replace(/-test$/,'');
 const uid=()=>crypto.randomUUID?crypto.randomUUID():('id-'+Date.now()+'-'+Math.random().toString(36).slice(2));
+const syncDeviceId=(()=>{try{
+ const key='zamerovac-installation-id';let id=native&&typeof Native.getSyncDeviceId==='function'?Native.getSyncDeviceId():localStorage.getItem(key);
+ if(native&&typeof Native.getSyncDeviceId==='function'&&!id)throw new Error('Identitu instalace nelze potvrdit');
+ if(!id){if(crypto.randomUUID)id=crypto.randomUUID();else{const bytes=crypto.getRandomValues(new Uint8Array(16));bytes[6]=(bytes[6]&15)|64;bytes[8]=(bytes[8]&63)|128;const hex=[...bytes].map(b=>b.toString(16).padStart(2,'0')).join('');id=hex.slice(0,8)+'-'+hex.slice(8,12)+'-'+hex.slice(12,16)+'-'+hex.slice(16,20)+'-'+hex.slice(20)}localStorage.setItem(key,id)}return id;
+}catch(error){return ''}})();
 const initialPrefs={unit:'mm',decimals:0,laserDecimals:'auto',laserRounding:'none',color:'#f7dc27',lineWidth:2,fontSize:17,loupe:true,loupeZoom:2,repeatDrawing:false,snapGrid:false,showGrid:false,gridStep:40,snapPoints:true,snapHorizontal:true,snapCorners:true,snapContours:true,snapRightAngle:true,keepAwake:false,vibration:true,fullScreen:false,autoText:true,autoSync:true,wifiOnly:false,moveSensitivity:1,presets:'Zásuvka;Voda;Odpad;Elektro;Výška parapetu',toolOrder:'',uiLanguage:'cs',backgroundPattern:'Vypnuto'};
 const initial={schema:1,records:[],prefs:{...initialPrefs},created:new Date().toISOString()};
-let state=initial,dataLoadFailed=false,persistedSnapshot="";
+let state=initial,dataLoadFailed=!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(syncDeviceId),persistedSnapshot="";
 try{const saved=native?Native.loadData():localStorage.getItem('zamerovac-data');if(saved){persistedSnapshot=saved;const loaded=JSON.parse(saved);if(loaded.schema!==1||!Array.isArray(loaded.records))throw new Error('Neplatná databáze');state={...initial,...loaded}};}catch(e){dataLoadFailed=true;console.warn('Cannot load database',e)}
 state.prefs={...initialPrefs,...(state.prefs||{})};
 const prefs=state.prefs;
 let sortAsc=true;let currentFolder=null,screen='browser',current=null,noteActive=null,mode='dimension',selected=null,stagedFileHandler=null,editStack=[],redoStack=[],lineDraft=[],stageImg=null,photoSize={w:1400,h:900},view={zoom:1,dx:0,dy:0},drag=null,pointers=new Map(),magnifierPoint=null,stageCanvas=$('drawCanvas'),ctx=stageCanvas.getContext('2d'),loupeCtx=$('loupe').getContext('2d'),autoSaving=false;
 const stamp=()=>new Date().toISOString();
-function touch(rec){rec.rev=uid();rec.updatedAt=stamp();}
-// Three-way reconciliation also covers a native callback queued behind a newer edit.
-function sameSavedValue(a,b){
- const canonical=v=>v&&typeof v==='object'?Array.isArray(v)?v.map(canonical):Object.fromEntries(Object.keys(v).sort().map(k=>[k,canonical(v[k])])):v;
- return JSON.stringify(canonical(a))===JSON.stringify(canonical(b));
+function touch(rec){rec.syncClock=advanceSyncClock(rec.syncClock||{});rec.rev=uid();rec.updatedAt=stamp();}
+function checkedSyncClock(value){
+ if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).length>1024)throw new Error('Neplatná synchronizační revize');
+ const next={};for(const [id,count] of Object.entries(value)){if(!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(id)||!Number.isSafeInteger(count)||count<1)throw new Error('Neplatný čítač revize');next[id]=count}return next;
 }
+function mergeSyncClocks(a={},b={}){const result=checkedSyncClock(a);for(const [id,count] of Object.entries(checkedSyncClock(b)))result[id]=Math.max(result[id]||0,count);return checkedSyncClock(result)}
+function compareSyncClocks(a={},b={}){a=checkedSyncClock(a);b=checkedSyncClock(b);let less=false,greater=false;for(const id of new Set([...Object.keys(a),...Object.keys(b)])){less||=(a[id]||0)<(b[id]||0);greater||=(a[id]||0)>(b[id]||0)}return less&&greater?'concurrent':less?'before':greater?'after':'equal'}
+function advanceSyncClock(clock){const result=checkedSyncClock(clock),count=result[syncDeviceId]||0;if(count===Number.MAX_SAFE_INTEGER)throw new Error('Vyčerpaný čítač revizí');result[syncDeviceId]=count+1;return checkedSyncClock(result)}
+function mergeSyncTombstones(a={},b={}){const result={};for(const id of new Set([...Object.keys(a),...Object.keys(b)]))Object.defineProperty(result,id,{value:mergeSyncClocks(Object.hasOwn(a,id)?a[id]:{},Object.hasOwn(b,id)?b[id]:{}),enumerable:true,writable:true,configurable:true});return result}
+// Three-way reconciliation also covers a native callback queued behind a newer edit.
+function canonicalSavedValue(value){
+ const canonical=v=>v&&typeof v==='object'?Array.isArray(v)?v.map(canonical):Object.fromEntries(Object.keys(v).sort().map(k=>[k,canonical(v[k])])):v;
+ return JSON.stringify(canonical(value));
+}
+function sameSavedValue(a,b){return canonicalSavedValue(a)===canonicalSavedValue(b)}
 function reconcileSavedState(base,local,remote){
  const old=new Map((base.records||[]).map(r=>[r.id,r])),ours=new Map(local.records.map(r=>[r.id,r]));
  const theirs=new Map(remote.records.map(r=>[r.id,r])),records=[];
  const purged=new Set([...(local.trashPurgedIds||[]),...(remote.trashPurgedIds||[])]);
+ const tombstones=mergeSyncTombstones(local.syncTombstones||{},remote.syncTombstones||{});
  const conflicts=new Set([...ours.values(),...theirs.values()].map(r=>r.conflictSource).filter(Boolean));
  for(const id of new Set([...ours.keys(),...theirs.keys()])){
   const l=ours.get(id),d=theirs.get(id),o=old.get(id);
+  if(Object.hasOwn(tombstones,id)){
+   for(let record of [l,d])if(record&&!record.deleted){
+    if(record===l&&!sameSavedValue(record,o)&&sameSavedValue(record.syncClock,o?.syncClock))record={...record,syncClock:advanceSyncClock(record.syncClock||{})};
+    if(['after','concurrent'].includes(compareSyncClocks(record.syncClock||{},tombstones[id]))){
+     const source='purge:'+id+':'+canonicalSavedValue(record);
+     if(!conflicts.has(source)){records.push({...record,id:uid(),conflict:true,conflictOf:id,conflictSource:source,title:(record.title||'Položka')+' (změna po vysypání koše)',syncClock:mergeSyncClocks(record.syncClock||{},tombstones[id])});conflicts.add(source)}
+    }
+   }
+   continue;
+  }
   if(purged.has(id)&&(!l||l.deleted)&&(!d||d.deleted))continue;
   if(sameSavedValue(l,d)){if(l)records.push(l);continue}
   if(sameSavedValue(l,o)){if(d)records.push(d);continue}
@@ -37,12 +62,13 @@ function reconcileSavedState(base,local,remote){
    if(!conflicts.has(source)){records.push({...d,id:uid(),title:(d.title||'Položka')+' (konflikt synchronizace)',conflict:true,conflictSource:source});conflicts.add(source)}
   }
  }
- return {...remote,...local,records,trashPurgedIds:[...purged],prefs};
+ return {...remote,...local,records,trashPurgedIds:[...purged],syncTombstones:tombstones,prefs};
 }
 function applySavedState(next){
  state=next;state.prefs=prefs;
  // Retain live editor/note references when a local draft wins reconciliation.
- for(const active of [current,noteActive])if(active){const at=state.records.findIndex(r=>r.id===active.id);if(at>=0&&state.records[at]!==active){Object.assign(active,state.records[at]);state.records[at]=active}}
+ for(const active of [current,noteActive])if(active){let at=state.records.findIndex(r=>r.id===active.id);if(at<0)at=state.records.findIndex(r=>r.conflictOf===active.id&&r.rev===active.rev);if(at>=0&&state.records[at]!==active){Object.assign(active,state.records[at]);state.records[at]=active}}
+ if(typeof document!=='undefined'&&current&&screen==='editor')$('editorTitle').textContent=current.title;
 }
 function reportSaveResult(ok){
  window.__lastSaveFailed=!ok;
@@ -59,7 +85,7 @@ function save(){
  if(dataLoadFailed){notify('Zakázky nelze načíst. Zápis je zablokovaný, původní data zůstávají chráněná.');return false}
  try{
   for(let attempt=0;attempt<3;attempt++){
-   const text=JSON.stringify(state);
+   state.syncProtocol=2;const text=JSON.stringify(state);
    if(!native){localStorage.setItem('zamerovac-data',text);persistedSnapshot=text;return reportSaveResult(true)}
    const result=JSON.parse(Native.saveDataChecked(text,persistedSnapshot));
    if(result.ok){persistedSnapshot=text;return reportSaveResult(true)}
@@ -94,7 +120,7 @@ function folderContains(folderId,otherId){
  while(node&&!seen.has(node.id)){if(node.id===folderId)return true;seen.add(node.id);node=node.parentId?recById(node.parentId):null}
  return false;
 }
-function newRecord(kind,title,parentId=currentFolder){return {id:uid(),kind,title,parentId,createdAt:stamp(),updatedAt:stamp(),rev:uid(),media:[],items:[],text:'',checks:[],width:1400,height:900,deleted:false}}
+function newRecord(kind,title,parentId=currentFolder){return {id:uid(),syncClock:advanceSyncClock({}),kind,title,parentId,createdAt:stamp(),updatedAt:stamp(),rev:uid(),media:[],items:[],text:'',checks:[],width:1400,height:900,deleted:false}}
 function addRecord(r){if(!canWriteToFolder(r.parentId)){notify('Nejdříve odemkněte složku.');return null}state.records.push(r);save();showFolder();return r}
 function closeMenus(){for(let id of ['toolMenu','newMenu','navMenu','overflowMenu','editorOverflow'])$(id).hidden=true;if($('editorExtraToolbar')?.hidden===false)window.setEditorExtraToolbarExpanded?.(false)}
 let modalFocusTimer=null;
@@ -172,7 +198,9 @@ function purgeTrashRecords(ids){
   }else{
    const targets=new Set(ids);
    if(state.records.filter(r=>targets.has(r.id)&&r.deleted).length!==targets.size)throw new Error('Obsah koše se změnil');
-   const next={...state,records:state.records.filter(r=>!targets.has(r.id))};
+   const tombstones=mergeSyncTombstones(state.syncTombstones||{},{});
+   for(const record of state.records.filter(r=>targets.has(r.id)))Object.defineProperty(tombstones,record.id,{value:advanceSyncClock(mergeSyncClocks(record.syncClock||{},Object.hasOwn(tombstones,record.id)?tombstones[record.id]:{})),enumerable:true,writable:true,configurable:true});
+   const next={...state,records:state.records.filter(r=>!targets.has(r.id)),syncTombstones:tombstones,trashPurgedIds:[...new Set([...(state.trashPurgedIds||[]),...targets])]};
    localStorage.setItem('zamerovac-data',JSON.stringify(next));
    result={data:next};
   }
@@ -360,7 +388,8 @@ window.onNativeSync=(text)=>{
    if(!save())return false;
    if(screen==='browser')showFolder();
   }
-  notify(result.message||'Synchronizace dokončena');return true;
+  const conflicts=result.data?state.records.filter(r=>r.conflict).length:0;
+  notify((result.message||'Synchronizace dokončena')+(conflicts?' · zachované konfliktní kopie: '+conflicts:''));return true;
  }catch(e){notify('Synchronizace: '+e.message);return false}
 };
 window.onLaserValue=(value,unit)=>{
