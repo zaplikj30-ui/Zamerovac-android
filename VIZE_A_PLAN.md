@@ -461,6 +461,14 @@ Tato část **zpřesňuje již existující požadavek**, nezakládá druhé nez
 
 **Stav:** zapsáno jako pravidlo pro budoucí skutečné vícejazyčné vydání. Nyní jen dokumentace, ne zadání k implementaci a ne nové APK.
 
+### Budoucí zpoplatnění funkcí či modulů – pouze možnost (upřesněno 5. 11. 2026)
+
+**NÁPAD / DLOUHODOBÁ MOŽNOST, nikoli schválená funkce nebo obchodní model.** Uživatel chce pouze, abychom při dlouhodobém navrhování Zaměřovače **nevyloučili možnost později zpoplatnit jednotlivé vhodné funkce, moduly, balíčky nebo celou aplikaci**. Připadá v úvahu zdarma, jednorázový nákup, volitelný placený modul, profesionální licence, případně předplatné či jiné modely. **Není rozhodnuto, zda vůbec zpoplatňovat, co přesně, za kolik ani kdy.** Nemá smysl nyní přidávat platební kód, licence, předplatné, registraci, reklamy, omezení funkcí ani vytvářet samostatné verze aplikace.
+
+**Pouze zásada pro budoucí návrh:** zachovat přehledné oddělení funkčních celků a dat, aby šel případný licenční systém později přidat bez přepisování editoru či narušení ochrany zákaznických dat. Režimy ovládání **Začátečník / Střední / Expert nejsou platební tarify**. Přechod na jinou licenci nesmí mazat zakázky ani měnit přesnost kót, výpočtů a bezpečnost; uživatel musí mít možnost dostat se ke svým datům. Pokud se skutečná monetizace někdy schválí, samostatně posoudit technické varianty, pravidla obchodů, offline fungování a testy.
+
+**Teď:** pouze evidence nápadu; dokončit #39/PR #41 a plánovanou kontrolu kvality #42, bez nové APK.
+
 ### Možná budoucí monetizace reklamou (pouze otevřená možnost)
 
 **4. 11. 2026 – NEROZHODNUTÁ DLOUHODOBÁ MOŽNOST.** K dříve zaznamenaným otevřeným otázkám (zdarma, jednorázová platba, předplatné, případně placené funkce či moduly) přibývá také **možnost financování aplikace reklamou**. Zatím není schváleno, že reklamy v aplikaci budou; není určený poskytovatel, formát, četnost, umístění, příjmový cíl ani kombinace s ostatními modely. Veřejné vydání také není rozhodnuté. **Reklama není požadavek na nynější ani příští aktualizaci.**
