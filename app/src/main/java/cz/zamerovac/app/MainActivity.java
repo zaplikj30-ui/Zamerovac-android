@@ -544,8 +544,8 @@ public class MainActivity extends Activity {
                 try(OutputStream stream=getContentResolver().openOutputStream(destination,"w")){
                     if(stream==null)throw new IOException("Nelze otevřít soubor");
                     exportArchive(stream,folderId,selectionIds);
-                    onSyncResult("ZIP záloha zakázek a původních médií byla uložena",null);
-                }catch(Exception e){error("Záloha ZIP: "+e.getMessage());}
+                }catch(Exception e){try{DocumentsContract.deleteDocument(getContentResolver(),destination);}catch(Exception ignored){}error("Záloha ZIP nebyla dokončena: "+e.getMessage());return;}
+                onSyncResult("ZIP záloha zakázek a původních médií byla uložena",null);
             },"ZamerovacBackup").start();
             return;
         }
@@ -617,6 +617,11 @@ public class MainActivity extends Activity {
             JSONObject record=records.optJSONObject(i);
             if(record!=null)collectMediaIds(record,mediaIds);
         }
+        for(String id:mediaIds){
+            if(!validId(id))throw new IOException("Neplatný identifikátor přílohy v záloze");
+            File source=mediaFile(id);
+            if(!source.isFile()||!source.canRead()||source.length()==0)throw new IOException("Záloha není úplná: chybí nebo je prázdná příloha "+id);
+        }
         try(ZipOutputStream zip=new ZipOutputStream(destination)){
             zip.putNextEntry(new ZipEntry("projects.json"));
             zip.write(json.getBytes(StandardCharsets.UTF_8));
@@ -632,7 +637,7 @@ public class MainActivity extends Activity {
             zip.closeEntry();
             for(String id:mediaIds){
                 if(!validId(id))continue;
-                File media=mediaFile(id);if(!media.isFile())continue;
+                File media=mediaFile(id);if(!media.isFile())throw new IOException("Příloha během exportu přestala být dostupná: "+id);
                 zip.putNextEntry(new ZipEntry("media/"+id));
                 try(InputStream in=new FileInputStream(media)){copy(in,zip);}
                 zip.closeEntry();
@@ -751,7 +756,16 @@ public class MainActivity extends Activity {
                 }catch(Exception e){try{return new JSONObject().put("error",e.getMessage()).toString();}catch(JSONException ignored){return "{}";}}
             }
         }
-        @JavascriptInterface public void saveData(String text){try{JSONObject j=new JSONObject(text);if(j.optInt("schema")!=1)throw new Exception("Unsupported schema");writeDb(text);}catch(Exception e){error("Uložení: "+e.getMessage());}}
+        @JavascriptInterface public boolean saveData(String text){try{writeDb(text);return true;}catch(Exception e){error("Uložení: "+e.getMessage());return false;}}
+        @JavascriptInterface public String saveDataChecked(String text,String expected){
+            synchronized(TrashPurger.LOCK){
+                try{
+                    String current=readDb();
+                    if(!current.equals(expected))return new JSONObject().put("ok",false).put("current",current.isEmpty()?"{\"schema\":1,\"records\":[]}":current).toString();
+                    writeDb(text);return "{\"ok\":true}";
+                }catch(Exception e){try{return new JSONObject().put("ok",false).put("error","Uložení se nezdařilo; poslední potvrzená data zůstávají chráněná.").toString();}catch(Exception ignored){return "{}";}}
+            }
+        }
         @JavascriptInterface public void beginMedia(String id,String mime,String name){try{if(!validId(id))return;closeUpload();activeUpload=new FileOutputStream(mediaFile(id));activeUploadId=id;settings.edit().putString("mime-"+id,mime).putString("name-"+id,name).apply();}catch(Exception e){error(e.toString());}}
         @JavascriptInterface public void appendMedia(String id,String chunk){try{if(activeUpload!=null&&id.equals(activeUploadId))activeUpload.write(Base64.decode(chunk,Base64.DEFAULT));}catch(Exception e){error(e.toString());}}
         @JavascriptInterface public void finishMedia(String id){if(id.equals(activeUploadId))closeUpload();}
@@ -807,9 +821,18 @@ public class MainActivity extends Activity {
         });}
         @JavascriptInterface public void openMedia(String id){runOnUiThread(()->{try{if(!validId(id)||!mediaFile(id).isFile())throw new IOException("Chybí soubor");if(mediaMime(id).startsWith("video/")){startActivity(new Intent(MainActivity.this,VideoActivity.class).putExtra("mediaId",id));return;}Uri uri=new Uri.Builder().scheme("content").authority(getPackageName()+".files").appendPath(id).build();Intent i=new Intent(Intent.ACTION_VIEW).setDataAndType(uri,mediaMime(id)).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);startActivity(Intent.createChooser(i,"Otevřít přílohu"));}catch(Exception e){error("Pro tento formát není dostupný prohlížeč");}});}
         @JavascriptInterface public void configure(String json){try{JSONObject p=new JSONObject(json);settings.edit().putBoolean("wifiOnly",p.optBoolean("wifiOnly",false)).putBoolean("autoSync",p.optBoolean("autoSync",true)).apply();runOnUiThread(()->{if(p.optBoolean("keepAwake"))getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);int flags=View.SYSTEM_UI_FLAG_LAYOUT_STABLE|View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN|View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION;if(p.optBoolean("fullscreen"))flags|=View.SYSTEM_UI_FLAG_FULLSCREEN|View.SYSTEM_UI_FLAG_HIDE_NAVIGATION|View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;getWindow().getDecorView().setSystemUiVisibility(flags);root.requestApplyInsets();});scheduleSync();}catch(Exception e){error(e.getMessage());}}
-        @JavascriptInterface public boolean startAudio(String id){if(Build.VERSION.SDK_INT>=23&&checkSelfPermission(Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){runOnUiThread(()->requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO},REQUEST_PERMISSIONS));return false;}
-            try{recordingId=id;recorder=new MediaRecorder();recorder.setAudioSource(MediaRecorder.AudioSource.MIC);recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);recorder.setOutputFile(mediaFile(id).getAbsolutePath());recorder.prepare();recorder.start();settings.edit().putString("mime-"+id,"audio/mp4").putString("name-"+id,"Hlasová poznámka.m4a").apply();return true;}catch(Exception e){error("Mikrofon: "+e.getMessage());return false;}}
-        @JavascriptInterface public void stopAudio(){try{if(recorder!=null){recorder.stop();recorder.reset();recorder.release();recorder=null;}}catch(Exception e){error("Nahrávání: "+e.getMessage());}}
+        @JavascriptInterface public boolean startAudio(String id){
+            if(!validId(id)||recorder!=null)return false;
+            if(Build.VERSION.SDK_INT>=23&&checkSelfPermission(Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){runOnUiThread(()->requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO},REQUEST_PERMISSIONS));return false;}
+            try{recordingId=id;recorder=new MediaRecorder();recorder.setAudioSource(MediaRecorder.AudioSource.MIC);recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);recorder.setOutputFile(mediaFile(id).getAbsolutePath());recorder.prepare();recorder.start();settings.edit().putString("mime-"+id,"audio/mp4").putString("name-"+id,"Hlasová poznámka.m4a").apply();return true;}
+            catch(Exception e){releaseRecorder();mediaFile(id).delete();error("Mikrofon: záznam se nepodařilo zahájit");return false;}
+        }
+        @JavascriptInterface public boolean stopAudio(){
+            String id=recordingId;boolean success=false;
+            try{if(recorder!=null){recorder.stop();success=id!=null&&mediaFile(id).length()>0;}return success;}
+            catch(Exception e){error("Nahrávání se nepodařilo uložit");return false;}
+            finally{releaseRecorder();if(!success&&validId(id))mediaFile(id).delete();}
+        }
         @JavascriptInterface public void searchAddress(String q){
             new Thread(()->{
                 try{jsCall("onAddressCandidates",AddressLookup.find(q));}
@@ -945,6 +968,17 @@ public class MainActivity extends Activity {
             });
         }
     }
+    private void releaseRecorder(){
+        MediaRecorder old=recorder;recorder=null;recordingId=null;
+        if(old!=null)try{old.release();}catch(Exception ignored){}
+    }
+    private static void validateDatabase(String text)throws IOException{
+        if(text==null||text.length()>20*1024*1024)throw new IOException("Databáze je příliš velká");
+        try{JSONObject db=new JSONObject(text);if(db.optInt("schema")!=1||db.optJSONArray("records")==null)throw new IOException("Neplatná databáze");
+            Set<String> ids=new HashSet<>();JSONArray records=db.getJSONArray("records");
+            for(int i=0;i<records.length();i++){JSONObject record=records.optJSONObject(i);if(record==null||!(record.opt("id") instanceof String)||record.getString("id").isEmpty()||!ids.add(record.getString("id")))throw new IOException("Neplatný nebo duplicitní záznam");}
+        }catch(JSONException e){throw new IOException("Neplatná databáze",e);}
+    }
     private void closeUpload(){try{if(activeUpload!=null)activeUpload.close();}catch(Exception ignored){}activeUpload=null;activeUploadId=null;}
     private String readDb() throws IOException {
         synchronized(TrashPurger.LOCK){
@@ -974,6 +1008,7 @@ public class MainActivity extends Activity {
     }
     private void writeDb(String data) throws IOException {
         synchronized(TrashPurger.LOCK){
+        validateDatabase(data);
         if(databaseReadFailed)throw new IOException("Zápis zablokován: uložené zakázky nebyly bezpečně načteny");
         File next=new File(getFilesDir(),"projects.tmp"),dest=new File(getFilesDir(),"projects.json");
         File backup=new File(getFilesDir(),"projects.bak");
@@ -997,7 +1032,7 @@ public class MainActivity extends Activity {
     private void syncCloud(){if(syncRunning){onSyncResult("Synchronizace již probíhá",null);return;}syncRunning=true;new Thread(()->{try{SyncEngine.Result result=new SyncEngine(this,settings).sync();onSyncResult(result.message,result.data);}catch(Exception e){error("Synchronizace: "+e.getMessage());}finally{syncRunning=false;}},"DriveSync").start();}
     private void scheduleSync(){try{JobScheduler jobs=(JobScheduler)getSystemService(JOB_SCHEDULER_SERVICE);JobInfo j=new JobInfo.Builder(14,new ComponentName(this,SyncJob.class)).setPeriodic(15*60*1000L).setRequiredNetworkType(settings.getBoolean("wifiOnly",false)?JobInfo.NETWORK_TYPE_UNMETERED:JobInfo.NETWORK_TYPE_ANY).setPersisted(true).build();if(settings.getString("treeUri",null)!=null&&settings.getBoolean("autoSync",true))jobs.schedule(j);else jobs.cancel(14);}catch(Exception e){android.util.Log.w("Zamerovac","Background job",e);}}
     @Override public void onResume(){super.onResume();if(settings!=null&&settings.getBoolean("autoSync",true)&&settings.getString("treeUri",null)!=null)handler.postDelayed(()->syncCloud(),1400);}
-    @Override protected void onDestroy(){closeUpload();stopLaserConnection();videoThumbnails.close();clearCustomerExport();handler.removeCallbacksAndMessages(null);if(recorder!=null){recorder.release();recorder=null;}if(web!=null)web.destroy();super.onDestroy();}
+    @Override protected void onDestroy(){closeUpload();stopLaserConnection();videoThumbnails.close();clearCustomerExport();handler.removeCallbacksAndMessages(null);releaseRecorder();if(web!=null)web.destroy();super.onDestroy();}
 
 
     // The GLM 100-25 C is Bluetooth LE. Show ALL nearby LE advertisements (like

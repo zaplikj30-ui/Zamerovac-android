@@ -408,6 +408,8 @@ const chapters=[
     ],
     "notes": [
       "Nevyvážej pouhé zákaznické PDF, pokud chceš později upravovat kóty.",
+      "Chybějící nebo prázdná příloha export zálohy zastaví. Neúspěšný zápis se neoznačí jako hotová záloha; původní zakázky zůstávají zachované.",
+      "Při hlášení Neuloženo zůstaň v aplikaci a uložení zopakuj. Aplikace potvrdí zápis až po úspěšném uložení; souběžné konfliktní změny uchová jako označenou kopii.",
       "Poškozený nebo neplatný ZIP aplikace odmítne. Pokud nelze soubor vybrat, zkontroluj filtr a umístění v systémovém správci."
     ],
     "keywords": [

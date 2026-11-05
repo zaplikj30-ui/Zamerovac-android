@@ -14,7 +14,51 @@ const prefs=state.prefs;
 let sortAsc=true;let currentFolder=null,screen='browser',current=null,noteActive=null,mode='dimension',selected=null,stagedFileHandler=null,editStack=[],redoStack=[],lineDraft=[],stageImg=null,photoSize={w:1400,h:900},view={zoom:1,dx:0,dy:0},drag=null,pointers=new Map(),magnifierPoint=null,stageCanvas=$('drawCanvas'),ctx=stageCanvas.getContext('2d'),loupeCtx=$('loupe').getContext('2d'),autoSaving=false;
 const stamp=()=>new Date().toISOString();
 function touch(rec){rec.rev=uid();rec.updatedAt=stamp();}
-function save(){if(dataLoadFailed){notify('Zakázky nelze načíst. Zápis je zablokovaný, původní data zůstávají chráněná.');return false}if(native){Native.saveData(JSON.stringify(state));persistedSnapshot=JSON.stringify(state);}else{localStorage.setItem('zamerovac-data',JSON.stringify(state));}}
+// Three-way reconciliation also covers a native callback queued behind a newer edit.
+function sameSavedValue(a,b){
+ const canonical=v=>v&&typeof v==='object'?Array.isArray(v)?v.map(canonical):Object.fromEntries(Object.keys(v).sort().map(k=>[k,canonical(v[k])])):v;
+ return JSON.stringify(canonical(a))===JSON.stringify(canonical(b));
+}
+function reconcileSavedState(base,local,remote){
+ const old=new Map((base.records||[]).map(r=>[r.id,r])),ours=new Map(local.records.map(r=>[r.id,r]));
+ const theirs=new Map(remote.records.map(r=>[r.id,r])),records=[];
+ const purged=new Set([...(local.trashPurgedIds||[]),...(remote.trashPurgedIds||[])]);
+ const conflicts=new Set([...ours.values(),...theirs.values()].map(r=>r.conflictSource).filter(Boolean));
+ for(const id of new Set([...ours.keys(),...theirs.keys()])){
+  const l=ours.get(id),d=theirs.get(id),o=old.get(id);
+  if(purged.has(id)&&(!l||l.deleted)&&(!d||d.deleted))continue;
+  if(sameSavedValue(l,d)){if(l)records.push(l);continue}
+  if(sameSavedValue(l,o)){if(d)records.push(d);continue}
+  if(sameSavedValue(d,o)){if(l)records.push(l);continue}
+  // A physical removal is not permission to discard an independent live edit.
+  if(l)records.push(l);else if(d)records.push(d);
+  if(l&&d){
+   const source=JSON.stringify([id,d.rev||'',d]);
+   if(!conflicts.has(source)){records.push({...d,id:uid(),title:(d.title||'Položka')+' (konflikt synchronizace)',conflict:true,conflictSource:source});conflicts.add(source)}
+  }
+ }
+ return {...remote,...local,records,trashPurgedIds:[...purged],prefs};
+}
+function applySavedState(next){
+ state=next;state.prefs=prefs;
+ // Retain live editor/note references when a local draft wins reconciliation.
+ for(const active of [current,noteActive])if(active){const at=state.records.findIndex(r=>r.id===active.id);if(at>=0&&state.records[at]!==active){Object.assign(active,state.records[at]);state.records[at]=active}}
+}
+function save(){
+ if(dataLoadFailed){notify('Zakázky nelze načíst. Zápis je zablokovaný, původní data zůstávají chráněná.');return false}
+ try{
+  for(let attempt=0;attempt<3;attempt++){
+   const text=JSON.stringify(state);
+   if(!native){localStorage.setItem('zamerovac-data',text);persistedSnapshot=text;return true}
+   const result=JSON.parse(Native.saveDataChecked(text,persistedSnapshot));
+   if(result.ok){persistedSnapshot=text;return true}
+   if(typeof result.current!=='string')throw new Error(result.error||'Zápis nebyl potvrzen');
+   const disk=JSON.parse(result.current),base=persistedSnapshot?JSON.parse(persistedSnapshot):initial;
+   applySavedState(reconcileSavedState(base,state,disk));persistedSnapshot=result.current;
+  }
+  throw new Error('Zakázky se právě mění. Zkus uložení znovu.');
+ }catch(e){notify('Neuloženo: '+e.message);return false}
+}
 function notify(msg){const el=$('toast');el.textContent=msg;el.hidden=false;clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>el.hidden=true,3000)}
 function dateText(s){return s?new Date(s).toLocaleDateString('cs-CZ'):''}
 function photoDateText(value){
@@ -214,7 +258,7 @@ function saveNote(){if(!noteActive)return;noteActive.title=$('noteTitle').value.
 $('saveNote').onclick=saveNote;$('noteBack').onclick=saveNote;$('addCheck').onclick=()=>{noteActive.checks.push({text:'',done:false});renderChecks();let fields=$('checkItems').querySelectorAll('[data-text]');fields[fields.length-1]?.focus()};$('attachFile').onclick=()=>pickMedia('media',(id)=>{noteActive.media.push(id);renderNoteAttachments()});
 $('recordAudio').onclick=recordVoice;
 window.__audioPermissionDenied=()=>{window.__audioPermissionRetry=null;notify('Mikrofon není povolen. Povol jej v nastavení aplikace.');};
-function recordVoice(){if(!native){notify('V prohlížeči použij možnost přidat zvukový soubor.');pickMedia('file',(id)=>{if(noteActive)noteActive.media.push(id);else addMediaRecord(id,'Hlasová poznámka','audio/m4a');renderNoteAttachments()});return}if(!window.recording){const id=uid();const start=()=>{if(!noteActive)return;if(!Native.startAudio(id))return;window.__audioPermissionRetry=null;window.recording=id;$('recordAudio').textContent='■ Zastavit záznam';notify('Nahrávání spuštěno')};window.__audioPermissionRetry=start;start()}else{const id=window.recording;Native.stopAudio();window.recording=null;$('recordAudio').textContent='● Hlasová poznámka';if(noteActive){noteActive.media.push(id);renderNoteAttachments();}else addMediaRecord(id,'Hlasová poznámka','audio/mp4');notify('Zvuková poznámka uložena')}}
+function recordVoice(){if(!native){notify('V prohlížeči použij možnost přidat zvukový soubor.');pickMedia('file',(id)=>{if(noteActive)noteActive.media.push(id);else addMediaRecord(id,'Hlasová poznámka','audio/m4a');renderNoteAttachments()});return}if(!window.recording){const id=uid();const start=()=>{if(!noteActive)return;if(!Native.startAudio(id))return;window.__audioPermissionRetry=null;window.recording=id;$('recordAudio').textContent='■ Zastavit záznam';notify('Nahrávání spuštěno')};window.__audioPermissionRetry=start;start()}else{const id=window.recording;const recorded=Native.stopAudio();window.recording=null;$('recordAudio').textContent='● Hlasová poznámka';if(!recorded)return;if(noteActive){noteActive.media.push(id);renderNoteAttachments();}else addMediaRecord(id,'Hlasová poznámka','audio/mp4');notify('Zvuková poznámka uložena')}}
 $('createBtn').onclick=showNewMenu;$('galleryBtn').onclick=()=>pickMedia('media');
 function showAppMenu(id,items){
   const el=$(id),open=!el.hidden;closeMenus();if(open)return;
@@ -277,7 +321,21 @@ window.onNativePhotoAddress=(mediaId,address)=>{
   }
 };
 window.onNativeMediaDone=()=>{stagedFileHandler=null;save()};
-window.onNativeSync=(text)=>{try{let s=JSON.parse(text);if(s.data){const purged=new Set([...(state.trashPurgedIds||[]),...(s.data.trashPurgedIds||[])]);s.data.trashPurgedIds=[...purged];s.data.records=(s.data.records||[]).filter(r=>!r.deleted||!purged.has(r.id));if(screen==='browser'){state=s.data;Object.assign(prefs,state.prefs||{});state.prefs=prefs;save();showFolder()}else{const activeIds=new Set([current?.id,noteActive?.id].filter(Boolean));const active=state.records.filter(r=>activeIds.has(r.id));let incoming=s.data.records||[];for(const r of active){let at=incoming.findIndex(x=>x.id===r.id);if(at>=0)incoming[at]=r;else incoming.push(r)}state.records=incoming;state.trashPurgedIds=[...purged];save();} }notify(s.message||'Synchronizace dokončena')}catch(e){notify(text)}};
+window.onNativeSync=(text)=>{
+ try{
+  const result=JSON.parse(text);
+  if(result.data){
+   // Read the current confirmed database, never replay a stale callback snapshot.
+   const snapshot=native?Native.loadData():JSON.stringify(result.data),disk=JSON.parse(snapshot);
+   if(disk.schema!==1||!Array.isArray(disk.records))throw new Error('Zakázky nelze bezpečně načíst');
+   const base=persistedSnapshot?JSON.parse(persistedSnapshot):initial;
+   applySavedState(reconcileSavedState(base,state,disk));persistedSnapshot=snapshot;
+   if(!save())return;
+   if(screen==='browser')showFolder();
+  }
+  notify(result.message||'Synchronizace dokončena');
+ }catch(e){notify('Synchronizace: '+e.message)}
+};
 window.onLaserValue=(value,unit)=>{
  // Přenos mimo editor: uložit poslední přijatou hodnotu do paměti.
  // V editoru provede přímý zápis __handleLaserAuto v upgrade.js.

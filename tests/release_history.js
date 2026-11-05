@@ -53,3 +53,5 @@ assert(help.includes('☰ → Historie změn'),'Offline help must be updated tog
 const source=fs.readFileSync(path.join(root,'app/src/main/assets/release-history.js'),'utf8');
 assert.doesNotMatch(source,/fetch\s*\(|XMLHttpRequest|localStorage|Native\./,'Offline catalog must not access network or customer data');
 console.log('PASS true versioned changelog: fixed releases, improvements, no future notes, offline, help and menus');
+assert.equal(history.pendingChanges.released,false,'Working notes must not pretend to be a released version');
+assert(!history.forVersion('1.2.152').includes(history.pendingChanges));

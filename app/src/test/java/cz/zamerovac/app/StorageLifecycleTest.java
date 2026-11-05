@@ -117,4 +117,35 @@ public class StorageLifecycleTest {
             assertEquals(before,invalid.toString());assertEquals(count,dir.list().length);
         }
     }
+    @Test public void missingAndEmptyNestedMediaAbortBeforeAnyArchiveBytes()throws Exception {
+        media();persist(fixture());String before=digest(new File(context.getFilesDir(),"projects.json"));
+        for(boolean empty:new boolean[]{false,true}){
+            File file=new File(dir,"original-video");if(empty)Files.write(file.toPath(),new byte[0]);else assertTrue(file.delete());
+            ByteArrayOutputStream out=new ByteArrayOutputStream();
+            try{call("exportArchive",new Class[]{OutputStream.class,String.class},out,null);fail("Incomplete backup accepted");}catch(IOException expected){assertTrue(expected.getMessage().contains("příloha"));}
+            assertEquals(0,out.size());assertEquals(before,digest(new File(context.getFilesDir(),"projects.json")));
+            media();
+        }
+    }
+    @Test public void exportWriteFailurePropagatesAndPreservesDatabaseAndOriginals()throws Exception {
+        media();persist(fixture());String before=digest(new File(context.getFilesDir(),"projects.json")),photo=digest(new File(dir,"original-photo"));
+        OutputStream rejected=new OutputStream(){public void write(int value)throws IOException{throw new IOException("simulated full destination");}};
+        try{call("exportArchive",new Class[]{OutputStream.class,String.class},rejected,null);fail("Write failure swallowed");}catch(IOException expected){}
+        assertEquals(before,digest(new File(context.getFilesDir(),"projects.json")));assertEquals(photo,digest(new File(dir,"original-photo")));
+    }
+    @Test public void compareAndSaveRejectsStaleSnapshotAndReportsDiskFailure()throws Exception {
+        persist(fixture());MainActivity.JsApi api=activity.new JsApi();String first=api.loadData();
+        String newer=fixture().put("sequence",1).toString();assertTrue(new JSONObject(api.saveDataChecked(newer,first)).getBoolean("ok"));
+        JSONObject stale=new JSONObject(api.saveDataChecked(fixture().put("sequence",2).toString(),first));
+        assertFalse(stale.getBoolean("ok"));assertEquals(newer,stale.getString("current"));assertEquals(newer,api.loadData());
+        File blocker=new File(context.getFilesDir(),"projects.tmp");assertTrue(blocker.mkdir());
+        try{JSONObject failed=new JSONObject(api.saveDataChecked(first,newer));assertFalse(failed.getBoolean("ok"));assertTrue(failed.has("error"));assertEquals(newer,api.loadData());}finally{blocker.delete();}
+    }
+    @Test public void failedAudioStopReleasesRecorderAndDoesNotAttachAnEmptyFile()throws Exception {
+        android.media.MediaRecorder recorder=org.mockito.Mockito.mock(android.media.MediaRecorder.class);
+        org.mockito.Mockito.doThrow(new RuntimeException("interrupted")).when(recorder).stop();
+        ReflectionHelpers.setField(activity,"recorder",recorder);ReflectionHelpers.setField(activity,"recordingId","failed-recording");Files.write(new File(dir,"failed-recording").toPath(),new byte[]{1});
+        assertFalse(activity.new JsApi().stopAudio());org.mockito.Mockito.verify(recorder).release();assertNull(ReflectionHelpers.getField(activity,"recorder"));assertFalse(new File(dir,"failed-recording").exists());
+    }
+
 }

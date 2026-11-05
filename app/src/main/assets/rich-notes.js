@@ -18,7 +18,7 @@ function openRichNote(item,isNew){
  window.__activeRichNoteRelease=release;
  $('cancelModal').onclick=()=>{cleanRecording();release();$('modal').hidden=true;window.modalOK=null};
  function persist(){
-  if(recording){Native.stopAudio();attachments.push(recording);item.audioMedia=[...(item.audioMedia||[]),recording];recording=null;}
+  if(recording){if(!Native.stopAudio()){recording=null;return false}attachments.push(recording);item.audioMedia=[...(item.audioMedia||[]),recording];recording=null;}
   item.text=$('richText').value.trim();
   const hadAttachment=Array.isArray(item.media)&&item.media.length>0;
   item.media=attachments.slice();
@@ -90,7 +90,7 @@ function openRichNote(item,isNew){
     };
     window.__audioPermissionRetry=start;start();
   }else{
-    Native.stopAudio();attachments.push(recording);
+    if(!Native.stopAudio()){recording=null;btn.textContent='🎙 Nahrát hlas';return}attachments.push(recording);
     item.audioMedia=[...(item.audioMedia||[]),recording];recording=null;
     btn.textContent='🎙 Nahrát hlas';render();notify('Hlas připojen k poznámce');
   }

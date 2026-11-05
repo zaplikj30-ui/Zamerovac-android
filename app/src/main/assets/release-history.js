@@ -4,6 +4,12 @@
  */
 (function(root){
 'use strict';
+// Working notes for the common update. These are NOT a released version and
+// are deliberately excluded from forVersion() and the installed release history.
+const pendingChanges={issue:39,released:false,groups:[{kind:'Opraveno',items:[
+ {text:'Potvrzované uložení, zachování souběžných změn a ochrana proti opožděnému výsledku synchronizace.'},
+ {text:'Odmítnutí neúplné ZIP zálohy a bezpečné ukončení chybného hlasového záznamu.'}
+]}]};
 const releases=[
   {
     "version": "1.2.152",
@@ -271,7 +277,7 @@ function forVersion(installedVersion){
 function hasReleaseNotes(installedVersion){
  return releases.some(r=>compareVersions(r.version,installedVersion)===0);
 }
-const api=Object.freeze({releases,parseVersion,compareVersions,forVersion,hasReleaseNotes});
+const api=Object.freeze({pendingChanges,releases,parseVersion,compareVersions,forVersion,hasReleaseNotes});
 root.ZamerovacReleaseHistory=api;
 if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);
