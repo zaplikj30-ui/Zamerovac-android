@@ -15,6 +15,19 @@ final class PeerDataStore {
         trusted(peer);JSONArray needed=new JSONArray();for(JSONObject media:snapshot.media.values())if(!PeerMedia.matches(new File(outbox.mediaDirectory,media.getString("id")),media))needed.put(media.getString("id"));return needed;
     }
     void receive(String id,InputStream input,JSONObject media,PeerHandshake.Peer peer)throws Exception{trusted(peer);PeerMedia.receive(outbox.mediaDirectory,id,input,media);trusted(peer);}
+    interface LocalReceipt {void save()throws Exception;}
+    /** Retire an older intent only when a verified durable newer local state no longer needs its absent files. No network here. */
+    boolean superseded(PeerSnapshot incoming,PeerHandshake.Peer peer,JSONArray needed,LocalReceipt receipt)throws Exception{
+        if(needed.length()==0)return false;trusted(peer);long generation;
+        synchronized(TrashPurger.LOCK){String text=LocalDatabase.read(context.getFilesDir());JSONObject current=text.isEmpty()?new JSONObject().put("schema",1).put("records",new JSONArray()):new JSONObject(text);if(!PeerOutbox.dominates(current,incoming.data))return false;Set<String> refs=PeerSnapshot.references(current.getJSONArray("records"));for(int i=0;i<needed.length();i++)if(refs.contains(needed.getString(i)))return false;generation=LocalDatabase.generation(context.getFilesDir());}
+        // Hash current originals only after the cheap causal/reference checks prove retirement is possible.
+        PeerSnapshot local=PeerSnapshot.capture(context,prefs);if(!PeerOutbox.dominates(local.data,incoming.data))return false;
+        for(int i=0;i<needed.length();i++)if(local.media.containsKey(needed.getString(i)))return false;
+        synchronized(TrashPurger.LOCK){trusted(peer);LocalDatabase.read(context.getFilesDir());if(generation!=LocalDatabase.generation(context.getFilesDir()))return false;
+            for(Map.Entry<String,long[]> entry:local.localStats.entrySet()){File file=new File(outbox.mediaDirectory,entry.getKey());if(!file.isFile()||java.nio.file.Files.isSymbolicLink(file.toPath())||file.length()!=entry.getValue()[0]||file.lastModified()!=entry.getValue()[1])return false;}
+            receipt.save();return true;
+        }
+    }
     JSONObject apply(PeerSnapshot snapshot,PeerHandshake.Peer peer)throws Exception{
         trusted(peer);
         // Recheck even files confirmed earlier: the user may have purged a record during a slow transfer.

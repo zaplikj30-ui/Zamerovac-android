@@ -827,7 +827,9 @@
         "app/src/main/java/cz/zamerovac/app/SafSyncV2.java",
         "app/src/main/java/cz/zamerovac/app/CloudProof.java",
         "app/src/main/java/cz/zamerovac/app/CloudFiles.java",
-        "app/src/main/java/cz/zamerovac/app/CloudPublications.java"
+        "app/src/main/java/cz/zamerovac/app/CloudPublications.java",
+        "app/src/main/java/cz/zamerovac/app/PeerDataStore.java",
+        "app/src/main/java/cz/zamerovac/app/PeerOutbox.java"
       ],
       "tests": [
         {
@@ -840,10 +842,11 @@
         }
       ],
       "coverage": "runtime-partial",
-      "positive": "Skutečné podpisy, immutable soubory, média a potvrzení úplného DB merge. Trvalé publication receipts a ověřená žádost o opravu konkrétního bloku.",
-      "negative": "Forged ACK, změněný podpis/adresát, částečný upload a chybějící velká fotografie. Stejně velké poškození, chybějící blob/snapshot, replay a nepovolená velká oprava nesmějí potvrdit DB.",
+      "positive": "Skutečné podpisy, immutable soubory, média a potvrzení úplného DB merge. Trvalé publication receipts a ověřená žádost o opravu konkrétního bloku. Kompletní publikace v novém namespace i po dřívějším globálním ACK, repair po finálním ACK a prokázané místní vyřazení staré partial zprávy po purge.",
+      "negative": "Forged ACK, změněný podpis/adresát, částečný upload a chybějící velká fotografie. Stejně velké poškození, chybějící blob/snapshot, replay a nepovolená velká oprava nesmějí potvrdit DB. Starý podpis ACK nenahradí chybějící cloudové soubory. Concurrent/required missing media nesmějí být lokálně vyřazeny; obsolete intent nikdy nevytvoří remote ACK.",
       "limits": [
-        "SAF závisí na provideru; oficiální Drive API/OAuth není implementované."
+        "Živý Google účet/registrace a fyzický provider nebyly ověřené.",
+        "Ztracená stará metadata bez dostupného důkazu nahrazení zůstávají nepotvrzená; nejde o automatickou opravu všech fyzických poruch."
       ]
     },
     {
@@ -872,7 +875,7 @@
         }
       ],
       "coverage": "runtime-partial",
-      "positive": "Bounded volající a durable DB receipt/ACK pokračování po restartu.",
+      "positive": "Bounded volající a durable DB receipt/ACK pokračování po restartu. Lokální obsolete receipt po důkazu kauzálního zahrnutí bez falešného ACK, invalidace při DB fallbacku.",
       "negative": "Ignored interrupt, late close, caller buffer, failed receipt write a changed immutable message. Fallback zneplatní cached/reopened inbox a historický remote ACK neobchází nový import.",
       "limits": [
         "Skutečný Binder/provider timeout není ověřen."
@@ -1147,7 +1150,6 @@
     "Živé API stránkování a ověření konzervativního HTTP budgetu; TLS/operátor nejsou přesně měřené.",
     "Low-memory/process-kill a poškození/ztráta všech kopií úložiště; fallback/inbox má od etapy 28 cílené testy.",
     "Kompletní mapování jednotlivých starších ovládacích prvků; nyní jsou mapované funkční oblasti.",
-    "Ověřit publikaci celého snapshotu v novém cloud namespace i po dřívějším direct/old-store ACK; globální lastAck nesmí přeskočit novou cloudovou kopii.",
     "Dokončit schválenou volitelnou frekvenci 15/30/60 min/ručně a audit priority nearby/LAN/cloud v Android koordinátoru."
   ]
 }

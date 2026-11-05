@@ -51,33 +51,37 @@ final class SafSyncV2 {
  }
  private boolean receive(String peer,X509Certificate certificate)throws Exception{
   LocalDatabase.read(context.getFilesDir());String directory=directory("messages",own,peer);int count=0;boolean pending=false;
-  try{List<ImmutableStore.Entry> unseen=new ArrayList<>(),waiting=new ArrayList<>();for(ImmutableStore.Entry entry:listed(directory)){if(entry.directory||!entry.name.matches("[a-f0-9]{64}-[a-f0-9-]{36}\\.json"))continue;JSONObject known=inbox.get(peer,entry.name);if(known==null)unseen.add(entry);else if(!known.getBoolean("acked"))waiting.add(entry);}waiting.addAll(scan.ordered(directory,unseen));
+  try{List<ImmutableStore.Entry> unseen=new ArrayList<>(),waiting=new ArrayList<>();for(ImmutableStore.Entry entry:listed(directory)){if(entry.directory||!entry.name.matches("[a-f0-9]{64}-[a-f0-9-]{36}\\.json"))continue;JSONObject known=inbox.get(peer,entry.name);if(known==null)unseen.add(entry);else if(!known.getBoolean("acked")&&!known.optBoolean("obsolete"))waiting.add(entry);}waiting.addAll(scan.ordered(directory,unseen));
   for(ImmutableStore.Entry entry:waiting){
-   LocalDatabase.read(context.getFilesDir());JSONObject committed=inbox.get(peer,entry.name);if(committed!=null){if(!committed.getBoolean("acked")){publish(directory("acks",peer,own),committed.getString("hash"),CloudProof.sign(CloudProof.body(CloudProof.ACK,own,peer,committed.getString("hash"),committed.getLong("size")),identity));inbox.acknowledged(peer,entry.name);}continue;}if(++count>32){deferred=true;return true;}JSONObject body;
+   LocalDatabase.read(context.getFilesDir());JSONObject committed=inbox.get(peer,entry.name);if(committed!=null){if(!committed.getBoolean("acked")&&!committed.optBoolean("obsolete")){publish(directory("acks",peer,own),committed.getString("hash"),CloudProof.sign(CloudProof.body(CloudProof.ACK,own,peer,committed.getString("hash"),committed.getLong("size")),identity));inbox.acknowledged(peer,entry.name);}continue;}if(++count>32){deferred=true;return true;}JSONObject body;
    try{body=CloudProof.verify(envelope(directory+"/"+entry.name,directory,entry.name),certificate,CloudProof.MESSAGE,peer,own);}catch(CloudScan.Deferred nextBatch){throw nextBatch;}catch(IOException unavailable){return true;}catch(Exception invalid){pending=true;continue;}
    String hash=body.getString("hash");long size=body.getLong("size");if(!entry.name.startsWith(hash+"-"))throw new IOException("Nesprávná cesta podepsané zprávy");
    // A historical cloud ACK cannot prove that this local database survived recovery.
    if(!policy.allow(transferred+size*2)){pending=true;continue;}transferred+=size*2;
    byte[] bytes=CloudFiles.read(store.open(findCloud(peer,hash,size,hash,size)),(int)size);if(bytes.length!=size||!hash.equals(PeerWire.hash(bytes)))throw new IOException("Poškozená revize cloudu");PeerSnapshot snapshot=PeerSnapshot.parse(bytes,peer);PeerHandshake.Peer authenticated=new PeerHandshake.Peer(peer,peers.snapshot().getJSONObject(peer).optString("name","Android"),SyncTls.fingerprint(certificate));JSONArray needed=data.needed(snapshot,authenticated);
+   route();if(data.superseded(snapshot,authenticated,needed,()->inbox.superseded(peer,entry.name,hash,size)))continue;
    long neededBytes=0;for(int i=0;i<needed.length();i++)neededBytes+=snapshot.media.get(needed.getString(i)).getLong("size")*2;if(!policy.allow(transferred+neededBytes)){pending=true;continue;}transferred+=neededBytes;
    for(int i=0;i<needed.length();i++){String id=needed.getString(i);JSONObject media=snapshot.media.get(id);try(InputStream in=store.open(findCloud(peer,hash,size,media.getString("hash"),media.getLong("size")))){data.receive(id,in,media,authenticated);if(in.read()!=-1)throw new IOException("Cloudová příloha je delší než manifest");}}
    route();data.apply(snapshot,authenticated);inbox.committed(peer,entry.name,hash,size);JSONObject ack=CloudProof.sign(CloudProof.body(CloudProof.ACK,own,peer,hash,size),identity);publish(directory("acks",peer,own),hash,ack);inbox.acknowledged(peer,entry.name);
   }return pending;}catch(CloudScan.Deferred nextBatch){return true;}
  }
+ private boolean repairPending(String peer,PeerSnapshot snapshot)throws Exception{if(publications.pending(peer,snapshot.hash,snapshot.hash)>0)return true;for(JSONObject media:snapshot.media.values())if(publications.pending(peer,snapshot.hash,media.getString("hash"))>0)return true;return false;}
  private boolean send(String peer,X509Certificate certificate)throws Exception{
-  boolean pending=false;try{controlTime();PeerHandshake.Peer authenticated=new PeerHandshake.Peer(peer,"Android",SyncTls.fingerprint(certificate));data.trusted(authenticated);data.outbox.prepare(peer);
+  boolean pending=false;try{controlTime();PeerHandshake.Peer authenticated=new PeerHandshake.Peer(peer,"Android",SyncTls.fingerprint(certificate));data.trusted(authenticated);PeerSnapshot current=data.outbox.prepare(peer);
+  // A global direct/old-store ACK cannot establish a complete copy in this store namespace.
+  repairRequests(peer,current,certificate);if(!publications.snapshotPublished(peer,current.hash)||repairPending(peer,current))data.outbox.prepare(peer,true);
   for(JSONObject job:data.outbox.messages(peer)){
-   data.trusted(authenticated);PeerSnapshot snapshot=data.outbox.load(job);
-   if(proof("acks",own,peer,snapshot.hash,snapshot.bytes.length,certificate,CloudProof.ACK)){data.outbox.completed(peer,job);continue;}
-   repairRequests(peer,snapshot,certificate);
+   data.trusted(authenticated);PeerSnapshot snapshot=data.outbox.load(job);if(!snapshot.hash.equals(current.hash))repairRequests(peer,snapshot,certificate);
+   if(publications.snapshotPublished(peer,snapshot.hash)&&!repairPending(peer,snapshot)&&proof("acks",own,peer,snapshot.hash,snapshot.bytes.length,certificate,CloudProof.ACK)){data.outbox.completed(peer,job);continue;}
    if(!putPublished(peer,snapshot,snapshot.hash,snapshot.bytes.length,()->new ByteArrayInputStream(snapshot.bytes))){pending=true;continue;}
    // A signed message is a pending intent, not a claim that the receiver has committed the project.
-   // This lets small edits reach a peer which already has the originals, even on a metered network.
    data.trusted(authenticated);if(!proof("messages",peer,own,snapshot.hash,snapshot.bytes.length,identity.certificate(),CloudProof.MESSAGE))publish(directory("messages",peer,own),snapshot.hash,CloudProof.sign(CloudProof.body(CloudProof.MESSAGE,own,peer,snapshot.hash,snapshot.bytes.length),identity));
-   for(JSONObject media:snapshot.media.values()){data.trusted(authenticated);String id=media.getString("id");if(!putPublished(peer,snapshot,media.getString("hash"),media.getLong("size"),()->new FileInputStream(new File(data.outbox.mediaDirectory,id))))pending=true;}
+   boolean complete=true;for(JSONObject media:snapshot.media.values()){data.trusted(authenticated);String id=media.getString("id");if(!putPublished(peer,snapshot,media.getString("hash"),media.getLong("size"),()->new FileInputStream(new File(data.outbox.mediaDirectory,id))))complete=false;}
+   if(complete){publications.publishedSnapshot(peer,snapshot.hash);if(proof("acks",own,peer,snapshot.hash,snapshot.bytes.length,certificate,CloudProof.ACK)){data.outbox.completed(peer,job);continue;}}
    pending=true;
   }return pending;}catch(CloudScan.Deferred nextBatch){return true;}
  }
+
  Result sync()throws Exception{
   AtomicBoolean running=RUNNING.computeIfAbsent(context.getNoBackupFilesDir().getAbsolutePath(),ignored->new AtomicBoolean());if(!running.compareAndSet(false,true))throw new IOException("Cloudová synchronizace již probíhá");boolean pending=false;String error="";transferred=0;controls=0;controlNanos=0;deferred=false;listings.clear();blobEntries=null;
   try{if(!policy.allow(1)){prefs.edit().putBoolean("syncPending",true).commit();String local=LocalDatabase.read(context.getFilesDir());return new Result("Synchronizace čeká na povolené připojení",local.isEmpty()?new JSONObject().put("schema",1).put("records",new JSONArray()):new JSONObject(local),true);}JSONObject known=peers.snapshot();if(known.length()==0)throw new IOException("Nejdříve spáruj telefon a tablet přes Synchronizace zařízení. Cloud přijímá jen podepsaná data schválené instalace.");

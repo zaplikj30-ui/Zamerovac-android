@@ -40,9 +40,10 @@ final class PeerOutbox {
         if(fresh)for(Map.Entry<String,long[]> item:cached.localStats.entrySet()){File file=new File(mediaDirectory,item.getKey());if(!file.isFile()||file.length()!=item.getValue()[0]||file.lastModified()!=item.getValue()[1]){fresh=false;break;}}
         if(fresh)return cached;PeerSnapshot snapshot=PeerSnapshot.capture(context,prefs);cached=snapshot;cachedGeneration=generation;return snapshot;
     }
-    PeerSnapshot prepare(String peer)throws Exception{synchronized(lock){return prepareLocked(peer);}}
-    private PeerSnapshot prepareLocked(String peer)throws Exception{
-        if(!DeviceIdentity.valid(peer)||!peers.snapshot().has(peer))throw new IOException("Zařízení není spárované");PeerSnapshot snapshot=current();if(snapshot.hash.equals(peers.lastAck(peer)))return snapshot;persist(snapshot);
+    PeerSnapshot prepare(String peer)throws Exception{return prepare(peer,false);}
+    PeerSnapshot prepare(String peer,boolean forcePublication)throws Exception{synchronized(lock){return prepareLocked(peer,forcePublication);}}
+    private PeerSnapshot prepareLocked(String peer,boolean forcePublication)throws Exception{
+        if(!DeviceIdentity.valid(peer)||!peers.snapshot().has(peer))throw new IOException("Zařízení není spárované");PeerSnapshot snapshot=current();if(!forcePublication&&snapshot.hash.equals(peers.lastAck(peer)))return snapshot;persist(snapshot);
         mutate(state->{JSONArray jobs=state.getJSONArray("jobs"),next=new JSONArray();Set<String> obsolete=new HashSet<>(),ids=new HashSet<>();
             for(int i=0;i<jobs.length();i++){JSONObject job=jobs.getJSONObject(i);if(peer.equals(job.getString("peer"))&&"metadata".equals(job.getString("kind"))&&!snapshot.hash.equals(job.getString("hash")))try{if(dominates(snapshot.data,load(job).data))obsolete.add(job.getString("hash"));}catch(IOException ignored){/* Never drop an unreadable older message without proof. */}}
             for(int i=0;i<jobs.length();i++){JSONObject job=jobs.getJSONObject(i);if(peer.equals(job.getString("peer"))&&obsolete.contains(job.optString("sourceRef","")))continue;next.put(job);ids.add(job.getString("id"));}

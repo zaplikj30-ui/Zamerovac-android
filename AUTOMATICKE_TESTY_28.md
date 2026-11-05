@@ -133,3 +133,7 @@ DriveAuthorizationTest (5) + DriveAccountsTest (3). Skutečné Google SDK typy s
 ## Etapa 32 – produkční účet/backend a UI
 
 CloudStorageTest4 + DriveAccountFlowTest6 + MainCloudSelectionTest2 + merged-permission test SDK. Picker/consent/lifecycle/recreated Activity, late grant a account/složka CAS, scope/cancel/offline/metered/factory a samostatné odpojení bez fallbacku. Nový browser drive-accounts3 a dosavadní peer-sync3/backup-history1 místně prošly. Node/Python47 (2skipy bez javac) prošly; novou native/quick CI ověřit. Google projekt a fyzický účet stále neověřené, current default UI tuto konfiguraci poctivě blokuje. Zvlášť ještě otestovat nový cloud namespace po globálním ACK, frekvenci a Android výběr route. Etapa31 už má178/quick SUCCESS v edab326.
+
+## Etapa 33 – global ACK vs nová kopie a kauzálně obsolete partial intent
+
+CloudPublicationsTest+1, CloudInboxTest+1 a SafSyncV2Test+6. Nová namespace i po globálním potvrzení musí obsahovat celý ověřený snapshot/média; historický podpis nesmí uzavřít chybějící velký blob na metered. Repair po finálním ACK obnoví fallback data. Skutečný purge po nedokončeném médiu se přenese jako tombstone a starý intent se místně vyřadí jen po důkazu; remote ACK se nepodvrhne. Concurrent nebo aktuálně potřebný missing soubor se nevyřadí. Nové native/quick ověřit, místní Node/Python/QA úspěšné. Etapa32 má191/quick SUCCESS v505ac68. Neznámá ztracená metadata/bit-rot/process-kill/fyzický účet zůstávají samostatné limity.
