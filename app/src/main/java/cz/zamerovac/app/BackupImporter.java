@@ -28,11 +28,12 @@ final class BackupImporter {
         finally{deleteDir(tempDir);}
     }
     static final class Result {
-        final JSONObject data; final int recordCount;
-        Result(JSONObject d,int n){data=d;recordCount=n;}
+        final JSONObject data; final int recordCount; final Set<String> createdMedia;
+        Result(JSONObject d,int n,Set<String> files){data=d;recordCount=n;createdMedia=files;}
+        void rollback(Context context,SharedPreferences prefs){SharedPreferences.Editor settings=prefs.edit();for(String id:createdMedia){new File(context.getFilesDir(),"media/"+id).delete();settings.remove("mime-"+id).remove("name-"+id);}settings.apply();}
     }
     private static Result read(Context context,Uri uri,JSONObject existing,SharedPreferences prefs,File tempDir)throws Exception{
-        JSONObject meta=new JSONObject();
+        JSONObject meta=new JSONObject(),manifest=null,checksums=new JSONObject();Set<String> names=new HashSet<>();
         byte[] json=null;
         HashMap<String,File> incomingMedia=new HashMap<>();
         long total=0;int count=0;
@@ -44,21 +45,25 @@ final class BackupImporter {
                     if(++count>MAX_ENTRIES)throw new IOException("Příliš mnoho souborů v záloze");
                     if(entry.isDirectory()){zip.closeEntry();continue;}
                     String name=entry.getName();
-                    boolean jsonFile="projects.json".equals(name)||"media-meta.json".equals(name);
+                    boolean jsonFile="projects.json".equals(name)||"media-meta.json".equals(name)||"manifest.json".equals(name);
                     String mediaId=name.startsWith("media/")?name.substring(6):"";
                     boolean mediaFile=name.matches("media/[a-zA-Z0-9_-]{3,120}");
-                    if(!jsonFile&&!mediaFile){zip.closeEntry();continue;}
+                    if(!names.add(name))throw new IOException("Duplicitní soubor v záloze");
+                    if(!jsonFile&&!mediaFile){int n;while((n=zip.read(buffer))!=-1){total+=n;if(total>LIMIT)throw new IOException("Záloha překračuje limit 2 GB");}zip.closeEntry();continue;}
                     ByteArrayOutputStream small=jsonFile?new ByteArrayOutputStream():null;
                     File dest=mediaFile?new File(tempDir,mediaId):null;
+                    java.security.MessageDigest digest=ArchiveIntegrity.digest();long size=0;
                     try(OutputStream out=jsonFile?small:new FileOutputStream(dest)){
                         int n;long one=0;
                         while((n=zip.read(buffer))!=-1){
                             one+=n;total+=n;
                             if(total>LIMIT)throw new IOException("Záloha překračuje limit 2 GB");
                             if(jsonFile&&one>MAX_JSON)throw new IOException("Databáze v ZIP je příliš velká");
-                            out.write(buffer,0,n);
+                            out.write(buffer,0,n);digest.update(buffer,0,n);size+=n;
                         }
                     }
+                    if(!"manifest.json".equals(name))checksums.put(name,ArchiveIntegrity.entry(size,digest.digest()));
+                    if("manifest.json".equals(name))manifest=new JSONObject(new String(small.toByteArray(),StandardCharsets.UTF_8));
                     if("projects.json".equals(name))json=small.toByteArray();
                     if("media-meta.json".equals(name))meta=new JSONObject(new String(small.toByteArray(),StandardCharsets.UTF_8));
                     if(mediaFile)incomingMedia.put(mediaId,dest);
@@ -68,6 +73,8 @@ final class BackupImporter {
         }
         if(json==null)throw new IOException("ZIP neobsahuje projects.json");
         JSONObject source=new JSONObject(new String(json,StandardCharsets.UTF_8));
+        if(source.optInt("archiveFormatVersion")==2&&manifest==null)throw new IOException("V záloze chybí kontrolní manifest");
+        if(manifest!=null)ArchiveIntegrity.verify(manifest,checksums);
         if(source.optInt("schema")!=1||existing.optInt("schema")!=1)throw new IOException("Nepodporovaný formát zálohy");
         JSONArray records=source.optJSONArray("records");
         if(records==null)throw new IOException("Záloha neobsahuje zakázky");
@@ -104,6 +111,8 @@ final class BackupImporter {
             rec.put("updatedAt",now);rec.put("deleted",false);
             rewriteMedia(rec.optJSONArray("media"),mediaIds);
             rewriteItems(rec.optJSONArray("items"),mediaIds);
+            JSONArray history=rec.optJSONArray("versionHistory");
+            if(history!=null)for(int h=0;h<history.length();h++){JSONObject version=history.getJSONObject(h);JSONArray oldItems=new JSONArray(version.optString("items","[]"));rewriteItems(oldItems,mediaIds);version.put("items",oldItems.toString());}
             newRecords.add(rec);
         }
         if(newRecords.isEmpty())throw new IOException("Záloha neobsahuje platné záznamy");
@@ -115,21 +124,24 @@ final class BackupImporter {
         File mediaDir=new File(context.getFilesDir(),"media");
         if(!mediaDir.exists()&&!mediaDir.mkdirs())throw new IOException("Nelze vytvořit složku médií");
         SharedPreferences.Editor settings=prefs.edit();
-        for(Map.Entry<String,String> pair:mediaIds.entrySet()){
+        Set<String> created=new HashSet<>();
+        try{for(Map.Entry<String,String> pair:mediaIds.entrySet()){
             File targetMedia=new File(mediaDir,pair.getValue());
+            if(targetMedia.exists())throw new IOException("Kolize identifikátoru obnovené přílohy");created.add(pair.getValue());
             try(InputStream in=new FileInputStream(incomingMedia.get(pair.getKey()));
-                OutputStream out=new FileOutputStream(targetMedia)){
+                FileOutputStream out=new FileOutputStream(targetMedia)){
                 byte[] buf=new byte[64*1024];int n;
-                while((n=in.read(buf))!=-1)out.write(buf,0,n);
+                while((n=in.read(buf))!=-1)out.write(buf,0,n);out.getFD().sync();
             }
             JSONObject info=meta.optJSONObject(pair.getKey());
             settings.putString("mime-"+pair.getValue(),info!=null?info.optString("mime","application/octet-stream"):"application/octet-stream");
             settings.putString("name-"+pair.getValue(),info!=null?info.optString("name","Příloha"):"Příloha");
         }
+        }catch(Exception failure){for(String id:created)new File(mediaDir,id).delete();throw failure;}
         settings.apply();
         target.put(root);
         for(JSONObject rec:newRecords)target.put(rec);
-        return new Result(result,newRecords.size());
+        return new Result(result,newRecords.size(),created);
     }
     static String restoredTitle(JSONArray records){
         Set<String> ids=new HashSet<>();
@@ -163,6 +175,7 @@ final class BackupImporter {
         for(int i=0;i<items.length();i++){
             JSONObject item=items.optJSONObject(i);if(item==null)continue;
             rewriteMedia(item.optJSONArray("media"),mapping);
+            rewriteMedia(item.optJSONArray("audioMedia"),mapping);
             rewriteItems(item.optJSONArray("detailItems"),mapping);
         }
     }

@@ -99,7 +99,9 @@ public class MainActivity extends Activity {
     private Set<String> pendingArchiveSelectionIds;
     private MediaRecorder recorder;
     private FileOutputStream activeUpload;
-    private String activeUploadId;
+    private String activeUploadId,activeUploadMime,activeUploadName;
+    private long activeUploadExpected=-1,activeUploadBytes=0;
+    private File activeUploadTemporary;
     private SharedPreferences settings;
     private final Handler handler=new Handler(Looper.getMainLooper());
     private final ArrayList<BluetoothDevice> scanned =new ArrayList<>();
@@ -528,7 +530,7 @@ public class MainActivity extends Activity {
                     String existingText=readDb();
                     JSONObject existing=existingText.isEmpty()?new JSONObject().put("schema",1).put("records",new JSONArray()).put("prefs",new JSONObject()):new JSONObject(existingText);
                     BackupImporter.Result restored=BackupImporter.importZip(this,origin,existing,settings);
-                    writeDb(restored.data.toString());
+                    try{writeDb(restored.data.toString());}catch(Exception failure){restored.rollback(this,settings);throw failure;}
                     onSyncResult("Obnoveno "+restored.recordCount+" záznamů jako nové zakázky",restored.data);
                     }
                 }catch(Exception e){error("Obnova ZIP: "+e.getMessage());}
@@ -622,9 +624,11 @@ public class MainActivity extends Activity {
             File source=mediaFile(id);
             if(!source.isFile()||!source.canRead()||source.length()==0)throw new IOException("Záloha není úplná: chybí nebo je prázdná příloha "+id);
         }
+        try{parsed.put("archiveFormatVersion",2);json=parsed.toString();}catch(JSONException ex){throw new IOException(ex);}
+        JSONObject checksums=new JSONObject();
         try(ZipOutputStream zip=new ZipOutputStream(destination)){
             zip.putNextEntry(new ZipEntry("projects.json"));
-            zip.write(json.getBytes(StandardCharsets.UTF_8));
+            try{checksums.put("projects.json",ArchiveIntegrity.copy(new java.io.ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)),zip));}catch(JSONException ex){throw new IOException(ex);}
             zip.closeEntry();
             JSONObject metadata=new JSONObject();
             for(String id:mediaIds){
@@ -633,15 +637,19 @@ public class MainActivity extends Activity {
                     .put("name",settings.getString("name-"+id,"Příloha")));}catch(Exception ignored){}
             }
             zip.putNextEntry(new ZipEntry("media-meta.json"));
-            zip.write(metadata.toString().getBytes(StandardCharsets.UTF_8));
+            try{checksums.put("media-meta.json",ArchiveIntegrity.copy(new java.io.ByteArrayInputStream(metadata.toString().getBytes(StandardCharsets.UTF_8)),zip));}catch(JSONException ex){throw new IOException(ex);}
             zip.closeEntry();
             for(String id:mediaIds){
                 if(!validId(id))continue;
                 File media=mediaFile(id);if(!media.isFile())throw new IOException("Příloha během exportu přestala být dostupná: "+id);
                 zip.putNextEntry(new ZipEntry("media/"+id));
-                try(InputStream in=new FileInputStream(media)){copy(in,zip);}
+                try(InputStream in=new FileInputStream(media)){checksums.put("media/"+id,ArchiveIntegrity.copy(in,zip));}catch(JSONException ex){throw new IOException(ex);}
                 zip.closeEntry();
             }
+            try{
+                zip.putNextEntry(new ZipEntry("manifest.json"));
+                zip.write(new JSONObject().put("format","cz.zamerovac.archive").put("version",2).put("entries",checksums).toString().getBytes(StandardCharsets.UTF_8));zip.closeEntry();
+            }catch(JSONException ex){throw new IOException(ex);}
         }
     }
 
@@ -720,6 +728,8 @@ public class MainActivity extends Activity {
         JSONArray media=record.optJSONArray("media");
         if(media!=null)for(int i=0;i<media.length();i++)ids.add(media.optString(i));
         collectNestedMedia(record.optJSONArray("items"),ids);
+        JSONArray history=record.optJSONArray("versionHistory");
+        if(history!=null)for(int i=0;i<history.length();i++)try{collectNestedMedia(new JSONArray(history.getJSONObject(i).optString("items","[]")),ids);}catch(JSONException error){throw new IllegalArgumentException("Neplatná historie anotací",error);}
     }
     private void collectNestedMedia(JSONArray items,Set<String> ids){
         if(items==null)return;
@@ -727,6 +737,7 @@ public class MainActivity extends Activity {
             JSONObject item=items.optJSONObject(i);if(item==null)continue;
             JSONArray media=item.optJSONArray("media");
             if(media!=null)for(int j=0;j<media.length();j++)ids.add(media.optString(j));
+            JSONArray audio=item.optJSONArray("audioMedia");if(audio!=null)for(int j=0;j<audio.length();j++)ids.add(audio.optString(j));
             collectNestedMedia(item.optJSONArray("detailItems"),ids);
         }
     }
@@ -766,9 +777,33 @@ public class MainActivity extends Activity {
                 }catch(Exception e){try{return new JSONObject().put("ok",false).put("error","Uložení se nezdařilo; poslední potvrzená data zůstávají chráněná.").toString();}catch(Exception ignored){return "{}";}}
             }
         }
-        @JavascriptInterface public void beginMedia(String id,String mime,String name){try{if(!validId(id))return;closeUpload();activeUpload=new FileOutputStream(mediaFile(id));activeUploadId=id;settings.edit().putString("mime-"+id,mime).putString("name-"+id,name).apply();}catch(Exception e){error(e.toString());}}
-        @JavascriptInterface public void appendMedia(String id,String chunk){try{if(activeUpload!=null&&id.equals(activeUploadId))activeUpload.write(Base64.decode(chunk,Base64.DEFAULT));}catch(Exception e){error(e.toString());}}
-        @JavascriptInterface public void finishMedia(String id){if(id.equals(activeUploadId))closeUpload();}
+        @JavascriptInterface public boolean beginMedia(String id,String mime,String name){return beginMediaChecked(id,mime,name,-1);}
+        @JavascriptInterface public boolean beginMediaChecked(String id,String mime,String name,long expected){
+            synchronized(TrashPurger.LOCK){
+                if(!validId(id)||activeUpload!=null||mediaFile(id).exists()||expected>2L*1024*1024*1024||expected< -1)return false;
+                try{activeUploadTemporary=new File(mediaFile(id).getParentFile(),id+".upload-"+UUID.randomUUID()+".tmp");activeUpload=new FileOutputStream(activeUploadTemporary);activeUploadId=id;activeUploadMime=mime;activeUploadName=name;activeUploadExpected=expected;activeUploadBytes=0;return true;}
+                catch(Exception failure){closeUpload();error("Přílohu nelze připravit k zápisu");return false;}
+            }
+        }
+        @JavascriptInterface public boolean appendMedia(String id,String chunk){
+            synchronized(TrashPurger.LOCK){
+                try{if(activeUpload==null||!id.equals(activeUploadId)||chunk==null||chunk.length()>128*1024)throw new IOException("Neplatná část přílohy");
+                    byte[] bytes=Base64.decode(chunk,Base64.DEFAULT);if(activeUploadBytes+bytes.length>2L*1024*1024*1024||(activeUploadExpected>=0&&activeUploadBytes+bytes.length>activeUploadExpected))throw new IOException("Příloha má jinou délku");
+                    activeUpload.write(bytes);activeUploadBytes+=bytes.length;return true;
+                }catch(Exception failure){closeUpload();error("Zápis přílohy se nezdařil");return false;}
+            }
+        }
+        @JavascriptInterface public boolean finishMedia(String id){
+            synchronized(TrashPurger.LOCK){
+                try{if(activeUpload==null||!id.equals(activeUploadId)||activeUploadBytes==0||(activeUploadExpected>=0&&activeUploadBytes!=activeUploadExpected))throw new IOException("Příloha není úplná");
+                    activeUpload.getFD().sync();activeUpload.close();activeUpload=null;
+                    File destination=mediaFile(id);if(destination.exists())throw new IOException("Příloha již existuje");
+                    java.nio.file.Files.move(activeUploadTemporary.toPath(),destination.toPath());activeUploadTemporary=null;
+                    settings.edit().putString("mime-"+id,activeUploadMime).putString("name-"+id,activeUploadName).commit();return true;
+                }catch(Exception failure){error("Příloha nebyla uložena úplně");return false;}
+                finally{closeUpload();}
+            }
+        }
         @JavascriptInterface public void takePhoto(){runOnUiThread(()->useCamera());}
         @JavascriptInterface public void selectFiles(String type){runOnUiThread(()->chooseAttachments(type));}
         @JavascriptInterface public void selectCloudFolder(){runOnUiThread(()->selectCloud());}
@@ -822,7 +857,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void openMedia(String id){runOnUiThread(()->{try{if(!validId(id)||!mediaFile(id).isFile())throw new IOException("Chybí soubor");if(mediaMime(id).startsWith("video/")){startActivity(new Intent(MainActivity.this,VideoActivity.class).putExtra("mediaId",id));return;}Uri uri=new Uri.Builder().scheme("content").authority(getPackageName()+".files").appendPath(id).build();Intent i=new Intent(Intent.ACTION_VIEW).setDataAndType(uri,mediaMime(id)).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);startActivity(Intent.createChooser(i,"Otevřít přílohu"));}catch(Exception e){error("Pro tento formát není dostupný prohlížeč");}});}
         @JavascriptInterface public void configure(String json){try{JSONObject p=new JSONObject(json);settings.edit().putBoolean("wifiOnly",p.optBoolean("wifiOnly",false)).putBoolean("autoSync",p.optBoolean("autoSync",true)).apply();runOnUiThread(()->{if(p.optBoolean("keepAwake"))getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);int flags=View.SYSTEM_UI_FLAG_LAYOUT_STABLE|View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN|View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION;if(p.optBoolean("fullscreen"))flags|=View.SYSTEM_UI_FLAG_FULLSCREEN|View.SYSTEM_UI_FLAG_HIDE_NAVIGATION|View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;getWindow().getDecorView().setSystemUiVisibility(flags);root.requestApplyInsets();});scheduleSync();}catch(Exception e){error(e.getMessage());}}
         @JavascriptInterface public boolean startAudio(String id){
-            if(!validId(id)||recorder!=null)return false;
+            if(!validId(id)||recorder!=null||mediaFile(id).exists())return false;
             if(Build.VERSION.SDK_INT>=23&&checkSelfPermission(Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){runOnUiThread(()->requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO},REQUEST_PERMISSIONS));return false;}
             try{recordingId=id;recorder=new MediaRecorder();recorder.setAudioSource(MediaRecorder.AudioSource.MIC);recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);recorder.setOutputFile(mediaFile(id).getAbsolutePath());recorder.prepare();recorder.start();settings.edit().putString("mime-"+id,"audio/mp4").putString("name-"+id,"Hlasová poznámka.m4a").apply();return true;}
             catch(Exception e){releaseRecorder();mediaFile(id).delete();error("Mikrofon: záznam se nepodařilo zahájit");return false;}
@@ -972,62 +1007,14 @@ public class MainActivity extends Activity {
         MediaRecorder old=recorder;recorder=null;recordingId=null;
         if(old!=null)try{old.release();}catch(Exception ignored){}
     }
-    private static void validateDatabase(String text)throws IOException{
-        if(text==null||text.length()>20*1024*1024)throw new IOException("Databáze je příliš velká");
-        try{JSONObject db=new JSONObject(text);if(db.optInt("schema")!=1||db.optJSONArray("records")==null)throw new IOException("Neplatná databáze");
-            Set<String> ids=new HashSet<>();JSONArray records=db.getJSONArray("records");
-            for(int i=0;i<records.length();i++){JSONObject record=records.optJSONObject(i);if(record==null||!(record.opt("id") instanceof String)||record.getString("id").isEmpty()||!ids.add(record.getString("id")))throw new IOException("Neplatný nebo duplicitní záznam");}
-        }catch(JSONException e){throw new IOException("Neplatná databáze",e);}
-    }
-    private void closeUpload(){try{if(activeUpload!=null)activeUpload.close();}catch(Exception ignored){}activeUpload=null;activeUploadId=null;}
+    private void closeUpload(){synchronized(TrashPurger.LOCK){try{if(activeUpload!=null)activeUpload.close();}catch(Exception ignored){}activeUpload=null;activeUploadId=null;activeUploadExpected=-1;activeUploadBytes=0;if(activeUploadTemporary!=null)activeUploadTemporary.delete();activeUploadTemporary=null;}}
     private String readDb() throws IOException {
-        synchronized(TrashPurger.LOCK){
-        File db=new File(getFilesDir(),"projects.json"),backup=new File(getFilesDir(),"projects.bak");
-        if(!db.exists()&&!backup.exists()&&!databaseReadFailed)return ""; // First installation only.
-        try{String data=readValidJson(db);databaseReadFailed=false;return data;}
-        catch(IOException primary){
-            try{
-                String data=readValidJson(backup);databaseReadFailed=false;
-                android.util.Log.w("Zamerovac","Recovered last valid local backup",primary);
-                return data;
-            }catch(IOException secondary){
-                databaseReadFailed=true;
-                throw new IOException("Uložené zakázky nelze načíst; původní soubory zůstaly beze změny",primary);
-            }
-        }
-        }
-    }
-    private String readValidJson(File file) throws IOException {
-        try(InputStream in=new FileInputStream(file)){
-            java.io.ByteArrayOutputStream o=new java.io.ByteArrayOutputStream();copy(in,o);
-            String data=o.toString("UTF-8");
-            try{JSONObject json=new JSONObject(data);if(json.optInt("schema")!=1||json.optJSONArray("records")==null)throw new IOException("Unsupported schema");}
-            catch(JSONException e){throw new IOException("Invalid JSON",e);}
-            return data;
-        }
+        try{String text=LocalDatabase.read(getFilesDir());if(text.isEmpty()&&databaseReadFailed)throw new IOException("Původní databáze nebyla bezpečně načtena");databaseReadFailed=false;return text;}
+        catch(IOException error){databaseReadFailed=true;throw error;}
     }
     private void writeDb(String data) throws IOException {
-        synchronized(TrashPurger.LOCK){
-        validateDatabase(data);
         if(databaseReadFailed)throw new IOException("Zápis zablokován: uložené zakázky nebyly bezpečně načteny");
-        File next=new File(getFilesDir(),"projects.tmp"),dest=new File(getFilesDir(),"projects.json");
-        File backup=new File(getFilesDir(),"projects.bak");
-        try(FileOutputStream out=new FileOutputStream(next)){
-            out.write(data.getBytes(StandardCharsets.UTF_8));out.getFD().sync();
-        }
-        if(dest.isFile()){
-            // Never replace the valid recovery copy with an unreadable primary.
-            boolean validPrimary=true;
-            try{readValidJson(dest);}
-            catch(IOException invalid){validPrimary=false;android.util.Log.w("Zamerovac","Keeping existing recovery backup",invalid);}
-            if(validPrimary)java.nio.file.Files.copy(dest.toPath(),backup.toPath(),java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-        }
-        try{java.nio.file.Files.move(next.toPath(),dest.toPath(),
-                java.nio.file.StandardCopyOption.ATOMIC_MOVE,java.nio.file.StandardCopyOption.REPLACE_EXISTING);}
-        catch(java.nio.file.AtomicMoveNotSupportedException e){
-            java.nio.file.Files.move(next.toPath(),dest.toPath(),java.nio.file.StandardCopyOption.REPLACE_EXISTING);
-        }
-        }
+        LocalDatabase.write(getFilesDir(),data);
     }
     private void syncCloud(){if(syncRunning){onSyncResult("Synchronizace již probíhá",null);return;}syncRunning=true;new Thread(()->{try{SyncEngine.Result result=new SyncEngine(this,settings).sync();onSyncResult(result.message,result.data);}catch(Exception e){error("Synchronizace: "+e.getMessage());}finally{syncRunning=false;}},"DriveSync").start();}
     private void scheduleSync(){try{JobScheduler jobs=(JobScheduler)getSystemService(JOB_SCHEDULER_SERVICE);JobInfo j=new JobInfo.Builder(14,new ComponentName(this,SyncJob.class)).setPeriodic(15*60*1000L).setRequiredNetworkType(settings.getBoolean("wifiOnly",false)?JobInfo.NETWORK_TYPE_UNMETERED:JobInfo.NETWORK_TYPE_ANY).setPersisted(true).build();if(settings.getString("treeUri",null)!=null&&settings.getBoolean("autoSync",true))jobs.schedule(j);else jobs.cancel(14);}catch(Exception e){android.util.Log.w("Zamerovac","Background job",e);}}

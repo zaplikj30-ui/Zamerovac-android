@@ -46,3 +46,15 @@ Ověření: všechny Node skripty, Python 47/2 skipy, Chromium všech 15 kreslic
 | Foto #21 | stejný dekódovaný obraz z cache | chybějící foto, žádné předčasné kóty | Chromium; studený start Samsung neměřen |
 
 Další krok: sjednotit atomické ukládání synchronizace a hlavní aplikace, odstranit držení globálního datového zámku po dobu práce se vzdáleným poskytovatelem. Celé #38/#40 stále zbývá.
+
+## Etapa 3 – společné úložiště, integrita, přílohy a souběh
+
+`LocalDatabase` nyní používá hlavní aplikace, obnova i synchronizace. Validace před zápisem, sync souborového deskriptoru, atomické nahrazení a chráněná předchozí kopie nemají dvě odlišné implementace.
+
+`SyncEngine` nedrží `TrashPurger.LOCK` při síťových/provider operacích. Oddělený zámek synchronizační relace zabrání souběhu Activity a JobService. Po přenosu znovu načte nejnovější místní stav a sloučí jej, místo přepsání snapshotem z počátku. Trvalý příznak `syncPending` označuje neodeslané novější změny nebo chybu. Stahují se pouze odkazovaná média; souběžně vysypaný koš se kontroluje před publikací staženého souboru. Upload se čte zpět a porovnává SHA-256/velikost; odlišný obsah stejného ID se nepřepíše. Konfliktní ID jsou deterministická a i stejná externí `rev` s odlišným obsahem zachová obě verze. Toto je oprava dosavadního SAF mechanismu, **nikoliv kompletní #38**: nemá transportní frontu/párování, vzdálený mutable `projects.json` stále potřebuje náhradu verzovaným protokolem a nelze garantovat souběh více zařízení ani neomezené timeouty poskytovatele.
+
+Nový [ZIP v2](archive-v2.md) obsahuje manifest SHA-256/velikostí; import ověřuje všechny položky před zápisem a odmítá duplicitní položky/odstraněný povinný manifest. Kontrolují se i limity neznámých položek, historie a druhotné audio reference. Nově zkopírované soubory se při selhání importu/commitu odstraní. Starší ZIP zůstávají podporovány.
+
+JS→Native upload používá dočasné soubory a potvrzenou očekávanou délku. Nelze přepsat existující ID; neúplný soubor se nepřipojí k záznamu. Doplněny i screenshoty hlášení chyb. Historie anotací nyní chrání své soubory před vysypáním jiné položky.
+
+Přidány `SyncSafetyTest` (zablokovaný poskytovatel a souběžný místní save, přesné konflikty, přerušení a trvalý pending, idempotence i shodná podvržená revize) a testy v2 roundtrip/poškození/manifestu/potvrzovaných médií v `StorageLifecycleTest`. Node a Python místně prošly; nové nativní testy musí ověřit Actions. Druhá etapa má nativní CI SUCCESS; praktické CI drawing/workflows/update39/help/changelog SUCCESS; starší browser job odhalil neaktualizovanou injekci chyby načítání po přidání cache. Test nyní vkládá zpoždění na hranici loaderu (skutečné chybějící médium samostatně testuje update39), nejde o prodloužení timeoutu.

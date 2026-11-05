@@ -58,8 +58,8 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
  result.privatePng.forEach((png,i)=>fs.writeFileSync('/tmp/zamerovac-post149/page-'+i+'.png',Buffer.from(png,'base64')));
  // A failed/reopened image never renders annotations against a false background.
  await page.evaluate(()=>{
-  window.__oldAsset=assetUrl;window.__pendingImages=[];
-  assetUrl=()=>new Promise(resolve=>__pendingImages.push(resolve));
+  window.__oldLoadPhoto=loadPhotoImage;window.__pendingImages=[];
+  loadPhotoImage=()=>new Promise((resolve,reject)=>__pendingImages.push({resolve,reject}));
   openEditor(state.records[0]);window.__beforeLoad=JSON.stringify(current.items);
   window.__realDraw=drawItem;window.__drawCount=0;drawItem=(...args)=>{__drawCount++;return __realDraw(...args)};
   paint();
@@ -67,18 +67,18 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
  assert.equal(await page.evaluate(()=>__drawCount),0);
  const box=await page.locator('#drawCanvas').boundingBox();await page.mouse.click(box.x+100,box.y+100);
  assert.equal(await page.evaluate(()=>JSON.stringify(current.items)),await page.evaluate(()=>__beforeLoad));
- await page.evaluate(()=>{const next=__pendingImages.length;openEditor(state.records[0]);__pendingImages[next]('data:image/png;base64,broken')});
+ await page.evaluate(()=>{const next=__pendingImages.length;openEditor(state.records[0]);__pendingImages[next].reject(new Error('Synthetic decode failure'))});
  await page.waitForFunction(()=>photoLoadFailed);
  assert.equal(await page.evaluate(()=>__drawCount),0,'Image error still cannot draw orphaned measurements');
  // Reopen with the same record, resolve new request first, then the stale one.
  await page.evaluate(async()=>{
-  const next=__pendingImages.length;openEditor(state.records[0]);__pendingImages[next](await __oldAsset(current.media[0]));
+  const next=__pendingImages.length;openEditor(state.records[0]);__pendingImages[next].resolve(await __oldLoadPhoto(current.media[0]));
  });
  await page.waitForFunction(()=>!!stageImg);
  const width=await page.evaluate(()=>photoSize.w);
- await page.evaluate(()=>__pendingImages[0]('data:image/png;base64,broken'));
+ await page.evaluate(()=>__pendingImages[0].reject(new Error('Synthetic stale failure')));
  assert.equal(await page.evaluate(()=>photoSize.w),width);assert.equal(await page.evaluate(()=>photoLoadFailed),false);
- await page.evaluate(()=>{assetUrl=__oldAsset;drawItem=__realDraw;setTool('select');view={zoom:1,dx:0,dy:0};current.items=[{id:'grip',type:'dimension',a:{x:90,y:110},b:{x:90,y:330},measure:'1585,800001',unit:'mm',hideUnit:false,text:''}];selected='grip';paint()});
+ await page.evaluate(()=>{loadPhotoImage=__oldLoadPhoto;drawItem=__realDraw;setTool('select');view={zoom:1,dx:0,dy:0};current.items=[{id:'grip',type:'dimension',a:{x:90,y:110},b:{x:90,y:330},measure:'1585,800001',unit:'mm',hideUnit:false,text:''}];selected='grip';paint()});
  const saved=await page.evaluate(()=>JSON.stringify(current.items));
  for(let i=0;i<2;i++){
   await page.mouse.move(box.x+90,box.y+110);await page.mouse.down();await page.mouse.move(box.x+91,box.y+111);await page.mouse.up();

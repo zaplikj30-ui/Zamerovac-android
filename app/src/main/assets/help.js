@@ -64,7 +64,8 @@ const chapters=[
     "notes": [
       "Původní fotografie se kvůli nakresleným kótám nemá přepisovat; anotace jsou uložené odděleně.",
       "Při chybě načtení fotografii zavři a otevři znovu. U důležitých dat neodinstalovávej aplikaci jako první způsob opravy.",
-      "Opakované otevření stejné fotografie využívá omezenou paměťovou mezipaměť dekódovaných obrázků. Po úplném restartu se originál načítá znovu. Při načítání nebo chybě se samostatné kóty nezobrazují na prázdném podkladu; originály ani hodnoty se nemění."
+      "Opakované otevření stejné fotografie využívá omezenou paměťovou mezipaměť dekódovaných obrázků. Po úplném restartu se originál načítá znovu. Při načítání nebo chybě se samostatné kóty nezobrazují na prázdném podkladu; originály ani hodnoty se nemění.",
+      "Příloha se připojí až po potvrzení celého zápisu. Při přerušení se nedokončený soubor odmítne a existující originál se nepřepíše."
     ],
     "keywords": [
       "foto",
@@ -413,6 +414,7 @@ const chapters=[
     ],
     "notes": [
       "Nevyvážej pouhé zákaznické PDF, pokud chceš později upravovat kóty.",
+      "Nové ZIP zálohy obsahují kontrolní součty SHA-256 a velikosti souborů. Obnova je ověří před vytvořením kopií; starší ZIP zůstávají přijímány bez této dodatečné kontroly.",
       "Chybějící nebo prázdná příloha export zálohy zastaví. Neúspěšný zápis se neoznačí jako hotová záloha; původní zakázky zůstávají zachované.",
       "Při hlášení Neuloženo zůstaň v aplikaci a uložení zopakuj. Aplikace potvrdí zápis až po úspěšném uložení; souběžné konfliktní změny uchová jako označenou kopii.",
       "Poškozený nebo neplatný ZIP aplikace odmítne. Pokud nelze soubor vybrat, zkontroluj filtr a umístění v systémovém správci."
@@ -459,7 +461,8 @@ const chapters=[
     ],
     "notes": [
       "Ne každý správce Google Disku nebo souborový poskytovatel nabízí zapisovatelnou složku pro Android.",
-      "Cloudová synchronizace není totéž jako ověřená nezávislá záloha. Před důležitými změnami si ulož ZIP."
+      "Cloudová synchronizace není totéž jako ověřená nezávislá záloha. Před důležitými změnami si ulož ZIP.",
+      "Pomalý přenos poskytovatele nedrží zámek místní databáze. Novější místní změny při přenosu zůstávají uložené a čekají na další pokus; výpadek se neoznačí jako dokončená synchronizace. Dosavadní SAF cesta stále není nová přímá synchronizace ani oficiální integrace Drive API."
     ],
     "keywords": [
       "cloud",

@@ -148,4 +148,25 @@ public class StorageLifecycleTest {
         assertFalse(activity.new JsApi().stopAudio());org.mockito.Mockito.verify(recorder).release();assertNull(ReflectionHelpers.getField(activity,"recorder"));assertFalse(new File(dir,"failed-recording").exists());
     }
 
+    File archiveEntries(Map<String,byte[]> entries)throws Exception {
+        File file=File.createTempFile("integrity-",".zip",context.getCacheDir());
+        try(ZipOutputStream out=new ZipOutputStream(new FileOutputStream(file))){for(Map.Entry<String,byte[]> item:entries.entrySet()){out.putNextEntry(new ZipEntry(item.getKey()));out.write(item.getValue());out.closeEntry();}}return file;
+    }
+    @Test public void v2ArchiveRoundtripAndTamperOrMissingManifestFailBeforeWrites()throws Exception {
+        media();persist(fixture());Map<String,byte[]> complete=entries(export());assertTrue(complete.containsKey("manifest.json"));
+        BackupImporter.Result restored=BackupImporter.importZip(context,Uri.fromFile(archiveEntries(complete)),fixture(),prefs);assertEquals(3,restored.recordCount);restored.rollback(context,prefs);
+        String before=digest(new File(context.getFilesDir(),"projects.json"));int count=dir.list().length;
+        for(boolean strip:new boolean[]{false,true}){
+            Map<String,byte[]> changed=new HashMap<>(complete);if(strip)changed.remove("manifest.json");else changed.put("media/original-photo",new byte[]{1,2,3,9});
+            try{BackupImporter.importZip(context,Uri.fromFile(archiveEntries(changed)),fixture(),prefs);fail("Damaged archive accepted");}catch(IOException expected){}
+            assertEquals(before,digest(new File(context.getFilesDir(),"projects.json")));assertEquals(count,dir.list().length);
+        }
+    }
+    @Test public void mediaUploadStagesAndAcknowledgesOnlyCompleteFilesWithoutOverwritingOriginals()throws Exception {
+        MainActivity.JsApi api=activity.new JsApi();String id="staged-upload";
+        assertTrue(api.beginMediaChecked(id,"application/octet-stream","Synthetic",4));assertTrue(api.appendMedia(id,"AQID"));assertFalse(new File(dir,id).exists());assertFalse(api.finishMedia(id));assertFalse(new File(dir,id).exists());
+        assertTrue(api.beginMediaChecked(id,"application/octet-stream","Synthetic",4));assertTrue(api.appendMedia(id,"AQIDBA=="));assertTrue(api.finishMedia(id));assertArrayEquals(new byte[]{1,2,3,4},Files.readAllBytes(new File(dir,id).toPath()));
+        assertFalse(api.beginMediaChecked(id,"application/octet-stream","overwrite",4));assertArrayEquals(new byte[]{1,2,3,4},Files.readAllBytes(new File(dir,id).toPath()));assertFalse(api.finishMedia("other-upload"));
+    }
+
 }

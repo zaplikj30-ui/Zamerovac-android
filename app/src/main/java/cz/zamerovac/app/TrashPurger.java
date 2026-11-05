@@ -25,7 +25,10 @@ final class TrashPurger {
     private static boolean validId(String id){return id.matches("[a-zA-Z0-9_-]{3,120}");}
     // Include unknown fields/history in the protection set. Shared detail photos must survive.
     private static void strings(Object value, Set<String> found) throws JSONException {
-        if(value instanceof String)found.add((String)value);
+        if(value instanceof String){String text=(String)value;found.add(text);
+            // Older annotation versions store their item arrays as JSON strings.
+            if(text.trim().startsWith("["))try{strings(new JSONArray(text),found);}catch(JSONException ignored){}
+        }
         else if(value instanceof JSONObject){JSONObject o=(JSONObject)value;Iterator<String> keys=o.keys();while(keys.hasNext())strings(o.get(keys.next()),found);}
         else if(value instanceof JSONArray){JSONArray a=(JSONArray)value;for(int i=0;i<a.length();i++)strings(a.get(i),found);}
     }
