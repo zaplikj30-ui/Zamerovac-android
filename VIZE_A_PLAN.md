@@ -23,6 +23,21 @@
 
 **Stav:** dlouhodobá zásada, ne povel k okamžité migraci ani k vytvoření nové APK. Navazuje na [pravidla kvality #42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42).
 
+### Budoucí promítání na další obrazovky a vzdálený tisk (upřesněno 5. 11. 2026)
+
+**Široká technologická připravenost:** Cílem není jen Android/Windows/iPhone, ale kvalitní stavba aplikace umožňující v budoucnu bezpečně **vyměnit nebo doplnit vnitřní technologie** (Java/Kotlin/JavaScript/WebView, knihovny, způsoby vykreslování a dnes neznámé možnosti). Stěžejní data, měření, editovatelné objekty a výpočty mají být přenositelné a oddělené od způsobu ovládání. Nepřidávat všechny hypotetické technologie předem, pouze nepřekážet bezpečnému rozvoji. Při povinné kontrole po #39/PR #41 posoudit také tuto technologickou vyměnitelnost.
+
+**Možnost A – „Promítat“ (NÁPAD, možná jej nikdy nepoužijeme):** v budoucnu tlačítko s běžnou ikonou obrazovky/vysílání, které nabídne praktické způsoby zobrazení Zaměřovače na televizoru, projektoru, monitoru či jiném displeji. Nesmí být omezeno pouze na Samsung; zvážit podle dostupnosti pro daný systém Google Cast/Chromecast, Miracast, AirPlay, systémové zrcadlení a kabel HDMI/USB-C. Je důležité odlišit zrcadlení celé obrazovky (včetně ovládání) od promítání pouze vybrané fotografie, půdorysu nebo výkresu; vlastní režim může vyžadovat samostatný přijímač či aplikaci. Jeden univerzální přenos pro všechna zařízení **není potvrzený**. Chránit citlivé poznámky, umožnit výslovné zahájení i ukončení a otestovat chyby spojení.
+
+**Možnost B – vzdálený tisk (požadavek do budoucna, NEIMPLEMENTOVAT NYNÍ):** možnost z aplikace bezpečně vytisknout zvolenou fotografii s kótami, náčrt, výkres nebo PDF na vzdálené tiskárně. Rozlišit:
+- tiskárnu v místní Wi-Fi/síti a systémový tisk (Android, Windows, případně AirPrint na Apple zařízení);
+- tisk přes internet na tiskárně mimo místní síť, kde bude potřeba individuálně vybrat bezpečný mechanismus/službu a ověřit dostupnost a ochranu podkladů;
+- běžné sdílení či export PDF jako náhradní možnost, pokud přímý tisk není dostupný.
+
+Pro budoucí návrh řešit výběr cíle, náhled stránky, správné formáty a měřítko (bez záměny „viditelné kóty“ a „tisk skutečného měřítka“), přesnou reprodukci hodnot a všech zvolených anotací, tisk jen na výslovný pokyn, stav a chyby tisku. Nepřepisovat zakázky ani neodesílat jejich další soubory. Kompatibilitu reálných tiskáren a dostupnost cloudových řešení ověřit při návrhu.
+
+**Stav:** Výše je evidence budoucích možností. Promítání je nezávazný nápad; vzdálený tisk je požadavek na budoucí schopnost, ale dosud bez schváleného konkrétního rozsahu/termínu. **Nezasahovat do aktuální #39/PR #41; žádná implementace, APK ani nové závislosti.** Podle výsledku architektonické kontroly [#42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42) rozhodnout, co opravdu připravit a kdy.
+
 ## 1. Hlavní smysl
 Praktická samostatná Android aplikace pro zaměřování zakázkového nábytku: od založení zakázky přes fotografie, kóty a poznámky až po předání podkladů pro návrh a výrobu. Minimalizovat přepínání mezi aplikacemi, neztrácet naměřená data a udržet snadné ovládání přímo na stavbě/montáži.
 
