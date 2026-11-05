@@ -73,3 +73,7 @@ Specifikace #38/#34/#33 → PeerCoordinator/PeerDiscovery/PeerWifiDirect/MainAct
 ## Poznámky/checklist/přílohy/skica – etapa 18
 
 #33/#38 → noteChanged/renderChecks/renderNoteAttachments/saveNote, readonly sketch init a active arrays → `tools/e2e/note-sync.cjs` (4 UI případy). Pozitivní: reálné checklist/file input IDB přílohy s kauzální revizí a reloadovatelným stavem; readonly note/sketch bez změny; callback během poznámky bez zbytečné kopie; Native CAS během skutečného tahu skici zachová koncové body i cizí verzi. Negativní: disk full zachová formulář/draft a retry; locked checklist/remove jsou disabled; modal OK focus nesmí umožnit příchozí přepsání rozpracovaného rozměru. Místně prošly, nové CI ověřit. Native fixture je výslovně modelovaná; Java/přenosy mají samostatné nativní integrační testy.
+
+## WebView / cizí webový obsah – etapa 19
+
+#33 → WebContentPolicy/MainActivity WebViewClient/WebChromeClient a applySavedState → `WebContentPolicyTest`, `tools/e2e/web-content-policy.cjs`, `tests/sync_conflict_bridge.js`. Pozitivní: zabalený HTTPS index, skutečné kreslení a přesná hodnota pod produkční CSP, uživatelský odkaz otevře systémový intent bez Native v popupu. Negativní: cizí origin/port/credentials/scheme, subframe/srcdoc, inline/event/script-příloha nesmí číst bridge či měnit data; MIME nosniff a žádný síťový fallback; __proto__ nesmí změnit prototyp. Browser + Node místně prošly, native compile/testy nové etapy teprve CI; fyzické Android WebView a nezávislý audit neprovedeny.

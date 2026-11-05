@@ -90,6 +90,7 @@ public class MainActivity extends Activity {
     private volatile PeerCoordinator peerCoordinator;
     private boolean pendingWifiDirectPermission;
     private WebView web;
+    private final Set<WebView> unprivilegedWindows=new HashSet<>();
     private FrameLayout root;
     private View statusFill;
     private long lastExitPress=0;
@@ -168,22 +169,28 @@ public class MainActivity extends Activity {
                 android.window.OnBackInvokedDispatcher.PRIORITY_DEFAULT,()->handleAndroidBack());
         }
         WebSettings ws=web.getSettings();ws.setJavaScriptEnabled(true);ws.setDomStorageEnabled(true);ws.setDatabaseEnabled(true);
-        ws.setAllowFileAccess(false);ws.setAllowContentAccess(true);ws.setMediaPlaybackRequiresUserGesture(false);
+        ws.setAllowFileAccess(false);ws.setAllowContentAccess(true);ws.setMediaPlaybackRequiresUserGesture(false);ws.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);try{ws.setSafeBrowsingEnabled(true);}catch(UnsupportedOperationException ignored){}ws.setJavaScriptCanOpenWindowsAutomatically(false);ws.setSupportMultipleWindows(true);
         web.addJavascriptInterface(new JsApi(),"Native");
         web.setWebViewClient(new WebViewClient(){
+            @Override public boolean shouldOverrideUrlLoading(WebView view,WebResourceRequest request){
+                if(request.isForMainFrame()&&WebContentPolicy.document(request.getUrl()))return false;
+                if(request.isForMainFrame()&&request.hasGesture()&&WebContentPolicy.external(request.getUrl()))openBrowserLink(request.getUrl());
+                return true;
+            }
+            @Override public boolean shouldOverrideUrlLoading(WebView view,String url){return !WebContentPolicy.document(Uri.parse(url));}
             @Override public WebResourceResponse shouldInterceptRequest(WebView v,WebResourceRequest req){
-                Uri uri=req.getUrl();if(!"appassets.androidplatform.net".equals(uri.getHost()))return null;
-                String path=uri.getPath();
+                Uri uri=req.getUrl();if(!WebContentPolicy.origin(uri))return WebContentPolicy.blocked(403);
+                String path=uri.getPath();if(path==null)return WebContentPolicy.blocked(403);
                 try{
                     if(path.startsWith("/app/")){
-                        String name=path.substring(5);if(name.contains(".."))return null;
-                        String mime=name.endsWith(".js")?"application/javascript":name.endsWith(".css")?"text/css":"text/html";
-                        return new WebResourceResponse(mime,"UTF-8",getAssets().open(name));
+                        String name=path.substring(5);if(name.contains("..")||!name.matches("[a-zA-Z0-9_./-]+"))return WebContentPolicy.blocked(403);
+                        String mime=name.endsWith(".js")?"application/javascript":name.endsWith(".css")?"text/css":name.endsWith(".html")?"text/html":"text/plain";
+                        return new WebResourceResponse(mime,"UTF-8",200,"OK",WebContentPolicy.headers(false),getAssets().open(name));
                     }
                     if(path.startsWith("/media/")){
-                        String id=path.substring(7);if(!validId(id))return null;
+                        String id=path.substring(7);if(!validId(id))return WebContentPolicy.blocked(403);
                         File f=mediaFile(id);if(!f.isFile())return new WebResourceResponse("text/plain","UTF-8",404,"Not Found",new HashMap<>(),new java.io.ByteArrayInputStream(new byte[0]));
-                        String mime=mediaMime(id);
+                        String mime=WebContentPolicy.mime(mediaMime(id));
                         String range=req.getRequestHeaders().get("Range");
                         if(range==null)range=req.getRequestHeaders().get("range");
                         if(range!=null&&range.startsWith("bytes=")){
@@ -209,7 +216,7 @@ public class MainActivity extends Activity {
                                             if(n>0)remaining-=n;return n;
                                         }
                                     };
-                                    Map<String,String> hdr=new HashMap<>();
+                                    Map<String,String> hdr=WebContentPolicy.headers(true);
                                     hdr.put("Accept-Ranges","bytes");
                                     hdr.put("Content-Range","bytes "+start+"-"+end+"/"+f.length());
                                     hdr.put("Content-Length",Long.toString(bytes));
@@ -217,21 +224,35 @@ public class MainActivity extends Activity {
                                 }
                             }catch(Exception ignored){}
                         }
-                        Map<String,String> hdr=new HashMap<>();
+                        Map<String,String> hdr=WebContentPolicy.headers(true);
                         hdr.put("Accept-Ranges","bytes");
                         hdr.put("Content-Length",Long.toString(f.length()));
                         return new WebResourceResponse(mime,null,200,"OK",hdr,new FileInputStream(f));
                     }
                     if(path.startsWith("/thumb/")){
-                        String id=path.substring(7);if(!validId(id))return null;
+                        String id=path.substring(7);if(!validId(id))return WebContentPolicy.blocked(403);
                         InputStream in=photoThumbnail(id);
                         if(in==null)return new WebResourceResponse("text/plain","UTF-8",404,"Not Found",new HashMap<>(),new java.io.ByteArrayInputStream(new byte[0]));
-                        return new WebResourceResponse("image/jpeg",null,in);
+                        return new WebResourceResponse("image/jpeg",null,200,"OK",WebContentPolicy.headers(true),in);
                     }
-                }catch(Exception e){android.util.Log.e("Zamerovac","Read resource",e);}return null;
+                }catch(Exception e){android.util.Log.e("Zamerovac","Read resource",e);}return WebContentPolicy.blocked(404);
             }
         });
         web.setWebChromeClient(new WebChromeClient(){
+            @Override public boolean onCreateWindow(WebView view,boolean dialog,boolean gesture,android.os.Message result){
+                if(!gesture||result==null||!(result.obj instanceof WebView.WebViewTransport))return false;
+                // target=_blank/window.open uses a separate JS-disabled view with NO Native bridge.
+                WebView popup=new WebView(MainActivity.this);unprivilegedWindows.add(popup);popup.getSettings().setJavaScriptEnabled(false);popup.getSettings().setAllowFileAccess(false);popup.getSettings().setAllowContentAccess(false);
+                java.util.concurrent.atomic.AtomicBoolean handled=new java.util.concurrent.atomic.AtomicBoolean();
+                java.util.function.Consumer<Uri> finish=uri->{if(!handled.compareAndSet(false,true))return;if(WebContentPolicy.external(uri))openBrowserLink(uri);popup.stopLoading();handler.post(()->{unprivilegedWindows.remove(popup);popup.destroy();});};
+                popup.setWebViewClient(new WebViewClient(){
+                    @Override public boolean shouldOverrideUrlLoading(WebView v,WebResourceRequest request){finish.accept(request.getUrl());return true;}
+                    @Override public boolean shouldOverrideUrlLoading(WebView v,String url){finish.accept(Uri.parse(url));return true;}
+                    @Override public void onPageStarted(WebView v,String url,Bitmap icon){if(!"about:blank".equals(url))finish.accept(Uri.parse(url));}
+                    @Override public WebResourceResponse shouldInterceptRequest(WebView v,WebResourceRequest request){return WebContentPolicy.blocked(403);}
+                });
+                ((WebView.WebViewTransport)result.obj).setWebView(popup);result.sendToTarget();handler.postDelayed(()->finish.accept(null),3000);return true;
+            }
             @Override public boolean onShowFileChooser(WebView v,ValueCallback<Uri[]> callback,FileChooserParams params){
                 if(fileCallback!=null)fileCallback.onReceiveValue(null);fileCallback=callback;
                 try{Intent intent=params.createIntent();startActivityForResult(intent,REQUEST_FILE);return true;}catch(Exception e){fileCallback.onReceiveValue(null);fileCallback=null;error("Výběr souboru se nezdařil");return false;}
@@ -254,6 +275,7 @@ public class MainActivity extends Activity {
 
     private boolean validId(String s){return s!=null&&s.matches("[a-zA-Z0-9_-]{3,120}");}
     private String mediaMime(String id){return settings.getString("mime-"+id,"application/octet-stream");}
+    private void openBrowserLink(Uri uri){if(!WebContentPolicy.external(uri))return;try{startActivity(new Intent(Intent.ACTION_VIEW,uri).addCategory(Intent.CATEGORY_BROWSABLE));}catch(Exception failure){error("Odkaz nelze otevřít v systémovém prohlížeči.");}}
     private void js(String code){runOnUiThread(()->web.evaluateJavascript(code,null));}
     private void jsCall(String fn,String jsonLiteral){js("window."+fn+"("+JSONObject.quote(jsonLiteral)+")");}
     // Hash the Bluetooth address with a private persisted salt; never expose raw
@@ -1016,7 +1038,7 @@ public class MainActivity extends Activity {
     private void scheduleSync(){try{JobScheduler jobs=(JobScheduler)getSystemService(JOB_SCHEDULER_SERVICE);JobInfo j=new JobInfo.Builder(14,new ComponentName(this,SyncJob.class)).setPeriodic(15*60*1000L).setRequiredNetworkType(settings.getBoolean("wifiOnly",false)?JobInfo.NETWORK_TYPE_UNMETERED:JobInfo.NETWORK_TYPE_ANY).setPersisted(true).build();if(settings.getString("treeUri",null)!=null&&settings.getBoolean("autoSync",true))jobs.schedule(j);else jobs.cancel(14);}catch(Exception e){android.util.Log.w("Zamerovac","Background job",e);}}
     @Override public void onResume(){super.onResume();if(settings!=null&&settings.getBoolean("directSyncEnabled",false))try{directCoordinator().start();}catch(Exception failure){directProblem(failure.getMessage());}if(settings!=null&&settings.getBoolean("autoSync",true)&&settings.getString("treeUri",null)!=null)handler.postDelayed(foregroundCloudSync,2000);}
     @Override protected void onStop(){handler.removeCallbacks(foregroundCloudSync);PeerCoordinator coordinator=peerCoordinator;if(coordinator!=null)coordinator.close();peerCoordinator=null;pendingWifiDirectPermission=false;super.onStop();}
-    @Override protected void onDestroy(){PeerCoordinator coordinator=peerCoordinator;if(coordinator!=null)coordinator.close();peerCoordinator=null;closeUpload();stopLaserConnection();videoThumbnails.close();clearCustomerExport();handler.removeCallbacksAndMessages(null);releaseRecorder();if(web!=null)web.destroy();super.onDestroy();}
+    @Override protected void onDestroy(){PeerCoordinator coordinator=peerCoordinator;if(coordinator!=null)coordinator.close();peerCoordinator=null;closeUpload();stopLaserConnection();videoThumbnails.close();clearCustomerExport();handler.removeCallbacksAndMessages(null);releaseRecorder();for(WebView popup:new ArrayList<>(unprivilegedWindows))popup.destroy();unprivilegedWindows.clear();if(web!=null)web.destroy();super.onDestroy();}
 
 
     // The GLM 100-25 C is Bluetooth LE. Show ALL nearby LE advertisements (like

@@ -47,3 +47,4 @@ finds('sha-256','backup');finds('neulozeno','backup');
 finds('wifi direct','cloud');finds('párování','cloud');finds('čekající potvrzení','cloud');
 
 finds('historické zálohy','backup');finds('sdílené bloky','backup');finds('měřená síť','backup');
+finds('webové odkazy','safety');finds('spustitelné přílohy','safety');

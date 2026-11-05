@@ -629,7 +629,8 @@ const chapters=[
     ],
     "notes": [
       "Kritické rozměry, například pro výrobu a montáž nábytku, nikdy nepotvrzuj jen podle obrazového měřítka fotografie.",
-      "Údaje o zákaznících a fotografie interiérů považuj za citlivé."
+      "Údaje o zákaznících a fotografie interiérů považuj za citlivé.",
+      "Editor otevírá jen vlastní zabalenou aplikaci. Cizí stránky, vložené rámce a spustitelné přílohy se v něm blokují; klepnutý webový odkaz se otevírá v systémovém prohlížeči. Tato ochrana nenahrazuje kontrolu celého zabezpečení aplikace."
     ],
     "keywords": [
       "bezpečnost",
@@ -637,7 +638,9 @@ const chapters=[
       "přesnost",
       "ochrana",
       "data",
-      "soukromí"
+      "soukromí",
+      "webové odkazy",
+      "spustitelné přílohy"
     ]
   }
 ];

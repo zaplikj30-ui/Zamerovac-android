@@ -55,3 +55,4 @@ assert.doesNotMatch(source,/fetch\s*\(|XMLHttpRequest|localStorage|Native\./,'Of
 console.log('PASS true versioned changelog: fixed releases, improvements, no future notes, offline, help and menus');
 assert.equal(history.pendingChanges.released,false,'Working notes must not pretend to be a released version');
 assert(!history.forVersion('1.2.152').includes(history.pendingChanges));
+assert(JSON.stringify(history.pendingChanges).includes('spustitelných příloh'));
