@@ -26,6 +26,16 @@ Před zavedením nové technologie či významnější funkce vždy posoudit jej
 
 **Stav:** pracovní pravidlo; žádný okamžitý přechod frameworku, změna kódu ani vydání APK.
 
+### Výhledová nezávislost na technologiích, promítání a vzdálený tisk (5. 11. 2026)
+
+**Upřesnění uživatele:** Nejde pouze o nové operační systémy. Zaměřovač má být technicky připravený na případnou **změnu či doplnění programovacích jazyků, frameworků, vykreslování a komunikačních technologií** (např. Java, Kotlin, JavaScript, WebView či něco, co dnes neznáme). Stabilní data, geometrie, hodnoty kót, jednotky a editovatelné objekty nemají zbytečně záviset na jedné technologii. Připravovat rozumné hranice mezi částmi, nepreventivně nezavádět každou myslitelnou knihovnu. Před konkrétní změnou posoudit reálný přínos, migrační rizika, kompatibilitu a testy.
+
+**Budoucí nápad, zatím nepovinná funkce: „Promítat“ s ikonou Cast.** Možnost vyslat pracovní obrazovku nebo vybranou fotografii s kótami / náčrt na TV, monitor, projektor či jiný displej **bez vazby na Samsung nebo jediného výrobce**. Před návrhem zmapovat systémové zrcadlení, bezdrátové technologie (Google Cast/Chromecast, Miracast, AirPlay a další dostupné způsoby dle platformy), kabelový výstup a možnost vlastní cílené prezentace. Tyto způsoby **nejsou navzájem zaměnitelné a nemusí být dostupné v každé kombinaci zařízení**; neslibovat univerzální výčet všech přijímačů z jednoho tlačítka. Při realizaci chránit soukromí zákaznických dat, spouštět přenos vědomě, ukázat stav a nabídnout ukončení.
+
+**Budoucí požadavek: vzdálený tisk.** Počítat s bezpečným tiskem vybraných fotografií s kótami, výkresů a dokumentů na tiskárnu mimo telefon/tablet: přednostně tisk dostupný přes systémové tiskové služby a lokální Wi-Fi/síť; možnost odeslání přes internet řešit zvlášť s ověřením konkrétní služby, přihlášení a zabezpečení. Přenos obrazu a tisk jsou odlišné funkce. Zachovat přesné rozměry, viditelnost anotací, náhled před tiskem, volbu tiskárny a rozsahu a možnost zrušit. Nesmí dojít k nechtěnému odeslání zákaznických podkladů ani ke změně uložených dat. Kompatibilita tiskáren se bude ověřovat, nikoliv předpokládat.
+
+**Stav a priorita:** jde o technickou připravenost a budoucí požadavky, **nikoli o zadání nyní přidat nové funkce, oprávnění, knihovny či sestavit APK**. Po dokončení #39/PR #41 nezávisle prověřit skutečnou architekturu v #42 a navrhnout vhodné pořadí. Přesná podoba a podporovaná zařízení se rozhodnou až před implementací; některé hypotetické technologie možná vůbec nepoužijeme.
+
 ## Povinné testování selhání a ochrany dat u každé změny (5. 11. 2026)
 
 **Výslovně schválené trvalé pravidlo uživatele:** Nesmíme ověřovat pouze to, že nová či upravená funkce v běžném scénáři funguje. **Před dokončením každé významné změny podle rizika zkontroluj také, jak funkce selže, co přitom zobrazí uživateli a zda zachová původní data a správnost rozměrů.** Testování chybových cest je součástí zadání, implementace i kontroly výsledku — není až volitelnou dodatečnou revizí.
