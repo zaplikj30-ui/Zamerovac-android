@@ -18,6 +18,14 @@ Uživatel vyrábí zakázkový nábytek. Vyvíjíme vlastní Android aplikaci na
 
 **Aktuální pořadí:** bezpečně dokončit rozpracovanou aktualizaci [#39 / PR #41](https://github.com/zaplikj30-ui/Zamerovac-android/pull/41), provést nezávislou kontrolu kvality a kolizí funkcí; pak podle zjištění navrhnout a provést cílenou modernizaci (případně větší přepracování po samostatném schválení). Nepřepisovat souběžně práci Codexu, nevytvářet APK kvůli dokumentaci. Technické rozhodování a výsledky průběžně evidovat v [#42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42).
 
+### Připravenost na změny a doplnění technologií (5. 11. 2026)
+
+**Upřesnění uživatele:** Zaměřovač musí být stavěn tak, aby bylo možné v budoucnu **přecházet na vhodnější technologie, přidávat nové technologie a funkce** bez zbytečného rozsáhlého přepisování a bez vzájemného rozbíjení existujících funkcí. Nelze zaručit nulové potíže, ale architektura má rizika předem omezovat.
+
+Před zavedením nové technologie či významnější funkce vždy posoudit její kompatibilitu se stávajícím kódem a daty, závislosti na ostatních modulech, bezpečný postup výměny/rozšíření, návrat při neúspěchu a kombinované testy starého i nového chování. Preferovat jasně vymezené a vyměnitelné části, dokumentované a verzované datové formáty a oddělení společných pravidel od Android/Windows/iOS. Nesmí se měnit rozměry, ztrácet originály, zakázky ani editovatelnost. **Nenabírat technologie jen proto, že jsou nové**; vybrat je podle skutečného dlouhodobého přínosu. Pokud zjištěná architektura bezpečné rozšiřování neumožňuje, navrhnout cílené nebo případně větší přepracování s testy, porovnáním variant a schválením rozsahu.
+
+**Stav:** pracovní pravidlo; žádný okamžitý přechod frameworku, změna kódu ani vydání APK.
+
 ## Povinné testování selhání a ochrany dat u každé změny (5. 11. 2026)
 
 **Výslovně schválené trvalé pravidlo uživatele:** Nesmíme ověřovat pouze to, že nová či upravená funkce v běžném scénáři funguje. **Před dokončením každé významné změny podle rizika zkontroluj také, jak funkce selže, co přitom zobrazí uživateli a zda zachová původní data a správnost rozměrů.** Testování chybových cest je součástí zadání, implementace i kontroly výsledku — není až volitelnou dodatečnou revizí.
