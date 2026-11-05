@@ -1,5 +1,7 @@
 # Praktická automatická kontrola #28 – průběžný stav
 
+**Aktuální mapa:** [qa/coverage-v1.json](qa/coverage-v1.json), 34 funkčních oblastí, soubory implementace/testů, pozitivní i negativní kritéria a explicitní mezery. `node tools/qa/audit.cjs` kontroluje platnost mapy/odkazů v rychlém CI; samotná validace žádný uvedený test nespouští a neověřuje zařízení. Jednotlivé historické checkpointy níže zůstávají odlišené od současného stavu.
+
 Schválené zadání a rozšíření jsou v [issue #28](https://github.com/zaplikj30-ui/Zamerovac-android/issues/28), pokračování ve stejném PR #27 z `50414b5`. Bez APK, změny requestu a merge. Pouze syntetické soubory.
 
 ## Skupina 1 – hotovo lokálně, CI ověřit na příslušném commitu
@@ -101,3 +103,9 @@ Specifikace #38/#34/#33 → PeerCoordinator/PeerDiscovery/PeerWifiDirect/MainAct
 ## Přepnutí cesty/sítě při přenosu a rušení jobů – etapa 25
 
 #33/#38 → GuardedSyncStore/SafSyncV2/PeerCoordinator intent priority/SyncJob → GuardedSyncStoreTest, SyncJobTest (3), SafSyncV2Test (+2). Pozitivní: po dalším dostupném pokusu skutečné originální bajty a potvrzený outbox, success/failure Job retry. Negativní: po prvním 64KiB bloku přijde ověřená direct priorita nebo ztráta unmetered oprávnění → další write se neprovede, DB/fronta nejsou falešně potvrzené; zrušený starý worker ani přes ignorované interrupt nesmaže novou relaci či nezavolá jobFinished; close se vždy povolí. Nové native CI ověřit; síťová změna je řízený policy callback, nejde o fyzický Wi-Fi/cellular handover.
+
+## Strojová mapa a rozhraní pro navázání – etapa 26 (QA/dokumentace)
+
+34 oblastí v qa/coverage-v1.json mapuje současné funkce na skutečné existující testy, pozitivní/negativní kritéria a jejich limity. Feedback je výslovně static-only; ostatní runtime-partial, nikoli kompletní pokrytí všech tlačítek a poruch. Sedm manuálních bran má stav not-run/blocked/pending; oficiální Drive, source publication repair, hard provider budget a low-memory/fallback audit jsou otevřené mezery. Audit CLI v rychlém CI ověřuje soubory/ID/vrstvy a brání mylnému fullApplicationVerified; místní negativní fixture s chybějícím testem byla skutečně odmítnuta. Není to další důkaz fyzického fungování aplikace.
+
+Předběžné rozhraní/moduly/vazby a pořadí další práce v docs/architecture-39-boundaries.md, načteny nejnovější main pravidla a #42. Žádné nové uživatelské funkce ani změny UI/chování aplikace; proto etapa nemění nápovědu/historii vydání. Obě CI posledního funkčního checkpointu 29083a8 SUCCESS (42066214116/42066213565).

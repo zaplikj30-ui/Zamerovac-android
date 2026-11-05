@@ -67,6 +67,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          node tools/qa/audit.cjs
           for script in tests/*.js; do
             node "$script"
           done
