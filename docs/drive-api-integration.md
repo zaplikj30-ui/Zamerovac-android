@@ -23,3 +23,9 @@ Konkrétní následující kroky:
 4. Zapojit zvlášť sync a backup UI, JobScheduler a povolené mobilní výjimky, zachovat místní funkčnost bez účtu/GMS. Testovat plný signed snapshot/media/ACK a dvě historie/obnovu přes API adapter se syntetickými odpověďmi; potom skutečný účet a obě Android zařízení.
 
 Etapa nemění aktivní UI, vydanou historii ani český návod. Skutečnou podporu Disku, úplné #38/#40 či fyzickou akceptaci zatím nelze označit jako dokončené. Žádná APK ani merge.
+
+## Doplnění etapy 30
+
+DriveObjectStore/DriveSyncStore/DriveBackupStore a explicitní PendingOutput jsou implementované a zapojené do CloudFiles/BackupHistory publikačního kontraktu. Jejich celek testuje DriveStoresTest přes REST odpovědi: signed synchronizace, chyba/retry a 2 historie/100 originálů/restore. Close není publish; po vadném zdroji nedojde k HTTP uploadu. Opuštěný vlastní staging se odklízí, aktivní/cizí ne. Duplicity content-addressed názvů se ověřují skutečnými bajty (max16 kandidátů); kontrolní zprávy s duplicitním jménem se odmítnou. Při závodu může existovat fyzicky více stejných bloků, aplikace je kvůli historii nemaže a obsazení uvádí přibližně. Dočasný staging potřebuje volné místo až do velikosti souboru (max2GiB).
+
+Body 1–2 výše jsou tím částečně realizované; chybí fyzický kill/disk/OEM scénář. Body 3–4 (AuthorizationClient a produkční UI/Job/účet) zůstávají hlavní práce. Aktivní app zatím nové Drive adaptéry nevytváří. Stage29 native CI SUCCESS v 63d5d16, nová stage30 CI musí potvrdit testy adaptéru; živý účet není ověřen.

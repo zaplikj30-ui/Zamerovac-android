@@ -19,7 +19,7 @@ public class DriveHttpTest {
     static class Connection extends HttpsURLConnection {
         int code=200,disconnects,readBytes;long declared=-1;byte[] response=new byte[0];final Map<String,String> headers=new HashMap<>();final ByteArrayOutputStream sent=new ByteArrayOutputStream();
         Connection(java.net.URL url){super(url);}
-        @Override public int getResponseCode(){return code;}
+        @Override public int getResponseCode()throws IOException{return code;}
         @Override public String getHeaderField(String key){return headers.get(key);}
         @Override public long getContentLengthLong(){return declared;}
         @Override public InputStream getInputStream(){return new FilterInputStream(new ByteArrayInputStream(response)){@Override public int read(byte[] bytes,int offset,int length)throws IOException{int count=in.read(bytes,offset,length);if(count>0)readBytes+=count;return count;}};}

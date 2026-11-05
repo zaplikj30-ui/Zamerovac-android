@@ -23,14 +23,16 @@ final class DriveHttp {
         @Override public void close()throws IOException{try{body.close();}finally{connection.disconnect();}}
     }
     private final Credentials credentials;private final Gate gate;private final Connections connections;
-    private final AtomicLong accounted=new AtomicLong();
+    private final AtomicLong accounted;
     DriveHttp(Credentials credentials,Gate gate){this(credentials,gate,url->(HttpsURLConnection)url.openConnection());}
-    DriveHttp(Credentials credentials,Gate gate,Connections connections){this.credentials=credentials;this.gate=gate;this.connections=connections;}
+    DriveHttp(Credentials credentials,Gate gate,Connections connections){this(credentials,gate,connections,new AtomicLong());}
+    private DriveHttp(Credentials credentials,Gate gate,Connections connections,AtomicLong accounted){this.credentials=credentials;this.gate=gate;this.connections=connections;this.accounted=accounted;}
     long accountedBytes(){return accounted.get();}
-    private synchronized void reserve(long bytes)throws IOException{
+    DriveHttp checked(ImmutableStore.Checkpoint checkpoint){return new DriveHttp(credentials,bytes->{checkpoint.check();gate.check(bytes);},connections,accounted);}
+    private void reserve(long bytes)throws IOException{synchronized(accounted){
         if(Thread.currentThread().isInterrupted())throw new InterruptedIOException("Přenos Disku byl přerušen");
         if(bytes<0||bytes>Long.MAX_VALUE-accounted.get())throw new IOException("Neplatný rozpočet Disku");long next=accounted.get()+bytes;gate.check(next);accounted.set(next);
-    }
+    }}
     static URL endpoint(String value)throws IOException{
         if(value==null||value.length()>12000||java.util.regex.Pattern.compile("[\\p{Cntrl}]").matcher(value).find())throw new IOException("Neplatná adresa Disku");
         URL url=new URL(value);String path=url.getPath();

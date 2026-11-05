@@ -1,6 +1,6 @@
 # Předběžná mapa odpovědností #39 / #42
 
-Stav po etapách 19–29, 5. 11. 2026. Jde o kontrolu vazeb v aktuálním kódu, nikoli dokončený nezávislý audit, fyzické ověření ani povolení dalších funkcí. Načteny také nové pokyny main `45d6ae4` / `ee5c0e1`, aktuální VIZE_A_PLAN a #42. Jejich dokumentaci na main tato větev nepřepisuje. Priorita zůstává dokončení #39; plánované budoucí schopnosti mají být zohledněné, ne nyní implementované.
+Stav po etapách 19–30, 5. 11. 2026. Jde o kontrolu vazeb v aktuálním kódu, nikoli dokončený nezávislý audit, fyzické ověření ani povolení dalších funkcí. Načteny také nové pokyny main `45d6ae4` / `ee5c0e1`, aktuální VIZE_A_PLAN a #42. Jejich dokumentaci na main tato větev nepřepisuje. Priorita zůstává dokončení #39; plánované budoucí schopnosti mají být zohledněné, ne nyní implementované.
 
 | Odpovědnost | Současná hranice | Kombinované důkazy a zbývající vazba |
 | --- | --- | --- |
@@ -19,7 +19,7 @@ Stav po etapách 19–29, 5. 11. 2026. Jde o kontrolu vazeb v aktuálním kódu,
 ## Priorita zbývajících konkrétních zásahů
 
 1. **Publication receipts a bezpečný repair:** etapa 27 je implementuje s podepsaným NEED, expirací a kontrolou konkrétního manifestu; má obě CI SUCCESS v 82eef6d, další revize zůstává. Před touto etapou source opakovaně četl již ověřené cloudové originály. Samotné trvalé „odesláno“ je nebezpečné při odstranění/poškození vzdáleného souboru. Řešení musí oddělit ověřenou publikaci od finálního ACK příjemce a mít autentizovanou opravu nebo jinou ověřitelnou invalidaci. Před kódem ověřit retry/restart, chybějící remote blob, souběžný direct/cloud, nový zdrojový obsah a metered pravidla.
-2. **Oficiální Drive API/OAuth:** chybí registrovaná Android OAuth konfigurace a zapojený adaptér. Etapa 29 přidává izolovaný DriveHttp/DriveApi REST základ, zatím bez SyncStore/BackupStore či přihlášení; není to aktivní Drive integrace. Přístup připojeného Drive konektoru není přihlašovací token uživatele Android aplikace. Nepřebírat jeho účty/tajemství ani předstírat funkční Google integraci. Potřebné jsou malé stránkované API operace, přesné HTTP limity a testy denied/revoked/expired přístupu; žádné runtime klíče v repozitáři.
+2. **Oficiální Drive API/OAuth:** chybí registrovaná Android OAuth konfigurace a zapojený adaptér. Etapa 29 má ověřený DriveHttp/DriveApi REST základ, etapa 30 přidává capability adaptéry, explicitní publish po verified staging a datové integrační testy. Android OAuth/UI/Job je stále nezapojený; nejde o aktivní Drive účet. Přístup připojeného Drive konektoru není přihlašovací token uživatele Android aplikace. Nepřebírat jeho účty/tajemství ani předstírat funkční Google integraci. Potřebné jsou malé stránkované API operace, přesné HTTP limity a testy denied/revoked/expired přístupu; žádné runtime klíče v repozitáři.
 3. **Finální datový audit:** etapa 28 opravuje nalezený DB fallback vůči inbox/ACK a direct lastAck stavu; má obě CI SUCCESS v 4b87a45. Dále prověřit obnovu po neúplném lokálním commitu, přílohy po systémovém kill a dočasné soubory. Dosavadní testy nejsou důkazem všech kombinací poruch.
 4. **Fyzická akceptace:** LAN/P2P bez routeru i s Wi-Fi, různá zařízení, Keystore/párování/revokace, Doze/OS restart, mobilní pravidla, Bosch, velká média, dvě historie a obnova. Jediná finální APK až po dokončení schválených prací a potřebných kontrolách.
 

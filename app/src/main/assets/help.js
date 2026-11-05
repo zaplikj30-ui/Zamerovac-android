@@ -425,6 +425,7 @@ const chapters=[
       "Po importu otevři fotografie a ověř kóty, vložené obrázky, poznámky a přílohy."
     ],
     "notes": [
+      "Když poskytovatel zálohy nevrací žádná data nebo překročí povolenou délku, kontrola skončí chybou. Neúplný obsah se nepotvrdí jako historická záloha ani se nepoužije k obnově; ověř dostupnost a zkus operaci znovu.",
       "Historie používá vlastní prostor Zamerovac-zalohy a funguje i při vypnuté synchronizaci či bez párování. Odpojení složky ani změna účtu uložené body nemaže. Starší historii najdeš opětovným výběrem původní složky.",
       "Google Disk je zatím závislý na tom, zda jeho systémový poskytovatel dovolí vybrat zapisovatelnou složku. Pokud ji nenabízí, použij místní úložiště nebo ZIP; oficiální Drive API se teprve dokončuje a nesmí se zaměnit za ověřené připojení.",
       "Poškozený blok, chybějící příloha, odebrané oprávnění, nedostatek místa a přerušený zápis nesmějí být potvrzeny jako úplná záloha. Při chybě původní historie zůstává beze změny; poškozený existující blok se automaticky nepřepisuje.",

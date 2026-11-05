@@ -1026,7 +1026,10 @@
       ],
       "sources": [
         "app/src/main/java/cz/zamerovac/app/DriveHttp.java",
-        "app/src/main/java/cz/zamerovac/app/DriveApi.java"
+        "app/src/main/java/cz/zamerovac/app/DriveApi.java",
+        "app/src/main/java/cz/zamerovac/app/DriveObjectStore.java",
+        "app/src/main/java/cz/zamerovac/app/DriveSyncStore.java",
+        "app/src/main/java/cz/zamerovac/app/DriveBackupStore.java"
       ],
       "tests": [
         {
@@ -1036,15 +1039,20 @@
         {
           "path": "app/src/test/java/cz/zamerovac/app/DriveApiTest.java",
           "layer": "native-jvm"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/DriveStoresTest.java",
+          "layer": "native-jvm"
         }
       ],
       "coverage": "runtime-partial",
-      "positive": "Drive v3 request serialization, úplné stránkování včetně prázdné stránky a 256KiB resumable upload se skutečnými bajty.",
-      "negative": "Hostile redirect/session/header, denied/changing budget, 401/403/404/429/503, cyklický/neúplný seznam, partial/oversized source, chybný Range/předčasný final.",
+      "positive": "Drive v3 request serialization, úplné stránkování včetně prázdné stránky a 256KiB resumable upload se skutečnými bajty. Celý signed snapshot/media/ACK přes Drive adaptéry a dvě historie se 100 deduplikovanými originály/obnovou.",
+      "negative": "Hostile redirect/session/header, denied/changing budget, 401/403/404/429/503, cyklický/neúplný seznam, partial/oversized source, chybný Range/předčasný final. Close/partial source nesmí uploadovat; cancel při publish zachová receiver DB/outbox; cross-namespace, duplicitní obsah, orphan/aktivní staging a API failures.",
       "limits": [
         "Connection je řízený HttpsURLConnection double na SDK26; nejde o síť vůči Googlu ani OAuth účet.",
-        "API vrstva zatím není připojená do SyncStore/BackupStore ani Android přihlašování/UI.",
-        "Rozpočet účtuje konzervativně HTTP payload/hlavičky; TLS/TCP ani účtování operátora neměří."
+        "Rozpočet účtuje konzervativně HTTP payload/hlavičky; TLS/TCP ani účtování operátora neměří.",
+        "Adaptéry ještě nejsou zapojené do Android OAuth/UI/Job a skutečný účet není ověřen.",
+        "Drive při souběžném create může mít více fyzických kopií téhož content-addressed jména; čtení je ověřuje, nic nemaže a obsazení značí přibližně."
       ]
     }
   ],
@@ -1086,8 +1094,8 @@
     }
   ],
   "openAutomationGaps": [
-    "Oficiální Drive API/OAuth a jeho chybové cesty.",
-    "Skutečná API paginace a tvrdé měření síťové režie.",
+    "Android Drive OAuth/UI/Job zapojení, registrace klienta a jeho skutečné chybové cesty.",
+    "Živé API stránkování a ověření konzervativního HTTP budgetu; TLS/operátor nejsou přesně měřené.",
     "Low-memory/process-kill a poškození/ztráta všech kopií úložiště; fallback/inbox má od etapy 28 cílené testy.",
     "Kompletní mapování jednotlivých starších ovládacích prvků; nyní jsou mapované funkční oblasti."
   ]

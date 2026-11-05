@@ -65,3 +65,5 @@ assert(JSON.stringify(history.pendingChanges).includes('Rušení plánované úl
 assert(JSON.stringify(history.pendingChanges).includes('Evidence publikace'));
 
 assert(JSON.stringify(history.pendingChanges).includes('Návrat ke starší místní databázi'));
+
+assert(JSON.stringify(history.pendingChanges).includes('Kontrola záloh odmítá proud'));

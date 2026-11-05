@@ -56,3 +56,5 @@ finds('další dávku zpráv','cloud');finds('změní povolené připojení','cl
 finds('podepsanou žádostí','cloud');
 
 finds('starší záložní kopie','cloud');finds('ztrátu všech kopií','cloud');
+
+finds('poskytovatel zálohy','backup');

@@ -121,3 +121,7 @@ Předběžné rozhraní/moduly/vazby a pořadí další práce v docs/architectu
 ## Etapa 29 – hranice Drive API (zatím bez aktivní integrace)
 
 DriveHttpTest (4) + DriveApiTest (5), SDK26, skutečný REST/stream kód s HttpsURLConnection double. Pozitivní i negativní kritéria v oblasti drive-rest-boundary qa/coverage-v1.json. Není to skutečný Google server, OAuth souhlas ani propojená synchronizace/záloha; nové native CI musí potvrdit kompilaci i testy. Etapa 28 už má obě CI SUCCESS v 4b87a45 (native42084505694/quick42084506171).
+
+## Etapa 30 – celý engine přes Drive adaptéry
+
+DriveStoresTest (7) a BackupHistoryTest (+1). Skutečný signed DB/media/ACK, výpadek velkého média a pending/retry, 2 historie/100 originálů/dedup/obnova, scoped capability/account, publish/close/partial/cleanup, duplicitní obsah a denied/expired API. HTTPS server je řízený double, native kompilaci/testy nové etapy ověřit. Node/Python/QA místně úspěšné; není to Google účet, OAuth/UI/Job ani fyzický Android. Etapa 29 native42098280995 SUCCESS, quick42098281099 ověřit.

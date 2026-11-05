@@ -1,0 +1,74 @@
+package cz.zamerovac.app;
+
+import org.json.*;
+import org.junit.*;
+import org.junit.runner.RunWith;
+import org.robolectric.*;
+import org.robolectric.annotation.Config;
+import java.io.*;
+import java.net.*;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
+import java.util.*;
+import java.util.concurrent.atomic.*;
+import static org.junit.Assert.*;
+
+/** Full native sync/history through the Drive REST adapters. Server/account/radio are synthetic. */
+@RunWith(RobolectricTestRunner.class) @Config(sdk=35)
+public class DriveStoresTest {
+    static final class Item {final String id,path;final byte[] bytes;Item(String id,String path,byte[] bytes){this.id=id;this.path=path;this.bytes=bytes.clone();}}
+    static class Server implements DriveHttp.Connections {
+        final Map<String,Item> objects=new LinkedHashMap<>();final Map<String,String> sessions=new HashMap<>();final Map<String,ByteArrayOutputStream> uploads=new HashMap<>();int calls,posts,next;String failMethod="";int failStatus;Runnable onChunk;
+        void add(String path,byte[] bytes){String id="item_"+(++next);objects.put(id,new Item(id,path,bytes));}
+        long count(String prefix){return objects.values().stream().filter(item->item.path.startsWith(prefix)).count();}
+        public javax.net.ssl.HttpsURLConnection open(URL url){calls++;return new DriveHttpTest.Connection(url){boolean processed;
+            @Override public int getResponseCode()throws IOException{if(!processed){processed=true;try{route(this);}catch(Exception failure){throw new IOException("Synthetic Drive server failure",failure);}}return code;}
+        };}
+        void route(DriveHttpTest.Connection connection)throws Exception{
+            assertEquals("Bearer "+DriveHttpTest.TOKEN,connection.getRequestProperty("Authorization"));String method=connection.getRequestMethod();URL url=connection.getURL();Map<String,String> query=new HashMap<>();if(url.getQuery()!=null)for(String pair:url.getQuery().split("&")){String[] parts=pair.split("=",2);query.put(URLDecoder.decode(parts[0],"UTF-8"),parts.length==2?URLDecoder.decode(parts[1],"UTF-8"):"");}
+            if(method.equals(failMethod)){connection.code=failStatus;failMethod="";return;}
+            if(method.equals("GET")&&url.getPath().equals("/drive/v3/files")){
+                assertEquals("appDataFolder",query.get("spaces"));String condition=query.get("q"),key;boolean exact=condition.contains("name = '");int from=condition.indexOf(exact?"name = '":"name contains '")+(exact?8:15);key=condition.substring(from,condition.indexOf("'",from));JSONArray files=new JSONArray();List<Item> matches=new ArrayList<>();for(Item item:objects.values())if(exact?item.path.equals(key):item.path.startsWith(key))matches.add(item);int start=query.containsKey("pageToken")?Integer.parseInt(query.get("pageToken")):0,end=Math.min(start+100,matches.size());for(int i=start;i<end;i++){Item item=matches.get(i);files.put(DriveApiTest.object(item.id,item.path,item.bytes.length));}JSONObject response=new JSONObject().put("files",files);if(end<matches.size())response.put("nextPageToken",String.valueOf(end));connection.response=response.toString().getBytes(StandardCharsets.UTF_8);return;
+            }
+            if(method.equals("GET")){String id=url.getPath().substring(url.getPath().lastIndexOf('/')+1);Item item=objects.get(id);if(item==null){connection.code=404;return;}connection.response=item.bytes;return;}
+            if(method.equals("POST")){
+                posts++;JSONObject metadata=new JSONObject(connection.sent.toString("UTF-8"));assertEquals("appDataFolder",metadata.getJSONArray("parents").getString(0));String session="session_"+(++next);sessions.put(session,metadata.getString("name"));uploads.put(session,new ByteArrayOutputStream());connection.headers.put("Location",DriveApi.UPLOAD+"?upload_id="+session);return;
+            }
+            if(method.equals("PUT")){
+                String session=query.get("upload_id"),range=connection.getRequestProperty("Content-Range");assertNotNull(sessions.get(session));java.util.regex.Matcher matcher=java.util.regex.Pattern.compile("bytes ([0-9]+)-([0-9]+)/([0-9]+)").matcher(range);assertTrue(matcher.matches());long start=Long.parseLong(matcher.group(1)),end=Long.parseLong(matcher.group(2))+1,total=Long.parseLong(matcher.group(3));ByteArrayOutputStream upload=uploads.get(session);assertEquals(start,upload.size());assertEquals(end-start,connection.sent.size());upload.write(connection.sent.toByteArray());Runnable action=end<total?onChunk:null;if(action!=null){onChunk=null;action.run();}if(end<total){connection.code=308;connection.headers.put("Range","bytes=0-"+(end-1));}else{String path=sessions.remove(session);byte[] bytes=uploads.remove(session).toByteArray();add(path,bytes);Item created=new ArrayList<>(objects.values()).get(objects.size()-1);connection.code=201;connection.response=DriveApiTest.object(created.id,path,bytes.length).toString().getBytes(StandardCharsets.UTF_8);}return;
+            }
+            fail("Unexpected mutable Drive request: "+method);
+        }
+        DriveApi api(DriveHttp.Gate gate){return new DriveApi(new DriveHttp(new DriveHttpTest.Tokens(),gate,this));}
+    }
+    File cache;Server server;
+    @Before public void setup()throws Exception{cache=Files.createTempDirectory(RuntimeEnvironment.getApplication().getCacheDir().toPath(),"drive-store-").toFile();server=new Server();}
+    DriveObjectStore objects(String account)throws Exception{return new DriveObjectStore(server.api(bytes->{}),cache,account);}
+    @Test public void stagedCloseAbortsAndVerifiedPublishRetainsNamespaceAndCapabilities()throws Exception{
+        DriveObjectStore objects=objects("synthetic-account");DriveSyncStore sync=new DriveSyncStore(objects);String path="sync/v2/blobs/"+"a".repeat(64);try(OutputStream output=sync.create(path)){output.write(new byte[]{1,2,3});}assertEquals(0,server.posts);assertEquals(0,objects.staging.listFiles().length);
+        byte[] original=new byte[]{5,6,7};String hash=PeerWire.hash(original),published=CloudFiles.put(new GuardedSyncStore(sync,()->{}),hash,original.length,()->new ByteArrayInputStream(original));assertEquals(1,server.posts);assertEquals(1,server.count("sync/"));try(InputStream input=sync.open(published)){assertArrayEquals(original,CloudFiles.read(input,3));}assertEquals(sync.namespace(),new GuardedSyncStore(sync,()->{}).namespace());assertNotEquals(sync.namespace(),new DriveSyncStore(objects("other-account")).namespace());
+        for(String forbidden:new String[]{"backups/v2/blobs/x","sync/v2/../backups/v2"})try{sync.list(forbidden);fail("Sync escaped its capability");}catch(IOException expected){}try{new DriveBackupStore(objects).list("sync/v2/blobs");fail("Backup escaped its capability");}catch(IOException expected){}assertEquals(0,objects.staging.listFiles().length);
+        try{CloudFiles.put(sync,hash,4,()->new ByteArrayInputStream(original));fail("Incomplete source published");}catch(IOException expected){}assertEquals(1,server.posts);assertEquals(0,objects.staging.listFiles().length);
+    }
+    @Test public void cancellationDuringPublishStopsBeforeNextChunkAndCleansStagingWithoutAck()throws Exception{
+        AtomicBoolean allowed=new AtomicBoolean(true);DriveObjectStore objects=new DriveObjectStore(server.api(bytes->{}),cache,"account");SyncStore sync=new GuardedSyncStore(new DriveSyncStore(objects),()->{if(!allowed.get())throw new CloudScan.Deferred();});byte[] bytes=new byte[400000];server.onChunk=()->allowed.set(false);try{CloudFiles.put(sync,PeerWire.hash(bytes),bytes.length,()->new ByteArrayInputStream(bytes));fail("Cancelled upload completed");}catch(CloudScan.Deferred expected){}assertEquals(0,server.count("sync/"));assertEquals(0,objects.staging.listFiles().length);allowed.set(true);String path=CloudFiles.put(sync,PeerWire.hash(bytes),bytes.length,()->new ByteArrayInputStream(bytes));CloudFiles.verify(sync,path,PeerWire.hash(bytes),bytes.length);assertEquals(1,server.count("sync/"));
+    }
+    @Test public void duplicateAddressedBlobsAreVerifiedAndOrphanCleanupNeverTouchesActiveStage()throws Exception{
+        DriveObjectStore objects=objects("account");byte[] bytes={1,7,9};String path="backups/v2/blobs/"+PeerWire.hash(bytes);server.add(path,new byte[]{0});server.add(path,bytes);try(InputStream input=objects.open(path)){assertArrayEquals(bytes,CloudFiles.read(input,3));}assertEquals(-1,objects.list("backups/v2/blobs").get(0).size);assertEquals(2,server.objects.size());String message="sync/v2/messages/a/b/c.json";server.add(message,bytes);server.add(message,bytes);try{objects.open(message);fail("Ambiguous control accepted");}catch(IOException expected){}
+        String stagingPath="sync/v2/blobs/"+"b".repeat(64);OutputStream active=objects.create(stagingPath);active.write(bytes);File orphan=new File(objects.staging,"upload-11111111-1111-4111-8111-111111111111.tmp");Files.write(orphan.toPath(),bytes);File other=new File(objects.staging,"unrelated");Files.write(other.toPath(),bytes);objects("account");assertFalse(orphan.exists());assertTrue(other.exists());assertEquals(2,objects.staging.listFiles().length);active.close();assertEquals(1,objects.staging.listFiles().length);
+    }
+    @Test public void fullSignedNativeSyncThroughDriveRestPreservesExactValuesAndOriginals()throws Exception{
+        SafSyncV2Test cloud=new SafSyncV2Test();cloud.setup();cloud.canonicalFiles(3,4000);for(int i=0;i<5;i++){for(boolean source:new boolean[]{true,false}){PeerTransferTest.Device device=source?cloud.a:cloud.b;new SafSyncV2(device,device.prefs,new DriveSyncStore(new DriveObjectStore(server.api(bytes->{}),device.cache,"account")),source?cloud.ai:cloud.bi,bytes->true).sync();}}
+        assertEquals(0,new PeerOutbox(cloud.a,cloud.a.prefs,cloud.ar).pending(cloud.bid));assertEquals(0,new PeerOutbox(cloud.b,cloud.b.prefs,cloud.br).pending(cloud.aid));JSONObject received=new JSONObject(LocalDatabase.read(cloud.b.home));assertEquals(1,received.getJSONArray("records").length());assertEquals("1585,800001",received.getJSONArray("records").getJSONObject(0).getJSONArray("items").getJSONObject(0).getString("measure"));for(int i=0;i<3;i++)assertArrayEquals(Files.readAllBytes(new File(cloud.a.home,"media/original-"+i).toPath()),Files.readAllBytes(new File(cloud.b.home,"media/original-"+i).toPath()));assertEquals(0,server.count("backups/"));assertTrue(server.count("sync/v2/acks/")>0);
+    }
+    @Test public void interruptedDriveMediaKeepsReceiverDatabaseAndOutboxUntilVerifiedRetry()throws Exception{
+        SafSyncV2Test cloud=new SafSyncV2Test();cloud.setup();cloud.canonicalFiles(1,400000);AtomicBoolean allowed=new AtomicBoolean(true);server.onChunk=()->allowed.set(false);String before=LocalDatabase.read(cloud.b.home);DriveHttp.Gate gate=bytes->{if(!allowed.get())throw new CloudScan.Deferred();};SafSyncV2.Result interrupted=new SafSyncV2(cloud.a,cloud.a.prefs,new DriveSyncStore(new DriveObjectStore(server.api(gate),cloud.a.cache,"account")),cloud.ai,bytes->true).sync();assertTrue(interrupted.pending);assertTrue(new PeerOutbox(cloud.a,cloud.a.prefs,cloud.ar).pending(cloud.bid)>0);new SafSyncV2(cloud.b,cloud.b.prefs,new DriveSyncStore(new DriveObjectStore(server.api(bytes->{}),cloud.b.cache,"account")),cloud.bi,bytes->true).sync();assertEquals(before,LocalDatabase.read(cloud.b.home));allowed.set(true);
+        for(int i=0;i<5;i++)for(boolean source:new boolean[]{true,false}){PeerTransferTest.Device device=source?cloud.a:cloud.b;new SafSyncV2(device,device.prefs,new DriveSyncStore(new DriveObjectStore(server.api(bytes->{}),device.cache,"account")),source?cloud.ai:cloud.bi,bytes->true).sync();}assertEquals(0,new PeerOutbox(cloud.a,cloud.a.prefs,cloud.ar).pending(cloud.bid));assertArrayEquals(Files.readAllBytes(new File(cloud.a.home,"media/original-0").toPath()),Files.readAllBytes(new File(cloud.b.home,"media/original-0").toPath()));assertEquals(0,new File(cloud.a.cache,"drive-staging-v2").listFiles().length);assertEquals(0,new File(cloud.b.cache,"drive-staging-v2").listFiles().length);
+    }
+    @Test public void twoDriveHistoriesDeduplicate100OriginalsAndRestoreDespiteSyncIndependence()throws Exception{
+        BackupHistoryTest backup=new BackupHistoryTest();backup.setup();backup.files(100);BackupHistory a=new BackupHistory(backup.a,backup.a.prefs,new DriveBackupStore(new DriveObjectStore(server.api(bytes->{}),backup.a.cache,"account")),null),b=new BackupHistory(backup.b,backup.b.prefs,new DriveBackupStore(new DriveObjectStore(server.api(bytes->{}),backup.b.cache,"account")),null);JSONObject first=a.create(),second=b.create();assertEquals(101,server.count("backups/v2/blobs/"));assertEquals(2,server.count("backups/v2/devices/"));assertEquals(2,b.list().getJSONArray("histories").length());String path=BackupHistory.path(first.getString("deviceId"),first.getString("backupId"));a.check(path);BackupImporter.Result restored=b.restore(path);assertEquals(1,restored.recordCount);assertEquals(2,restored.data.getJSONArray("records").length());JSONObject copy=restored.data.getJSONArray("records").getJSONObject(1);assertEquals("0,000000000123456789",copy.getJSONArray("items").getJSONObject(0).getString("measure"));assertArrayEquals(Files.readAllBytes(new File(backup.a.home,"media/original-0").toPath()),Files.readAllBytes(new File(backup.b.home,"media/"+copy.getJSONArray("media").getString(0)).toPath()));assertEquals(101,server.count("backups/v2/blobs/"));assertEquals(0,server.count("sync/"));assertNotEquals(first.getString("deviceId"),second.getString("deviceId"));
+    }
+    @Test public void deniedOrExpiredApiDoesNotCreateABackupPointOrHideExistingHistory()throws Exception{
+        BackupHistoryTest backup=new BackupHistoryTest();backup.setup();backup.files(1);BackupHistory history=new BackupHistory(backup.a,backup.a.prefs,new DriveBackupStore(objects("account")),null);JSONObject first=history.create();long before=server.objects.size();for(int status:new int[]{401,403,429,503}){server.failMethod="GET";server.failStatus=status;try{history.create();fail("Failed API created history");}catch(DriveHttp.Failure expected){assertEquals(status,expected.status);}assertEquals(before,server.objects.size());}history.check(BackupHistory.path(first.getString("deviceId"),first.getString("backupId")));assertEquals(1,server.count("backups/v2/devices/"));
+    }
+}
