@@ -30,9 +30,9 @@ final class CausalClock {
         JSONObject result=a==null?new JSONObject():new JSONObject(a.toString());if(b!=null)for(Iterator<String> it=b.keys();it.hasNext();){String id=it.next();JSONObject other=b.getJSONObject(id);result.put(id,merge(result.optJSONObject(id)==null?new JSONObject():result.getJSONObject(id),other));}return result;
     }
     static String canonical(Object value)throws Exception{
-        if(value==null||value==JSONObject.NULL)return "null";
-        if(value instanceof JSONObject){JSONObject object=(JSONObject)value;ArrayList<String> keys=new ArrayList<>();object.keys().forEachRemaining(keys::add);Collections.sort(keys);ArrayList<String> items=new ArrayList<>();for(String key:keys)items.add(JSONObject.quote(key)+":"+canonical(object.get(key)));return "{"+String.join(",",items)+"}";}
-        if(value instanceof JSONArray){ArrayList<String> items=new ArrayList<>();JSONArray array=(JSONArray)value;for(int i=0;i<array.length();i++)items.add(canonical(array.get(i)));return "["+String.join(",",items)+"]";}
-        return value instanceof String?JSONObject.quote((String)value):value.toString();
+        if(value==null||value==JSONObject.NULL)return "null";JsonInput.unicode(value);
+        String encoded=value instanceof JSONObject||value instanceof JSONArray?value.toString():new JSONObject().put("value",value).toString();
+        JsonInput.check(encoded);String result=new org.erdtman.jcs.JsonCanonicalizer(encoded).getEncodedString();
+        return value instanceof JSONObject||value instanceof JSONArray?result:result.substring(9,result.length()-1);
     }
 }

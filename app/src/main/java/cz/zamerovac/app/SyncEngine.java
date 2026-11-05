@@ -62,13 +62,15 @@ public class SyncEngine {
         JSONObject j=new JSONObject(prefs.getString("syncBase","{}"));for(java.util.Iterator<String> it=j.keys();it.hasNext();){String k=it.next();m.put(k,j.optString(k));}
         }catch(Exception ignored){}return m;}
     private String nextBaseline="{}";
-    private JSONObject merge(JSONObject local, JSONObject remote) throws Exception {
+    JSONObject mergePeer(JSONObject local,JSONObject remote)throws Exception{LocalDatabase.validate(local.toString());LocalDatabase.validate(remote.toString());return merge(local,remote,java.util.Collections.emptyMap());}
+    private JSONObject merge(JSONObject local,JSONObject remote)throws Exception{return merge(local,remote,baseline());}
+    private JSONObject merge(JSONObject local,JSONObject remote,Map<String,String> base)throws Exception{
         Map<String,JSONObject> l=new HashMap<>(), r=new HashMap<>();
         JSONArray a=local.optJSONArray("records"), b=remote.optJSONArray("records");
         if(a!=null)for(int i=0;i<a.length();i++){JSONObject rec=a.optJSONObject(i);if(rec!=null&&rec.has("id"))l.put(rec.getString("id"),rec);}
         if(b!=null)for(int i=0;i<b.length();i++){JSONObject rec=b.optJSONObject(i);if(rec!=null&&rec.has("id"))r.put(rec.getString("id"),rec);}
         Set<String> purged=TrashPurger.purgedIds(local);purged.addAll(TrashPurger.purgedIds(remote));
-        Map<String,String> base=baseline();Set<String> all=new HashSet<>();all.addAll(l.keySet());all.addAll(r.keySet());
+        Set<String> all=new HashSet<>();all.addAll(l.keySet());all.addAll(r.keySet());
         JSONObject tombstones=CausalClock.tombstones(local.optJSONObject("syncTombstones"),remote.optJSONObject("syncTombstones"));
         for(String id:purged)if(!tombstones.has(id))tombstones.put(id,new JSONObject());
         Set<String> generatedConflicts=new HashSet<>();
@@ -97,24 +99,25 @@ public class SyncEngine {
                 String lrev=lv.optString("rev",""),rrev=rv.optString("rev","");
                 String known=base.get(id);
                 JSONObject lc=CausalClock.clock(lv),rc=CausalClock.clock(rv);String order=CausalClock.compare(lc,rc);
-                if(lv.toString().equals(rv.toString()))chosen=lv;
+                if(CausalClock.canonical(lv).equals(CausalClock.canonical(rv)))chosen=lv;
                 else if(lc.length()>0&&rc.length()>0&&"after".equals(order))chosen=lv;
                 else if(lc.length()>0&&rc.length()>0&&"before".equals(order))chosen=rv;
                 else if(!(lc.length()>0&&rc.length()>0)&&known!=null&&!lrev.equals(rrev)&&known.equals(lrev))chosen=rv;
                 else if(!(lc.length()>0&&rc.length()>0)&&known!=null&&!lrev.equals(rrev)&&known.equals(rrev))chosen=lv;
                 else {
                     // Preserve independent edits; do not discard either side.
-                    boolean localNewer=lv.toString().compareTo(rv.toString())>=0;
+                    boolean localNewer=CausalClock.canonical(lv).compareTo(CausalClock.canonical(rv))<=0;
                     chosen=localNewer?lv:rv;
                     JSONObject losing=new JSONObject((localNewer?rv:lv).toString());
-                    String conflictId=UUID.nameUUIDFromBytes((id+"\n"+losing.toString()).getBytes(StandardCharsets.UTF_8)).toString();losing.put("id",conflictId);losing.put("title",losing.optString("title","Položka")+" (konflikt synchronizace)");
+                    String conflictHash=PeerWire.hash(CausalClock.canonical(new JSONObject().put("id",id).put("record",losing)).getBytes(StandardCharsets.UTF_8));String conflictId="conflict-"+conflictHash;losing.put("id",conflictId).put("conflictOf",id).put("conflictSource","revision:"+conflictHash);losing.put("title",losing.optString("title","Položka")+" (konflikt synchronizace)");
                     losing.put("conflict",true);
                     if(!l.containsKey(conflictId)&&!r.containsKey(conflictId))merged.put(losing);
                 }
             }
             merged.put(chosen);nextBase.put(id,chosen.optString("rev",""));
         }
-        JSONObject result=new JSONObject(local.toString());result.put("records",merged);result.put("trashPurgedIds",new JSONArray(purged));result.put("syncTombstones",tombstones);
+        ArrayList<JSONObject> orderedRecords=new ArrayList<>();for(int i=0;i<merged.length();i++)orderedRecords.add(merged.getJSONObject(i));orderedRecords.sort(java.util.Comparator.comparing(record->record.optString("id")));JSONArray ordered=new JSONArray();for(JSONObject record:orderedRecords)ordered.put(record);
+        ArrayList<String> orderedPurged=new ArrayList<>(purged);java.util.Collections.sort(orderedPurged);JSONObject result=new JSONObject(local.toString());result.put("records",ordered);result.put("trashPurgedIds",new JSONArray(orderedPurged));result.put("syncTombstones",tombstones);
         // Preferences are device-local (screen size, tool order, colors). Never overwrite.
         nextBaseline=nextBase.toString();
         return result;

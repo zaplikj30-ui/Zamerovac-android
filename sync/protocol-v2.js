@@ -6,10 +6,11 @@ const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}
 const HASH=/^[0-9a-f]{64}$/;
 function canonical(value,depth=0){
  if(depth>100)throw Error('Nested content limit');
- if(value===null||typeof value==='string'||typeof value==='boolean')return JSON.stringify(value);
+ if(typeof value==='string'){for(let i=0;i<value.length;i++){const c=value.charCodeAt(i);if(c>=0xd800&&c<=0xdbff){const low=value.charCodeAt(++i);if(!(low>=0xdc00&&low<=0xdfff))throw Error('Invalid Unicode')}else if(c>=0xdc00&&c<=0xdfff)throw Error('Invalid Unicode')}return JSON.stringify(value)}
+ if(value===null||typeof value==='boolean')return JSON.stringify(value);
  if(typeof value==='number'){if(!Number.isFinite(value))throw Error('Non-finite number');return JSON.stringify(value)}
  if(Array.isArray(value))return '['+value.map(item=>canonical(item,depth+1)).join(',')+']';
- if(value&&typeof value==='object'&&[Object.prototype,null].includes(Object.getPrototypeOf(value)))return '{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+canonical(value[k],depth+1)).join(',')+'}';
+ if(value&&typeof value==='object'&&[Object.prototype,null].includes(Object.getPrototypeOf(value)))return '{'+Object.keys(value).sort().map(k=>canonical(k,depth+1)+':'+canonical(value[k],depth+1)).join(',')+'}';
  throw Error('Unsupported value');
 }
 const clone=value=>JSON.parse(canonical(value));
@@ -54,17 +55,23 @@ function routesFor(job,routes,{allowMetered=false,largeBytes=1024*1024}={}){
   return route.kind==='drive'&&(route.metered===false||allowMetered||job.size<=largeBytes);
  }).sort((a,b)=>({nearby:0,lan:1,drive:2}[a.kind]-{nearby:0,lan:1,drive:2}[b.kind]));
 }
+async function jobId(hash,{peer,kind,hash:digest,sourceRef=null,mediaId=null}){
+ return hash(new TextEncoder().encode(canonical({format:'cz.zamerovac.sync.job',version:2,peer,kind,hash:digest,sourceRef,mediaId})));
+}
 class PersistentQueue {
  constructor(storage,hash){this.storage=storage;this.hash=hash;this.running=false}
  async read(){const snapshot=await this.storage.readQueue();if(!snapshot||snapshot.version!==2||!Number.isSafeInteger(snapshot.revision)||snapshot.revision<0||!Array.isArray(snapshot.jobs)||snapshot.jobs.length>100000)throw Error('Invalid queue');
   const ids=new Set();for(const job of snapshot.jobs){if(!HASH.test(job.id)||ids.has(job.id)||!UUID.test(job.peer)||!['metadata','blob'].includes(job.kind)||!HASH.test(job.hash)||!Number.isSafeInteger(job.size)||job.size<0||!Number.isSafeInteger(job.attempts)||job.attempts<0||!Number.isSafeInteger(job.nextAttempt)||job.nextAttempt<0)throw Error('Invalid queued transfer');ids.add(job.id)}return snapshot}
 
  async mutate(change){for(let attempt=0;attempt<8;attempt++){const current=await this.read(),next=clone(current);change(next);next.revision=current.revision+1;if(await this.storage.compareAndSwapQueue(current.revision,next))return next}throw Error('Queue changed concurrently')}
- async enqueue({peer,kind,hash,size,payload=null}){
+ async enqueue({peer,kind,hash,size,payload=null,sourceRef=null}){
   if(!UUID.test(peer)||!['metadata','blob'].includes(kind)||!HASH.test(hash)||!Number.isSafeInteger(size)||size<0)throw Error('Invalid transfer');
-  if(kind==='metadata'){const bytes=new TextEncoder().encode(canonical(payload));if(!payload||bytes.length>20*1024*1024||size!==bytes.length||await this.hash(bytes)!==hash)throw Error('Invalid metadata');}
-  const id=await this.hash(new TextEncoder().encode(canonical({peer,kind,hash})));
-  await this.mutate(queue=>{if(!queue.jobs.some(j=>j.id===id))queue.jobs.push({id,peer,kind,hash,size,payload,attempts:0,nextAttempt:0})});return id;
+  if(sourceRef!==null&&!HASH.test(sourceRef))throw Error('Invalid snapshot reference');
+  if(kind==='metadata'&&sourceRef===null){const bytes=new TextEncoder().encode(canonical(payload));if(!payload||bytes.length>20*1024*1024||size!==bytes.length||await this.hash(bytes)!==hash)throw Error('Invalid metadata');}
+  const mediaId=kind==='blob'&&payload?.mediaId||null;
+  if(mediaId!==null&&(typeof mediaId!=='string'||!/[a-zA-Z0-9_-]{3,120}/.test(mediaId)))throw Error('Invalid media ID');
+  const id=await jobId(this.hash,{peer,kind,hash,sourceRef,mediaId});
+  await this.mutate(queue=>{if(!queue.jobs.some(j=>j.id===id))queue.jobs.push({id,peer,kind,hash,size,payload,sourceRef,attempts:0,nextAttempt:0})});return id;
  }
  async flush(routes,policy={}){
   if(this.running)return {busy:true};this.running=true;const failedRoutes=new Set(),now=policy.now??Date.now();let completed=0;
@@ -116,4 +123,4 @@ async function restoreBackup({store,hash,path}){
  const required=mediaReferences(data.records);if(required.size!==media.size||[...required].some(id=>!media.has(id)))throw Error('Incomplete backup');
  return {data,media,manifest}; // Caller must stage copies and CAS-commit; never overwrite the active database here.
 }
-module.exports={canonical,validateData,mediaReferences,mergeData,routesFor,PersistentQueue,createBackup,restoreBackup};
+module.exports={canonical,validateData,mediaReferences,mergeData,routesFor,jobId,PersistentQueue,createBackup,restoreBackup};

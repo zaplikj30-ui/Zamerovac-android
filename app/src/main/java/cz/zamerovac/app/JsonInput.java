@@ -23,5 +23,12 @@ final class JsonInput {
         }
         if(quoted||depth!=0)throw new IOException("Neúplný JSON");
     }
-    static JSONObject object(byte[] bytes)throws IOException,JSONException {String text=decode(bytes);check(text);return new JSONObject(text);}
+    static void unicode(Object value)throws IOException,JSONException{unicode(value,0);}
+    private static void unicode(Object value,int depth)throws IOException,JSONException{
+        if(depth>100)throw new IOException("JSON je příliš zanořený");
+        if(value instanceof String){String text=(String)value;for(int i=0;i<text.length();i++){char c=text.charAt(i);if(Character.isHighSurrogate(c)){if(i+1>=text.length()||!Character.isLowSurrogate(text.charAt(++i)))throw new IOException("Neplatný znak Unicode v JSON");}else if(Character.isLowSurrogate(c))throw new IOException("Neplatný znak Unicode v JSON");}}
+        else if(value instanceof JSONObject){JSONObject object=(JSONObject)value;for(java.util.Iterator<String> it=object.keys();it.hasNext();){String key=it.next();unicode(key,depth+1);unicode(object.get(key),depth+1);}}
+        else if(value instanceof JSONArray){JSONArray array=(JSONArray)value;for(int i=0;i<array.length();i++)unicode(array.get(i),depth+1);}
+    }
+    static JSONObject object(byte[] bytes)throws IOException,JSONException {String text=decode(bytes);check(text);JSONObject data=new JSONObject(text);unicode(data);return data;}
 }

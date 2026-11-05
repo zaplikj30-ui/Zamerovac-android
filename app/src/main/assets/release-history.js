@@ -8,6 +8,7 @@
 // are deliberately excluded from forVersion() and the installed release history.
 const pendingChanges={issue:39,released:false,groups:[{kind:'Opraveno',items:[
  {text:'Potvrzované uložení, zachování souběžných změn a ochrana proti opožděnému výsledku synchronizace.'},
+ {text:'Odmítnutí poškozených znaků Unicode bez tiché změny uloženého textu.'},
  {text:'Odmítnutí neúplné ZIP zálohy, kontrolní součty při obnově, potvrzované přílohy a bezpečné ukončení chybného hlasového záznamu.'},
  {text:'Společné atomické ukládání a místní práce během pomalého SAF přenosu; novější změny zůstávají čekající.'},
  {text:'Identita instalace a kauzální revize skutečných záznamů; vysypaný koš zachová nezávislou úpravu jako kopii.'},
