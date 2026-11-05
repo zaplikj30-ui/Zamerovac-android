@@ -70,6 +70,14 @@ Před zavedením nové technologie či významnější funkce vždy posoudit jej
 
 **Priorita:** nejprve bezpečně dokončit #39/PR #41, poté přezkoumat technický základ a testy v [#42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42). Žádné nové APK kvůli této dokumentaci.
 
+### Budoucí funkce jsou zamýšlené, nikoli odepsané (upřesnění 5. 11. 2026)
+
+**Oprava dřívější interpretace:** Když uživatel mluví o „nezávazných nápadech“, často tím myslí **funkce, které v aplikaci do budoucna chce, ale ještě nemají domyšlené chování, technické řešení nebo pořadí**. Nesmíme je automaticky označit za nepodstatné hypotézy, které se mohou ignorovat. U těchto záměrů s jejich **budoucím přidáním počítat při návrhu architektury**. Současně **to není schválení okamžité implementace**: konkrétní zadání, prioritu, čas a bezpečné testy je nutné dohodnout zvlášť.
+
+**Povinné rozlišení stavu:** (a) plánovaná budoucí schopnost, detaily otevřené; (b) pouze možnost k obchodnímu/technickému posouzení; (c) schválená konkrétní implementace; (d) skutečně implementováno a ověřeno. Pokud z kontextu není jisté, která kategorie platí, nedomýšlet závazek ani zamítnutí. **Monetizace a konkrétní reklamní model zůstávají jen otevřenými obchodními možnostmi**, protože uživatel je takto výslovně označil.
+
+**Technické řízení:** ChatGPT sám porovnává všechny plánované budoucí schopnosti a možnosti se současnou stavbou aplikace, předchází zbytečným závislostem a kolizím, ale nemá předem programovat neodsouhlasené funkce či vytvářet složitou infrastrukturu „pro jistotu“. Plánované oblasti zahrnují mj. promítání na další displeje, vzdálený tisk, další pera a vstupy, další měřidla, různé režimy ovládání a bezpečné integrace. Postupovat až po bezpečném dokončení rozpracované #39/PR #41 a povinné kontrole #42.
+
 ## Povinné testování selhání a ochrany dat u každé změny (5. 11. 2026)
 
 **Výslovně schválené trvalé pravidlo uživatele:** Nesmíme ověřovat pouze to, že nová či upravená funkce v běžném scénáři funguje. **Před dokončením každé významné změny podle rizika zkontroluj také, jak funkce selže, co přitom zobrazí uživateli a zda zachová původní data a správnost rozměrů.** Testování chybových cest je součástí zadání, implementace i kontroly výsledku — není až volitelnou dodatečnou revizí.
