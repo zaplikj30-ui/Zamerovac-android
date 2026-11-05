@@ -502,17 +502,22 @@ const chapters=[
     "steps": [
       "Ikonou hledání nahoře vyhledej položku podle názvu.",
       "Tlačítkem A–Z / Z–A změň pořadí v seznamu.",
-      "Další možnosti hledání a filtrování mohou být dostupné v rozšířené nabídce; výsledky zkontroluj před úpravami."
+      "Další možnosti hledání a filtrování mohou být dostupné v rozšířené nabídce; výsledky zkontroluj před úpravami.",
+      "Ve vyhledávání zvol Vyhledat adresu v RÚIAN, zadej obec a číslo domu a vyber nalezenou adresu. Mapu otevři tlačítkem v prohlížeči."
     ],
     "notes": [
-      "Vyhledání neznamená přesunutí ani smazání záznamu."
+      "Vyhledání neznamená přesunutí ani smazání záznamu.",
+      "Vyhledávání RÚIAN a mapa potřebují internet. Při otevření mapy se vybrané souřadnice odešlou službě OpenStreetMap."
     ],
     "keywords": [
       "najít",
       "hledat",
       "řazení",
       "seřadit",
-      "filtr"
+      "filtr",
+      "RÚIAN",
+      "adresa",
+      "mapa"
     ]
   },
   {

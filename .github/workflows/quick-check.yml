@@ -50,6 +50,10 @@ jobs:
     timeout-minutes: 6
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
       - name: Zkontrolovat syntax všech JavaScriptových souborů
         shell: bash
         run: |
@@ -92,6 +96,7 @@ jobs:
           node tools/check-post149-browser.cjs
           node tools/check-orientation-browser.cjs
           node tools/check-loupe-exit-browser.cjs
+          node tools/check-address-map-browser.cjs
 
   practical-e2e:
     name: Praktické UI a barevné pixely (syntetická data)

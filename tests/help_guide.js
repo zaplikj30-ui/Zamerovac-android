@@ -22,6 +22,8 @@ finds('Bosch','bosch');
 finds('soukromí','customer');
 finds('s pen','handles');
 finds('video','video');
+finds('ruian','search');
+finds('mapa','search');
 assert.equal(help.searchChapters('  ').length,help.chapters.length);
 assert.equal(help.searchChapters('zzzz--neexistuje').length,0);
 const src=fs.readFileSync(path.join(root,'app/src/main/assets/help.js'),'utf8');

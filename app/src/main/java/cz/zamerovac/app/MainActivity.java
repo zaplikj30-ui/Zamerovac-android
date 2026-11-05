@@ -816,6 +816,15 @@ public class MainActivity extends Activity {
                 catch(Exception ex){error("Vyhledávání adres: "+ex.getMessage());}
             },"AddressRUIAN").start();
         }
+        @JavascriptInterface public void openAddressMap(double latitude,double longitude){
+            final String url;
+            try{url=AddressMapLink.forCoordinates(latitude,longitude);}
+            catch(IllegalArgumentException ex){error("Mapa: neplatné souřadnice");return;}
+            runOnUiThread(()->{
+                try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(url)).addCategory(Intent.CATEGORY_BROWSABLE));}
+                catch(Exception ex){error("Mapu nelze otevřít. Zkontroluj, zda je dostupný prohlížeč.");}
+            });
+        }
         @JavascriptInterface public void connectLaser(){runOnUiThread(()->startScan(false));}
         @JavascriptInterface public void chooseOtherLaser(){runOnUiThread(()->startScan(true));}
         @JavascriptInterface public void disconnectLaser(){runOnUiThread(()->stopLaserConnection());}

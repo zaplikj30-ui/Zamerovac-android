@@ -306,11 +306,16 @@ window.onAddressCandidates=function(raw){
  wrap.querySelectorAll('[data-candidate]').forEach(button=>button.onclick=()=>{
   const candidate=matches[Number(button.dataset.candidate)];
   const lat=Number(candidate.lat),lon=Number(candidate.lon);
-  if(!Number.isFinite(lat)||!Number.isFinite(lon))return;
-  const bbox=[lon-.005,lat-.003,lon+.005,lat+.003].join('%2C');
-  const marker=encodeURIComponent(lat+','+lon);
-  const url='https://www.openstreetmap.org/export/embed.html?bbox='+bbox+'&layer=mapnik&marker='+marker;
-  $('addressMap').innerHTML='<p>📍 '+esc(candidate.address)+'</p><iframe title="Mapa adresního místa" loading="lazy" width="100%" height="270" src="'+url+'"></iframe><small>Souřadnice vrácené službou RÚIAN, mapový podklad OpenStreetMap.</small>';
+  const map=$('addressMap');
+  if(candidate.lat==null||candidate.lon==null||String(candidate.lat).trim()===''||String(candidate.lon).trim()===''||
+     !Number.isFinite(lat)||!Number.isFinite(lon)||Math.abs(lat)>90||Math.abs(lon)>180){
+   map.textContent='Pro tuto adresu nejsou dostupné platné souřadnice.';return;
+  }
+  map.innerHTML='<p>📍 '+esc(candidate.address||'Vybraná adresa')+'</p><button type="button" class="outline" id="openAddressMap">Otevřít mapu v prohlížeči</button><small> Souřadnice se odešlou službě OpenStreetMap.</small>';
+  $('openAddressMap').onclick=()=>{
+   if(!native||typeof Native.openAddressMap!=='function'){notify('Otevření mapy vyžaduje Android verzi');return}
+   Native.openAddressMap(lat,lon);
+  };
  });
 };
 
