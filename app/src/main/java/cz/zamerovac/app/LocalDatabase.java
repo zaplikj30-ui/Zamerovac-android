@@ -28,10 +28,13 @@ final class LocalDatabase {
     static String read(File home)throws IOException {
         synchronized(TrashPurger.LOCK){
             File primary=new File(home,"projects.json"),backup=new File(home,"projects.bak");
-            if(!primary.exists()&&!backup.exists())return "";
-            try{return readFile(primary);}catch(IOException error){try{return readFile(backup);}catch(IOException ignored){throw new IOException("Uložené zakázky nelze načíst; původní soubory zůstaly beze změny",error);}}
+            if(!primary.exists()&&!backup.exists()){if(DatabaseRecovery.exists(home)&&DatabaseRecovery.recovered(home))changed(home);return "";}
+            String text;
+            try{text=readFile(primary);}catch(IOException error){try{text=readFile(backup);}catch(IOException ignored){throw new IOException("Uložené zakázky nelze načíst; původní soubory zůstaly beze změny",error);}if(DatabaseRecovery.recovered(home))changed(home);return text;}
+            DatabaseRecovery.healthy(home,false);return text;
         }
     }
+    static String recoveryId(File home)throws IOException{synchronized(TrashPurger.LOCK){read(home);return DatabaseRecovery.id(home);}}
     private static void replace(File from,File to)throws IOException {
         try{Files.move(from.toPath(),to.toPath(),StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING);}
         catch(AtomicMoveNotSupportedException error){Files.move(from.toPath(),to.toPath(),StandardCopyOption.REPLACE_EXISTING);}
@@ -44,6 +47,7 @@ final class LocalDatabase {
             validate(text);File primary=new File(home,"projects.json"),backup=new File(home,"projects.bak"),next=new File(home,"projects.tmp"),backupNext=new File(home,"projects.backup.tmp");
             // If an existing primary and its recovery copy are BOTH unreadable, do not overwrite either.
             if(primary.exists()||backup.exists())read(home);
+            DatabaseRecovery.healthy(home,true);
             try{
                 writeSynced(next,text.getBytes(StandardCharsets.UTF_8));
                 if(primary.isFile()){

@@ -63,3 +63,5 @@ assert(JSON.stringify(history.pendingChanges).includes('Opožděné výsledky'))
 assert(JSON.stringify(history.pendingChanges).includes('rozlišení dávky od potvrzení dat'));
 assert(JSON.stringify(history.pendingChanges).includes('Rušení plánované úlohy'));
 assert(JSON.stringify(history.pendingChanges).includes('Evidence publikace'));
+
+assert(JSON.stringify(history.pendingChanges).includes('Návrat ke starší místní databázi'));

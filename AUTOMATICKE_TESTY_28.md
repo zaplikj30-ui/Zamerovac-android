@@ -113,3 +113,7 @@ Předběžné rozhraní/moduly/vazby a pořadí další práce v docs/architectu
 ## Cloud publication cache a repair – etapa 27
 
 #33/#38 → CloudPublications/CloudProof.NEED/SafSyncV2 → CloudPublicationsTest (3) + SafSyncV2Test (+6). Pozitivní: verified receipts survive restart, pending source nečte velký originál znovu, odstraněný/stejně velký corrupt blob a chybějící snapshot se bezpečně obnoví. Negativní: failed receipt write/foreign scope/expired clock, forged/unreferenced/replayed NEED nesmí číst libovolná data ani uzavřít outbox, velká oprava na metered počká. Ověřují skutečný disk/sign/DB a přesnou kótu/media; native CI nové etapy teprve ověřit, skutečný Drive provider neproveden.
+
+## Etapa 28 – návrat DB proti historickému ACK
+
+#33/#38 → DatabaseRecovery/LocalDatabase/CloudInbox/PeerOutbox/PeerTransfer/SyncPeerRegistry. DatabaseRecoveryTest (3), CloudInboxTest (+1), SafSyncV2Test (+1) a PeerTransferTest (+2). Pozitivní: durable era jen jednou na fallback, re-arm další poruchy, cache a reopened inbox invalidace, opětovný cloudový import i po publikovaném finálním ACK, skutečné TLS obnovení obou rolí bez nové editace. Negativní: journal disk failure nebo vadný journal nesmějí potvrdit starší DB, smazaná DB nesmí ponechat staré receipts; originály/kóty se nezmění. Nová native CI musí potvrdit běh; není to fyzický process-kill/bit-rot audit. Etapa 27 už má obě CI SUCCESS (82eef6d, native42082852446/quick42082852438).

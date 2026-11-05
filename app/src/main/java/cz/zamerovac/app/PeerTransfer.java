@@ -32,7 +32,7 @@ final class PeerTransfer {
     }
     private void send(DataInputStream in,DataOutputStream out,PeerHandshake.Peer peer)throws Exception{
         working(out,()->{update(peer,"preparing",0,0);store.outbox.prepare(peer.id);return null;});List<JSONObject> messages=store.outbox.messages(peer.id);
-        PeerWire.write(out,new JSONObject().put("type","batch").put("count",messages.size()),PeerWire.MAX_HELLO);
+        PeerWire.write(out,new JSONObject().put("type","batch").put("count",messages.size()).put("recovery",LocalDatabase.recoveryId(store.context.getFilesDir())),PeerWire.MAX_HELLO);
         for(JSONObject job:messages){
             store.trusted(peer);PeerSnapshot snapshot=store.outbox.load(job);
             PeerWire.write(out,new JSONObject().put("type","snapshot").put("id",job.getString("id")).put("hash",snapshot.hash).put("size",snapshot.bytes.length),PeerWire.MAX_HELLO);PeerWire.writeBytes(out,snapshot.bytes,PeerWire.MAX_JSON);
@@ -51,6 +51,7 @@ final class PeerTransfer {
     }
     private void receive(DataInputStream in,DataOutputStream out,PeerHandshake.Peer peer)throws Exception{
         JSONObject batch=message(in);if(!"batch".equals(batch.optString("type")))throw new IOException("Neplatná dávka synchronizace");long count=PeerSnapshot.integer(batch,"count",16);
+        if(batch.has("recovery")){Object recovery=batch.get("recovery");if(!(recovery instanceof String))throw new IOException("Neplatná obnova zařízení");if(!((String)recovery).isEmpty())store.peers.recovered(peer.id,(String)recovery);}
         for(int n=0;n<count;n++){
             store.trusted(peer);JSONObject header=message(in);if(!"snapshot".equals(header.optString("type")))throw new IOException("Neplatná zpráva revize");String hash=header.getString("hash"),jobId=header.getString("id");long size=PeerSnapshot.integer(header,"size",PeerWire.MAX_JSON);
             byte[] bytes=PeerWire.readBytes(in,PeerWire.MAX_JSON);if(size!=bytes.length||!hash.equals(PeerWire.hash(bytes)))throw new IOException("Neúplná nebo poškozená revize");

@@ -1,6 +1,6 @@
 # Předběžná mapa odpovědností #39 / #42
 
-Stav po etapách 19–25, 5. 11. 2026. Jde o kontrolu vazeb v aktuálním kódu, nikoli dokončený nezávislý audit, fyzické ověření ani povolení dalších funkcí. Načteny také nové pokyny main `45d6ae4` / `ee5c0e1`, aktuální VIZE_A_PLAN a #42. Jejich dokumentaci na main tato větev nepřepisuje. Priorita zůstává dokončení #39; plánované budoucí schopnosti mají být zohledněné, ne nyní implementované.
+Stav po etapách 19–28, 5. 11. 2026. Jde o kontrolu vazeb v aktuálním kódu, nikoli dokončený nezávislý audit, fyzické ověření ani povolení dalších funkcí. Načteny také nové pokyny main `45d6ae4` / `ee5c0e1`, aktuální VIZE_A_PLAN a #42. Jejich dokumentaci na main tato větev nepřepisuje. Priorita zůstává dokončení #39; plánované budoucí schopnosti mají být zohledněné, ne nyní implementované.
 
 | Odpovědnost | Současná hranice | Kombinované důkazy a zbývající vazba |
 | --- | --- | --- |
@@ -18,9 +18,9 @@ Stav po etapách 19–25, 5. 11. 2026. Jde o kontrolu vazeb v aktuálním kódu,
 
 ## Priorita zbývajících konkrétních zásahů
 
-1. **Publication receipts a bezpečný repair:** etapa 27 je implementuje s podepsaným NEED, expirací a kontrolou konkrétního manifestu; vyžaduje vlastní nativní CI a revizi. Před touto etapou source opakovaně četl již ověřené cloudové originály. Samotné trvalé „odesláno“ je nebezpečné při odstranění/poškození vzdáleného souboru. Řešení musí oddělit ověřenou publikaci od finálního ACK příjemce a mít autentizovanou opravu nebo jinou ověřitelnou invalidaci. Před kódem ověřit retry/restart, chybějící remote blob, souběžný direct/cloud, nový zdrojový obsah a metered pravidla.
+1. **Publication receipts a bezpečný repair:** etapa 27 je implementuje s podepsaným NEED, expirací a kontrolou konkrétního manifestu; má obě CI SUCCESS v 82eef6d, další revize zůstává. Před touto etapou source opakovaně četl již ověřené cloudové originály. Samotné trvalé „odesláno“ je nebezpečné při odstranění/poškození vzdáleného souboru. Řešení musí oddělit ověřenou publikaci od finálního ACK příjemce a mít autentizovanou opravu nebo jinou ověřitelnou invalidaci. Před kódem ověřit retry/restart, chybějící remote blob, souběžný direct/cloud, nový zdrojový obsah a metered pravidla.
 2. **Oficiální Drive API/OAuth:** chybí registrovaná Android OAuth konfigurace a vlastní adaptér. Přístup připojeného Drive konektoru není přihlašovací token uživatele Android aplikace. Nepřebírat jeho účty/tajemství ani předstírat funkční Google integraci. Potřebné jsou malé stránkované API operace, přesné HTTP limity a testy denied/revoked/expired přístupu; žádné runtime klíče v repozitáři.
-3. **Finální datový audit:** explicitně prověřit DB fallback vůči inbox/ACK stavu, obnovu po neúplném lokálním commitu, přílohy po systémovém kill a dočasné soubory. Dosavadní testy nejsou důkazem všech kombinací poruch.
+3. **Finální datový audit:** etapa 28 opravuje nalezený DB fallback vůči inbox/ACK a direct lastAck stavu; její CI ověřit. Dále prověřit obnovu po neúplném lokálním commitu, přílohy po systémovém kill a dočasné soubory. Dosavadní testy nejsou důkazem všech kombinací poruch.
 4. **Fyzická akceptace:** LAN/P2P bez routeru i s Wi-Fi, různá zařízení, Keystore/párování/revokace, Doze/OS restart, mobilní pravidla, Bosch, velká média, dvě historie a obnova. Jediná finální APK až po dokončení schválených prací a potřebných kontrolách.
 
 ## Dopad plánovaných schopností na návrh

@@ -12,7 +12,8 @@
       ],
       "sources": [
         "app/src/main/java/cz/zamerovac/app/LocalDatabase.java",
-        "app/src/main/assets/app.js"
+        "app/src/main/assets/app.js",
+        "app/src/main/java/cz/zamerovac/app/DatabaseRecovery.java"
       ],
       "tests": [
         {
@@ -26,11 +27,15 @@
         {
           "path": "app/src/test/java/cz/zamerovac/app/StorageLifecycleTest.java",
           "layer": "native-jvm"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/DatabaseRecoveryTest.java",
+          "layer": "native-jvm"
         }
       ],
       "coverage": "runtime-partial",
-      "positive": "CAS zápis, třícestný merge a přesné uložené hodnoty.",
-      "negative": "Stale callback, odmítnutý disk a souběžný export nesmějí přepsat novější data.",
+      "positive": "CAS zápis, třícestný merge a přesné uložené hodnoty. Durable recovery era při fallbacku a ztrátě DB.",
+      "negative": "Stale callback, odmítnutý disk a souběžný export nesmějí přepsat novější data. Bez potvrzené evidence obnovy nelze vrátit starší fallback jako úspěch.",
       "limits": [
         "OS kill/aktualizace APK a náhodné poškození celého úložiště vyžadují další kontrolu."
       ]
@@ -749,7 +754,7 @@
         }
       ],
       "coverage": "runtime-partial",
-      "positive": "Místní adresy, známá P2P cesta, obnova skupiny/kanálu a očekávané TLS UUID.",
+      "positive": "Místní adresy, známá P2P cesta, obnova skupiny/kanálu a očekávané TLS UUID. TLS recovery era znovu nabídne aktuální revizi po fallbacku initiatoru i responderu.",
       "negative": "Internet/loopback/multicast, unsupported/permission/busy/close a late callback.",
       "limits": [
         "mDNS/P2P reálné rádiové vyjednání různých značek a změna MAC vyžadují telefon."
@@ -868,7 +873,7 @@
       ],
       "coverage": "runtime-partial",
       "positive": "Bounded volající a durable DB receipt/ACK pokračování po restartu.",
-      "negative": "Ignored interrupt, late close, caller buffer, failed receipt write a changed immutable message.",
+      "negative": "Ignored interrupt, late close, caller buffer, failed receipt write a changed immutable message. Fallback zneplatní cached/reopened inbox a historický remote ACK neobchází nový import.",
       "limits": [
         "Skutečný Binder/provider timeout není ověřen."
       ]
@@ -1053,7 +1058,7 @@
   "openAutomationGaps": [
     "Oficiální Drive API/OAuth a jeho chybové cesty.",
     "Skutečná API paginace a tvrdé měření síťové režie.",
-    "Low-memory/process-kill a konzistence DB fallbacku s receipt indexy.",
+    "Low-memory/process-kill a poškození/ztráta všech kopií úložiště; fallback/inbox má od etapy 28 cílené testy.",
     "Kompletní mapování jednotlivých starších ovládacích prvků; nyní jsou mapované funkční oblasti."
   ]
 }

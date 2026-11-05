@@ -34,6 +34,8 @@ final class PeerOutbox {
     private interface Mutation {boolean apply(JSONObject queue)throws Exception;}
     private void mutate(Mutation mutation)throws Exception{for(int attempt=0;attempt<8;attempt++){JSONObject current=new JSONObject(queue.read());long revision=current.getLong("revision");if(!mutation.apply(current))return;current.put("revision",revision+1);if(queue.save(revision,current.toString()))return;}throw new IOException("Fronta se souběžně změnila, přenos zůstává čekající");}
     private PeerSnapshot current()throws Exception{
+        // Detect a fallback even when this outbox still holds a cached newer snapshot.
+        LocalDatabase.read(context.getFilesDir());
         long generation=LocalDatabase.generation(context.getFilesDir());boolean fresh=cached!=null&&cachedGeneration==generation;
         if(fresh)for(Map.Entry<String,long[]> item:cached.localStats.entrySet()){File file=new File(mediaDirectory,item.getKey());if(!file.isFile()||file.length()!=item.getValue()[0]||file.lastModified()!=item.getValue()[1]){fresh=false;break;}}
         if(fresh)return cached;PeerSnapshot snapshot=PeerSnapshot.capture(context,prefs);cached=snapshot;cachedGeneration=generation;return snapshot;

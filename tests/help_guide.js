@@ -54,3 +54,5 @@ finds('chyba mikrofonu','notes');
 finds('původní složky','photo');finds('1024 souborů','photo');
 finds('další dávku zpráv','cloud');finds('změní povolené připojení','cloud');
 finds('podepsanou žádostí','cloud');
+
+finds('starší záložní kopie','cloud');finds('ztrátu všech kopií','cloud');

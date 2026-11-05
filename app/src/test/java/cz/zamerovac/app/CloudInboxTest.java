@@ -19,4 +19,8 @@ public class CloudInboxTest {
  @Test public void missingCommitAndChangedImmutableMessageCannotBeAcknowledged()throws Exception{
   File root=Files.createTempDirectory(RuntimeEnvironment.getApplication().getCacheDir().toPath(),"inbox-invalid-").toFile();CloudInbox inbox=new CloudInbox(root,A,"store");try{inbox.acknowledged(B,NAME);fail("No commit was acknowledged");}catch(IOException expected){}inbox.committed(B,NAME,H,123);try{inbox.committed(B,NAME,H,124);fail("Changed immutable receipt accepted");}catch(IOException expected){}assertEquals(123,inbox.get(B,NAME).getLong("size"));
  }
+ @Test public void cachedAndReopenedInboxInvalidateEveryReceiptAfterDatabaseFallback()throws Exception{
+  File root=Files.createTempDirectory(RuntimeEnvironment.getApplication().getCacheDir().toPath(),"inbox-recovery-").toFile(),home=new File(root,"files");assertTrue(home.mkdir());String empty="{\"schema\":1,\"records\":[]}",fresh="{\"schema\":1,\"records\":[{\"id\":\"new\",\"measure\":\"1585,800001\"}]}";LocalDatabase.write(home,empty);LocalDatabase.write(home,fresh);CloudInbox inbox=new CloudInbox(root,A,"store",home);inbox.committed(B,NAME,H,123);inbox.acknowledged(B,NAME);assertNotNull(inbox.get(B,NAME));Files.write(new File(home,"projects.json").toPath(),new byte[]{0});assertEquals(empty,LocalDatabase.read(home));assertNull(inbox.get(B,NAME));assertNull(new CloudInbox(root,A,"store",home).get(B,NAME));
+  LocalDatabase.write(home,fresh);inbox.committed(B,NAME,H,123);inbox.acknowledged(B,NAME);assertTrue(new CloudInbox(root,A,"store",home).get(B,NAME).getBoolean("acked"));
+ }
 }
