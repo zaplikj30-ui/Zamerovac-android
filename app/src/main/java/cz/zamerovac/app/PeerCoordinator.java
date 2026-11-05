@@ -20,14 +20,13 @@ final class PeerCoordinator implements AutoCloseable {
     private final ThreadPoolExecutor workers=new ThreadPoolExecutor(0,4,30,TimeUnit.SECONDS,new SynchronousQueue<>(),new ThreadPoolExecutor.AbortPolicy());
     private final Set<Socket> sockets=ConcurrentHashMap.newKeySet();private final Set<String> connecting=ConcurrentHashMap.newKeySet();
     private ReentrantLock gate(String peer){return PeerGates.get(context,peer);}
-    private final Map<String,Session> sessions=new ConcurrentHashMap<>();
+    private final PeerSessions sessions=new PeerSessions();
     private final Map<String,JSONObject> states=new ConcurrentHashMap<>();private final Map<String,String> endpoints=new ConcurrentHashMap<>();
     private final Map<String,Long> attempted=new ConcurrentHashMap<>();private final AtomicReference<Approval> approval=new AtomicReference<>();
     private final PeerDiscovery lan;private final PeerWifiDirect nearby;private volatile boolean closed;private volatile long pairingUntil;
     private volatile SSLServerSocket server;private volatile SyncTls tls;private volatile String problem="";private volatile boolean started;
     private volatile long preparedGeneration=-1,manualUntil;
     private static final class Approval {final PeerHandshake.Request request;final CompletableFuture<Boolean> answer=new CompletableFuture<>();Approval(PeerHandshake.Request request){this.request=request;}}
-    private static final class Session {final SSLSocket socket;final boolean preferred;Session(SSLSocket socket,boolean preferred){this.socket=socket;this.preferred=preferred;}}
     PeerCoordinator(Context context,SharedPreferences prefs,Events events)throws Exception{
         this.context=context;this.prefs=prefs;this.events=events;power=new TransferPower(context);id=DeviceIdentity.get(context.getNoBackupFilesDir());registry=new SyncPeerRegistry(context.getNoBackupFilesDir());data=new PeerDataStore(context,prefs,registry,events::saved);
         lan=new PeerDiscovery(context,new PeerDiscovery.Events(){public void changed(){publish();}public void found(PeerDiscovery.Endpoint endpoint){if(!isPairing()&&automaticRequested())connect(endpoint,false);}public void problem(String message){problem=message;publish();}});
@@ -60,31 +59,30 @@ final class PeerCoordinator implements AutoCloseable {
         try{workers.execute(()->{Socket raw=new Socket();SSLSocket socket=null;try{if(!explicit&&!isPairing()&&!automaticRequested())return;sockets.add(raw);if("lan".equals(endpoint.route))lan.bindWifi(raw);raw.connect(new InetSocketAddress(endpoint.host,endpoint.port),7000);raw.setSoTimeout(15000);socket=(SSLSocket)tls.context(registry,this::isPairing).getSocketFactory().createSocket(raw,endpoint.host.getHostAddress(),endpoint.port,true);sockets.remove(raw);sockets.add(socket);session(socket,true,endpoint);}catch(Exception failure){if(explicit)fail(null,failure);}finally{connecting.remove(endpoint.key);sockets.remove(raw);try{raw.close();}catch(IOException ignored){}if(socket!=null){sockets.remove(socket);try{socket.close();}catch(IOException ignored){}}}});}catch(RejectedExecutionException busy){connecting.remove(endpoint.key);}
     }
     private void session(SSLSocket socket,boolean initiator,PeerDiscovery.Endpoint endpoint){
-        String peerId=null;Session session=null;ReentrantLock gate=null;boolean acquired=false;long beforeGeneration=LocalDatabase.generation(context.getFilesDir());
+        String peerId=null;PeerSessions.Lease session=null;ReentrantLock gate=null;boolean acquired=false;long beforeGeneration=LocalDatabase.generation(context.getFilesDir());
         try{
             if(closed)return;PeerHandshake.Peer peer=PeerHandshake.negotiate(socket,id,"Android · "+safeModel(),tls,registry,this::isPairing,this::approve,endpoint==null?null:endpoint.expectedPeer);peerId=peer.id;if(endpoint!=null){endpoints.put(endpoint.key,peer.id);if("nearby".equals(endpoint.route))registry.rememberNearby(peer.id,peer.fingerprint,endpoint.nearbyAddress);}
-            Session candidate=new Session(socket,initiator==(id.compareTo(peer.id)<0));AtomicBoolean admitted=new AtomicBoolean();
-            sessions.compute(peer.id,(key,previous)->{if(previous==null||candidate.preferred&&!previous.preferred){if(previous!=null)try{previous.socket.close();}catch(IOException ignored){}admitted.set(true);return candidate;}return previous;});
-            if(!admitted.get())return;session=candidate;power.active(true);PeerGates.direct(context,peer.id);gate=gate(peer.id);acquired=gate.tryLock(20,TimeUnit.SECONDS);if(!acquired||closed||sessions.get(peer.id)!=session)throw new IOException("Jiná relace zařízení ještě dokončuje zápis. Změny zůstávají ve frontě.");
+            String route=endpoint==null?(nearby.incoming(socket)?"nearby":"lan"):endpoint.route;
+            session=sessions.admit(peer.id,socket,route,initiator==(id.compareTo(peer.id)<0));if(session==null)return;power.active(true);PeerGates.direct(context,peer.id);gate=gate(peer.id);acquired=gate.tryLock(20,TimeUnit.SECONDS);if(!acquired||closed||sessions.get(peer.id)!=session)throw new IOException("Jiná relace zařízení ještě dokončuje zápis. Změny zůstávají ve frontě.");
             PeerGates.direct(context,peer.id);status(peer.id,"connected",0,0,"");new PeerTransfer(data,(key,phase,done,total)->{PeerGates.direct(context,key);status(key,phase,done,total,"");}).exchange(socket,peer,initiator);
             if(beforeGeneration!=LocalDatabase.generation(context.getFilesDir()))preparedGeneration=-1;
             if(isPairing())stopPairing();publish();
-        }catch(Exception failure){if(!closed)fail(peerId,failure);}finally{if(acquired)gate.unlock();if(peerId!=null&&session!=null)sessions.remove(peerId,session);power.active(!closed&&!sessions.isEmpty());sockets.remove(socket);try{socket.close();}catch(IOException ignored){}}
+        }catch(Exception failure){if(!closed&&(peerId==null||session==null||sessions.get(peerId)==session))fail(peerId,failure);}finally{if(acquired)gate.unlock();if(peerId!=null&&session!=null)sessions.remove(peerId,session);power.active(!closed&&!sessions.empty());sockets.remove(socket);try{socket.close();}catch(IOException ignored){}}
     }
     private String safeModel(){String model=Build.MODEL==null?"zařízení":Build.MODEL;model=model.replaceAll("[\\p{Cntrl}]","");return model.substring(0,Math.min(60,model.length()));}
-    private void tick(){if(closed)return;power.active(!sessions.isEmpty());try{
+    private void tick(){if(closed)return;power.active(!sessions.empty());try{
         if(approval.get()!=null&&!isPairing())stopPairing();long generation=LocalDatabase.generation(context.getFilesDir());boolean all=true;
-        if(generation!=preparedGeneration){JSONObject peers=registry.snapshot();for(Iterator<String> it=peers.keys();it.hasNext();){String peer=it.next();ReentrantLock gate=gate(peer);if(sessions.containsKey(peer)||!gate.tryLock()){all=false;continue;}try{data.outbox.prepare(peer);if(data.outbox.pending(peer)>0)status(peer,"waiting",0,data.outbox.pending(peer),"");}catch(Exception failure){all=false;fail(peer,failure);}finally{gate.unlock();}}if(all)preparedGeneration=generation;}
+        if(generation!=preparedGeneration){JSONObject peers=registry.snapshot();for(Iterator<String> it=peers.keys();it.hasNext();){String peer=it.next();ReentrantLock gate=gate(peer);if(sessions.contains(peer)||!gate.tryLock()){all=false;continue;}try{data.outbox.prepare(peer,false,()->{if(PeerGates.recentlyDirect(context,peer))throw new CloudScan.Deferred();});if(data.outbox.pending(peer)>0)status(peer,"waiting",0,data.outbox.pending(peer),"");}catch(CloudScan.Deferred directPriority){all=false;}catch(Exception failure){all=false;fail(peer,failure);}finally{gate.unlock();}}if(all)preparedGeneration=generation;}
         nearby.automatic(!isPairing()&&automaticRequested());
         PeerDiscovery.Endpoint direct=nearby.group();if(direct!=null&&(isPairing()||automaticRequested()))connect(direct,false);
-        if(!isPairing()&&automaticRequested()){for(PeerDiscovery.Endpoint endpoint:lan.snapshot())if(!connecting.contains(endpoint.key)){String peer=endpoints.get(endpoint.key);if(peer==null||!sessions.containsKey(peer))connect(endpoint,false);}}
+        if(!isPairing()&&automaticRequested()){for(PeerDiscovery.Endpoint endpoint:lan.snapshot())if(!connecting.contains(endpoint.key)){String peer=endpoints.get(endpoint.key);if(peer==null||!sessions.contains(peer))connect(endpoint,false);}}
         publish();
     }catch(Exception failure){fail(null,failure);}}
-    boolean activeTransfer(){return !sessions.isEmpty();}
+    boolean activeTransfer(){return !sessions.empty();}
     void refresh(){if(!closed)try{ticker.execute(this::publish);}catch(RejectedExecutionException ignored){}}
     void retry(){manualUntil=SystemClock.elapsedRealtime()+60000;preparedGeneration=-1;attempted.clear();submit(()->{tick();PeerDiscovery.Endpoint owner=nearby.group();if(owner!=null)connect(owner,true);for(PeerDiscovery.Endpoint endpoint:lan.snapshot())connect(endpoint,true);});}
-    void forget(String peer){submit(()->{if(!DeviceIdentity.valid(peer))throw new IOException("Neplatné zařízení");registry.forget(peer);data.outbox.discard(peer);Session current=sessions.get(peer);if(current!=null)current.socket.close();Approval pending=approval.get();if(pending!=null&&peer.equals(pending.request.peerId))pending.answer.complete(false);states.remove(peer);endpoints.values().removeIf(value->peer.equals(value));publish();});}
-    private void status(String peer,String phase,int done,int total,String error)throws Exception{if("connected".equals(phase)||"done".equals(phase))problem="";states.put(peer,new JSONObject().put("phase",phase).put("completed",done).put("total",total).put("error",error));publish();}
+    void forget(String peer){submit(()->{if(!DeviceIdentity.valid(peer))throw new IOException("Neplatné zařízení");registry.forget(peer);data.outbox.discard(peer);PeerSessions.Lease current=sessions.get(peer);if(current!=null)current.socket.close();Approval pending=approval.get();if(pending!=null&&peer.equals(pending.request.peerId))pending.answer.complete(false);states.remove(peer);endpoints.values().removeIf(value->peer.equals(value));publish();});}
+    private void status(String peer,String phase,int done,int total,String error)throws Exception{if("connected".equals(phase)||"done".equals(phase))problem="";PeerSessions.Lease lease=sessions.get(peer);states.put(peer,new JSONObject().put("route",lease==null?"":lease.route).put("phase",phase).put("completed",done).put("total",total).put("error",error));publish();}
     private void fail(String peer,Exception failure){String message=failure.getMessage();if(message==null)message=failure.getClass().getSimpleName();if(message.length()>220)message=message.substring(0,220);problem=message;if(peer!=null)try{status(peer,"error",0,0,message);}catch(Exception ignored){}publish();}
     JSONObject snapshot()throws Exception{
         JSONArray candidates=new JSONArray();for(PeerDiscovery.Endpoint endpoint:lan.snapshot())candidates.put(endpoint.json());JSONArray direct=nearby.snapshot();for(int i=0;i<direct.length();i++)candidates.put(direct.get(i));

@@ -25,6 +25,7 @@ function render(){if(!panel||panel.hidden)return;const active=document.activeEle
  body.append(node('h3','Spárovaná zařízení'));const peers=state.peers&&typeof state.peers==='object'?Object.entries(state.peers):[];
  if(!peers.length)body.append(node('p','Zatím není spárované žádné zařízení.'));
  for(const [id,peer] of peers){const row=node('article',null,'peer-device'),progress=peer.state||{},pending=Math.max(0,Number(peer.pending)||0);row.append(node('h4',String(peer.name||'Android zařízení')),node('p',phases[progress.phase]||'Čeká na spojení'));
+  if(progress.route==='nearby'||progress.route==='lan')row.append(node('p',progress.route==='nearby'?'Přenos přes Wi-Fi Direct':'Přenos přes místní Wi-Fi','muted'));
   if(Number(progress.total)>0)row.append(node('p',Math.max(0,Number(progress.completed)||0)+' / '+Number(progress.total)+' příloh'));
   row.append(node('p','Čekajících potvrzení: '+pending));if(peer.lastSuccess)row.append(node('p','Poslední potvrzený odeslaný stav: '+String(peer.lastSuccess),'muted'));if(progress.error)row.append(node('p',String(progress.error),'peer-error'));
   row.append(button('Odebrat párování',null,()=>{if(root.confirm('Odebrat důvěru zařízení '+String(peer.name||'Android')+'? Jeho uložené zakázky se tím nesmažou.'))command('forget',id);}));body.append(row);

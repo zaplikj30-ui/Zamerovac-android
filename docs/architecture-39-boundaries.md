@@ -34,3 +34,5 @@ Pera/myš, různé režimy ovládání, promítání a tisk mají volat stejná 
 Strojová mapa [qa/coverage-v1.json](../qa/coverage-v1.json) rozlišuje runtime částečné pokrytí, statické kontroly, manuální brány a otevřené mezery. Ani její validace, ani zelené CI nenahrazují nezávislou revizi a fyzický test.
 
 Etapa34: SyncCadence vlastní potvrzenou lokální konfiguraci a společný durable fg/job attempt gate; sync-cadence.js vlastní volbu četnosti. MainActivity pouze přijímá ACK konfigurace a nastaví Android plánování; incoming TLS zůstává pod dosavadní autorizací. Nepřidává se plošný refaktoring ani další režim.
+
+Etapa35: PeerSessions vlastní pouze po-TLS route admission/tie-break a conditional cleanup. PeerWifiDirect dodá ověřitelnou lokální group interface informaci, nikoli důvěru. Cloud předává read checkpoint do existujících datových/media modulů; krátký commit je oddělen od velkého hash I/O. Nejde o plošný přesun Android lifecycle ani editoru.

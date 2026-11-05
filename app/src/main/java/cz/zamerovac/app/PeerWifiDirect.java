@@ -8,6 +8,7 @@ import android.net.wifi.p2p.*;
 import android.os.*;
 import org.json.*;
 import java.util.*;
+import java.net.*;
 import java.util.function.LongSupplier;
 
 /** Generic Android Wi-Fi Direct. Routing hints never replace pinned TLS authentication. */
@@ -23,7 +24,7 @@ final class PeerWifiDirect implements AutoCloseable {
     private volatile boolean closed;private boolean opened,formed,automatic;private long generation,connectionRevision,nextDiscovery,connectingUntil;
     private String requestedPeer;
     private final Map<String,WifiP2pDevice> devices=new HashMap<>();private final Map<String,String> addresses=new HashMap<>();
-    private volatile PeerDiscovery.Endpoint groupOwner;
+    private volatile PeerDiscovery.Endpoint groupOwner;private volatile String groupInterface;
     PeerWifiDirect(Context context,Events events){this(context,events,(WifiP2pManager)context.getSystemService(Context.WIFI_P2P_SERVICE),SystemClock::elapsedRealtime);}
     PeerWifiDirect(Context context,Events events,WifiP2pManager manager,LongSupplier clock){this.context=context;this.events=events;this.manager=manager;this.clock=clock;}
     static boolean validAddress(String address){if(address==null||!address.matches("(?i)[0-9a-f]{2}(:[0-9a-f]{2}){5}"))return false;return (Integer.parseInt(address.substring(0,2),16)&1)==0&&!address.equalsIgnoreCase("00:00:00:00:00:00")&&!address.equalsIgnoreCase("02:00:00:00:00:00");}
@@ -31,6 +32,8 @@ final class PeerWifiDirect implements AutoCloseable {
     boolean permitted(){String permission=Build.VERSION.SDK_INT>=33?Manifest.permission.NEARBY_WIFI_DEVICES:Manifest.permission.ACCESS_FINE_LOCATION;return context.checkSelfPermission(permission)==PackageManager.PERMISSION_GRANTED;}
     synchronized JSONArray snapshot()throws Exception{JSONArray result=new JSONArray();for(Map.Entry<String,WifiP2pDevice> entry:devices.entrySet()){String name=entry.getValue().deviceName;if(name==null||name.isEmpty())name="Android zařízení";name=name.replaceAll("[\\p{Cntrl}]","");result.put(new JSONObject().put("key",entry.getKey()).put("name",name.substring(0,Math.min(80,name.length()))).put("route","nearby"));}return result;}
     PeerDiscovery.Endpoint group(){return groupOwner;}
+    /** Match the socket's local address to Android's actual group interface, never a guessed subnet or radio name. */
+    boolean incoming(Socket socket){try{String name=groupInterface;if(closed||name==null||name.isEmpty())return false;NetworkInterface network=NetworkInterface.getByName(name);return network!=null&&Collections.list(network.getInetAddresses()).contains(socket.getLocalAddress());}catch(Exception unavailable){return false;}}
     void start(boolean discover){main.post(()->{if(closed)return;if(discover)automatic=false;startMain(discover);});}
     private void startMain(boolean discover){
         if(closed)return;
@@ -39,9 +42,9 @@ final class PeerWifiDirect implements AutoCloseable {
         try{
             if(!opened||channel==null){
                 disposeChannel();opened=true;long token=++generation;
-                channel=manager.initialize(context,Looper.getMainLooper(),()->{if(closed||token!=generation)return;groupOwner=null;formed=false;opened=false;channel=null;events.problem("Spojení se službou Wi-Fi Direct bylo přerušeno. Aplikace zkusí obnovit známou cestu.");});
+                channel=manager.initialize(context,Looper.getMainLooper(),()->{if(closed||token!=generation)return;groupOwner=null;groupInterface=null;formed=false;opened=false;channel=null;events.problem("Spojení se službou Wi-Fi Direct bylo přerušeno. Aplikace zkusí obnovit známou cestu.");});
                 if(channel==null){opened=false;events.problem("Služba Wi-Fi Direct není dostupná.");return;}
-                receiver=new BroadcastReceiver(){@Override public void onReceive(Context c,Intent intent){if(closed||token!=generation||!opened)return;String action=intent.getAction();if(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION.equals(action))peers();if(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION.equals(action))connection();if(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION.equals(action)){if(intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE,-1)!=WifiP2pManager.WIFI_P2P_STATE_ENABLED){formed=false;groupOwner=null;events.problem("Zapni Wi-Fi pro přímé propojení.");}else{nextDiscovery=0;connection();}}}};
+                receiver=new BroadcastReceiver(){@Override public void onReceive(Context c,Intent intent){if(closed||token!=generation||!opened)return;String action=intent.getAction();if(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION.equals(action))peers();if(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION.equals(action))connection();if(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION.equals(action)){if(intent.getIntExtra(WifiP2pManager.EXTRA_WIFI_STATE,-1)!=WifiP2pManager.WIFI_P2P_STATE_ENABLED){formed=false;groupOwner=null;groupInterface=null;events.problem("Zapni Wi-Fi pro přímé propojení.");}else{nextDiscovery=0;connection();}}}};
                 IntentFilter filter=new IntentFilter();filter.addAction(WifiP2pManager.WIFI_P2P_PEERS_CHANGED_ACTION);filter.addAction(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION);filter.addAction(WifiP2pManager.WIFI_P2P_STATE_CHANGED_ACTION);
                 if(Build.VERSION.SDK_INT>=33)context.registerReceiver(receiver,filter,Context.RECEIVER_EXPORTED);else context.registerReceiver(receiver,filter);
                 connection();
@@ -66,14 +69,15 @@ final class PeerWifiDirect implements AutoCloseable {
         for(String address:candidates){String key; synchronized(this){key=addresses.get(address);}if(key!=null){connectMain(key,known.get(address));return;}}
     }catch(Exception failure){events.problem("Známé zařízení nelze připojit: "+failure.getMessage());}}
     private void connection(){if(channel==null||!permitted())return;long token=generation,revision=++connectionRevision;try{manager.requestConnectionInfo(channel,info->{
-        if(closed||token!=generation||revision!=connectionRevision||!opened)return;groupOwner=null;boolean previouslyFormed=formed;formed=info.groupFormed;if(previouslyFormed&&!formed){requestedPeer=null;connectingUntil=0;}
-        if(info.groupFormed&&!info.isGroupOwner&&PeerDiscovery.local(info.groupOwnerAddress)){
+        if(closed||token!=generation||revision!=connectionRevision||!opened)return;groupOwner=null;groupInterface=null;boolean previouslyFormed=formed;formed=info.groupFormed;if(previouslyFormed&&!formed){requestedPeer=null;connectingUntil=0;}
+        if(info.groupFormed){
             try{manager.requestGroupInfo(channel,group->{if(closed||token!=generation||revision!=connectionRevision||!opened||!formed)return;try{
-                String address=group!=null&&group.getOwner()!=null?group.getOwner().deviceAddress:null;
+                groupInterface=group==null?null:group.getInterface();
+                if(!info.isGroupOwner&&PeerDiscovery.local(info.groupOwnerAddress)){String address=group!=null&&group.getOwner()!=null?group.getOwner().deviceAddress:null;
                 if(!validAddress(address))address=null;else address=address.toLowerCase(Locale.ROOT);
                 String expected=requestedPeer;if(expected==null&&address!=null)expected=events.trustedRoutes().get(address);
                 groupOwner=new PeerDiscovery.Endpoint("nearby:owner","Wi-Fi Direct","nearby",info.groupOwnerAddress,PORT,expected,address);
-                connectingUntil=0;events.connected(groupOwner);events.changed();
+                connectingUntil=0;events.connected(groupOwner);}events.changed();
             }catch(Exception failure){events.problem("Identitu přímé cesty nelze načíst: "+failure.getMessage());}});}catch(Exception failure){events.problem("Přímou skupinu nelze ověřit: "+failure.getMessage());}
         }
         events.changed();
@@ -88,5 +92,5 @@ final class PeerWifiDirect implements AutoCloseable {
     }
     private void disposeChannel(){try{if(receiver!=null)context.unregisterReceiver(receiver);}catch(Exception ignored){}receiver=null;try{if(channel!=null){manager.stopPeerDiscovery(channel,null);if(Build.VERSION.SDK_INT>=27)channel.close();}}catch(Exception ignored){}channel=null;}
     /** Do not remove an existing Android group: it may be used by another application. */
-    @Override public void close(){closed=true;main.post(()->{++generation;opened=false;automatic=false;formed=false;groupOwner=null;requestedPeer=null;connectingUntil=0;nextDiscovery=0;synchronized(this){devices.clear();addresses.clear();}disposeChannel();events.changed();});}
+    @Override public void close(){closed=true;main.post(()->{++generation;opened=false;automatic=false;formed=false;groupOwner=null;groupInterface=null;requestedPeer=null;connectingUntil=0;nextDiscovery=0;synchronized(this){devices.clear();addresses.clear();}disposeChannel();events.changed();});}
 }

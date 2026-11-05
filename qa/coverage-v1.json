@@ -1147,6 +1147,52 @@
         "Příchozí důvěryhodný direct přenos zůstává při zapnuté službě povolený; frekvence omezuje vlastní pokusy.",
         "Skutečný Android/OEM může plánované časy prodloužit; rádio/Doze/restart fyzicky NOT RUN."
       ]
+    },
+    {
+      "id": "route-arbitration-and-cloud-progress",
+      "issues": [
+        38,
+        33,
+        39,
+        28
+      ],
+      "sources": [
+        "app/src/main/java/cz/zamerovac/app/PeerSessions.java",
+        "app/src/main/java/cz/zamerovac/app/PeerWifiDirect.java",
+        "app/src/main/java/cz/zamerovac/app/PeerCoordinator.java",
+        "app/src/main/java/cz/zamerovac/app/PeerMedia.java",
+        "app/src/main/java/cz/zamerovac/app/SafSyncV2.java"
+      ],
+      "tests": [
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/PeerSessionsTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/PeerWifiDirectTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/PeerMediaCheckpointTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/SafSyncV2Test.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "tools/e2e/peer-sync.cjs",
+          "layer": "chromium"
+        }
+      ],
+      "coverage": "runtime-partial",
+      "positive": "Nearby > LAN po TLS; stejný initiator tie-break, souběh16 relací/stale cleanup, skutečný socket local address vs Android group interface. Cloud local hash yields a retry doručí přesné soubory; nedostupná stará metadata neblokují nové incoming/outgoing.",
+      "negative": "LAN nesmí vytlačit nearby; starý socket nesmí vymazat novou relaci. Cancel/zero-progress/collision zachovají originály a smažou jen staging. Nepotvrzená stará metadata nikdy nedostanou ACK.",
+      "limits": [
+        "Android rádio a route fallback pod OEM/Doze fyzicky NOT RUN; test je adapter s řízeným rádiem, route arbitráž a skutečné místní soubory.",
+        "Neznámá/nedostupná stará metadata zůstávají pending; nevydává se falešný důkaz nahrazení.",
+        "Probíhající provider I/O může doběhnout do deadline; JSON/AtomicFile krátké lokální operace nejsou tvrdý realtime limit."
+      ]
     }
   ],
   "manualGates": [

@@ -33,17 +33,19 @@ final class PeerOutbox {
     }
     private interface Mutation {boolean apply(JSONObject queue)throws Exception;}
     private void mutate(Mutation mutation)throws Exception{for(int attempt=0;attempt<8;attempt++){JSONObject current=new JSONObject(queue.read());long revision=current.getLong("revision");if(!mutation.apply(current))return;current.put("revision",revision+1);if(queue.save(revision,current.toString()))return;}throw new IOException("Fronta se souběžně změnila, přenos zůstává čekající");}
-    private PeerSnapshot current()throws Exception{
+    private PeerSnapshot current(ImmutableStore.Checkpoint checkpoint)throws Exception{
+        checkpoint.check();
         // Detect a fallback even when this outbox still holds a cached newer snapshot.
         LocalDatabase.read(context.getFilesDir());
         long generation=LocalDatabase.generation(context.getFilesDir());boolean fresh=cached!=null&&cachedGeneration==generation;
         if(fresh)for(Map.Entry<String,long[]> item:cached.localStats.entrySet()){File file=new File(mediaDirectory,item.getKey());if(!file.isFile()||file.length()!=item.getValue()[0]||file.lastModified()!=item.getValue()[1]){fresh=false;break;}}
-        if(fresh)return cached;PeerSnapshot snapshot=PeerSnapshot.capture(context,prefs);cached=snapshot;cachedGeneration=generation;return snapshot;
+        if(fresh)return cached;PeerSnapshot snapshot=PeerSnapshot.capture(context,prefs,checkpoint);cached=snapshot;cachedGeneration=generation;return snapshot;
     }
     PeerSnapshot prepare(String peer)throws Exception{return prepare(peer,false);}
-    PeerSnapshot prepare(String peer,boolean forcePublication)throws Exception{synchronized(lock){return prepareLocked(peer,forcePublication);}}
-    private PeerSnapshot prepareLocked(String peer,boolean forcePublication)throws Exception{
-        if(!DeviceIdentity.valid(peer)||!peers.snapshot().has(peer))throw new IOException("Zařízení není spárované");PeerSnapshot snapshot=current();if(!forcePublication&&snapshot.hash.equals(peers.lastAck(peer)))return snapshot;persist(snapshot);
+    PeerSnapshot prepare(String peer,boolean forcePublication)throws Exception{return prepare(peer,forcePublication,()->{});}
+    PeerSnapshot prepare(String peer,boolean forcePublication,ImmutableStore.Checkpoint checkpoint)throws Exception{synchronized(lock){checkpoint.check();return prepareLocked(peer,forcePublication,checkpoint);}}
+    private PeerSnapshot prepareLocked(String peer,boolean forcePublication,ImmutableStore.Checkpoint checkpoint)throws Exception{
+        if(!DeviceIdentity.valid(peer)||!peers.snapshot().has(peer))throw new IOException("Zařízení není spárované");PeerSnapshot snapshot=current(checkpoint);checkpoint.check();if(!forcePublication&&snapshot.hash.equals(peers.lastAck(peer)))return snapshot;persist(snapshot);
         mutate(state->{JSONArray jobs=state.getJSONArray("jobs"),next=new JSONArray();Set<String> obsolete=new HashSet<>(),ids=new HashSet<>();
             for(int i=0;i<jobs.length();i++){JSONObject job=jobs.getJSONObject(i);if(peer.equals(job.getString("peer"))&&"metadata".equals(job.getString("kind"))&&!snapshot.hash.equals(job.getString("hash")))try{if(dominates(snapshot.data,load(job).data))obsolete.add(job.getString("hash"));}catch(IOException ignored){/* Never drop an unreadable older message without proof. */}}
             for(int i=0;i<jobs.length();i++){JSONObject job=jobs.getJSONObject(i);if(peer.equals(job.getString("peer"))&&obsolete.contains(job.optString("sourceRef","")))continue;next.put(job);ids.add(job.getString("id"));}

@@ -41,6 +41,9 @@ public class PeerWifiDirectTest {
  void idle(){Shadows.shadowOf(Looper.getMainLooper()).idle();}
  void automatic(boolean enabled){direct.automatic(enabled);idle();}
  void connection(){BroadcastReceiver receiver=ReflectionHelpers.getField(direct,"receiver");assertNotNull(receiver);receiver.onReceive(context,new Intent(WifiP2pManager.WIFI_P2P_CONNECTION_CHANGED_ACTION));idle();}
+ @Test public void incomingRouteUsesActualGroupInterfaceForOwnerAndClearsAfterDisconnect()throws Exception{
+  InetAddress loopback=InetAddress.getByName("127.0.0.1");NetworkInterface network=NetworkInterface.getByInetAddress(loopback);assertNotNull(network);when(group.getInterface()).thenReturn(network.getName());Socket local=mock(Socket.class),foreign=mock(Socket.class);when(local.getLocalAddress()).thenReturn(loopback);when(foreign.getLocalAddress()).thenReturn(InetAddress.getByName("192.0.2.10"));direct.start(false);idle();assertFalse(direct.incoming(local));info.groupFormed=true;info.isGroupOwner=true;connection();assertTrue(direct.incoming(local));assertFalse(direct.incoming(foreign));assertNull(direct.group());info.groupFormed=false;connection();assertFalse(direct.incoming(local));info.groupFormed=true;connection();assertTrue(direct.incoming(local));channelLost.onChannelDisconnected();assertFalse(direct.incoming(local));
+ }
  @Test public void automaticRecreatesKnownRouteAndKeepsExpectedIdentityOutOfUi()throws Exception{
   routes.put(ADDRESS,B);devices.add(device(OTHER));devices.add(device(ADDRESS.toUpperCase(Locale.ROOT)));automatic(true);
   ArgumentCaptor<WifiP2pConfig> config=ArgumentCaptor.forClass(WifiP2pConfig.class);verify(manager).connect(eq(channel),config.capture(),any());assertEquals(ADDRESS.toUpperCase(Locale.ROOT),config.getValue().deviceAddress);
