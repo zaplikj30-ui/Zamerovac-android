@@ -49,7 +49,6 @@ import android.webkit.WebResourceRequest;
 import android.webkit.WebResourceResponse;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
-import android.media.MediaRecorder;
 import android.print.PrintManager;
 import android.view.WindowManager;
 import android.view.View;
@@ -108,7 +107,7 @@ public class MainActivity extends Activity {
     private String exportBase64;
     private String pendingArchiveFolderId;
     private Set<String> pendingArchiveSelectionIds;
-    private MediaRecorder recorder;
+    private volatile AudioCapture audioCapture;
     private FileOutputStream activeUpload;
     private String activeUploadId,activeUploadMime,activeUploadName;
     private long activeUploadExpected=-1,activeUploadBytes=0;
@@ -130,7 +129,6 @@ public class MainActivity extends Activity {
     private volatile String activeLaserHistoryId="";
     private volatile boolean syncRunning=false;
     private volatile boolean databaseReadFailed=false;
-    private String recordingId;
     private String pendingMediaType="media";
     private String pendingIssueZipId;
     private final PhotoThumbnails photoThumbnails=new PhotoThumbnails();
@@ -417,8 +415,11 @@ public class MainActivity extends Activity {
         filePicked(uri,id,mime,name,null);
     }
     private void filePicked(Uri uri,String id,String mime,String name,String photoTakenAt) throws IOException {
-        try(InputStream in=getContentResolver().openInputStream(uri);OutputStream out=new FileOutputStream(mediaFile(id))){if(in==null)throw new IOException("Cannot read file");copy(in,out);}
-        settings.edit().putString("mime-"+id,mime).putString("name-"+id,name).apply();
+        File temporary=MediaStaging.temporary(mediaFile(id).getParentFile(),id);
+        try{
+            try(InputStream in=getContentResolver().openInputStream(uri);FileOutputStream out=new FileOutputStream(temporary)){if(in==null)throw new IOException("Soubor nelze číst");long total=0;byte[] block=new byte[65536];int count;while((count=in.read(block))!=-1){total+=count;if(total>MediaStaging.LIMIT)throw new IOException("Příloha překračuje limit 2 GiB");out.write(block,0,count);}out.getFD().sync();}
+            MediaStaging.commit(temporary,id,settings,mime,name);
+        }catch(Exception failure){throw failure instanceof IOException?(IOException)failure:new IOException("Příloha nebyla potvrzena",failure);}finally{temporary.delete();}
         // Prefer the camera's EXIF capture timestamp over the return-from-camera time.
         // Not all Android camera applications provide the original timestamp.
         String takenAt=photoTakenAt==null?null:readCaptureDate(mediaFile(id),photoTakenAt);
@@ -750,7 +751,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface public String purgeTrash(String expected,String desired,String ids){
             synchronized(TrashPurger.LOCK){
                 try{
-                    if(activeUpload!=null||recorder!=null)throw new IOException("Nejdříve dokonči přidávání souborů nebo nahrávání.");
+                    if(activeUpload!=null||audioCapture!=null&&audioCapture.active())throw new IOException("Nejdříve dokonči přidávání souborů nebo nahrávání.");
                     String saved=readDb();
                     if(!saved.equals(expected))throw new IOException("Zakázky se mezitím změnily. Zavři a znovu otevři aplikaci a potvrď aktuální koš.");
                     return new TrashPurger(MainActivity.this,settings)
@@ -772,7 +773,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface public boolean beginMedia(String id,String mime,String name){return beginMediaChecked(id,mime,name,-1);}
         @JavascriptInterface public boolean beginMediaChecked(String id,String mime,String name,long expected){
             synchronized(TrashPurger.LOCK){
-                if(!validId(id)||activeUpload!=null||mediaFile(id).exists()||expected>2L*1024*1024*1024||expected< -1)return false;
+                if(!validId(id)||!MediaStaging.metadata(mime,name)||activeUpload!=null||mediaFile(id).exists()||expected>2L*1024*1024*1024||expected< -1)return false;
                 try{activeUploadTemporary=new File(mediaFile(id).getParentFile(),id+".upload-"+UUID.randomUUID()+".tmp");activeUpload=new FileOutputStream(activeUploadTemporary);activeUploadId=id;activeUploadMime=mime;activeUploadName=name;activeUploadExpected=expected;activeUploadBytes=0;return true;}
                 catch(Exception failure){closeUpload();error("Přílohu nelze připravit k zápisu");return false;}
             }
@@ -791,9 +792,7 @@ public class MainActivity extends Activity {
                 if(activeUpload==null||id==null||!id.equals(activeUploadId))return false;
                 try{if(activeUploadBytes==0||(activeUploadExpected>=0&&activeUploadBytes!=activeUploadExpected))throw new IOException("Příloha není úplná");
                     activeUpload.getFD().sync();activeUpload.close();activeUpload=null;
-                    File destination=mediaFile(id);if(destination.exists())throw new IOException("Příloha již existuje");
-                    java.nio.file.Files.move(activeUploadTemporary.toPath(),destination.toPath());activeUploadTemporary=null;
-                    settings.edit().putString("mime-"+id,activeUploadMime).putString("name-"+id,activeUploadName).commit();return true;
+                    MediaStaging.commit(activeUploadTemporary,id,settings,activeUploadMime,activeUploadName);activeUploadTemporary=null;return true;
                 }catch(Exception failure){error("Příloha nebyla uložena úplně");return false;}
                 finally{closeUpload();}
             }
@@ -852,17 +851,12 @@ public class MainActivity extends Activity {
         @JavascriptInterface public void openMedia(String id){runOnUiThread(()->{try{if(!validId(id)||!mediaFile(id).isFile())throw new IOException("Chybí soubor");if(mediaMime(id).startsWith("video/")){startActivity(new Intent(MainActivity.this,VideoActivity.class).putExtra("mediaId",id));return;}Uri uri=new Uri.Builder().scheme("content").authority(getPackageName()+".files").appendPath(id).build();Intent i=new Intent(Intent.ACTION_VIEW).setDataAndType(uri,mediaMime(id)).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);startActivity(Intent.createChooser(i,"Otevřít přílohu"));}catch(Exception e){error("Pro tento formát není dostupný prohlížeč");}});}
         @JavascriptInterface public void configure(String json){try{JSONObject p=new JSONObject(json);settings.edit().putBoolean("wifiOnly",p.optBoolean("wifiOnly",false)).putBoolean("autoSync",p.optBoolean("autoSync",true)).apply();runOnUiThread(()->{if(p.optBoolean("keepAwake"))getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);int flags=View.SYSTEM_UI_FLAG_LAYOUT_STABLE|View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN|View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION;if(p.optBoolean("fullscreen"))flags|=View.SYSTEM_UI_FLAG_FULLSCREEN|View.SYSTEM_UI_FLAG_HIDE_NAVIGATION|View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY;getWindow().getDecorView().setSystemUiVisibility(flags);root.requestApplyInsets();});handler.removeCallbacks(foregroundCloudSync);if(p.optBoolean("autoSync",true)&&settings.getString("treeUri",null)!=null)handler.postDelayed(foregroundCloudSync,2000);scheduleSync();}catch(Exception e){error(e.getMessage());}}
         @JavascriptInterface public boolean startAudio(String id){
-            if(!validId(id)||recorder!=null||mediaFile(id).exists())return false;
-            if(Build.VERSION.SDK_INT>=23&&checkSelfPermission(Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){runOnUiThread(()->requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO},REQUEST_PERMISSIONS));return false;}
-            try{recordingId=id;recorder=new MediaRecorder();recorder.setAudioSource(MediaRecorder.AudioSource.MIC);recorder.setOutputFormat(MediaRecorder.OutputFormat.MPEG_4);recorder.setAudioEncoder(MediaRecorder.AudioEncoder.AAC);recorder.setOutputFile(mediaFile(id).getAbsolutePath());recorder.prepare();recorder.start();settings.edit().putString("mime-"+id,"audio/mp4").putString("name-"+id,"Hlasová poznámka.m4a").apply();return true;}
-            catch(Exception e){releaseRecorder();mediaFile(id).delete();error("Mikrofon: záznam se nepodařilo zahájit");return false;}
+            if(!validId(id))return false;
+            if(checkSelfPermission(Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){runOnUiThread(()->requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO},REQUEST_PERMISSIONS));return false;}
+            try{return audioCapture().start(id);}catch(Exception failure){error("Mikrofon: záznam se nepodařilo zahájit. Existující přílohy zůstaly zachované.");return false;}
         }
-        @JavascriptInterface public boolean stopAudio(){
-            String id=recordingId;boolean success=false;
-            try{if(recorder!=null){recorder.stop();success=id!=null&&mediaFile(id).length()>0;}return success;}
-            catch(Exception e){error("Nahrávání se nepodařilo uložit");return false;}
-            finally{releaseRecorder();if(!success&&validId(id))mediaFile(id).delete();}
-        }
+        @JavascriptInterface public boolean stopAudio(){try{return audioCapture!=null&&audioCapture.stop();}catch(Exception failure){error("Nahrávání se nepodařilo bezpečně uložit. Hlas nebyl připojen.");return false;}}
+        @JavascriptInterface public void cancelAudio(){releaseRecorder();}
         @JavascriptInterface public void searchAddress(String q){
             new Thread(()->{
                 try{jsCall("onAddressCandidates",AddressLookup.find(q));}
@@ -998,10 +992,8 @@ public class MainActivity extends Activity {
             });
         }
     }
-    private void releaseRecorder(){
-        MediaRecorder old=recorder;recorder=null;recordingId=null;
-        if(old!=null)try{old.release();}catch(Exception ignored){}
-    }
+    private synchronized AudioCapture audioCapture(){if(audioCapture==null)audioCapture=new AudioCapture(new File(getFilesDir(),"media"),settings);return audioCapture;}
+    private void releaseRecorder(){AudioCapture capture=audioCapture;if(capture!=null)capture.close();}
     private void closeUpload(){synchronized(TrashPurger.LOCK){try{if(activeUpload!=null)activeUpload.close();}catch(Exception ignored){}activeUpload=null;activeUploadId=null;activeUploadExpected=-1;activeUploadBytes=0;if(activeUploadTemporary!=null)activeUploadTemporary.delete();activeUploadTemporary=null;}}
     private String readDb() throws IOException {
         try{String text=LocalDatabase.read(getFilesDir());if(text.isEmpty()&&databaseReadFailed)throw new IOException("Původní databáze nebyla bezpečně načtena");databaseReadFailed=false;return text;}

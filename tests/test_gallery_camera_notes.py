@@ -10,7 +10,7 @@ class PhotoNotesGalleryTests(unittest.TestCase):
     def test_back_persists_unsaved_photo_note(self):
         source=(ASSETS/'rich-notes.js').read_text(encoding='utf-8')
         self.assertIn('window.__activeRichNotePersist=persist',source)
-        self.assertIn("window.__activeRichNotePersist();",source)
+        self.assertIn("if(window.__activeRichNotePersist()===false)return 'handled'",source)
         self.assertIn("return 'handled'",source)
         self.assertIn('window.__activeRichNotePersist=null',source)
 

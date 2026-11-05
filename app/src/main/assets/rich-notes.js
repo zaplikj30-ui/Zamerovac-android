@@ -12,13 +12,13 @@ function openRichNote(item,isNew){
  let recording=null;
  const previousCancel=$('cancelModal').onclick;
  $('modal')?.querySelector('.dialog')?.classList.add('richNoteDialog');
- const cleanRecording=()=>{window.__audioPermissionRetry=null;if(recording){if(native)Native.stopAudio();recording=null}};
+ const cleanRecording=()=>{window.__audioPermissionRetry=null;if(recording){if(native){if(typeof Native.cancelAudio==='function')Native.cancelAudio();else Native.stopAudio();}recording=null}};
  const release=()=>{$('modal')?.querySelector('.dialog')?.classList.remove('richNoteDialog');if(window.__activeRichNoteCleanup===cleanRecording){window.__activeRichNoteCleanup=null;window.__activeRichNoteRelease=null;window.__activeRichNotePersist=null}$('cancelModal').onclick=previousCancel};
  window.__activeRichNoteCleanup=cleanRecording;
  window.__activeRichNoteRelease=release;
  $('cancelModal').onclick=()=>{cleanRecording();release();$('modal').hidden=true;window.modalOK=null};
  function persist(){
-  if(recording){if(!Native.stopAudio()){recording=null;return false}attachments.push(recording);item.audioMedia=[...(item.audioMedia||[]),recording];recording=null;}
+  if(recording){if(!Native.stopAudio()){recording=null;$('richVoice').textContent='🎙 Nahrát hlas';return false}attachments.push(recording);item.audioMedia=[...(item.audioMedia||[]),recording];recording=null;}
   item.text=$('richText').value.trim();
   const hadAttachment=Array.isArray(item.media)&&item.media.length>0;
   item.media=attachments.slice();
@@ -36,7 +36,7 @@ function openRichNote(item,isNew){
   }
   if(isNew){checkpoint();parent.items.push(item);finishDraw(item);isNew=false;}
   else checkpoint();
-  commitEditor();
+  if(!commitEditor())return false;
   release();
   return true;
  }
@@ -55,7 +55,7 @@ function openRichNote(item,isNew){
  '<div class="row wrap"><button type="button" class="outline" id="richEditDetail">✎ Kótovat vloženou fotografii</button>'+
  '<button type="button" class="outline" id="richDelete">🗑 Odstranit poznámku</button></div>'+
  '<p class="muted">Detail můžeš prstem přetáhnout i mimo hlavní fotografii. Žlutá šipka ukáže původní místo, bílý bod lze také přemístit. Dvojklepnutím na detail otevřeš jeho vlastní kóty.</p><p class="muted">Přílohy a kóty se ukládají editovatelně.</p>',
- ()=>{persist()},'Uložit');
+ ()=>persist(),'Uložit');
  const render=()=>{
   const container=$('richAttachments');if(!container)return;
   container.innerHTML=attachments.length?attachments.map((id,i)=>'<div class="rich-attachment" data-attachment="'+i+'"><span>📎 Příloha '+(i+1)+'</span><button class="outline" data-preview="'+i+'">Otevřít</button><button data-remove="'+i+'">✕</button><div class="previewMedia" data-embed="'+i+'"></div></div>').join(''):'<p class="muted">Zatím bez příloh</p>';
@@ -83,7 +83,7 @@ function openRichNote(item,isNew){
   if(!recording){
     const id=uid();
     const start=()=>{
-      if($('modal').hidden||!document.getElementById('richVoice'))return;
+      if($('modal').hidden||window.__activeRichNoteCleanup!==cleanRecording||current!==parent||window.isRecordLocked?.(parent)||!document.getElementById('richVoice'))return;
       if(!Native.startAudio(id))return;
       window.__audioPermissionRetry=null;
       recording=id;btn.textContent='■ Zastavit nahrávání';notify('Nahrávání spuštěno');
@@ -97,7 +97,7 @@ function openRichNote(item,isNew){
  };
  $('richEditDetail').onclick=()=>{
   if(!attachments.length){notify('Nejdřív připoj detailní fotografii');return}
-  persist();$('modal').hidden=true;
+  if(!persist())return;$('modal').hidden=true;
   openNestedPhoto(parent,item,attachments[0]);
  };
  $('richDelete').onclick=()=>{
@@ -132,7 +132,7 @@ const richPreviousAndroidBack=window.handleAndroidBack;
 window.handleAndroidBack=()=>{
  if(!$('modal').hidden&&typeof window.__activeRichNotePersist==='function'){
   try{
-   window.__activeRichNotePersist();
+   if(window.__activeRichNotePersist()===false)return 'handled';
    $('modal').hidden=true;
    window.modalOK=null;
    return 'handled';

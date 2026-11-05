@@ -50,3 +50,4 @@ finds('historické zálohy','backup');finds('sdílené bloky','backup');finds('m
 finds('webové odkazy','safety');finds('spustitelné přílohy','safety');
 finds('rádiovou adresu','cloud');
 finds('oznámení','cloud');finds('úspora baterie','cloud');
+finds('chyba mikrofonu','notes');

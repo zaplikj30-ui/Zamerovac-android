@@ -299,6 +299,8 @@ const chapters=[
     ],
     "notes": [
       "Hlasové nahrávání vyžaduje přístup k mikrofonu. Při odmítnutém oprávnění lze zkusit nastavení Androidu.",
+      "Hlas se připojí k původní poznámce až po úspěšném ukončení záznamu a potvrzení souboru. Uložit nebo šipka zpět v textové poznámce nahrávání ukončí. Při chybě mikrofonu nebo zápisu zůstane formulář otevřený; u bodové poznámky zůstane otevřený i po neúspěšném Zpět. Zrušit bodovou poznámku rozpracovaný hlas zahodí.",
+      "Nahrávej v otevřené aplikaci; systém může mikrofon na pozadí omezit. Nedokončený hlas se při zničení obrazovky nepřipojí. Existující originál ani při kolizi identifikátoru nepřepisuj. Přílohy s neplatnými metadaty nebo nad 2 GiB se odmítnou.",
       "Checklisty a přílohy dostávají revizi a průběžně se ukládají. Příchozí synchronizace během otevřené poznámky počká na dokončení její úpravy. Při chybě zápisu tlačítko Uložit formulář nezavře; zopakuj uložení.",
       "Pouhé otevření a zavření textové poznámky nebo zobrazení prázdné skici nemění její obsah ani revizi. Uzamčená poznámka nedovolí měnit checklist ani odebírat přílohy.",
       "Soukromé poznámky do zákaznického PDF patří jen při výslovné volbě."
@@ -308,6 +310,7 @@ const chapters=[
       "poznámkový blok",
       "audio",
       "mikrofon",
+      "chyba mikrofonu",
       "přílohy",
       "S Pen"
     ]

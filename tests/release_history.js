@@ -58,3 +58,4 @@ assert(!history.forVersion('1.2.152').includes(history.pendingChanges));
 assert(JSON.stringify(history.pendingChanges).includes('spustitelných příloh'));
 assert(JSON.stringify(history.pendingChanges).includes('zaniklá skupina Wi-Fi Direct'));
 assert(JSON.stringify(history.pendingChanges).includes('služba Androidu s oznámením'));
+assert(JSON.stringify(history.pendingChanges).includes('potvrzených metadatech'));
