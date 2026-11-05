@@ -22,7 +22,18 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
    // its 8px border can otherwise *legitimately* select the last menu row.
    const bounds=await page.locator('#'+menu).boundingBox();
    const viewport=page.viewportSize();
-   const px=bounds.x<viewport.width/2?viewport.width-5:5,py=Math.min(400,viewport.height-5);
+   // Use the centre of the largest free region. A longer menu can approach
+   // the previous fixed test point; Chromium touch adjustment then correctly
+   // picks a nearby row, so that point is no longer an outside gesture.
+   const free=[
+    {x:viewport.width/2,y:bounds.y/2,gap:bounds.y},
+    {x:viewport.width/2,y:(bounds.y+bounds.height+viewport.height)/2,gap:viewport.height-bounds.y-bounds.height},
+    {x:bounds.x/2,y:viewport.height/2,gap:bounds.x},
+    {x:(bounds.x+bounds.width+viewport.width)/2,y:viewport.height/2,gap:viewport.width-bounds.x-bounds.width}
+   ].sort((a,b)=>b.gap-a.gap);
+   assert(free[0].gap>60,'A clearly outside touch target must exist');
+   const {x:px,y:py}=free[0];
+   assert.equal(await page.evaluate(({menu,px,py})=>document.getElementById(menu).contains(document.elementFromPoint(px,py)),{menu,px,py}),false);
    if(touch)await page.touchscreen.tap(px,py);else await page.mouse.click(px,py);
    assert.equal(await page.locator('#'+menu).isVisible(),false);assert.equal(await page.evaluate(()=>JSON.stringify(state)),before);
    if(await page.locator('#modal').isVisible()){
