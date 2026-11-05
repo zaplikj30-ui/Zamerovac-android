@@ -403,9 +403,14 @@ const chapters=[
   },
   {
     "id": "backup",
-    "title": "18. Zálohovací ZIP, export a import zakázky",
-    "intro": "Zálohovací ZIP je určený pro uchování a obnovu zakázek včetně editovatelných anotací a souborů.",
+    "title": "18. Historické zálohy, ZIP a bezpečná obnova",
+    "intro": "Historické zálohy uchovávají samostatné body telefonu a tabletu ve vybraném úložišti. ZIP zůstává přenosnou úplnou zálohou zakázek s anotacemi a soubory.",
     "steps": [
+      "Otevři ☰ → Historické zálohy nebo Nastavení → Historické zálohy a obnova. Vyber složku záloh nezávisle na synchronizaci.",
+      "Zvol Vytvořit historickou zálohu. Všechny soubory se uloží do ověřovaných datových bloků a nový historický bod se potvrdí až po kontrole úplnosti.",
+      "V přehledu najdeš oddělené historie instalací telefonu a tabletu. Stejné originály mohou sdílet neměnný blok; nový historický bod starý nepřepisuje. Přehled uvádí velikost datových bloků bez režie poskytovatele.",
+      "Před obnovou můžeš zvolit Ověřit všechny soubory. Obnovit jako nové kopie znovu ověří data a přílohy a vytvoří nové identifikátory. Aktuální zakázky včetně změn provedených během stahování zůstanou zachované.",
+      "Velké operace u cloudového nebo neznámého poskytovatele vyžadují neměřenou Wi-Fi. Výjimku pro jedinou operaci můžeš výslovně potvrdit; může spotřebovat mobilní data i data hotspotu. Místní složka funguje offline.",
       "V nabídce konkrétní fotografie nebo složky najdi Exportovat do ZIP a vyber místo pro uložení.",
       "Zkontroluj, že soubor ZIP skutečně vznikl; u důležité zakázky si jej ponech na bezpečném místě.",
       "Pro obnovení zvol ＋ → Importovat zakázky ze ZIP a vyber správný zálohovací soubor.",
@@ -413,6 +418,10 @@ const chapters=[
       "Po importu otevři fotografie a ověř kóty, vložené obrázky, poznámky a přílohy."
     ],
     "notes": [
+      "Historie používá vlastní prostor Zamerovac-zalohy a funguje i při vypnuté synchronizaci či bez párování. Odpojení složky ani změna účtu uložené body nemaže. Starší historii najdeš opětovným výběrem původní složky.",
+      "Google Disk je zatím závislý na tom, zda jeho systémový poskytovatel dovolí vybrat zapisovatelnou složku. Pokud ji nenabízí, použij místní úložiště nebo ZIP; oficiální Drive API se teprve dokončuje a nesmí se zaměnit za ověřené připojení.",
+      "Poškozený blok, chybějící příloha, odebrané oprávnění, nedostatek místa a přerušený zápis nesmějí být potvrzeny jako úplná záloha. Při chybě původní historie zůstává beze změny; poškozený existující blok se automaticky nepřepisuje.",
+      "Automatická frekvence ani automatické promazávání nejsou zapnuté. Ruční správa patří do správce souborů úložiště. Sdílené bloky nemaž bez kontroly všech historií, jinak můžeš poškodit více bodů; synchronizace je nikdy nemaže.",
       "Nevyvážej pouhé zákaznické PDF, pokud chceš později upravovat kóty.",
       "Nové ZIP zálohy obsahují kontrolní součty SHA-256 a velikosti souborů. Obnova je ověří před vytvořením kopií; starší ZIP zůstávají přijímány bez této dodatečné kontroly.",
       "Chybějící nebo prázdná příloha export zálohy zastaví. Neúspěšný zápis se neoznačí jako hotová záloha; původní zakázky zůstávají zachované.",
@@ -421,6 +430,10 @@ const chapters=[
     ],
     "keywords": [
       "archiv",
+      "historické zálohy",
+      "historie telefonu a tabletu",
+      "sdílené bloky",
+      "měřená síť",
       "SHA-256",
       "kontrolní součet",
       "neuloženo",

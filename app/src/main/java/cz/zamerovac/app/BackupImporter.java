@@ -74,6 +74,11 @@ final class BackupImporter {
         String sourceText=JsonInput.decode(json);LocalDatabase.validate(sourceText);JSONObject source=new JSONObject(sourceText);
         if(source.optInt("archiveFormatVersion")==2&&manifest==null)throw new IOException("V záloze chybí kontrolní manifest");
         if(manifest!=null)ArchiveIntegrity.verify(manifest,checksums);
+        return restoreVerified(context,existing,prefs,source,meta,incomingMedia);
+    }
+    /** Network and integrity checks are completed by the caller before acquiring the local commit lock. */
+    static Result restoreVerified(Context context,JSONObject existing,SharedPreferences prefs,JSONObject source,JSONObject meta,Map<String,File> incomingMedia)throws Exception{
+        LocalDatabase.validate(source.toString());LocalDatabase.validate(existing.toString());
         if(source.optInt("schema")!=1||existing.optInt("schema")!=1)throw new IOException("Nepodporovaný formát zálohy");
         JSONArray records=source.optJSONArray("records");
         if(records==null)throw new IOException("Záloha neobsahuje zakázky");
@@ -108,10 +113,8 @@ final class BackupImporter {
             rec.put("parentId",recIds.getOrDefault(oldParent,rootId));
             rec.put("rev",UUID.randomUUID().toString());
             rec.put("updatedAt",now);rec.put("deleted",false);
-            rewriteMedia(rec.optJSONArray("media"),mediaIds);
-            rewriteItems(rec.optJSONArray("items"),mediaIds);
-            JSONArray history=rec.optJSONArray("versionHistory");
-            if(history!=null)for(int h=0;h<history.length();h++){JSONObject version=history.getJSONObject(h);String text=version.optString("items","[]");if(text.trim().startsWith("[")){JsonInput.check(text);JSONArray oldItems=new JSONArray(text);rewriteItems(oldItems,mediaIds);version.put("items",oldItems.toString());}}
+            rewriteAll(rec,mediaIds,0);
+            rec.put("syncClock",CausalClock.advance(new JSONObject(),DeviceIdentity.get(context.getNoBackupFilesDir())));
             newRecords.add(rec);
         }
         if(newRecords.isEmpty())throw new IOException("Záloha neobsahuje platné záznamy");
@@ -137,7 +140,8 @@ final class BackupImporter {
             settings.putString("name-"+pair.getValue(),info!=null?info.optString("name","Příloha"):"Příloha");
         }
         }catch(Exception failure){for(String id:created)new File(mediaDir,id).delete();throw failure;}
-        settings.apply();
+        if(!settings.commit()){for(String id:created)new File(mediaDir,id).delete();throw new IOException("Metadata obnovy nebyla potvrzena");}
+        root.put("syncClock",CausalClock.advance(new JSONObject(),DeviceIdentity.get(context.getNoBackupFilesDir())));
         target.put(root);
         for(JSONObject rec:newRecords)target.put(rec);
         return new Result(result,newRecords.size(),created);
@@ -169,14 +173,13 @@ final class BackupImporter {
             media.put(i,mapping.computeIfAbsent(id,k->UUID.randomUUID().toString()));
         }
     }
-    private static void rewriteItems(JSONArray items,Map<String,String> mapping)throws JSONException,IOException{
-        if(items==null)return;
-        for(int i=0;i<items.length();i++){
-            JSONObject item=items.optJSONObject(i);if(item==null)continue;
-            rewriteMedia(item.optJSONArray("media"),mapping);
-            rewriteMedia(item.optJSONArray("audioMedia"),mapping);
-            rewriteItems(item.optJSONArray("detailItems"),mapping);
-        }
+    private static void rewriteAll(Object value,Map<String,String> mapping,int depth)throws Exception{
+        if(depth>100)throw new IOException("Příliš zanořená obnova");
+        if(value instanceof JSONObject){JSONObject object=(JSONObject)value;for(Iterator<String> it=object.keys();it.hasNext();){String key=it.next();Object child=object.get(key);
+            if("media".equals(key)||"audioMedia".equals(key)){if(!(child instanceof JSONArray))throw new IOException("Neplatný seznam příloh v záloze");rewriteMedia((JSONArray)child,mapping);}
+            else if("items".equals(key)&&child instanceof String&&((String)child).trim().startsWith("[")){JsonInput.check((String)child);JSONArray items=new JSONArray((String)child);rewriteAll(items,mapping,depth+1);object.put(key,items.toString());}
+            else rewriteAll(child,mapping,depth+1);
+        }}else if(value instanceof JSONArray){JSONArray array=(JSONArray)value;for(int i=0;i<array.length();i++)rewriteAll(array.get(i),mapping,depth+1);}
     }
     private static void deleteDir(File dir){
         File[] contents=dir.listFiles();if(contents!=null)for(File f:contents)if(f.isDirectory())deleteDir(f);else f.delete();

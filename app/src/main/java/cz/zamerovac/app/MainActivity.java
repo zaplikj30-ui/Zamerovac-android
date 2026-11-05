@@ -85,7 +85,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class MainActivity extends Activity {
-    private static final int REQUEST_FILE=20,REQUEST_TREE=21,REQUEST_CAMERA=22,REQUEST_EXPORT=23,REQUEST_PERMISSIONS=24,REQUEST_ATTACH=25,REQUEST_CAMERA_PERMISSION=26,REQUEST_PHOTO_LOCATION=27,REQUEST_BACKUP=28,REQUEST_IMPORT_BACKUP=29,REQUEST_ISSUE_EXPORT=30,REQUEST_BLUETOOTH_PERMISSION=31,REQUEST_CUSTOMER_EXPORT=32,REQUEST_WIFI_DIRECT_PERMISSION=33;
+    private static final int REQUEST_FILE=20,REQUEST_TREE=21,REQUEST_CAMERA=22,REQUEST_EXPORT=23,REQUEST_PERMISSIONS=24,REQUEST_ATTACH=25,REQUEST_CAMERA_PERMISSION=26,REQUEST_PHOTO_LOCATION=27,REQUEST_BACKUP=28,REQUEST_IMPORT_BACKUP=29,REQUEST_ISSUE_EXPORT=30,REQUEST_BLUETOOTH_PERMISSION=31,REQUEST_CUSTOMER_EXPORT=32,REQUEST_WIFI_DIRECT_PERMISSION=33,REQUEST_BACKUP_TREE=34;
+    private volatile boolean historyBackupBusy;
     private volatile PeerCoordinator peerCoordinator;
     private boolean pendingWifiDirectPermission;
     private WebView web;
@@ -505,6 +506,7 @@ public class MainActivity extends Activity {
             js("window.onNativeMediaDone?.()");
             return;
         }
+        if(request==REQUEST_BACKUP_TREE&&data!=null&&data.getData()!=null){try{Uri uri=data.getData();getContentResolver().takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_WRITE_URI_PERMISSION);if(!settings.edit().putString("backupTreeUri",uri.toString()).commit())throw new IOException("Složka záloh nebyla uložena");historyBackup("list","",false);}catch(Exception failure){backupEvent("error",failure.getMessage(),null);}return;}
         if(request==REQUEST_TREE&&data!=null&&data.getData()!=null){Uri uri=data.getData();try{getContentResolver().takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_WRITE_URI_PERMISSION);settings.edit().putString("treeUri",uri.toString()).apply();scheduleSync();syncCloud();}catch(Exception e){error("Nelze použít vybranou složku: "+e.getMessage());}return;}
         if(request==REQUEST_CUSTOMER_EXPORT){
             if(pendingCustomerZip!=null&&data!=null&&data.getData()!=null){
@@ -758,6 +760,7 @@ public class MainActivity extends Activity {
                 return "nezjištěna";
             }
         }
+        @JavascriptInterface public void backupHistoryControl(String command,String path,boolean allowMetered){if(command!=null&&command.length()<24&&path!=null&&path.length()<200)runOnUiThread(()->historyBackup(command,path,allowMetered));}
         @JavascriptInterface public void directSyncControl(String command,String argument){if(command!=null&&command.length()<40&&argument!=null&&argument.length()<200)runOnUiThread(()->directCommand(command,argument));}
         @JavascriptInterface public String directSyncState(){try{return directCoordinator().snapshot().toString();}catch(Exception failure){return "{\"problem\":\"Stav zařízení nelze načíst. Data zůstala uložená.\"}";}}
         @JavascriptInterface public String getSyncDeviceId(){try{return DeviceIdentity.get(getNoBackupFilesDir());}catch(Exception error){return "";}}
@@ -1029,6 +1032,20 @@ public class MainActivity extends Activity {
     private void writeDb(String data) throws IOException {
         if(databaseReadFailed)throw new IOException("Zápis zablokován: uložené zakázky nebyly bezpečně načteny");
         LocalDatabase.write(getFilesDir(),data);
+    }
+    private void backupEvent(String phase,String message,JSONObject data){try{JSONObject event=new JSONObject().put("phase",phase).put("message",message==null?"":message).put("busy",historyBackupBusy).put("configured",settings.getString("backupTreeUri",null)!=null);if(data!=null)event.put("data",data);jsCall("onNativeBackupHistory",event.toString());}catch(Exception ignored){}}
+    private JSONObject backupListAfter(BackupHistory history){try{return history.list();}catch(Exception failure){try{return new JSONObject().put("refreshWarning","Operace je dokončená, přehled nyní nelze načíst. Obnovu neopakuj; zkus pouze Obnovit seznam.");}catch(Exception ignored){return new JSONObject();}}}
+    private synchronized void historyBackup(String command,String path,boolean allowMetered){
+        if(historyBackupBusy){backupEvent("working","Operace zálohy již probíhá",null);return;}
+        if("select".equals(command)){Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE).addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_WRITE_URI_PERMISSION|Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);startActivityForResult(intent,REQUEST_BACKUP_TREE);return;}
+        if("disconnect".equals(command)){if(settings.edit().remove("backupTreeUri").commit())backupEvent("idle","Složka odpojena. Její historické zálohy zůstaly uložené.",null);else backupEvent("error","Nastavení nebylo potvrzeno",null);return;}
+        if(!java.util.Arrays.asList("list","create","check","restore").contains(command)){backupEvent("error","Neznámá operace zálohy",null);return;}String tree=settings.getString("backupTreeUri",null);if(tree==null){backupEvent("idle","Nejdříve vyber samostatnou složku historických záloh.",null);return;}
+        if(!BackupNetwork.allowed(this,tree,allowMetered)){try{backupEvent("metered","Velká záloha nebo obnova na měřeném či neznámém připojení čeká na neměřenou Wi-Fi. Můžeš povolit výjimku pro tuto operaci.",new JSONObject().put("command",command).put("path",path));}catch(Exception ignored){}return;}
+        historyBackupBusy=true;backupEvent("working","Připravuji operaci zálohy",null);new Thread(()->{JSONObject result=null;String message="",phase="done";try{
+            BackupHistory history=new BackupHistory(this,settings,new DocumentBackupStore(this,tree),(text,done,total)->backupEvent("working",text+(total>0?" · "+done+"/"+total:""),null));
+            switch(command){case "create":JSONObject manifest=history.create();message="Historická záloha byla uložena a ověřena";result=backupListAfter(history);result.put("created",manifest);break;case "check":history.check(path);message="Úplnost a kontrolní součty této zálohy byly ověřeny";result=backupListAfter(history);result.put("verifiedPath",path);break;case "restore":BackupImporter.Result restored=history.restore(path);message="Obnoveno "+restored.recordCount+" záznamů jako nové kopie";onSyncResult(message,restored.data);result=backupListAfter(history);break;default:result=history.list();message="Historie záloh načtena";}
+        }catch(Exception failure){phase="error";message="Operace zálohy: "+failure.getMessage()+". Aktuální zakázky a předchozí historické body se nepřepisují.";}
+        finally{historyBackupBusy=false;backupEvent(phase,message,result);}},"ZamerovacBackupHistory").start();
     }
     private synchronized PeerCoordinator directCoordinator()throws Exception{
         if(peerCoordinator==null)peerCoordinator=new PeerCoordinator(this,settings,new PeerCoordinator.Events(){

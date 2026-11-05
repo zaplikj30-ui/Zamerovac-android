@@ -46,7 +46,7 @@ class BigUpdateSmokeTest(unittest.TestCase):
         self.assertIn('restoredTitle(records)', restore)
         self.assertIn('MAX_ENTRIES', restore)
         self.assertIn('collectNestedMedia', main)
-        self.assertIn('rewriteItems', restore)
+        self.assertIn('rewriteAll(rec,mediaIds,0)', restore)
         self.assertIn('writeDb(restored.data.toString())', main)
 
     def test_photo_notes_contain_editable_detail(self):
