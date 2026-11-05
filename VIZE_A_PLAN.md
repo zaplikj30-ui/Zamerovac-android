@@ -1,6 +1,20 @@
 # Zaměřovač – živá vize aplikace a plán do budoucna
 *Založeno 4. 11. 2026. Tento dokument je pracovní představa, **nikoli neměnná specifikace**. Může se průběžně měnit po domluvě s uživatelem.*
 
+## Dlouhodobý technický plán: předcházet chybám a vzájemným konfliktům funkcí (potvrzeno 5. 11. 2026)
+
+**Výslovná priorita uživatele:** vedle požadovaných funkcí má mít Zaměřovač hlavně profesionální a trvale kvalitní vnitřní stavbu. Nové funkce se nesmějí vzájemně rušit, poškodit uložené zakázky, změnit naměřené hodnoty ani znemožnit další rozvoj. Technické zlepšení má ChatGPT navrhovat proaktivně, ne až po upozornění jinou AI. **Uživatel připouští i větší přepracování a opakované testování**, pokud je to objektivně potřebné pro dlouhodobou kvalitu; **konkrétní zásah tím ještě neschvaluje**.
+
+**Pořadí technických kroků (podmíněné skutečnými nálezy, bez termínů):**
+1. **Dokončit probíhající #39/PR #41**, zhodnotit ochranu dat, přesnost kót, souběhy a skutečný stav ověření. Nerozbíhat souběžně konkurující přepis rozpracovaných souborů.
+2. **Zmapovat, kde se funkce kříží:** zejména editor/galerie, výběr a úchopy, lupa/zoom, Undo/Redo, ukládání a obnova, media, export, Bluetooth měření, koš, synchronizace a přechody mezi obrazovkami. Ověřit existující kombinované scénáře, zanést chybějící do registru testů [#28](https://github.com/zaplikj30-ui/Zamerovac-android/issues/28). Každou hypotézu o chybě potvrdit testem nebo kontrolou konkrétního kódu.
+3. **Stanovit hranice společných částí:** samostatný model zakázek, měření a jednotek, geometrie a editovatelných objektů, bezpečné ukládání, soubory a přenos; ovládání telefonu, PC a iPhonu/iPadu řešit odděleně. Předem posoudit kompatibilitu stávajících dat, budoucí Windows a iOS a vhodnost Java/Kotlin/JS/Kotlin Multiplatform či jiných možností podle důkazů.
+4. **Zlepšovat postupně i společně s opravami:** vždy nejmenší rozumný bezpečný celek, test původního chování, změna, automatické pozitivní a negativní testy, **kombinované testy spolupráce funkcí**, zhodnocení dopadu na výkon a data. Opravovat důležité chyby hned; nečekat, až bude kompletní přestavba hotová.
+5. **Při doložené systémové slabině zvážit větší přepracování:** stručně porovnat postupné úpravy versus cílenou výraznější přestavbu, vysvětlit výhody, rizika, cenu/čas, postup migrace a bezpečného návratu. Vybrat technicky udržitelnou variantu a před zásadní změnou schválit rozsah. Nepřepisovat všechno jen proto, že by nový kód vypadal moderněji.
+6. **Kontrola po každé aktualizaci:** zpráva o zlepšeních, zbývajících problémech, kolizích funkcí, přesnosti, ochraně dat, testech a skutečném ověření; objektivní hodnocení a alespoň dva prioritizované návrhy. Uchovávat výsledky a rozhodnutí v [#42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42), detaily testů v #28, bez duplicit.
+
+**Stav:** schválený dlouhodobý technický směr a pracovní pravidla. **Žádný nový kód, migrace frameworku, rozsáhlý přepis ani APK nejsou touto dohodou samostatně spuštěné.** Cílem je nižší riziko regresí, ochrana reálných dat a dobře udržovatelný základ pro Android, Windows i iPhone/iPad.
+
 ## 1. Hlavní smysl
 Praktická samostatná Android aplikace pro zaměřování zakázkového nábytku: od založení zakázky přes fotografie, kóty a poznámky až po předání podkladů pro návrh a výrobu. Minimalizovat přepínání mezi aplikacemi, neztrácet naměřená data a udržet snadné ovládání přímo na stavbě/montáži.
 
