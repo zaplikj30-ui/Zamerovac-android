@@ -97,3 +97,7 @@ Specifikace #38/#34/#33 → PeerCoordinator/PeerDiscovery/PeerWifiDirect/MainAct
 ## Cloudové řídicí dávky a restart procházení – etapa 24
 
 #33/#38 → CloudFiles/CloudScan/SafSyncV2 → CloudFilesReadTest (4), CloudScanTest (2), SafSyncV2Test +2 integrační případy. Pozitivní: přesné bajty/hash/EOF, trvalý kruhový cursor mezi instalacemi/store/scope a priority nedokončeného ACK, skutečná podepsaná revize/media/kóta po 80 neplatných zprávách a restartech. Negativní: limit+1/zero-progress/interrupt, failed AtomicFile write, unsafe cursor, zakázaná síť nesmí ani list/open/create, podvržené zprávy nemohou vymazat frontu. Nové native CI vyžaduje ověření; provider je souborový/test double, skutečný Drive/SAF přenos ani hard síťová spotřeba nejsou testovány.
+
+## Přepnutí cesty/sítě při přenosu a rušení jobů – etapa 25
+
+#33/#38 → GuardedSyncStore/SafSyncV2/PeerCoordinator intent priority/SyncJob → GuardedSyncStoreTest, SyncJobTest (3), SafSyncV2Test (+2). Pozitivní: po dalším dostupném pokusu skutečné originální bajty a potvrzený outbox, success/failure Job retry. Negativní: po prvním 64KiB bloku přijde ověřená direct priorita nebo ztráta unmetered oprávnění → další write se neprovede, DB/fronta nejsou falešně potvrzené; zrušený starý worker ani přes ignorované interrupt nesmaže novou relaci či nezavolá jobFinished; close se vždy povolí. Nové native CI ověřit; síťová změna je řízený policy callback, nejde o fyzický Wi-Fi/cellular handover.
