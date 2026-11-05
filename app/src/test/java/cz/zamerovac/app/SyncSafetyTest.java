@@ -76,8 +76,13 @@ public class SyncSafetyTest {
   try{try{store.save(1,"{\"version\":2,\"revision\":2,\"jobs\":[]}");fail("Write failure hidden");}catch(IOException expected){}assertEquals(one,store.read());}finally{new File(blocker,"block").delete();blocker.delete();}
  }
  @Test public void installationIdentityIsStableAndVectorsValidateExactCounters()throws Exception {
-  String id=DeviceIdentity.get(prefs);assertTrue(DeviceIdentity.valid(id));assertEquals(id,DeviceIdentity.get(prefs));assertEquals("concurrent",CausalClock.compare(clock(1,0),clock(0,1)));assertEquals(2,CausalClock.advance(clock(1,0),A).getLong(A));
+  String id=DeviceIdentity.get(context.getNoBackupFilesDir());assertTrue(DeviceIdentity.valid(id));assertEquals(id,DeviceIdentity.get(context.getNoBackupFilesDir()));assertNotEquals(id,DeviceIdentity.get(new File(context.getNoBackupFilesDir(),"another-installation")));assertEquals("concurrent",CausalClock.compare(clock(1,0),clock(0,1)));assertEquals(2,CausalClock.advance(clock(1,0),A).getLong(A));
   try{CausalClock.advance(new JSONObject().put(A,9007199254740991L),A);fail("Overflow accepted");}catch(IOException expected){}
+ }
+
+ @Test public void webBridgeCannotInvokeLegacyUnconditionalDatabaseWriter()throws Exception {
+  assertNull(MainActivity.JsApi.class.getDeclaredMethod("saveData",String.class).getAnnotation(android.webkit.JavascriptInterface.class));
+  assertNotNull(MainActivity.JsApi.class.getDeclaredMethod("saveDataChecked",String.class,String.class).getAnnotation(android.webkit.JavascriptInterface.class));
  }
 
 }

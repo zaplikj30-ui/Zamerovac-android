@@ -98,3 +98,15 @@ Přidán `tests/causal_app_clock.js` pro skutečné JS pomocníky: čítače/ove
 Pátá etapa měla nativní CI SUCCESS; browser kontrola odhalila závod testu s asynchronním přepočtem galerie při rotaci. Galerie nyní omezí posun ihned při resize a po přepočtu; test čeká na skutečně dokončené vykreslení daného viewportu a potom ověřuje meze. Místně 11 viewportů prošlo. Toto nemění měřené hodnoty ani uloženou geometrii.
 
 **Aktualizovaná návaznost:** identita, lokální queue store a `syncClock`/tombstones už nejsou pouze návrh. Ještě je nutné je propojit s jediným běžícím synchronizačním koordinátorem, společným protokolem v2 a skutečnými autentizovanými transporty. Podmínky nehotové #38/#40 a fyzického ověření výše nadále platí.
+
+## Etapa 7 – dokončení revize checkpointu
+
+Nechráněný původní `saveData` zůstává pouze Java pomocníkem pro staré nativní fixture testy; **nemá `@JavascriptInterface`**, takže WebView může zapisovat databázi jen potvrzovaným compare-and-save. Nativní regresní test to kontroluje přes skutečné anotace rozhraní.
+
+Identita instalace je uložená atomicky v `Context.getNoBackupFilesDir()`, mimo Android Auto Backup. Obnovení systémové zálohy tak podle Android kontraktu nekopíruje identitu na druhé zařízení; ID není odvozeno od účtu ani hardwaru. Test ověřuje stálost jednoho adresáře a různé identity dvou instalací.
+
+Šestá etapa má celé rychlé/UI CI SUCCESS. Nativní CI našlo důležitou starší podmínku: živý vzdálený záznam bez kauzálních čítačů se nesmí tiše zahodit proti vysypanému koši. Opraveno konzervativně: smazané staré záznamy se nevracejí; živá verze s neznámým pořadím se zachová jako **označená kopie s novým ID**, stejně jako prokazatelná souběžná změna. Původní test zůstal a navíc ověřuje, že původní vysypané ID nevstane. Legacy `trashPurgedIds` se při merge doplní prázdnou kauzální tombstone se stejnou opatrnou politikou.
+
+Všechny Node/Python kontroly prošly místně, po napojení skutečných čítačů znovu prošlo všech 15 nástrojů, šest workflow a cílené nové UI případy. Poslední nativní/CI výsledek je nutné ověřit na posledním SHA této etapy; tuto poznámku nepovažovat za předem daný úspěch.
+
+**Předávka pro další pokračování celé #39:** stabilní identita, kauzální čítače/koš a nativní durable queue store jsou nyní naprogramované. Ještě chybí zapojení fronty do koordinátoru a jeho skutečných LAN/offline P2P/Drive adaptérů, párování/revokace, publikace neměnných autentizovaných revizí, stav čekajících médií, zálohovací historie/obnova v aplikaci a fyzické ověření. Aktualizace proto nadále není celá dokončená a nesmí se vydat nová APK ani sloučit PR.

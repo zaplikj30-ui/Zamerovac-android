@@ -38,13 +38,14 @@ function reconcileSavedState(base,local,remote){
  const theirs=new Map(remote.records.map(r=>[r.id,r])),records=[];
  const purged=new Set([...(local.trashPurgedIds||[]),...(remote.trashPurgedIds||[])]);
  const tombstones=mergeSyncTombstones(local.syncTombstones||{},remote.syncTombstones||{});
+ for(const id of purged)if(!Object.hasOwn(tombstones,id))Object.defineProperty(tombstones,id,{value:{},enumerable:true,writable:true,configurable:true});
  const conflicts=new Set([...ours.values(),...theirs.values()].map(r=>r.conflictSource).filter(Boolean));
  for(const id of new Set([...ours.keys(),...theirs.keys()])){
   const l=ours.get(id),d=theirs.get(id),o=old.get(id);
   if(Object.hasOwn(tombstones,id)){
    for(let record of [l,d])if(record&&!record.deleted){
     if(record===l&&!sameSavedValue(record,o)&&sameSavedValue(record.syncClock,o?.syncClock))record={...record,syncClock:advanceSyncClock(record.syncClock||{})};
-    if(['after','concurrent'].includes(compareSyncClocks(record.syncClock||{},tombstones[id]))){
+    if(!Object.keys(record.syncClock||{}).length||['after','concurrent'].includes(compareSyncClocks(record.syncClock||{},tombstones[id]))){
      const source='purge:'+id+':'+canonicalSavedValue(record);
      if(!conflicts.has(source)){records.push({...record,id:uid(),conflict:true,conflictOf:id,conflictSource:source,title:(record.title||'Položka')+' (změna po vysypání koše)',syncClock:mergeSyncClocks(record.syncClock||{},tombstones[id])});conflicts.add(source)}
     }

@@ -135,5 +135,6 @@ public class TrashPurgerTest {
         assertEquals(2,merged.getJSONArray("records").length());
         original.getJSONArray("records").getJSONObject(2).put("deleted",false);
         merged=(JSONObject)merge.invoke(sync,local,original);assertEquals(3,merged.getJSONArray("records").length());
+        String originalId=original.getJSONArray("records").getJSONObject(2).getString("id");boolean copy=false;for(int i=0;i<merged.getJSONArray("records").length();i++){JSONObject rec=merged.getJSONArray("records").getJSONObject(i);assertNotEquals(originalId,rec.getString("id"));if(originalId.equals(rec.optString("conflictOf")))copy=true;}assertTrue(copy);
     }
 }

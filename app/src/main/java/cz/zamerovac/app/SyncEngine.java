@@ -70,6 +70,7 @@ public class SyncEngine {
         Set<String> purged=TrashPurger.purgedIds(local);purged.addAll(TrashPurger.purgedIds(remote));
         Map<String,String> base=baseline();Set<String> all=new HashSet<>();all.addAll(l.keySet());all.addAll(r.keySet());
         JSONObject tombstones=CausalClock.tombstones(local.optJSONObject("syncTombstones"),remote.optJSONObject("syncTombstones"));
+        for(String id:purged)if(!tombstones.has(id))tombstones.put(id,new JSONObject());
         Set<String> generatedConflicts=new HashSet<>();
         JSONArray merged=new JSONArray();JSONObject nextBase=new JSONObject();
         // Deterministic order keeps generated JSON stable.
@@ -78,7 +79,7 @@ public class SyncEngine {
             if(tombstones.has(id)){
                 for(JSONObject record:new JSONObject[]{lv,rv})if(record!=null&&!record.optBoolean("deleted")){
                     JSONObject clock=CausalClock.clock(record);String relation=CausalClock.compare(clock,tombstones.getJSONObject(id));
-                    if("after".equals(relation)||"concurrent".equals(relation)){
+                    if(clock.length()==0||"after".equals(relation)||"concurrent".equals(relation)){
                         String source="purge:"+id+":"+CausalClock.canonical(record);String copyId=UUID.nameUUIDFromBytes(source.getBytes(StandardCharsets.UTF_8)).toString();
                         if(!l.containsKey(copyId)&&!r.containsKey(copyId)&&generatedConflicts.add(copyId))merged.put(new JSONObject(record.toString()).put("id",copyId).put("conflict",true).put("conflictOf",id).put("conflictSource",source).put("title",record.optString("title","Položka")+" (změna po vysypání koše)").put("syncClock",CausalClock.merge(clock,tombstones.getJSONObject(id))));
                     }

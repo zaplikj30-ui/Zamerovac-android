@@ -752,12 +752,12 @@ public class MainActivity extends Activity {
                 return "nezjištěna";
             }
         }
-        @JavascriptInterface public String getSyncDeviceId(){try{return DeviceIdentity.get(settings);}catch(Exception error){return "";}}
+        @JavascriptInterface public String getSyncDeviceId(){try{return DeviceIdentity.get(getNoBackupFilesDir());}catch(Exception error){return "";}}
         @JavascriptInterface public String loadSyncQueue(){try{return new SyncQueueStore(getFilesDir()).read();}catch(Exception failure){error("Frontu přenosů nelze načíst; původní stav zůstává chráněný");return "{\"error\":true}";}}
         @JavascriptInterface public boolean saveSyncQueue(long expected,String text){try{return new SyncQueueStore(getFilesDir()).save(expected,text);}catch(Exception failure){error("Fronta přenosů nebyla uložena");return false;}}
         @JavascriptInterface public String loadData(){try{return readDb();}catch(Exception e){return "{\"_loadError\":true}";}}
         @JavascriptInterface public int trashCleanupCount(){
-            synchronized(TrashPurger.LOCK){try{return new TrashPurger(getFilesDir(),getCacheDir(),settings).pendingCount();}catch(Exception e){return -1;}}
+            synchronized(TrashPurger.LOCK){try{return new TrashPurger(MainActivity.this,settings).pendingCount();}catch(Exception e){return -1;}}
         }
         @JavascriptInterface public String purgeTrash(String expected,String desired,String ids){
             synchronized(TrashPurger.LOCK){
@@ -765,12 +765,13 @@ public class MainActivity extends Activity {
                     if(activeUpload!=null||recorder!=null)throw new IOException("Nejdříve dokonči přidávání souborů nebo nahrávání.");
                     String saved=readDb();
                     if(!saved.equals(expected))throw new IOException("Zakázky se mezitím změnily. Zavři a znovu otevři aplikaci a potvrď aktuální koš.");
-                    return new TrashPurger(getFilesDir(),getCacheDir(),settings)
+                    return new TrashPurger(MainActivity.this,settings)
                         .purge(desired,desired,new JSONArray(ids),MainActivity.this::writeDb).toString();
                 }catch(Exception e){try{return new JSONObject().put("error",e.getMessage()).toString();}catch(JSONException ignored){return "{}";}}
             }
         }
-        @JavascriptInterface public boolean saveData(String text){try{writeDb(text);return true;}catch(Exception e){error("Uložení: "+e.getMessage());return false;}}
+        // Legacy Java test/setup entry only. WebView must use acknowledged compare-and-save.
+        public boolean saveData(String text){try{writeDb(text);return true;}catch(Exception e){error("Uložení: "+e.getMessage());return false;}}
         @JavascriptInterface public String saveDataChecked(String text,String expected){
             synchronized(TrashPurger.LOCK){
                 try{

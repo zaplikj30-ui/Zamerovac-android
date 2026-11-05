@@ -1,6 +1,7 @@
 package cz.zamerovac.app;
 
 import android.content.SharedPreferences;
+import android.content.Context;
 import android.util.AtomicFile;
 import org.json.*;
 import java.io.*;
@@ -14,12 +15,16 @@ final class TrashPurger {
     static final Object LOCK = new Object();
     interface Writer { void write(String data) throws Exception; }
     interface Unlink { boolean delete(File file); }
-    private final File home, cache;
+    private final File home, cache, identityDirectory;
     private final SharedPreferences prefs;
     private final Unlink unlink;
+    TrashPurger(Context context,SharedPreferences prefs){this(context.getFilesDir(),context.getCacheDir(),prefs,File::delete,context.getNoBackupFilesDir());}
     TrashPurger(File home, File cache, SharedPreferences prefs) { this(home,cache,prefs,File::delete); }
     TrashPurger(File home, File cache, SharedPreferences prefs, Unlink unlink) {
-        this.home=home;this.cache=cache;this.prefs=prefs;this.unlink=unlink;
+        this(home,cache,prefs,unlink,new File(home.getParentFile(),"no_backup"));
+    }
+    private TrashPurger(File home,File cache,SharedPreferences prefs,Unlink unlink,File identityDirectory){
+        this.home=home;this.cache=cache;this.prefs=prefs;this.unlink=unlink;this.identityDirectory=identityDirectory;
     }
     private File pendingFile(){return new File(home,"trash-cleanup.json");}
     private static boolean validId(String id){return id.matches("[a-zA-Z0-9_-]{3,120}");}
@@ -66,7 +71,7 @@ final class TrashPurger {
             JSONObject r=records.getJSONObject(i);
             if(ids.contains(r.getString("id"))){
                 if(!r.optBoolean("deleted"))throw new IOException("Položka již není v koši. Nic nebylo odstraněno.");
-                tombstones.put(r.getString("id"),CausalClock.advance(CausalClock.merge(CausalClock.clock(r),tombstones.optJSONObject(r.getString("id"))==null?new JSONObject():tombstones.getJSONObject(r.getString("id"))),DeviceIdentity.get(prefs)));media(r,candidates);removed++;
+                tombstones.put(r.getString("id"),CausalClock.advance(CausalClock.merge(CausalClock.clock(r),tombstones.optJSONObject(r.getString("id"))==null?new JSONObject():tombstones.getJSONObject(r.getString("id"))),DeviceIdentity.get(identityDirectory)));media(r,candidates);removed++;
             }else kept.put(r);
         }
         if(removed!=ids.size())throw new IOException("Obsah koše se změnil. Potvrď jej znovu.");
