@@ -36,6 +36,14 @@ Před zavedením nové technologie či významnější funkce vždy posoudit jej
 
 **Stav a priorita:** jde o technickou připravenost a budoucí požadavky, **nikoli o zadání nyní přidat nové funkce, oprávnění, knihovny či sestavit APK**. Po dokončení #39/PR #41 nezávisle prověřit skutečnou architekturu v #42 a navrhnout vhodné pořadí. Přesná podoba a podporovaná zařízení se rozhodnou až před implementací; některé hypotetické technologie možná vůbec nepoužijeme.
 
+### Nezávislé ovládání prstem, perem a myší (upřesnění 5. 11. 2026)
+
+**Závazný směr:** Zaměřovač nesmí být závislý na S Pen ani jedné značce zařízení. Základní kreslení, úprava kót, výběr, přesun, úchopy a zoom musí fungovat **prstem** na podporovaných telefonech a tabletech. Na zařízeních s podporou pera počítat se stylusy různých výrobců (včetně S Pen a do budoucna Apple Pencil na kompatibilním iPadu), později také s myší/klávesnicí. **Apple Pencil automaticky nepovažovat za příslušenství k iPhonu.** Specifické schopnosti pera jako tlak, boční tlačítko či ignorování dlaně jsou volitelné a závislé na zařízení; nesmějí být podmínkou základní použitelnosti.
+
+**Technický princip:** obecná gesta a geometrie oddělit od API konkrétního pera/výrobce; sjednotit význam akcí bez ztráty přesnosti kót. Testovat dotyk/tah, víceprstá gesta, zoom, přerušení, výběr a editaci, rotaci a změnu velikosti okna. Dodržet schválené rozlišení vizuálních úchopů a dotykových oblastí. Při chybě nebo absenci pera musí fungovat prst. Potvrzovat kompatibilitu konkrétních značek až skutečným testem.
+
+**Stav:** pravidlo pro další práci a testování, ne potvrzení současné kompatibility se všemi pery. Nespouští změnu #39/PR #41 ani APK.
+
 ## Povinné testování selhání a ochrany dat u každé změny (5. 11. 2026)
 
 **Výslovně schválené trvalé pravidlo uživatele:** Nesmíme ověřovat pouze to, že nová či upravená funkce v běžném scénáři funguje. **Před dokončením každé významné změny podle rizika zkontroluj také, jak funkce selže, co přitom zobrazí uživateli a zda zachová původní data a správnost rozměrů.** Testování chybových cest je součástí zadání, implementace i kontroly výsledku — není až volitelnou dodatečnou revizí.
