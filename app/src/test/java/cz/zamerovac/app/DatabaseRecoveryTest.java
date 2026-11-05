@@ -29,4 +29,16 @@ public class DatabaseRecoveryTest {
         LocalDatabase.write(home,data("1585,800001"));assertTrue(new File(home,"projects.json").delete());assertEquals("",LocalDatabase.read(home));String epoch=LocalDatabase.recoveryId(home);assertTrue(DeviceIdentity.valid(epoch));assertEquals(epoch,LocalDatabase.recoveryId(home));
         LocalDatabase.write(home,data("0,000000001"));Files.write(new File(home,"projects.recovery-v1.json").toPath(),"{}".getBytes(StandardCharsets.UTF_8));try{LocalDatabase.read(home);fail("Malformed recovery state ignored");}catch(IOException expected){}assertEquals(data("0,000000001"),LocalDatabase.readFile(new File(home,"projects.json")));
     }
+    @Test public void partialAndCompleteUnconfirmedTemporaryFilesNeverReplaceConfirmedDatabaseOnRead()throws Exception{
+        String older=data("123,000000001"),confirmed=data("1585,800000123456789"),unconfirmed=data("999,999999999999999");LocalDatabase.write(home,older);LocalDatabase.write(home,confirmed);
+        for(String temporary:new String[]{"{partial",unconfirmed}){Files.write(new File(home,"projects.tmp").toPath(),temporary.getBytes(StandardCharsets.UTF_8));Files.write(new File(home,"projects.backup.tmp").toPath(),"{partial-backup".getBytes(StandardCharsets.UTF_8));assertEquals(confirmed,LocalDatabase.read(home));assertEquals(older,LocalDatabase.readFile(new File(home,"projects.bak")));assertEquals(temporary,Files.readString(new File(home,"projects.tmp").toPath()));}
+        LocalDatabase.write(home,unconfirmed);assertEquals(unconfirmed,LocalDatabase.read(home));assertEquals(confirmed,LocalDatabase.readFile(new File(home,"projects.bak")));assertFalse(new File(home,"projects.tmp").exists());assertFalse(new File(home,"projects.backup.tmp").exists());
+    }
+    @Test public void restartResidueAfterBackupPublicationKeepsPrimaryAndFallbackDoesNotPromotePendingData()throws Exception{
+        String confirmed=data("1585,800000000123456789"),pending=data("999,000000001");LocalDatabase.write(home,confirmed);Files.write(new File(home,"projects.bak").toPath(),confirmed.getBytes(StandardCharsets.UTF_8));Files.write(new File(home,"projects.tmp").toPath(),pending.getBytes(StandardCharsets.UTF_8));assertEquals(confirmed,LocalDatabase.read(home));assertTrue(new File(home,"projects.json").delete());assertEquals(confirmed,LocalDatabase.read(home));String epoch=LocalDatabase.recoveryId(home);assertTrue(DeviceIdentity.valid(epoch));assertEquals(confirmed,LocalDatabase.readFile(new File(home,"projects.bak")));assertEquals(pending,Files.readString(new File(home,"projects.tmp").toPath()));assertEquals(epoch,LocalDatabase.recoveryId(home));
+    }
+    @Test public void failedDatabaseStagingPreservesConfirmedPrimaryAndRecoveryCopy()throws Exception{
+        String older=data("123,000000001"),confirmed=data("1585,800000123456789");LocalDatabase.write(home,older);LocalDatabase.write(home,confirmed);File blocked=new File(home,"projects.tmp");assertTrue(blocked.mkdir());Files.write(new File(blocked,"block").toPath(),new byte[]{1});try{LocalDatabase.write(home,data("999,000000001"));fail("Unconfirmed DB staging accepted");}catch(IOException expected){}assertEquals(confirmed,LocalDatabase.read(home));assertEquals(older,LocalDatabase.readFile(new File(home,"projects.bak")));assertTrue(new File(blocked,"block").exists());
+    }
+
 }

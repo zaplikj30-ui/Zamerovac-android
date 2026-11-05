@@ -67,3 +67,5 @@ finds("frekvence","cloud");
 for(const phrase of ["15, 30 či 60 minut","Ručně zastaví vlastní automatické pokusy","příchozí místní spojení"])assert(src.includes(phrase),"Missing scheduling meaning: "+phrase);
 
 for(const phrase of ['souběhu ověřených místních relací','ostatní příchozí zprávy','místní kontroly velkých originálů'])assert(src.includes(phrase),'Missing transport limitation: '+phrase);
+
+assert(src.includes('bezpečnostní klíč zařízení není dostupný'),'Identity initialization failure must be explained');

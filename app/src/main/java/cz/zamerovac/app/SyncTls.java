@@ -17,7 +17,7 @@ final class SyncTls {
     SyncTls(PrivateKey key,X509Certificate[] chain){this.key=key;this.chain=chain.clone();}
     X509Certificate certificate(){return chain[0];}
     byte[] sign(byte[] message)throws Exception{java.security.Signature signer=java.security.Signature.getInstance("SHA256withECDSA");signer.initSign(key);signer.update(message);return signer.sign();}
-    static SyncTls androidIdentity()throws Exception{
+    static synchronized SyncTls androidIdentity()throws Exception{
         KeyStore keys=KeyStore.getInstance("AndroidKeyStore");keys.load(null);
         if(!keys.containsAlias(ALIAS)){
             KeyPairGenerator generator=KeyPairGenerator.getInstance(KeyProperties.KEY_ALGORITHM_EC,"AndroidKeyStore");long now=System.currentTimeMillis();

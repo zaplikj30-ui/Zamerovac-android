@@ -35,9 +35,10 @@
       ],
       "coverage": "runtime-partial",
       "positive": "CAS zápis, třícestný merge a přesné uložené hodnoty. Durable recovery era při fallbacku a ztrátě DB.",
-      "negative": "Stale callback, odmítnutý disk a souběžný export nesmějí přepsat novější data. Bez potvrzené evidence obnovy nelze vrátit starší fallback jako úspěch.",
+      "negative": "Stale callback, odmítnutý disk a souběžný export nesmějí přepsat novější data. Bez potvrzené evidence obnovy nelze vrátit starší fallback jako úspěch. Partial/complete nepublikované tmp/backup.tmp se nesmějí číst jako potvrzená DB; failed staging zachová primary/backup.",
       "limits": [
-        "OS kill/aktualizace APK a náhodné poškození celého úložiště vyžadují další kontrolu."
+        "OS kill/aktualizace APK a náhodné poškození celého úložiště vyžadují další kontrolu.",
+        "Crash residue jsou ručně vytvořené diskové stavy, nikoli skutečný OS kill/power-cut."
       ]
     },
     {
@@ -725,11 +726,15 @@
         {
           "path": "tools/e2e/peer-sync.cjs",
           "layer": "chromium"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/SyncTlsIdentityTest.java",
+          "layer": "native-jvm"
         }
       ],
       "coverage": "runtime-partial",
-      "positive": "Skutečné TLS sockets, oboustranný celý kód, durable cert pin a známý reconnect.",
-      "negative": "Cizí cert/UUID, odmítnutí, one-sided approval, revokace a cizí HTML jméno.",
+      "positive": "Skutečné TLS sockets, oboustranný celý kód, durable cert pin a známý reconnect. Souběžný startup přes skutečnou JCA hranici a řízený provider vytvoří pouze jeden klíč.",
+      "negative": "Cizí cert/UUID, odmítnutí, one-sided approval, revokace a cizí HTML jméno. Druhý startup nesmí nahradit alias mezi načtením key/cert.",
       "limits": [
         "Android Keystore a rádio nejsou v JVM fyzicky ověřeny."
       ]

@@ -416,3 +416,14 @@ Nedostupná jedna stará metadata/média či failed ACK se řeší po zprávách
 Nové native případy: PeerSessionsTest3 (včetně souběhu16), PeerWifiDirectTest+1 (actual loopback interface vs foreign local address, owner/disconnect/channel), PeerMediaCheckpointTest4 (chunk defer/original; duplicate mimo DB lock; cancel/zero; colliding original), SafSyncV2Test+2 (direct arrival právě při local hash, gate release/žádná publikace/retry; nedostupná stará metadata + nové incoming a vlastní note outgoing bez old ACK). Jsou to syntetické soubory a řízené adapter rádio, nikoli fyzické P2P. Novou native/quick CI ověřit. Node/Python/QA a peer UI místně spustit před commitem. Nápověda/nevydané poznámky/QA aktualizované, bez APK/merge.
 
 Další konkrétní krok: vyhodnotit CI etapy35, konečná omezená bezpečnostní/datová revize (process-kill/large-data, manifest/logy/architektura a kombinace funkcí), zaznamenat nezastupitelné fyzické brány. Živý Drive nadále vyžaduje legitimní externí GCP registraci a test stejného účtu; nefalšovat konfiguraci ani nepoužít přihlášení konektoru.
+
+
+Etapa35 potvrzena v **87db82198530ac712fcee962664a419545d8edfe**, native42115099893 / quick42115099985 SUCCESS. Nová route/hash/supersession/progress sada prošla včetně původních TLS/media/account/cadence a browser regresí; rádio je nadále řízený adapter, ne fyzické zařízení.
+
+## Etapa 36 – omezená závěrečná kontrola a startup identity race
+
+Kontrola konkrétních datových/Android/účetních hranic je v update-39-final-review.md. Nalezený reálný souběh: Direct coordinator a cloud při prvním startu mohly oba zjistit chybějící AndroidKeyStore alias a vytvořit odlišný klíč nebo načíst key/cert přes jeho nahrazení. SyncTls.androidIdentity nyní serializuje celé ensure+load. Nový SyncTlsIdentityTest používá skutečnou JCA hranici s řízeným providerem a dvěma vlákny, žádný Android hardware; ověřuje jeden generate, shodný key/fingerprint a čekání druhého startu.
+
+DatabaseRecoveryTest+3 doplňuje partial/complete ale nepublikované tmp a backup.tmp, stav po publikaci backup před primary rename a nedostupný writer staging. Zachová přesné hodnoty a původní recovery kopii; čtení nesmí povýšit tmp. Tyto testy modelují diskové pozůstatky, nesmějí být označené skutečným process-kill/power-cut. Novou native/quick CI ověřit. Nápověda/nevydané změny/QA38 a START doplněné, všechny původní výsledky zachované. Žádná APK ani merge.
+
+Externí technická překážka: není dostupný legitimní Google Cloud projekt/OAuth Android registrace. Produkční adaptér/auth/UI/Job je naprogramovaný, ale v této konfiguraci se připojení poctivě nepovolí. Poslední potřebné integrační/fyzické důkazy nelze nahradit konektorem ani syntetickou CI. Pokračování přesně v závěrečné kontrole a drive-api-integration.md. Neoznačovat #39/#38/#40 za hotové ani zavírat issues.
