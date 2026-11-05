@@ -9,16 +9,21 @@ if (!debugKey.exists()) {
     debugKey.bytes = java.util.Base64.getDecoder().decode(encoded)
 }
 def workflowBuildNumber = (System.getenv('GITHUB_RUN_NUMBER') ?: '1').toInteger()
+// Public project ID, NOT an OAuth secret. Empty until the Android client is registered.
+def driveCloudProject = providers.gradleProperty('driveCloudProject').orElse(providers.environmentVariable('ZAMEROVAC_DRIVE_PROJECT')).getOrElse('')
+if (driveCloudProject && !(driveCloudProject ==~ /[a-z][a-z0-9-]{4,61}[a-z0-9]/)) throw new GradleException('Invalid Drive Cloud project ID')
 
 android {
     namespace 'cz.zamerovac.app'
     compileSdk 35
+    buildFeatures { buildConfig true }
     defaultConfig {
         applicationId 'cz.zamerovac.app'
         minSdk 26
         targetSdk 35
         versionCode 1000 + workflowBuildNumber
         versionName "1.2.${workflowBuildNumber}"
+        buildConfigField 'String', 'DRIVE_CLOUD_PROJECT', '"' + driveCloudProject + '"'
     }
     signingConfigs {
         debug {
@@ -49,6 +54,7 @@ android {
 
 android.testOptions.unitTests.includeAndroidResources = true
 dependencies {
+    implementation 'com.google.android.gms:play-services-auth:22.0.0'
     implementation 'io.github.erdtman:java-json-canonicalization:1.1'
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.mockito:mockito-core:5.14.2'

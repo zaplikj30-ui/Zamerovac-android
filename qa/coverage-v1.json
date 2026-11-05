@@ -1054,6 +1054,36 @@
         "Adaptéry ještě nejsou zapojené do Android OAuth/UI/Job a skutečný účet není ověřen.",
         "Drive při souběžném create může mít více fyzických kopií téhož content-addressed jména; čtení je ověřuje, nic nemaže a obsazení značí přibližně."
       ]
+    },
+    {
+      "id": "drive-authorization-and-account-binding",
+      "issues": [
+        33,
+        38,
+        40
+      ],
+      "sources": [
+        "app/src/main/java/cz/zamerovac/app/DriveAuthorization.java",
+        "app/src/main/java/cz/zamerovac/app/DriveAccounts.java"
+      ],
+      "tests": [
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/DriveAuthorizationTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/DriveAccountsTest.java",
+          "layer": "native-jvm"
+        }
+      ],
+      "coverage": "runtime-partial",
+      "positive": "Skutečné SDK request/task typy, připnutý zvolený účet/appdata scope, krátká memory cache, oddělené atomické sync/backup vazby.",
+      "negative": "Consent/scope/developer error, 401 jen použitého tokenu, změna účtu během SDK await, interrupt/UI thread, failed AtomicFile a vadná/Unicode vazba nesmějí potvrdit nový účet ani prozradit token.",
+      "limits": [
+        "AuthorizationClient je mock; nejde o skutečné Google Play/consent/OAuth přihlášení.",
+        "Android UI/Job ještě třídy nevytvářejí; chybí skutečná registrace a veřejný Google Cloud project ID.",
+        "Fyzický OAuth účet/GMS absence/odvolání/OS lifecycle vyžadují finální aplikaci a zařízení."
+      ]
     }
   ],
   "manualGates": [

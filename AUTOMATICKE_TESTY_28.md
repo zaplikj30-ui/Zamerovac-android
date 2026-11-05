@@ -125,3 +125,7 @@ DriveHttpTest (4) + DriveApiTest (5), SDK26, skutečný REST/stream kód s Https
 ## Etapa 30 – celý engine přes Drive adaptéry
 
 DriveStoresTest (7) a BackupHistoryTest (+1). Skutečný signed DB/media/ACK, výpadek velkého média a pending/retry, 2 historie/100 originálů/dedup/obnova, scoped capability/account, publish/close/partial/cleanup, duplicitní obsah a denied/expired API. HTTPS server je řízený double, native kompilaci/testy nové etapy ověřit. Node/Python/QA místně úspěšné; není to Google účet, OAuth/UI/Job ani fyzický Android. Etapa 29 native42098280995 SUCCESS, quick42098281099 ověřit.
+
+## Etapa 31 – SDK autorizace a durable account binding
+
+DriveAuthorizationTest (5) + DriveAccountsTest (3). Skutečné Google SDK typy s mock AuthorizationClient; task/cache/account/scope/401/consent/error/interrupt/UI a confirmed AtomicFile/reopen/oddělení/vadné Unicode. Native CI musí potvrdit dependency/kompilaci/běh; skutečný GMS/OAuth účet/registrace ani UI zatím nejsou zapojené. Etapa 30 už má plné native170/quick SUCCESS v 17b8c87.
