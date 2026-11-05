@@ -22,6 +22,11 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
+      - name: Obnovit veřejné Robolectric SDK artefakty
+        uses: actions/cache@v4
+        with:
+          path: ~/.m2/repository/org/robolectric
+          key: robolectric-4.16.1-sdk26-35-v1-${{ runner.os }}
       - name: Ověřit Java a Android zdroje bez vydání APK
         run: gradle --no-daemon :app:compilePreviewJavaWithJavac :app:testPreviewUnitTest
       - name: Nezávisle parsovat a vykreslit zákaznické PDF

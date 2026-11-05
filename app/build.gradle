@@ -58,5 +58,7 @@ dependencies {
 tasks.withType(Test).configureEach {
     // JVM-only Conscrypt/Robolectric compatibility; does not alter Android TLS trust.
     jvmArgs '--add-opens=java.base/java.net=ALL-UNNAMED'
+    // Canonical Maven Central endpoint; repo1 throttled large SDK downloads (HTTP 429).
+    systemProperty 'robolectric.dependency.repo.url', 'https://repo.maven.apache.org/maven2'
     testLogging { events 'failed', 'skipped'; exceptionFormat 'full' }
 }
