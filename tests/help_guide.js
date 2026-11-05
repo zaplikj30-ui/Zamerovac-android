@@ -53,3 +53,4 @@ finds('oznámení','cloud');finds('úspora baterie','cloud');
 finds('chyba mikrofonu','notes');
 finds('původní složky','photo');finds('1024 souborů','photo');
 finds('další dávku zpráv','cloud');finds('změní povolené připojení','cloud');
+finds('podepsanou žádostí','cloud');

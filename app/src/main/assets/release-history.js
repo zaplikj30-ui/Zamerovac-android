@@ -7,6 +7,7 @@
 // Working notes for the common update. These are NOT a released version and
 // are deliberately excluded from forVersion() and the installed release history.
 const pendingChanges={issue:39,released:false,groups:[{kind:'Nové funkce',items:[{text:'Samostatné historické zálohy po instalaci, sdílené neměnné datové bloky, kontrola úplnosti a obnova jako nové kopie. Systémové úložiště včetně Disku závisí na poskytovateli; skutečný Drive účet dosud neověřen.'},{text:'Obrazovka synchronizace zařízení, oboustranné TLS párování, přímý přenos celých zakázek přes místní Wi-Fi / Wi-Fi Direct a trvalá fronta příloh. Rádio a zařízení zatím čekají na fyzické ověření; Drive a historie záloh se dále dokončují.'}]},{kind:'Opraveno',items:[
+ {text:'Čekající cloudový přenos znovu nestahuje již ověřené originály; chybějící a poškozené bloky opravuje podle podepsané žádosti příjemce. Evidence publikace ani opakovaná žádost nesmějí uzavřít frontu bez potvrzení celé zakázky.'},
  {text:'Cloud mezi bloky uvolní cestu ověřenému přímému spojení a znovu ověří síťová pravidla. Rušení plánované úlohy patří pouze jejímu pokusu a nemůže ukončit nebo potvrdit novou relaci.'},
  {text:'Omezené čtení cloudových řídicích zpráv, pokračování procházení po restartu a rozlišení dávky od potvrzení dat; zakázaný síťový přenos nespouští ani seznam poskytovatele.'},
  {text:'Hlasové a importované přílohy se zveřejní až po úplném souboru a potvrzených metadatech; kolize ID nepoškodí originál. Hlas zůstává u původní poznámky a neúspěšný záznam nebo zápis nezavře její formulář.'},

@@ -821,17 +821,22 @@
       "sources": [
         "app/src/main/java/cz/zamerovac/app/SafSyncV2.java",
         "app/src/main/java/cz/zamerovac/app/CloudProof.java",
-        "app/src/main/java/cz/zamerovac/app/CloudFiles.java"
+        "app/src/main/java/cz/zamerovac/app/CloudFiles.java",
+        "app/src/main/java/cz/zamerovac/app/CloudPublications.java"
       ],
       "tests": [
         {
           "path": "app/src/test/java/cz/zamerovac/app/SafSyncV2Test.java",
           "layer": "native-jvm"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/CloudPublicationsTest.java",
+          "layer": "native-jvm"
         }
       ],
       "coverage": "runtime-partial",
-      "positive": "Skutečné podpisy, immutable soubory, média a potvrzení úplného DB merge.",
-      "negative": "Forged ACK, změněný podpis/adresát, částečný upload a chybějící velká fotografie.",
+      "positive": "Skutečné podpisy, immutable soubory, média a potvrzení úplného DB merge. Trvalé publication receipts a ověřená žádost o opravu konkrétního bloku.",
+      "negative": "Forged ACK, změněný podpis/adresát, částečný upload a chybějící velká fotografie. Stejně velké poškození, chybějící blob/snapshot, replay a nepovolená velká oprava nesmějí potvrdit DB.",
       "limits": [
         "SAF závisí na provideru; oficiální Drive API/OAuth není implementované."
       ]
@@ -896,7 +901,7 @@
       "positive": "Kruhové procházení, restart a skutečná revize po 80 neplatných zprávách.",
       "negative": "Limit+1/zero-progress, failed cursor a zakázaná síť bez provider I/O; cursor není ACK.",
       "limits": [
-        "SAF list metadata nejsou tvrdě měřená ani stránkovaná; source readback se opakuje."
+        "SAF list metadata nejsou tvrdě měřená ani stránkovaná; publication cache má 24h kontrolní expiraci."
       ]
     },
     {
@@ -1047,7 +1052,6 @@
   ],
   "openAutomationGaps": [
     "Oficiální Drive API/OAuth a jeho chybové cesty.",
-    "Durable published-blob receipts a bezpečná obnova po odstranění cloudového bloku.",
     "Skutečná API paginace a tvrdé měření síťové režie.",
     "Low-memory/process-kill a konzistence DB fallbacku s receipt indexy.",
     "Kompletní mapování jednotlivých starších ovládacích prvků; nyní jsou mapované funkční oblasti."
