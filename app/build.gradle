@@ -55,5 +55,7 @@ dependencies {
 }
 
 tasks.withType(Test).configureEach {
+    // JVM-only Conscrypt/Robolectric compatibility; does not alter Android TLS trust.
+    jvmArgs '--add-opens=java.base/java.net=ALL-UNNAMED'
     testLogging { events 'failed', 'skipped'; exceptionFormat 'full' }
 }

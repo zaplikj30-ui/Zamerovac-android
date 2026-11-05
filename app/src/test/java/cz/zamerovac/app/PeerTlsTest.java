@@ -28,6 +28,7 @@ public class PeerTlsTest {
    assertNotNull(in);byte[] bytes=java.util.Base64.getMimeDecoder().decode(in.readAllBytes());KeyStore keys=KeyStore.getInstance("PKCS12");keys.load(new ByteArrayInputStream(bytes),"synthetic".toCharArray());return new SyncTls((PrivateKey)keys.getKey("peer","synthetic".toCharArray()),new X509Certificate[]{(X509Certificate)keys.getCertificate("peer")});
   }
  }
+ static boolean contains(Throwable error,String message){if(String.valueOf(error.getMessage()).contains(message))return true;if(error.getCause()!=null&&contains(error.getCause(),message))return true;for(Throwable suppressed:error.getSuppressed())if(contains(suppressed,message))return true;return false;}
  interface Endpoint {void run(SSLSocket socket)throws Exception;}
  void sockets(SSLContext serverContext,SSLContext clientContext,Endpoint server,Endpoint client)throws Exception{
   ExecutorService workers=Executors.newSingleThreadExecutor();
@@ -35,7 +36,7 @@ public class PeerTlsTest {
    SyncTls.secure(listener);listener.setSoTimeout(5000);
    Future<?> result=workers.submit(()->{try(SSLSocket socket=(SSLSocket)listener.accept()){server.run(socket);}catch(Exception failure){throw new CompletionException(failure);}});
    Exception failure=null;try(SSLSocket socket=(SSLSocket)clientContext.getSocketFactory().createSocket(InetAddress.getLoopbackAddress(),listener.getLocalPort())){client.run(socket);}catch(Exception error){failure=error;}
-   try{result.get(10,TimeUnit.SECONDS);}catch(ExecutionException error){if(failure==null)failure=(Exception)error.getCause();}
+   try{result.get(10,TimeUnit.SECONDS);}catch(ExecutionException error){if(failure==null)failure=(Exception)error.getCause();else failure.addSuppressed(error.getCause());}
    if(failure!=null)throw failure;
   }finally{workers.shutdownNow();}
  }
@@ -54,23 +55,23 @@ public class PeerTlsTest {
   assertEquals(2,approved.get());assertEquals(codes.get(0),codes.get(1));assertTrue(codes.get(0).matches("[a-f0-9]{64}"));assertTrue(ar.isTrusted(B,b.fingerprint()));assertTrue(br.isTrusted(A,a.fingerprint()));
  }
  @Test public void rejectedPairingSavesNeitherTrustBinding()throws Exception{
-  try{sockets(a.context(ar,()->true),b.context(br,()->true),socket->PeerHandshake.negotiate(socket,A,"A",a,ar,()->true,request->true),socket->PeerHandshake.negotiate(socket,B,"B",b,br,()->true,request->false));fail("Rejected pairing completed");}catch(IOException expected){}
+  try{sockets(a.context(ar,()->true),b.context(br,()->true),socket->PeerHandshake.negotiate(socket,A,"A",a,ar,()->true,request->true),socket->PeerHandshake.negotiate(socket,B,"B",b,br,()->true,request->false));fail("Rejected pairing completed");}catch(IOException expected){assertTrue(expected.toString(),contains(expected,"Párování nebylo potvrzeno"));}
   assertEquals(0,ar.snapshot().length());assertEquals(0,br.snapshot().length());
  }
  @Test public void pinnedReconnectDoesNotNeedAnotherApprovalAndUnknownCertificateIsDenied()throws Exception{
   ar.approve(B,b.fingerprint(),"B");br.approve(A,a.fingerprint(),"A");PeerHandshake.Approval unexpected=request->{throw new AssertionError("Known peer asked to pair again");};
   sockets(a.context(ar,()->false),b.context(br,()->false),socket->PeerHandshake.negotiate(socket,A,"A",a,ar,()->false,unexpected),socket->PeerHandshake.negotiate(socket,B,"B",b,br,()->false,unexpected));
-  try{sockets(a.context(ar,()->false),rogue.context(br,()->false),socket->PeerHandshake.negotiate(socket,A,"A",a,ar,()->false,unexpected),socket->PeerHandshake.negotiate(socket,B,"B",rogue,br,()->false,unexpected));fail("Unpinned certificate connected");}catch(Exception expected){}
+  try{sockets(a.context(ar,()->false),rogue.context(br,()->false),socket->PeerHandshake.negotiate(socket,A,"A",a,ar,()->false,unexpected),socket->PeerHandshake.negotiate(socket,B,"B",rogue,br,()->false,unexpected));fail("Unpinned certificate connected");}catch(Exception expected){assertTrue(expected.toString(),contains(expected,"Zařízení není spárované"));}
   assertEquals(b.fingerprint(),ar.snapshot().getJSONObject(B).getString("fingerprint"));
  }
  @Test public void certificateCannotClaimAnotherInstallIdentityEvenDuringPairing()throws Exception{
   ar.approve(B,b.fingerprint(),"B");br.approve(A,a.fingerprint(),"A");
-  try{sockets(a.context(ar,()->true),b.context(br,()->true),socket->PeerHandshake.negotiate(socket,A,"A",a,ar,()->true,request->true),socket->PeerHandshake.negotiate(socket,C,"Spoof",b,br,()->true,request->true));fail("Certificate spoofed another install ID");}catch(Exception expected){}
+  try{sockets(a.context(ar,()->true),b.context(br,()->true),socket->PeerHandshake.negotiate(socket,A,"A",a,ar,()->true,request->true),socket->PeerHandshake.negotiate(socket,C,"Spoof",b,br,()->true,request->true));fail("Certificate spoofed another install ID");}catch(Exception expected){assertTrue(expected.toString(),contains(expected,"Certifikát patří jinému zařízení"));}
   assertFalse(ar.snapshot().has(C));assertTrue(ar.isTrusted(B,b.fingerprint()));
  }
  @Test public void revokedBindingAndOversizeFramesAreRejected()throws Exception{
   ar.approve(B,b.fingerprint(),"B");br.approve(A,a.fingerprint(),"A");ar.forget(B);assertFalse(ar.hasFingerprint(b.fingerprint()));
-  try{sockets(a.context(ar,()->false),b.context(br,()->false),socket->PeerHandshake.negotiate(socket,A,"A",a,ar,()->false,request->true),socket->PeerHandshake.negotiate(socket,B,"B",b,br,()->false,request->true));fail("Revoked peer connected");}catch(Exception expected){}
+  try{sockets(a.context(ar,()->false),b.context(br,()->false),socket->PeerHandshake.negotiate(socket,A,"A",a,ar,()->false,request->true),socket->PeerHandshake.negotiate(socket,B,"B",b,br,()->false,request->true));fail("Revoked peer connected");}catch(Exception expected){assertTrue(expected.toString(),contains(expected,"Zařízení není spárované"));}
   for(int size:new int[]{-1,0,PeerWire.MAX_JSON+1,Integer.MAX_VALUE}){ByteArrayOutputStream bytes=new ByteArrayOutputStream();new DataOutputStream(bytes).writeInt(size);try{PeerWire.read(new DataInputStream(new ByteArrayInputStream(bytes.toByteArray())),PeerWire.MAX_JSON);fail("Invalid frame allocated");}catch(IOException expected){}}
  }
 }
