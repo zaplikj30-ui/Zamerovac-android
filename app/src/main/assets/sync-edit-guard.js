@@ -8,6 +8,8 @@ function editing(){
  if(typeof drawStart!=='undefined'&&drawStart)return true;
  if(typeof polylineDraft!=='undefined'&&polylineDraft.length)return true;
  if(root.__detailParent)return true;
+ if(typeof screen==='string'&&screen==='note'&&noteActive)return true;
+ if(!document.getElementById('modal')?.hidden)return true;
  const focused=document.activeElement;
  return !!focused?.matches('input,textarea,select,[contenteditable="true"]')&&!!focused.closest('#modal:not([hidden]),#noteView:not([hidden])');
 }

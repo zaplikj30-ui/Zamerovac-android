@@ -299,6 +299,8 @@ const chapters=[
     ],
     "notes": [
       "Hlasové nahrávání vyžaduje přístup k mikrofonu. Při odmítnutém oprávnění lze zkusit nastavení Androidu.",
+      "Checklisty a přílohy dostávají revizi a průběžně se ukládají. Příchozí synchronizace během otevřené poznámky počká na dokončení její úpravy. Při chybě zápisu tlačítko Uložit formulář nezavře; zopakuj uložení.",
+      "Pouhé otevření a zavření textové poznámky nebo zobrazení prázdné skici nemění její obsah ani revizi. Uzamčená poznámka nedovolí měnit checklist ani odebírat přílohy.",
       "Soukromé poznámky do zákaznického PDF patří jen při výslovné volbě."
     ],
     "keywords": [

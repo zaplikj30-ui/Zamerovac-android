@@ -69,3 +69,7 @@ Specifikace #38/#34/#33 → PeerCoordinator/PeerDiscovery/PeerWifiDirect/MainAct
 ## Synchronizace během skutečné editace – etapa 17
 
 #33/#38/#12/#13 → sync-edit-guard, applySavedState a commitEditor dočasného detailu → `tools/e2e/sync-edit-guard.cjs`. Tři pozitivní/negativní scénáře s modelovým Native diskovým CAS: příchozí data během reálného pointer tahu a vyplňování přesného rozměru, vynucený conflict s přesunem vlastní editace do kopie, přesné finální souřadnicové delta i hodnoty; úprava detailu, parent konflikt a další tah se stále stejnými živými položkami, zachované obě verze a reopen. Místně prošly; CI nového SHA a fyzický Android callback ještě ověřit. Samostatná stavová zpráva nenahrazuje pending data. Produkční Java merge/sign/TLS nejsou v tomto UI testu fingovaně vydávané za dvě zařízení.
+
+## Poznámky/checklist/přílohy/skica – etapa 18
+
+#33/#38 → noteChanged/renderChecks/renderNoteAttachments/saveNote, readonly sketch init a active arrays → `tools/e2e/note-sync.cjs` (4 UI případy). Pozitivní: reálné checklist/file input IDB přílohy s kauzální revizí a reloadovatelným stavem; readonly note/sketch bez změny; callback během poznámky bez zbytečné kopie; Native CAS během skutečného tahu skici zachová koncové body i cizí verzi. Negativní: disk full zachová formulář/draft a retry; locked checklist/remove jsou disabled; modal OK focus nesmí umožnit příchozí přepsání rozpracovaného rozměru. Místně prošly, nové CI ověřit. Native fixture je výslovně modelovaná; Java/přenosy mají samostatné nativní integrační testy.
