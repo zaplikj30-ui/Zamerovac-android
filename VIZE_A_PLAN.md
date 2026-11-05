@@ -38,6 +38,27 @@ Pro budoucí návrh řešit výběr cíle, náhled stránky, správné formáty 
 
 **Stav:** Výše je evidence budoucích možností. Promítání je nezávazný nápad; vzdálený tisk je požadavek na budoucí schopnost, ale dosud bez schváleného konkrétního rozsahu/termínu. **Nezasahovat do aktuální #39/PR #41; žádná implementace, APK ani nové závislosti.** Podle výsledku architektonické kontroly [#42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42) rozhodnout, co opravdu připravit a kdy.
 
+### Další technické možnosti pro bezpečný budoucí rozvoj (5. 11. 2026)
+
+**Uživatel požádal zaznamenat všechny návrhy.** Níže jsou budoucí možnosti; **nejde o schválení jejich okamžitého programování**. Návazné obecné požadavky na rozličná zařízení, myš, soubory, Bluetooth, kvalitu a bezpečnost už jsou rozepsané i jinde v tomto plánu.
+
+| Možnost | Co by přinesla | Orientační priorita |
+| --- | --- | --- |
+| **Myš, klávesnice a touchpad** | Přesnější ovládání na tabletu/PC, případně zkratky a kolečko. Stejné kóty a data jako u dotyku; vstup nesmí měnit geometrii. | Vysoká |
+| **Skládací telefony, více oken, proměnlivá velikost** | Přizpůsobení displeji, zachování otevřené zakázky, neuložených změn, výběru objektu a zoomu při změně okna. | Vysoká |
+| **Univerzální sdílení** | Výslovně vybraný výstup přes systémovou nabídku do jiné aplikace; bez přibalování interních dat či záměny zálohy za zákaznické PDF. | Vysoká |
+| **Další měřicí přístroje a způsoby připojení** | Jiné značky laserů, případně USB a další protokoly. Společná pravidla jednotek, rozměrů a historie bez závislosti na konkrétním výrobci. | Střední |
+| **Volitelné biometrické zabezpečení** | Odemknutí aplikace nebo zakázky otiskem či obličejem podle systému, se záložní možností přístupu. Nenahrazuje šifrování ani zálohy. | Střední |
+| **QR kódy a fotoaparát** | Např. rychlé otevření konkrétní zakázky či dokumentu ve výrobě; bez zveřejnění osobních údajů a přístupových klíčů. | Nízká |
+
+**Další čtyři technické oblasti, které je vhodné mít připravené:**
+1. **Rozšiřitelné způsoby komunikace:** promítání, tisk, měřidla a přenos zakázek lze časem doplnit nebo vyměnit, aniž by to změnilo geometrii či ukládání. Žádné předčasné složité univerzální vrstvy.
+2. **Bezpečné aktualizace a případný návrat:** migrace a obnova dat musí být vyzkoušené. Návrat na starou APK není automaticky bezpečný, pokud se změnil formát zakázek.
+3. **Odhalování pádů a chyb:** možná lokální diagnostika a případně dobrovolné technické hlášení bez fotografií, zákaznických podkladů, adres a tajných údajů. Před jakýmkoliv odesíláním ven jasně popsat, co a proč se odesílá.
+4. **Stabilita při nedostatku paměti, přerušení a dlouhé práci:** šetrné načítání obrázků, automaticky bezpečně zachovaná rozpracovaná práce, testy velkých zakázek, offline výpadků a návratu z pozadí.
+
+**Stav:** plán k pozdějšímu posouzení. Promítání na TV, vzdálený tisk, různá pera a interní technologická nezávislost jsou zaznamenány zvlášť; zde se neduplikuje jejich implementační zadání. Po dokončení #39/PR #41 nejprve provést architektonickou kontrolu #42 a rozhodnout pořadí, teprve pak případně schválit konkrétní změnu.
+
 ## 1. Hlavní smysl
 Praktická samostatná Android aplikace pro zaměřování zakázkového nábytku: od založení zakázky přes fotografie, kóty a poznámky až po předání podkladů pro návrh a výrobu. Minimalizovat přepínání mezi aplikacemi, neztrácet naměřená data a udržet snadné ovládání přímo na stavbě/montáži.
 
@@ -56,9 +77,9 @@ Praktická samostatná Android aplikace pro zaměřování zakázkového nábytk
 
 ### Budoucí samostatné nastavení složitosti ovládání a výkonu vykreslování (námět, nikoli hotová funkce)
 
-**Námět uživatele 4. 11. 2026:** Dva **nezávislé** přepínače v Nastavení, aby budoucí rozsáhlé aplikace vyhovovaly začátečníkům, pokročilým uživatelům i profesionálům a současně výkonným i slabším telefonům. Přesné názvy a počty stupňů se rozhodnou až při návrhu UX.
+**Námět uživatele 4. 11. 2026, názvy režimů upřesněny 5. 11. 2026:** Dva **nezávislé** přepínače v Nastavení, aby budoucí rozsáhlé aplikace vyhovovaly začátečníkům, běžným i zkušeným uživatelům a současně výkonným i slabším telefonům. **Zvolená označení režimů ovládání: Začátečník / Střední / Expert.** Přesný rozsah jednotlivých režimů se určí až při návrhu ovládání.
 
-1. **Složitost ovládání (např. Jednoduché / Běžné / Pokročilé; uživatelská alternativa „amatér / střední / profesionál“):** mění pouze přehlednost, počet zobrazených pokročilých nástrojů, rozsah nápovědy a způsob nabídky funkcí. Nejde o hodnocení schopností člověka, automatické zařazování uživatelů ani o cenový tarif. **Neměnit výpočty, přesnost, obsah zakázek či uložená data.** Pokročilé funkce mají být dostupné na vyžádání a přechod mezi režimy nesmí ztratit nebo skrýt editovatelná data tak, že je nepůjde bezpečně upravovat. Nabídnout jednoduchý přechod bez zakládání nové zakázky a bez restartu, pokud je to technicky možné.
+1. **Složitost ovládání (Začátečník / Střední / Expert):** mění pouze přehlednost, počet zobrazených pokročilých nástrojů, rozsah nápovědy a způsob nabídky funkcí. Nejde o hodnocení schopností člověka, automatické zařazování uživatelů ani o cenový tarif. **Neměnit výpočty, přesnost, obsah zakázek či uložená data.** Pokročilé funkce mají být dostupné na vyžádání a přechod mezi režimy nesmí ztratit nebo skrýt editovatelná data tak, že je nepůjde bezpečně upravovat. Nabídnout jednoduchý přechod bez zakládání nové zakázky a bez restartu, pokud je to technicky možné.
 2. **Kvalita / náročnost vykreslování (např. Automaticky [výchozí] / Úsporně / Vyváženě / Vysoká kvalita):** nezávisle na úrovni ovládání dovolí nastavit zátěž 2D/3D vykreslování, náhledů, animací a detailů. Automatika volí rozumné zatížení podle reálných schopností a aktuálních podmínek zařízení (paměť, plynulost, případně teplota/úsporný režim, pokud je lze bezpečně zjistit); neodvozovat výkon jen z označení nebo ceny telefonu. Ruční volba může snížit grafickou náročnost, ale nesmí obejít bezpečnostní limity zařízení ani způsobit pád kvůli vysokému nastavení.
 3. **Co se nikdy nesmí změnit:** naměřené délky, rozměry dílců, hrany, orientace dekoru, přesnost kót, výstupy kusovníku/nářezu, originály fotografií, exporty, rozpracované změny a bezpečnost ukládání. Úsporný režim může zjednodušit **pouze vizuální zobrazení**, nikoli výpočet či obsah výrobní dokumentace.
 4. **Společné testování v budoucnu:** různé výkonnostní třídy telefonů/tabletů; velké fotky, dlouhé projekty, přepnutí úrovně ovládání i grafiky u otevřené zakázky, restart/obnovení, offline provoz, zachování přiblížení a dat; automatika vs. ruční předvolba a reakce na nedostatek paměti. Obě nastavení ukládat zvlášť mimo zakázková data.
