@@ -413,3 +413,5 @@ window.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();wi
 // Editor functions supplied by editor.js below.
 $('lineColor').value=prefs.color;
 showFolder();applyNativePrefs();
+
+window.ZamerovacPeerConflictCount=()=>state.records.filter(record=>record.conflict&&!record.deleted).length;

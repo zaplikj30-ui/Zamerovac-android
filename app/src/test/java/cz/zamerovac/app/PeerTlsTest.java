@@ -64,6 +64,10 @@ public class PeerTlsTest {
   try{sockets(a.context(ar,()->false),rogue.context(br,()->false),socket->PeerHandshake.negotiate(socket,A,"A",a,ar,()->false,unexpected),socket->PeerHandshake.negotiate(socket,B,"B",rogue,br,()->false,unexpected));fail("Unpinned certificate connected");}catch(Exception expected){assertTrue(expected.toString(),contains(expected,"Zařízení není spárované"));}
   assertEquals(b.fingerprint(),ar.snapshot().getJSONObject(B).getString("fingerprint"));
  }
+ @Test public void oneSidedDurablePairingRequiresFreshComparisonOnBothScreens()throws Exception{
+  ar.approve(B,b.fingerprint(),"B");AtomicInteger count=new AtomicInteger();List<String> codes=Collections.synchronizedList(new ArrayList<>());PeerHandshake.Approval accept=request->{count.incrementAndGet();codes.add(request.code);return true;};
+  sockets(a.context(ar,()->true),b.context(br,()->true),socket->PeerHandshake.negotiate(socket,A,"A",a,ar,()->true,accept),socket->PeerHandshake.negotiate(socket,B,"B",b,br,()->true,accept));assertEquals(2,count.get());assertEquals(codes.get(0),codes.get(1));assertTrue(ar.isTrusted(B,b.fingerprint()));assertTrue(br.isTrusted(A,a.fingerprint()));
+ }
  @Test public void certificateCannotClaimAnotherInstallIdentityEvenDuringPairing()throws Exception{
   ar.approve(B,b.fingerprint(),"B");br.approve(A,a.fingerprint(),"A");
   try{sockets(a.context(ar,()->true),b.context(br,()->true),socket->PeerHandshake.negotiate(socket,A,"A",a,ar,()->true,request->true),socket->PeerHandshake.negotiate(socket,C,"Spoof",b,br,()->true,request->true));fail("Certificate spoofed another install ID");}catch(Exception expected){assertTrue(expected.toString(),contains(expected,"Certifikát patří jinému zařízení"));}

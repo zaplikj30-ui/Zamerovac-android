@@ -43,3 +43,5 @@ assert.deepEqual(help.matchingRanges('žádný výskyt','zzzz'),[]);
 assert.deepEqual(help.matchingRanges('kóta',''),[]);
 
 finds('sha-256','backup');finds('neulozeno','backup');
+
+finds('wifi direct','cloud');finds('párování','cloud');finds('čekající potvrzení','cloud');

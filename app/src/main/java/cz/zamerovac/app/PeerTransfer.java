@@ -11,7 +11,7 @@ import javax.net.ssl.SSLSocket;
 final class PeerTransfer {
     interface Progress {void update(String peer,String phase,int completed,int total)throws Exception;}
     private final PeerDataStore store;private final Progress progress;
-    private final ScheduledExecutorService heartbeat=Executors.newSingleThreadScheduledExecutor();
+    private final ScheduledExecutorService heartbeat=Executors.newScheduledThreadPool(2);
     PeerTransfer(PeerDataStore store,Progress progress){this.store=store;this.progress=progress;}
     private interface Work<T>{T run()throws Exception;}
     private <T>T working(DataOutputStream out,Work<T> work)throws Exception{
@@ -27,7 +27,7 @@ final class PeerTransfer {
         DataInputStream in=new DataInputStream(new BufferedInputStream(trackedInput,65536));DataOutputStream out=new DataOutputStream(new BufferedOutputStream(trackedOutput,65536));
         // Java sockets have no write timeout. Close a stalled writer as well as a stalled reader.
         ScheduledFuture<?> watchdog=heartbeat.scheduleAtFixedRate(()->{if(System.nanoTime()-activity.get()>TimeUnit.SECONDS.toNanos(45))try{socket.close();}catch(IOException ignored){}},5,5,TimeUnit.SECONDS);
-        try{if(initiator){send(in,out,peer);receive(in,out,peer);}else{receive(in,out,peer);send(in,out,peer);}store.trusted(peer);update(peer,store.outbox.pending(peer.id)==0?"done":"waiting",0,store.outbox.pending(peer.id));}
+        try{if(initiator){send(in,out,peer);receive(in,out,peer);}else{receive(in,out,peer);send(in,out,peer);}store.trusted(peer);store.outbox.prepare(peer.id);update(peer,store.outbox.pending(peer.id)==0?"done":"waiting",0,store.outbox.pending(peer.id));}
         finally{watchdog.cancel(false);heartbeat.shutdownNow();}
     }
     private void send(DataInputStream in,DataOutputStream out,PeerHandshake.Peer peer)throws Exception{

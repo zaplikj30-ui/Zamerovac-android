@@ -6,7 +6,7 @@
 'use strict';
 // Working notes for the common update. These are NOT a released version and
 // are deliberately excluded from forVersion() and the installed release history.
-const pendingChanges={issue:39,released:false,groups:[{kind:'Opraveno',items:[
+const pendingChanges={issue:39,released:false,groups:[{kind:'Nové funkce',items:[{text:'Obrazovka synchronizace zařízení, oboustranné TLS párování, přímý přenos celých zakázek přes místní Wi-Fi / Wi-Fi Direct a trvalá fronta příloh. Rádio a zařízení zatím čekají na fyzické ověření; Drive a historie záloh se dále dokončují.'}]},{kind:'Opraveno',items:[
  {text:'Potvrzované uložení, zachování souběžných změn a ochrana proti opožděnému výsledku synchronizace.'},
  {text:'Odmítnutí poškozených znaků Unicode bez tiché změny uloženého textu.'},
  {text:'Odmítnutí neúplné ZIP zálohy, kontrolní součty při obnově, potvrzované přílohy a bezpečné ukončení chybného hlasového záznamu.'},

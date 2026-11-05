@@ -37,3 +37,7 @@ Připravený společný spouštěč, strojový registr, jazykové kontroly a dal
 ## Přímý přenos – etapa 9 #39
 
 Specifikace #38/#33 → PeerSnapshot/Media/Outbox/DataStore/Transfer → `PeerTransferTest`: úplný obousměrný přenos a přesné řetězce kót, poznámka/audio/detail, 30 souborů s přerušením po 19. a restartem outboxu, idempotence, místní změna během přenosu, rozdílné originály stejného ID, EOF/nesprávný hash bez publikace, podvržený source a nebezpečné/duplicitní JSON, kauzálně bezpečné rušení starých pending snapshotů. `SyncCanonicalTest` + `tests/sync_canonical.js` ověřují společné JCS bajty/hash/job ID a neplatné Unicode. Native výsledek je nutné ověřit na konkrétním novém CI SHA; místní Node/Python prošly. Fyzické rádio/Keystore/UI/Drive dosud neprovedeno. Přenos aplikace ještě neaktivuje.
+
+## Android přímé propojení – etapa 10
+
+Specifikace #38/#34/#33 → PeerCoordinator/PeerDiscovery/PeerWifiDirect/MainActivity a peer-sync.js → `PeerDiscoveryTest` (privátní/link-local/ULA proti internet/loopback/multicast/wildcard, žádná fiktivní zařízení bez permission), rozšířený PeerTransferTest (novější změny za dřívějším ACK), `tools/e2e/peer-sync.cjs` (menu/settings/browser, explicitní potvrzení i negativní/Zpět, celý kód/nová relace, cizí HTML jméno, pending/chyba/nezměněná data/oddělená cloud ikona). UI tři scénáře prošly místně; nativní výsledek nové etapy teprve Actions. Praktické radio, permission dialog Androidu a Keystore neověřeny; platí foreground/P2P reconnect omezení v docs/update-39-progress.md. Etapa 9 nativní i quick/UI CI již SUCCESS.

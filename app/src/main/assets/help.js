@@ -455,23 +455,37 @@ const chapters=[
   },
   {
     "id": "cloud",
-    "title": "20. Google Disk, synchronizace a práce offline",
-    "intro": "Zakázky lze držet lokálně v zařízení a podle možností poskytovatele propojit se složkou na Google Disku.",
+    "title": "20. Synchronizace zařízení, Google Disk a práce offline",
+    "intro": "Přímé propojení přenáší celé zakázky mezi spárovanými Androidy v místní síti nebo přes Wi-Fi Direct. Google Disk je oddělená cesta závislá na poskytovateli složky.",
     "steps": [
-      "V Nastavení nebo nabídce Google Disk vyber složku, do které má Zaměřovač přístup pro čtení i zápis.",
+      "Otevři ☰ → Synchronizace zařízení nebo Nastavení → Místní a přímé propojení. Zapni párování na obou zařízeních.",
+      "Ve stejné místní Wi-Fi vyber nalezený Zaměřovač. Bez internetu a routeru na obou spusť Hledat přes Wi-Fi Direct bez routeru a na jednom zvol druhé zařízení; systém Android může vyžádat potvrzení propojení.",
+      "Porovnej celý kód na obou obrazovkách a potvrď shodu na obou zařízeních. Při odlišných kódech párování odmítni. Spárované zařízení získá všechny zakázky a přílohy.",
+      "Při dostupném spojení se spárované instalace dorovnávají automaticky, když je Zaměřovač otevřený. Obrazovka ukazuje čekající potvrzení a chyby; po výpadku použij Zkusit přenos znovu.",
+      "Pro odebrání důvěry zvol Odebrat párování. Tím se nemažou zakázky už uložené na druhém zařízení; zastaví se nové přenosy a odstraní místní fronta pro toto zařízení.",
+      "Pro dosavadní cloudovou cestu v Nastavení nebo nabídce Google Disk vyber složku, do které má Zaměřovač přístup pro čtení i zápis.",
       "Ruční synchronizaci spouštěj přes Synchronizovat nyní; její skutečný stav ověř ve zprávách aplikace.",
       "Offline můžeš pracovat s lokálně dostupnými projekty. Při opětovném připojení zkontroluj úspěšné provedení synchronizace.",
       "Při souběžných změnách na více zařízeních zkontroluj konfliktní kopie, než cokoli smažeš."
     ],
     "notes": [
+      "Přímé propojení nevyžaduje internet, Google účet ani služby Samsungu. Wi-Fi Direct závisí na podpoře konkrétního Androidu a oprávněních; na starším Androidu také na zapnutém určování polohy. Při nepodpoře použij stejnou místní Wi-Fi. Rádia různých značek je stále nutné fyzicky ověřit.",
+      "Po přerušení zůstává fronta v zařízení. Potvrzené soubory se ověří a nepřenášejí zbytečně znovu; nedokončený soubor se odešle celý. Při chybě hashe nebo odlišném originálu se přenos zastaví a nic nepřepíše. Příjem projektu se potvrdí až po ověření všech potřebných souborů a uložení dat.",
+      "Po uspání nebo odchodu z aplikace se místní spojení zavře; návrat pokračuje z fronty. Bez vytvořené skupiny Wi-Fi Direct může být potřeba znovu vybrat zařízení. Tato implementace zatím negarantuje nepřetržitý přenos na pozadí ani automatické přepnutí na Drive.",
+      "Historické zálohy se přímou synchronizací nemažou. Obnova Android systému nekopíruje identitu ani párování/frontu do jiného zařízení; po ní párování znovu nastav.",
       "Ne každý správce Google Disku nebo souborový poskytovatel nabízí zapisovatelnou složku pro Android.",
       "Cloudová synchronizace není totéž jako ověřená nezávislá záloha. Před důležitými změnami si ulož ZIP.",
       "Instalace používá náhodnou vlastní identitu a čítače revizí, ne model telefonu ani jeho hodiny. Při souběhu se novější pozorovaná verze odliší od nezávislé změny.",
-      "Pomalý přenos poskytovatele nedrží zámek místní databáze. Novější místní změny při přenosu zůstávají uložené a čekají na další pokus; výpadek se neoznačí jako dokončená synchronizace. Dosavadní SAF cesta stále není nová přímá synchronizace ani oficiální integrace Drive API."
+      "Pomalý přenos poskytovatele nedrží zámek místní databáze. Novější místní změny při přenosu zůstávají uložené a čekají na další pokus; výpadek se neoznačí jako dokončená synchronizace. Dosavadní SAF cesta není oficiální integrace Drive API; místní přenos se ovládá samostatně přes Synchronizace zařízení."
     ],
     "keywords": [
       "cloud",
       "SAF",
+      "párování",
+      "Wi-Fi Direct",
+      "wifi direct",
+      "router",
+      "čekající potvrzení",
       "synchronizovat",
       "konflikt",
       "bez internetu",

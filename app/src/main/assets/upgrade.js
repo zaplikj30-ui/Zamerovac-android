@@ -80,9 +80,9 @@ const oldError=window.onNativeError;
 window.onNativeError=function(message){logEvent('chyba',String(message).split('\n')[0]);if(/synchronizac|google disk|cloud/i.test(String(message)))setCloudState('failed');oldError(message)};
 const oldSync=window.onNativeSync;
 window.onNativeSync=function(text){
-  let message='';try{message=JSON.parse(text).message||'';}catch(e){}
+  let message='',transport='';try{const result=JSON.parse(text);message=result.message||'';transport=result.transport||'';}catch(e){}
   const confirmed=oldSync(text);
-  if(/synchroniz/i.test(message)){
+  if(transport!=='direct'&&/synchroniz/i.test(message)){
    const failed=confirmed===false||/chyb|selhal|nelze|nepodpor/i.test(message);
    setCloudState(failed?'failed':'ok');logEvent('cloud',failed?'Synchronizace hlásí chybu':'Synchronizace dokončena');
   }
