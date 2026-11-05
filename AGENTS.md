@@ -18,6 +18,15 @@ Uživatel vyrábí zakázkový nábytek. Vyvíjíme vlastní Android aplikaci na
 
 **Aktuální pořadí:** bezpečně dokončit rozpracovanou aktualizaci [#39 / PR #41](https://github.com/zaplikj30-ui/Zamerovac-android/pull/41), provést nezávislou kontrolu kvality a kolizí funkcí; pak podle zjištění navrhnout a provést cílenou modernizaci (případně větší přepracování po samostatném schválení). Nepřepisovat souběžně práci Codexu, nevytvářet APK kvůli dokumentaci. Technické rozhodování a výsledky průběžně evidovat v [#42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42).
 
+### Povinné porovnání architektury se seznamem funkcí a nápadů (5. 11. 2026)
+
+**Přímý pokyn uživatele:** Koordinující ChatGPT je odpovědný za to, že **sám porovnává technický návrh a skutečnou stavbu Zaměřovače se všemi známými požadavky a možnými budoucími funkcemi na GitHubu**. Uživatel má říkat, co potřebuje, ne sám hlídat architektonické dopady či objevovat rizika.
+
+- Před významnými změnami a povinně po dokončení velké aktualizace [#39 / PR #41](https://github.com/zaplikj30-ui/Zamerovac-android/pull/41) načíst nejnovější [VIZE_A_PLAN.md](VIZE_A_PLAN.md), relevantní issues (zejména #12, #17, #28, #39, #42), současný kód, testy a pravidla. Rozlišit **fungující funkce / schválené zadání / nezávazný budoucí nápad**.
+- Zjistit, zda současná architektura bezpečně zvládne zamýšlený rozvoj: samostatné moduly, jednotky a geometrie, stabilní editovatelná data, ochrana a migrace zakázek, různé způsoby ovládání, doplnění měřidel, promítání, vzdálený tisk, sdílení, možné licence a budoucí změny technologií (Java, Kotlin, WebView i alternativy). **Neznámé budoucí funkce** zohledňovat obecně udržitelným návrhem, ne spekulativní implementací každé technologie.
+- Proaktivně najít konkrétní místa, která zbytečně ztíží rozšíření nebo způsobí konflikty nových a starých funkcí, a doporučit pořadí oprav. **Říct uživateli srozumitelně, co musíme zlepšit před další funkcí a proč**; pokud je prokázaná zásadní slabina, porovnat menší úpravy s cíleným větším přepracováním.
+- Výsledky kontroly a zbývající rizika ukládat do existujícího [#42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42), relevantní funkční testy do #28. Nevytvářet duplicitní záznamy. **Neimplementovat automaticky nezávazné nápady**, nespouštět nyní konkurenční zásahy do PR #41 ani novou APK kvůli dokumentaci.
+
 ### Připravenost na změny a doplnění technologií (5. 11. 2026)
 
 **Upřesnění uživatele:** Zaměřovač musí být stavěn tak, aby bylo možné v budoucnu **přecházet na vhodnější technologie, přidávat nové technologie a funkce** bez zbytečného rozsáhlého přepisování a bez vzájemného rozbíjení existujících funkcí. Nelze zaručit nulové potíže, ale architektura má rizika předem omezovat.
