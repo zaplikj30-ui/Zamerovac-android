@@ -38,3 +38,5 @@ Etapa34: SyncCadence vlastní potvrzenou lokální konfiguraci a společný dura
 Etapa35: PeerSessions vlastní pouze po-TLS route admission/tie-break a conditional cleanup. PeerWifiDirect dodá ověřitelnou lokální group interface informaci, nikoli důvěru. Cloud předává read checkpoint do existujících datových/media modulů; krátký commit je oddělen od velkého hash I/O. Nejde o plošný přesun Android lifecycle ani editoru.
 
 Etapa36: omezená finální kontrola vlastní implementace je v [update-39-final-review.md](update-39-final-review.md); není nezávislý audit. Jeden zjištěný startup key race řeší synchronizovaný existující identity loader, nikoli plošný přesun TLS/Activity. Diskové residue testy neprohlašují fyzický process-kill.
+
+Etapa37: BackupBlobs vlastní jen adresování/výběr ověřené immutable repair kopie; BackupHistory drží integritu/publikaci/restore a BackupStore stále nemá delete/replace. Sdílený CorruptBlob odděluje ověřenou integritní chybu od síťové/provider chyby. Manifestový obsah se nemění.

@@ -429,3 +429,14 @@ DatabaseRecoveryTest+3 doplňuje partial/complete ale nepublikované tmp a backu
 Externí technická překážka: není dostupný legitimní Google Cloud projekt/OAuth Android registrace. Produkční adaptér/auth/UI/Job je naprogramovaný, ale v této konfiguraci se připojení poctivě nepovolí. Poslední potřebné integrační/fyzické důkazy nelze nahradit konektorem ani syntetickou CI. Pokračování přesně v závěrečné kontrole a drive-api-integration.md. Neoznačovat #39/#38/#40 za hotové ani zavírat issues.
 
 První native etapy36 (fcf4aa9 /42116269121) zkompilovala produkční aplikaci, ale compileUnitTest selhalo na Files.readString, které compile Android SDK neposkytuje. Test opravuje UTF-8 decode přes již používané readAllBytes; produkční změna/testovací očekávání se nemění a žádný test nebyl vypnutý. Celá native CI musí projít znovu.
+
+
+Etapa36 potvrzena v **20eb4551a677edea3664a44d11499949b72360e0**, native42116667936 / quick42116667853 SUCCESS. Po opravě pouze test API prošly všechny native testy včetně skutečné JCA hranice/dvou startup vláken a tří diskových residue stavů. Není to fyzický Keystore/process-kill.
+
+## Etapa37 – retry historické zálohy bez přepsání partial/corrupt bloku
+
+Omezený závěrečný audit zjistil další konkrétní funkční vazbu #40: neúplný canonical blob po přerušeném SAF zápisu nebo poškozený historický blob mohl trvale blokovat další zálohu stejného dostupného originálu. Fail-closed bránilo přepsání, ale chyběla bezpečná nová kopie. BackupBlobs nyní hledá a ověřuje canonical hash a případné hash-UUID kopie. Nový pokus při prokázané absenci/integritním poškození použije nový immutable název, zachová původní fyzický soubor i manifesty. Manifest nadále ukazuje hash/size, tedy stejný historický obsah; check/restore hledá jen validní bajty a před DB commitem znovu kontroluje hash. Zdravé bloky se dál deduplikují.
+
+ImmutableStore.CorruptBlob odlišuje prokázanou integritní chybu od provider permission/timeout/network failure. DriveObjectStore vrátí tuto konkrétní chybu také při všech poškozených duplicate blob kopiích. Provider chyby se neignorují jako povolení psát. Výběr alternativ je bounded16, nic se nemaže ani nepřepisuje, oprava vyžaduje dostupný originál. Dodatečné ověřovací čtení je cena bezpečného výběru; nevydává se za záchranu ztracených všech kopií.
+
+Nové native testy4: po partial11byte prvním bloku/restartu nový bod+restore a původní partial beze změny; poškozený canonical a dvě historie/check/restore/reuse s nezměněnými manifesty a přesnými bajty; denied read nikdy nevytvoří repair; Drive REST duplicate corrupt canonical obě kopie zůstanou a nová validní varianta obnoví starou historii. Novou native/quick CI ověřit. Nápověda/nevydaná historie/QA doplněné, bez APK/merge. Po této cílené opravě zbývá externí GCP registrace/živý účet, nezávislá kontrola a fyzické brány; nerozšiřovat audit do neomezených budoucích funkcí.

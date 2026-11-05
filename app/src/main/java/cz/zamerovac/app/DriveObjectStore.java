@@ -24,7 +24,7 @@ final class DriveObjectStore {
         // Drive permits identical names after a race. Resolve only content-addressed blobs by their real bytes.
         String name=path.substring(path.lastIndexOf('/')+1);if(files.size()>16||!path.contains("/blobs/")||!name.matches("[a-f0-9]{64}(?:-[a-f0-9-]{36})?"))throw new IOException("Disk obsahuje nejednoznačné neměnné zprávy");String expected=name.substring(0,64);files.sort(Comparator.comparing(file->file.id));
         for(DriveApi.ObjectFile file:files){boolean matches;try(InputStream input=api.open(file)){org.json.JSONObject verified=CloudFiles.copy(input,new OutputStream(){public void write(int value){}public void write(byte[] bytes,int offset,int length){}},file.size);matches=file.size==verified.getLong("size")&&expected.equals(verified.getString("sha256"));}if(matches)return api.open(file);}
-        throw new IOException("Disk nemá úplnou ověřenou kopii duplicitního bloku");
+        throw new ImmutableStore.CorruptBlob("Disk nemá úplnou ověřenou kopii duplicitního bloku");
     }
     OutputStream create(String path)throws Exception{
         if(!api.exact(path).isEmpty())throw new IOException("Neměnný soubor Disku již existuje");File file;

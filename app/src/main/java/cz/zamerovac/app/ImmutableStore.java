@@ -3,6 +3,7 @@ import java.io.*;
 import java.util.*;
 /** Immutable storage capability shared by transport adapters. No replace/delete operation. */
 interface ImmutableStore {
+    class CorruptBlob extends IOException {CorruptBlob(String message){super(message);}}
     interface Checkpoint {void check()throws IOException;}
     /** Staged adapters publish only after the caller verifies the complete source. close() only cleans up. */
     interface PendingOutput {void publish()throws IOException;}

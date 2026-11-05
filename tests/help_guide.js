@@ -69,3 +69,5 @@ for(const phrase of ["15, 30 či 60 minut","Ručně zastaví vlastní automatick
 for(const phrase of ['souběhu ověřených místních relací','ostatní příchozí zprávy','místní kontroly velkých originálů'])assert(src.includes(phrase),'Missing transport limitation: '+phrase);
 
 assert(src.includes('bezpečnostní klíč zařízení není dostupný'),'Identity initialization failure must be explained');
+
+assert(src.includes('další ověřenou kopii'),'Backup repair and original preservation must be explained');

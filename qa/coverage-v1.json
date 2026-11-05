@@ -620,7 +620,8 @@
       "sources": [
         "app/src/main/java/cz/zamerovac/app/BackupHistory.java",
         "app/src/main/java/cz/zamerovac/app/DocumentBackupStore.java",
-        "app/src/main/assets/backup-history.js"
+        "app/src/main/assets/backup-history.js",
+        "app/src/main/java/cz/zamerovac/app/BackupBlobs.java"
       ],
       "tests": [
         {
@@ -637,10 +638,11 @@
         }
       ],
       "coverage": "runtime-partial",
-      "positive": "Dvě historie, dedup 100 syntetických originálů, check a obnova starých/nových bajtů jako kopie.",
-      "negative": "Corrupt/missing/denied provider, metered exception, souběžná editace a rollback.",
+      "positive": "Dvě historie, dedup 100 syntetických originálů, check a obnova starých/nových bajtů jako kopie. Retry po partial/corrupt canonical vytvoří nový immutable blob hash-UUID, check/restore ověří přesné původní bajty bez změny historických manifestů. REST test má i duplicitní poškozený název.",
+      "negative": "Corrupt/missing/denied provider, metered exception, souběžná editace a rollback. Permission/provider read failure se nesmí vydávat za integritní poškození a povolit nový zápis.",
       "limits": [
-        "Skutečný Google účet/provider a per-device zachování po aktualizaci neověřeny."
+        "Skutečný Google účet/provider a per-device zachování po aktualizaci neověřeny.",
+        "Repair vyžaduje dostupný originál; nejvýše16 vhodných alternativ na hash, další ověřovací čtení zvyšují cenu velkého restore."
       ]
     },
     {
