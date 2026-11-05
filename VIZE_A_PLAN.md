@@ -325,6 +325,12 @@ Kontrola má **upozornit a vysvětlit konkrétní nesrovnalost**. Bez výslovné
 
 **Aktuální priorita:** opravit a otestovat domluvených 28 kontrol Zaměřovače a schválené doplňky, bezpečně zachovat data a češtinu. **Žádný PC build, synchronizační služba ani nový datový formát nejsou tímto zadáním schválené k okamžité implementaci.**
 
+### Dotyková pera a vstup nezávislý na výrobci (upřesnění 5. 11. 2026)
+
+**Požadavek uživatele:** budoucí Zaměřovač se má dobře ovládat prstem i kompatibilními pery různých značek, nejen S Pen. U podporovaných iPadů počítat s Apple Pencil; na iPhonu především s běžným dotykovým ovládáním prstem; na Androidu s rozmanitými stylusy podle podpory hardware; na Windows s myší/klávesnicí a případným perem. Specifické možnosti pera jsou volitelné. Úchopy, gesta, lupa, přichytávání, přesun a ukládání mají stejný význam a přesnost bez ohledu na zařízení. Přesný seznam kompatibilních per potvrzovat testy, nepředstírat univerzální kompatibilitu.
+
+**Realizace:** oddělený vstupní mechanismus od geometrie a datového modelu, testy kombinací gest a obnovení rozpracovaných dat, bez automatického zavádění nové funkce do #39/PR #41. Toto doplňuje již existující pravidla Android/iOS kompatibility, neduplikuje novou implementaci.
+
 ### Široká kompatibilita Android telefonů a tabletů – průřezový požadavek
 
 **Upřesnění 4. 11. 2026. Stav: SCHVÁLENÝ SMĚR A PRAVIDLO PŘI BĚŽNÝCH ÚPRAVÁCH; NEZNAMENÁ OVĚŘENOU PODPORU VŠECH ZAŘÍZENÍ.** Cílem je, aby aplikace nebyla svázaná pouze s aktuálně používaným Samsungem, ale byla dlouhodobě dobře použitelná na **širokém spektru Android telefonů a tabletů různých výrobců, velikostí i výkonnostních tříd**. Přesný seznam podporovaných modelů a verzí Androidu bude stanoven a ověřován postupně, podle reálných testů a požadavků aplikace; nyní jej nevymýšlet.
