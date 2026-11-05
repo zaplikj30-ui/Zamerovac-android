@@ -46,4 +46,13 @@ public class SafSyncV2Test {
   String hash="a".repeat(64);JSONObject envelope=CloudProof.sign(CloudProof.body(CloudProof.MESSAGE,aid,bid,hash,100),ai);CloudProof.verify(envelope,ai.certificate(),CloudProof.MESSAGE,aid,bid);
   try{CloudProof.verify(envelope,ai.certificate(),CloudProof.ACK,aid,bid);fail("Message used as ACK");}catch(IOException expected){}envelope.getJSONObject("body").put("hash","b".repeat(64));try{CloudProof.verify(envelope,ai.certificate(),CloudProof.MESSAGE,aid,bid);fail("Changed signed body accepted");}catch(IOException expected){assertTrue(expected.getMessage().contains("Podpis"));}
  }
+ @Test public void rejectedNetworkPolicyDoesNotEvenListOrReadProvider()throws Exception{
+  files(1,4000);SyncStore denied=new SyncStore(){public String namespace(){return "denied-store";}public InputStream open(String path){throw new AssertionError("Denied provider read");}public OutputStream create(String path){throw new AssertionError("Denied provider write");}public List<ImmutableStore.Entry> list(String path){throw new AssertionError("Denied provider list");}};String before=LocalDatabase.read(a.home);SafSyncV2.Result result=new SafSyncV2(a,a.prefs,denied,ai,bytes->false).sync();assertTrue(result.pending);assertTrue(result.message.contains("povolené připojení"));assertEquals(before,LocalDatabase.read(a.home));
+ }
+ @Test public void manyInvalidMessagesUseBoundedBatchesResumeAfterRestartAndCannotClearOutbox()throws Exception{
+  files(1,4000);sync(a,ai,false).sync();String directory="sync/v2/messages/"+bid+"/"+aid;store.watchedMessages=directory+"/";for(int i=0;i<80;i++){File bad=store.file(directory+"/"+CloudScanTest.name(i));bad.getParentFile().mkdirs();Files.write(bad.toPath(),"{}".getBytes(java.nio.charset.StandardCharsets.UTF_8));}store.messageReads=0;String before=LocalDatabase.read(b.home);SafSyncV2.Result first=sync(b,bi,false).sync();assertTrue(first.pending);assertTrue(store.messageReads<=64);assertEquals(before,LocalDatabase.read(b.home));assertTrue(new PeerOutbox(a,a.prefs,ar).pending(bid)>0);
+  for(int i=0;i<4;i++){store.messageReads=0;sync(b,bi,false).sync();assertTrue(store.messageReads<=64);sync(a,ai,false).sync();}
+  assertEquals(0,new PeerOutbox(a,a.prefs,ar).pending(bid));JSONObject received=new JSONObject(LocalDatabase.read(b.home));assertEquals(1,received.getJSONArray("records").length());assertEquals("1585,800001",received.getJSONArray("records").getJSONObject(0).getJSONArray("items").getJSONObject(0).getString("measure"));assertArrayEquals(Files.readAllBytes(new File(a.home,"media/original-0").toPath()),Files.readAllBytes(new File(b.home,"media/original-0").toPath()));
+ }
+
 }

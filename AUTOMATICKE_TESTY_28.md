@@ -93,3 +93,7 @@ Specifikace #38/#34/#33 → PeerCoordinator/PeerDiscovery/PeerWifiDirect/MainAct
 ## Asynchronní URI ingest, původní cíl a request token – etapa 23
 
 #21/#33/#38 → MediaIngest/MainActivity bounded worker + pickMedia/acceptPickedMedia → MediaIngestTest (3 native) a `media-import.cjs` (3 skutečné browser UI). Pozitivní: UI Handler a potvrzený save při blokovaném inputu, finální originální bajty a request token, původní složka po navigaci. Negativní: timeout/cancel/unsafe URI/metadata, purge během importu, stale callback/done, druhý výběr, deleted/locked cíl a zavřený modal, disk failure zachová draft/retry. Browser místně prošel, native vyžaduje novou CI. Skutečný provider/velká souborová dávka na fyzickém Androidu dosud neprovedeny.
+
+## Cloudové řídicí dávky a restart procházení – etapa 24
+
+#33/#38 → CloudFiles/CloudScan/SafSyncV2 → CloudFilesReadTest (4), CloudScanTest (2), SafSyncV2Test +2 integrační případy. Pozitivní: přesné bajty/hash/EOF, trvalý kruhový cursor mezi instalacemi/store/scope a priority nedokončeného ACK, skutečná podepsaná revize/media/kóta po 80 neplatných zprávách a restartech. Negativní: limit+1/zero-progress/interrupt, failed AtomicFile write, unsafe cursor, zakázaná síť nesmí ani list/open/create, podvržené zprávy nemohou vymazat frontu. Nové native CI vyžaduje ověření; provider je souborový/test double, skutečný Drive/SAF přenos ani hard síťová spotřeba nejsou testovány.

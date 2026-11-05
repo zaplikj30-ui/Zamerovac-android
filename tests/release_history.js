@@ -60,3 +60,4 @@ assert(JSON.stringify(history.pendingChanges).includes('zaniklá skupina Wi-Fi D
 assert(JSON.stringify(history.pendingChanges).includes('služba Androidu s oznámením'));
 assert(JSON.stringify(history.pendingChanges).includes('potvrzených metadatech'));
 assert(JSON.stringify(history.pendingChanges).includes('Opožděné výsledky'));
+assert(JSON.stringify(history.pendingChanges).includes('rozlišení dávky od potvrzení dat'));
