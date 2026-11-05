@@ -724,14 +724,14 @@ public class MainActivity extends Activity {
             }catch(Exception ex){error("Balíček připomínek: "+ex.getMessage());}
         },"ZamerovacIssueBundle").start();
     }
-    private void collectMediaIds(JSONObject record,Set<String> ids){
+    private void collectMediaIds(JSONObject record,Set<String> ids)throws IOException{
         JSONArray media=record.optJSONArray("media");
         if(media!=null)for(int i=0;i<media.length();i++)ids.add(media.optString(i));
         collectNestedMedia(record.optJSONArray("items"),ids);
         JSONArray history=record.optJSONArray("versionHistory");
-        if(history!=null)for(int i=0;i<history.length();i++)try{String items=history.getJSONObject(i).optString("items","[]");if(items.trim().startsWith("["))collectNestedMedia(new JSONArray(items),ids);}catch(JSONException error){throw new IllegalArgumentException("Neplatná historie anotací",error);}
+        if(history!=null)for(int i=0;i<history.length();i++)try{String items=history.getJSONObject(i).optString("items","[]");if(items.trim().startsWith("[")){JsonInput.check(items);collectNestedMedia(new JSONArray(items),ids);}}catch(JSONException error){throw new IllegalArgumentException("Neplatná historie anotací",error);}
     }
-    private void collectNestedMedia(JSONArray items,Set<String> ids){
+    private void collectNestedMedia(JSONArray items,Set<String> ids)throws IOException{
         if(items==null)return;
         for(int i=0;i<items.length();i++){
             JSONObject item=items.optJSONObject(i);if(item==null)continue;

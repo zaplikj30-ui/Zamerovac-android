@@ -12,6 +12,7 @@ class DiskStore {
  async compareAndSwapQueue(revision,next){if(this.denyQueue)throw Error('synthetic disk full');const current=await this.readQueue();if(current.revision!==revision)return false;const temporary=this.file('queue.json')+'.tmp';const handle=await fs.open(temporary,'w');try{await handle.writeFile(JSON.stringify(next));await handle.sync()}finally{await handle.close()}await fs.rename(temporary,this.file('queue.json'));return true}
 }
 (async()=>{
+ let deep={};for(let i=0;i<110;i++)deep={child:deep};assert.throws(()=>p.canonical(deep),/Nested content limit/);
  const directory=await fs.mkdtemp(path.join(os.tmpdir(),'zamerovac-protocol-'));
  try{
   const disk=new DiskStore(directory),queue=new p.PersistentQueue(disk,hash),source=new Map(),receiver=new Map();

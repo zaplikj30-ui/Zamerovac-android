@@ -10,6 +10,7 @@ import java.util.*;
 final class LocalDatabase {
     static void validate(String text)throws IOException {
         if(text==null||text.length()>20*1024*1024)throw new IOException("Databáze je příliš velká");
+        JsonInput.check(text);
         try{JSONObject db=new JSONObject(text);if(db.optInt("schema")!=1||db.optJSONArray("records")==null)throw new IOException("Neplatná databáze");
             Set<String> ids=new HashSet<>();JSONArray records=db.getJSONArray("records");
             for(int i=0;i<records.length();i++){JSONObject record=records.optJSONObject(i);if(record==null||!(record.opt("id") instanceof String)||record.getString("id").isEmpty()||!ids.add(record.getString("id")))throw new IOException("Neplatný nebo duplicitní záznam");}
@@ -17,7 +18,7 @@ final class LocalDatabase {
     }
     static String readFile(File file)throws IOException {
         if(!file.isFile()||file.length()>20L*1024*1024)throw new IOException("Databáze není dostupná");
-        String text=new String(Files.readAllBytes(file.toPath()),StandardCharsets.UTF_8);validate(text);return text;
+        String text=JsonInput.decode(Files.readAllBytes(file.toPath()));validate(text);return text;
     }
     static String read(File home)throws IOException {
         synchronized(TrashPurger.LOCK){

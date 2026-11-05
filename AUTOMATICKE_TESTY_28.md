@@ -29,3 +29,7 @@ Tři `tools/e2e/interactions.cjs` případy prošly: 1/2/3 klepnutí na oba konc
 **Skutečně nalezené regrese:** duplicitní ID v příchozí záloze vedlo k obnovení dvou položek se stejným ID; neplatné odkazy na média zůstávaly v importovaných datech. Dva testy prokazatelně selhaly před opravou. Import je nyní odmítne před zápisem do media/. Platné starší zálohy a původní importer/exporter zůstávají zachované. Po opravě prošlo 38 nativních testů; sedmý lifecycle případ a finální úplný běh jsou právě ověřované, dosud zde netvrzené jako hotové.
 
 Připravený společný spouštěč, strojový registr, jazykové kontroly a další úrovně jsou rozpracované. Není to tvrzení, že celá aplikace je už automaticky pokrytá. Žádná APK ani emulátor nebyly spuštěny.
+
+## Společná aktualizace #39 – nové praktické a negativní kontroly (5. 11. 2026)
+
+Živý registr nových změn je v [docs/update-39-progress.md](docs/update-39-progress.md) včetně mapy funkcí, chybových cest a omezení; checkpoint přenosového modelu v [docs/sync-v2-checkpoint.md](docs/sync-v2-checkpoint.md). Přidáno `tests/save_acknowledgement.js`, `tools/e2e/update39.cjs`, `SyncSafetyTest` a další skutečné souborové/ZIP testy v `StorageLifecycleTest`. `tests/sync_protocol_v2.js` provádí simulovaný failover s 30 syntetickými soubory, diskovou frontu a dvě modelové historie se 100 společnými originály; nejde o reálnou komunikaci Android/Drive. Rychlé/UI i nativní CI pro `8ac5865` prošly, pozdější SHA musí mít své výsledky. Žádné fyzické ani vydávací ověření se tím nenahrazuje.

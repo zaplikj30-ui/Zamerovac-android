@@ -64,3 +64,23 @@ Přidány `SyncSafetyTest` (zablokovaný poskytovatel a souběžný místní sav
 Přidán skutečný `sync/protocol-v2.js` s trvalou frontou nad CAS adaptérem, kontrolou potvrzení, failover politikou, zachováním souběžných vektorových verzí a neměnnými zálohovacími bloky sdílenými mezi historiemi zařízení. [Přesné rozhraní, důkazy a mezery](sync-v2-checkpoint.md). Kód **není zapojen do Androidu**; UI ani skutečné transporty nepředstírá. Syntetický test 30 souborů s přerušením, restartem fronty, chybným potvrzením a 100 sdílenými originály / dvěma historiemi prošel místně. Nejde o skutečný Google Disk, párování ani radio test.
 
 Třetí nativní CI odhalilo podporovaný neprůhledný historický text `items: "legacy"`; nyní se zachovává beze změny, jen rozpoznané JSON seznamy se přemapují. Původní testy historických dat ponechány, neoslabeny. Starší rotační test nyní ověřuje zachované měřítko a správné **nové** meze posunu, nikoliv chybnou identickou translaci po změně poměru stran. Doplněno chránění aktivního uploadu před opožděným callbackem s cizím ID a test historie odkazující na médium jiné vysypané položky. Tyto opravy je nutné potvrdit novým Actions během.
+
+## Etapa 5 – doplnění vstupních limitů a dostupnosti ovládání
+
+JSON se kontroluje ještě před rekurzivním parserem: velikost, hloubka 100 a striktní UTF-8. Totéž platí pro seznamy anotací uložené uvnitř historických řetězců. Import odmítá neplatné záznamy místo tichého vynechání. Rozbalovací limit se vztahuje i na obsah ZIP položek označených jako adresář. Nečitelný (`null`) cursor poskytovatele není považovaný za prázdnou cloudovou složku. Původní lokální data se při odmítnutí nemění.
+
+Doplňková vysouvací nabídka na šířku zůstává dosažitelná i tehdy, když si uživatel původní ⋮ přeuspořádal do vysunuté lišty. Výškové pořadí ikon se nemění. Cílený browser test ověřil i tento případ a nápovědu se 0/1/N výskyty včetně výsledku pouze v klíčovém slově.
+
+Místně prošly všechny Node testy, Python 47 s 2 skipy bez javac, cílené update39 a 11 viewportů. Pro předchozí `8ac5865` jsou **obě CI SUCCESS**: [rychlé/UI](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/41960696051), [nativní kompilace/testy](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/41960696056). Poslední etapu je nutné znovu potvrdit na jejím vlastním SHA.
+
+## Pravdivá hranice dokončení
+
+Hotové kódové etapy nejsou celé zadání #39. Především:
+
+- **#33 zbývá:** kompletní prověření všech vstupů/nativního mostu, nová bezpečná synchronizační publikace místo sdíleného přepisovaného `projects.json`, kompletní kauzální koš a důkazy při všech typech selhání provideru. Tato práce není nezávislý bezpečnostní audit ani certifikace MASVS.
+- **#38 zbývá skutečná integrace:** vektory při každé editaci, nativní durable fronta, LAN, offline Wi-Fi P2P bez routeru, vzájemné bezpečné párování/revokace, skutečný Drive API adaptér, metered network policy z Androidu, media payload streaming/timeouty/failover, pravdivé UI čekajících souborů a konfliktů, lifecycle/Doze. Izolovaný model není funkční synchronizace mezi dvěma instalacemi.
+- **#40 zbývá:** reálné úložiště na Drive, oddělený výběr/namespace, seznam historií obou zařízení a prostoru, bezpečné obnovení jako kopie přes nativní import. Izolovaný content-addressed backup engine už má testy, aplikace jej ale nenabízí a netvoří skutečnou historii Disku.
+- **#21:** cache pomáhá opakovanému otevření, studený start velkých fotek po restartu ještě potřebuje měření a případné nativní optimalizace.
+- **Fyzicky neprovedeno:** telefon/tablet Samsung, Xiaomi/Lenovo a jiné značky, S Pen, Bosch, skutečný Drive účet/provider, přenosová rádia, reálný výpadek/plný disk a aktualizace instalace. Windows/iOS aplikace nebyly vytvořené. Nová APK nebyla sestavená a PR se neslučuje.
+
+**Další jediný konkrétní krok:** po kontrole nejnovějšího HEAD a Actions implementovat Android adaptér identity/atomické fronty a napojení kauzálních revizí/tombstones na skutečné místní změny podle `docs/sync-v2-checkpoint.md`; teprve na tomto bezpečném základě transporty a UI. Nepřidávat zahraniční adresní službu, reklamy ani licence.

@@ -48,4 +48,12 @@ public class SyncSafetyTest {
   try{LocalDatabase.write(home,"{\"schema\":1,\"records\":[{\"id\":\"x\"},{\"id\":\"x\"}]}");fail("Duplicate IDs accepted");}catch(IOException expected){}
   assertEquals(before,LocalDatabase.read(home));assertArrayEquals(backup,Files.readAllBytes(new File(home,"projects.bak").toPath()));
  }
+ @Test public void deeplyNestedOrMalformedUtf8DataIsRejectedWithoutReplacingTheDatabase()throws Exception {
+  String before=data("local","123,000001").toString();LocalDatabase.write(home,before);
+  String deep="{\"schema\":1,\"records\":[],\"nested\":"+"[".repeat(200)+"0"+"]".repeat(200)+"}";
+  try{LocalDatabase.write(home,deep);fail("Deep JSON accepted");}catch(IOException expected){}
+  try{JsonInput.decode(new byte[]{(byte)0xc3,(byte)0x28});fail("Invalid UTF-8 accepted");}catch(IOException expected){}
+  assertEquals(before,LocalDatabase.read(home));JsonInput.check(new JSONObject().put("text","Brackets [ { inside string "+(char)34+"quoted"+(char)34).toString());
+ }
+
 }

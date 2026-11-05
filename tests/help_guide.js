@@ -41,3 +41,5 @@ assert.deepEqual(help.matchingRanges('Kóta kóta KOTA','kota'),[[0,4],[5,9],[10
 assert.deepEqual(help.matchingRanges('<script> & kóta','<script>'),[[0,8]]);
 assert.deepEqual(help.matchingRanges('žádný výskyt','zzzz'),[]);
 assert.deepEqual(help.matchingRanges('kóta',''),[]);
+
+finds('sha-256','backup');finds('neulozeno','backup');

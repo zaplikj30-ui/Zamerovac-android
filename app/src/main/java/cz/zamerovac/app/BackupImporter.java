@@ -43,7 +43,6 @@ final class BackupImporter {
                 ZipEntry entry;byte[] buffer=new byte[64*1024];
                 while((entry=zip.getNextEntry())!=null){
                     if(++count>MAX_ENTRIES)throw new IOException("Příliš mnoho souborů v záloze");
-                    if(entry.isDirectory()){zip.closeEntry();continue;}
                     String name=entry.getName();
                     boolean jsonFile="projects.json".equals(name)||"media-meta.json".equals(name)||"manifest.json".equals(name);
                     String mediaId=name.startsWith("media/")?name.substring(6):"";
@@ -63,16 +62,16 @@ final class BackupImporter {
                         }
                     }
                     if(!"manifest.json".equals(name))checksums.put(name,ArchiveIntegrity.entry(size,digest.digest()));
-                    if("manifest.json".equals(name))manifest=new JSONObject(new String(small.toByteArray(),StandardCharsets.UTF_8));
+                    if("manifest.json".equals(name))manifest=JsonInput.object(small.toByteArray());
                     if("projects.json".equals(name))json=small.toByteArray();
-                    if("media-meta.json".equals(name))meta=new JSONObject(new String(small.toByteArray(),StandardCharsets.UTF_8));
+                    if("media-meta.json".equals(name))meta=JsonInput.object(small.toByteArray());
                     if(mediaFile)incomingMedia.put(mediaId,dest);
                     zip.closeEntry();
                 }
             }
         }
         if(json==null)throw new IOException("ZIP neobsahuje projects.json");
-        JSONObject source=new JSONObject(new String(json,StandardCharsets.UTF_8));
+        String sourceText=JsonInput.decode(json);LocalDatabase.validate(sourceText);JSONObject source=new JSONObject(sourceText);
         if(source.optInt("archiveFormatVersion")==2&&manifest==null)throw new IOException("V záloze chybí kontrolní manifest");
         if(manifest!=null)ArchiveIntegrity.verify(manifest,checksums);
         if(source.optInt("schema")!=1||existing.optInt("schema")!=1)throw new IOException("Nepodporovaný formát zálohy");
@@ -112,7 +111,7 @@ final class BackupImporter {
             rewriteMedia(rec.optJSONArray("media"),mediaIds);
             rewriteItems(rec.optJSONArray("items"),mediaIds);
             JSONArray history=rec.optJSONArray("versionHistory");
-            if(history!=null)for(int h=0;h<history.length();h++){JSONObject version=history.getJSONObject(h);String text=version.optString("items","[]");if(text.trim().startsWith("[")){JSONArray oldItems=new JSONArray(text);rewriteItems(oldItems,mediaIds);version.put("items",oldItems.toString());}}
+            if(history!=null)for(int h=0;h<history.length();h++){JSONObject version=history.getJSONObject(h);String text=version.optString("items","[]");if(text.trim().startsWith("[")){JsonInput.check(text);JSONArray oldItems=new JSONArray(text);rewriteItems(oldItems,mediaIds);version.put("items",oldItems.toString());}}
             newRecords.add(rec);
         }
         if(newRecords.isEmpty())throw new IOException("Záloha neobsahuje platné záznamy");

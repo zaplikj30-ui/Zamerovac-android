@@ -49,7 +49,7 @@ public class SyncEngine {
     private static String slurp(InputStream in) throws Exception {
         ByteArrayOutputStream b=new ByteArrayOutputStream();byte[] block=new byte[65536];int n;
         while((n=in.read(block))!=-1){if(b.size()+n>20*1024*1024)throw new java.io.IOException("Cloudová databáze je příliš velká");b.write(block,0,n);}
-        return b.toString("UTF-8");
+        return JsonInput.decode(b.toByteArray());
     }
     private String loadLocal() throws Exception {return LocalDatabase.read(home);}
     private void saveLocal(String text) throws Exception {LocalDatabase.write(home,text);}
@@ -106,7 +106,8 @@ public class SyncEngine {
     private Uri dir(String parentId,String name,boolean create) throws Exception{
         Uri parent=DocumentsContract.buildChildDocumentsUriUsingTree(tree,parentId);
         try(Cursor c=resolver.query(parent,new String[]{Document.COLUMN_DOCUMENT_ID,Document.COLUMN_DISPLAY_NAME,Document.COLUMN_MIME_TYPE},null,null,null)){
-            if(c!=null)while(c.moveToNext())if(name.equals(c.getString(1))&&Document.MIME_TYPE_DIR.equals(c.getString(2))){
+            if(c==null)throw new java.io.IOException("Nelze načíst cloudovou složku");
+            while(c.moveToNext())if(name.equals(c.getString(1))&&Document.MIME_TYPE_DIR.equals(c.getString(2))){
                 return DocumentsContract.buildDocumentUriUsingTree(tree,c.getString(0));}
         }
         if(!create)return null;
@@ -116,7 +117,8 @@ public class SyncEngine {
     private Map<String,Entry> children(String parent) throws Exception{
         Map<String,Entry> result=new HashMap<>();Uri query=DocumentsContract.buildChildDocumentsUriUsingTree(tree,parent);
         try(Cursor c=resolver.query(query,new String[]{Document.COLUMN_DOCUMENT_ID,Document.COLUMN_DISPLAY_NAME,Document.COLUMN_MIME_TYPE},null,null,null)){
-            if(c!=null)while(c.moveToNext())result.put(c.getString(1),new Entry(DocumentsContract.buildDocumentUriUsingTree(tree,c.getString(0)),c.getString(2)));
+            if(c==null)throw new java.io.IOException("Nelze načíst cloudovou složku");
+            while(c.moveToNext())result.put(c.getString(1),new Entry(DocumentsContract.buildDocumentUriUsingTree(tree,c.getString(0)),c.getString(2)));
         }
         return result;
     }
@@ -128,7 +130,7 @@ public class SyncEngine {
     private static void references(Object value,Set<String> ids)throws Exception{
         if(value instanceof JSONObject){JSONObject o=(JSONObject)value;
             for(String key:new String[]{"media","audioMedia"}){JSONArray media=o.optJSONArray(key);if(media!=null)for(int i=0;i<media.length();i++){String id=media.getString(i);if(!id.matches("[a-zA-Z0-9_-]{3,120}"))throw new java.io.IOException("Neplatná příloha synchronizace");ids.add(id);}}
-            for(java.util.Iterator<String> it=o.keys();it.hasNext();){String key=it.next();if(!"prefs".equals(key)){Object child=o.get(key);if("items".equals(key)&&child instanceof String&&((String)child).trim().startsWith("["))references(new JSONArray((String)child),ids);else references(child,ids);}}
+            for(java.util.Iterator<String> it=o.keys();it.hasNext();){String key=it.next();if(!"prefs".equals(key)){Object child=o.get(key);if("items".equals(key)&&child instanceof String&&((String)child).trim().startsWith("[")){JsonInput.check((String)child);references(new JSONArray((String)child),ids);}else references(child,ids);}}
         }else if(value instanceof JSONArray){JSONArray a=(JSONArray)value;for(int i=0;i<a.length();i++)references(a.get(i),ids);}
     }
     protected void transferMedia(JSONObject data)throws Exception {

@@ -4,11 +4,12 @@
 const vectors=require('./revision-vector');
 const UUID=/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/;
 const HASH=/^[0-9a-f]{64}$/;
-function canonical(value){
+function canonical(value,depth=0){
+ if(depth>100)throw Error('Nested content limit');
  if(value===null||typeof value==='string'||typeof value==='boolean')return JSON.stringify(value);
  if(typeof value==='number'){if(!Number.isFinite(value))throw Error('Non-finite number');return JSON.stringify(value)}
- if(Array.isArray(value))return '['+value.map(canonical).join(',')+']';
- if(value&&typeof value==='object'&&[Object.prototype,null].includes(Object.getPrototypeOf(value)))return '{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+canonical(value[k])).join(',')+'}';
+ if(Array.isArray(value))return '['+value.map(item=>canonical(item,depth+1)).join(',')+']';
+ if(value&&typeof value==='object'&&[Object.prototype,null].includes(Object.getPrototypeOf(value)))return '{'+Object.keys(value).sort().map(k=>JSON.stringify(k)+':'+canonical(value[k],depth+1)).join(',')+'}';
  throw Error('Unsupported value');
 }
 const clone=value=>JSON.parse(canonical(value));
@@ -48,7 +49,7 @@ async function mergeData(left,right,hash){
 function routesFor(job,routes,{allowMetered=false,largeBytes=1024*1024}={}){
  return routes.filter(route=>{
   // This is a contract imposed on a native adapter, not proof of TLS/pairing.
-  if(!route.available||!route.authenticated||!route.encrypted||!route.peers.includes(job.peer))return false;
+  if(route.available!==true||route.authenticated!==true||route.encrypted!==true||!Array.isArray(route.peers)||!route.peers.includes(job.peer)||typeof route.send!=='function')return false;
   if(route.kind==='nearby'||route.kind==='lan')return true;
   return route.kind==='drive'&&(route.metered===false||allowMetered||job.size<=largeBytes);
  }).sort((a,b)=>({nearby:0,lan:1,drive:2}[a.kind]-{nearby:0,lan:1,drive:2}[b.kind]));
@@ -92,7 +93,7 @@ async function putVerified(store,path,bytes,hash){
 }
 async function createBackup({store,hash,deviceId,backupId,createdAt,data,readMedia}){
  if(!UUID.test(deviceId)||!UUID.test(backupId)||!Number.isFinite(Date.parse(createdAt)))throw Error('Invalid backup identity');validateData(data);
- const project=new TextEncoder().encode(canonical(data)),projectHash=await hash(project),media=[];
+ const project=new TextEncoder().encode(canonical(data));if(project.length>20*1024*1024)throw Error('Project metadata limit');const projectHash=await hash(project),media=[];
  await putVerified(store,'backups/v2/blobs/'+projectHash,project,hash);
  for(const id of [...mediaReferences(data.records)].sort()){
   const bytes=await readMedia(id);if(!(bytes instanceof Uint8Array)||!bytes.length)throw Error('Missing backup media');
@@ -109,6 +110,7 @@ async function restoreBackup({store,hash,path}){
  const manifest=JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(raw));
  if(manifest.format!=='cz.zamerovac.backup'||manifest.version!==2||!UUID.test(manifest.deviceId)||!UUID.test(manifest.backupId)||!path.endsWith('/'+manifest.deviceId+'/'+manifest.backupId+'.json')||!Array.isArray(manifest.media))throw Error('Invalid backup manifest');
  async function verified(entry){if(!entry||!HASH.test(entry.hash)||!Number.isSafeInteger(entry.size)||entry.size<0)throw Error('Invalid blob reference');const bytes=await store.read('backups/v2/blobs/'+entry.hash);if(bytes.length!==entry.size||await hash(bytes)!==entry.hash)throw Error('Damaged backup blob');return bytes}
+ if(manifest.project?.size>20*1024*1024)throw Error('Project metadata limit');
  const data=validateData(JSON.parse(new TextDecoder('utf-8',{fatal:true}).decode(await verified(manifest.project))));
  const media=new Map();for(const item of manifest.media){if(media.has(item.id))throw Error('Duplicate backup media');media.set(item.id,await verified(item))}
  const required=mediaReferences(data.records);if(required.size!==media.size||[...required].some(id=>!media.has(id)))throw Error('Incomplete backup');

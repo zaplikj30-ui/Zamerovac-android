@@ -417,10 +417,13 @@ const chapters=[
       "Nové ZIP zálohy obsahují kontrolní součty SHA-256 a velikosti souborů. Obnova je ověří před vytvořením kopií; starší ZIP zůstávají přijímány bez této dodatečné kontroly.",
       "Chybějící nebo prázdná příloha export zálohy zastaví. Neúspěšný zápis se neoznačí jako hotová záloha; původní zakázky zůstávají zachované.",
       "Při hlášení Neuloženo zůstaň v aplikaci a uložení zopakuj. Aplikace potvrdí zápis až po úspěšném uložení; souběžné konfliktní změny uchová jako označenou kopii.",
-      "Poškozený nebo neplatný ZIP aplikace odmítne. Pokud nelze soubor vybrat, zkontroluj filtr a umístění v systémovém správci."
+      "Poškozený nebo neplatný ZIP, neplatné kódování a příliš zanořená data aplikace odmítne. Pokud nelze soubor vybrat, zkontroluj filtr a umístění v systémovém správci."
     ],
     "keywords": [
       "archiv",
+      "SHA-256",
+      "kontrolní součet",
+      "neuloženo",
       "obnova",
       "importovat",
       "záloha",

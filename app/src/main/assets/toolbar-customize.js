@@ -28,13 +28,16 @@
   button.title=label;button.setAttribute('aria-label',label);button.innerHTML=toolIcon(key,icon);button.onclick=()=>setTool(key);
   return [key,button];
  }));
+ const landscapeDrawer=document.createElement('button');landscapeDrawer.type='button';landscapeDrawer.className='ico landscape-tool';landscapeDrawer.dataset.landscapeDrawer='';landscapeDrawer.textContent='⋮';landscapeDrawer.setAttribute('aria-label','Rozbalit další nástroje');landscapeDrawer.onclick=()=>window.setEditorExtraToolbarExpanded?.(extra.hidden);
  let lastLandscape='';
  function updateLandscape(){
   const enabled=Array.isArray(prefs.landscapeTools)?prefs.landscapeTools:landscapeTools.map(t=>t[0]);
-  const capacity=window.innerWidth>window.innerHeight?Math.max(0,Math.floor((main.clientWidth-8-mainCount*48)/48)):0;
-  const keys=[...new Set(enabled)].filter(k=>landscapeButtons.has(k)).slice(0,capacity),signature=keys.join(',');
+  const landscape=window.innerWidth>window.innerHeight,drawer=landscape&&!main.contains($('editorMore'));
+  const capacity=landscape?Math.max(0,Math.floor((main.clientWidth-8-mainCount*48-(drawer?48:0))/48)):0;
+  const keys=[...new Set(enabled)].filter(k=>landscapeButtons.has(k)).slice(0,capacity),signature=keys.join(',')+'|'+drawer;
   if(signature===lastLandscape)return;lastLandscape=signature;
-  for(const button of landscapeButtons.values())button.remove();
+  for(const button of landscapeButtons.values())button.remove();landscapeDrawer.remove();
+  if(drawer)main.append(landscapeDrawer);
   for(const key of keys)main.insertBefore(landscapeButtons.get(key),main.querySelector('#editorMore'));
  }
  function configureLandscape(){
@@ -175,6 +178,6 @@
  },true);
  window.__getToolbarIconOrder=orderNow;
  window.__applyToolbarIconOrder=order=>{
-   applyOrder(order);prefs.toolbarIconOrder=orderNow();save();status();
+   applyOrder(order);prefs.toolbarIconOrder=orderNow();save();lastLandscape='force';updateLandscape();status();
  };
 })();
