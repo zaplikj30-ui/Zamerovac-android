@@ -57,3 +57,7 @@ Specifikace #38/#34/#33 → PeerCoordinator/PeerDiscovery/PeerWifiDirect/MainAct
 ## Studené náhledy fotografií – etapa 14
 
 #21/#33 → PhotoThumbnails/MainActivity → PhotoThumbnailsTest (pomalý decoder a současný potvrzený save bez globálního locku; purge během decode bez pozdní cache; skutečné zrcadlené pixely/cache reuse/bajty originálu; invalid image a cache write failure). Původní EXIF otočený obrázek v StorageLifecycleTest zůstává. Python místně prošel, nový Native Graphics výsledek vyžaduje CI. Studený start editoru velké fotografie a fyzické různé telefony není tímto benchmarkován.
+
+## Poskytovatel ignorující timeout – etapa 15
+
+#33/#38/#40 → ProviderIo a oba Document adaptéry → ProviderIoTest: skutečné čekající read/write/close ignorují interrupt, volající se vrátí po deadline, další worker funguje, původní caller buffer je chráněný, stream po selhání nepokračuje a opožděný resource se zavře právě jednou. Úspěšné byte/offset/EOF/close kontrakty zůstávají. DocumentBackupStoreTest dál ověřuje null/denied/duplicitní provider, nyní veřejnou query s CancellationSignal. Výsledek nového nativního CI teprve ověřit; skutečný Google provider/Binder a fyzické timeouty nejsou testovány.

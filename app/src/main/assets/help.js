@@ -494,7 +494,7 @@ const chapters=[
       "Živá cloudová synchronizace má vlastní prostor Zamerovac-sync/sync/v2, historické zálohy vlastní Zamerovac-zalohy/backups/v2. Složku cloudové synchronizace nastav na obou zařízeních na stejné úložiště. Data ve vybrané složce chrání oprávnění poskytovatele/účtu; podpis sám nešifruje jejich obsah. Nezveřejňuj tuto složku ostatním.",
       "Cloudová synchronizace není totéž jako ověřená nezávislá záloha. Před důležitými změnami si ulož ZIP.",
       "Instalace používá náhodnou vlastní identitu a čítače revizí, ne model telefonu ani jeho hodiny. Při souběhu se novější pozorovaná verze odliší od nezávislé změny.",
-      "Přenos poskytovatele nedrží zámek místní databáze. Novější změny čekají ve frontě; data příjemce se sloučí teprve po ověření všech potřebných souborů. Při přímém spojení má místní přenos přednost. Otevřená aplikace opakuje cloud přibližně po minutě, Android na pozadí určuje čas sám. SAF poskytovatel může být pomalý či blokovat; tato cesta stále není oficiální Drive API/OAuth a účet Disku dosud nebyl fyzicky ověřen."
+      "Přenos poskytovatele nedrží zámek místní databáze. Novější změny čekají ve frontě; data příjemce se sloučí teprve po ověření všech potřebných souborů. Při přímém spojení má místní přenos přednost. Otevřená aplikace opakuje cloud přibližně po minutě, Android na pozadí určuje čas sám. Při neodpovídajícím poskytovateli se operace po časovém limitu nepotvrdí a čekající data zůstanou zachovaná; opožděná odpověď se zahodí. Tato cesta stále není oficiální Drive API/OAuth a účet Disku dosud nebyl fyzicky ověřen."
     ],
     "keywords": [
       "cloud",
