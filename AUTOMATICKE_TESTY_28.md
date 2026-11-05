@@ -65,3 +65,7 @@ Specifikace #38/#34/#33 → PeerCoordinator/PeerDiscovery/PeerWifiDirect/MainAct
 ## Durable cloud inbox – etapa 16
 
 #33/#38 → CloudInbox/SafSyncV2/SyncStore.namespace → CloudInboxTest + nový SafSyncV2Test. Pozitivní: skutečný DB commit, ztracená publikace ACK, restart, nové podepsané ACK a nulové opakované čtení starých incoming zpráv; druhá instance uvidí potvrzený zápis. Negativní: jiná instalace/úložiště není důkazem lokálního commitu, odmítnutý AtomicFile zápis nemůže změnit ack cache, bez uloženého commitu nebo při změně hash/size nelze potvrdit. Nativní výsledek nové etapy teprve Actions. Zbývající control-frame/list režie a opakované source ověřování popsány v docs/update-39-progress.md.
+
+## Synchronizace během skutečné editace – etapa 17
+
+#33/#38/#12/#13 → sync-edit-guard, applySavedState a commitEditor dočasného detailu → `tools/e2e/sync-edit-guard.cjs`. Tři pozitivní/negativní scénáře s modelovým Native diskovým CAS: příchozí data během reálného pointer tahu a vyplňování přesného rozměru, vynucený conflict s přesunem vlastní editace do kopie, přesné finální souřadnicové delta i hodnoty; úprava detailu, parent konflikt a další tah se stále stejnými živými položkami, zachované obě verze a reopen. Místně prošly; CI nového SHA a fyzický Android callback ještě ověřit. Samostatná stavová zpráva nenahrazuje pending data. Produkční Java merge/sign/TLS nejsou v tomto UI testu fingovaně vydávané za dvě zařízení.

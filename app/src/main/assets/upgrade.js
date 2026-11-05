@@ -124,11 +124,13 @@ commitEditor=function(){
       if(record.versionHistory.length>12)record.versionHistory.shift();
     }
   }
-  const confirmed=oldCommit();
+  let confirmed;
   if(window.__detailParent && record._detailTemporary){
+    // The temporary editor is not a root record. Update and touch its real parent BEFORE CAS.
     window.__detailItem.detailItems=record.items;
-    touch(window.__detailParent);save();
-  }
+    window.__detailItem.detailWidth=photoSize.w;window.__detailItem.detailHeight=photoSize.h;
+    touch(window.__detailParent);confirmed=save();paint();
+  }else confirmed=oldCommit();
   logEvent(confirmed===false?'chyba':'editor',confirmed===false?'Změna kótování není uložená':'Změna kótování uložena');return confirmed;
 };
 function restoreVersion(){

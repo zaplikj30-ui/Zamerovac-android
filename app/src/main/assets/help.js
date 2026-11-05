@@ -484,6 +484,7 @@ const chapters=[
       "Velké cloudové přílohy na měřené nebo neznámé síti čekají. Malá změna může dorazit, pokud má příjemce potřebné originály už uložené. Výjimku pro aktuální pokus povolíš přes ikonu cloudu a Jednorázově povolit velké soubory na měřené síti. Volba Synchronizovat pouze na Wi-Fi omezuje i malé automatické cloudové změny.",
       "Offline můžeš pracovat s lokálně dostupnými projekty. Při opětovném připojení zkontroluj úspěšné provedení synchronizace.",
       "Při souběžných změnách na více zařízeních zkontroluj konfliktní kopie, než cokoli smažeš. Otevřený editor zůstane u své zachované změny, i když dostane nové ID kopie.",
+      "Příchozí změny během kreslení, vyplňování rozměru nebo úprav detailní fotografie počkají na dokončení této úpravy. Tvoje rozpracovaná hodnota zůstane zachovaná i při konfliktní kopii; potom se načte aktuální stav.",
       "Pouhé prohlížení fotografie nebo detailu nevytváří historii ani novou revizi. Výchozí stav historie se uloží až s první skutečnou úpravou; rozměry plátna se zapíší při editaci, naměřené hodnoty se z pixelů neodvozují."
     ],
     "notes": [

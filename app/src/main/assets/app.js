@@ -73,7 +73,7 @@ function reconcileSavedState(base,local,remote){
 function applySavedState(next){
  state=next;state.prefs=prefs;
  // Retain live editor/note references when a local draft wins reconciliation.
- for(const active of [current,noteActive])if(active){let at=state.records.findIndex(r=>r.id===active.id&&r.rev===active.rev);if(at<0)at=state.records.findIndex(r=>r.conflictOf===active.id&&r.rev===active.rev);if(at<0)at=state.records.findIndex(r=>r.id===active.id);if(at>=0&&state.records[at]!==active){Object.assign(active,state.records[at]);state.records[at]=active}}
+ for(const active of new Set([current,noteActive,window.__detailParent]))if(active){let at=state.records.findIndex(r=>r.id===active.id&&r.rev===active.rev);if(at<0)at=state.records.findIndex(r=>r.conflictOf===active.id&&r.rev===active.rev);if(at<0)at=state.records.findIndex(r=>r.id===active.id);if(at>=0&&state.records[at]!==active){const saved=state.records[at],items=sameSavedValue(active.items,saved.items)?active.items:saved.items;for(const key of Object.keys(active))if(!Object.hasOwn(saved,key))delete active[key];Object.assign(active,saved);if(items!==undefined)active.items=items;state.records[at]=active}}
  if(typeof document!=='undefined'&&current&&screen==='editor')$('editorTitle').textContent=current.title;
 }
 function reportSaveResult(ok){
