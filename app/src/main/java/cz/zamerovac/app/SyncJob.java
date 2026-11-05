@@ -16,7 +16,7 @@ public class SyncJob extends JobService {
         finally{active.compareAndSet(attempt,null);if(!attempt.cancelled.get())jobFinished(params,retry);}},"ScheduledSync");attempt.worker.start();return true;
     }
     void performSync(SharedPreferences prefs,BooleanSupplier cancelled)throws Exception{
-        String tree=prefs.getString("treeUri",null);new SafSyncV2(this,prefs,new DocumentSyncStore(this,tree),SyncTls.androidIdentity(),bytes->!cancelled.get()&&(BackupNetwork.allowed(this,tree,false)||!prefs.getBoolean("wifiOnly",false)&&bytes<=1024*1024)).sync();
+        String tree=prefs.getString("treeUri",null);new SafSyncV2(this,prefs,new DocumentSyncStore(this,tree),SyncTls.androidIdentity(),bytes->!cancelled.getAsBoolean()&&(BackupNetwork.allowed(this,tree,false)||!prefs.getBoolean("wifiOnly",false)&&bytes<=1024*1024)).sync();
     }
     @Override public boolean onStopJob(JobParameters params){Attempt attempt=active.get();if(attempt!=null)attempt.cancel();return true;}
     @Override public void onDestroy(){Attempt attempt=active.get();if(attempt!=null)attempt.cancel();super.onDestroy();}
