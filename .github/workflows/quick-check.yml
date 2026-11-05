@@ -85,7 +85,9 @@ jobs:
       - name: Připravit izolovaný prohlížeč
         run: |
           npm install --no-save --package-lock=false playwright@1.62.1
-          npx playwright install --with-deps chromium
+          # ubuntu-latest already has the Chromium runtime libraries and Czech fonts.
+          # Download only the pinned browser; apt font mirrors timed out before tests.
+          npx playwright install chromium
       - name: Skutečné kliknutí, dotyk, persistence a exportní vstupy
         shell: bash
         run: |
@@ -114,7 +116,9 @@ jobs:
       - name: Připravit Chromium
         run: |
           npm install --no-save --package-lock=false playwright@1.62.1
-          npx playwright install --with-deps chromium
+          # ubuntu-latest already has the Chromium runtime libraries and Czech fonts.
+          # Download only the pinned browser; apt font mirrors timed out before tests.
+          npx playwright install chromium
       - name: Kreslení, hodnoty, úchopy, Undo/Redo, pixely a persistence
         shell: bash
         run: |
