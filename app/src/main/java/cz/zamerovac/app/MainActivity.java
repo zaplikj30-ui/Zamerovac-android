@@ -85,9 +85,16 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class MainActivity extends Activity {
-    private static final int REQUEST_FILE=20,REQUEST_TREE=21,REQUEST_CAMERA=22,REQUEST_EXPORT=23,REQUEST_PERMISSIONS=24,REQUEST_ATTACH=25,REQUEST_CAMERA_PERMISSION=26,REQUEST_PHOTO_LOCATION=27,REQUEST_BACKUP=28,REQUEST_IMPORT_BACKUP=29,REQUEST_ISSUE_EXPORT=30,REQUEST_BLUETOOTH_PERMISSION=31,REQUEST_CUSTOMER_EXPORT=32,REQUEST_WIFI_DIRECT_PERMISSION=33,REQUEST_BACKUP_TREE=34;
+    private static final int REQUEST_FILE=20,REQUEST_TREE=21,REQUEST_CAMERA=22,REQUEST_EXPORT=23,REQUEST_PERMISSIONS=24,REQUEST_ATTACH=25,REQUEST_CAMERA_PERMISSION=26,REQUEST_PHOTO_LOCATION=27,REQUEST_BACKUP=28,REQUEST_IMPORT_BACKUP=29,REQUEST_ISSUE_EXPORT=30,REQUEST_BLUETOOTH_PERMISSION=31,REQUEST_CUSTOMER_EXPORT=32,REQUEST_WIFI_DIRECT_PERMISSION=33,REQUEST_BACKUP_TREE=34,REQUEST_SYNC_NOTIFICATION=35;
     private volatile boolean historyBackupBusy;
-    private volatile PeerCoordinator peerCoordinator;
+    private volatile boolean activityDestroyed;
+    private boolean webReady;
+    private volatile long lastUiGeneration=-1;
+    private final PeerCoordinator.Events directEvents=new PeerCoordinator.Events(){
+        public void state(JSONObject state){jsCall("onNativePeerState",state.toString());}
+        public void pairing(JSONObject request){jsCall("onNativePeerPairing",request.toString());}
+        public void saved(JSONObject data,String transport)throws Exception{jsCall("onNativeSync",new JSONObject().put("message","Přímá synchronizace přijata").put("data",data).put("transport",transport).toString());}
+    };
     private boolean pendingWifiDirectPermission;
     private WebView web;
     private final Set<WebView> unprivilegedWindows=new HashSet<>();
@@ -172,6 +179,7 @@ public class MainActivity extends Activity {
         ws.setAllowFileAccess(false);ws.setAllowContentAccess(true);ws.setMediaPlaybackRequiresUserGesture(false);ws.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);try{ws.setSafeBrowsingEnabled(true);}catch(UnsupportedOperationException ignored){}ws.setJavaScriptCanOpenWindowsAutomatically(false);ws.setSupportMultipleWindows(true);
         web.addJavascriptInterface(new JsApi(),"Native");
         web.setWebViewClient(new WebViewClient(){
+            @Override public void onPageFinished(WebView view,String url){if(WebContentPolicy.document(Uri.parse(url))){webReady=true;refreshBackgroundChanges();try{directCoordinator().publish();}catch(Exception failure){directProblem("Stav přenosu nelze načíst.");}}}
             @Override public boolean shouldOverrideUrlLoading(WebView view,WebResourceRequest request){
                 if(request.isForMainFrame()&&WebContentPolicy.document(request.getUrl()))return false;
                 if(request.isForMainFrame()&&request.hasGesture()&&WebContentPolicy.external(request.getUrl()))openBrowserLink(request.getUrl());
@@ -276,7 +284,7 @@ public class MainActivity extends Activity {
     private boolean validId(String s){return s!=null&&s.matches("[a-zA-Z0-9_-]{3,120}");}
     private String mediaMime(String id){return settings.getString("mime-"+id,"application/octet-stream");}
     private void openBrowserLink(Uri uri){if(!WebContentPolicy.external(uri))return;try{startActivity(new Intent(Intent.ACTION_VIEW,uri).addCategory(Intent.CATEGORY_BROWSABLE));}catch(Exception failure){error("Odkaz nelze otevřít v systémovém prohlížeči.");}}
-    private void js(String code){runOnUiThread(()->web.evaluateJavascript(code,null));}
+    private void js(String code){if(activityDestroyed)return;runOnUiThread(()->{if(!activityDestroyed&&web!=null)web.evaluateJavascript(code,null);});}
     private void jsCall(String fn,String jsonLiteral){js("window."+fn+"("+JSONObject.quote(jsonLiteral)+")");}
     // Hash the Bluetooth address with a private persisted salt; never expose raw
     // hardware addresses in JavaScript history or public diagnostic output.
@@ -731,11 +739,11 @@ public class MainActivity extends Activity {
         @JavascriptInterface public String preservePurgedEdit(String id,String record,String tombstone){try{JsonInput.check(tombstone);JSONObject parsed=SyncConflicts.input(record);if(!id.equals(parsed.getString("id")))throw new IOException("Odlišné ID");return SyncConflicts.purged(id,parsed,new JSONObject(tombstone)).toString();}catch(Exception failure){return "{\"error\":true}";}}
         @JavascriptInterface public void backupHistoryControl(String command,String path,boolean allowMetered){if(command!=null&&command.length()<24&&path!=null&&path.length()<200)runOnUiThread(()->historyBackup(command,path,allowMetered));}
         @JavascriptInterface public void directSyncControl(String command,String argument){if(command!=null&&command.length()<40&&argument!=null&&argument.length()<200)runOnUiThread(()->directCommand(command,argument));}
-        @JavascriptInterface public String directSyncState(){try{return directCoordinator().snapshot().toString();}catch(Exception failure){return "{\"problem\":\"Stav zařízení nelze načíst. Data zůstala uložená.\"}";}}
+        @JavascriptInterface public String directSyncState(){try{return PeerRuntime.get(MainActivity.this).snapshot().toString();}catch(Exception failure){return "{\"problem\":\"Stav zařízení nelze načíst. Data zůstala uložená.\"}";}}
         @JavascriptInterface public String getSyncDeviceId(){try{return DeviceIdentity.get(getNoBackupFilesDir());}catch(Exception error){return "";}}
         @JavascriptInterface public String loadSyncQueue(){try{return new SyncQueueStore(getNoBackupFilesDir()).read();}catch(Exception failure){error("Frontu přenosů nelze načíst; původní stav zůstává chráněný");return "{\"error\":true}";}}
         @JavascriptInterface public boolean saveSyncQueue(long expected,String text){try{return new SyncQueueStore(getNoBackupFilesDir()).save(expected,text);}catch(Exception failure){error("Fronta přenosů nebyla uložena");return false;}}
-        @JavascriptInterface public String loadData(){try{return readDb();}catch(Exception e){return "{\"_loadError\":true}";}}
+        @JavascriptInterface public String loadData(){synchronized(TrashPurger.LOCK){try{String text=readDb();lastUiGeneration=LocalDatabase.generation(getFilesDir());return text;}catch(Exception e){return "{\"_loadError\":true}";}}}
         @JavascriptInterface public int trashCleanupCount(){
             synchronized(TrashPurger.LOCK){try{return new TrashPurger(MainActivity.this,settings).pendingCount();}catch(Exception e){return -1;}}
         }
@@ -757,7 +765,7 @@ public class MainActivity extends Activity {
                 try{
                     String current=readDb();
                     if(!current.equals(expected))return new JSONObject().put("ok",false).put("current",current.isEmpty()?"{\"schema\":1,\"records\":[]}":current).toString();
-                    writeDb(text);return "{\"ok\":true}";
+                    writeDb(text);lastUiGeneration=LocalDatabase.generation(getFilesDir());return "{\"ok\":true}";
                 }catch(Exception e){try{return new JSONObject().put("ok",false).put("error","Uložení se nezdařilo; poslední potvrzená data zůstávají chráněná.").toString();}catch(Exception ignored){return "{}";}}
             }
         }
@@ -1017,17 +1025,15 @@ public class MainActivity extends Activity {
         }catch(Exception failure){phase="error";message="Operace zálohy: "+failure.getMessage()+". Aktuální zakázky a předchozí historické body se nepřepisují.";}
         finally{historyBackupBusy=false;backupEvent(phase,message,result);}},"ZamerovacBackupHistory").start();
     }
-    private synchronized PeerCoordinator directCoordinator()throws Exception{
-        if(peerCoordinator==null)peerCoordinator=new PeerCoordinator(this,settings,new PeerCoordinator.Events(){
-            public void state(JSONObject state){jsCall("onNativePeerState",state.toString());}
-            public void pairing(JSONObject request){jsCall("onNativePeerPairing",request.toString());}
-            public void saved(JSONObject data,String transport)throws Exception{JSONObject result=new JSONObject().put("message","Přímá synchronizace přijata").put("data",data).put("transport",transport);jsCall("onNativeSync",result.toString());}
-        });return peerCoordinator;
+    private PeerCoordinator directCoordinator()throws Exception{return PeerRuntime.get(this).coordinator();}
+    private void refreshBackgroundChanges(){
+        if(!webReady||activityDestroyed||lastUiGeneration<0||lastUiGeneration==LocalDatabase.generation(getFilesDir()))return;
+        new Thread(()->{try{String text=readDb();if(text.isEmpty())return;JSONObject event=new JSONObject().put("message","Načteny změny uložené na pozadí").put("transport","direct").put("data",new JSONObject(text));js("if(typeof window.onNativeSync==='function')window.onNativeSync("+JSONObject.quote(event.toString())+")");}catch(Exception failure){directProblem("Změny na pozadí nelze bezpečně načíst. Uložená data zůstávají chráněná.");}},"SyncResumeRead").start();
     }
     private void directProblem(String message){try{jsCall("onNativePeerProblem",new JSONObject().put("problem",message).toString());}catch(Exception ignored){}}
     private void directCommand(String command,String argument){try{
-        if("disable".equals(command)){if(!settings.edit().putBoolean("directSyncEnabled",false).commit())throw new IOException("Nastavení nebylo uloženo");PeerCoordinator coordinator=peerCoordinator;if(coordinator!=null)coordinator.close();peerCoordinator=null;directCoordinator().publish();return;}
-        if("enable".equals(command)||"pair".equals(command)||"nearby".equals(command)){if(!settings.edit().putBoolean("directSyncEnabled",true).commit())throw new IOException("Nastavení nebylo uloženo");directCoordinator().start();}
+        if("disable".equals(command)){if(!settings.edit().putBoolean("directSyncEnabled",false).commit())throw new IOException("Nastavení nebylo uloženo");DirectSyncService.stop(this);directCoordinator().publish();return;}
+        if("enable".equals(command)||"pair".equals(command)||"nearby".equals(command)){if(!settings.edit().putBoolean("directSyncEnabled",true).commit())throw new IOException("Nastavení nebylo uloženo");DirectSyncService.start(this);if("enable".equals(command)&&Build.VERSION.SDK_INT>=33&&checkSelfPermission(Manifest.permission.POST_NOTIFICATIONS)!=PackageManager.PERMISSION_GRANTED)requestPermissions(new String[]{Manifest.permission.POST_NOTIFICATIONS},REQUEST_SYNC_NOTIFICATION);}
         PeerCoordinator coordinator=directCoordinator();
         switch(command){case "enable":coordinator.publish();break;case "pair":coordinator.pair();break;case "stopPairing":coordinator.stopPairing();pendingWifiDirectPermission=false;break;case "nearby":String permission=Build.VERSION.SDK_INT>=33?Manifest.permission.NEARBY_WIFI_DEVICES:Manifest.permission.ACCESS_FINE_LOCATION;if(checkSelfPermission(permission)!=PackageManager.PERMISSION_GRANTED){pendingWifiDirectPermission=true;requestPermissions(new String[]{permission},REQUEST_WIFI_DIRECT_PERMISSION);}else coordinator.scanNearby();break;case "connect":coordinator.choose(argument);break;case "approve":coordinator.answer(argument,true);break;case "reject":coordinator.answer(argument,false);break;case "forget":coordinator.forget(argument);break;case "retry":coordinator.retry();break;case "refresh":coordinator.refresh();break;default:throw new IOException("Neznámý příkaz synchronizace");}
     }catch(Exception failure){directProblem(failure.getMessage());}}
@@ -1036,9 +1042,9 @@ public class MainActivity extends Activity {
     private final Runnable foregroundCloudSync=new Runnable(){public void run(){if(settings!=null&&settings.getBoolean("autoSync",true)&&settings.getString("treeUri",null)!=null)syncCloud();handler.postDelayed(this,60000);}};
 
     private void scheduleSync(){try{JobScheduler jobs=(JobScheduler)getSystemService(JOB_SCHEDULER_SERVICE);JobInfo j=new JobInfo.Builder(14,new ComponentName(this,SyncJob.class)).setPeriodic(15*60*1000L).setRequiredNetworkType(settings.getBoolean("wifiOnly",false)?JobInfo.NETWORK_TYPE_UNMETERED:JobInfo.NETWORK_TYPE_ANY).setPersisted(true).build();if(settings.getString("treeUri",null)!=null&&settings.getBoolean("autoSync",true))jobs.schedule(j);else jobs.cancel(14);}catch(Exception e){android.util.Log.w("Zamerovac","Background job",e);}}
-    @Override public void onResume(){super.onResume();if(settings!=null&&settings.getBoolean("directSyncEnabled",false))try{directCoordinator().start();}catch(Exception failure){directProblem(failure.getMessage());}if(settings!=null&&settings.getBoolean("autoSync",true)&&settings.getString("treeUri",null)!=null)handler.postDelayed(foregroundCloudSync,2000);}
-    @Override protected void onStop(){handler.removeCallbacks(foregroundCloudSync);PeerCoordinator coordinator=peerCoordinator;if(coordinator!=null)coordinator.close();peerCoordinator=null;pendingWifiDirectPermission=false;super.onStop();}
-    @Override protected void onDestroy(){PeerCoordinator coordinator=peerCoordinator;if(coordinator!=null)coordinator.close();peerCoordinator=null;closeUpload();stopLaserConnection();videoThumbnails.close();clearCustomerExport();handler.removeCallbacksAndMessages(null);releaseRecorder();for(WebView popup:new ArrayList<>(unprivilegedWindows))popup.destroy();unprivilegedWindows.clear();if(web!=null)web.destroy();super.onDestroy();}
+    @Override public void onResume(){super.onResume();PeerRuntime.get(this).observe(directEvents);if(settings!=null&&settings.getBoolean("directSyncEnabled",false))try{DirectSyncService.start(this);}catch(Exception failure){directProblem("Android nepovolil službu přenosu na pozadí. Změny zůstávají ve frontě: "+failure.getMessage());}refreshBackgroundChanges();if(settings!=null&&settings.getBoolean("autoSync",true)&&settings.getString("treeUri",null)!=null)handler.postDelayed(foregroundCloudSync,2000);}
+    @Override protected void onStop(){handler.removeCallbacks(foregroundCloudSync);PeerRuntime.get(this).unobserve(directEvents);pendingWifiDirectPermission=false;super.onStop();}
+    @Override protected void onDestroy(){activityDestroyed=true;PeerRuntime.get(this).unobserve(directEvents);closeUpload();stopLaserConnection();videoThumbnails.close();clearCustomerExport();handler.removeCallbacksAndMessages(null);releaseRecorder();for(WebView popup:new ArrayList<>(unprivilegedWindows))popup.destroy();unprivilegedWindows.clear();if(web!=null)web.destroy();super.onDestroy();}
 
 
     // The GLM 100-25 C is Bluetooth LE. Show ALL nearby LE advertisements (like

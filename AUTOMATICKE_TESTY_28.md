@@ -81,3 +81,7 @@ Specifikace #38/#34/#33 → PeerCoordinator/PeerDiscovery/PeerWifiDirect/MainAct
 ## Wi-Fi Direct reconnect a očekávaný peer – etapa 20
 
 #33/#38 → PeerWifiDirect/SyncPeerRegistry/PeerCoordinator/PeerHandshake → `PeerWifiDirectTest` (6 případů) + nový skutečný TLS případ v `PeerTlsTest`. Pozitivní: známý peer, obnova skupiny/kanálu, atomicky uložená cesta po ověření, očekávané TLS UUID. Negativní: cizí adresa/pin/UUID, chybějící permission, vypnutá automatika, revokace, busy rádio/minutové retry, opožděné group/peer callbacky a close; žádné mazání Android skupiny ani MAC/certifikát v UI. Nové native CI ověřit; rádio je v adapter testu mock, TLS jsou skutečné sockety, fyzické Samsung/Xiaomi/Lenovo a pozadí nejsou provedené.
+
+## Služba pozadí, návrat UI a napájení – etapa 21
+
+#33/#38 → DirectSyncService/PeerRuntime/TransferPower + MainActivity observer/resume → `DirectSyncServiceTest` (6 native případů) a rozšířený browser `peer-sync.cjs`. Pozitivní: connectedDevice foreground/oznámení, jediný koordinátor, stop obrazovky zachová relaci, čerstvá DB na resume, explicitní notification STOP zachová DB/durable frontu, UI observer není ACK. Negativní: disabled/denied služba nesmí připojit ani hlásit úspěch, rozbité/odpojené UI, background párování se zruší, lock se pustí a po close neobnoví; UI poctivě popíše omezení Androidu. Native vyžaduje novou CI; lifecycle má mock koordinátor, skutečný TLS/datový přenos je samostatný. Doze/force-stop/restart/rádio různých značek a instalace fyzicky neprovedeny.

@@ -7,6 +7,7 @@
 // Working notes for the common update. These are NOT a released version and
 // are deliberately excluded from forVersion() and the installed release history.
 const pendingChanges={issue:39,released:false,groups:[{kind:'Nové funkce',items:[{text:'Samostatné historické zálohy po instalaci, sdílené neměnné datové bloky, kontrola úplnosti a obnova jako nové kopie. Systémové úložiště včetně Disku závisí na poskytovateli; skutečný Drive účet dosud neověřen.'},{text:'Obrazovka synchronizace zařízení, oboustranné TLS párování, přímý přenos celých zakázek přes místní Wi-Fi / Wi-Fi Direct a trvalá fronta příloh. Rádio a zařízení zatím čekají na fyzické ověření; Drive a historie záloh se dále dokončují.'}]},{kind:'Opraveno',items:[
+ {text:'Zavření obrazovky nepřeruší zapnutý místní přenos; koordinátor vlastní služba Androidu s oznámením a vypnutím. Návrat načte potvrzené změny a nepřehraje starý stav obrazovky. Systémová omezení pozadí různých značek dosud fyzicky neověřena.'},
  {text:'Vlastní obsah editoru je oddělen od cizích stránek a spustitelných příloh; webové odkazy se otevírají v systémovém prohlížeči bez přístupu k nativnímu rozhraní zakázek.'},
  {text:'Checklisty a přílohy poznámek mají správné kauzální revize a průběžný zápis; selhání uložení nezavře poznámku. Prohlížení prázdné skici nemění data a zámek chrání i checklist/přílohy.'},
  {text:'Příchozí synchronizace nepřeruší tah, formulář rozměru ani úpravu detailu; konfliktní kopie zachová živé úchopy i vlastní přesné hodnoty.'},

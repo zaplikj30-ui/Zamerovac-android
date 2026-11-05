@@ -15,7 +15,7 @@ import java.util.concurrent.locks.ReentrantLock;
 final class PeerCoordinator implements AutoCloseable {
     interface Events {void state(JSONObject state);void pairing(JSONObject request);void saved(JSONObject data,String transport)throws Exception;}
     private final Context context;private final SharedPreferences prefs;private final Events events;
-    private final SyncPeerRegistry registry;private final PeerDataStore data;private final String id;
+    private final SyncPeerRegistry registry;private final PeerDataStore data;private final String id;private final TransferPower power;
     private final ScheduledExecutorService ticker=Executors.newSingleThreadScheduledExecutor();
     private final ThreadPoolExecutor workers=new ThreadPoolExecutor(0,4,30,TimeUnit.SECONDS,new SynchronousQueue<>(),new ThreadPoolExecutor.AbortPolicy());
     private final Set<Socket> sockets=ConcurrentHashMap.newKeySet();private final Set<String> connecting=ConcurrentHashMap.newKeySet();
@@ -29,7 +29,7 @@ final class PeerCoordinator implements AutoCloseable {
     private static final class Approval {final PeerHandshake.Request request;final CompletableFuture<Boolean> answer=new CompletableFuture<>();Approval(PeerHandshake.Request request){this.request=request;}}
     private static final class Session {final SSLSocket socket;final boolean preferred;Session(SSLSocket socket,boolean preferred){this.socket=socket;this.preferred=preferred;}}
     PeerCoordinator(Context context,SharedPreferences prefs,Events events)throws Exception{
-        this.context=context;this.prefs=prefs;this.events=events;id=DeviceIdentity.get(context.getNoBackupFilesDir());registry=new SyncPeerRegistry(context.getNoBackupFilesDir());data=new PeerDataStore(context,prefs,registry,events::saved);
+        this.context=context;this.prefs=prefs;this.events=events;power=new TransferPower(context);id=DeviceIdentity.get(context.getNoBackupFilesDir());registry=new SyncPeerRegistry(context.getNoBackupFilesDir());data=new PeerDataStore(context,prefs,registry,events::saved);
         lan=new PeerDiscovery(context,new PeerDiscovery.Events(){public void changed(){publish();}public void found(PeerDiscovery.Endpoint endpoint){if(!isPairing()&&prefs.getBoolean("autoSync",true))connect(endpoint,false);}public void problem(String message){problem=message;publish();}});
         nearby=new PeerWifiDirect(context,new PeerWifiDirect.Events(){public void changed(){publish();}public void connected(PeerDiscovery.Endpoint endpoint){if(isPairing()||prefs.getBoolean("autoSync",true))connect(endpoint,true);}public void problem(String message){problem=message;publish();}public Map<String,String> trustedRoutes()throws Exception{return registry.nearbyRoutes();}});
     }
@@ -64,14 +64,14 @@ final class PeerCoordinator implements AutoCloseable {
             if(closed)return;PeerHandshake.Peer peer=PeerHandshake.negotiate(socket,id,"Android · "+safeModel(),tls,registry,this::isPairing,this::approve,endpoint==null?null:endpoint.expectedPeer);peerId=peer.id;if(endpoint!=null){endpoints.put(endpoint.key,peer.id);if("nearby".equals(endpoint.route))registry.rememberNearby(peer.id,peer.fingerprint,endpoint.nearbyAddress);}
             Session candidate=new Session(socket,initiator==(id.compareTo(peer.id)<0));AtomicBoolean admitted=new AtomicBoolean();
             sessions.compute(peer.id,(key,previous)->{if(previous==null||candidate.preferred&&!previous.preferred){if(previous!=null)try{previous.socket.close();}catch(IOException ignored){}admitted.set(true);return candidate;}return previous;});
-            if(!admitted.get())return;session=candidate;gate=gate(peer.id);acquired=gate.tryLock(20,TimeUnit.SECONDS);if(!acquired||closed||sessions.get(peer.id)!=session)throw new IOException("Jiná relace zařízení ještě dokončuje zápis. Změny zůstávají ve frontě.");
+            if(!admitted.get())return;session=candidate;power.active(true);gate=gate(peer.id);acquired=gate.tryLock(20,TimeUnit.SECONDS);if(!acquired||closed||sessions.get(peer.id)!=session)throw new IOException("Jiná relace zařízení ještě dokončuje zápis. Změny zůstávají ve frontě.");
             PeerGates.direct(context,peer.id);status(peer.id,"connected",0,0,"");new PeerTransfer(data,(key,phase,done,total)->{PeerGates.direct(context,key);status(key,phase,done,total,"");}).exchange(socket,peer,initiator);
             if(beforeGeneration!=LocalDatabase.generation(context.getFilesDir()))preparedGeneration=-1;
             if(isPairing())stopPairing();publish();
-        }catch(Exception failure){if(!closed)fail(peerId,failure);}finally{if(acquired)gate.unlock();if(peerId!=null&&session!=null)sessions.remove(peerId,session);sockets.remove(socket);try{socket.close();}catch(IOException ignored){}}
+        }catch(Exception failure){if(!closed)fail(peerId,failure);}finally{if(acquired)gate.unlock();if(peerId!=null&&session!=null)sessions.remove(peerId,session);power.active(!closed&&!sessions.isEmpty());sockets.remove(socket);try{socket.close();}catch(IOException ignored){}}
     }
     private String safeModel(){String model=Build.MODEL==null?"zařízení":Build.MODEL;model=model.replaceAll("[\\p{Cntrl}]","");return model.substring(0,Math.min(60,model.length()));}
-    private void tick(){if(closed)return;try{
+    private void tick(){if(closed)return;power.active(!sessions.isEmpty());try{
         if(approval.get()!=null&&!isPairing())stopPairing();long generation=LocalDatabase.generation(context.getFilesDir());boolean all=true;
         if(generation!=preparedGeneration){JSONObject peers=registry.snapshot();for(Iterator<String> it=peers.keys();it.hasNext();){String peer=it.next();ReentrantLock gate=gate(peer);if(sessions.containsKey(peer)||!gate.tryLock()){all=false;continue;}try{data.outbox.prepare(peer);if(data.outbox.pending(peer)>0)status(peer,"waiting",0,data.outbox.pending(peer),"");}catch(Exception failure){all=false;fail(peer,failure);}finally{gate.unlock();}}if(all)preparedGeneration=generation;}
         nearby.automatic(!isPairing()&&prefs.getBoolean("autoSync",true));
@@ -91,5 +91,5 @@ final class PeerCoordinator implements AutoCloseable {
         Approval pending=approval.get();return new JSONObject().put("enabled",prefs.getBoolean("directSyncEnabled",false)).put("active",server!=null&&!server.isClosed()&&!closed).put("pairing",isPairing()).put("pairingSeconds",Math.max(0,(pairingUntil-SystemClock.elapsedRealtime())/1000)).put("wifiDirectSupported",nearby.supported()).put("wifiDirectPermission",nearby.permitted()).put("problem",problem).put("peers",peers).put("candidates",candidates).put("approval",pending==null?JSONObject.NULL:pending.request.json());
     }
     void publish(){if(closed)return;try{events.state(snapshot());}catch(Exception failure){android.util.Log.w("Zamerovac","Local sync state unavailable",failure);}}
-    @Override public void close(){if(closed)return;stopPairing();closed=true;lan.close();nearby.close();ticker.shutdownNow();workers.shutdownNow();for(Socket socket:sockets)try{socket.close();}catch(IOException ignored){}sockets.clear();SSLServerSocket listener=server;if(listener!=null)try{listener.close();}catch(IOException ignored){}server=null;}
+    @Override public void close(){if(closed)return;stopPairing();closed=true;power.close();lan.close();nearby.close();ticker.shutdownNow();workers.shutdownNow();for(Socket socket:sockets)try{socket.close();}catch(IOException ignored){}sockets.clear();SSLServerSocket listener=server;if(listener!=null)try{listener.close();}catch(IOException ignored){}server=null;}
 }

@@ -28,7 +28,7 @@ function render(){if(!panel||panel.hidden)return;const active=document.activeEle
   row.append(button('Odebrat párování',null,()=>{if(root.confirm('Odebrat důvěru zařízení '+String(peer.name||'Android')+'? Jeho uložené zakázky se tím nesmažou.'))command('forget',id);}));body.append(row);
  }
  const conflicts=typeof root.ZamerovacPeerConflictCount==='function'?root.ZamerovacPeerConflictCount():0;if(conflicts)body.append(node('p','Zachovaných konfliktních kopií: '+conflicts+'. Najdeš je mezi zakázkami s označením konflikt synchronizace. Porovnej obě verze před odstraněním.'));
- body.append(node('p','Přenos je aktivní, když je Zaměřovač otevřený. Po návratu pokračuje z trvalé fronty; nedokončený soubor se odešle znovu. Android může omezit práci při uspání. Historické zálohy se tím nemažou.','muted'));
+ body.append(node('p','Zapnutý místní přenos pokračuje službou Androidu s oznámením i po zavření obrazovky. Vypneš ho zde nebo v oznámení. Android může službu při uspání či úspoře baterie omezit nebo ukončit; po návratu pokračuje z trvalé fronty. Párování vyžaduje otevřenou aplikaci. Historické zálohy se tím nemažou.','muted'));
  if(active&&panel.querySelector('#'+active))panel.querySelector('#'+active).focus();
 }
 function close(){panel.hidden=true;clearInterval(timer);timer=null;}
