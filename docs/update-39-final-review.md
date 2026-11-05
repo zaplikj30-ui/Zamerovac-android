@@ -1,6 +1,6 @@
 # Omezená závěrečná kontrola #39 – 5. 11. 2026
 
-Tato kontrola vlastní implementace není nezávislý audit, fyzický test, absolutní bezpečnostní záruka ani dokončená #39. Je omezená na níže uvedené hranice. Ověřený kód 20eb4551a677edea3664a44d11499949b72360e0 má native42116667936 a quick42116667853 SUCCESS, bez APK. Dřívější výsledky a opravy jsou v update-39-progress.md.
+Tato kontrola vlastní implementace není nezávislý audit, fyzický test, absolutní bezpečnostní záruka ani dokončená #39. Je omezená na níže uvedené hranice. Ověřený kód c1b91feb29508379d6d06bfc0832388f91a8ebc6 má native42117735945 a quick42117735619 SUCCESS, bez APK. Dřívější výsledky a opravy jsou v update-39-progress.md.
 
 | Kontrolovaná hranice | Konkrétní stav / důkaz | Praktický limit |
 | --- | --- | --- |
@@ -15,11 +15,13 @@ Tato kontrola vlastní implementace není nezávislý audit, fyzický test, abso
 
 ## Co dále skutečně zbývá
 
-1. Ověřit CI etapy37 (nově nalezený retry zálohy po partial/corrupt bloku) a případný konkrétní nález opravit; nereportovat nové testy jako prošlé před výsledkem.
+1. Nezávislá kontrola bezpečnosti/architektury/kolizí #33/#42 zůstává pending. Omezená kontrola vlastní implementace i navazující opravy mají celou CI SUCCESS; to nenahrazuje nezávislého reviewera.
 2. Dokončit legitimní externí Google Cloud registraci a dodat veřejný project ID. Přesný testovací package/SHA1, build property a oficiální postup jsou v drive-api-integration.md. V prostředí nejsou oprávnění ani legitimní projekt k registraci; nevymýšlet identifikátor a nepřebírat účty/tokeny konektoru.
 3. Ověřit skutečný souhlas/denied/revoked/expired token, stejný účet na dvou zařízeních, celé originály a přesné kóty, oddělené historie, check/restore a zachování historie při sync. Jednu společnou testovací APK teprve po dokončení konfigurace a potřebných kontrolách; nyní žádná APK/merge.
 4. Na syntetických datech fyzická LAN/P2P bez routeru, OEM/Doze/OS kill/restart, instalace se zachováním dat, Bosch a kamera/mikrofon/kodeky. Telefon/tablet i slabší HW jsou acceptance gates, nikoli důvody vymýšlet další funkce.
 
 Stav neumožňuje označit celou #39 za dokončenou. Rozpracovaný kód, testy a přesná místa pokračování jsou uložené v jedné větvi/PR; budoucí zahraniční adresy, Windows/iOS, 3D/cast ani monetizace se nevytvářejí.
 
-Etapa37: auditovaný backup retry měl funkční mezeru po partial/corrupt canonical. Nový BackupBlobs vytvoří hash-UUID kopii dostupného originálu; manifest/hash/velikost a původní fyzické objekty zůstávají neměnné. Rozlišuje skutečné CorruptBlob vs provider failure, check/restore vybírá ověřený obsah. Novou CI ověřit, nejde o fyzický účet.
+Etapa37: auditovaný backup retry měl funkční mezeru po partial/corrupt canonical. Nový BackupBlobs vytvoří hash-UUID kopii dostupného originálu; manifest/hash/velikost a původní fyzické objekty zůstávají neměnné. Rozlišuje skutečné CorruptBlob vs provider failure, check/restore vybírá ověřený obsah. Native42117735945 i quick42117735619 SUCCESS; nejde o fyzický účet.
+
+Předávka: všechny dokončené etapy jsou na GitHubu ve stejné větvi/draft PR, lokální a vzdálený obsah byl porovnaný podle tree SHA. Žádný build APK/request/merge. Správa legitimního Google Cloud projektu není dostupná přes současné nástroje/credential bindings; požadovaná konfigurace nesmí být vymyšlená. Další worker začne současným HEAD/komentáři/Actions, zachová práci druhého chatu a nenahradí fyzické výsledky automatickými.

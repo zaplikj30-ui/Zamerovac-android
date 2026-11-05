@@ -1221,7 +1221,7 @@
     {
       "id": "google-drive",
       "status": "blocked",
-      "scope": "Oficiální OAuth/API chybí; reálný účet/Drive provider neověřen"
+      "scope": "API/OAuth/UI/Job jsou v kódu; chybí legitimní GCP Android klient/registrace a skutečný účet/Drive ověření."
     },
     {
       "id": "power-lifecycle",
@@ -1240,10 +1240,10 @@
     }
   ],
   "openAutomationGaps": [
-    "Android Drive OAuth/UI/Job zapojení, registrace klienta a jeho skutečné chybové cesty.",
+    "Legitimní Android Google registrace a živý consent/denied/revoked/expired účet; SDK/API/UI/Job jsou zapojené a synteticky otestované.",
     "Živé API stránkování a ověření konzervativního HTTP budgetu; TLS/operátor nejsou přesně měřené.",
     "Low-memory/process-kill a poškození/ztráta všech kopií úložiště; fallback/inbox má od etapy 28 cílené testy.",
     "Kompletní mapování jednotlivých starších ovládacích prvků; nyní jsou mapované funkční oblasti.",
-    "Dokončit schválenou volitelnou frekvenci 15/30/60 min/ručně a audit priority nearby/LAN/cloud v Android koordinátoru."
+    "Fyzické OEM potvrzení route fallback/frekvence/Doze; auto/15/30/60/ručně a po-TLS nearby/LAN arbitráž jsou implementované a CI prošly."
   ]
 }
