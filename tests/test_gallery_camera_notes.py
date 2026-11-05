@@ -27,7 +27,8 @@ class PhotoNotesGalleryTests(unittest.TestCase):
         self.assertIn('private void discardPendingCamera()',source)
         self.assertIn('if(request==REQUEST_CAMERA){discardPendingCamera();',source)
         self.assertIn('cameraOutput=null;cameraId=null;',source)
-        self.assertIn('js("window.onNativeMediaDone?.()")',source)
+        self.assertIn('finishMediaSelection(mediaSelectionToken)',source)
+        self.assertIn('window.onNativeMediaDone?.(',source)
 
 if __name__=='__main__':
     unittest.main()

@@ -74,7 +74,7 @@ function openRichNote(item,isNew){
   });
  };
  render();
- const photoHandler=(id)=>{attachments.push(id);render()};
+ const photoHandler=(id)=>{if(window.__activeRichNoteCleanup!==cleanRecording||current!==parent||window.isRecordLocked?.(parent)){notify('Původní poznámka už není dostupná; příloha nebyla připojena jinam.');return false}attachments.push(id);render()};
  $('richPhotoCamera').onclick=()=>pickMedia('camera',photoHandler);
  $('richPhotoPick').onclick=()=>pickMedia('media',photoHandler);
  $('richVoice').onclick=()=>{

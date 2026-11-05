@@ -1,12 +1,12 @@
 'use strict';
-const {suite,assert,createCanvas,tool,drag,editSelected}=require('./harness.cjs');
+const {suite,assert,createCanvas,chooseFiles,tool,drag,editSelected}=require('./harness.cjs');
 const nativeStorage=require('./native-storage-fixture.cjs');
 async function note(page){return page.evaluate(()=>{const r=newRecord('note','Syntetická poznámka');r.text='Původní text';state.records=[r];save();return JSON.stringify(r);});}
 suite('note-sync',async run=>{
  await run('read-only-note-and-checklist-attachment-causal-autosave',async({page})=>{
   const before=await note(page);await page.evaluate(()=>openNote(state.records[0]));await page.click('#toggleSketch');await page.click('#noteBack');assert.equal(await page.evaluate(()=>JSON.stringify(state.records[0])),before);
   await page.evaluate(()=>openNote(state.records[0]));const clock=await page.evaluate(()=>noteActive.syncClock[syncDeviceId]);await page.click('#addCheck');await page.fill('[data-text="0"]','123,000000123456');await page.waitForFunction(()=>JSON.parse(localStorage.getItem('zamerovac-data')).records[0].checks[0]?.text==='123,000000123456');await page.check('[data-check="0"]');assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('zamerovac-data')).records[0].checks[0].done),true);assert((await page.evaluate(()=>noteActive.syncClock[syncDeviceId]))>clock);
-  const beforeMedia=await page.evaluate(()=>noteActive.syncClock[syncDeviceId]);await page.click('#attachFile');await page.setInputFiles('#filePick',{name:'synthetic.txt',mimeType:'text/plain',buffer:Buffer.from('Synthetic only')});await page.waitForFunction(()=>state.records[0].media.length===1);assert((await page.evaluate(()=>noteActive.syncClock[syncDeviceId]))>beforeMedia);await page.click('#noteAttachments [data-remove]');assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('zamerovac-data')).records[0].media.length),0);
+  const beforeMedia=await page.evaluate(()=>noteActive.syncClock[syncDeviceId]);await chooseFiles(page,'#attachFile',{name:'synthetic.txt',mimeType:'text/plain',buffer:Buffer.from('Synthetic only')});await page.waitForFunction(()=>state.records[0].media.length===1);assert((await page.evaluate(()=>noteActive.syncClock[syncDeviceId]))>beforeMedia);await page.click('#noteAttachments [data-remove]');assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('zamerovac-data')).records[0].media.length),0);
   await page.locator('#checkItems [data-delete]').click();assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('zamerovac-data')).records[0].checks.length),0);
  });
  await run('incoming-note-data-waits-and-read-only-close-does-not-create-conflict',async({page})=>{

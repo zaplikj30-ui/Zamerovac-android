@@ -129,7 +129,9 @@ public class MainActivity extends Activity {
     private volatile String activeLaserHistoryId="";
     private volatile boolean syncRunning=false;
     private volatile boolean databaseReadFailed=false;
-    private String pendingMediaType="media";
+    private String mediaSelectionToken;
+    private volatile boolean mediaImportBusy;
+    private final java.util.concurrent.ThreadPoolExecutor mediaImports=new java.util.concurrent.ThreadPoolExecutor(1,1,30,java.util.concurrent.TimeUnit.SECONDS,new java.util.concurrent.ArrayBlockingQueue<>(1),work->{Thread thread=new Thread(work,"ZamerovacMediaImport");thread.setDaemon(true);return thread;},new java.util.concurrent.ThreadPoolExecutor.AbortPolicy());
     private String pendingIssueZipId;
     private final PhotoThumbnails photoThumbnails=new PhotoThumbnails();
     private final VideoThumbnails videoThumbnails=new VideoThumbnails();
@@ -359,7 +361,7 @@ public class MainActivity extends Activity {
             if(grantResults.length>0&&grantResults[0]==PackageManager.PERMISSION_GRANTED){
                 handler.post(this::useCamera); // Continue the same camera action without a second tap.
             }else{
-                error("Fotoaparát nemá povolení. Povol jej v nastavení aplikace.");
+                error("Fotoaparát nemá povolení. Povol jej v nastavení aplikace.");finishMediaSelection(mediaSelectionToken);
             }
         }
         if(requestCode==REQUEST_PHOTO_LOCATION){
@@ -374,11 +376,12 @@ public class MainActivity extends Activity {
         }
     }
     private void useCamera(){
+        if(activityDestroyed||mediaSelectionToken==null)return;
         if(Build.VERSION.SDK_INT>=23&&checkSelfPermission(Manifest.permission.CAMERA)!=PackageManager.PERMISSION_GRANTED){requestPermissions(new String[]{Manifest.permission.CAMERA},REQUEST_CAMERA_PERMISSION);return;}
         cameraId=UUID.randomUUID().toString();ContentValues vals=new ContentValues();vals.put(MediaStore.Images.Media.DISPLAY_NAME,"zamerovac-"+cameraId+".jpg");vals.put(MediaStore.Images.Media.MIME_TYPE,"image/jpeg");
         try{
             cameraOutput=getContentResolver().insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI,vals);
-            if(cameraOutput==null){error("Nepodařilo se vytvořit fotografii");js("window.onNativeMediaDone?.()");return;}
+            if(cameraOutput==null){error("Nepodařilo se vytvořit fotografii");finishMediaSelection(mediaSelectionToken);return;}
             Intent i=new Intent(MediaStore.ACTION_IMAGE_CAPTURE);
             i.putExtra(MediaStore.EXTRA_OUTPUT,cameraOutput);
             i.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
@@ -386,7 +389,7 @@ public class MainActivity extends Activity {
         }catch(Exception ex){
             error("Fotoaparát se nepodařilo spustit: "+ex.getMessage());
             discardPendingCamera();
-            js("window.onNativeMediaDone?.()");
+            finishMediaSelection(mediaSelectionToken);
         }
     }
     private void discardPendingCamera(){
@@ -395,36 +398,36 @@ public class MainActivity extends Activity {
         if(unused!=null)try{getContentResolver().delete(unused,null,null);}catch(Exception ignored){}
     }
     private void chooseAttachments(String type){
-        pendingMediaType=type;
         Intent intent=new Intent(Intent.ACTION_OPEN_DOCUMENT);
         intent.setType("*/*");intent.addCategory(Intent.CATEGORY_OPENABLE);
         intent.putExtra(Intent.EXTRA_ALLOW_MULTIPLE,true);
         if("media".equals(type))intent.putExtra(Intent.EXTRA_MIME_TYPES,new String[]{"image/*","video/*","audio/*","application/pdf"});
-        try{startActivityForResult(intent,REQUEST_ATTACH);}catch(Exception e){error("Výběr souborů: "+e.getMessage());}
+        try{startActivityForResult(intent,REQUEST_ATTACH);}catch(Exception e){error("Výběr souborů: "+e.getMessage());finishMediaSelection(mediaSelectionToken);}
     }
-    private void importUri(Uri uri)throws IOException{
-        String id=UUID.randomUUID().toString();String mime=getContentResolver().getType(uri);
-        if(mime==null)mime="application/octet-stream";
-        String name="Příloha";
-        try(Cursor c=getContentResolver().query(uri,new String[]{android.provider.OpenableColumns.DISPLAY_NAME},null,null,null)){
-            if(c!=null&&c.moveToFirst()&&!c.isNull(0))name=c.getString(0);
-        }
-        filePicked(uri,id,mime,name);
+    private void beginMediaSelection(String type,String token){
+        if(activityDestroyed)return;if(mediaImportBusy||mediaSelectionToken!=null){error("Přidávání příloh již probíhá");if(validId(token))finishMediaSelection(token);return;}
+        if(token==null||!token.matches("[a-zA-Z0-9_-]{3,120}")||!java.util.Arrays.asList("camera","media","file").contains(type)){error("Neplatný požadavek na přílohu");return;}
+        mediaSelectionToken=token;if("camera".equals(type))useCamera();else chooseAttachments(type);
     }
-    private void filePicked(Uri uri,String id,String mime,String name) throws IOException {
-        filePicked(uri,id,mime,name,null);
+    private void finishMediaSelection(String token){
+        if(token==null)return;runOnUiThread(()->{if(token.equals(mediaSelectionToken)){mediaSelectionToken=null;mediaImportBusy=false;}js("window.onNativeMediaDone?.("+JSONObject.quote(token)+")");});
     }
-    private void filePicked(Uri uri,String id,String mime,String name,String photoTakenAt) throws IOException {
-        File temporary=MediaStaging.temporary(mediaFile(id).getParentFile(),id);
-        try{
-            try(InputStream in=getContentResolver().openInputStream(uri);FileOutputStream out=new FileOutputStream(temporary)){if(in==null)throw new IOException("Soubor nelze číst");long total=0;byte[] block=new byte[65536];int count;while((count=in.read(block))!=-1){total+=count;if(total>MediaStaging.LIMIT)throw new IOException("Příloha překračuje limit 2 GiB");out.write(block,0,count);}out.getFD().sync();}
-            MediaStaging.commit(temporary,id,settings,mime,name);
-        }catch(Exception failure){throw failure instanceof IOException?(IOException)failure:new IOException("Příloha nebyla potvrzena",failure);}finally{temporary.delete();}
-        // Prefer the camera's EXIF capture timestamp over the return-from-camera time.
-        // Not all Android camera applications provide the original timestamp.
+    private void importMediaBatch(java.util.List<Uri> uris,String token,String cameraMediaId){
+        if(token==null||!token.equals(mediaSelectionToken)||uris.isEmpty()||uris.size()>1024){error("Neplatný nebo příliš velký výběr příloh");finishMediaSelection(token);return;}
+        mediaImportBusy=true;try{mediaImports.execute(()->{
+            int done=0;try{for(Uri uri:uris){if(activityDestroyed||Thread.currentThread().isInterrupted())throw new IOException("Import byl přerušen");String id=cameraMediaId==null?UUID.randomUUID().toString():cameraMediaId;
+                MediaIngest.Metadata metadata=cameraMediaId==null?new MediaIngest(this,settings,()->activityDestroyed).metadata(uri):new MediaIngest.Metadata("image/jpeg","Foto "+System.currentTimeMillis()+".jpg");
+                filePicked(uri,id,metadata.mime,metadata.name,cameraMediaId==null?null:java.time.Instant.now().toString(),token);done++;js("window.onNativeMediaProgress?.("+JSONObject.quote(token)+","+done+","+uris.size()+")");
+                if(cameraMediaId!=null)runOnUiThread(()->{if(!activityDestroyed)requestPhotoAddress(id);});
+            }}catch(Exception failure){error("Import příloh: "+failure.getMessage()+". Již dokončené přílohy zůstávají uložené.");}finally{finishMediaSelection(token);}
+        });}catch(java.util.concurrent.RejectedExecutionException busy){mediaImportBusy=false;error("Import nelze nyní spustit. Vyber přílohy znovu.");finishMediaSelection(token);}
+    }
+    private void filePicked(Uri uri,String id,String mime,String name)throws IOException{filePicked(uri,id,mime,name,null,null);}
+    private void filePicked(Uri uri,String id,String mime,String name,String photoTakenAt)throws IOException{filePicked(uri,id,mime,name,photoTakenAt,null);}
+    private void filePicked(Uri uri,String id,String mime,String name,String photoTakenAt,String token)throws IOException{
+        try{new MediaIngest(this,settings,()->activityDestroyed).copy(uri,id,mime,name);}catch(Exception failure){throw failure instanceof IOException?(IOException)failure:new IOException("Příloha nebyla potvrzena",failure);}
         String takenAt=photoTakenAt==null?null:readCaptureDate(mediaFile(id),photoTakenAt);
-        js("window.onNativeMedia("+JSONObject.quote(id)+","+JSONObject.quote(mime)+","+
-            JSONObject.quote(name)+","+(takenAt==null?"null":JSONObject.quote(takenAt))+")");
+        js("window.onNativeMedia("+JSONObject.quote(id)+","+JSONObject.quote(mime)+","+JSONObject.quote(name)+","+(takenAt==null?"null":JSONObject.quote(takenAt))+","+JSONObject.quote(token)+")");
     }
     private String readCaptureDate(File jpeg,String fallback){
         try{
@@ -459,29 +462,14 @@ public class MainActivity extends Activity {
         if(request==REQUEST_FILE){if(fileCallback!=null){Uri[] resultUris=null;if(result==RESULT_OK&&data!=null){if(data.getClipData()!=null){int n=data.getClipData().getItemCount();resultUris=new Uri[n];for(int i=0;i<n;i++)resultUris[i]=data.getClipData().getItemAt(i).getUri();}else if(data.getData()!=null)resultUris=new Uri[]{data.getData()};}fileCallback.onReceiveValue(resultUris);fileCallback=null;}return;}
         if(result!=RESULT_OK){
             if(request==REQUEST_BACKUP){pendingArchiveFolderId=null;pendingArchiveSelectionIds=null;}
-            if(request==REQUEST_ATTACH)js("window.onNativeMediaDone?.()");
-            if(request==REQUEST_CAMERA){discardPendingCamera();js("window.onNativeMediaDone?.()");}
+            if(request==REQUEST_ATTACH)finishMediaSelection(mediaSelectionToken);
+            if(request==REQUEST_CAMERA){discardPendingCamera();finishMediaSelection(mediaSelectionToken);}
             if(request==REQUEST_ISSUE_EXPORT)pendingIssueZipId=null;
             if(request==REQUEST_CUSTOMER_EXPORT)clearCustomerExport();
             return;
         }
-        if(request==REQUEST_ATTACH&&data!=null){int done=0;try{
-            if(data.getClipData()!=null){for(int i=0;i<data.getClipData().getItemCount();i++){importUri(data.getClipData().getItemAt(i).getUri());done++;}}
-            else if(data.getData()!=null){importUri(data.getData());done++;}
-        }catch(Exception ex){error("Import souborů: "+ex.getMessage());}js("window.onNativeMediaDone?.()");return;}
-        if(request==REQUEST_CAMERA){
-            Uri captured=cameraOutput;
-            String id=cameraId;
-            cameraOutput=null;cameraId=null;
-            try{
-                if(captured==null||id==null)throw new IOException("Chybí výstup fotoaparátu");
-                String takenAt=java.time.Instant.now().toString();
-                filePicked(captured,id,"image/jpeg","Foto "+System.currentTimeMillis()+".jpg",takenAt);
-                requestPhotoAddress(id);
-            }catch(Exception e){error("Fotografie: "+e.getMessage());}
-            js("window.onNativeMediaDone?.()");
-            return;
-        }
+        if(request==REQUEST_ATTACH){String token=mediaSelectionToken;ArrayList<Uri> uris=new ArrayList<>();if(data!=null){if(data.getClipData()!=null){int count=data.getClipData().getItemCount();if(count>1024){error("Výběr má více než 1024 příloh");finishMediaSelection(token);return;}for(int i=0;i<count;i++)uris.add(data.getClipData().getItemAt(i).getUri());}else if(data.getData()!=null)uris.add(data.getData());}importMediaBatch(uris,token,null);return;}
+        if(request==REQUEST_CAMERA){Uri captured=cameraOutput;String id=cameraId,token=mediaSelectionToken;cameraOutput=null;cameraId=null;if(captured==null||id==null){error("Chybí výstup fotoaparátu");finishMediaSelection(token);}else importMediaBatch(java.util.Collections.singletonList(captured),token,id);return;}
         if(request==REQUEST_BACKUP_TREE&&data!=null&&data.getData()!=null){try{Uri uri=data.getData();getContentResolver().takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_WRITE_URI_PERMISSION);if(!settings.edit().putString("backupTreeUri",uri.toString()).commit())throw new IOException("Složka záloh nebyla uložena");historyBackup("list","",false);}catch(Exception failure){backupEvent("error",failure.getMessage(),null);}return;}
         if(request==REQUEST_TREE&&data!=null&&data.getData()!=null){Uri uri=data.getData();try{getContentResolver().takePersistableUriPermission(uri,Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_WRITE_URI_PERMISSION);settings.edit().putString("treeUri",uri.toString()).apply();scheduleSync();syncCloud();}catch(Exception e){error("Nelze použít vybranou složku: "+e.getMessage());}return;}
         if(request==REQUEST_CUSTOMER_EXPORT){
@@ -751,7 +739,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface public String purgeTrash(String expected,String desired,String ids){
             synchronized(TrashPurger.LOCK){
                 try{
-                    if(activeUpload!=null||audioCapture!=null&&audioCapture.active())throw new IOException("Nejdříve dokonči přidávání souborů nebo nahrávání.");
+                    if(activeUpload!=null||mediaImportBusy||audioCapture!=null&&audioCapture.active())throw new IOException("Nejdříve dokonči přidávání souborů nebo nahrávání.");
                     String saved=readDb();
                     if(!saved.equals(expected))throw new IOException("Zakázky se mezitím změnily. Zavři a znovu otevři aplikaci a potvrď aktuální koš.");
                     return new TrashPurger(MainActivity.this,settings)
@@ -797,8 +785,8 @@ public class MainActivity extends Activity {
                 finally{closeUpload();}
             }
         }
-        @JavascriptInterface public void takePhoto(){runOnUiThread(()->useCamera());}
-        @JavascriptInterface public void selectFiles(String type){runOnUiThread(()->chooseAttachments(type));}
+        @JavascriptInterface public void takePhotoForRequest(String token){if(validId(token))runOnUiThread(()->beginMediaSelection("camera",token));}
+        @JavascriptInterface public void selectFilesForRequest(String type,String token){if(validId(token)&&type!=null&&type.length()<12)runOnUiThread(()->beginMediaSelection(type,token));}
         @JavascriptInterface public void selectCloudFolder(){runOnUiThread(()->selectCloud());}
         @JavascriptInterface public void syncCloud(){MainActivity.this.syncCloud();}
         @JavascriptInterface public void syncCloudMetered(){MainActivity.this.syncCloud(true);}
@@ -1036,7 +1024,7 @@ public class MainActivity extends Activity {
     private void scheduleSync(){try{JobScheduler jobs=(JobScheduler)getSystemService(JOB_SCHEDULER_SERVICE);JobInfo j=new JobInfo.Builder(14,new ComponentName(this,SyncJob.class)).setPeriodic(15*60*1000L).setRequiredNetworkType(settings.getBoolean("wifiOnly",false)?JobInfo.NETWORK_TYPE_UNMETERED:JobInfo.NETWORK_TYPE_ANY).setPersisted(true).build();if(settings.getString("treeUri",null)!=null&&settings.getBoolean("autoSync",true))jobs.schedule(j);else jobs.cancel(14);}catch(Exception e){android.util.Log.w("Zamerovac","Background job",e);}}
     @Override public void onResume(){super.onResume();PeerRuntime.get(this).observe(directEvents);if(settings!=null&&settings.getBoolean("directSyncEnabled",false))try{DirectSyncService.start(this);}catch(Exception failure){directProblem("Android nepovolil službu přenosu na pozadí. Změny zůstávají ve frontě: "+failure.getMessage());}refreshBackgroundChanges();if(settings!=null&&settings.getBoolean("autoSync",true)&&settings.getString("treeUri",null)!=null)handler.postDelayed(foregroundCloudSync,2000);}
     @Override protected void onStop(){handler.removeCallbacks(foregroundCloudSync);PeerRuntime.get(this).unobserve(directEvents);pendingWifiDirectPermission=false;super.onStop();}
-    @Override protected void onDestroy(){activityDestroyed=true;PeerRuntime.get(this).unobserve(directEvents);closeUpload();stopLaserConnection();videoThumbnails.close();clearCustomerExport();handler.removeCallbacksAndMessages(null);releaseRecorder();for(WebView popup:new ArrayList<>(unprivilegedWindows))popup.destroy();unprivilegedWindows.clear();if(web!=null)web.destroy();super.onDestroy();}
+    @Override protected void onDestroy(){activityDestroyed=true;mediaImports.shutdownNow();PeerRuntime.get(this).unobserve(directEvents);closeUpload();stopLaserConnection();videoThumbnails.close();clearCustomerExport();handler.removeCallbacksAndMessages(null);releaseRecorder();for(WebView popup:new ArrayList<>(unprivilegedWindows))popup.destroy();unprivilegedWindows.clear();if(web!=null)web.destroy();super.onDestroy();}
 
 
     // The GLM 100-25 C is Bluetooth LE. Show ALL nearby LE advertisements (like

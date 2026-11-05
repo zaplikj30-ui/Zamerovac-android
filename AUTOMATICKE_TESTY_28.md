@@ -89,3 +89,7 @@ Specifikace #38/#34/#33 → PeerCoordinator/PeerDiscovery/PeerWifiDirect/MainAct
 ## Staging hlasu/importu a vlastník poznámky – etapa 22
 
 #33/#38 → AudioCapture/MediaStaging/Native upload + JS voice/rich persist → AudioCaptureTest (5), rozšířen StorageLifecycleTest (audio, URI partial/success/collision, upload metadata failure/input), `note-sync.cjs` nově 6 UI scénářů. Pozitivní: potvrzený kompletní hlas/metadata, save u původního vlastníka, DB zápis během pomalého recorder startu, URI a WebView upload roundtrip. Negativní: start/stop/empty/cancel/disk/metadata chyby, dřívější i souběžný originál zůstane, neplatné MIME/control/Unicode, rich OK/Back neschová neuložený draft, cancel nahrávání nepublikuje. Browser úspěšný, nové native CI ověřit. Recorder je řízený test double; fyzický mikrofon/uspání a odezva URI provideru nejsou ověřeny.
+
+## Asynchronní URI ingest, původní cíl a request token – etapa 23
+
+#21/#33/#38 → MediaIngest/MainActivity bounded worker + pickMedia/acceptPickedMedia → MediaIngestTest (3 native) a `media-import.cjs` (3 skutečné browser UI). Pozitivní: UI Handler a potvrzený save při blokovaném inputu, finální originální bajty a request token, původní složka po navigaci. Negativní: timeout/cancel/unsafe URI/metadata, purge během importu, stale callback/done, druhý výběr, deleted/locked cíl a zavřený modal, disk failure zachová draft/retry. Browser místně prošel, native vyžaduje novou CI. Skutečný provider/velká souborová dávka na fyzickém Androidu dosud neprovedeny.

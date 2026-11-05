@@ -66,7 +66,8 @@ const chapters=[
       "Při chybě načtení fotografii zavři a otevři znovu. U důležitých dat neodinstalovávej aplikaci jako první způsob opravy.",
       "Náhledy v přehledu se vytvářejí se zmenšeným dekódováním mimo zámek místní databáze, aby načítání fotografie neblokovalo ukládání. U náhledu se respektuje otočení i zrcadlení EXIF; originál zůstává beze změny. Při chybě nebo odstranění fotografie se nepublikuje opožděný náhled.",
       "Opakované otevření stejné fotografie využívá omezenou paměťovou mezipaměť dekódovaných obrázků. Po úplném restartu se originál načítá znovu. Při načítání nebo chybě se samostatné kóty nezobrazují na prázdném podkladu; originály ani hodnoty se nemění.",
-      "Příloha se připojí až po potvrzení celého zápisu. Při přerušení se nedokončený soubor odmítne a existující originál se nepřepíše."
+      "Příloha se připojí až po potvrzení celého zápisu. Při přerušení se nedokončený soubor odmítne a existující originál se nepřepíše.",
+      "Přidávání ze systémového výběru běží mimo hlavní vlákno a zobrazuje průběh. Po dobu dávky nezačínej další výběr. Výsledek patří do původní složky nebo poznámky; po přechodu jinam se tam nepřesměruje. Je-li původní cíl smazaný, uzamčený nebo dialog zavřený, příloha se jinam nepřipojí. Jedna dávka má nejvýše 1024 souborů a jeden soubor nejvýše 2 GiB."
     ],
     "keywords": [
       "foto",

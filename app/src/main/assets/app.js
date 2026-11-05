@@ -16,7 +16,7 @@ let state=initial,dataLoadFailed=!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][
 try{const saved=native?Native.loadData():localStorage.getItem('zamerovac-data');if(saved){persistedSnapshot=saved;const loaded=JSON.parse(saved);if(loaded.schema!==1||!Array.isArray(loaded.records))throw new Error('Neplatná databáze');state={...initial,...loaded}};}catch(e){dataLoadFailed=true;console.warn('Cannot load database',e)}
 state.prefs={...initialPrefs,...(state.prefs||{})};
 const prefs=state.prefs;
-let sortAsc=true;let currentFolder=null,screen='browser',current=null,noteActive=null,mode='dimension',selected=null,stagedFileHandler=null,editStack=[],redoStack=[],lineDraft=[],stageImg=null,photoSize={w:1400,h:900},view={zoom:1,dx:0,dy:0},drag=null,pointers=new Map(),magnifierPoint=null,stageCanvas=$('drawCanvas'),ctx=stageCanvas.getContext('2d'),loupeCtx=$('loupe').getContext('2d'),autoSaving=false;
+let sortAsc=true;let currentFolder=null,screen='browser',current=null,noteActive=null,mode='dimension',selected=null,stagedMediaRequest=null,editStack=[],redoStack=[],lineDraft=[],stageImg=null,photoSize={w:1400,h:900},view={zoom:1,dx:0,dy:0},drag=null,pointers=new Map(),magnifierPoint=null,stageCanvas=$('drawCanvas'),ctx=stageCanvas.getContext('2d'),loupeCtx=$('loupe').getContext('2d'),autoSaving=false;
 const stamp=()=>new Date().toISOString();
 function touch(rec){rec.syncClock=advanceSyncClock(rec.syncClock||{});rec.rev=uid();rec.updatedAt=stamp();}
 function checkedSyncClock(value){
@@ -120,7 +120,7 @@ function photoDetailsText(r){
 }
 function escapeHtml(t){return String(t??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function recById(id,includeDeleted=false){return state.records.find(r=>r.id===id&&(includeDeleted||!r.deleted))}
-function canWriteToFolder(id){if(dataLoadFailed)return false;if(!id)return true;const folder=recById(id);return !!folder&&folder.kind==='folder'&&!window.isRecordLocked?.(folder)}
+function canWriteToFolder(id){if(dataLoadFailed)return false;if(!id)return true;const folder=recById(id);return !!folder&&folder.kind==='folder'&&!folder.deleted&&!window.isRecordLocked?.(folder)}
 function folderContains(folderId,otherId){
  let node=recById(otherId),seen=new Set();
  while(node&&!seen.has(node.id)){if(node.id===folderId)return true;seen.add(node.id);node=node.parentId?recById(node.parentId):null}
@@ -288,9 +288,21 @@ function showNewMenu(){if(!$('newMenu').hidden){closeMenus();return}if(!canWrite
 ['<svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h16v12H4z" fill="#e8bf65" stroke="#b98828" stroke-width="1.7"/><path d="M3 4h18v4H3z" fill="#ffd778" stroke="#b98828" stroke-width="1.7"/><path d="M12 11a4 4 0 1 1-3.5 5.9" stroke="#9263d5" stroke-width="2.2"/><path d="m7 12 1.5 4.9 4.8-1.1" stroke="#9263d5" stroke-width="2.2"/></svg>','Importovat zakázky ze ZIP',()=>native?Native.importBackup():notify('Obnova ZIP je dostupná v Android aplikaci')]
 ];
 $('newMenu').innerHTML=choices.map((a,i)=>`<button class="choice" data-i="${i}"><strong>${a[0]}</strong>${a[1]}</button>`).join('');$('newMenu').querySelectorAll('button').forEach(b=>b.onclick=()=>{closeMenus();choices[+b.dataset.i][2]()})}
-function pickMedia(type,handler=null){stagedFileHandler=handler;if(native&&type==='camera'){Native.takePhoto();return}if(native){Native.selectFiles(type);return}const inp=$('filePick');inp.value='';inp.accept=type==='camera'?'image/*':type==='file'?'*/*':'image/*,video/*,application/pdf,audio/*';inp.multiple=type==='file'||type==='media';if(type==='camera')inp.setAttribute('capture','environment');else inp.removeAttribute('capture');inp.click()}
-$('filePick').addEventListener('change',async(e)=>{try{for(let file of e.target.files){let mediaId=await storeMedia(file);if(stagedFileHandler)stagedFileHandler(mediaId,file);else await addMediaRecord(mediaId,file.name,file.type)}}catch(error){notify('Příloha nebyla přidána: '+error.message)}finally{stagedFileHandler=null}});
-async function addMediaRecord(id,name,mime,takenAt=null){if(!canWriteToFolder(currentFolder)){notify('Nejdříve odemkněte složku.');return}const kind=mime.startsWith('image/')?'photo':mime.startsWith('video/')?'video':mime.startsWith('audio/')?'audio':'file';let r=newRecord(kind,name);r.media=[id];if(kind==='photo'&&takenAt)r.photoTakenAt=takenAt;addRecord(r);if(kind==='photo')openEditor(r)}
+function pickMedia(type,handler=null){
+ if(stagedMediaRequest){notify('Probíhá přidávání příloh. Počkej na dokončení.');return}
+ const request={id:uid(),handler,folder:currentFolder,modal:handler&&!$('modal').hidden?$('modalBody').firstElementChild:null};stagedMediaRequest=request;
+ try{if(native){if(type==='camera')Native.takePhotoForRequest(request.id);else Native.selectFilesForRequest(type,request.id);return}
+ const inp=$('filePick');inp.value='';inp.accept=type==='camera'?'image/*':type==='file'?'*/*':'image/*,video/*,application/pdf,audio/*';inp.multiple=type==='file'||type==='media';if(type==='camera')inp.setAttribute('capture','environment');else inp.removeAttribute('capture');inp.click();
+ }catch(error){stagedMediaRequest=null;notify('Přílohu nelze vybrat: '+error.message)}
+}
+async function acceptPickedMedia(request,id,mime,name,takenAt=null){
+ if(!request||stagedMediaRequest!==request)return false;
+ if(request.handler){if(request.modal&&($('modal').hidden||$('modalBody').firstElementChild!==request.modal)){notify('Původní dialog už je zavřený; příloha nebyla připojena jinam.');return false}if(request.handler(id,{name,mime,type:mime})===false)return false;return save()}
+ return !!(await addMediaRecord(id,name,mime,takenAt,request.folder));
+}
+$('filePick').addEventListener('change',async(e)=>{const request=stagedMediaRequest;if(!request)return;try{for(let file of e.target.files){let mediaId=await storeMedia(file);await acceptPickedMedia(request,mediaId,file.type||'application/octet-stream',file.name)}}catch(error){notify('Příloha nebyla přidána: '+error.message)}finally{if(stagedMediaRequest===request)stagedMediaRequest=null}});
+$('filePick').addEventListener('cancel',()=>{stagedMediaRequest=null});
+async function addMediaRecord(id,name,mime,takenAt=null,folder=currentFolder){if(!canWriteToFolder(folder)){notify('Původní složka není dostupná nebo je uzamčená; příloha nebyla připojena jinam.');return null}const kind=mime.startsWith('image/')?'photo':mime.startsWith('video/')?'video':mime.startsWith('audio/')?'audio':'file',r=newRecord(kind,name,folder);r.media=[id];if(kind==='photo'&&takenAt)r.photoTakenAt=takenAt;state.records.push(r);if(!save())return null;if(screen==='browser'&&currentFolder===folder){showFolder();if(kind==='photo')openEditor(r)}return r}
 async function storeMedia(file){const id=uid(),mime=file.type||'application/octet-stream';if(native){let bytes=new Uint8Array(await file.arrayBuffer());const chunkSize=48*1024;if(!Native.beginMediaChecked(id,mime,file.name||'soubor',bytes.length))throw new Error('Přílohu nelze připravit k uložení');for(let off=0;off<bytes.length;off+=chunkSize){let sub=bytes.subarray(off,off+chunkSize);let s='';for(let b of sub)s+=String.fromCharCode(b);if(!Native.appendMedia(id,btoa(s)))throw new Error('Příloha nebyla zapsána');}if(!Native.finishMedia(id))throw new Error('Příloha není uložená úplně');}
 else{const db=await mediaDb();await new Promise((resolve,reject)=>{let tx=db.transaction('files','readwrite');tx.objectStore('files').put(file,id);tx.oncomplete=resolve;tx.onerror=reject})}return id}
 let idb=null;function mediaDb(){if(!idb)idb=new Promise((res,rej)=>{let req=indexedDB.open('zamerovac-media',1);req.onupgradeneeded=()=>req.result.createObjectStore('files');req.onsuccess=()=>res(req.result);req.onerror=rej});return idb}
@@ -318,7 +330,7 @@ function openNote(r){noteViewBaselines.set(r,{value:canonicalSavedValue(r),title
 function renderChecks(){$('checkItems').innerHTML=(noteActive.checks||[]).map((c,i)=>`<div class="checkRow"><input type="checkbox" data-check="${i}" ${c.done?'checked':''}><input type="text" data-text="${i}" value="${escapeHtml(c.text)}" aria-label="Úkol"><button data-delete="${i}">×</button></div>`).join('');$('checkItems').querySelectorAll('[data-check]').forEach(el=>el.onchange=()=>{noteActive.checks[+el.dataset.check].done=el.checked;noteChanged()});$('checkItems').querySelectorAll('[data-text]').forEach(el=>el.oninput=()=>{noteActive.checks[+el.dataset.text].text=el.value;noteChanged(true)});$('checkItems').querySelectorAll('[data-delete]').forEach(el=>el.onclick=()=>{noteActive.checks.splice(+el.dataset.delete,1);noteChanged();renderChecks()});if(window.isRecordLocked?.(noteActive))$('checkItems').querySelectorAll('input,button').forEach(el=>el.disabled=true)}
 function renderNoteAttachments(){$('noteAttachments').innerHTML=(noteActive.media||[]).map((m,i)=>`<div class="attachRow"><button data-open="${escapeHtml(m)}">▣ Příloha ${i+1}</button><button data-remove="${i}">×</button></div>`).join('');$('noteAttachments').querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openAttachment(b.dataset.open));$('noteAttachments').querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{noteActive.media.splice(+b.dataset.remove,1);noteChanged();renderNoteAttachments()});if(window.isRecordLocked?.(noteActive))$('noteAttachments').querySelectorAll('[data-remove]').forEach(el=>el.disabled=true)}
 function saveNote(){if(!noteActive)return;if(!finishNoteRecording())return false;clearTimeout(noteCheckSaveTimer);const baseline=noteViewBaselines.get(noteActive);if(!baseline||$('noteTitle').value!==baseline.title)noteActive.title=$('noteTitle').value.trim()||'Poznámka';if(!baseline||$('noteText').value!==baseline.text)noteActive.text=$('noteText').value;if(!baseline||canonicalSavedValue(noteActive)!==baseline.value)touch(noteActive);if(!save())return false;noteActive=null;showFolder();return true}
-$('saveNote').onclick=saveNote;$('noteBack').onclick=saveNote;$('addCheck').onclick=()=>{noteActive.checks.push({text:'',done:false});noteChanged();renderChecks();let fields=$('checkItems').querySelectorAll('[data-text]');fields[fields.length-1]?.focus()};$('attachFile').onclick=()=>{const owner=noteActive;if(!owner)return;pickMedia('media',(id)=>{const target=recById(owner.id);if(!target||target.kind!=='note'||window.isRecordLocked?.(target)){notify('Poznámka není dostupná nebo je uzamčena; příloha nebyla připojena.');return;}target.media.push(id);touch(target);save();if(noteActive===target)renderNoteAttachments()})};
+$('saveNote').onclick=saveNote;$('noteBack').onclick=saveNote;$('addCheck').onclick=()=>{noteActive.checks.push({text:'',done:false});noteChanged();renderChecks();let fields=$('checkItems').querySelectorAll('[data-text]');fields[fields.length-1]?.focus()};$('attachFile').onclick=()=>{const owner=noteActive;if(!owner)return;pickMedia('media',(id)=>{const target=recById(owner.id);if(!target||target.deleted||target.kind!=='note'||window.isRecordLocked?.(target)){notify('Poznámka není dostupná nebo je uzamčena; příloha nebyla připojena.');return;}target.media.push(id);touch(target);save();if(noteActive===target)renderNoteAttachments()})};
 $('recordAudio').onclick=recordVoice;
 window.__audioPermissionDenied=()=>{window.__audioPermissionRetry=null;notify('Mikrofon není povolen. Povol jej v nastavení aplikace.');};
 function finishNoteRecording(){
@@ -383,7 +395,7 @@ function syncCloud(){if(native){Native.syncCloud();notify('Spouštím synchroniz
 $('cloudBtn').onclick=()=>native?modal('Google Disk','<p>Vyber složku na Google Disku, ve které budou projekty všech zařízení. Synchronizace funguje i po návratu z offline režimu.</p><div class="row wrap"><button class="outline" id="cloudChoose">Vybrat složku</button><button class="outline" id="cloudSync">Synchronizovat</button></div>',()=>true,'Zavřít'):notify('Cloud je dostupný v Android aplikaci');
 document.addEventListener('click',e=>{if(e.target.id==='cloudChoose'){Native.selectCloudFolder();$('modal').hidden=true}if(e.target.id==='cloudSync'){Native.syncCloud();$('modal').hidden=true}});
 $('bluetoothBtn').onclick=()=>native?Native.connectLaser():notify('Laser se připojuje v Android aplikaci');
-window.onNativeMedia=async(id,mime,name,takenAt)=>{if(stagedFileHandler){stagedFileHandler(id,{name,mime,type:mime});save();}else await addMediaRecord(id,name,mime,takenAt)};
+window.onNativeMedia=async(id,mime,name,takenAt,token)=>{const request=stagedMediaRequest;if(!request||request.id!==token)return false;try{return await acceptPickedMedia(request,id,mime,name,takenAt)}catch(error){notify('Příloha nebyla připojena: '+error.message);return false}};
 window.onNativePhotoAddress=(mediaId,address)=>{
   const record=state.records.find(r=>r.kind==='photo'&&Array.isArray(r.media)&&r.media.includes(mediaId));
   if(!record||record.photoAddressConfirmed)return;
@@ -396,7 +408,8 @@ window.onNativePhotoAddress=(mediaId,address)=>{
     if(meta){meta.textContent=photoDetailsText(record);meta.title=meta.textContent;}
   }
 };
-window.onNativeMediaDone=()=>{stagedFileHandler=null;save()};
+window.onNativeMediaDone=token=>{if(stagedMediaRequest?.id===token)stagedMediaRequest=null};
+window.onNativeMediaProgress=(token,done,total)=>{if(stagedMediaRequest?.id===token)notify('Přidávání příloh: '+done+'/'+total)};
 window.onNativeSync=(text)=>{
  try{
   const result=JSON.parse(text);
