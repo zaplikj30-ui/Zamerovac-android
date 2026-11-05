@@ -729,7 +729,7 @@ public class MainActivity extends Activity {
         if(media!=null)for(int i=0;i<media.length();i++)ids.add(media.optString(i));
         collectNestedMedia(record.optJSONArray("items"),ids);
         JSONArray history=record.optJSONArray("versionHistory");
-        if(history!=null)for(int i=0;i<history.length();i++)try{collectNestedMedia(new JSONArray(history.getJSONObject(i).optString("items","[]")),ids);}catch(JSONException error){throw new IllegalArgumentException("Neplatná historie anotací",error);}
+        if(history!=null)for(int i=0;i<history.length();i++)try{String items=history.getJSONObject(i).optString("items","[]");if(items.trim().startsWith("["))collectNestedMedia(new JSONArray(items),ids);}catch(JSONException error){throw new IllegalArgumentException("Neplatná historie anotací",error);}
     }
     private void collectNestedMedia(JSONArray items,Set<String> ids){
         if(items==null)return;
@@ -787,7 +787,8 @@ public class MainActivity extends Activity {
         }
         @JavascriptInterface public boolean appendMedia(String id,String chunk){
             synchronized(TrashPurger.LOCK){
-                try{if(activeUpload==null||!id.equals(activeUploadId)||chunk==null||chunk.length()>128*1024)throw new IOException("Neplatná část přílohy");
+                if(activeUpload==null||id==null||!id.equals(activeUploadId))return false;
+                try{if(chunk==null||chunk.length()>128*1024)throw new IOException("Neplatná část přílohy");
                     byte[] bytes=Base64.decode(chunk,Base64.DEFAULT);if(activeUploadBytes+bytes.length>2L*1024*1024*1024||(activeUploadExpected>=0&&activeUploadBytes+bytes.length>activeUploadExpected))throw new IOException("Příloha má jinou délku");
                     activeUpload.write(bytes);activeUploadBytes+=bytes.length;return true;
                 }catch(Exception failure){closeUpload();error("Zápis přílohy se nezdařil");return false;}
@@ -795,7 +796,8 @@ public class MainActivity extends Activity {
         }
         @JavascriptInterface public boolean finishMedia(String id){
             synchronized(TrashPurger.LOCK){
-                try{if(activeUpload==null||!id.equals(activeUploadId)||activeUploadBytes==0||(activeUploadExpected>=0&&activeUploadBytes!=activeUploadExpected))throw new IOException("Příloha není úplná");
+                if(activeUpload==null||id==null||!id.equals(activeUploadId))return false;
+                try{if(activeUploadBytes==0||(activeUploadExpected>=0&&activeUploadBytes!=activeUploadExpected))throw new IOException("Příloha není úplná");
                     activeUpload.getFD().sync();activeUpload.close();activeUpload=null;
                     File destination=mediaFile(id);if(destination.exists())throw new IOException("Příloha již existuje");
                     java.nio.file.Files.move(activeUploadTemporary.toPath(),destination.toPath());activeUploadTemporary=null;

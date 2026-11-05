@@ -112,7 +112,7 @@ final class BackupImporter {
             rewriteMedia(rec.optJSONArray("media"),mediaIds);
             rewriteItems(rec.optJSONArray("items"),mediaIds);
             JSONArray history=rec.optJSONArray("versionHistory");
-            if(history!=null)for(int h=0;h<history.length();h++){JSONObject version=history.getJSONObject(h);JSONArray oldItems=new JSONArray(version.optString("items","[]"));rewriteItems(oldItems,mediaIds);version.put("items",oldItems.toString());}
+            if(history!=null)for(int h=0;h<history.length();h++){JSONObject version=history.getJSONObject(h);String text=version.optString("items","[]");if(text.trim().startsWith("[")){JSONArray oldItems=new JSONArray(text);rewriteItems(oldItems,mediaIds);version.put("items",oldItems.toString());}}
             newRecords.add(rec);
         }
         if(newRecords.isEmpty())throw new IOException("Záloha neobsahuje platné záznamy");

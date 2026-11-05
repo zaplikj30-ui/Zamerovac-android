@@ -12,6 +12,7 @@ on:
       - 'app/src/test/**'
       - 'app/build.gradle'
       - 'tests/**'
+      - 'sync/**'
       - 'tools/check-post*-browser.cjs'
       - 'tools/check-orientation-browser.cjs'
       - 'tools/check-loupe-exit-browser.cjs'
@@ -28,6 +29,7 @@ on:
       - 'app/src/test/**'
       - 'app/build.gradle'
       - 'tests/**'
+      - 'sync/**'
       - 'tools/check-post*-browser.cjs'
       - 'tools/check-orientation-browser.cjs'
       - 'tools/check-loupe-exit-browser.cjs'
@@ -58,7 +60,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for file in app/src/main/assets/*.js; do
+          for file in app/src/main/assets/*.js sync/*.js; do
             node --check "$file"
           done
       - name: Spustit rychlé testy editoru a poznámek

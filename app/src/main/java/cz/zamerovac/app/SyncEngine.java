@@ -128,7 +128,7 @@ public class SyncEngine {
     private static void references(Object value,Set<String> ids)throws Exception{
         if(value instanceof JSONObject){JSONObject o=(JSONObject)value;
             for(String key:new String[]{"media","audioMedia"}){JSONArray media=o.optJSONArray(key);if(media!=null)for(int i=0;i<media.length();i++){String id=media.getString(i);if(!id.matches("[a-zA-Z0-9_-]{3,120}"))throw new java.io.IOException("Neplatná příloha synchronizace");ids.add(id);}}
-            for(java.util.Iterator<String> it=o.keys();it.hasNext();){String key=it.next();if(!"prefs".equals(key)){Object child=o.get(key);if("items".equals(key)&&child instanceof String)references(new JSONArray((String)child),ids);else references(child,ids);}}
+            for(java.util.Iterator<String> it=o.keys();it.hasNext();){String key=it.next();if(!"prefs".equals(key)){Object child=o.get(key);if("items".equals(key)&&child instanceof String&&((String)child).trim().startsWith("["))references(new JSONArray((String)child),ids);else references(child,ids);}}
         }else if(value instanceof JSONArray){JSONArray a=(JSONArray)value;for(int i=0;i<a.length();i++)references(a.get(i),ids);}
     }
     protected void transferMedia(JSONObject data)throws Exception {

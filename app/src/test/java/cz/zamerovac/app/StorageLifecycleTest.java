@@ -165,8 +165,14 @@ public class StorageLifecycleTest {
     @Test public void mediaUploadStagesAndAcknowledgesOnlyCompleteFilesWithoutOverwritingOriginals()throws Exception {
         MainActivity.JsApi api=activity.new JsApi();String id="staged-upload";
         assertTrue(api.beginMediaChecked(id,"application/octet-stream","Synthetic",4));assertTrue(api.appendMedia(id,"AQID"));assertFalse(new File(dir,id).exists());assertFalse(api.finishMedia(id));assertFalse(new File(dir,id).exists());
-        assertTrue(api.beginMediaChecked(id,"application/octet-stream","Synthetic",4));assertTrue(api.appendMedia(id,"AQIDBA=="));assertTrue(api.finishMedia(id));assertArrayEquals(new byte[]{1,2,3,4},Files.readAllBytes(new File(dir,id).toPath()));
+        assertTrue(api.beginMediaChecked(id,"application/octet-stream","Synthetic",4));assertFalse(api.appendMedia("unrelated-upload","AQIDBA=="));assertFalse(api.finishMedia("unrelated-upload"));assertTrue(api.appendMedia(id,"AQIDBA=="));assertTrue(api.finishMedia(id));assertArrayEquals(new byte[]{1,2,3,4},Files.readAllBytes(new File(dir,id).toPath()));
         assertFalse(api.beginMediaChecked(id,"application/octet-stream","overwrite",4));assertArrayEquals(new byte[]{1,2,3,4},Files.readAllBytes(new File(dir,id).toPath()));assertFalse(api.finishMedia("other-upload"));
+    }
+
+    @Test public void annotationHistoryProtectsSharedMediaDuringAnotherRecordsPurge()throws Exception {
+        media();JSONObject db=fixture();JSONObject photo=db.getJSONArray("records").getJSONObject(1),video=db.getJSONArray("records").getJSONObject(2);
+        photo.put("versionHistory",new JSONArray().put(new JSONObject().put("items",new JSONArray().put(new JSONObject().put("media",new JSONArray().put("original-video"))).toString())));video.put("deleted",true);persist(db);
+        String snapshot=activity.new JsApi().loadData();JSONObject result=new JSONObject(activity.new JsApi().purgeTrash(snapshot,snapshot,"[\"video-record\"]"));assertFalse(result.has("error"));assertTrue(new File(dir,"original-video").isFile());
     }
 
 }
