@@ -56,3 +56,4 @@ console.log('PASS true versioned changelog: fixed releases, improvements, no fut
 assert.equal(history.pendingChanges.released,false,'Working notes must not pretend to be a released version');
 assert(!history.forVersion('1.2.152').includes(history.pendingChanges));
 assert(JSON.stringify(history.pendingChanges).includes('spustitelných příloh'));
+assert(JSON.stringify(history.pendingChanges).includes('zaniklá skupina Wi-Fi Direct'));

@@ -78,4 +78,10 @@ public class PeerTlsTest {
   try{sockets(a.context(ar,()->false),b.context(br,()->false),socket->PeerHandshake.negotiate(socket,A,"A",a,ar,()->false,request->true),socket->PeerHandshake.negotiate(socket,B,"B",b,br,()->false,request->true));fail("Revoked peer connected");}catch(Exception expected){assertTrue(expected.toString(),contains(expected,"Zařízení není spárované"));}
   for(int size:new int[]{-1,0,PeerWire.MAX_JSON+1,Integer.MAX_VALUE}){ByteArrayOutputStream bytes=new ByteArrayOutputStream();new DataOutputStream(bytes).writeInt(size);try{PeerWire.read(new DataInputStream(new ByteArrayInputStream(bytes.toByteArray())),PeerWire.MAX_JSON);fail("Invalid frame allocated");}catch(IOException expected){}}
  }
+ @Test public void rememberedRouteMustAnswerWithExpectedPinnedIdentityBeforeAnyPayload()throws Exception{
+  ar.approve(B,b.fingerprint(),"B");br.approve(A,a.fingerprint(),"A");AtomicInteger payloads=new AtomicInteger();PeerHandshake.Approval unexpected=request->{throw new AssertionError("Automatic route asked to pair");};
+  sockets(a.context(ar,()->false),b.context(br,()->false),socket->{PeerHandshake.negotiate(socket,A,"A",a,ar,()->false,unexpected,B);payloads.incrementAndGet();},socket->PeerHandshake.negotiate(socket,B,"B",b,br,()->false,unexpected,A));assertEquals(1,payloads.get());payloads.set(0);
+  try{sockets(a.context(ar,()->false),b.context(br,()->false),socket->{PeerHandshake.negotiate(socket,A,"A",a,ar,()->false,unexpected,C);payloads.incrementAndGet();},socket->PeerHandshake.negotiate(socket,B,"B",b,br,()->false,unexpected,A));fail("Wrong remembered identity received payload");}catch(Exception expected){assertTrue(expected.toString(),contains(expected,"odpovědělo jiné zařízení"));}
+  assertEquals(0,payloads.get());assertFalse(ar.snapshot().has(C));assertTrue(ar.isTrusted(B,b.fingerprint()));
+ }
 }

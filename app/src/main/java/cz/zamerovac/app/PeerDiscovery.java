@@ -15,8 +15,9 @@ final class PeerDiscovery implements AutoCloseable {
     static final String SERVICE="_zamerovac._tcp.";
     interface Events {void changed();void found(Endpoint endpoint);void problem(String message);}
     static final class Endpoint {
-        final String key,name,route;final InetAddress host;final int port;
-        Endpoint(String key,String name,String route,InetAddress host,int port){this.key=key;this.name=name;this.route=route;this.host=host;this.port=port;}
+        final String key,name,route,expectedPeer,nearbyAddress;final InetAddress host;final int port;
+        Endpoint(String key,String name,String route,InetAddress host,int port){this(key,name,route,host,port,null,null);}
+        Endpoint(String key,String name,String route,InetAddress host,int port,String expectedPeer,String nearbyAddress){this.key=key;this.name=name;this.route=route;this.host=host;this.port=port;this.expectedPeer=expectedPeer;this.nearbyAddress=nearbyAddress;}
         JSONObject json()throws Exception{return new JSONObject().put("key",key).put("name",name).put("route",route);}
     }
     private final Context context;private final NsdManager manager;private final Handler main=new Handler(Looper.getMainLooper());private final Events events;

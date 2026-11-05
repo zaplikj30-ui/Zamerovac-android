@@ -17,6 +17,10 @@ final class PeerHandshake {
     }
     static final class Peer {final String id,name,fingerprint;Peer(String id,String name,String fingerprint){this.id=id;this.name=name;this.fingerprint=fingerprint;}}
     static Peer negotiate(SSLSocket socket,String localId,String localName,SyncTls identity,SyncPeerRegistry registry,BooleanSupplier pairing,Approval approval)throws Exception{
+        return negotiate(socket,localId,localName,identity,registry,pairing,approval,null);
+    }
+    static Peer negotiate(SSLSocket socket,String localId,String localName,SyncTls identity,SyncPeerRegistry registry,BooleanSupplier pairing,Approval approval,String expectedPeer)throws Exception{
+        if(expectedPeer!=null&&!DeviceIdentity.valid(expectedPeer))throw new IOException("Neplatná očekávaná identita zařízení");
         if(!DeviceIdentity.valid(localId))throw new IOException("Neplatná místní identita");socket.setSoTimeout(15000);SyncTls.secure(socket);socket.startHandshake();
         DataInputStream in=new DataInputStream(socket.getInputStream());DataOutputStream out=new DataOutputStream(socket.getOutputStream());String localNonce=PeerWire.nonce();String fingerprint=SyncTls.fingerprint((X509Certificate)socket.getSession().getPeerCertificates()[0]);
         JSONObject hello=new JSONObject().put("type","hello").put("version",2).put("id",localId).put("name",localName).put("nonce",localNonce).put("paired",registry.hasFingerprint(fingerprint));
@@ -24,6 +28,7 @@ final class PeerHandshake {
         if(!"hello".equals(remote.optString("type"))||!(remote.opt("version") instanceof Number)||remote.getDouble("version")!=2)throw new IOException("Nekompatibilní verze synchronizačního protokolu");
         String id=remote.getString("id"),name=remote.getString("name"),nonce=remote.getString("nonce");
         if(!DeviceIdentity.valid(id)||localId.equals(id)||name.length()>80||name.matches(".*[\\p{Cntrl}].*")||!nonce.matches("[0-9a-f]{64}"))throw new IOException("Neplatná identita protistrany");
+        if(expectedPeer!=null&&!expectedPeer.equals(id))throw new IOException("Na uložené přímé cestě odpovědělo jiné zařízení. Zakázky nebyly přeneseny.");
         boolean known=registry.isTrusted(id,fingerprint);
         JSONArray endpoints=new JSONArray();JSONObject a=new JSONObject().put("id",localId).put("fingerprint",identity.fingerprint()).put("nonce",localNonce),b=new JSONObject().put("id",id).put("fingerprint",fingerprint).put("nonce",nonce);
         if(localId.compareTo(id)<0){endpoints.put(a);endpoints.put(b);}else{endpoints.put(b);endpoints.put(a);}

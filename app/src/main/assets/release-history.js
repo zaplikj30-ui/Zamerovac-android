@@ -22,6 +22,7 @@ const pendingChanges={issue:39,released:false,groups:[{kind:'Nové funkce',items
  {text:'Omezení posunu galerie a úplný výřez poznámek včetně textu pod detailní fotografií.'},
  {text:'Výchozí výběr v editoru, lupa při přesunu rohů a respektování nastaveného zvětšení.'}
 ]},{kind:'Vylepšeno',items:[
+ {text:'V otevřené aplikaci se obnovuje zaniklá skupina Wi-Fi Direct pro dříve ověřené zařízení; uložená cesta vyžaduje stejnou TLS identitu. Změna rádiové adresy může vyžadovat nový výběr.'},
  {text:'Nastavitelná doplňková lišta pouze na šířku, procházení výskytů v nápovědě a neutrální dialog Bluetooth.'},
  {text:'Vytváření náhledů fotografií mimo zámek databáze, bezpečné souběhy cache a správné zrcadlení EXIF bez změny originálu.'},
  {text:'Omezená mezipaměť dekódovaných fotografií pro opakované otevření. První načtení po restartu je stále nutné.'}

@@ -48,3 +48,4 @@ finds('wifi direct','cloud');finds('párování','cloud');finds('čekající pot
 
 finds('historické zálohy','backup');finds('sdílené bloky','backup');finds('měřená síť','backup');
 finds('webové odkazy','safety');finds('spustitelné přílohy','safety');
+finds('rádiovou adresu','cloud');

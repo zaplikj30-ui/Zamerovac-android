@@ -77,3 +77,7 @@ Specifikace #38/#34/#33 → PeerCoordinator/PeerDiscovery/PeerWifiDirect/MainAct
 ## WebView / cizí webový obsah – etapa 19
 
 #33 → WebContentPolicy/MainActivity WebViewClient/WebChromeClient a applySavedState → `WebContentPolicyTest`, `tools/e2e/web-content-policy.cjs`, `tests/sync_conflict_bridge.js`. Pozitivní: zabalený HTTPS index, skutečné kreslení a přesná hodnota pod produkční CSP, uživatelský odkaz otevře systémový intent bez Native v popupu. Negativní: cizí origin/port/credentials/scheme, subframe/srcdoc, inline/event/script-příloha nesmí číst bridge či měnit data; MIME nosniff a žádný síťový fallback; __proto__ nesmí změnit prototyp. Browser + Node místně prošly, native compile/testy nové etapy teprve CI; fyzické Android WebView a nezávislý audit neprovedeny.
+
+## Wi-Fi Direct reconnect a očekávaný peer – etapa 20
+
+#33/#38 → PeerWifiDirect/SyncPeerRegistry/PeerCoordinator/PeerHandshake → `PeerWifiDirectTest` (6 případů) + nový skutečný TLS případ v `PeerTlsTest`. Pozitivní: známý peer, obnova skupiny/kanálu, atomicky uložená cesta po ověření, očekávané TLS UUID. Negativní: cizí adresa/pin/UUID, chybějící permission, vypnutá automatika, revokace, busy rádio/minutové retry, opožděné group/peer callbacky a close; žádné mazání Android skupiny ani MAC/certifikát v UI. Nové native CI ověřit; rádio je v adapter testu mock, TLS jsou skutečné sockety, fyzické Samsung/Xiaomi/Lenovo a pozadí nejsou provedené.
