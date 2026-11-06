@@ -2,5 +2,5 @@
 # Běžné změny kódu APK nesestavují. Teprve změna tohoto souboru spustí workflow build-apk.yml.
 # Při požadavku na sestavení uprav číslo a popis níže, commitni do main.
 
-request: 12
-reason: jedina spolecna TEST APK 1.2.153 po schvalene aktualizaci issue39 PR41, oprave vsech sesti auditnich nalezu A39-01 az A39-06, uspesnych finalnich kontrolach; bez ruseni uzivatelskych dat
+request: 13
+reason: jedina TEST APK 1.3.0 pro schvalene semanticke verzovani PR45, po uspesnych native a UI testech; zachovat stejny preview balicek, podpis a data bez odinstalace
