@@ -469,3 +469,12 @@ Preview BuildConfig přebírá pouze validovanou veřejnou registraci; default n
 Nové native testy DriveRegistrationTest3 (skutečný generovaný BuildConfig proti public config, ID negative a skutečný MainActivity snapshot bez přihlášení/změny DB) a CloudStorageTest+1 (invalid project nevolá API/nezmění oba účty/DB). Nová CI ověřit, lokálně Node/Python47 (2skipy bez javac) předchozí přípravy prošly. Nápověda/nevydaná historie už správně popisují potvrzenou Google registraci a Testing účet bez osobních údajů. QA mapa doplněná o skutečnou Gradle vrstvu a jasné limity.
 
 Dokument audit-39-handoff.md je konkrétní zadání nezávislého bezpečnostního/architektonického auditu: rozsah, kód/testy, reprodukce bez APK, kombinace funkcí, kritéria nálezů a NOT RUN fyzické/živé Google brány. Není to provedený nezávislý audit. Připravenost aktivace sleduje jediný neověřený údaj Project ID; názvu projektu ani návrhu ID se nesmí přisoudit neexistující potvrzení.
+
+
+## Etapa39 – potvrzené ID a aktivovaná preview konfigurace (6.11.2026)
+
+Nové #39/6673933539 a PR#41/6673934045 definitivně potvrzují Project ID zamerovac-android z IAM & Admin → Settings; uživatel potvrzení zopakoval přímo v zadání. Registrace se neopakuje a další potvrzení ID se nevyžaduje. Před prací znovu ověřeny branch8f21a0f, main45d6ae4, AGENTS21bb8b9, VIZE9d9b8f5, START, novější komentáře a oba původní zelené CI běhy. Main dokumentace ani práce jiného chatu se nepřepisují.
+
+config/drive-preview.properties nyní obsahuje přesné veřejné zamerovac-android, původní správný preview package a SHA1 zůstaly. Gradle kontrola už vyžaduje skutečnou public registraci i odpovídající explicitní override, aktivaci, certifikát a package. Native testy trvají na přesném generovaném ID a projectConfigured=true v reálném MainActivity snapshotu, zároveň nesmějí předstírat vybraný účet ani změnit DB. Native CI má driveRequireConfigured=true, tedy nesmí projít se znovu vyprázdněným ID.19 dosavadních negativních variant včetně disabled/povinné aktivace zůstává. Nenahrazuje se tím žádný skutečný OAuth/GMS/Drive účet.
+
+Nápověda/nevydané změny, QA mapa39, aktuální dokumentace a auditní zadání aktualizované na odstraněný registrační blokátor. Novou CI ověřit; nezávislý audit a fyzická akceptace jsou samostatně pending/NOT RUN. Žádný token, osobní účet, project number, tajemství nebo credential JSON nepřidán. Build APK/request/triggers ani merge se neprovádějí.

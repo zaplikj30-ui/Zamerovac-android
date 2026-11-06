@@ -33,7 +33,7 @@ jobs:
       - name: Ověřit veřejnou Drive registraci a chybové konfigurace bez APK
         run: gradle --no-daemon -p tools/drive-config-checks verify
       - name: Ověřit Java a Android zdroje bez vydání APK
-        run: gradle --no-daemon :app:verifyDriveRegistration :app:compilePreviewJavaWithJavac :app:testPreviewUnitTest
+        run: gradle --no-daemon :app:verifyDriveRegistration :app:compilePreviewJavaWithJavac :app:testPreviewUnitTest -PdriveRequireConfigured=true
       - name: Nezávisle parsovat a vykreslit zákaznické PDF
         run: |
           python3 -m pip install 'pypdf[image]>=5,<7' 'pymupdf>=1.24,<2'

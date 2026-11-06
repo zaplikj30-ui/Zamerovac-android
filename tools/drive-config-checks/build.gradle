@@ -29,6 +29,9 @@ tasks.register('verify') {
         try {
             def actual = readDriveRegistration(new File(repository, 'config/drive-preview.properties'), packageId, keyFile, 'PKCS12', 'android', 'zamerovacdev', null)
             assert actual.certificateSha1 == fingerprint
+            assert actual.projectId == 'zamerovac-android'
+            assert checkDriveActivation(actual, true)
+            assert readDriveRegistration(new File(repository, 'config/drive-preview.properties'), packageId, keyFile, 'PKCS12', 'android', 'zamerovacdev', actual.projectId) == actual
             refuses { readDriveRegistration(new File(temporaryDir, 'absent.properties'), packageId, keyFile, 'PKCS12', 'android', 'zamerovacdev', null) }
             refuses { readDriveRegistration(new File(repository, 'config/drive-preview.properties'), packageId, keyFile, 'PKCS12', 'android', 'missing-alias', null) }
         } finally { keyFile.delete() }

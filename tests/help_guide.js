@@ -73,3 +73,5 @@ assert(src.includes('bezpečnostní klíč zařízení není dostupný'),'Identi
 assert(src.includes('další ověřenou kopii'),'Backup repair and original preservation must be explained');
 
 assert(src.includes('povolený testovací účet'),'Google Testing restriction must be explained without exposing the account');
+
+assert(src.includes('Registrace a konfigurace této testovací verze jsou propojené'),'Registered preview setup must no longer be described as missing');

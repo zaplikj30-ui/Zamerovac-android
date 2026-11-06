@@ -1,18 +1,18 @@
 # Drive API: aktuální zapojení a veřejná registrace preview
 
-Aktuální stav6.11.: [#39/6672377880](https://github.com/zaplikj30-ui/Zamerovac-android/issues/39#issuecomment-6672377880) potvrzuje podle uživatelských obrazovek vytvořený projekt Zamerovac-Android, Drive API Enabled, External/Testing, správný Android preview package/SHA1, jeden testovací účet a uložený jediný scope drive.appdata. Registrace se znovu neprovádí. Výsledné Project ID není v zápisu doložené: zamerovac-android je označené jen jako původně předvyplněný návrh. Přesné veřejné ID bylo vyžádáno, žádná potřeba hesla, e-mailu, JSON credentials nebo secretu. Živá autorizace/sync/history/restore jsou NOT RUN.
+Aktuální stav6.11.: [#39/6673933539](https://github.com/zaplikj30-ui/Zamerovac-android/issues/39#issuecomment-6673933539) definitivně potvrzuje **Project ID zamerovac-android** z IAM & Admin → Settings skutečného projektu Zamerovac-Android. Dřívější [#39/6672377880](https://github.com/zaplikj30-ui/Zamerovac-android/issues/39#issuecomment-6672377880) potvrzuje Drive API Enabled, External/Testing, správný Android preview package/SHA1, jeden testovací účet a uložený jediný scope drive.appdata. Registraci ani ověření ID neopakovat. Veřejné ID je zapojené do preview konfigurace; žádné účty, project number, hesla, JSON credentials nebo tokeny se nepřidávají. Živá autorizace/sync/history/restore jsou NOT RUN.
 
 ## Aktuální sestavovací cesta
 
-- `config/drive-preview.properties` obsahuje pouze veřejné projectId/applicationId/certificateSha1. Prázdné ID bezpečně ponechává Disk disabled; není nahrazeno návrhem ani vymyšleným identifikátorem.
+- `config/drive-preview.properties` obsahuje pouze veřejné projectId/applicationId/certificateSha1. Aktuální potvrzené ID je zamerovac-android. Prázdné či nesouhlasící nastavení by bezpečně odmítlo aktivaci; nepoužívá se návrh ani vymyšlený identifikátor.
 - `gradle/drive-registration.gradle` ověří přesný applicationId a skutečný certifikát použitého preview PKCS12 proti uloženému SHA1. Odmítá neznámá pole a nesouhlasící `-PdriveCloudProject`/`ZAMEROVAC_DRIVE_PROJECT`. Žádné credentials se do konfigurace nepřidávají.
 - Pouze registrovaný `preview` přebírá ID do `BuildConfig.DRIVE_CLOUD_PROJECT`; výchozí neregistrovaný balíček `cz.zamerovac.app` má prázdné pole. Budoucí produkční klient/signer se nyní nevytváří.
-- Compile/test workflow provede skutečný Gradle validátor se19 negativními případy a native kontrolu generovaného BuildConfig/UI/factory. Vytvoří pouze veřejný `app/build/reports/drive-registration.json` s configured=true/false, nikoli OAuth token nebo APK.
+- Compile/test workflow povinně vyžaduje aktivovanou konfiguraci přes driveRequireConfigured=true a provede skutečný Gradle validátor se19 negativními případy i native kontrolu generovaného BuildConfig/UI/factory. Vytvoří pouze veřejný `app/build/reports/drive-registration.json` s configured=true, nikoli OAuth token nebo APK; toto pole neříká, že skutečný Google účet udělil oprávnění.
 - Budoucí `build-apk.yml` před assemble vyžaduje `-PdriveRequireConfigured=true`; neúplná konfigurace jej odmítne. Jeho triggers ani `.github/apk-build-request.txt` se nemění a během této práce nebyl spuštěný.
 - Project ID je veřejná build/namespace konfigurace, nikoli OAuth client ID nebo přihlašovací tajemství. Skutečného Android klienta ověřuje Google podle package+SHA1; statický řetězec ani certifikátový test nedokazuje živý consent. SDK žádá pouze drive.appdata pro vybraný účet, bez backend serveru/refresh token exportu/webového client secretu.
 - Jeden povolený testovací Google účet se použije na telefonu i tabletu. Google Testing, nedostupný GMS, zrušení/denied/revoked/expired a skutečné Drive oprávnění musí projít fyzickou akceptací na syntetických datech po potřebných kontrolách. Nepublikovat osobní e-mail ani screenshots.
 
-Samostatná kontrola bez APK: `gradle --no-daemon -p tools/drive-config-checks verify`. Native cesta: `gradle --no-daemon :app:verifyDriveRegistration :app:compilePreviewJavaWithJavac :app:testPreviewUnitTest`. Připravené zadání nezávislé revize: [audit-39-handoff.md](audit-39-handoff.md).
+Samostatná kontrola bez APK: `gradle --no-daemon -p tools/drive-config-checks verify`. Native cesta: `gradle --no-daemon :app:verifyDriveRegistration :app:compilePreviewJavaWithJavac :app:testPreviewUnitTest -PdriveRequireConfigured=true`. Připravené zadání nezávislé revize: [audit-39-handoff.md](audit-39-handoff.md).
 
 Použité oficiální zdroje (ověřeno 5. 11. 2026):
 

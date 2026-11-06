@@ -13,7 +13,7 @@ Posoudit celý schválený celek #39, včetně #38/#40 a galerie/editoru/ovlád�
 | P0: autentizace a stav přenosu | Mutual TLS, celý kód na obou zařízeních, správný certifikát/UUID pin a revokace; žádný data ACK před kompletními médii a DB. | SyncTls, PeerHandshake, SyncPeerRegistry, PeerTransfer/PeerDataStore; PeerTlsTest, PeerTransferTest a SyncTlsIdentityTest. JCA provider a rádio jsou test doubles, ne hardware. |
 | P0/P1: souběh cest a recovery | Direct/LAN/cloud stejné job/causal principy; source publication není receiver ACK; fallback zneplatní receipts, starý intent ani ztracený ACK nezničí novou práci. | PeerOutbox, PeerSessions/Coordinator, PeerGates, SafSyncV2, CloudInbox/Publications/Scan; SafSyncV2Test, PeerSessionsTest, PeerMediaCheckpointTest. |
 | P0/P1: historická záloha | Sync nemá delete/replace backup capability. Nové body a opravné kopie nemění starý obsah/manifest. Partial/corrupt blok, failed source/read/write a restore nezničí současná data. | BackupStore/Blobs/History, BackupImporter, DriveObjectStore; BackupHistoryTest, DriveStoresTest, DocumentBackupStoreTest. |
-| P0/P1: skutečná Google konfigurace | Preview package a skutečný SHA1 souhlasí s registrací; pouze drive.appdata, účty oddělené/CAS; žádný token v URL/DB/Bundle/logu. Zkontrolovat scope a public namespace, nikoli jen neprázdný build string. | config/drive-preview.properties, gradle/drive-registration.gradle, app/build.gradle; Gradle drive-config-checks, DriveAuthorization/AccountFlow/Accounts/Http/Api/CloudStorage testy a připravený DriveRegistrationTest. Skutečný Google souhlas je samostatný NOT RUN. |
+| P0/P1: skutečná Google konfigurace | Preview package a skutečný SHA1 souhlasí s registrací; pouze drive.appdata, účty oddělené/CAS; žádný token v URL/DB/Bundle/logu. Zkontrolovat scope a public namespace, nikoli jen neprázdný build string. | config/drive-preview.properties, gradle/drive-registration.gradle, app/build.gradle; Gradle drive-config-checks, DriveAuthorization/AccountFlow/Accounts/Http/Api/CloudStorage testy a DriveRegistrationTest s potvrzeným projektovým ID a povoleným native UI. Skutečný Google souhlas je samostatný NOT RUN. |
 | P1: dlouhé operace a lifecycle | Síť/provider neblokuje DB/UI, timeout/cancel/direct priorita po blocích. Starý Job/picker/consent/import callback neovládne nový pokus nebo jiný cíl. | ProviderIo, MediaIngest/Staging, AudioCapture, SyncJob/Cadence, DriveAccountFlow, PeerRuntime/DirectSyncService; odpovídající native testy a media-import/voice/note/callback browser scénáře. |
 | P1: geometrie a viditelnost | Skutečná gesta a barevné obrysy všech15 nástrojů, úchopy/lupa/Undo/Redo, galerie extreme pan a text mimo původní foto; failure bez kresby musí být odhalen. | tools/e2e/drawing.cjs, interactions.cjs, update39.cjs, zoom-grid.cjs a tests/*interaction.js. Prst/S Pen/Bosch a Android WebView fyzicky NOT RUN. |
 | P1/P2: architektura a rozvoj | Přesné společné modely oddělené od Android rádio/Keystore/přihlášení. Při nové hranici nejsou paralelní zapisovače. Změna nemusí předem zavádět Windows/iOS/3D/cast/tisk/režimy. | docs/architecture-39-boundaries.md, datový/wire/cloud kontrakt a qa/coverage-v1.json proti aktuálnímu VIZE_A_PLAN na main. Doporučit malé následné změny s regresními testy, nepřepisovat celý editor. |
@@ -24,7 +24,7 @@ Použít stejné prostředí, verze a příkazy jako `.github/workflows/verify-n
 
 ```
 gradle --no-daemon -p tools/drive-config-checks verify
-gradle --no-daemon :app:verifyDriveRegistration :app:compilePreviewJavaWithJavac :app:testPreviewUnitTest
+gradle --no-daemon :app:verifyDriveRegistration :app:compilePreviewJavaWithJavac :app:testPreviewUnitTest -PdriveRequireConfigured=true
 node tools/qa/audit.cjs
 python3 -m unittest discover -s tests -p 'test_*.py'
 ```
@@ -35,7 +35,7 @@ Cíleně kombinovat nové a staré funkce: přesná kóta + příchozí sync bě
 
 ## Co automatická evidence nedokazuje
 
-- Console registrace je doložená uživatelskými obrazovkami v #39 (až6672377880), ne živým OAuth na zařízení. Project ID musí být přesně potvrzené; název projektu a původní návrh ID nejsou zaměnitelné.
+- Console registrace včetně přesného Project ID zamerovac-android je doložená uživatelskými obrazovkami v #39 (až6673933539). Aktivovaná build konfigurace není živé OAuth na zařízení; report configured=true neznamená vybraný účet nebo udělený souhlas. Znovu registraci ani potvrzení ID nevyžadovat.
 - Google Testing má zatím jeden povolený účet. Pro telefon i tablet použít tentýž účet. Skutečný consent/cancel/denied/revoked/expired, appDataFolder, velké originály, dvě historie a obnova jsou NOT RUN do fyzické akceptace.
 - Rádio/Keystore/Doze/OS restart/služba a instalace, kamera/mikrofon/kodeky, Bosch/prst/pera a výkon slabšího Androidu jsou NOT RUN. Simulované diskové residue nejsou skutečný process-kill/power-cut. Screenshot bez automatického porovnání není vizuální důkaz.
 - HTTP rozpočet je konzervativní a není účtem operátora. Podpis/hash není end-to-end šifrování; oprávnění účtu/poskytovatele zůstávají součástí ochrany cloudových dat. Vývojový signer není produkční identita.
