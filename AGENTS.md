@@ -245,3 +245,15 @@ Před zavedením nové technologie či významnější funkce vždy posoudit jej
 - Přímé **„sestav APK“**, **„vytvoř testovací verzi“**, **„dej mi instalaci“** znamená spustit sestavení aktuálního stavu bez čekání na další změny.
 - Aby sestavení mohl vyvolat připojený GitHub nástroj i bez přímého API `workflow_dispatch`, načti aktuální obsah a SHA `.github/apk-build-request.txt`, **zvyš číslo `request` o 1**, zapiš stručný důvod a aktualizuj soubor na `main` samostatným commitem. Tento jediný commit vyvolá `build-apk.yml` přes filtr `paths`. Neprováděj tentýž požadavek opakovaně a nesestavuj po každém mezikroku.
 - Před změnou spouštěcího souboru musí být zamýšlené úpravy uloženy na `main`; při souběžné práci ověř poslední stav a případné konflikty. Pokud GitHub build selže, oznam to a zkus cílenou opravu. Pokud nemáš možnost číst výsledek běhu, **netvrď, že APK je hotová**; odkaž na Actions/Releases a výslovně označ stav za neověřený.
+
+## Výběr režimu ChatGPT: Chat / Work / Codex (dohoda 6. 11. 2026)
+
+**ChatGPT sám doporučuje vhodný pracovní režim podle cíle, rizika, dostupných nástrojů a limitů; uživatel nemusí volbu technicky řešit.** Tato zásada doplňuje výše uvedené rozdělení práce a nenahrazuje ho.
+
+- **Běžný Chat:** každodenní rozhodování, vysvětlování, průběžná kontrola GitHubu, menší bezpečné úpravy, evidence požadavků a výsledků. Pokud má přímý přístup k odpovídajícím nástrojům, má úkol provést, ne automaticky přesouvat jinam.
+- **Work (Práce):** doporučit především pro rozsáhlejší samostatnou práci s dokumenty, soubory, podporovanými weby či připojenými aplikacemi: například úplný návrh a inventuru Zaměřovače, porovnání UI, přípravu podrobného plánu a dokumentace. Režim Work nenahrazuje automaticky Codex ani neznamená záruku přístupu k webu, GitHubu, místním souborům či testovacím zařízením; schopnosti ověřit pro konkrétní úkol.
+- **Codex:** přednostně složitější zásahy do zdrojového kódu, opravy datových/bezpečnostních chyb, komplexní testování, kontrolu buildů a rozsáhlejší implementaci. Když není přímé spuštění k dispozici, ChatGPT dá úplný text zadání, doporučí dostupný model a úroveň a řídí následnou kontrolu výsledků.
+- **GitHub zůstává zdrojem pravdy bez ohledu na režim.** Před změnou číst aktuální pravidla, issues, commity, PR a CI; zabránit souběžnému přepisu. Přepnutí režimu automaticky nepřenáší nedokončené lokální změny ani nespouští Codex. Důležité závěry zapisovat na GitHub bez duplicit. Uživatel přepnutí do Work/Codex provede, pokud ho ChatGPT nemůže provést dostupnou oprávněnou akcí.
+- **Nesnažit se použít Work pro každou drobnost.** Výběr musí usnadnit dosažení výsledku, ne zvýšit režii či spotřebu limitů. Neodkládat kritické opravy #39/PR #41 kvůli přípravě dokumentace nebo experimentům s režimy.
+
+**Pokyny projektu ChatGPT jsou odlišné od tohoto souboru.** Požadavek uživateli doporučit i krátké doplnění v Pokynech projektu; GitHub zápis tyto pokyny sám nemění. Bez změny programu, testů či APK.
