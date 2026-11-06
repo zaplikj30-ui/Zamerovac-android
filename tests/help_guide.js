@@ -71,3 +71,5 @@ for(const phrase of ['souběhu ověřených místních relací','ostatní příc
 assert(src.includes('bezpečnostní klíč zařízení není dostupný'),'Identity initialization failure must be explained');
 
 assert(src.includes('další ověřenou kopii'),'Backup repair and original preservation must be explained');
+
+assert(src.includes('povolený testovací účet'),'Google Testing restriction must be explained without exposing the account');

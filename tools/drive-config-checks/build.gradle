@@ -32,7 +32,10 @@ tasks.register('verify') {
             refuses { readDriveRegistration(new File(temporaryDir, 'absent.properties'), packageId, keyFile, 'PKCS12', 'android', 'zamerovacdev', null) }
             refuses { readDriveRegistration(new File(repository, 'config/drive-preview.properties'), packageId, keyFile, 'PKCS12', 'android', 'missing-alias', null) }
         } finally { keyFile.delete() }
-        assert rejected == 18
-        println 'PASS Drive Gradle registration: valid/disabled inputs, 18 rejected configurations, actual preview certificate; no APK or account access'
+        assert checkDriveActivation(validateDriveRegistration(fixture(), packageId, fingerprint, null), true)
+        assert !checkDriveActivation(validateDriveRegistration(disabled, packageId, fingerprint, null), false)
+        refuses { checkDriveActivation(validateDriveRegistration(disabled, packageId, fingerprint, null), true) }
+        assert rejected == 19
+        println 'PASS Drive Gradle registration: valid/disabled inputs, 19 rejected configurations, actual preview certificate; no APK or account access'
     }
 }

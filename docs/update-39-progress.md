@@ -458,3 +458,14 @@ Načteny komentáře #39 až6672377880: Cloud projekt Zamerovac-Android, Drive A
 Zápis uvádí zamerovac-android pouze jako původně předvyplněný návrh ID, nikoli potvrzený výsledek. Přesné veřejné Project ID bylo vyžádáno samostatně; nejde o opakování registrace ani žádost o přihlašovací údaje. Do jeho potvrzení se nesmí vymyslet hodnota nebo označit skutečný OAuth test jako prošlý.
 
 Nezávisle připravena malá Gradle hranice veřejné registrace: pouze projectId/applicationId/certificateSha1, ověření skutečného PKCS12 certifikátu, odmítnutí jiného package/podpisu/projektového override a neznámých polí. Samostatný Gradle test používá skutečný validátor, pozitivní/disabled vstupy a18 záporných variant včetně chybného aliasu/chybějícího souboru; bez Android pluginu, APK, účtu a síťové autorizace. Native workflow jej spustí před původní nezměněnou kompilací/testy. Tato mezietapa ještě nezapíná Drive v aplikaci; navazující preview-only BuildConfig/UI/negative testy jsou připravené a čekají na přesné ID. Není důvod znovu zakládat projekt nebo žádat secret/token/e-mail.
+
+
+Etapa38a potvrzena v3f7b07ac3ac53611565f0bbf5063c3a95189db3d: native42140071521 / quick42140071562 SUCCESS, skutečný Gradle validátor/PKCS12/18 rejected plus všechny původní testy.
+
+## Etapa38b – preview-only build a příprava nezávislého auditu
+
+Preview BuildConfig přebírá pouze validovanou veřejnou registraci; default neregistrovaný package zůstává disabled. Compile/CI umí poctivě otestovat disabled stav, budoucí APK workflow navíc povinně vyžaduje driveRequireConfigured=true. Samostatný validátor ověřuje i odmítnutou aktivaci bez ID (19.negativní případ); žádný APK workflow se nespustil. Config report má public project/package/fingerprint+configured, nikoli token. Runtime SDK/UI/factory používají stejný tvar ID6–30 znaků; neplatná konfigurace nevolá API a nemění účty/data. Google chybová hláška doporučí povolený testovací účet a u SDK10 vysvětlí nesouhlas verze/registrace, nevyžaduje opakování celé registrace.
+
+Nové native testy DriveRegistrationTest3 (skutečný generovaný BuildConfig proti public config, ID negative a skutečný MainActivity snapshot bez přihlášení/změny DB) a CloudStorageTest+1 (invalid project nevolá API/nezmění oba účty/DB). Nová CI ověřit, lokálně Node/Python47 (2skipy bez javac) předchozí přípravy prošly. Nápověda/nevydaná historie už správně popisují potvrzenou Google registraci a Testing účet bez osobních údajů. QA mapa doplněná o skutečnou Gradle vrstvu a jasné limity.
+
+Dokument audit-39-handoff.md je konkrétní zadání nezávislého bezpečnostního/architektonického auditu: rozsah, kód/testy, reprodukce bez APK, kombinace funkcí, kritéria nálezů a NOT RUN fyzické/živé Google brány. Není to provedený nezávislý audit. Připravenost aktivace sleduje jediný neověřený údaj Project ID; názvu projektu ani návrhu ID se nesmí přisoudit neexistující potvrzení.

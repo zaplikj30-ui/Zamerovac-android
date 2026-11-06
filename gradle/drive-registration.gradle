@@ -24,3 +24,8 @@ ext.readDriveRegistration = { File source, String applicationId, File storeFile,
     def sha1 = MessageDigest.getInstance('SHA-1').digest(certificate.encoded).collect { String.format(Locale.ROOT, '%02X', it & 255) }.join(':')
     return validateDriveRegistration(values, applicationId, sha1, overrideProject)
 }
+
+ext.checkDriveActivation = { Map registration, boolean required ->
+    if (required && !registration.projectId) throw new GradleException('The registered Drive preview project ID must be confirmed before creating the test APK')
+    return !!registration.projectId
+}

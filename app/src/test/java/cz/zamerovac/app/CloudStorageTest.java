@@ -29,4 +29,8 @@ public class CloudStorageTest {
     @Test public void missingProjectDoesNotBecomeASafFallbackOrAuthorizeAnAccount()throws Exception{
         device.prefs.edit().putString("treeUri","content://synthetic/tree/old").commit();storage.accounts.select("sync",a);project="";try{storage.sync(false,()->false);fail("Unconfigured app pretended to connect");}catch(IOException expected){assertTrue(expected.getMessage().contains("nastavení"));}assertEquals(0,apis);assertEquals(a,storage.accounts.account("sync"));
     }
+    @Test public void invalidProjectConfigurationNeverCallsDriveApiOrChangesSelectedAccount()throws Exception{
+        storage.accounts.select("sync",a);storage.accounts.select("backup",b);String before=LocalDatabase.read(device.home);for(String invalid:new String[]{"","short","Uppercase-project","project/escape","a".repeat(31)}){project=invalid;try{storage.sync(false,()->false);fail("Invalid sync project accepted");}catch(IOException expected){}try{storage.backup(false);fail("Invalid backup project accepted");}catch(IOException expected){}}assertEquals(0,apis);assertEquals(a,storage.accounts.account("sync"));assertEquals(b,storage.accounts.account("backup"));assertEquals(before,LocalDatabase.read(device.home));
+    }
+
 }

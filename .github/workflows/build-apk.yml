@@ -44,7 +44,7 @@ jobs:
           node tests/extra_toolbar_interaction.js
           python3 -m unittest discover -s tests -p "test_*.py" -v
       - name: Sestavit testovací variantu aplikace Zaměřovač
-        run: gradle --no-daemon assemblePreview
+        run: gradle --no-daemon :app:verifyDriveRegistration assemblePreview -PdriveRequireConfigured=true
       - name: Ověřit podpis a jednoznačnou verzi testovací APK
         shell: bash
         run: |

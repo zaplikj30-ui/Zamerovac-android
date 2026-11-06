@@ -1200,6 +1200,46 @@
         "Neznámá/nedostupná stará metadata zůstávají pending; nevydává se falešný důkaz nahrazení.",
         "Probíhající provider I/O může doběhnout do deadline; JSON/AtomicFile krátké lokální operace nejsou tvrdý realtime limit."
       ]
+    },
+    {
+      "id": "drive-preview-registration",
+      "issues": [
+        39,
+        28,
+        33,
+        42
+      ],
+      "sources": [
+        "config/drive-preview.properties",
+        "gradle/drive-registration.gradle",
+        "app/build.gradle",
+        "app/src/main/java/cz/zamerovac/app/DriveAuthorization.java"
+      ],
+      "tests": [
+        {
+          "path": "tools/drive-config-checks/build.gradle",
+          "layer": "gradle"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/DriveRegistrationTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/CloudStorageTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "tools/e2e/drive-accounts.cjs",
+          "layer": "chromium"
+        }
+      ],
+      "coverage": "runtime-partial",
+      "positive": "Skutečný Gradle validátor a PKCS12 certifikát, preview-only BuildConfig, native account state souhlasí s veřejnou konfigurací; CI bez APK, budoucí APK workflow vyžaduje potvrzený projekt.",
+      "negative": "19 rejected konfigurací, jiný package/SHA1/project override, neznámé pole/alias/chybějící soubor a požadavek na aktivaci bez ID. Runtime neplatné ID nevolá API ani nemění data/účty.",
+      "limits": [
+        "Console registrace potvrzená uživatelem v #39, přesné výsledné Project ID zatím vyžádáno; žádné vymyšlené credentials.",
+        "Skutečný Google účet/GMS souhlas/Drive přenos a obnova NOT RUN; prázdná konfigurace znamená disabled, nikoli úspěšné přihlášení."
+      ]
     }
   ],
   "manualGates": [
@@ -1221,7 +1261,7 @@
     {
       "id": "google-drive",
       "status": "blocked",
-      "scope": "API/OAuth/UI/Job jsou v kódu; chybí legitimní GCP Android klient/registrace a skutečný účet/Drive ověření."
+      "scope": "Registrace/API/Android preview klient/testovací účet/drive.appdata potvrzené Console obrazovkami; přesné Project ID a živé GMS/OAuth/Drive/restore ověření dosud pending."
     },
     {
       "id": "power-lifecycle",
@@ -1240,7 +1280,7 @@
     }
   ],
   "openAutomationGaps": [
-    "Legitimní Android Google registrace a živý consent/denied/revoked/expired účet; SDK/API/UI/Job jsou zapojené a synteticky otestované.",
+    "Potvrzení přesného výsledného Project ID a živý consent/denied/revoked/expired účet; registrace v Console je již dokončená podle #39/6672377880.",
     "Živé API stránkování a ověření konzervativního HTTP budgetu; TLS/operátor nejsou přesně měřené.",
     "Low-memory/process-kill a poškození/ztráta všech kopií úložiště; fallback/inbox má od etapy 28 cílené testy.",
     "Kompletní mapování jednotlivých starších ovládacích prvků; nyní jsou mapované funkční oblasti.",

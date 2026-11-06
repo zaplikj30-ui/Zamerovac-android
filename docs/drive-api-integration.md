@@ -1,6 +1,18 @@
-# Drive API: hranice etapy 29 a další zapojení
+# Drive API: aktuální zapojení a veřejná registrace preview
 
-Aktuální stav etapy32: DriveHttp/DriveApi, capability adaptéry, SDK auth, picker/consent a CloudStorage jsou zapojené do MainActivity/SyncJob a UI. Prázdný veřejný project ID ale úmyslně blokuje neověřené Google připojení; legitimní Cloud projekt/Android registrace a živý účet nejsou dostupné. Následující etapy 29–31 jsou historická evidence původního rozdělení. Nativní testy používají řízené HTTPS odpovědi, ne účet Googlu. Před vydáním tento rozdíl zachovat v PR, nápovědě i historii.
+Aktuální stav6.11.: [#39/6672377880](https://github.com/zaplikj30-ui/Zamerovac-android/issues/39#issuecomment-6672377880) potvrzuje podle uživatelských obrazovek vytvořený projekt Zamerovac-Android, Drive API Enabled, External/Testing, správný Android preview package/SHA1, jeden testovací účet a uložený jediný scope drive.appdata. Registrace se znovu neprovádí. Výsledné Project ID není v zápisu doložené: zamerovac-android je označené jen jako původně předvyplněný návrh. Přesné veřejné ID bylo vyžádáno, žádná potřeba hesla, e-mailu, JSON credentials nebo secretu. Živá autorizace/sync/history/restore jsou NOT RUN.
+
+## Aktuální sestavovací cesta
+
+- `config/drive-preview.properties` obsahuje pouze veřejné projectId/applicationId/certificateSha1. Prázdné ID bezpečně ponechává Disk disabled; není nahrazeno návrhem ani vymyšleným identifikátorem.
+- `gradle/drive-registration.gradle` ověří přesný applicationId a skutečný certifikát použitého preview PKCS12 proti uloženému SHA1. Odmítá neznámá pole a nesouhlasící `-PdriveCloudProject`/`ZAMEROVAC_DRIVE_PROJECT`. Žádné credentials se do konfigurace nepřidávají.
+- Pouze registrovaný `preview` přebírá ID do `BuildConfig.DRIVE_CLOUD_PROJECT`; výchozí neregistrovaný balíček `cz.zamerovac.app` má prázdné pole. Budoucí produkční klient/signer se nyní nevytváří.
+- Compile/test workflow provede skutečný Gradle validátor se19 negativními případy a native kontrolu generovaného BuildConfig/UI/factory. Vytvoří pouze veřejný `app/build/reports/drive-registration.json` s configured=true/false, nikoli OAuth token nebo APK.
+- Budoucí `build-apk.yml` před assemble vyžaduje `-PdriveRequireConfigured=true`; neúplná konfigurace jej odmítne. Jeho triggers ani `.github/apk-build-request.txt` se nemění a během této práce nebyl spuštěný.
+- Project ID je veřejná build/namespace konfigurace, nikoli OAuth client ID nebo přihlašovací tajemství. Skutečného Android klienta ověřuje Google podle package+SHA1; statický řetězec ani certifikátový test nedokazuje živý consent. SDK žádá pouze drive.appdata pro vybraný účet, bez backend serveru/refresh token exportu/webového client secretu.
+- Jeden povolený testovací Google účet se použije na telefonu i tabletu. Google Testing, nedostupný GMS, zrušení/denied/revoked/expired a skutečné Drive oprávnění musí projít fyzickou akceptací na syntetických datech po potřebných kontrolách. Nepublikovat osobní e-mail ani screenshots.
+
+Samostatná kontrola bez APK: `gradle --no-daemon -p tools/drive-config-checks verify`. Native cesta: `gradle --no-daemon :app:verifyDriveRegistration :app:compilePreviewJavaWithJavac :app:testPreviewUnitTest`. Připravené zadání nezávislé revize: [audit-39-handoff.md](audit-39-handoff.md).
 
 Použité oficiální zdroje (ověřeno 5. 11. 2026):
 
@@ -15,7 +27,9 @@ HTTP třída povoluje pouze HTTPS www.googleapis.com a konkrétní Drive cesty, 
 
 Gate se kontroluje před požadavky i každými 64KiB čtení/zápisu. Účtuje konzervativní rezervu hlaviček a velikost povoleného čtení/payloadu. Nejde o měření TLS/TCP, skrytého OS provozu nebo účtování operátora. Google odpovědi mají omezenou velikost a seznam se vrátí pouze po všech stránkách; odmítnutý rozpočet nesmí vrátit neúplný seznam jako prázdné úložiště. Na dlouhém seznamu může omezený přenos čekat na neměřené spojení; další integrace nesmí tvrdit okamžitou malou synchronizaci v libovolně velké historii.
 
-Konkrétní následující kroky:
+## Historické rozdělení etap29–32 (není aktuální seznam chybějících funkcí)
+
+Původní implementační pořadí:
 
 1. Implementovat oddělené DriveSyncStore / DriveBackupStore capability nad sdílenou API hranicí; sync nesmí adresovat backup cestu. Ověřit nejednoznačné stejné názvy, souběžné vytvoření stejného backup blobu, metadata cache a účetní namespace. Sdílené stejné názvy v Drive nejsou automaticky unikátní.
 2. Proudový `ImmutableStore.create()` nezná velikost předem. Adaptér potřebuje omezený soukromý staging nebo změnu explicitního size kontraktu; close po chybě nesmí spustit zakázaný velký upload. Ověřit disk full, cancel/direct prioritu a cleanup po systémovém kill. Dosavadní API začíná po chybě novou relaci; byte-range resume po restartu zatím nemá.
