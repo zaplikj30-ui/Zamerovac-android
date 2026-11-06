@@ -2,5 +2,5 @@
 # Běžné změny kódu APK nesestavují. Teprve změna tohoto souboru spustí workflow build-apk.yml.
 # Při požadavku na sestavení uprav číslo a popis níže, commitni do main.
 
-request: 11
-reason: jedna spolecna TEST APK 1.2.152 po issue31: pravdiva historie novinek oprav a vylepseni podle skutecnych vydani, hlavni menu a Nastaveni, offline a beze zmen zakaznickych dat; vsechny tri skupiny CI uspesne v PR32
+request: 12
+reason: jedina spolecna TEST APK 1.2.153 po schvalene aktualizaci issue39 PR41, oprave vsech sesti auditnich nalezu A39-01 az A39-06, uspesnych finalnich kontrolach; bez ruseni uzivatelskych dat
