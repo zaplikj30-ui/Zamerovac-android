@@ -13,6 +13,7 @@ const {suite,assert,createCanvas}=require('./harness.cjs');
    assert(await page.locator('details.releaseTimeline').first().getByText('Verze 1.2.153').isVisible());
    assert((await page.locator('details.releaseTimeline').first().innerText()).includes('A39-01 až A39-06'));
    assert((await page.locator('details.releaseTimeline').nth(1).innerText()).includes('Verze 1.2.152'));
+   await page.locator('details.releaseTimeline').nth(1).locator('summary').click();
    assert(await page.locator('details.releaseTimeline').nth(1).innerText().then(t=>t.includes('chybné přiřazování')));
    assert.equal(await page.locator('details.releaseTimeline').nth(1).locator('h3').first().innerText(),'Opraveno');
    await page.locator('details.releaseTimeline').nth(3).locator('summary').click();
