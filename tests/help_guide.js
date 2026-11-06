@@ -21,6 +21,7 @@ finds('ZALOHA','backup');
 finds('Bosch','bosch');
 finds('soukromí','customer');
 finds('s pen','handles');
+finds('obloukové šipky','insets');
 finds('video','video');
 finds('ruian','search');
 finds('mapa','search');
