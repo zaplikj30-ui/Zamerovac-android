@@ -2,6 +2,12 @@
 
 Toto je připravené zadání a mapa důkazů, nikoli výsledek nezávislého auditu. Přesný předávaný commit a jeho CI odkazy musí být v posledním předávacím komentáři draft PR #41; auditovat tento neměnný SHA. Před začátkem znovu přečíst nejnovější AGENTS/START, #39, #33, #28, #42 a novější komentáře. Chránit main dokumentaci a již uložené opravy, žádná APK/merge ani nová budoucí funkce.
 
+## Ověřený commit k předání
+
+Auditovaná implementace: **86b0a63ff3a503be3692177d86dba7cd0db9543d**. [Native/Gradle/PDF SUCCESS](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42142954490), [Node/Python/Chromium SUCCESS](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42142954473). Build kontrola vyžaduje skutečné zamerovac-android/configured=true, preview package a správný skutečný certifikát. Devatenáct negativních konfiguračních/aktivačních scénářů zůstává. Konfigurace neznamená vybraný účet ani živé OAuth oprávnění. Následná čistě dokumentační předávka nemění tento funkční kód ani testy; při jakékoli nové změně kódu znovu určit auditovaný SHA.
+
+Připravenost k revizi kódu: **ANO**. Výsledek nezávislého auditu: **pending**, živé/fyzické Google/radio/Keystore/Bosch testy: **NOT RUN**. Nic dalšího z registrace/Project ID se nevyžaduje. Žádná APK/merge.
+
 ## Rozsah a kritéria
 
 Posoudit celý schválený celek #39, včetně #38/#40 a galerie/editoru/ovládání. Tvrzení o vadě doložit konkrétním kódem a reprodukcí na syntetických datech, odlišit potvrzenou vadu od rizika nebo chybějícího fyzického důkazu. Samotná velikost MainActivity/editor.js není nález. Žádné zákaznické zakázky, účty nebo fotografie v testech/reportech. Žádné Google tokeny, e-maily, OAuth tajemství nebo přihlašovací JSON v repozitáři/artefaktech.

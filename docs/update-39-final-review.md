@@ -1,6 +1,6 @@
-# Omezená závěrečná kontrola #39 – 5. 11. 2026
+# Omezená závěrečná kontrola #39 – aktualizace6.11.2026
 
-Tato kontrola vlastní implementace není nezávislý audit, fyzický test, absolutní bezpečnostní záruka ani dokončená #39. Je omezená na níže uvedené hranice. Ověřený kód c1b91feb29508379d6d06bfc0832388f91a8ebc6 má native42117735945 a quick42117735619 SUCCESS, bez APK. Dřívější výsledky a opravy jsou v update-39-progress.md.
+Tato kontrola vlastní implementace není nezávislý audit, fyzický test, absolutní bezpečnostní záruka ani dokončená #39. Je omezená na níže uvedené hranice. Ověřený aktivovaný kód86b0a63ff3a503be3692177d86dba7cd0db9543d má native42142954490 a quick42142954473 SUCCESS, bez APK. Dřívější výsledky a opravy jsou v update-39-progress.md.
 
 | Kontrolovaná hranice | Konkrétní stav / důkaz | Praktický limit |
 | --- | --- | --- |
@@ -16,7 +16,7 @@ Tato kontrola vlastní implementace není nezávislý audit, fyzický test, abso
 ## Co dále skutečně zbývá
 
 1. Nezávislá kontrola bezpečnosti/architektury/kolizí #33/#42 zůstává pending. Omezená kontrola vlastní implementace i navazující opravy mají celou CI SUCCESS; to nenahrazuje nezávislého reviewera.
-2. Registraci Google Cloud ani potvrzení ID neopakovat: zamerovac-android je definitivně doložené v #39/6673933539 a zapojené do preview. Ověřit výsledek nové povinně aktivované CI konfigurace. Přesný testovací package/SHA1, build property a oficiální postup jsou v drive-api-integration.md. Nové doložení již potvrzuje i skutečné výsledné ID z přehledu projektu. Nepřebírat účty/tokeny konektoru.
+2. Registraci Google Cloud ani potvrzení ID neopakovat: zamerovac-android je definitivně doložené v #39/6673933539 a zapojené do preview. Povinně aktivovaná CI konfigurace má SUCCESS na86b0a63; předat tento SHA nezávislému auditorovi. Přesný testovací package/SHA1, build property a oficiální postup jsou v drive-api-integration.md. Nové doložení již potvrzuje i skutečné výsledné ID z přehledu projektu. Nepřebírat účty/tokeny konektoru.
 3. Ověřit skutečný souhlas/denied/revoked/expired token, stejný účet na dvou zařízeních, celé originály a přesné kóty, oddělené historie, check/restore a zachování historie při sync. Jednu společnou testovací APK teprve po dokončení konfigurace a potřebných kontrolách; nyní žádná APK/merge.
 4. Na syntetických datech fyzická LAN/P2P bez routeru, OEM/Doze/OS kill/restart, instalace se zachováním dat, Bosch a kamera/mikrofon/kodeky. Telefon/tablet i slabší HW jsou acceptance gates, nikoli důvody vymýšlet další funkce.
 
@@ -29,3 +29,5 @@ Předávka: všechny dokončené etapy jsou na GitHubu ve stejné větvi/draft P
 Navázání6.11.: připravené explicitní [zadání nezávislého auditu](audit-39-handoff.md) a veřejná build registrační hranice. Registrace Console již není chybějící práce. Přesná aktivace ID a nové CI/proof jsou sledované samostatně; nezávislý audit ani živý Google test se tím neprohlašují za provedené.
 
 Etapa39: poslední registrační blokátor odstraněný potvrzením Project ID zamerovac-android. Preview config/BuildConfig/UI jsou propojené, native CI vyžaduje configured=true a testy stále neprohlašují živý účet za připojený. K dokončení auditu/akceptace zbývají samostatné nezávislé a fyzické důkazy; tyto kroky se nesmí nahradit tvrzením, že chybí registrace.
+
+Připravenost: k nezávislému auditu kódu ANO, provedený nezávislý audit NE, fyzická/živá Google akceptace NE. Registrační a konfigurační blokátor není otevřený. Žádná APK ani merge.

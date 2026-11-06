@@ -2,6 +2,8 @@
 
 Aktuální stav6.11.: [#39/6673933539](https://github.com/zaplikj30-ui/Zamerovac-android/issues/39#issuecomment-6673933539) definitivně potvrzuje **Project ID zamerovac-android** z IAM & Admin → Settings skutečného projektu Zamerovac-Android. Dřívější [#39/6672377880](https://github.com/zaplikj30-ui/Zamerovac-android/issues/39#issuecomment-6672377880) potvrzuje Drive API Enabled, External/Testing, správný Android preview package/SHA1, jeden testovací účet a uložený jediný scope drive.appdata. Registraci ani ověření ID neopakovat. Veřejné ID je zapojené do preview konfigurace; žádné účty, project number, hesla, JSON credentials nebo tokeny se nepřidávají. Živá autorizace/sync/history/restore jsou NOT RUN.
 
+Ověřená aktivace v **86b0a63ff3a503be3692177d86dba7cd0db9543d**: native/Gradle/PDF42142954490 a quick/UI42142954473 SUCCESS. Native kontrola vyžaduje přesný generovaný projekt a projectConfigured=true; zároveň potvrzuje, že dosud není zvolený žádný Google účet ani změněná místní databáze. Registrační blokátor je odstraněný.
+
 ## Aktuální sestavovací cesta
 
 - `config/drive-preview.properties` obsahuje pouze veřejné projectId/applicationId/certificateSha1. Aktuální potvrzené ID je zamerovac-android. Prázdné či nesouhlasící nastavení by bezpečně odmítlo aktivaci; nepoužívá se návrh ani vymyšlený identifikátor.
