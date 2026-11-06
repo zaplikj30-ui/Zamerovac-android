@@ -31,3 +31,10 @@ Navázání6.11.: připravené explicitní [zadání nezávislého auditu](audit
 Etapa39: poslední registrační blokátor odstraněný potvrzením Project ID zamerovac-android. Preview config/BuildConfig/UI jsou propojené, native CI vyžaduje configured=true a testy stále neprohlašují živý účet za připojený. K dokončení auditu/akceptace zbývají samostatné nezávislé a fyzické důkazy; tyto kroky se nesmí nahradit tvrzením, že chybí registrace.
 
 Připravenost: k nezávislému auditu kódu ANO, provedený nezávislý audit NE, fyzická/živá Google akceptace NE. Registrační a konfigurační blokátor není otevřený. Žádná APK ani merge.
+
+
+## Po nezávislém auditu: šest cílených oprav (6. 11. 2026)
+
+Nezávislý audit je dokončený v #42/6678805687; není nahrazovaný touto vlastní kontrolou. Všech šest potvrzených A39-01–06 je opravených v0bd81f5 a finálním funkčním checkpointued8240b96a33113bc16077ccfba8e9d649bbbe4b. [native/Gradle/PDF42178671854](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42178671854) a [quick/browser42178671882](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42178671882) SUCCESS. Místně256native bez skipů/25Node/47Python bez skipů/58praktických Chromium+7browser, Gradle19negativních konfigurací a3PDF PASS. Původní reprodukce před opravami skutečně6FAIL; nyní PASS bez oslabení bezpečnostních asercí.
+
+[Přesná implementace, zachycené a opravené meziregrese, příkazy a fyzické limity](audit39-fixes.md). Připraveno k následné cílené kontrole oprav, nikoli potvrzené fyzické akceptaci. Žádná APK/merge/Google registrace.

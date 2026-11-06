@@ -37,7 +37,10 @@ Původní sada má 232 metod; 24 dalších spuštěných metod zahrnuje šest p�
 - **Drive Gradle validátor PASS**, platná/disabled konfigurace a **19 negativních konfigurací**, beze změny registrace nebo přístupu k účtu.
 - **Externí parser/render PDF PASS** pro customer-pdf-1.zip, customer-pdf-3.zip a customer-pdf-multipage.zip.
 
-Implementační checkpoint `0bd81f5` je uložený na GitHubu. CI po opravě se ověřuje; přesné finální odkazy budou doplněné po doběhnutí.
+Implementační checkpoint `0bd81f5` a finální text/UI checkpoint **`ed8240b96a33113bc16077ccfba8e9d649bbbe4b`** jsou uložené na GitHubu.
+**Finální kód má oba GitHub běhy SUCCESS:** [native/Gradle/PDF42178671854](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42178671854), [quick/browser42178671882](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42178671882).
+Native job dokončil konfiguraci, kompilaci, úplnou regresi i nezávislý PDF parser/render; quick dokončil všechny tři joby včetně nové hierarchie.
+Následný předávací commit mění jen Markdown dokumenty a nepřepisuje tento ověřený funkční checkpoint.
 
 Příkazy (Gradle 8.10.2, JDK17, SDK35, Robolectric4.16.1; pouze syntetická data):
 
@@ -59,5 +62,5 @@ Neproveden přenos fyzických >2 GiB dat; celkový limit ověřuje sparse soubor
 NOT RUN: živý GMS/OAuth/Drive a dva skutečné přístroje, Android rádio/Keystore/Doze/OS kill/upgrade/power-cut, Samsung/Xiaomi/Lenovo, S Pen/Bosch/mikrofon/kodeky a výkon slabého HW.
 Zelené testy nejsou fyzická akceptace ani nový nezávislý audit.
 
-Po úspěšné regresi následuje cílená kontrola těchto šesti oprav před případným jediným sestavením testovací APK.
+Připraveno k následné cílené kontrole všech šesti oprav: **ANO**. Teprve potom případné jediné sestavení testovací APK; v této práci se nesestavuje.
 PR zůstává draft. Žádná APK, merge, změna Google registrace, mazání existujících uživatelských dat nebo širší refaktoring.
