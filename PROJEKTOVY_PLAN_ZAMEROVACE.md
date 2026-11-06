@@ -111,3 +111,62 @@ Toto je **architektonická mapa existujícího systému**, ne příkaz k refakto
 - [NAVRH_NOVEHO_ZAMEROVACE_OD_NULY.md](NAVRH_NOVEHO_ZAMEROVACE_OD_NULY.md) – **samostatný námět**, není rozpracovanou fází tohoto plánu.
 
 **Rozlišovat:** tento dokument je **založený projektový plán s osnovou a výchozím stavem**. Není dosud kompletní hotovou inventurou ani vizuálním návrhem všech obrazovek a není podložený fyzickými testy tam, kde nejsou zaznamenané.
+
+
+## 11. Budoucí možnosti a rozhodnutí potřebná už dnes – rozšíření inventury 6. 11. 2026
+
+**Výslovné upřesnění uživatele:** při **postupné vnitřní přestavbě současné aplikace** počítat i s návrhy typu „možná“, „někdy“, „ještě probereme“, aby budoucí rozšíření nevyžadovala další rozsáhlý přepis. **Nemusí se nyní upřesnit vzhled a chování každé neschválené funkce.** Je nutné dnes navrhnout jen stabilní **hranice** a identifikovat rozhodnutí, která by později ohrožovala přesné hodnoty, data nebo kompatibilitu. Nezaměňovat architektonickou připravenost s implementačním souhlasem. Platí společně s [#42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42).
+
+### 11.1 Katalog hlavních dnešních a budoucích oblastí
+
+**Stav každého řádku je stav požadavku/směru, nikoli tvrzení o dokončení v APK.** Podrobné podfunkce a případná pozdější změna rozhodnutí zůstávají v prolinkovaných zdrojích; pro každé budoucí programování je nutná kontrola proti aktuální implementaci a posledním komentářům.
+
+| Oblast | Dnes zachovat / napravit | Zohlednit jako možnost, neschvalovat automaticky | Architektonický důsledek nyní |
+| --- | --- | --- | --- |
+| Zakázky a dokumenty | Stabilní strom zakázek/složek, adresy, hledání, koš, zámky, přesuny a hromadné operace, originální foto/video/PDF, import/export | Šablony zakázek, karta zákazníka, porovnání dvou fotografií, výměna podkladu bez ztráty kót, více různých druhů položek | Obecné stabilní ID, verzovaný typ dokumentu a vazby na média; zvlášť data zakázky a nastavení UI |
+| Kóty/geometrie | Přesné číselné řetězce s jednotkou; kóty, šipky, čáry, lomené, řetězce, úhel, kruh/elipsa, plocha/obdélník, kresba, lupa, úchopy, magnet, Undo/Redo | Chytré rozmístění/úpravy kót, zadávání textem nebo AI, matematické kontroly, nové tvary, ruční i automatické kreslení půdorysů | Oddělit význam měření, geometrii, styly, transformace a nástroje; stabilní typy/ID prvků; neodvozovat skutečné mm z pixelů |
+| Editor/galerie/export | Shodný obsah a ostré čitelné kóty, bez úprav v galerii; současná P1 vada [#50](https://github.com/zaplikj30-ui/Zamerovac-android/issues/50); správné PDF, zákaznické výstupy | Více zobrazení téže scény, 2D plán, nárysy stěn, případné 3D, externí obrazovky/tisk | Jediná geometrická a sémantická definice; **více nezávislých rendererů/pohledů**, každý s vlastním kontextem, měřítkem a určením (editace/prohlížení/tisk) |
+| Fotografie, poznámky, přílohy | Oddělené kotvy šipek, textu a přemístitelného detailu, stohy fotografií, hlasové nahrávky, videa, editovatelné vnořené kóty; opravy [#46](https://github.com/zaplikj30-ui/Zamerovac-android/issues/46) a [#47](https://github.com/zaplikj30-ui/Zamerovac-android/issues/47) | Samostatný poznámkový blok/S Pen, možná Samsung Notes integrace, diktování textu a čísla [#44](https://github.com/zaplikj30-ui/Zamerovac-android/issues/44) | Model přílohy a vazby na objekt oddělit od způsobu vstupu; dialog/IME/picker mají explicitní stav a vlastnictví |
+| Měření a hardware | Bosch BLE/Classic, přesun jen do skutečně aktivní kóty, historie a opravy spojení; pracovat i bez laseru | Další značky a modely laserů, hlasový vstup, jiné ovladače, myš, klávesnice, S Pen i jiná pera | Převod na ověřené `měření + jednotka + zdroj + cílový objekt`; adaptér pro zařízení/protokol, bez závislosti modelu na Boschi |
+| Půdorys/prostor | Dnešní fotoeditor a existující plátno; nic nerozbít | Editovatelný půdorys rukou s jemným narovnáním a magnetem, klikací nárysy stěn jako Bosch MeasureOn [#25](https://github.com/zaplikj30-ui/Zamerovac-android/issues/25), okna/dveře/přípojky/překážky, perspektiva/2D/3D | Uvažovat dokument-scénu s více pohledy a vztahy stěna ↔ rozměr ↔ fotografie, **bez zavedení nepřipraveného 3D engine** |
+| Offline, záloha a zařízení | Lokální bezpečný stav, úplné originály, ZIP včetně integrity, historie, konflikty, dva přístroje, Google Drive bez falešného „hotovo“ [#38](https://github.com/zaplikj30-ui/Zamerovac-android/issues/38) [#40](https://github.com/zaplikj30-ui/Zamerovac-android/issues/40) | Budoucí Windows/iOS klient, více zařízení a účastníků, volitelná další přenosová média | Jediný důvěryhodný místní stav, revize/identity, oddělené synchronizační a zálohovací kontrakty; žádné skryté poslední-přepsání-vyhrává |
+| Propojení druhé aplikace | Zachovat **dva nezávislé projekty** Zaměřovač a Konfigurátor–Nářezák | Jedna zakázka napříč zaměřením, návrhem skříněk, kusovníkem, nářezem, kalkulací, montáží; případně jedno modulární uživatelské prostředí | Stabilní a verzovatelné výměnné rozhraní měření, identit, jednotek, revizí; **nikdy automaticky nepřepisovat schválenou výrobu**; neimplementovat teď společnou databázi |
+| Cizí jazyky a země | Zachovat češtinu a schválenou přípravu volby jazyka [#14](https://github.com/zaplikj30-ui/Zamerovac-android/issues/14) | Desítky jazyků, RTL, autonyma, místní jednotky, formáty, zahraniční adresy, mezinárodní název | Přeložitelné texty a metadatové jednotky mimo data kót; lokalizace mění prezentaci, ne přesně uložené hodnoty |
+| Ovládání a vzhled | Přehledná lišta, úchopy, adaptivní Android displeje, nápověda, přístupnost, experimenty | Úrovně Začátečník/Střední/Expert, profily profesí (elektro/voda/stavba/nábytek/domácnost), vlastní lišta a „+“, tmavý/světlý/systém, pozadí, výkonové režimy, projekce | Konfigurovatelné zobrazení/nástroje bez různých verzí dat a pravidel měření; motiv a grafické preference nejsou součástí výpočtů |
+| Pokročilá pomoc | Současné ruční kótování a validace, nápověda | Chytré rozmístění kót a AI/textové příkazy [#16](https://github.com/zaplikj30-ui/Zamerovac-android/issues/16), průvodce zaměřením, kontrola chybějících rozměrů, hlas [#44](https://github.com/zaplikj30-ui/Zamerovac-android/issues/44) | Volitelný návrh změn nad kontrolovatelným modelem; uživatel musí rozhodnout o jejich potvrzení; možnost fungovat i plně offline |
+| Výkon, zařízení, dostupnost | Zachovat funkce na telefonu/tabletu a rozumnou výkonnost, žádná degradace kvality měřených čísel | Levnější Androidy, různá rozlišení/velikosti, širší veřejnost, Play Store / App Store | Render podle zařízení, bezpečné paměťové limity, nezávislé funkční jádro a cílené testy; nepředpokládat hardware Samsungu |
+| Obchodní/produktové možnosti | Nyní bez monetizace, bez omezení pracovních dat | Volitelné moduly/licence, jednorázový nákup, předplatné, reklama/bez reklam, jiné obchodní modely | Nepropojovat data a výpočty s budoucí licencí; **žádná platební SDK, reklamní sledování ani tarifní logika dnes** |
+
+Podrobnosti ke všem dnes evidovaným **40 oblastem testů**, jejich implementaci a mezerám: [qa/coverage-v1.json](qa/coverage-v1.json). Historické **28 kroků**, kompletní seznam aktuálně nahlášených drobností **#12**, uživatelské průběžné video výsledky **#13**, uživatelská rozhodnutí a nápady **ROZHODNUTI_A_NAPADY_Z_TESTU.md**, celá [VIZE_A_PLAN.md](VIZE_A_PLAN.md) a **všechny komentáře** jsou součástí povinné inventury; **tato souhrnná matice je nepřepisuje a nesmí být označena za 100% kompletní detailní funkční specifikaci**.
+
+### 11.2 Co je potřeba rozhodnout už při přestavbě – bez čekání na nové funkce
+
+1. **Kontrakt současných dat:** stabilní ID objektu/zakázky/média, přesná hodnota a jednotka zvlášť od libovolného textu, image/world/screen souřadnice, vztahy objekt ↔ zdroj; zachovat současné skutečné `schema:1`, ZIP v2 a aktuální sync protokol, dokud není bezpečně doložená a schválená migrace.
+2. **Kdo vlastní stav:** jedno místo pro správu zakázek a transakčně potvrzené ukládání; UI, renderer, dialog a přenos nesmějí nezávisle přepisovat živá data.
+3. **Renderovací kontrakt:** pozice podle geometrie, písmo/tloušťka/úchopy podle výsledného prostoru pixelů, nezávislé kontexty editoru, galerie a exportu. Přenos do jiných rozlišení/platforem nemění uložené body ani hodnoty.
+4. **Rozhraní doplnitelných částí:** nástroj/anotace, druh dokumentu a pohled, médium, zdroj měření, platformní vstup, přenos/synchronizace, lokalizace. Jen minimální skutečně potřebné rozhraní; nevytvářet generický systém pro hypotetické pluginy.
+5. **Vazby a revize:** budoucí půdorysy, nárysy, více obrazovek a druhá aplikace budou potřebovat referencovat stejný ověřený údaj, nikoliv udržovat nebezpečné nezávislé kopie. Nyní otestovat existující data, navrhnout zpětně kompatibilní model **bez okamžité nové struktury databáze**.
+6. **Kontroly kvality jako brána změny:** reprodukce P1 na staré verzi → FAIL, po opravě → PASS, skutečné pixely/screenshoty, negativní dotykové scénáře, uložení/obnova, Undo/Redo, import/export, přerušení a platformní zkoušky. Nezaměňovat CI, APK a fyzické zařízení.
+
+### 11.3 Co se nyní NAOPAK rozhodovat nemusí
+
+- Jak přesně bude vypadat budoucí 3D nárys, workflow a kreslicí nástroje půdorysu; geometrické toleranční prahy inteligentního narovnání.
+- Zda vůbec použijeme AI, rozpoznávání hlasu, projekci, Samsung Notes propojení, placené funkce či reklamu.
+- Názvy a počet profesních profilů, přesné rozdělení režimů pro začátečníky, koncová nabídka jazyků, značek laserů a platformní technologie Windows/iOS.
+- Zda se samostatné současné aplikace někdy fyzicky sloučí do jedné instalace.
+
+Rozhodovat až podle prototypu, dostupnosti API, nákladů, bezpečnosti a **výslovného schválení**; nevytvářet prázdné moduly, spekulativní tabulky DB ani nová SDK „pro jistotu“.
+
+### 11.4 Bezpečné pořadí přestavby
+
+**Etapa 0 – faktická mapa:** u všech důležitých současných funkcí porovnat nejnovější specifikaci, zjištěný kód, stav 1.3.0, regresní test, rizika a plánovaný způsob přenosu dat; neoznačovat staré historické audity za hotové nové testy.
+
+**Etapa 1 – stabilizace potvrzených P1 chyb:** #50 rozpracováno jako draft [PR #51](https://github.com/zaplikj30-ui/Zamerovac-android/pull/51) s dosud **neúspěšným CI**; #46/#47 poznámky/IME/picker, #48/[PR #49](https://github.com/zaplikj30-ui/Zamerovac-android/pull/49) vzhled úchopů. Každá oprava musí být podložená testem; #51 neintegrovat naslepo.
+
+**Etapa 2 – konkrétní rozhraní místo sdílených globálních proměnných:** po auditu jako první malý izolovaný zásah oddělit renderovací kontext od editoru a následně obsluhu modal/IME/pickeru; zachovat chování a historii. Dělat po měřitelných menších PR.
+
+**Etapa 3 – data, média, více pohledů a platformní adaptéry:** pouze tam, kde audit prokáže potřebu, sepsat kontrakty a malou bezpečnou kompatibilní adaptaci s porovnáním před/po. **Neprovádět velkou datovou migraci jen kvůli nápadům.**
+
+**Etapa 4 – společná kvalita:** cílené automatické testy a emulátor, kontrola jedné společné APK až po dohodnutém balíku; následně fyzicky Samsung S24 Ultra, poté tablet a Bosch/Google podle relevantních scénářů. Před každou další úpravou načíst GitHub, #42, poslední PR a CI.
+
+**Stav zápisu:** technická inventura a architektonická dohoda; **nikoli dokončený audit všech detailů, provedená přestavba, zelené CI, vytvořená APK či fyzické ověření.**
