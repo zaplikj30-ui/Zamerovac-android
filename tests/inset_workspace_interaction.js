@@ -99,10 +99,14 @@ assert.deepEqual(sandbox.opens,['note:note-1'],'Second separate tap opens full n
 }
 // New drawings must stay on the existing handle positions: left/right resize, top rotate.
 {
- const seen={arcs:[],resizeLines:0,translations:[]};
+ const seen={bows:0,resizeLines:0,centerArrows:0,translations:[]};
  const c={
   save(){},restore(){},translate(x,y){seen.translations.push({x,y})},rotate(){},
-  beginPath(){},moveTo(x,y){if(x===-12&&y===0)seen.resizeLines++},lineTo(){},
+  beginPath(){},moveTo(x,y){
+   if(x===-12&&y===0)seen.resizeLines++;
+   const cx=note.insetX+note.insetWidth/2,cy=note.insetY+note.insetWidth/2;
+   if((Math.abs(x-cx)===8&&y===cy)||(Math.abs(y-cy)===8&&x===cx))seen.centerArrows++;
+  },lineTo(){},quadraticCurveTo(){seen.bows++},
   closePath(){},fill(){},stroke(){},arc(x,y,r,start,end){seen.arcs.push({r,start,end})},
   setLineDash(){},strokeRect(){},drawImage(){},fillText(){},
   measureText(t){return {width:String(t).length*9}},fillRect(){}
@@ -110,7 +114,8 @@ assert.deepEqual(sandbox.opens,['note:note-1'],'Second separate tap opens full n
  sandbox.selected=note.id;
  sandbox.window.renderPhotoInset(c,note,sandbox.window.__detailPhotoCache['detail-1'],()=>{});
  assert.equal(seen.resizeLines,2,'Both original side handles must show a two-way resize arrow');
- assert.equal(seen.arcs.filter(a=>a.r===12).length,2,'Top rotation handle must show two curved arrows');
+ assert.equal(seen.bows,2,'Top rotation handle shows two open bowed arrows, not a circular ring');
+ assert.equal(seen.centerArrows,4,'Center handle shows four directional arrowheads for moving the inset');
  const width=note.insetWidth;
  const centerX=note.insetX+width/2,centerY=note.insetY+width/2;
  const initialAnchor={...note.a};
