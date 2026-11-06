@@ -64,7 +64,7 @@ assert.equal(history.releaseChanges.version,'1.2.153');
 assert(!history.forVersion('1.2.152').some(x=>x.version==='1.2.153'));
 assert(JSON.stringify(history.releases[1]).includes('A39-01 až A39-06'))
 assert(JSON.stringify(history.releases[0]).includes('smysluplná čísla vydání'));
-assert(JSON.stringify(history.releases[0]).includes('Oddělený výběr Google účtu'));
+assert(JSON.stringify(history.releases[1]).includes('Oddělený výběr Google účtu'));
 assert(JSON.stringify(history.releaseChanges).includes('spustitelných příloh'));
 assert(JSON.stringify(history.releaseChanges).includes('zaniklá skupina Wi-Fi Direct'));
 assert(JSON.stringify(history.releaseChanges).includes('služba Androidu s oznámením'));
