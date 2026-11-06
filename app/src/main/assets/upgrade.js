@@ -329,6 +329,14 @@ browseGallery.id='browseGallery';browseGallery.className='ico';browseGallery.inn
 $('browserFoot').insertBefore(browseGallery,$('bluetoothBtn'));
 browseGallery.onclick=()=>openGallery(0);
 let gallery=null,galleryList=[],galleryIndex=0,galleryStart=null,galleryRenderGeneration=0;
+let galleryFrame=null;
+function scheduleGalleryFrame(){
+ if(galleryFrame!==null)return;
+ galleryFrame=requestAnimationFrame(()=>{
+  galleryFrame=null;
+  if(gallery?.__drawGallery)try{gallery.__drawGallery()}catch(e){notify('Galerii se nepodařilo překreslit')}
+ });
+}
 function galleryPhotos(){return state.records.filter(r=>!r.deleted&&r.kind==='photo'&&r.parentId===currentFolder).sort((a,b)=>a.createdAt.localeCompare(b.createdAt))}
 async function renderGallery(){
  if(!gallery)return;
@@ -353,9 +361,7 @@ async function renderGallery(){
   }));
   if(generation!==galleryRenderGeneration||gallery!==display||galleryList[galleryIndex]?.id!==r.id)return;
   const available=display.querySelector('.gallery-content');
-  const density=Math.min(2,window.devicePixelRatio||1);
-  const maxW=Math.max(1,(available.clientWidth||500)*density);
-  const maxH=Math.max(1,(available.clientHeight||650)*density);
+  // Rendering uses a viewport-sized canvas instead of a downsized bitmap.
   // Measure the full annotated workspace using the actual inset/caption renderer.
   let minX=0,minY=0,maxX=image.naturalWidth,maxY=image.naturalHeight;
   const measure=canvas.getContext('2d'),previousView=view,previousPhoto=photoSize,previousExport=window.__exportingAnnotations;
@@ -375,29 +381,42 @@ async function renderGallery(){
   }finally{view=previousView;photoSize=previousPhoto;window.__exportingAnnotations=previousExport}
   const margin=38;
   const workspaceW=maxX-minX+2*margin,workspaceH=maxY-minY+2*margin;
-  const scale=Math.min(maxW/workspaceW,maxH/workspaceH,2);
-  const width=Math.max(1,Math.round(workspaceW*scale));
-  const height=Math.max(1,Math.round(workspaceH*scale));
-  canvas.width=width;canvas.height=height;
-  canvas.style.width=(width/density)+'px';canvas.style.height=(height/density)+'px';
+  // Never resample already-tiny text and lines: draw annotations directly
+  // in screen pixels while geometry continues to use worldToScreen().
+  display.__drawGallery=()=>{
+   if(gallery!==display||galleryList[galleryIndex]?.id!==r.id)return;
+   const w=Math.max(1,available.clientWidth),h=Math.max(1,available.clientHeight);
+   const density=Math.min(2,Math.max(1,window.devicePixelRatio||1));
+   const pixelW=Math.max(1,Math.round(w*density)),pixelH=Math.max(1,Math.round(h*density));
+   if(canvas.width!==pixelW)canvas.width=pixelW;
+   if(canvas.height!==pixelH)canvas.height=pixelH;
+   canvas.style.width=w+'px';canvas.style.height=h+'px';
+   const c=canvas.getContext('2d');
+   c.setTransform(density,0,0,density,0,0);
+   c.imageSmoothingEnabled=true;c.imageSmoothingQuality='high';
+   c.fillStyle='#292a2f';c.fillRect(0,0,w,h);
+   const fit=Math.min(w/workspaceW,h/workspaceH);
+   const zoom=display.__galleryZoom?.()||1,pan=display.__galleryPan?.()||{x:0,y:0};
+   const startX=(w-workspaceW*fit)/2+(margin-minX)*fit;
+   const startY=(h-workspaceH*fit)/2+(margin-minY)*fit;
+   const dx=w/2+(startX-w/2)*zoom+pan.x;
+   const dy=h/2+(startY-h/2)*zoom+pan.y,s=fit*zoom;
+   c.drawImage(image,dx,dy,image.naturalWidth*s,image.naturalHeight*s);
+   const oldCtx=ctx,oldView=view,oldCurrent=current,oldPhoto=photoSize,oldSelected=selected;
+   const oldExport=window.__exportingAnnotations;
+   try{
+    ctx=c;view={zoom:s,dx,dy};current=r;
+    photoSize={w:image.naturalWidth,h:image.naturalHeight};
+    selected=null;window.__exportingAnnotations=true;
+    for(const item of r.items||[])drawItem(c,item);
+   }finally{
+    ctx=oldCtx;view=oldView;current=oldCurrent;
+    photoSize=oldPhoto;selected=oldSelected;window.__exportingAnnotations=oldExport;
+   }
+  };
+  display.__galleryExtent=()=>({w:workspaceW,h:workspaceH});
   display.__updateGalleryZoom?.();
-  canvas.dataset.galleryViewport=available.clientWidth+'x'+available.clientHeight;
-  const c=canvas.getContext('2d');
-  c.fillStyle='#292a2f';c.fillRect(0,0,width,height);
-  const shiftX=(margin-minX)*scale,shiftY=(margin-minY)*scale;
-  c.drawImage(image,shiftX,shiftY,image.naturalWidth*scale,image.naturalHeight*scale);
-  const oldCtx=ctx,oldView=view,oldCurrent=current,oldPhoto=photoSize,oldSelected=selected;
-  const oldExport=window.__exportingAnnotations;
-  try{
-   c.save();c.translate(shiftX,shiftY);c.scale(scale,scale);
-   ctx=c;view={zoom:1,dx:0,dy:0};
-   current=r;photoSize={w:image.naturalWidth,h:image.naturalHeight};
-   selected=null;window.__exportingAnnotations=true;
-   for(const item of r.items||[])drawItem(c,item);
-  }finally{
-   c.restore();ctx=oldCtx;view=oldView;current=oldCurrent;photoSize=oldPhoto;selected=oldSelected;
-   window.__exportingAnnotations=oldExport;
-  }
+  display.__drawGallery();
  }catch(err){notify('Fotografii v galerii se nepodařilo zobrazit');}
 }
 let galleryResizeFrame=null;
@@ -419,12 +438,17 @@ function openGallery(index,records=null){
  });
  const image=gallery.querySelector('.gallery-img');
  let galleryZoom=1,galleryTx=0,galleryTy=0,pinch=null,pan=null;
+ gallery.__galleryZoom=()=>galleryZoom;
+ gallery.__galleryPan=()=>({x:galleryTx,y:galleryTy});
  const updateZoom=()=>{
-  const viewport=gallery?.querySelector('.gallery-content');if(!viewport)return;
-  const limitX=Math.max(0,(image.offsetWidth*galleryZoom-viewport.clientWidth)/2);
-  const limitY=Math.max(0,(image.offsetHeight*galleryZoom-viewport.clientHeight)/2);
-  galleryTx=Math.max(-limitX,Math.min(limitX,galleryTx));galleryTy=Math.max(-limitY,Math.min(limitY,galleryTy));
-  image.style.transform='translate('+galleryTx+'px,'+galleryTy+'px) scale('+galleryZoom+')';
+  const viewport=gallery?.querySelector('.gallery-content'),extent=gallery?.__galleryExtent?.();
+  if(!viewport||!extent)return;
+  const fit=Math.min(viewport.clientWidth/extent.w,viewport.clientHeight/extent.h);
+  const limitX=Math.max(0,(extent.w*fit*galleryZoom-viewport.clientWidth)/2);
+  const limitY=Math.max(0,(extent.h*fit*galleryZoom-viewport.clientHeight)/2);
+  galleryTx=Math.max(-limitX,Math.min(limitX,galleryTx));
+  galleryTy=Math.max(-limitY,Math.min(limitY,galleryTy));
+  scheduleGalleryFrame();
  };
  gallery.__updateGalleryZoom=updateZoom;
  const resetZoom=()=>{galleryZoom=1;galleryTx=0;galleryTy=0;updateZoom()};
@@ -436,8 +460,10 @@ function openGallery(index,records=null){
  };
  image.addEventListener('touchstart',e=>{
   if(e.touches.length===2){
-   const rect=image.getBoundingClientRect(),mid={x:(e.touches[0].clientX+e.touches[1].clientX)/2,y:(e.touches[0].clientY+e.touches[1].clientY)/2};
-   pinch={distance:distance(e.touches[0],e.touches[1]),scale:galleryZoom,tx:galleryTx,ty:galleryTy,mid,cx:rect.x+rect.width/2-galleryTx,cy:rect.y+rect.height/2-galleryTy};
+   const rect=gallery.querySelector('.gallery-content').getBoundingClientRect();
+   const mid={x:(e.touches[0].clientX+e.touches[1].clientX)/2-rect.left-rect.width/2,
+    y:(e.touches[0].clientY+e.touches[1].clientY)/2-rect.top-rect.height/2};
+   pinch={distance:distance(e.touches[0],e.touches[1]),scale:galleryZoom,tx:galleryTx,ty:galleryTy,mid};
    galleryStart=null;pan=null;
   }else if(e.touches.length===1){
    const t=e.touches[0];
@@ -449,9 +475,11 @@ function openGallery(index,records=null){
   if(e.touches.length===2&&pinch){
    e.preventDefault();
    galleryZoom=Math.max(1,Math.min(5,pinch.scale*distance(e.touches[0],e.touches[1])/Math.max(1,pinch.distance)));
-   const factor=galleryZoom/pinch.scale,mx=(e.touches[0].clientX+e.touches[1].clientX)/2,my=(e.touches[0].clientY+e.touches[1].clientY)/2;
-   galleryTx=mx-pinch.cx-(pinch.mid.x-pinch.cx-pinch.tx)*factor;
-   galleryTy=my-pinch.cy-(pinch.mid.y-pinch.cy-pinch.ty)*factor;
+   const rect=gallery.querySelector('.gallery-content').getBoundingClientRect();
+   const mx=(e.touches[0].clientX+e.touches[1].clientX)/2-rect.left-rect.width/2;
+   const my=(e.touches[0].clientY+e.touches[1].clientY)/2-rect.top-rect.height/2;
+   galleryTx=mx-(pinch.mid.x-pinch.tx)*galleryZoom/pinch.scale;
+   galleryTy=my-(pinch.mid.y-pinch.ty)*galleryZoom/pinch.scale;
    if(galleryZoom===1){galleryTx=0;galleryTy=0}
    updateZoom();
   }else if(e.touches.length===1&&pan){
@@ -475,7 +503,7 @@ function openGallery(index,records=null){
 
  renderGallery();
 }
-function closeGallery(){gallery?.remove();gallery=null}
+function closeGallery(){gallery?.remove();gallery=null;if(galleryFrame!==null){cancelAnimationFrame(galleryFrame);galleryFrame=null}}
 function renderEditorNavigation(){
  let nav=$('photoNavigation');
  if(!nav){nav=document.createElement('div');nav.id='photoNavigation';nav.innerHTML='<button id="galleryMode" title="Prohlížet fotografie"><img class="editor-gallery-thumbnail" alt="" draggable="false"></button>';const head=document.querySelector('.editor-head');head.insertBefore(nav,$('editorTopMenu'))}
