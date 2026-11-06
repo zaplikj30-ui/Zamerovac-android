@@ -130,6 +130,7 @@ jobs:
           trap 'kill "$SERVER_PID"' EXIT
           export CHROMIUM_PATH="$(node -p "require('playwright').chromium.executablePath()")"
           node tools/e2e/drawing.cjs
+          node tools/e2e/gallery-visual.cjs
           node tools/e2e/workflows.cjs
           node tools/e2e/interactions.cjs
           node tools/e2e/zoom-grid.cjs
