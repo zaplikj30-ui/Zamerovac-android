@@ -27,8 +27,17 @@ Rozšířeny `tests/help_guide.js`, `tests/release_history.js` a registr `qa/cov
 ## Skutečné výsledky
 
 První cílený běh: **22 testů PASS / 0 failures / 0 errors / 0 skipped**, z toho 7 zděděných původních TLS metod.
-Následující plná nativní regrese zahrnuje ještě přidaný hraniční ZIP roundtrip a streaming budget.
-Výsledky plné regrese a browser kontrol se doplní po jejich dokončení; jejich přítomnost v registru není tvrzení PASS.
+Plná místní nativní regrese: **256 testů, 0 failures, 0 errors, 0 skipped; BUILD SUCCESSFUL** (včetně hraničního ZIP roundtripu a streaming budget).
+Původní sada má 232 metod; 24 dalších spuštěných metod zahrnuje šest původních reprodukcí, jedenáct nových metod a sedm zděděných opakovaných TLS metod.
+
+- **25 Node skriptů PASS**, syntaxe všech assets/*.js a sync/*.js PASS; QA40 PASS.
+- **47 Python testů PASS, 0 skip** s JDK17. Původní statická kontrola přesunutých názvů byla upravená na společný kontrakt; runtime původní regrese zůstávají.
+- **58 praktických Chromium scénářů PASS, 0 FAIL**, včetně nové navigace do opravené hierarchie, označení a reopen; přesné kóty/pixely/Undo/Redo/souběžné formuláře/poznámky/importy/účty/nápověda beze ztráty.
+- **7 samostatných browser kontrol PASS** podle quick-check.yml.
+- **Drive Gradle validátor PASS**, platná/disabled konfigurace a **19 negativních konfigurací**, beze změny registrace nebo přístupu k účtu.
+- **Externí parser/render PDF PASS** pro customer-pdf-1.zip, customer-pdf-3.zip a customer-pdf-multipage.zip.
+
+Implementační checkpoint `0bd81f5` je uložený na GitHubu. CI po opravě se ověřuje; přesné finální odkazy budou doplněné po doběhnutí.
 
 Příkazy (Gradle 8.10.2, JDK17, SDK35, Robolectric4.16.1; pouze syntetická data):
 

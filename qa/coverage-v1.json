@@ -1254,7 +1254,9 @@
         "app/src/main/java/cz/zamerovac/app/BackupImporter.java",
         "app/src/main/java/cz/zamerovac/app/SyncPeerRegistry.java",
         "app/src/main/java/cz/zamerovac/app/TrashPurger.java",
-        "app/src/main/assets/app.js"
+        "app/src/main/assets/app.js",
+        "app/src/main/java/cz/zamerovac/app/PeerSnapshot.java",
+        "sync/protocol-v2.js"
       ],
       "tests": [
         {
@@ -1272,6 +1274,10 @@
         {
           "path": "tests/audit39_hierarchy.js",
           "layer": "node"
+        },
+        {
+          "path": "tools/e2e/peer-sync.cjs",
+          "layer": "chromium"
         }
       ],
       "coverage": "runtime-partial",

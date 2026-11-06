@@ -487,4 +487,4 @@ Závěrečná předávka: implementace i podklady jsou připravené k nezávisl�
 
 ## Opravy nezávislého auditu 6. 11. 2026 – A39-01 až A39-06
 
-Navázáno na fefb46f bez souběžné funkční změny. Původní šestice reprodukcí je uložená v a83c2da, CI42176445230 má přesně šest očekávaných failures. Cílené opravy limitů UTF-8/ZIP, revokace handshake, cyklů Java/JS, přípravy ZIP mimo DB lock a referencí médií jsou implementované. První cílený běh22testů PASS, plná regrese a hraniční roundtrip probíhají. [Důkazy a otevřené fyzické brány](audit39-fixes.md). Žádná APK/merge/Google registrace.
+Navázáno na fefb46f bez souběžné funkční změny. Původní šestice reprodukcí je uložená v a83c2da, CI42176445230 má přesně šest očekávaných failures. Cílené opravy limitů UTF-8/ZIP, revokace handshake, cyklů Java/JS, přípravy ZIP mimo DB lock a referencí médií jsou implementované. Checkpoint0bd81f5: plná místní regrese256native/25Node/47Python bez skipů,58Chromium+7browser, Gradle19negativních konfigurací a3PDF PASS. GitHub CI se vyhodnocuje. [Důkazy a otevřené fyzické brány](audit39-fixes.md). Žádná APK/merge/Google registrace.
