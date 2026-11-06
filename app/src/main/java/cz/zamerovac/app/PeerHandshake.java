@@ -21,6 +21,7 @@ final class PeerHandshake {
     }
     static Peer negotiate(SSLSocket socket,String localId,String localName,SyncTls identity,SyncPeerRegistry registry,BooleanSupplier pairing,Approval approval,String expectedPeer)throws Exception{
         if(expectedPeer!=null&&!DeviceIdentity.valid(expectedPeer))throw new IOException("Neplatná očekávaná identita zařízení");
+        long trustRevision=registry.revision();
         if(!DeviceIdentity.valid(localId))throw new IOException("Neplatná místní identita");socket.setSoTimeout(15000);SyncTls.secure(socket);socket.startHandshake();
         DataInputStream in=new DataInputStream(socket.getInputStream());DataOutputStream out=new DataOutputStream(socket.getOutputStream());String localNonce=PeerWire.nonce();String fingerprint=SyncTls.fingerprint((X509Certificate)socket.getSession().getPeerCertificates()[0]);
         JSONObject hello=new JSONObject().put("type","hello").put("version",2).put("id",localId).put("name",localName).put("nonce",localNonce).put("paired",registry.hasFingerprint(fingerprint));
@@ -37,9 +38,11 @@ final class PeerHandshake {
         if(needsApproval){if(!pairing.getAsBoolean())throw new IOException("Párování není zapnuté");accepted=approval.approve(new Request(id,name,code));}
         PeerWire.write(out,new JSONObject().put("type","approval").put("accepted",accepted),PeerWire.MAX_HELLO);socket.setSoTimeout(130000);
         JSONObject other=PeerWire.read(in,PeerWire.MAX_HELLO);if(!"approval".equals(other.optString("type"))||!Boolean.TRUE.equals(other.opt("accepted"))||!accepted)throw new IOException("Párování nebylo potvrzeno na obou zařízeních");
-        registry.approve(id,fingerprint,name);registry.rememberCertificate(id,(X509Certificate)socket.getSession().getPeerCertificates()[0]);
+        if(needsApproval&&!pairing.getAsBoolean())throw new IOException("Párování již není zapnuté");
+        registry.confirmHandshake(id,fingerprint,name,trustRevision,known,(X509Certificate)socket.getSession().getPeerCertificates()[0]);
         PeerWire.write(out,new JSONObject().put("type","committed").put("accepted",true),PeerWire.MAX_HELLO);
         JSONObject committed=PeerWire.read(in,PeerWire.MAX_HELLO);if(!"committed".equals(committed.optString("type"))||!Boolean.TRUE.equals(committed.opt("accepted")))throw new IOException("Protistrana nepotvrdila uložení párování");
+        registry.checkHandshake(id,fingerprint,trustRevision,true);
         socket.setSoTimeout(15000);return new Peer(id,name,fingerprint);
     }
 }

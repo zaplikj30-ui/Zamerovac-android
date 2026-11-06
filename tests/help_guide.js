@@ -75,3 +75,5 @@ assert(src.includes('další ověřenou kopii'),'Backup repair and original pres
 assert(src.includes('povolený testovací účet'),'Google Testing restriction must be explained without exposing the account');
 
 assert(src.includes('Registrace a konfigurace této testovací verze jsou propojené'),'Registered preview setup must no longer be described as missing');
+
+finds('20 MiB','backup');finds('20 000','backup');finds('časový limit','backup');finds('OPRAVENÝ CYKLUS SLOŽEK','cloud');finds('dokončované spojení','cloud');finds('přílohy historie','trash');

@@ -1240,6 +1240,48 @@
         "Project ID/package/SHA1 a Console registrace jsou potvrzené uživatelským screenshotem v #39/6673933539; statická/build kontrola nenahrazuje živé Google ověření.",
         "Skutečný Google účet/GMS souhlas/Drive přenos a obnova NOT RUN; report configured=true znamená konfiguraci, nikoli udělené OAuth oprávnění."
       ]
+    },
+    {
+      "id": "audit39-data-safety",
+      "issues": [
+        28,
+        39,
+        42
+      ],
+      "sources": [
+        "app/src/main/java/cz/zamerovac/app/ArchiveLimits.java",
+        "app/src/main/java/cz/zamerovac/app/FolderHierarchy.java",
+        "app/src/main/java/cz/zamerovac/app/BackupImporter.java",
+        "app/src/main/java/cz/zamerovac/app/SyncPeerRegistry.java",
+        "app/src/main/java/cz/zamerovac/app/TrashPurger.java",
+        "app/src/main/assets/app.js"
+      ],
+      "tests": [
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/Audit39FindingsTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/Audit39HandshakeTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/Audit39SafetyTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "tests/audit39_hierarchy.js",
+          "layer": "node"
+        }
+      ],
+      "coverage": "runtime-partial",
+      "positive": "A39-01–06: původní reprodukce, přesné UTF-8 hranice, společné Java/JS fixtures hierarchie a konvergence, souběžná ZIP obnova, platné nové párování, sdílená hlasová/historická média.",
+      "negative": "Odmítnutý nadlimitní zápis zachová primary/backup; revokace během approval i commit a plní workers; cyklus nevytvoří další kopie; stalled provider/failed commit bez publikace a orphan médií; limity ZIP položek/metadat/celkových bajtů; samostatná immutable historie přežije purge.",
+      "limits": [
+        "Výsledky a přesné příkazy: docs/audit39-fixes.md a issue #28; přítomnost testu sama není PASS.",
+        "Objem přes 2 GiB se ověřuje předběžnou kontrolou skutečného sparse souboru a bajtovým rozpočtem, nikoli přenosem 2 GiB.",
+        "Robolectric/provider doubles a JVM TLS neověřují rádio, Keystore, skutečný power-cut, OEM výkon ani živý OAuth/Drive."
+      ]
     }
   ],
   "manualGates": [

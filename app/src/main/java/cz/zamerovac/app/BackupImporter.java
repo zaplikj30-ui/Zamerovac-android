@@ -17,47 +17,70 @@ import java.util.zip.ZipInputStream;
  * Zachovává původní fotky i všechny editovatelné kóty/skici.
  */
 final class BackupImporter {
-    private static final long LIMIT=2L*1024*1024*1024;
-    private static final int MAX_ENTRIES=20000;
-    private static final int MAX_JSON=20*1024*1024;
     private BackupImporter() {}
+    /** Prepare/copy outside the DB lock; append to the latest state only at the durable commit. */
+    static Result restoreZip(Context ctx,Uri uri,SharedPreferences prefs)throws Exception {
+        return restoreZip(ctx,uri,prefs,ProviderIo.SHARED);
+    }
+    static Result restoreZip(Context ctx,Uri uri,SharedPreferences prefs,ProviderIo io)throws Exception {
+        Result staged=importZip(ctx,uri,new JSONObject().put("schema",1).put("records",new JSONArray()),prefs,io);
+        try{
+            if(Thread.currentThread().isInterrupted())throw new InterruptedIOException("Obnova byla zrušena");
+            synchronized(TrashPurger.LOCK){
+                if(Thread.currentThread().isInterrupted())throw new InterruptedIOException("Obnova byla zrušena");
+                String text=LocalDatabase.read(ctx.getFilesDir());
+                JSONObject latest=text.isEmpty()?new JSONObject().put("schema",1).put("records",new JSONArray()):new JSONObject(text);
+                Result result=staged.appendTo(latest);
+                LocalDatabase.write(ctx.getFilesDir(),result.data.toString());return result;
+            }
+        }catch(Exception failure){staged.rollback(ctx,prefs);throw failure;}
+    }
     static Result importZip(Context ctx, Uri uri, JSONObject existing, SharedPreferences prefs)throws Exception {
+        return importZip(ctx,uri,existing,prefs,ProviderIo.SHARED);
+    }
+    private static Result importZip(Context ctx,Uri uri,JSONObject existing,SharedPreferences prefs,ProviderIo io)throws Exception {
         File tempDir=new File(ctx.getCacheDir(),"restore-"+UUID.randomUUID());
         if(!tempDir.mkdirs())throw new IOException("Nelze vytvořit dočasnou složku");
-        try{return read(ctx,uri,existing,prefs,tempDir);}
+        try{return read(ctx,uri,existing,prefs,tempDir,io);}
         finally{deleteDir(tempDir);}
     }
     static final class Result {
         final JSONObject data; final int recordCount; final Set<String> createdMedia;
         Result(JSONObject d,int n,Set<String> files){data=d;recordCount=n;createdMedia=files;}
+        Result appendTo(JSONObject latest)throws Exception{
+            JSONObject merged=new JSONObject(latest.toString());JSONArray records=merged.getJSONArray("records"),added=data.getJSONArray("records");
+            for(int i=0;i<added.length();i++)records.put(added.getJSONObject(i));
+            LocalDatabase.validate(merged.toString());return new Result(merged,recordCount,createdMedia);
+        }
         void rollback(Context context,SharedPreferences prefs){SharedPreferences.Editor settings=prefs.edit();for(String id:createdMedia){new File(context.getFilesDir(),"media/"+id).delete();settings.remove("mime-"+id).remove("name-"+id);}settings.apply();}
     }
-    private static Result read(Context context,Uri uri,JSONObject existing,SharedPreferences prefs,File tempDir)throws Exception{
+    private static Result read(Context context,Uri uri,JSONObject existing,SharedPreferences prefs,File tempDir,ProviderIo io)throws Exception{
         JSONObject meta=new JSONObject(),manifest=null,checksums=new JSONObject();Set<String> names=new HashSet<>();
         byte[] json=null;
         HashMap<String,File> incomingMedia=new HashMap<>();
         long total=0;int count=0;
-        try(InputStream input=context.getContentResolver().openInputStream(uri)){
-            if(input==null)throw new IOException("Soubor nelze otevřít");
+        InputStream opened=io.call(()->context.getContentResolver().openInputStream(uri),null);
+        if(opened==null)throw new IOException("Soubor nelze otevřít");
+        try(InputStream input=io.input(opened)){
             try(ZipInputStream zip=new ZipInputStream(input)){
                 ZipEntry entry;byte[] buffer=new byte[64*1024];
                 while((entry=zip.getNextEntry())!=null){
-                    if(++count>MAX_ENTRIES)throw new IOException("Příliš mnoho souborů v záloze");
+                    ArchiveLimits.entries(++count);
                     String name=entry.getName();
                     boolean jsonFile="projects.json".equals(name)||"media-meta.json".equals(name)||"manifest.json".equals(name);
                     String mediaId=name.startsWith("media/")?name.substring(6):"";
                     boolean mediaFile=name.matches("media/[a-zA-Z0-9_-]{3,120}");
                     if(!names.add(name))throw new IOException("Duplicitní soubor v záloze");
-                    if(!jsonFile&&!mediaFile){int n;while((n=zip.read(buffer))!=-1){total+=n;if(total>LIMIT)throw new IOException("Záloha překračuje limit 2 GB");}zip.closeEntry();continue;}
+                    if(!jsonFile&&!mediaFile){int n;while((n=zip.read(buffer))!=-1){total=ArchiveLimits.add(total,n);}zip.closeEntry();continue;}
                     ByteArrayOutputStream small=jsonFile?new ByteArrayOutputStream():null;
                     File dest=mediaFile?new File(tempDir,mediaId):null;
                     java.security.MessageDigest digest=ArchiveIntegrity.digest();long size=0;
                     try(OutputStream out=jsonFile?small:new FileOutputStream(dest)){
                         int n;long one=0;
                         while((n=zip.read(buffer))!=-1){
-                            one+=n;total+=n;
-                            if(total>LIMIT)throw new IOException("Záloha překračuje limit 2 GB");
-                            if(jsonFile&&one>MAX_JSON)throw new IOException("Databáze v ZIP je příliš velká");
+                            if(Thread.currentThread().isInterrupted())throw new InterruptedIOException("Obnova byla zrušena");
+                            one+=n;total=ArchiveLimits.add(total,n);
+                            if(jsonFile)ArchiveLimits.json(one);
                             out.write(buffer,0,n);digest.update(buffer,0,n);size+=n;
                         }
                     }
@@ -133,7 +156,7 @@ final class BackupImporter {
             try(InputStream in=new FileInputStream(incomingMedia.get(pair.getKey()));
                 FileOutputStream out=new FileOutputStream(targetMedia)){
                 byte[] buf=new byte[64*1024];int n;
-                while((n=in.read(buf))!=-1)out.write(buf,0,n);out.getFD().sync();
+                while((n=in.read(buf))!=-1){if(Thread.currentThread().isInterrupted())throw new InterruptedIOException("Obnova byla zrušena");out.write(buf,0,n);}out.getFD().sync();
             }
             JSONObject info=meta.optJSONObject(pair.getKey());
             settings.putString("mime-"+pair.getValue(),info!=null?info.optString("mime","application/octet-stream"):"application/octet-stream");
@@ -144,6 +167,7 @@ final class BackupImporter {
         root.put("syncClock",CausalClock.advance(new JSONObject(),DeviceIdentity.get(context.getNoBackupFilesDir())));
         target.put(root);
         for(JSONObject rec:newRecords)target.put(rec);
+        FolderHierarchy.repair(target);
         return new Result(result,newRecords.size(),created);
     }
     static String restoredTitle(JSONArray records){

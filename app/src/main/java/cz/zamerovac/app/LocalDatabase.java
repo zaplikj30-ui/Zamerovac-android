@@ -8,11 +8,12 @@ import java.util.*;
 
 /** One durable writer shared by UI, restore and sync. The lock protects LOCAL I/O only. */
 final class LocalDatabase {
+    static final int MAX_BYTES=20*1024*1024;
     private static final java.util.concurrent.ConcurrentHashMap<String,java.util.concurrent.atomic.AtomicLong> GENERATIONS=new java.util.concurrent.ConcurrentHashMap<>();
     static long generation(File home){return GENERATIONS.computeIfAbsent(home.getAbsolutePath(),key->new java.util.concurrent.atomic.AtomicLong()).get();}
     private static void changed(File home){GENERATIONS.computeIfAbsent(home.getAbsolutePath(),key->new java.util.concurrent.atomic.AtomicLong()).incrementAndGet();}
     static void validate(String text)throws IOException {
-        if(text==null||text.length()>20*1024*1024)throw new IOException("Databáze je příliš velká");
+        if(text==null||text.length()>MAX_BYTES||text.getBytes(StandardCharsets.UTF_8).length>MAX_BYTES)throw new IOException("Databáze je příliš velká");
         JsonInput.check(text);
         try{JSONObject db=new JSONObject(text);JsonInput.unicode(db);if(db.optInt("schema")!=1||db.optJSONArray("records")==null)throw new IOException("Neplatná databáze");
             Set<String> ids=new HashSet<>();JSONArray records=db.getJSONArray("records");
@@ -22,7 +23,7 @@ final class LocalDatabase {
         }catch(JSONException e){throw new IOException("Neplatná databáze",e);}
     }
     static String readFile(File file)throws IOException {
-        if(!file.isFile()||file.length()>20L*1024*1024)throw new IOException("Databáze není dostupná");
+        if(!file.isFile()||file.length()>MAX_BYTES)throw new IOException("Databáze není dostupná");
         String text=JsonInput.decode(Files.readAllBytes(file.toPath()));validate(text);return text;
     }
     static String read(File home)throws IOException {

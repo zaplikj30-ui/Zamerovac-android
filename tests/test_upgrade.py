@@ -44,10 +44,12 @@ class BigUpdateSmokeTest(unittest.TestCase):
         self.assertIn('new ZipEntry("media/"+id)', main)
         self.assertIn('UUID.randomUUID()', restore)
         self.assertIn('restoredTitle(records)', restore)
-        self.assertIn('MAX_ENTRIES', restore)
-        self.assertIn('collectNestedMedia', main)
+        self.assertIn('ArchiveLimits.entries(++count)', restore)
+        self.assertIn('MAX_ENTRIES=20000', (JAVA / 'ArchiveLimits.java').read_text(encoding='utf-8'))
+        self.assertIn('PeerSnapshot.references(record)', main)
         self.assertIn('rewriteAll(rec,mediaIds,0)', restore)
-        self.assertIn('writeDb(restored.data.toString())', main)
+        self.assertIn('BackupImporter.restoreZip(this,origin,settings)', main)
+        self.assertIn('LocalDatabase.write(ctx.getFilesDir(),result.data.toString())', restore)
 
     def test_photo_notes_contain_editable_detail(self):
         editor = (ASSETS / 'editor.js').read_text(encoding='utf-8')

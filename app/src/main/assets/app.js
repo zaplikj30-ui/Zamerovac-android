@@ -18,7 +18,7 @@ state.prefs={...initialPrefs,...(state.prefs||{})};
 const prefs=state.prefs;
 let sortAsc=true;let currentFolder=null,screen='browser',current=null,noteActive=null,mode='dimension',selected=null,stagedMediaRequest=null,editStack=[],redoStack=[],lineDraft=[],stageImg=null,photoSize={w:1400,h:900},view={zoom:1,dx:0,dy:0},drag=null,pointers=new Map(),magnifierPoint=null,stageCanvas=$('drawCanvas'),ctx=stageCanvas.getContext('2d'),loupeCtx=$('loupe').getContext('2d'),autoSaving=false;
 const stamp=()=>new Date().toISOString();
-function touch(rec){rec.syncClock=advanceSyncClock(rec.syncClock||{});rec.rev=uid();rec.updatedAt=stamp();}
+function touch(rec){rec.syncClock=advanceSyncClock(rec.syncClock||{});rec.rev=uid();rec.updatedAt=stamp();delete rec.hierarchyConflict;}
 function checkedSyncClock(value){
  if(!value||typeof value!=='object'||Array.isArray(value)||Object.keys(value).length>1024)throw new Error('Neplatná synchronizační revize');
  const next={};for(const [id,count] of Object.entries(value)){if(!/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/.test(id)||!Number.isSafeInteger(count)||count<1)throw new Error('Neplatný čítač revize');next[id]=count}return next;
@@ -33,6 +33,25 @@ function canonicalSavedValue(value){
  return JSON.stringify(canonical(value));
 }
 function sameSavedValue(a,b){return canonicalSavedValue(a)===canonicalSavedValue(b)}
+function sameHierarchyIntent(repaired,original){
+ if(!repaired?.hierarchyConflict||repaired.parentId!==null||typeof repaired.hierarchyConflict.parentId!=='string')return false;
+ const intent={...repaired,parentId:repaired.hierarchyConflict.parentId};delete intent.hierarchyConflict;return sameSavedValue(intent,original);
+}
+function repairFolderHierarchy(records){
+ const positions=new Map(records.map((record,index)=>[record.id,index])),done=new Set();
+ for(const start of [...positions.keys()].sort()){
+  const path=[],seen=new Map();let at=start;
+  while(positions.has(at)&&!done.has(at)){
+   if(seen.has(at)){
+    const cut=path.slice(seen.get(at)).sort()[0],index=positions.get(cut),record=records[index];
+    records[index]={...record,hierarchyConflict:{parentId:record.parentId},parentId:null};break;
+   }
+   seen.set(at,path.length);path.push(at);at=records[positions.get(at)].parentId;
+  }
+  for(const id of path)done.add(id);
+ }
+ return records;
+}
 function reconcileSavedState(base,local,remote){
  const old=new Map((base.records||[]).map(r=>[r.id,r])),ours=new Map(local.records.map(r=>[r.id,r]));
  const theirs=new Map(remote.records.map(r=>[r.id,r])),records=[];
@@ -56,6 +75,8 @@ function reconcileSavedState(base,local,remote){
   if(sameSavedValue(l,d)){if(l)records.push(l);continue}
   if(sameSavedValue(l,o)){if(d)records.push(d);continue}
   if(sameSavedValue(d,o)){if(l)records.push(l);continue}
+  if(sameHierarchyIntent(l,d)){records.push(l);continue}
+  if(sameHierarchyIntent(d,l)){records.push(d);continue}
   // Use the same deterministic winner and copy as native peer merge.
   if(l&&d&&native&&typeof Native.resolveSyncConflict==='function'){
    const result=JSON.parse(Native.resolveSyncConflict(JSON.stringify(l),JSON.stringify(d)));
@@ -68,7 +89,7 @@ function reconcileSavedState(base,local,remote){
    if(l&&d){const source=JSON.stringify([id,d.rev||'',d]);if(!conflicts.has(source)){records.push({...d,id:uid(),title:(d.title||'Položka')+' (konflikt synchronizace)',conflict:true,conflictSource:source});conflicts.add(source)}}
   }
  }
- return {...remote,...local,records,trashPurgedIds:[...purged],syncTombstones:tombstones,prefs};
+ return {...remote,...local,records:repairFolderHierarchy(records),trashPurgedIds:[...purged],syncTombstones:tombstones,prefs};
 }
 function applySavedState(next){
  state=next;state.prefs=prefs;
@@ -165,7 +186,7 @@ $('breadcrumbs').innerHTML=`<button class="crumb" data-nav="root">⌂ Domů</but
 $('breadcrumbs').querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>{currentFolder=b.dataset.nav==='root'?null:b.dataset.nav;showFolder()});
 if(dataLoadFailed){$('items').innerHTML='<div class="empty" role="alert">Uložené zakázky se nepodařilo načíst. Zápis je zablokovaný, původní soubory zůstávají beze změny. Aplikaci nemaž ani nevymazávej její data. Zavři ji a zkus otevřít znovu; pokud chyba trvá, požádej o pomoc s obnovou zálohy.</div>';return}
 let list=state.records.filter(r=>!r.deleted&&r.parentId===currentFolder).sort((a,b)=>(a.kind==='folder'?0:1)-(b.kind==='folder'?0:1)||(sortAsc?1:-1)*a.title.localeCompare(b.title,'cs'));
-$('items').innerHTML=list.length?list.map(r=>`<div class="entry" data-id="${escapeHtml(r.id)}">${browserEntryIcon(r)}<div class="entry-info"><div class="entry-title">${escapeHtml(r.title)}${(r.locked||window.isRecordLocked?.(r))?' <span class="entry-lock" title="Uzamčeno" aria-label="Uzamčeno">🔒</span>':''}</div><div class="entry-date">${r.photoTakenAt?'Pořízeno: '+escapeHtml(photoDateText(r.photoTakenAt)):dateText(r.updatedAt)}${r.conflict?' · KONFLIKTNÍ KOPIE':''}</div>${r.photoTakenAt||r.photoAddress?'<div class="entry-place" title="'+escapeHtml(photoAddressText(r))+'">📍 '+escapeHtml(photoAddressText(r))+'</div>':''}</div><button class="entry-more" data-more="${escapeHtml(r.id)}">⋮</button></div>`).join(''):`<div class="empty"><div class="big">▤</div>Zatím prázdné.<br>Pomocí ＋ vytvoříš složku, fotografii nebo poznámku.</div>`;
+$('items').innerHTML=list.length?list.map(r=>`<div class="entry" data-id="${escapeHtml(r.id)}">${browserEntryIcon(r)}<div class="entry-info"><div class="entry-title">${escapeHtml(r.title)}${(r.locked||window.isRecordLocked?.(r))?' <span class="entry-lock" title="Uzamčeno" aria-label="Uzamčeno">🔒</span>':''}</div><div class="entry-date">${r.photoTakenAt?'Pořízeno: '+escapeHtml(photoDateText(r.photoTakenAt)):dateText(r.updatedAt)}${r.hierarchyConflict?' · OPRAVENÝ CYKLUS SLOŽEK':r.conflict?' · KONFLIKTNÍ KOPIE':''}</div>${r.photoTakenAt||r.photoAddress?'<div class="entry-place" title="'+escapeHtml(photoAddressText(r))+'">📍 '+escapeHtml(photoAddressText(r))+'</div>':''}</div><button class="entry-more" data-more="${escapeHtml(r.id)}">⋮</button></div>`).join(''):`<div class="empty"><div class="big">▤</div>Zatím prázdné.<br>Pomocí ＋ vytvoříš složku, fotografii nebo poznámku.</div>`;
 $('items').querySelectorAll('.entry').forEach(el=>el.onclick=(e)=>{if(e.target.closest('[data-more]')){recordActions(el.dataset.id);return}openRecord(el.dataset.id)});
 $('items').querySelectorAll('.entry-thumb').forEach(img=>img.addEventListener('error',()=>{img.hidden=true;img.nextElementSibling.hidden=false},{once:true}));
 }
@@ -447,4 +468,4 @@ window.addEventListener('keydown',e=>{if(e.key==='Escape'){e.preventDefault();wi
 $('lineColor').value=prefs.color;
 showFolder();applyNativePrefs();
 
-window.ZamerovacPeerConflictCount=()=>state.records.filter(record=>record.conflict&&!record.deleted).length;
+window.ZamerovacPeerConflictCount=()=>state.records.filter(record=>(record.conflict||record.hierarchyConflict)&&!record.deleted).length;

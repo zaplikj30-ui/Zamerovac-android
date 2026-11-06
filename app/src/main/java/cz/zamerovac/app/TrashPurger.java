@@ -37,13 +37,6 @@ final class TrashPurger {
         else if(value instanceof JSONObject){JSONObject o=(JSONObject)value;Iterator<String> keys=o.keys();while(keys.hasNext())strings(o.get(keys.next()),found);}
         else if(value instanceof JSONArray){JSONArray a=(JSONArray)value;for(int i=0;i<a.length();i++)strings(a.get(i),found);}
     }
-    private static void media(Object value, Set<String> found) throws JSONException {
-        if(value instanceof JSONObject){
-            JSONObject o=(JSONObject)value;JSONArray a=o.optJSONArray("media");
-            if(a!=null)for(int i=0;i<a.length();i++){String id=a.optString(i);if(validId(id))found.add(id);}
-            Iterator<String> keys=o.keys();while(keys.hasNext())media(o.get(keys.next()),found);
-        }else if(value instanceof JSONArray){JSONArray a=(JSONArray)value;for(int i=0;i<a.length();i++)media(a.get(i),found);}
-    }
     private Set<String> pending() throws Exception {
         Set<String> ids=new TreeSet<>();AtomicFile file=new AtomicFile(pendingFile());
         if(!pendingFile().exists()&&!new File(pendingFile()+".bak").exists())return ids;
@@ -71,7 +64,7 @@ final class TrashPurger {
             JSONObject r=records.getJSONObject(i);
             if(ids.contains(r.getString("id"))){
                 if(!r.optBoolean("deleted"))throw new IOException("Položka již není v koši. Nic nebylo odstraněno.");
-                tombstones.put(r.getString("id"),CausalClock.advance(CausalClock.merge(CausalClock.clock(r),tombstones.optJSONObject(r.getString("id"))==null?new JSONObject():tombstones.getJSONObject(r.getString("id"))),DeviceIdentity.get(identityDirectory)));media(r,candidates);removed++;
+                tombstones.put(r.getString("id"),CausalClock.advance(CausalClock.merge(CausalClock.clock(r),tombstones.optJSONObject(r.getString("id"))==null?new JSONObject():tombstones.getJSONObject(r.getString("id"))),DeviceIdentity.get(identityDirectory)));candidates.addAll(PeerSnapshot.cleanupReferences(r));removed++;
             }else kept.put(r);
         }
         if(removed!=ids.size())throw new IOException("Obsah koše se změnil. Potvrď jej znovu.");

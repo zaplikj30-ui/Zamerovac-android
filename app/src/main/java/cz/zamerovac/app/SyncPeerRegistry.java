@@ -8,6 +8,19 @@ import java.util.*;
 /** Explicitly approved device-to-certificate bindings, outside Android Auto Backup. */
 final class SyncPeerRegistry {
     private static final Object LOCK=new Object();private final File target;
+    // Pending sockets belong to this process. A forget invalidates every pending approval,
+    // including one using another registry instance for the same installation.
+    private static final Map<String,Long> REVISIONS=new HashMap<>();
+    long revision(){synchronized(LOCK){return REVISIONS.getOrDefault(target.getAbsolutePath(),0L);}}
+    void confirmHandshake(String id,String fingerprint,String name,long revision,boolean known,java.security.cert.X509Certificate certificate)throws Exception{synchronized(LOCK){
+        checkHandshake(id,fingerprint,revision,false);
+        if(known&&!isTrusted(id,fingerprint))throw new IOException("Párování bylo odebráno");
+        if(!known)approve(id,fingerprint,name);
+        rememberCertificate(id,certificate);
+    }}
+    void checkHandshake(String id,String fingerprint,long revision,boolean requireTrusted)throws Exception{synchronized(LOCK){
+        if(revision()!=revision||(requireTrusted&&!isTrusted(id,fingerprint)))throw new IOException("Párování bylo během spojování odebráno. Spusť nové výslovné párování.");
+    }}
     SyncPeerRegistry(File noBackup){target=new File(noBackup,"sync-peers-v2.json");}
     private JSONObject load()throws Exception{
         AtomicFile file=new AtomicFile(target);if(!target.exists()&&!new File(target+".bak").exists())return new JSONObject().put("version",2).put("peers",new JSONObject());
@@ -24,7 +37,7 @@ final class SyncPeerRegistry {
     boolean hasFingerprint(String fingerprint)throws Exception{synchronized(LOCK){JSONObject peers=load().getJSONObject("peers");for(Iterator<String> it=peers.keys();it.hasNext();)if(fingerprint.equals(peers.getJSONObject(it.next()).getString("fingerprint")))return true;return false;}}
     boolean isTrusted(String id,String fingerprint)throws Exception{synchronized(LOCK){if(!DeviceIdentity.valid(id)||!fingerprint.matches("[0-9a-f]{64}"))throw new IOException("Neplatná identita zařízení");JSONObject peers=load().getJSONObject("peers");JSONObject known=peers.optJSONObject(id);if(known!=null&&!fingerprint.equals(known.getString("fingerprint")))throw new IOException("Identita zařízení se změnila. Nejdříve odeber staré párování.");for(Iterator<String> it=peers.keys();it.hasNext();){String other=it.next();if(!other.equals(id)&&fingerprint.equals(peers.getJSONObject(other).getString("fingerprint")))throw new IOException("Certifikát patří jinému zařízení");}return known!=null;}}
     void approve(String id,String fingerprint,String name)throws Exception{synchronized(LOCK){if(isTrusted(id,fingerprint))return;JSONObject data=load(),peers=data.getJSONObject("peers");if(peers.length()>=1024)throw new IOException("Seznam zařízení je plný");if(name==null||name.length()>80||name.matches(".*[\\p{Cntrl}].*"))throw new IOException("Neplatný název zařízení");peers.put(id,new JSONObject().put("fingerprint",fingerprint).put("name",name).put("pairedAt",java.time.Instant.now().toString()));write(data);}}
-    void forget(String id)throws Exception{synchronized(LOCK){if(!DeviceIdentity.valid(id))throw new IOException("Neplatná identita zařízení");JSONObject data=load();data.getJSONObject("peers").remove(id);write(data);}}
+    void forget(String id)throws Exception{synchronized(LOCK){if(!DeviceIdentity.valid(id))throw new IOException("Neplatná identita zařízení");REVISIONS.put(target.getAbsolutePath(),revision()+1);JSONObject data=load();data.getJSONObject("peers").remove(id);write(data);}}
     /** An address is only a private routing hint. It can never approve a certificate. */
     void rememberNearby(String id,String fingerprint,String address)throws Exception{synchronized(LOCK){if(!PeerWifiDirect.validAddress(address))return;if(!isTrusted(id,fingerprint))throw new IOException("Zařízení už není spárované");String normalized=address.toLowerCase(Locale.ROOT);JSONObject data=load(),peers=data.getJSONObject("peers"),peer=peers.getJSONObject(id);if(normalized.equals(peer.optString("nearbyAddress")))return;for(Iterator<String> it=peers.keys();it.hasNext();){String other=it.next();if(!other.equals(id)&&normalized.equalsIgnoreCase(peers.getJSONObject(other).optString("nearbyAddress")))peers.getJSONObject(other).remove("nearbyAddress");}peer.put("nearbyAddress",normalized);write(data);}}
     Map<String,String> nearbyRoutes()throws Exception{synchronized(LOCK){Map<String,String> result=new HashMap<>();JSONObject peers=load().getJSONObject("peers");for(Iterator<String> it=peers.keys();it.hasNext();){String id=it.next(),address=peers.getJSONObject(id).optString("nearbyAddress");if(PeerWifiDirect.validAddress(address))result.put(address.toLowerCase(Locale.ROOT),id);}return result;}}

@@ -17,6 +17,7 @@ final class PeerCoordinator implements AutoCloseable {
     private final Context context;private final SharedPreferences prefs;private final Events events;
     private final SyncPeerRegistry registry;private final PeerDataStore data;private final String id;private final TransferPower power;
     private final ScheduledExecutorService ticker=Executors.newSingleThreadScheduledExecutor();
+    private final ExecutorService controls=Executors.newSingleThreadExecutor();
     private final ThreadPoolExecutor workers=new ThreadPoolExecutor(0,4,30,TimeUnit.SECONDS,new SynchronousQueue<>(),new ThreadPoolExecutor.AbortPolicy());
     private final Set<Socket> sockets=ConcurrentHashMap.newKeySet();private final Set<String> connecting=ConcurrentHashMap.newKeySet();
     private ReentrantLock gate(String peer){return PeerGates.get(context,peer);}
@@ -81,7 +82,7 @@ final class PeerCoordinator implements AutoCloseable {
     boolean activeTransfer(){return !sessions.empty();}
     void refresh(){if(!closed)try{ticker.execute(this::publish);}catch(RejectedExecutionException ignored){}}
     void retry(){manualUntil=SystemClock.elapsedRealtime()+60000;preparedGeneration=-1;attempted.clear();submit(()->{tick();PeerDiscovery.Endpoint owner=nearby.group();if(owner!=null)connect(owner,true);for(PeerDiscovery.Endpoint endpoint:lan.snapshot())connect(endpoint,true);});}
-    void forget(String peer){submit(()->{if(!DeviceIdentity.valid(peer))throw new IOException("Neplatné zařízení");registry.forget(peer);data.outbox.discard(peer);PeerSessions.Lease current=sessions.get(peer);if(current!=null)current.socket.close();Approval pending=approval.get();if(pending!=null&&peer.equals(pending.request.peerId))pending.answer.complete(false);states.remove(peer);endpoints.values().removeIf(value->peer.equals(value));publish();});}
+    void forget(String peer){if(closed)return;try{controls.execute(()->{try{if(!DeviceIdentity.valid(peer))throw new IOException("Neplatné zařízení");registry.forget(peer);PeerSessions.Lease current=sessions.get(peer);if(current!=null)current.socket.close();Approval pending=approval.get();if(pending!=null&&peer.equals(pending.request.peerId))pending.answer.complete(false);data.outbox.discard(peer);states.remove(peer);endpoints.values().removeIf(value->peer.equals(value));publish();}catch(Exception failure){fail(peer,failure);}});}catch(RejectedExecutionException stopped){if(!closed)fail(peer,stopped);}}
     private void status(String peer,String phase,int done,int total,String error)throws Exception{if("connected".equals(phase)||"done".equals(phase))problem="";PeerSessions.Lease lease=sessions.get(peer);states.put(peer,new JSONObject().put("route",lease==null?"":lease.route).put("phase",phase).put("completed",done).put("total",total).put("error",error));publish();}
     private void fail(String peer,Exception failure){String message=failure.getMessage();if(message==null)message=failure.getClass().getSimpleName();if(message.length()>220)message=message.substring(0,220);problem=message;if(peer!=null)try{status(peer,"error",0,0,message);}catch(Exception ignored){}publish();}
     JSONObject snapshot()throws Exception{
@@ -90,5 +91,5 @@ final class PeerCoordinator implements AutoCloseable {
         Approval pending=approval.get();return new JSONObject().put("enabled",prefs.getBoolean("directSyncEnabled",false)).put("active",server!=null&&!server.isClosed()&&!closed).put("automatic",SyncCadence.current(context,prefs).automatic()).put("pairing",isPairing()).put("pairingSeconds",Math.max(0,(pairingUntil-SystemClock.elapsedRealtime())/1000)).put("wifiDirectSupported",nearby.supported()).put("wifiDirectPermission",nearby.permitted()).put("problem",problem).put("peers",peers).put("candidates",candidates).put("approval",pending==null?JSONObject.NULL:pending.request.json());
     }
     void publish(){if(closed)return;try{events.state(snapshot());}catch(Exception failure){android.util.Log.w("Zamerovac","Local sync state unavailable",failure);}}
-    @Override public void close(){if(closed)return;stopPairing();closed=true;power.close();lan.close();nearby.close();ticker.shutdownNow();workers.shutdownNow();for(Socket socket:sockets)try{socket.close();}catch(IOException ignored){}sockets.clear();SSLServerSocket listener=server;if(listener!=null)try{listener.close();}catch(IOException ignored){}server=null;}
+    @Override public void close(){if(closed)return;stopPairing();closed=true;power.close();lan.close();nearby.close();ticker.shutdownNow();controls.shutdown();workers.shutdownNow();for(Socket socket:sockets)try{socket.close();}catch(IOException ignored){}sockets.clear();SSLServerSocket listener=server;if(listener!=null)try{listener.close();}catch(IOException ignored){}server=null;}
 }

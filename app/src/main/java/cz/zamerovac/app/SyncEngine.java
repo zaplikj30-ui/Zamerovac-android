@@ -102,6 +102,8 @@ public class SyncEngine {
                 if(CausalClock.canonical(lv).equals(CausalClock.canonical(rv)))chosen=lv;
                 else if(lc.length()>0&&rc.length()>0&&"after".equals(order))chosen=lv;
                 else if(lc.length()>0&&rc.length()>0&&"before".equals(order))chosen=rv;
+                else if(FolderHierarchy.sameIntent(lv,rv))chosen=lv;
+                else if(FolderHierarchy.sameIntent(rv,lv))chosen=rv;
                 else if(!(lc.length()>0&&rc.length()>0)&&known!=null&&!lrev.equals(rrev)&&known.equals(lrev))chosen=rv;
                 else if(!(lc.length()>0&&rc.length()>0)&&known!=null&&!lrev.equals(rrev)&&known.equals(rrev))chosen=lv;
                 else {
@@ -115,6 +117,7 @@ public class SyncEngine {
         ArrayList<JSONObject> orderedRecords=new ArrayList<>();for(int i=0;i<merged.length();i++)orderedRecords.add(merged.getJSONObject(i));orderedRecords.sort(java.util.Comparator.comparing(record->record.optString("id")));JSONArray ordered=new JSONArray();for(JSONObject record:orderedRecords)ordered.put(record);
         ArrayList<String> orderedPurged=new ArrayList<>(purged);java.util.Collections.sort(orderedPurged);JSONObject result=new JSONObject(local.toString());result.put("records",ordered);result.put("trashPurgedIds",new JSONArray(orderedPurged));result.put("syncTombstones",tombstones);
         // Preferences are device-local (screen size, tool order, colors). Never overwrite.
+        FolderHierarchy.repair(ordered);
         nextBaseline=nextBase.toString();
         return result;
     }

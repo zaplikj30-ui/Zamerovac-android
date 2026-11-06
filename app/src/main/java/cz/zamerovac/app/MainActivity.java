@@ -86,6 +86,7 @@ import java.util.regex.Pattern;
 public class MainActivity extends Activity {
     private static final int REQUEST_FILE=20,REQUEST_TREE=21,REQUEST_CAMERA=22,REQUEST_EXPORT=23,REQUEST_PERMISSIONS=24,REQUEST_ATTACH=25,REQUEST_CAMERA_PERMISSION=26,REQUEST_PHOTO_LOCATION=27,REQUEST_BACKUP=28,REQUEST_IMPORT_BACKUP=29,REQUEST_ISSUE_EXPORT=30,REQUEST_BLUETOOTH_PERMISSION=31,REQUEST_CUSTOMER_EXPORT=32,REQUEST_WIFI_DIRECT_PERMISSION=33,REQUEST_BACKUP_TREE=34,REQUEST_SYNC_NOTIFICATION=35;
     private DriveAccountFlow driveAccountFlow;
+    private final java.util.concurrent.ExecutorService zipRestores=new java.util.concurrent.ThreadPoolExecutor(1,1,0,java.util.concurrent.TimeUnit.SECONDS,new java.util.concurrent.SynchronousQueue<>(),new java.util.concurrent.ThreadPoolExecutor.AbortPolicy());
     private long cloudTreeRevision=-1,backupTreeRevision=-1;
     private volatile boolean historyBackupBusy;
     private volatile boolean activityDestroyed;
@@ -501,17 +502,12 @@ public class MainActivity extends Activity {
         }
         if(request==REQUEST_IMPORT_BACKUP&&data!=null&&data.getData()!=null){
             final Uri origin=data.getData();
-            new Thread(()->{
+            try{zipRestores.execute(()->{
                 try{
-                    synchronized(TrashPurger.LOCK){
-                    String existingText=readDb();
-                    JSONObject existing=existingText.isEmpty()?new JSONObject().put("schema",1).put("records",new JSONArray()).put("prefs",new JSONObject()):new JSONObject(existingText);
-                    BackupImporter.Result restored=BackupImporter.importZip(this,origin,existing,settings);
-                    try{writeDb(restored.data.toString());}catch(Exception failure){restored.rollback(this,settings);throw failure;}
+                    BackupImporter.Result restored=BackupImporter.restoreZip(this,origin,settings);
                     onSyncResult("Obnoveno "+restored.recordCount+" záznamů jako nové zakázky",restored.data);
-                    }
                 }catch(Exception e){error("Obnova ZIP: "+e.getMessage());}
-            },"ZamerovacRestore").start();
+            });}catch(java.util.concurrent.RejectedExecutionException busy){error("Jiná obnova ZIP již probíhá. Zkus to po jejím dokončení.");}
             return;
         }
         if(request==REQUEST_BACKUP&&data!=null&&data.getData()!=null){
@@ -602,32 +598,34 @@ public class MainActivity extends Activity {
             if(!source.isFile()||!source.canRead()||source.length()==0)throw new IOException("Záloha není úplná: chybí nebo je prázdná příloha "+id);
         }
         try{parsed.put("archiveFormatVersion",2);json=parsed.toString();}catch(JSONException ex){throw new IOException(ex);}
-        JSONObject checksums=new JSONObject();
-        try(ZipOutputStream zip=new ZipOutputStream(destination)){
-            zip.putNextEntry(new ZipEntry("projects.json"));
-            try{checksums.put("projects.json",ArchiveIntegrity.copy(new java.io.ByteArrayInputStream(json.getBytes(StandardCharsets.UTF_8)),zip));}catch(JSONException ex){throw new IOException(ex);}
-            zip.closeEntry();
-            JSONObject metadata=new JSONObject();
-            for(String id:mediaIds){
-                if(!validId(id))continue;
-                try{metadata.put(id,new JSONObject().put("mime",mediaMime(id))
-                    .put("name",settings.getString("name-"+id,"Příloha")));}catch(Exception ignored){}
+        try{
+            LocalDatabase.validate(json);ArchiveLimits.entries(mediaIds.size()+3);
+            boolean restorable=false;for(int i=0;i<records.length();i++)if(!records.getJSONObject(i).optBoolean("deleted"))restorable=true;
+            if(!restorable)throw new IOException("Záloha neobsahuje záznamy k obnovení");
+            JSONObject metadata=new JSONObject(),planned=new JSONObject();
+            byte[] projectBytes=json.getBytes(StandardCharsets.UTF_8);
+            planned.put("projects.json",ArchiveIntegrity.entry(projectBytes.length,new byte[32]));
+            long total=ArchiveLimits.add(0,projectBytes.length);
+            for(String id:mediaIds){metadata.put(id,new JSONObject().put("mime",mediaMime(id)).put("name",settings.getString("name-"+id,"Příloha")));long size=mediaFile(id).length();total=ArchiveLimits.add(total,size);planned.put("media/"+id,ArchiveIntegrity.entry(size,new byte[32]));}
+            byte[] metaBytes=metadata.toString().getBytes(StandardCharsets.UTF_8);ArchiveLimits.json(metaBytes.length);total=ArchiveLimits.add(total,metaBytes.length);
+            planned.put("media-meta.json",ArchiveIntegrity.entry(metaBytes.length,new byte[32]));
+            byte[] manifestBytes=archiveManifest(planned);ArchiveLimits.json(manifestBytes.length);ArchiveLimits.add(total,manifestBytes.length);
+            // Preflight catches unsupported archives before writing; streaming checks also catch growth.
+            JSONObject checksums=new JSONObject();ArchiveLimits.Budget budget=new ArchiveLimits.Budget();
+            try(ZipOutputStream zip=new ZipOutputStream(destination)){
+                zip.putNextEntry(new ZipEntry("projects.json"));checksums.put("projects.json",ArchiveIntegrity.copy(new java.io.ByteArrayInputStream(projectBytes),budget.output(zip,true)));zip.closeEntry();
+                zip.putNextEntry(new ZipEntry("media-meta.json"));checksums.put("media-meta.json",ArchiveIntegrity.copy(new java.io.ByteArrayInputStream(metaBytes),budget.output(zip,true)));zip.closeEntry();
+                for(String id:mediaIds){
+                    File media=mediaFile(id);if(!media.isFile())throw new IOException("Příloha během exportu přestala být dostupná: "+id);
+                    zip.putNextEntry(new ZipEntry("media/"+id));
+                    try(InputStream in=new FileInputStream(media)){JSONObject actual=ArchiveIntegrity.copy(in,budget.output(zip,false));if(actual.getLong("size")!=planned.getJSONObject("media/"+id).getLong("size"))throw new IOException("Velikost přílohy se během exportu změnila");checksums.put("media/"+id,actual);}zip.closeEntry();
+                }
+                zip.putNextEntry(new ZipEntry("manifest.json"));budget.output(zip,true).write(archiveManifest(checksums));zip.closeEntry();
             }
-            zip.putNextEntry(new ZipEntry("media-meta.json"));
-            try{checksums.put("media-meta.json",ArchiveIntegrity.copy(new java.io.ByteArrayInputStream(metadata.toString().getBytes(StandardCharsets.UTF_8)),zip));}catch(JSONException ex){throw new IOException(ex);}
-            zip.closeEntry();
-            for(String id:mediaIds){
-                if(!validId(id))continue;
-                File media=mediaFile(id);if(!media.isFile())throw new IOException("Příloha během exportu přestala být dostupná: "+id);
-                zip.putNextEntry(new ZipEntry("media/"+id));
-                try(InputStream in=new FileInputStream(media)){checksums.put("media/"+id,ArchiveIntegrity.copy(in,zip));}catch(JSONException ex){throw new IOException(ex);}
-                zip.closeEntry();
-            }
-            try{
-                zip.putNextEntry(new ZipEntry("manifest.json"));
-                zip.write(new JSONObject().put("format","cz.zamerovac.archive").put("version",2).put("entries",checksums).toString().getBytes(StandardCharsets.UTF_8));zip.closeEntry();
-            }catch(JSONException ex){throw new IOException(ex);}
-        }
+        }catch(JSONException ex){throw new IOException(ex);}
+    }
+    private static byte[] archiveManifest(JSONObject checksums)throws JSONException{
+        return new JSONObject().put("format","cz.zamerovac.archive").put("version",2).put("entries",checksums).toString().getBytes(StandardCharsets.UTF_8);
     }
 
     /** Local feedback ZIP, including only explicitly captured screenshots and attached videos. */
@@ -702,21 +700,7 @@ public class MainActivity extends Activity {
         },"ZamerovacIssueBundle").start();
     }
     private void collectMediaIds(JSONObject record,Set<String> ids)throws IOException{
-        JSONArray media=record.optJSONArray("media");
-        if(media!=null)for(int i=0;i<media.length();i++)ids.add(media.optString(i));
-        collectNestedMedia(record.optJSONArray("items"),ids);
-        JSONArray history=record.optJSONArray("versionHistory");
-        if(history!=null)for(int i=0;i<history.length();i++)try{String items=history.getJSONObject(i).optString("items","[]");if(items.trim().startsWith("[")){JsonInput.check(items);collectNestedMedia(new JSONArray(items),ids);}}catch(JSONException error){throw new IllegalArgumentException("Neplatná historie anotací",error);}
-    }
-    private void collectNestedMedia(JSONArray items,Set<String> ids)throws IOException{
-        if(items==null)return;
-        for(int i=0;i<items.length();i++){
-            JSONObject item=items.optJSONObject(i);if(item==null)continue;
-            JSONArray media=item.optJSONArray("media");
-            if(media!=null)for(int j=0;j<media.length();j++)ids.add(media.optString(j));
-            JSONArray audio=item.optJSONArray("audioMedia");if(audio!=null)for(int j=0;j<audio.length();j++)ids.add(audio.optString(j));
-            collectNestedMedia(item.optJSONArray("detailItems"),ids);
-        }
+        try{ids.addAll(PeerSnapshot.references(record));}catch(IOException invalid){throw invalid;}catch(Exception invalid){throw new IOException("Neplatné přílohy zálohy",invalid);}
     }
     private static void copy(InputStream a,OutputStream b) throws IOException{byte[] buf=new byte[64*1024];int n;while((n=a.read(buf))!=-1)b.write(buf,0,n);}
     public final class JsApi{
@@ -1039,7 +1023,7 @@ public class MainActivity extends Activity {
     private void scheduleSync(){try{JobScheduler jobs=(JobScheduler)getSystemService(JOB_SCHEDULER_SERVICE);SyncCadence.State cadence=SyncCadence.current(this,settings);if(storageConfigured("sync")&&cadence.automatic()){JobInfo j=new JobInfo.Builder(14,new ComponentName(this,SyncJob.class)).setPeriodic(cadence.cloud(true)).setRequiredNetworkType(cadence.wifiOnly?JobInfo.NETWORK_TYPE_UNMETERED:JobInfo.NETWORK_TYPE_ANY).setPersisted(true).build();jobs.schedule(j);}else jobs.cancel(14);}catch(Exception e){android.util.Log.w("Zamerovac","Background job",e);}}
     @Override public void onResume(){super.onResume();if(driveAccountFlow!=null)driveAccountFlow.resume();PeerRuntime.get(this).observe(directEvents);if(settings!=null&&settings.getBoolean("directSyncEnabled",false))try{DirectSyncService.start(this);}catch(Exception failure){directProblem("Android nepovolil službu přenosu na pozadí. Změny zůstávají ve frontě: "+failure.getMessage());}refreshBackgroundChanges();if(settings!=null&&SyncCadence.current(this,settings).automatic()&&storageConfigured("sync"))handler.postDelayed(foregroundCloudSync,2000);}
     @Override protected void onStop(){if(driveAccountFlow!=null)driveAccountFlow.suspend();handler.removeCallbacks(foregroundCloudSync);PeerRuntime.get(this).unobserve(directEvents);pendingWifiDirectPermission=false;super.onStop();}
-    @Override protected void onDestroy(){activityDestroyed=true;if(driveAccountFlow!=null)driveAccountFlow.close();mediaImports.shutdownNow();PeerRuntime.get(this).unobserve(directEvents);closeUpload();stopLaserConnection();videoThumbnails.close();clearCustomerExport();handler.removeCallbacksAndMessages(null);releaseRecorder();for(WebView popup:new ArrayList<>(unprivilegedWindows))popup.destroy();unprivilegedWindows.clear();if(web!=null)web.destroy();super.onDestroy();}
+    @Override protected void onDestroy(){activityDestroyed=true;zipRestores.shutdownNow();if(driveAccountFlow!=null)driveAccountFlow.close();mediaImports.shutdownNow();PeerRuntime.get(this).unobserve(directEvents);closeUpload();stopLaserConnection();videoThumbnails.close();clearCustomerExport();handler.removeCallbacksAndMessages(null);releaseRecorder();for(WebView popup:new ArrayList<>(unprivilegedWindows))popup.destroy();unprivilegedWindows.clear();if(web!=null)web.destroy();super.onDestroy();}
 
 
     // The GLM 100-25 C is Bluetooth LE. Show ALL nearby LE advertisements (like

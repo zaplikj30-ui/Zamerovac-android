@@ -4,6 +4,20 @@ const A='11111111-1111-4111-8111-111111111111',B='22222222-2222-4222-8222-222222
 const request={sessionId:A,peerId:B,name:'Syntetický tablet',code:'0123456789abcdef'.repeat(4)};
 async function mock(page){await page.evaluate(()=>{window.peerCalls=[];window.Native={directSyncControl:(name,arg)=>peerCalls.push({name,arg}),directSyncState:()=>JSON.stringify({enabled:false,active:false,peers:{},candidates:[]})};});}
 suite('peer-sync',async run=>{
+ await run('offline-folder-cycle-repair-is-visible-reachable-and-exact',async({page})=>{
+  await page.evaluate(()=>{
+   const make=(id,parentId)=>({id,kind:'folder',title:id,parentId,items:[{measure:'1585,800001000000000123',unit:'mm'}]});
+   const base={schema:1,records:[make('folder-a',null),make('folder-b',null)]};
+   const local=JSON.parse(JSON.stringify(base)),remote=JSON.parse(JSON.stringify(base));local.records[0].parentId='folder-b';remote.records[1].parentId='folder-a';
+   applySavedState(reconcileSavedState(base,local,remote));showFolder(null);save();
+  });
+  assert.match(await page.locator('.entry[data-id="folder-a"]').innerText(),/OPRAVENÝ CYKLUS SLOŽEK/);
+  await page.locator('.entry[data-id="folder-a"] .entry-title').click();
+  assert.equal(await page.locator('.entry[data-id="folder-b"]').count(),1);
+  assert.deepEqual(await page.evaluate(()=>state.records.map(r=>r.items[0].measure)),['1585,800001000000000123','1585,800001000000000123']);
+  await page.reload();await page.waitForFunction(()=>typeof showFolder==='function');await page.evaluate(()=>showFolder(null));
+  assert.match(await page.locator('.entry[data-id="folder-a"]').innerText(),/OPRAVENÝ CYKLUS SLOŽEK/);
+ });
  await run('menu-settings-offline-and-data-preserved',async({page})=>{
   const before=await page.evaluate(()=>JSON.stringify(state));await page.click('#back');await page.getByText('⇄  Synchronizace zařízení',{exact:true}).click();await page.locator('#peerSyncPanel').waitFor({state:'visible'});assert.match(await page.locator('#peerProblem').innerText(),/Android/);await page.click('#peerPair');assert.match(await page.locator('#peerProblem').innerText(),/Android/);await page.keyboard.press('Escape');assert.equal(await page.locator('#peerSyncPanel').isVisible(),false);
   await page.evaluate(()=>{toggleSettings()});await page.click('#peerSettings');await page.locator('#peerClose').click();assert.equal(await page.evaluate(()=>JSON.stringify(state)),before);

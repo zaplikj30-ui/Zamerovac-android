@@ -483,3 +483,8 @@ Nápověda/nevydané změny, QA mapa39, aktuální dokumentace a auditní zadán
 Etapa39 potvrzena v **86b0a63ff3a503be3692177d86dba7cd0db9543d**: native/Gradle/PDF42142954490 a quick/UI42142954473 SUCCESS. Skutečný Gradle běh potvrdil registrovaný preview project/package/signing certificate,19 negativních variant a plnou aplikovanou konfiguraci. Native test vyžaduje projectConfigured=true/přesné zamerovac-android a přitom žádný vybraný účet/změnu DB. Celá předchozí native/TLS/media/Drive/history a Node/Python/Chromium sada prošla; živý účet/radio fyzicky neověřené. Místně Node/Python47 (2skipy bez javac), QA39, help/release a account UI3 PASS.
 
 Závěrečná předávka: implementace i podklady jsou připravené k nezávislému auditu na přesném86b0a63 podle audit-39-handoff.md. Project ID ani registrace už nejsou blokátorem a nesmějí se znovu požadovat. Výsledek nezávislé revize a fyzická/živá akceptace jsou samostatně pending/NOT RUN; žádná APK/merge a nic nepublikované jako nové vydání. Metadata předávky nemění ověřený funkční kód/testy.
+
+
+## Opravy nezávislého auditu 6. 11. 2026 – A39-01 až A39-06
+
+Navázáno na fefb46f bez souběžné funkční změny. Původní šestice reprodukcí je uložená v a83c2da, CI42176445230 má přesně šest očekávaných failures. Cílené opravy limitů UTF-8/ZIP, revokace handshake, cyklů Java/JS, přípravy ZIP mimo DB lock a referencí médií jsou implementované. První cílený běh22testů PASS, plná regrese a hraniční roundtrip probíhají. [Důkazy a otevřené fyzické brány](audit39-fixes.md). Žádná APK/merge/Google registrace.

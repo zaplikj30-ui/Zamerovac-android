@@ -26,14 +26,16 @@ final class PeerSnapshot {
     static long integer(JSONObject object,String key,long maximum)throws Exception{
         Object raw=object.get(key);if(!(raw instanceof Number))throw new IOException("Neplatná číselná hodnota přenosu");double number=((Number)raw).doubleValue();if(!Double.isFinite(number)||number<0||number>maximum||number!=Math.floor(number))throw new IOException("Neplatná velikost přenosu");return ((Number)raw).longValue();
     }
-    static Set<String> references(Object value)throws Exception{Set<String> refs=new TreeSet<>();collect(value,refs,0);return refs;}
-    private static void collect(Object value,Set<String> refs,int depth)throws Exception{
+    static Set<String> references(Object value)throws Exception{Set<String> refs=new TreeSet<>();collect(value,refs,0,true);return refs;}
+    /** Cleanup only selects safe local paths; malformed legacy IDs must never block deleting valid candidates. */
+    static Set<String> cleanupReferences(Object value)throws Exception{Set<String> refs=new TreeSet<>();collect(value,refs,0,false);return refs;}
+    private static void collect(Object value,Set<String> refs,int depth,boolean strict)throws Exception{
         if(depth>100)throw new IOException("Příliš zanořená data přenosu");
         if(value instanceof JSONObject){JSONObject object=(JSONObject)value;for(Iterator<String> it=object.keys();it.hasNext();){String key=it.next();Object child=object.get(key);
-            if("media".equals(key)||"audioMedia".equals(key)){if(!(child instanceof JSONArray))throw new IOException("Neplatný seznam příloh");JSONArray items=(JSONArray)child;for(int i=0;i<items.length();i++){Object id=items.get(i);if(!(id instanceof String)||!validMediaId((String)id))throw new IOException("Neplatný identifikátor přílohy");refs.add((String)id);}}
-            else if("items".equals(key)&&child instanceof String&&((String)child).trim().startsWith("[")){JsonInput.check((String)child);collect(new JSONArray((String)child),refs,depth+1);}
-            else collect(child,refs,depth+1);
-        }}else if(value instanceof JSONArray){JSONArray values=(JSONArray)value;for(int i=0;i<values.length();i++)collect(values.get(i),refs,depth+1);}
+            if("media".equals(key)||"audioMedia".equals(key)){if(!(child instanceof JSONArray)){if(strict)throw new IOException("Neplatný seznam příloh");continue;}JSONArray items=(JSONArray)child;for(int i=0;i<items.length();i++){Object id=items.get(i);if(!(id instanceof String)||!validMediaId((String)id)){if(strict)throw new IOException("Neplatný identifikátor přílohy");continue;}refs.add((String)id);}}
+            else if("items".equals(key)&&child instanceof String&&((String)child).trim().startsWith("[")){JsonInput.check((String)child);collect(new JSONArray((String)child),refs,depth+1,strict);}
+            else collect(child,refs,depth+1,strict);
+        }}else if(value instanceof JSONArray){JSONArray values=(JSONArray)value;for(int i=0;i<values.length();i++)collect(values.get(i),refs,depth+1,strict);}
     }
     private static void numbers(Object value,int depth)throws Exception{
         if(depth>100)throw new IOException("Příliš zanořená data");

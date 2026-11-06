@@ -35,6 +35,25 @@ async function resolveConflict(a,b,hash){
  if(!HASH.test(digest))throw Error('Invalid digest implementation');
  return {winner:first?'local':'remote',copy:{...losing,id:'conflict-'+digest,conflict:true,conflictOf:a.id,conflictSource:'revision:'+digest,title:String(losing.title??'Položka')+' (konflikt synchronizace)'}};
 }
+function sameHierarchyIntent(repaired,original){
+ if(!repaired?.hierarchyConflict||repaired.parentId!==null||typeof repaired.hierarchyConflict.parentId!=='string')return false;
+ const intent={...repaired,parentId:repaired.hierarchyConflict.parentId};delete intent.hierarchyConflict;return canonical(intent)===canonical(original);
+}
+function repairFolderHierarchy(records){
+ const positions=new Map(records.map((record,index)=>[record.id,index])),done=new Set();
+ for(const start of [...positions.keys()].sort()){
+  const path=[],seen=new Map();let at=start;
+  while(positions.has(at)&&!done.has(at)){
+   if(seen.has(at)){
+    const cut=path.slice(seen.get(at)).sort()[0],index=positions.get(cut),record=records[index];
+    records[index]={...record,hierarchyConflict:{parentId:record.parentId},parentId:null};break;
+   }
+   seen.set(at,path.length);path.push(at);at=records[positions.get(at)].parentId;
+  }
+  for(const id of path)done.add(id);
+ }
+ return records;
+}
 async function mergeData(left,right,hash){
  validateData(left);validateData(right);
  const l=new Map(left.records.map(r=>[r.id,r])),r=new Map(right.records.map(r=>[r.id,r])),result=new Map();
@@ -43,11 +62,13 @@ async function mergeData(left,right,hash){
   if(canonical(a)===canonical(b)){result.set(id,clone(a));continue}
   const order=vectors.compare(a.syncClock||{},b.syncClock||{});
   if(order==='after'||order==='before'){result.set(id,clone(order==='after'?a:b));continue}
+  if(sameHierarchyIntent(a,b)){result.set(id,clone(a));continue}
+  if(sameHierarchyIntent(b,a)){result.set(id,clone(b));continue}
   // Equal clocks with different content are also unsafe to collapse.
   const conflict=await resolveConflict(a,b,hash);result.set(id,clone(conflict.winner==='local'?a:b));
   if(!l.has(conflict.copy.id)&&!r.has(conflict.copy.id))result.set(conflict.copy.id,conflict.copy);
  }
- return {...clone(left),records:[...result.values()].sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0)};
+ return {...clone(left),records:repairFolderHierarchy([...result.values()].sort((a,b)=>a.id<b.id?-1:a.id>b.id?1:0))};
 }
 function routesFor(job,routes,{allowMetered=false,largeBytes=1024*1024}={}){
  return routes.filter(route=>{
