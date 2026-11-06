@@ -107,7 +107,7 @@ assert.deepEqual(sandbox.opens,['note:note-1'],'Second separate tap opens full n
    const cx=note.insetX+note.insetWidth/2,cy=note.insetY+note.insetWidth/2;
    if((Math.abs(x-cx)===8&&y===cy)||(Math.abs(y-cy)===8&&x===cx))seen.centerArrows++;
   },lineTo(){},quadraticCurveTo(){seen.bows++},
-  closePath(){},fill(){},stroke(){},arc(x,y,r,start,end){seen.arcs.push({r,start,end})},
+  closePath(){},fill(){},stroke(){},arc(){},
   setLineDash(){},strokeRect(){},drawImage(){},fillText(){},
   measureText(t){return {width:String(t).length*9}},fillRect(){}
  };
