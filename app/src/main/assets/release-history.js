@@ -4,9 +4,9 @@
  */
 (function(root){
 'use strict';
-// Working notes for the common update. These are NOT a released version and
-// are deliberately excluded from forVersion() and the installed release history.
-const pendingChanges={issue:39,released:false,groups:[{kind:'Nové funkce',items:[{text:'Volba četnosti vlastních automatických pokusů synchronizace: automaticky, 15, 30, 60 minut nebo ručně. Nastavení potvrzuje Android; příchozí důvěryhodné místní spojení zůstává při zapnuté službě povolené.'},{text:'Oddělený výběr Google účtu pro synchronizaci a zálohy, souhlas k soukromým datům aplikace, API přenos a odpojení bez mazání historie. Potvrzený projekt Google Cloud je propojený s testovací aplikací; sestavení ověřuje balíček a skutečný podpis. Živý účet zatím nebyl fyzicky ověřen.'},{text:'Samostatné historické zálohy po instalaci, sdílené neměnné datové bloky, kontrola úplnosti a obnova jako nové kopie. Systémové úložiště včetně Disku závisí na poskytovateli; skutečný Drive účet dosud neověřen.'},{text:'Obrazovka synchronizace zařízení, oboustranné TLS párování, přímý přenos celých zakázek přes místní Wi-Fi / Wi-Fi Direct a trvalá fronta příloh. Rádio a zařízení zatím čekají na fyzické ověření; Drive a historie záloh se dále dokončují.'}]},{kind:'Opraveno',items:[
+// Exact 1.2.153 test-release notes; available only to matching installed versions.
+// Automated verification is not physical acceptance of Google, Bosch or the devices.
+const releaseChanges={issue:39,version:'1.2.153',groups:[{kind:'Nové funkce',items:[{text:'Volba četnosti vlastních automatických pokusů synchronizace: automaticky, 15, 30, 60 minut nebo ručně. Nastavení potvrzuje Android; příchozí důvěryhodné místní spojení zůstává při zapnuté službě povolené.'},{text:'Oddělený výběr Google účtu pro synchronizaci a zálohy, souhlas k soukromým datům aplikace, API přenos a odpojení bez mazání historie. Potvrzený projekt Google Cloud je propojený s testovací aplikací; sestavení ověřuje balíček a skutečný podpis. Živý účet zatím nebyl fyzicky ověřen.'},{text:'Samostatné historické zálohy po instalaci, sdílené neměnné datové bloky, kontrola úplnosti a obnova jako nové kopie. Systémové úložiště včetně Disku závisí na poskytovateli; skutečný Drive účet dosud neověřen.'},{text:'Obrazovka synchronizace zařízení, oboustranné TLS párování, přímý přenos celých zakázek přes místní Wi-Fi / Wi-Fi Direct a trvalá fronta příloh. Rádio a zařízení zatím čekají na fyzické ověření; Drive a historie záloh se dále dokončují.'}]},{kind:'Opraveno',items:[
  {text:'Opravy auditu A39-01 až A39-06: společný UTF-8 limit čtení a zápisu, odvolání rozjednaného TLS párování i při vytížených přenosech, deterministická oprava cyklu složek při synchronizaci a obnově bez změny přesných kót.'},
  {text:'Příprava ZIP obnovy mimo zámek ukládání, zachování souběžných editací a rollback. Export a import sdílejí limity počtu položek, metadat a celkových bajtů. Koš uklidí výhradní hlasová a historická média; sdílené soubory a neměnné zálohy zachová.'},
  {text:'Opakovaný pokus zálohy po nedokončeném nebo poškozeném bloku vytvoří ověřenou neměnnou kopii z dostupného originálu. Původní soubor a historické manifesty se nepřepisují; chyby přístupu a chybějící všechny kopie se nepovažují za úspěch.'},
@@ -43,6 +43,7 @@ const pendingChanges={issue:39,released:false,groups:[{kind:'Nové funkce',items
  {text:'Omezená mezipaměť dekódovaných fotografií pro opakované otevření. První načtení po restartu je stále nutné.'}
 ]}]};
 const releases=[
+  {version:releaseChanges.version,title:'Bezpečné ukládání, synchronizace a opravy editoru',groups:releaseChanges.groups},
   {
     "version": "1.2.152",
     "title": "Přehledná historie změn a oprav",
@@ -309,7 +310,7 @@ function forVersion(installedVersion){
 function hasReleaseNotes(installedVersion){
  return releases.some(r=>compareVersions(r.version,installedVersion)===0);
 }
-const api=Object.freeze({pendingChanges,releases,parseVersion,compareVersions,forVersion,hasReleaseNotes});
+const api=Object.freeze({releaseChanges,releases,parseVersion,compareVersions,forVersion,hasReleaseNotes});
 root.ZamerovacReleaseHistory=api;
 if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);
