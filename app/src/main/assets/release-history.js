@@ -43,6 +43,14 @@ const releaseChanges={issue:39,version:'1.2.153',groups:[{kind:'Nové funkce',it
  {text:'Omezená mezipaměť dekódovaných fotografií pro opakované otevření. První načtení po restartu je stále nutné.'}
 ]}]};
 const releases=[
+  {
+    "version":"1.3.0",
+    "title":"Přehlednější číslování vydání",
+    "groups":[{"kind":"Vylepšeno","items":[
+      {"text":"Od této verze používáme smysluplná čísla vydání: větší zpětně kompatibilní aktualizace dostanou novou vedlejší řadu a drobné opravy poslední číslo. Číslo sestavení Androidu zůstává samostatné."},
+      {"text":"Funkce a opravy z verze 1.2.153 zůstávají zachovány. Toto vydání upravuje především číslování; skutečná instalace přes 1.2.153 na zařízení nás ještě čeká."}
+    ]}]
+  },
   {version:releaseChanges.version,title:'Bezpečné ukládání, synchronizace a opravy editoru',groups:releaseChanges.groups},
   {
     "version": "1.2.152",

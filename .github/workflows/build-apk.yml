@@ -43,10 +43,24 @@ jobs:
           node tests/laser_auto_interaction.js
           node tests/extra_toolbar_interaction.js
           python3 -m unittest discover -s tests -p "test_*.py" -v
+      - name: Před vydáním ověřit verzi a nepřepisovat existující APK
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          APP_VERSION="$(node tools/release/versioning.js --release)"
+          if gh release view "test-v${APP_VERSION}" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "Vydání této verze již existuje a nesmí být přepsáno." >&2
+            exit 1
+          fi
+          echo "APP_VERSION=${APP_VERSION}" >> "$GITHUB_ENV"
       - name: Sestavit testovací variantu aplikace Zaměřovač
         run: gradle --no-daemon :app:verifyDriveRegistration assemblePreview -PdriveRequireConfigured=true
       - name: Ověřit podpis a jednoznačnou verzi testovací APK
         shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           APK=app/build/outputs/apk/preview/app-preview.apk
@@ -65,8 +79,25 @@ jobs:
           echo "$PACKAGE_INFO"
           echo "$PACKAGE_INFO" | grep -q "name='cz.zamerovac.app.preview'"
           echo "$PACKAGE_INFO" | grep -q "versionCode='$((1000 + GITHUB_RUN_NUMBER))'"
-          mkdir -p dist
-          cp "$APK" "dist/Zamerovac-v1.2.${GITHUB_RUN_NUMBER}.apk"
+          echo "$PACKAGE_INFO" | grep -q "versionName='${APP_VERSION}-test'"
+          # An update must have a strictly higher versionCode and the unchanged signature.
+          PREVIOUS_TAG="$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq '.tagName')"
+          test -n "$PREVIOUS_TAG"
+          mkdir -p previous dist
+          gh release download "$PREVIOUS_TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.apk' --dir previous
+          PREVIOUS_APK="$(find previous -maxdepth 1 -name '*.apk' -type f | head -n 1)"
+          test -n "$PREVIOUS_APK"
+          PREVIOUS_INFO="$("$AAPT" dump badging "$PREVIOUS_APK" | head -n 1)"
+          echo "$PREVIOUS_INFO" | grep -q "name='cz.zamerovac.app.preview'"
+          "$SIGNER" verify --min-sdk-version 26 --print-certs "$PREVIOUS_APK" | grep -qi 'c828c96739e554e8da4f5851913356134f1359a98d5013772ad5587e74a2d229'
+          PREVIOUS_CODE="$(echo "$PREVIOUS_INFO" | grep -oE "versionCode='[0-9]+'" | grep -oE '[0-9]+')"
+          NEW_CODE="$((1000 + GITHUB_RUN_NUMBER))"
+          test -n "$PREVIOUS_CODE"
+          if (( NEW_CODE <= PREVIOUS_CODE )); then
+            echo "Nová APK by nemohla aktualizovat předchozí versionCode." >&2
+            exit 1
+          fi
+          cp "$APK" "dist/Zamerovac-v${APP_VERSION}.apk"
           sha256sum dist/*.apk
       - uses: actions/upload-artifact@v4
         with:
@@ -80,24 +111,20 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          TAG="test-v1.2.${GITHUB_RUN_NUMBER}"
-          FILE="dist/Zamerovac-v1.2.${GITHUB_RUN_NUMBER}.apk"
+          TAG="test-v${APP_VERSION}"
+          FILE="dist/Zamerovac-v${APP_VERSION}.apk"
           for attempt in 1 2 3; do
             if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-              if gh release upload "$TAG" "$FILE" --repo "$GITHUB_REPOSITORY" --clobber && \
-                 gh release edit "$TAG" --repo "$GITHUB_REPOSITORY" --latest; then
-                echo "Vydání bylo aktualizováno."
-                exit 0
-              fi
-            else
-              if gh release create "$TAG" "$FILE" \
-                  --repo "$GITHUB_REPOSITORY" \
-                  --target "$GITHUB_SHA" \
-                  --title "Zaměřovač 1.2.${GITHUB_RUN_NUMBER}" \
-                  --notes "Testovací sestavení aplikace Zaměřovač pro Android. Aktualizuje pouze dřívější testovací instalaci (balíček cz.zamerovac.app.preview) při zachování jejích dat; běžnou instalaci aplikace Zaměřovač nemění. Otevři APK přímo ze Stažených souborů." \
-                  --latest; then
-                exit 0
-              fi
+              echo "Vydání této verze již existuje; nelze jej přepsat." >&2
+              exit 1
+            fi
+            if gh release create "$TAG" "$FILE" \
+                --repo "$GITHUB_REPOSITORY" \
+                --target "$GITHUB_SHA" \
+                --title "Zaměřovač ${APP_VERSION}" \
+                --notes "Testovací Zaměřovač. Nově používá přehledné číslování vydání; funkce z 1.2.153 zůstaly zachovány. Instaluj jako aktualizaci přes stávající testovací verzi bez odinstalování nebo mazání dat. Fyzická akceptace zatím nebyla provedena." \
+                --latest; then
+              exit 0
             fi
             echo "GitHub odmítl vydání, pokus $attempt ze 3." >&2
             sleep $((attempt * 5))

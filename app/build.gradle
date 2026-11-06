@@ -9,6 +9,13 @@ if (!debugKey.exists()) {
     debugKey.bytes = java.util.Base64.getDecoder().decode(encoded)
 }
 def workflowBuildNumber = (System.getenv('GITHUB_RUN_NUMBER') ?: '1').toInteger()
+// User-facing version is independent from Android's monotonic versionCode.
+def versionProperties = new Properties()
+def versionFile = rootProject.file('config/app-version.properties')
+if (!versionFile.isFile()) throw new GradleException('Chybí config/app-version.properties')
+versionFile.withInputStream { versionProperties.load(it) }
+def marketingVersion = versionProperties.getProperty('versionName','').trim()
+if (!(marketingVersion ==~ /^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$/)) throw new GradleException('Neplatné versionName')
 // Only the registered preview package may activate Google authorization.
 apply from: rootProject.file('gradle/drive-registration.gradle')
 def driveProjectOverride = providers.gradleProperty('driveCloudProject').orElse(providers.environmentVariable('ZAMEROVAC_DRIVE_PROJECT')).orNull
@@ -24,7 +31,7 @@ android {
         minSdk 26
         targetSdk 35
         versionCode 1000 + workflowBuildNumber
-        versionName "1.2.${workflowBuildNumber}"
+        versionName marketingVersion
         buildConfigField 'String', 'DRIVE_CLOUD_PROJECT', '""'
     }
     signingConfigs {
