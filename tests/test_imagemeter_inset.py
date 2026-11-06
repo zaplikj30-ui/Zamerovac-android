@@ -24,10 +24,12 @@ class ImageMeterInsetTests(unittest.TestCase):
         self.assertIn("c.strokeStyle='#f7dc27';c.lineWidth=isSelected?2.4:2", INSET)
         self.assertNotIn("isSelected?'#e3c4ff'", INSET)
 
-    def test_grips_match_video_without_changing_hit_targets(self):
+    def test_grips_show_resize_and_rotation_without_changing_hit_targets(self):
         self.assertIn("c.arc(g.cx,g.cy,11", INSET)
         self.assertIn("rgba(255,255,255,.46)", INSET)
-        self.assertIn("rgba(255,255,255,.72)", INSET)
+        self.assertIn("c.beginPath();c.moveTo(-12,0);c.lineTo(12,0);c.stroke();", INSET)
+        self.assertIn("for(const [start,end] of [[Math.PI*1.1,Math.PI*1.85]", INSET)
+        self.assertIn("rgba(255,255,255,.92)", INSET)
         self.assertIn("rotationHandle(c,turn(", INSET)
         self.assertIn("const near=position=>pointerDistance(point,position)<=24", INSET)
         self.assertIn("kind:'resize-right'", INSET)
