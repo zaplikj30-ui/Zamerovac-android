@@ -68,16 +68,21 @@
     ctx.fillStyle='#231a30';ctx.fillText(label,p.x,p.y+1)}
   ctx.restore();
  }
- // Rotace zobrazená jako dvě lehké šipky nad obrázkem, ne nové tlačítko v kolečku.
+ // Jen vzhled: dva oblouky naznačují otáčení. Dotyk zůstává nahoře v hitTest().
  function rotationHandle(c,p,g){
   c.save();c.translate(p.x,p.y);c.rotate(g.angle);
   c.lineCap='round';c.lineJoin='round';
-  c.strokeStyle='rgba(255,255,255,.88)';c.fillStyle='rgba(255,255,255,.88)';
+  c.strokeStyle='rgba(255,255,255,.92)';c.fillStyle='rgba(255,255,255,.92)';
   c.shadowColor='rgba(0,0,0,.7)';c.shadowBlur=4;c.lineWidth=2.7;
-  for(const side of [-1,1]){
-   const a=side*3,b=side*17;
-   c.beginPath();c.moveTo(a,0);c.lineTo(b,0);c.stroke();
-   c.beginPath();c.moveTo(b,0);c.lineTo(b-side*7,-6);c.lineTo(b-side*7,6);c.closePath();c.fill();
+  // Dva oddělené oblouky s hroty, bez změny středu úchopu či jeho citlivosti.
+  for(const [start,end] of [[Math.PI*1.1,Math.PI*1.85],[Math.PI*.1,Math.PI*.85]]){
+   const r=12,x=r*Math.cos(end),y=r*Math.sin(end);
+   const tx=-Math.sin(end),ty=Math.cos(end);
+   c.beginPath();c.arc(0,0,r,start,end);c.stroke();
+   c.beginPath();c.moveTo(x,y);
+   c.lineTo(x-7*tx+4*Math.cos(end),y-7*ty+4*Math.sin(end));
+   c.lineTo(x-7*tx-4*Math.cos(end),y-7*ty-4*Math.sin(end));
+   c.closePath();c.fill();
   }
   c.restore();
  }
@@ -186,15 +191,21 @@
    c.strokeStyle='rgba(38,38,38,.55)';c.lineWidth=1.4;
    c.setLineDash([3,3]);
    c.beginPath();c.arc(g.cx,g.cy,11,0,Math.PI*2);c.fill();c.stroke();c.restore();
-   // Jemné bílé trojúhelníkové úchopy u obou stran a otáčení nahoře.
+   // Na obou původních postranních úchopech obousměrné šipky pro změnu velikosti.
+   // Souřadnice i dotykové oblasti v hitTest() zůstávají beze změny.
    for(const side of [-1,1]){
     const p=turn({x:side*(g.w/2+15),y:0},g);
     c.save();c.translate(p.x,p.y);c.rotate(g.angle);
-    c.fillStyle='rgba(255,255,255,.72)';
-    c.strokeStyle='rgba(55,55,55,.65)';c.lineWidth=1.3;c.setLineDash([4,3]);
-    c.beginPath();
-    c.moveTo(side*17,0);c.lineTo(-side*7,-16);c.lineTo(-side*7,16);c.closePath();
-    c.fill();c.stroke();c.restore();
+    c.strokeStyle='rgba(255,255,255,.92)';c.fillStyle='rgba(255,255,255,.92)';
+    c.shadowColor='rgba(0,0,0,.7)';c.shadowBlur=4;c.lineWidth=2.7;
+    c.lineCap='round';c.lineJoin='round';
+    c.beginPath();c.moveTo(-12,0);c.lineTo(12,0);c.stroke();
+    for(const direction of [-1,1]){
+     const x=direction*13;
+     c.beginPath();c.moveTo(x,0);c.lineTo(x-direction*7,-6);
+     c.lineTo(x-direction*7,6);c.closePath();c.fill();
+    }
+    c.restore();
    }
    rotationHandle(c,turn({x:0,y:-g.h/2-33},g),g);
   }
