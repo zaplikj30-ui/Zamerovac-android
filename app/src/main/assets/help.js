@@ -18,7 +18,8 @@ const chapters=[
     ],
     "notes": [
       "Rozměry se automaticky nepočítají podle velikosti objektů na fotografii. Fotografie je pracovní podklad, skutečnou hodnotu zadáváš ty nebo měřidlo.",
-      "Před použitím při výrobě vždy zkontroluj kritické rozměry."
+      "Před použitím při výrobě vždy zkontroluj kritické rozměry.",
+      "Lupa nápovědy hledá jen zde. Tlačítka Předchozí a Další přecházejí mezi zvýrazněnými slovy; samostatná počítadla rozlišují témata a výskyty. Hledání funguje i bez diakritiky."
     ],
     "keywords": [
       "první použití",
@@ -62,7 +63,11 @@ const chapters=[
     ],
     "notes": [
       "Původní fotografie se kvůli nakresleným kótám nemá přepisovat; anotace jsou uložené odděleně.",
-      "Při chybě načtení fotografii zavři a otevři znovu. U důležitých dat neodinstalovávej aplikaci jako první způsob opravy."
+      "Při chybě načtení fotografii zavři a otevři znovu. U důležitých dat neodinstalovávej aplikaci jako první způsob opravy.",
+      "Náhledy v přehledu se vytvářejí se zmenšeným dekódováním mimo zámek místní databáze, aby načítání fotografie neblokovalo ukládání. U náhledu se respektuje otočení i zrcadlení EXIF; originál zůstává beze změny. Při chybě nebo odstranění fotografie se nepublikuje opožděný náhled.",
+      "Opakované otevření stejné fotografie využívá omezenou paměťovou mezipaměť dekódovaných obrázků. Po úplném restartu se originál načítá znovu. Při načítání nebo chybě se samostatné kóty nezobrazují na prázdném podkladu; originály ani hodnoty se nemění.",
+      "Příloha se připojí až po potvrzení celého zápisu. Při přerušení se nedokončený soubor odmítne a existující originál se nepřepíše.",
+      "Přidávání ze systémového výběru běží mimo hlavní vlákno a zobrazuje průběh. Po dobu dávky nezačínej další výběr. Výsledek patří do původní složky nebo poznámky; po přechodu jinam se tam nepřesměruje. Je-li původní cíl smazaný, uzamčený nebo dialog zavřený, příloha se jinam nepřipojí. Jedna dávka má nejvýše 1024 souborů a jeden soubor nejvýše 2 GiB."
     ],
     "keywords": [
       "foto",
@@ -85,7 +90,8 @@ const chapters=[
     ],
     "notes": [
       "Podpora formátů videa závisí na kodecích konkrétního telefonu. Nepodporované video může zobrazit chybu nebo náhradní miniaturu.",
-      "Přehrání videa a vytvoření miniatury nemá změnit jeho původní obsah."
+      "Přehrání videa a vytvoření miniatury nemá změnit jeho původní obsah.",
+      "V galerii se fotografie i všechny anotace posouvají jen k dostupným okrajům. Po oddálení na 1× se vycentrují; gesta zůstávají dostupná bez spodního pokynu."
     ],
     "keywords": [
       "mp4",
@@ -220,7 +226,8 @@ const chapters=[
     ],
     "notes": [
       "Jemné poklepání nemá náhodně posunout bod. Pokud se to stane, zkus Vrátit úpravu a chybu zdokumentuj.",
-      "Výběr objektu není totéž jako změna jeho skutečně naměřené číselné hodnoty."
+      "Výběr objektu není totéž jako změna jeho skutečně naměřené číselné hodnoty.",
+      "Po otevření editoru je aktivní výběr. Při tažení rohu hotového obdélníku, lichoběžníku, kruhu nebo elipsy lupa sleduje upravovaný úchop; při přesunu celého objektu se nezobrazuje."
     ],
     "keywords": [
       "úchop",
@@ -293,6 +300,10 @@ const chapters=[
     ],
     "notes": [
       "Hlasové nahrávání vyžaduje přístup k mikrofonu. Při odmítnutém oprávnění lze zkusit nastavení Androidu.",
+      "Hlas se připojí k původní poznámce až po úspěšném ukončení záznamu a potvrzení souboru. Uložit nebo šipka zpět v textové poznámce nahrávání ukončí. Při chybě mikrofonu nebo zápisu zůstane formulář otevřený; u bodové poznámky zůstane otevřený i po neúspěšném Zpět. Zrušit bodovou poznámku rozpracovaný hlas zahodí.",
+      "Nahrávej v otevřené aplikaci; systém může mikrofon na pozadí omezit. Nedokončený hlas se při zničení obrazovky nepřipojí. Existující originál ani při kolizi identifikátoru nepřepisuj. Přílohy s neplatnými metadaty nebo nad 2 GiB se odmítnou.",
+      "Checklisty a přílohy dostávají revizi a průběžně se ukládají. Příchozí synchronizace během otevřené poznámky počká na dokončení její úpravy. Při chybě zápisu tlačítko Uložit formulář nezavře; zopakuj uložení.",
+      "Pouhé otevření a zavření textové poznámky nebo zobrazení prázdné skici nemění její obsah ani revizi. Uzamčená poznámka nedovolí měnit checklist ani odebírat přílohy.",
       "Soukromé poznámky do zákaznického PDF patří jen při výslovné volbě."
     ],
     "keywords": [
@@ -300,6 +311,7 @@ const chapters=[
       "poznámkový blok",
       "audio",
       "mikrofon",
+      "chyba mikrofonu",
       "přílohy",
       "S Pen"
     ]
@@ -339,7 +351,8 @@ const chapters=[
     ],
     "notes": [
       "Bluetooth přenos nemusí fungovat se všemi modely Bosch; podporu ověř na vlastním přístroji.",
-      "Do výrobní dokumentace používej až rozměr, který se skutečně přenesl a který jsi zkontroloval."
+      "Do výrobní dokumentace používej až rozměr, který se skutečně přenesl a který jsi zkontroloval.",
+      "Obecný dialog se jmenuje Bluetooth měřič. Připojit můj laser Bosch používá dosavadní podporu Bosch; neutrální název neznamená podporu všech protokolů."
     ],
     "keywords": [
       "GLM",
@@ -397,9 +410,14 @@ const chapters=[
   },
   {
     "id": "backup",
-    "title": "18. Zálohovací ZIP, export a import zakázky",
-    "intro": "Zálohovací ZIP je určený pro uchování a obnovu zakázek včetně editovatelných anotací a souborů.",
+    "title": "18. Historické zálohy, ZIP a bezpečná obnova",
+    "intro": "Historické zálohy uchovávají samostatné body telefonu a tabletu ve vybraném úložišti. ZIP zůstává přenosnou úplnou zálohou zakázek s anotacemi a soubory.",
     "steps": [
+      "Otevři ☰ → Historické zálohy nebo Nastavení → Historické zálohy a obnova. Zvol systémovou složku záloh nebo Připojit Google účet; tento výběr je nezávislý na synchronizaci.",
+      "Zvol Vytvořit historickou zálohu. Všechny soubory se uloží do ověřovaných datových bloků a nový historický bod se potvrdí až po kontrole úplnosti.",
+      "V přehledu najdeš oddělené historie instalací telefonu a tabletu. Stejné originály mohou sdílet neměnný blok; nový historický bod starý nepřepisuje. Přehled uvádí velikost datových bloků bez režie poskytovatele.",
+      "Před obnovou můžeš zvolit Ověřit všechny soubory. Obnovit jako nové kopie znovu ověří data a přílohy a vytvoří nové identifikátory. Aktuální zakázky včetně změn provedených během stahování zůstanou zachované.",
+      "Velké operace u cloudového nebo neznámého poskytovatele vyžadují neměřenou Wi-Fi. Výjimku pro jedinou operaci můžeš výslovně potvrdit; může spotřebovat mobilní data i data hotspotu. Místní složka funguje offline.",
       "V nabídce konkrétní fotografie nebo složky najdi Exportovat do ZIP a vyber místo pro uložení.",
       "Zkontroluj, že soubor ZIP skutečně vznikl; u důležité zakázky si jej ponech na bezpečném místě.",
       "Pro obnovení zvol ＋ → Importovat zakázky ze ZIP a vyber správný zálohovací soubor.",
@@ -407,15 +425,37 @@ const chapters=[
       "Po importu otevři fotografie a ověř kóty, vložené obrázky, poznámky a přílohy."
     ],
     "notes": [
+      "Když poskytovatel zálohy nevrací žádná data nebo překročí povolenou délku, kontrola skončí chybou. Neúplný obsah se nepotvrdí jako historická záloha ani se nepoužije k obnově; ověř dostupnost a zkus operaci znovu.",
+      "Historie používá vlastní prostor Zamerovac-zalohy a funguje i při vypnuté synchronizaci či bez párování. Odpojení složky ani změna účtu uložené body nemaže. Starší historii najdeš opětovným výběrem původní složky.",
+      "Google připojení používá soukromý prostor této aplikace na vybraném účtu. Body nejsou běžnými soubory v seznamu Disku; prohlížej, ověřuj a obnovuj je zde. Registrace a konfigurace této testovací verze jsou propojené. Použij povolený testovací účet; skutečný přenos a obnova na účtu dosud fyzicky ověřeny nebyly. Systémová složka nebo ZIP zůstávají samostatnou možností.",
+      "Poškozený blok, chybějící příloha, odebrané oprávnění, nedostatek místa a přerušený zápis nesmějí být potvrzeny jako úplná záloha. Při chybě původní historie zůstává beze změny; poškozený existující blok se automaticky nepřepisuje.",
+      "Pokud přerušená nebo poškozená záloha zanechá neúplný datový blok, nový pokus může z dostupného originálu vytvořit další ověřenou kopii. Původní soubor a historické manifesty nepřepisuje. Kontrola i obnova vybírají jen úplný obsah se správným součtem. Chyba oprávnění nebo čtení se nesmí vydávat za opravenou zálohu; pokud chybí všechny kopie i originál, obnova není možná. Ověření může vyžadovat další čtení velkých souborů.",
+      "Automatická frekvence ani automatické promazávání nejsou zapnuté. Systémovou složku lze spravovat v jejím správci souborů; hromadné odstranění dat této aplikace v nastavení Disku smaže i její body. Sdílené bloky nemaž bez kontroly všech historií, jinak můžeš poškodit více bodů; synchronizace je nikdy nemaže.",
       "Nevyvážej pouhé zákaznické PDF, pokud chceš později upravovat kóty.",
-      "Poškozený nebo neplatný ZIP aplikace odmítne. Pokud nelze soubor vybrat, zkontroluj filtr a umístění v systémovém správci."
+      "ZIP podporuje nejvýše 20 000 položek včetně tří metadatových souborů, celkem 2 GiB rozbalených dat a 20 MiB UTF-8 pro každý JSON. Nadlimitní export skončí chybou; nepovažuj jej za hotovou zálohu.",
+      "Při čtení ZIP ze systémového úložiště můžeš dál ukládat místní práci. Obnova přidá nové kopie k aktuálním zakázkám; pomalý poskytovatel má časový limit a přerušení nepotvrdí obnovu.",
+      "Nové ZIP zálohy obsahují kontrolní součty SHA-256 a velikosti souborů. Obnova je ověří před vytvořením kopií; starší ZIP zůstávají přijímány bez této dodatečné kontroly.",
+      "Chybějící nebo prázdná příloha export zálohy zastaví. Neúspěšný zápis se neoznačí jako hotová záloha; původní zakázky zůstávají zachované.",
+      "Místní databáze má limit 20 MiB skutečných UTF-8 bajtů; české znaky a emoji zabírají více bajtů než prostý text. Odmítnutý nadlimitní zápis zachová obě potvrzené kopie. Rozpracované změny ponech otevřené a omez nepotřebný obsah před dalším uložením.",
+      "Při hlášení Neuloženo zůstaň v aplikaci a uložení zopakuj. Aplikace potvrdí zápis až po úspěšném uložení; souběžné konfliktní změny uchová jako označenou kopii.",
+      "Poškozený nebo neplatný ZIP, neplatné kódování, neúplné znaky Unicode a příliš zanořená data aplikace odmítne. Pokud nelze soubor vybrat, zkontroluj filtr a umístění v systémovém správci.",
+      "Změna účtu nebo úložiště vyčistí pouze zobrazený seznam a dočasná označení ověření; původní historie zůstává na původním místě. Znovu ji zpřístupníš jeho výběrem. Odpojení záloh nezmění účet synchronizace ani místní zakázky."
     ],
     "keywords": [
       "archiv",
+      "historické zálohy",
+      "historie telefonu a tabletu",
+      "sdílené bloky",
+      "měřená síť",
+      "SHA-256",
+      "kontrolní součet",
+      "neuloženo",
       "obnova",
       "importovat",
       "záloha",
-      "kompatibilita"
+      "kompatibilita",
+      "Google účet",
+      "soukromý prostor"
     ]
   },
   {
@@ -429,6 +469,8 @@ const chapters=[
       "Zámky složek slouží k ochraně před nechtěnou změnou. Před editací nebo mazáním složku podle potřeby odemkni."
     ],
     "notes": [
+      "Vysypání koše uchovává pouze identifikátory a revizi smazání. Nezávislá novější změna z jiného zařízení se může zachovat jako označená konfliktní kopie; původní vysypané ID se neobnovuje.",
+      "Trvalý úklid zahrnuje také výhradní hlasové poznámky a přílohy historie anotací. Soubor používaný jiným záznamem nebo jeho historií zůstane zachovaný; oddělené neměnné zálohy se tím nemažou.",
       "Obnovení z koše nenahrazuje samostatnou zálohu ZIP.",
       "Trvalé odstranění a synchronizace s dalšími zařízeními mohou mít nevratné následky."
     ],
@@ -442,25 +484,68 @@ const chapters=[
   },
   {
     "id": "cloud",
-    "title": "20. Google Disk, synchronizace a práce offline",
-    "intro": "Zakázky lze držet lokálně v zařízení a podle možností poskytovatele propojit se složkou na Google Disku.",
+    "title": "20. Synchronizace zařízení, Google Disk a práce offline",
+    "intro": "Přímé propojení přenáší celé zakázky mezi spárovanými Androidy v místní síti nebo přes Wi-Fi Direct. Vzdálený přenos může použít samostatně připojený Google účet nebo systémovou složku.",
     "steps": [
-      "V Nastavení nebo nabídce Google Disk vyber složku, do které má Zaměřovač přístup pro čtení i zápis.",
-      "Ruční synchronizaci spouštěj přes Synchronizovat nyní; její skutečný stav ověř ve zprávách aplikace.",
+      "Otevři ☰ → Synchronizace zařízení nebo Nastavení → Synchronizace zařízení – místní a Google Disk. Zapni párování na obou zařízeních.",
+      "Ve stejné místní Wi-Fi vyber nalezený Zaměřovač. Bez internetu a routeru na obou spusť Hledat přes Wi-Fi Direct bez routeru a na jednom zvol druhé zařízení; systém Android může vyžádat potvrzení propojení.",
+      "Pokud Android oznámí, že bezpečnostní klíč zařízení není dostupný, párování ani přenos nejsou potvrzené. Vrať se do aplikace a zkus přenos znovu; trvající chybu nepovažuj za úspěšné doručení dat.",
+      "Porovnej celý kód na obou obrazovkách a potvrď shodu na obou zařízeních. Při odlišných kódech párování odmítni. Spárované zařízení získá všechny zakázky a přílohy.",
+      "Automatické pokusy z tohoto zařízení se řídí zvolenou frekvencí. Zapnutý místní přenos běží i po zavření obrazovky ve službě Androidu s oznámením; vypneš ho v Synchronizaci zařízení nebo tlačítkem v oznámení. Na Androidu 13 a novějším povol oznámení, pokud je chceš vidět v běžném seznamu. Obrazovka ukazuje čekající potvrzení a chyby; po výpadku použij Zkusit přenos znovu.",
+      "Ve stejné obrazovce nastav Frekvence automatických pokusů z tohoto zařízení: Automaticky (doporučeno), každých 15, 30 či 60 minut nebo Ručně. Automaticky průběžně zkouší místní přenos a otevřený cloud přibližně po minutě; Android na pozadí plánuje cloud nejdříve po 15 minutách. Časy jsou orientační, systém je může odložit. Ručně zastaví vlastní automatické pokusy, neukončí rozběhnutý přenos a nevypne příchozí místní spojení důvěryhodného zařízení. Vlastní pokus spustíš přes Zkusit přenos znovu nebo Synchronizovat nyní; příchozí místní přenos zastavíš vypnutím místního přenosu. Neúspěšně uložené nastavení se nepotvrdí.",
+      "Odebrání párování zneplatní také právě dokončované spojení. Zařízení lze znovu schválit jen novým výslovným párováním. Pro odebrání důvěry zvol Odebrat párování. Tím se nemažou zakázky už uložené na druhém zařízení; zastaví se nové přenosy a odstraní místní fronta pro toto zařízení.",
+      "Pro Google Disk v Synchronizaci zařízení zvol Připojit Google účet. Vyber stejný povolený testovací účet v telefonu i tabletu a potvrď přístup k soukromým datům této aplikace. Zrušený souhlas ponechá původní účet; změna účtu záloh je samostatná. Pokud připojení této verze čeká na dokončení nastavení, zůstává tlačítko nedostupné a místní přenos lze dál používat.",
+      "Systémovou složku lze dál vybrat v Nastavení → Systémová složka synchronizace nebo přes ikonu cloudu. Vyber na obou zařízeních stejné místo s právem číst i zapisovat. Přepnutí na složku nahradí pro synchronizaci vybraný Google účet, účet záloh tím nemění.",
+      "Ruční cloudovou synchronizaci spouštěj přes Synchronizovat nyní. Ikona cloudu rozlišuje potvrzeno, čeká a chybu; pouhé odeslání bez potvrzení příjemce není dokončený přenos.",
+      "Potvrzené přijaté cloudové zprávy se evidují přímo v instalaci pro konkrétní úložiště. Po návratu se jejich obsah nečte zbytečně znovu; přerušené odeslání potvrzení se dokončí z uloženého stavu bez opakování importu.",
+      "Před cloudem zařízení nejdříve spáruj místní cestou. Cloudové zprávy i potvrzení mají ověřovaný podpis veřejného certifikátu schválené instalace. Nová cesta nepřepisuje společný projects.json; starší vzdálené soubory zůstávají nedotčené.",
+      "Velké cloudové přílohy na měřené nebo neznámé síti čekají. Malá změna může dorazit, pokud má příjemce potřebné originály už uložené. Výjimku pro aktuální pokus povolíš přes ikonu cloudu a Jednorázově povolit velké soubory na měřené síti. Volba Synchronizovat pouze na Wi-Fi omezuje i malé automatické cloudové změny.",
+      "Hláška čekání na místní přenos, povolenou síť nebo další dávku zpráv znamená pokračování v následujícím pokusu. Poškozené zprávy ani uložená pozice procházení nejsou potvrzením přijetí zakázky. Rozpočet aplikace zahrnuje také řídicí zprávy; neudává přesnou síťovou spotřebu systémového poskytovatele.",
+      "Při souběhu ověřených místních relací má Wi-Fi Direct přednost před místní Wi-Fi; mezi stejně dostupnými cestami obě zařízení používají shodné pořadí. Při výpadku se fronta pokusí pokračovat dostupnou cestou. Obrazovka ukazuje použitý místní přenos. Určení Wi-Fi Direct vychází ze skutečného síťového rozhraní skupiny Androidu, nikoli z názvu výrobce nebo odhadnuté IP adresy. Ověření rádia na skutečných zařízeních teprve čeká.",
+      "Nedostupná stará cloudová zpráva zůstane nepotvrzená a může dál hlásit chybu; ostatní příchozí zprávy i vlastní nové odesílání přesto pokračují po omezených dávkách. Chybějící starý obsah se nesmí vydávat za doručený jen proto, že dorazila jiná zpráva.",
+      "Dva nezávislé přesuny mohou při sloučení vytvořit cyklus složek. Aplikace deterministicky přesune jednu ze složek do kořene a označí ji OPRAVENÝ CYKLUS SLOŽEK. Všechny záznamy, přílohy a přesné kóty zachová; zkontroluj umístění a případně složku přesuň znovu.",
+      "Když se objeví ověřené místní spojení nebo se změní povolené připojení, cloud to zkontroluje před dalším blokem, také během místní kontroly velkých originálů. Již probíhající operace poskytovatele může čekat do svého časového limitu. Nedokončená příloha ani zrušená plánovaná úloha neoznačí zakázku jako doručenou; potvrzené změny a fronta zůstávají uložené.",
+      "Po změně cloudového úložiště se do něj musí ověřit úplná kopie aktuálních dat, i když je druhé zařízení dříve potvrdilo jinou cestou. Staré potvrzení nenahrazuje chybějící přílohy v novém místě. Velká kopie dál čeká na povolené připojení.",
+      "Ověřené cloudové soubory se při čekání na druhé zařízení znovu celé nečtou. Aplikace kontroluje jejich dostupnost; chybějící nebo poškozený soubor si příjemce vyžádá podepsanou žádostí o novou kopii. Velká oprava dál čeká na povolenou síť. Při dlouhém čekání se kontrola souboru zopakuje nejpozději při dalším přenosu po uplynutí dne. Žádost o opravu ani evidence odeslání nenahrazují potvrzení celé zakázky.",
       "Offline můžeš pracovat s lokálně dostupnými projekty. Při opětovném připojení zkontroluj úspěšné provedení synchronizace.",
-      "Při souběžných změnách na více zařízeních zkontroluj konfliktní kopie, než cokoli smažeš."
+      "Při souběžných změnách na více zařízeních zkontroluj konfliktní kopie, než cokoli smažeš. Otevřený editor zůstane u své zachované změny, i když dostane nové ID kopie.",
+      "Příchozí změny během kreslení, vyplňování rozměru nebo úprav detailní fotografie počkají na dokončení této úpravy. Tvoje rozpracovaná hodnota zůstane zachovaná i při konfliktní kopii; potom se načte aktuální stav.",
+      "Pouhé prohlížení fotografie nebo detailu nevytváří historii ani novou revizi. Výchozí stav historie se uloží až s první skutečnou úpravou; rozměry plátna se zapíší při editaci, naměřené hodnoty se z pixelů neodvozují."
     ],
     "notes": [
+      "Přímé propojení nevyžaduje internet, Google účet ani služby Samsungu. Wi-Fi Direct závisí na podpoře konkrétního Androidu a oprávněních; na starším Androidu také na zapnutém určování polohy. Při nepodpoře použij stejnou místní Wi-Fi. Rádia různých značek je stále nutné fyzicky ověřit.",
+      "Pokud se místní databáze musí načíst ze starší záložní kopie, aplikace zneplatní stará místní potvrzení cloudových zpráv a znovu je ověří a sloučí. Spárovanému zařízení oznámí obnovu a vyžádá nové nabídnutí jeho dat; podle pořadí spojení může být potřeba další automatický pokus. Musí zůstat dostupná ověřená kopie zprávy nebo druhé zařízení. Ztrátu všech kopií tím opravit nelze.",
+      "Když novější potvrzený stav nebo vysypaný koš prokazatelně nahradí starší nedokončenou zprávu a její chybějící přílohy už nejsou potřebné, aplikace ji místně vyřadí z čekání. Chybějící soubory tím neoznačí jako přijaté. Nezávislá konfliktní změna ani stále potřebná příloha se nesmějí zahodit.",
+      "Po přerušení zůstává fronta v zařízení. Potvrzené soubory se ověří a nepřenášejí zbytečně znovu; nedokončený soubor se odešle celý. Při chybě hashe nebo odlišném originálu se přenos zastaví a nic nepřepíše. Příjem projektu se potvrdí až po ověření všech potřebných souborů a uložení dat.",
+      "Párování vyžaduje otevřenou aplikaci a po odchodu z obrazovky se ukončí. Již spárovaný přenos může pokračovat na pozadí; Android či úspora baterie jej mohou omezit nebo ukončit. Po návratu se použijí potvrzená data a trvalá fronta. U dříve přímo ověřeného zařízení aplikace zkouší obnovit i zaniklou skupinu Wi-Fi Direct, pokud má oprávnění a protistrana nezměnila rádiovou adresu. Při změně adresy nebo systémovém odmítnutí znovu vyber zařízení. Nepřetržitý provoz na všech značkách ani skutečný Drive dosud nejsou fyzicky ověřeny.",
+      "Historické zálohy se přímou synchronizací nemažou. Obnova Android systému nekopíruje identitu ani párování/frontu do jiného zařízení; po ní párování znovu nastav.",
       "Ne každý správce Google Disku nebo souborový poskytovatel nabízí zapisovatelnou složku pro Android.",
-      "Cloudová synchronizace není totéž jako ověřená nezávislá záloha. Před důležitými změnami si ulož ZIP."
+      "Systémová složka synchronizace má prostor Zamerovac-sync/sync/v2, zálohy Zamerovac-zalohy/backups/v2. Google připojení používá oddělené sync/v2 a backups/v2 v soukromém prostoru aplikace téhož účtu. Složku cloudové synchronizace nastav na obou zařízeních na stejné úložiště. Data ve vybrané složce chrání oprávnění poskytovatele/účtu; podpis sám nešifruje jejich obsah. Nezveřejňuj tuto složku ostatním.",
+      "Cloudová synchronizace není totéž jako ověřená nezávislá záloha. Před důležitými změnami si ulož ZIP.",
+      "Instalace používá náhodnou vlastní identitu a čítače revizí, ne model telefonu ani jeho hodiny. Při souběhu se novější pozorovaná verze odliší od nezávislé změny.",
+      "Přenos poskytovatele nedrží zámek místní databáze. Novější změny čekají ve frontě; data příjemce se sloučí teprve po ověření všech potřebných souborů. Při přímém spojení má místní přenos přednost. Frekvenci automatických pokusů z tohoto zařízení volíš v synchronizačním panelu; Android na pozadí může nastavený interval prodloužit. Při neodpovídajícím poskytovateli se operace po časovém limitu nepotvrdí a čekající data zůstanou zachovaná; opožděná odpověď se zahodí. Google cesta používá vlastní API a potvrzenou registraci testovacího přihlášení. Vyžaduje služby Google Play a povolený testovací účet; živý přenos a obnova na účtu dosud fyzicky ověřeny nebyly.",
+      "Odpojit Disk pro tuto funkci zastaví její cloudové přenosy a nepřejde samo na dřívější složku. Zakázky, párování, druhá funkce a historie se nemažou. Na pozadí se neotvírá souhlas k účtu; pokud je znovu potřeba, potvrď jej zde. Přihlašovací token se neukládá do projektu ani zálohy."
     ],
     "keywords": [
       "cloud",
+      "frekvence",
+      "15 minut",
+      "30 minut",
+      "60 minut",
+      "ručně",
       "SAF",
+      "párování",
+      "Wi-Fi Direct",
+      "wifi direct",
+      "router",
+      "čekající potvrzení",
       "synchronizovat",
       "konflikt",
       "bez internetu",
-      "wi-fi"
+      "wi-fi",
+      "Google účet",
+      "souhlas účtu",
+      "odpojit Disk"
     ]
   },
   {
@@ -477,7 +562,8 @@ const chapters=[
     ],
     "notes": [
       "Změna zobrazení jednotek nebo přiblížení nesmí přepočítat již uloženou naměřenou hodnotu bez tvé výslovné úpravy.",
-      "Experimentální funkce jsou v hlavní nabídce samostatné a nemusí být ověřené pro běžné zakázky."
+      "Experimentální funkce jsou v hlavní nabídce samostatné a nemusí být ověřené pro běžné zakázky.",
+      "Na výšku se lišta nemění. Na šířku se přidají vybrané nástroje podle volného místa. Nabídka nástrojů → Nastavit lištu na šířku umožní výběr a pořadí; vytahovací nabídka zůstává dostupná."
     ],
     "keywords": [
       "čeština",
@@ -502,17 +588,22 @@ const chapters=[
     "steps": [
       "Ikonou hledání nahoře vyhledej položku podle názvu.",
       "Tlačítkem A–Z / Z–A změň pořadí v seznamu.",
-      "Další možnosti hledání a filtrování mohou být dostupné v rozšířené nabídce; výsledky zkontroluj před úpravami."
+      "Další možnosti hledání a filtrování mohou být dostupné v rozšířené nabídce; výsledky zkontroluj před úpravami.",
+      "Ve vyhledávání zvol Vyhledat adresu v RÚIAN, zadej obec a číslo domu a vyber nalezenou adresu. Mapu otevři tlačítkem v prohlížeči."
     ],
     "notes": [
-      "Vyhledání neznamená přesunutí ani smazání záznamu."
+      "Vyhledání neznamená přesunutí ani smazání záznamu.",
+      "Vyhledávání RÚIAN a mapa potřebují internet. Při otevření mapy se vybrané souřadnice odešlou službě OpenStreetMap."
     ],
     "keywords": [
       "najít",
       "hledat",
       "řazení",
       "seřadit",
-      "filtr"
+      "filtr",
+      "RÚIAN",
+      "adresa",
+      "mapa"
     ]
   },
   {
@@ -572,7 +663,8 @@ const chapters=[
     ],
     "notes": [
       "Kritické rozměry, například pro výrobu a montáž nábytku, nikdy nepotvrzuj jen podle obrazového měřítka fotografie.",
-      "Údaje o zákaznících a fotografie interiérů považuj za citlivé."
+      "Údaje o zákaznících a fotografie interiérů považuj za citlivé.",
+      "Editor otevírá jen vlastní zabalenou aplikaci. Cizí stránky, vložené rámce a spustitelné přílohy se v něm blokují; klepnutý webový odkaz se otevírá v systémovém prohlížeči. Tato ochrana nenahrazuje kontrolu celého zabezpečení aplikace."
     ],
     "keywords": [
       "bezpečnost",
@@ -580,7 +672,9 @@ const chapters=[
       "přesnost",
       "ochrana",
       "data",
-      "soukromí"
+      "soukromí",
+      "webové odkazy",
+      "spustitelné přílohy"
     ]
   }
 ];
@@ -590,33 +684,53 @@ function searchChapters(query=''){
  if(!needle)return chapters;
  return chapters.filter(c=>fold([c.title,c.intro,...c.steps,...c.notes,...c.keywords].join(' ')).includes(needle));
 }
-const api=Object.freeze({chapters,searchChapters});
+function matchingRanges(text,query){
+ const needle=fold(query);if(!needle)return [];
+ let normalized='',offsets=[];
+ for(let i=0;i<text.length;){const point=String.fromCodePoint(text.codePointAt(i)),part=point.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('cs-CZ');for(const char of part){normalized+=char;offsets.push([i,i+point.length])}i+=point.length;}
+ const ranges=[];for(let at=0;(at=normalized.indexOf(needle,at))>=0;at+=needle.length){ranges.push([offsets[at][0],offsets[at+needle.length-1][1]])}return ranges;
+}
+const api=Object.freeze({chapters,searchChapters,matchingRanges});
 root.ZamerovacHelp=api;
 if(typeof module!=='undefined'&&module.exports)module.exports=api;
 if(typeof document==='undefined')return;
-let panel,search,results,count,returnFocus;
+let panel,search,results,count,returnFocus,occurrenceCount,previousMatch,nextMatch,matches=[],matchIndex=-1;
 function el(tag,className,text){
  const node=document.createElement(tag);
  if(className)node.className=className;
  if(text!==undefined)node.textContent=text;
  return node;
 }
+function moveMatch(step){
+ if(!matches.length)return;
+ matches[matchIndex]?.classList.remove('z-help-active-match');matchIndex=(matchIndex+step+matches.length)%matches.length;
+ const target=matches[matchIndex];target.closest('details').open=true;target.classList.add('z-help-active-match');
+ target.scrollIntoView({block:'center',behavior:'auto'});occurrenceCount.textContent=(matchIndex+1)+' z '+matches.length+' výskytů';
+}
 function render(){
- const query=search.value;
- const filtered=new Set(searchChapters(query).map(c=>c.id));
- let shown=0;
+ for(const mark of results.querySelectorAll('mark[data-help-match]'))mark.replaceWith(document.createTextNode(mark.textContent));
+ results.normalize();matches=[];matchIndex=-1;
+ const query=search.value,filtered=new Set(searchChapters(query).map(c=>c.id));let shown=0;
  for(const card of results.querySelectorAll('details[data-help-topic]')){
-  const visible=filtered.has(card.dataset.helpTopic);
-  card.hidden=!visible;
+  const visible=filtered.has(card.dataset.helpTopic);card.hidden=!visible;
   if(visible)shown++;
-  if(query.trim())card.open=visible;
-  else if(card.dataset.helpTopic!=='start')card.open=false;
+  if(query.trim())card.open=visible;else if(card.dataset.helpTopic!=='start')card.open=false;
+  if(!visible||!fold(query))continue;
+  const walker=document.createTreeWalker(card,NodeFilter.SHOW_TEXT),nodes=[];while(walker.nextNode())nodes.push(walker.currentNode);
+  for(const node of nodes){
+   const ranges=matchingRanges(node.textContent,query);if(!ranges.length)continue;
+   const fragment=document.createDocumentFragment();let from=0;
+   for(const [start,end] of ranges){fragment.append(document.createTextNode(node.textContent.slice(from,start)));const mark=el('mark','',node.textContent.slice(start,end));mark.dataset.helpMatch='';matches.push(mark);fragment.append(mark);from=end;}
+   fragment.append(document.createTextNode(node.textContent.slice(from)));node.replaceWith(fragment);
+  }
  }
  count.textContent=shown===0?'Nic jsme nenašli. Zkus jiné slovo.':'Zobrazeno témat: '+shown+' z '+chapters.length;
+ previousMatch.disabled=nextMatch.disabled=!matches.length;occurrenceCount.textContent='0 z '+matches.length+' výskytů';
+ if(matches.length)moveMatch(1);
 }
 function close(){
  if(!panel||panel.hidden)return;
- panel.hidden=true;
+ panel.hidden=true;document.body.classList.remove('help-open');
  search.value='';
  render();
  const target=returnFocus&&returnFocus.isConnected?returnFocus:document.getElementById('back');
@@ -626,7 +740,7 @@ function open(){
  if(!panel)build();
  if(typeof closeMenus==='function')closeMenus();
  returnFocus=document.activeElement;
- panel.hidden=false;
+ panel.hidden=false;document.body.classList.add('help-open');
  search.value='';
  render();
  panel.querySelector('details[data-help-topic="start"]').open=true;
@@ -657,7 +771,11 @@ function build(){
  search.autocomplete='off';search.setAttribute('enterkeyhint','search');
  search.addEventListener('input',render);
  count=el('p','z-help-count');
- top.append(label,search,count);
+ const navigation=el('div','z-help-match-nav');
+ previousMatch=el('button','','↑ Předchozí');previousMatch.id='helpPreviousMatch';previousMatch.type='button';previousMatch.onclick=()=>moveMatch(-1);
+ nextMatch=el('button','','Další ↓');nextMatch.id='helpNextMatch';nextMatch.type='button';nextMatch.onclick=()=>moveMatch(1);
+ occurrenceCount=el('span');occurrenceCount.id='helpOccurrenceCount';occurrenceCount.setAttribute('aria-live','polite');
+ navigation.append(previousMatch,occurrenceCount,nextMatch);top.append(label,search,count,navigation);
  const scroller=el('div','z-help-scroll');
  const intro=el('p','z-help-intro','Praktický návod ke všem současným funkcím. Funguje i bez internetu. Klepni na kapitolu pro otevření a čti postupy po jednotlivých krocích.');
  results=el('div','z-help-results');

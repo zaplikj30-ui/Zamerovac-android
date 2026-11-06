@@ -1,5 +1,7 @@
 # Praktická automatická kontrola #28 – průběžný stav
 
+**Aktuální mapa:** [qa/coverage-v1.json](qa/coverage-v1.json), 34 funkčních oblastí, soubory implementace/testů, pozitivní i negativní kritéria a explicitní mezery. `node tools/qa/audit.cjs` kontroluje platnost mapy/odkazů v rychlém CI; samotná validace žádný uvedený test nespouští a neověřuje zařízení. Jednotlivé historické checkpointy níže zůstávají odlišené od současného stavu.
+
 Schválené zadání a rozšíření jsou v [issue #28](https://github.com/zaplikj30-ui/Zamerovac-android/issues/28), pokračování ve stejném PR #27 z `50414b5`. Bez APK, změny requestu a merge. Pouze syntetické soubory.
 
 ## Skupina 1 – hotovo lokálně, CI ověřit na příslušném commitu
@@ -29,3 +31,109 @@ Tři `tools/e2e/interactions.cjs` případy prošly: 1/2/3 klepnutí na oba konc
 **Skutečně nalezené regrese:** duplicitní ID v příchozí záloze vedlo k obnovení dvou položek se stejným ID; neplatné odkazy na média zůstávaly v importovaných datech. Dva testy prokazatelně selhaly před opravou. Import je nyní odmítne před zápisem do media/. Platné starší zálohy a původní importer/exporter zůstávají zachované. Po opravě prošlo 38 nativních testů; sedmý lifecycle případ a finální úplný běh jsou právě ověřované, dosud zde netvrzené jako hotové.
 
 Připravený společný spouštěč, strojový registr, jazykové kontroly a další úrovně jsou rozpracované. Není to tvrzení, že celá aplikace je už automaticky pokrytá. Žádná APK ani emulátor nebyly spuštěny.
+
+## Společná aktualizace #39 – nové praktické a negativní kontroly (5. 11. 2026)
+
+Živý registr nových změn je v [docs/update-39-progress.md](docs/update-39-progress.md) včetně mapy funkcí, chybových cest a omezení; checkpoint přenosového modelu v [docs/sync-v2-checkpoint.md](docs/sync-v2-checkpoint.md). Přidáno `tests/save_acknowledgement.js`, `tools/e2e/update39.cjs`, `SyncSafetyTest` a další skutečné souborové/ZIP testy v `StorageLifecycleTest`. `tests/sync_protocol_v2.js` provádí simulovaný failover s 30 syntetickými soubory, diskovou frontu a dvě modelové historie se 100 společnými originály; nejde o reálnou komunikaci Android/Drive. Rychlé/UI i nativní CI pro `8ac5865` prošly, pozdější SHA musí mít své výsledky. Žádné fyzické ani vydávací ověření se tím nenahrazuje.
+
+## Přímý přenos – etapa 9 #39
+
+Specifikace #38/#33 → PeerSnapshot/Media/Outbox/DataStore/Transfer → `PeerTransferTest`: úplný obousměrný přenos a přesné řetězce kót, poznámka/audio/detail, 30 souborů s přerušením po 19. a restartem outboxu, idempotence, místní změna během přenosu, rozdílné originály stejného ID, EOF/nesprávný hash bez publikace, podvržený source a nebezpečné/duplicitní JSON, kauzálně bezpečné rušení starých pending snapshotů. `SyncCanonicalTest` + `tests/sync_canonical.js` ověřují společné JCS bajty/hash/job ID a neplatné Unicode. Native výsledek je nutné ověřit na konkrétním novém CI SHA; místní Node/Python prošly. Fyzické rádio/Keystore/UI/Drive dosud neprovedeno. Přenos aplikace ještě neaktivuje.
+
+## Android přímé propojení – etapa 10
+
+Specifikace #38/#34/#33 → PeerCoordinator/PeerDiscovery/PeerWifiDirect/MainActivity a peer-sync.js → `PeerDiscoveryTest` (privátní/link-local/ULA proti internet/loopback/multicast/wildcard, žádná fiktivní zařízení bez permission), rozšířený PeerTransferTest (novější změny za dřívějším ACK), `tools/e2e/peer-sync.cjs` (menu/settings/browser, explicitní potvrzení i negativní/Zpět, celý kód/nová relace, cizí HTML jméno, pending/chyba/nezměněná data/oddělená cloud ikona). UI tři scénáře prošly místně; nativní výsledek nové etapy teprve Actions. Praktické radio, permission dialog Androidu a Keystore neověřeny; platí foreground/P2P reconnect omezení v docs/update-39-progress.md. Etapa 9 nativní i quick/UI CI již SUCCESS.
+
+## Historické zálohy a obnova – etapa 11
+
+#40/#33 → BackupHistory/BackupStore/DocumentBackupStore/BackupNetwork a BackupImporter → `BackupHistoryTest`, `DocumentBackupStoreTest`. Pozitivní: 2 instalace/100 originálů, dedup, nová verze jediného média a skutečná obnova starších i nových bajtů, přesné hodnoty/geometrie, audio/detail/historie, místní editace při pomalé obnově. Negativní: write denied/plný storage, null/denied/duplicitní provider, poškozený či chybějící blok, traversal a zakázaný namespace, nedokončený DB commit/rollback, metered bez a s výjimkou. `tools/e2e/backup-history.cjs` prošel místně: skutečné menu a panel, dvě historie, cizí HTML jako text, Cancel/Confirm obnovy, výjimka pro mobilní přenos a chyba bez změny dat. Nové native výsledky teprve Actions; adaptér testuje filesystem/mock ContentResolver, nikoli reálný Disk. Fyzický účet/provider a jeho trvalost zůstávají otevřené. Původní statická pojistka importeru nyní odkazuje na obecné rekurzivní rewriteAll místo zrušeného užšího rewriteItems, ostatní původní ochrany zachovány.
+
+## Konzistence konfliktů a prohlížení – etapa 12
+
+#33/#38/#12/#13 → SyncConflicts + nativní bridge, applySavedState a editor/history/detail lifecycle → Java/JS sdílená fixture, `tests/sync_conflict_bridge.js`, SyncCanonicalTest/SyncSafetyTest a `tools/e2e/read-only-sync.cjs`. Pozitivní: stejný copy ID/obsah a přesná vlastní draft revize, první skutečná historie/geometrie/naměřená hodnota. Negativní: odmítnutý bridge, duplicitní/opakované sloučení, vysypaná konfliktní kopie, legacy purge source a otevření/načtení/detail/reopen bez jakékoli změny dat. Zaznamenat CI daného SHA; žádný HW/rádio/Bosch závěr.
+
+## Podepsaná cloudová synchronizace – etapa 13
+
+#33/#38 → SafSyncV2/CloudProof/CloudFiles/DocumentSyncStore + registry certifikátu po PeerHandshake → SafSyncV2Test. Pozitivní: standardní ECDSA, nativní úplný obousměrný merge a přílohy, immutable retry/restart, malá přesná změna na měřené síti bez opakovaného čtení velkého originálu. Negativní: podvržený ACK nesmí vyprázdnit frontu, odebraná důvěra/změněný podpis/druh, neúplný 19. media upload a žádný předčasný DB commit, velký chybějící soubor na metered čeká. Chromium peer-sync navíc kontroluje stav waiting a izolaci direct/cloud. Nové CI SHA ověřit; adaptér testů je skutečný lokální filesystem, nikoli Drive. Fyzické a provider cancellation/index/metered režie limity jsou přesně v docs/cloud-sync-v2.md.
+
+## Studené náhledy fotografií – etapa 14
+
+#21/#33 → PhotoThumbnails/MainActivity → PhotoThumbnailsTest (pomalý decoder a současný potvrzený save bez globálního locku; purge během decode bez pozdní cache; skutečné zrcadlené pixely/cache reuse/bajty originálu; invalid image a cache write failure). Původní EXIF otočený obrázek v StorageLifecycleTest zůstává. Python místně prošel, nový Native Graphics výsledek vyžaduje CI. Studený start editoru velké fotografie a fyzické různé telefony není tímto benchmarkován.
+
+## Poskytovatel ignorující timeout – etapa 15
+
+#33/#38/#40 → ProviderIo a oba Document adaptéry → ProviderIoTest: skutečné čekající read/write/close ignorují interrupt, volající se vrátí po deadline, další worker funguje, původní caller buffer je chráněný, stream po selhání nepokračuje a opožděný resource se zavře právě jednou. Úspěšné byte/offset/EOF/close kontrakty zůstávají. DocumentBackupStoreTest dál ověřuje null/denied/duplicitní provider, nyní veřejnou query s CancellationSignal. Výsledek nového nativního CI teprve ověřit; skutečný Google provider/Binder a fyzické timeouty nejsou testovány.
+
+## Durable cloud inbox – etapa 16
+
+#33/#38 → CloudInbox/SafSyncV2/SyncStore.namespace → CloudInboxTest + nový SafSyncV2Test. Pozitivní: skutečný DB commit, ztracená publikace ACK, restart, nové podepsané ACK a nulové opakované čtení starých incoming zpráv; druhá instance uvidí potvrzený zápis. Negativní: jiná instalace/úložiště není důkazem lokálního commitu, odmítnutý AtomicFile zápis nemůže změnit ack cache, bez uloženého commitu nebo při změně hash/size nelze potvrdit. Nativní výsledek nové etapy teprve Actions. Zbývající control-frame/list režie a opakované source ověřování popsány v docs/update-39-progress.md.
+
+## Synchronizace během skutečné editace – etapa 17
+
+#33/#38/#12/#13 → sync-edit-guard, applySavedState a commitEditor dočasného detailu → `tools/e2e/sync-edit-guard.cjs`. Tři pozitivní/negativní scénáře s modelovým Native diskovým CAS: příchozí data během reálného pointer tahu a vyplňování přesného rozměru, vynucený conflict s přesunem vlastní editace do kopie, přesné finální souřadnicové delta i hodnoty; úprava detailu, parent konflikt a další tah se stále stejnými živými položkami, zachované obě verze a reopen. Místně prošly; CI nového SHA a fyzický Android callback ještě ověřit. Samostatná stavová zpráva nenahrazuje pending data. Produkční Java merge/sign/TLS nejsou v tomto UI testu fingovaně vydávané za dvě zařízení.
+
+## Poznámky/checklist/přílohy/skica – etapa 18
+
+#33/#38 → noteChanged/renderChecks/renderNoteAttachments/saveNote, readonly sketch init a active arrays → `tools/e2e/note-sync.cjs` (4 UI případy). Pozitivní: reálné checklist/file input IDB přílohy s kauzální revizí a reloadovatelným stavem; readonly note/sketch bez změny; callback během poznámky bez zbytečné kopie; Native CAS během skutečného tahu skici zachová koncové body i cizí verzi. Negativní: disk full zachová formulář/draft a retry; locked checklist/remove jsou disabled; modal OK focus nesmí umožnit příchozí přepsání rozpracovaného rozměru. Místně prošly, nové CI ověřit. Native fixture je výslovně modelovaná; Java/přenosy mají samostatné nativní integrační testy.
+
+## WebView / cizí webový obsah – etapa 19
+
+#33 → WebContentPolicy/MainActivity WebViewClient/WebChromeClient a applySavedState → `WebContentPolicyTest`, `tools/e2e/web-content-policy.cjs`, `tests/sync_conflict_bridge.js`. Pozitivní: zabalený HTTPS index, skutečné kreslení a přesná hodnota pod produkční CSP, uživatelský odkaz otevře systémový intent bez Native v popupu. Negativní: cizí origin/port/credentials/scheme, subframe/srcdoc, inline/event/script-příloha nesmí číst bridge či měnit data; MIME nosniff a žádný síťový fallback; __proto__ nesmí změnit prototyp. Browser + Node místně prošly, native compile/testy nové etapy teprve CI; fyzické Android WebView a nezávislý audit neprovedeny.
+
+## Wi-Fi Direct reconnect a očekávaný peer – etapa 20
+
+#33/#38 → PeerWifiDirect/SyncPeerRegistry/PeerCoordinator/PeerHandshake → `PeerWifiDirectTest` (6 případů) + nový skutečný TLS případ v `PeerTlsTest`. Pozitivní: známý peer, obnova skupiny/kanálu, atomicky uložená cesta po ověření, očekávané TLS UUID. Negativní: cizí adresa/pin/UUID, chybějící permission, vypnutá automatika, revokace, busy rádio/minutové retry, opožděné group/peer callbacky a close; žádné mazání Android skupiny ani MAC/certifikát v UI. Nové native CI ověřit; rádio je v adapter testu mock, TLS jsou skutečné sockety, fyzické Samsung/Xiaomi/Lenovo a pozadí nejsou provedené.
+
+## Služba pozadí, návrat UI a napájení – etapa 21
+
+#33/#38 → DirectSyncService/PeerRuntime/TransferPower + MainActivity observer/resume → `DirectSyncServiceTest` (6 native případů) a rozšířený browser `peer-sync.cjs`. Pozitivní: connectedDevice foreground/oznámení, jediný koordinátor, stop obrazovky zachová relaci, čerstvá DB na resume, explicitní notification STOP zachová DB/durable frontu, UI observer není ACK. Negativní: disabled/denied služba nesmí připojit ani hlásit úspěch, rozbité/odpojené UI, background párování se zruší, lock se pustí a po close neobnoví; UI poctivě popíše omezení Androidu. Native vyžaduje novou CI; lifecycle má mock koordinátor, skutečný TLS/datový přenos je samostatný. Doze/force-stop/restart/rádio různých značek a instalace fyzicky neprovedeny.
+
+## Staging hlasu/importu a vlastník poznámky – etapa 22
+
+#33/#38 → AudioCapture/MediaStaging/Native upload + JS voice/rich persist → AudioCaptureTest (5), rozšířen StorageLifecycleTest (audio, URI partial/success/collision, upload metadata failure/input), `note-sync.cjs` nově 6 UI scénářů. Pozitivní: potvrzený kompletní hlas/metadata, save u původního vlastníka, DB zápis během pomalého recorder startu, URI a WebView upload roundtrip. Negativní: start/stop/empty/cancel/disk/metadata chyby, dřívější i souběžný originál zůstane, neplatné MIME/control/Unicode, rich OK/Back neschová neuložený draft, cancel nahrávání nepublikuje. Browser úspěšný, nové native CI ověřit. Recorder je řízený test double; fyzický mikrofon/uspání a odezva URI provideru nejsou ověřeny.
+
+## Asynchronní URI ingest, původní cíl a request token – etapa 23
+
+#21/#33/#38 → MediaIngest/MainActivity bounded worker + pickMedia/acceptPickedMedia → MediaIngestTest (3 native) a `media-import.cjs` (3 skutečné browser UI). Pozitivní: UI Handler a potvrzený save při blokovaném inputu, finální originální bajty a request token, původní složka po navigaci. Negativní: timeout/cancel/unsafe URI/metadata, purge během importu, stale callback/done, druhý výběr, deleted/locked cíl a zavřený modal, disk failure zachová draft/retry. Browser místně prošel, native vyžaduje novou CI. Skutečný provider/velká souborová dávka na fyzickém Androidu dosud neprovedeny.
+
+## Cloudové řídicí dávky a restart procházení – etapa 24
+
+#33/#38 → CloudFiles/CloudScan/SafSyncV2 → CloudFilesReadTest (4), CloudScanTest (2), SafSyncV2Test +2 integrační případy. Pozitivní: přesné bajty/hash/EOF, trvalý kruhový cursor mezi instalacemi/store/scope a priority nedokončeného ACK, skutečná podepsaná revize/media/kóta po 80 neplatných zprávách a restartech. Negativní: limit+1/zero-progress/interrupt, failed AtomicFile write, unsafe cursor, zakázaná síť nesmí ani list/open/create, podvržené zprávy nemohou vymazat frontu. Nové native CI vyžaduje ověření; provider je souborový/test double, skutečný Drive/SAF přenos ani hard síťová spotřeba nejsou testovány.
+
+## Přepnutí cesty/sítě při přenosu a rušení jobů – etapa 25
+
+#33/#38 → GuardedSyncStore/SafSyncV2/PeerCoordinator intent priority/SyncJob → GuardedSyncStoreTest, SyncJobTest (3), SafSyncV2Test (+2). Pozitivní: po dalším dostupném pokusu skutečné originální bajty a potvrzený outbox, success/failure Job retry. Negativní: po prvním 64KiB bloku přijde ověřená direct priorita nebo ztráta unmetered oprávnění → další write se neprovede, DB/fronta nejsou falešně potvrzené; zrušený starý worker ani přes ignorované interrupt nesmaže novou relaci či nezavolá jobFinished; close se vždy povolí. Nové native CI ověřit; síťová změna je řízený policy callback, nejde o fyzický Wi-Fi/cellular handover.
+
+## Strojová mapa a rozhraní pro navázání – etapa 26 (QA/dokumentace)
+
+34 oblastí v qa/coverage-v1.json mapuje současné funkce na skutečné existující testy, pozitivní/negativní kritéria a jejich limity. Feedback je výslovně static-only; ostatní runtime-partial, nikoli kompletní pokrytí všech tlačítek a poruch. Sedm manuálních bran má stav not-run/blocked/pending; oficiální Drive, source publication repair, hard provider budget a low-memory/fallback audit jsou otevřené mezery. Audit CLI v rychlém CI ověřuje soubory/ID/vrstvy a brání mylnému fullApplicationVerified; místní negativní fixture s chybějícím testem byla skutečně odmítnuta. Není to další důkaz fyzického fungování aplikace.
+
+Předběžné rozhraní/moduly/vazby a pořadí další práce v docs/architecture-39-boundaries.md, načteny nejnovější main pravidla a #42. Žádné nové uživatelské funkce ani změny UI/chování aplikace; proto etapa nemění nápovědu/historii vydání. Obě CI posledního funkčního checkpointu 29083a8 SUCCESS (42066214116/42066213565).
+
+## Cloud publication cache a repair – etapa 27
+
+#33/#38 → CloudPublications/CloudProof.NEED/SafSyncV2 → CloudPublicationsTest (3) + SafSyncV2Test (+6). Pozitivní: verified receipts survive restart, pending source nečte velký originál znovu, odstraněný/stejně velký corrupt blob a chybějící snapshot se bezpečně obnoví. Negativní: failed receipt write/foreign scope/expired clock, forged/unreferenced/replayed NEED nesmí číst libovolná data ani uzavřít outbox, velká oprava na metered počká. Ověřují skutečný disk/sign/DB a přesnou kótu/media; native CI nové etapy teprve ověřit, skutečný Drive provider neproveden.
+
+## Etapa 28 – návrat DB proti historickému ACK
+
+#33/#38 → DatabaseRecovery/LocalDatabase/CloudInbox/PeerOutbox/PeerTransfer/SyncPeerRegistry. DatabaseRecoveryTest (3), CloudInboxTest (+1), SafSyncV2Test (+1) a PeerTransferTest (+2). Pozitivní: durable era jen jednou na fallback, re-arm další poruchy, cache a reopened inbox invalidace, opětovný cloudový import i po publikovaném finálním ACK, skutečné TLS obnovení obou rolí bez nové editace. Negativní: journal disk failure nebo vadný journal nesmějí potvrdit starší DB, smazaná DB nesmí ponechat staré receipts; originály/kóty se nezmění. Nová native CI musí potvrdit běh; není to fyzický process-kill/bit-rot audit. Etapa 27 už má obě CI SUCCESS (82eef6d, native42082852446/quick42082852438).
+
+## Etapa 29 – hranice Drive API (zatím bez aktivní integrace)
+
+DriveHttpTest (4) + DriveApiTest (5), SDK26, skutečný REST/stream kód s HttpsURLConnection double. Pozitivní i negativní kritéria v oblasti drive-rest-boundary qa/coverage-v1.json. Není to skutečný Google server, OAuth souhlas ani propojená synchronizace/záloha; nové native CI musí potvrdit kompilaci i testy. Etapa 28 už má obě CI SUCCESS v 4b87a45 (native42084505694/quick42084506171).
+
+## Etapa 30 – celý engine přes Drive adaptéry
+
+DriveStoresTest (7) a BackupHistoryTest (+1). Skutečný signed DB/media/ACK, výpadek velkého média a pending/retry, 2 historie/100 originálů/dedup/obnova, scoped capability/account, publish/close/partial/cleanup, duplicitní obsah a denied/expired API. HTTPS server je řízený double, native kompilaci/testy nové etapy ověřit. Node/Python/QA místně úspěšné; není to Google účet, OAuth/UI/Job ani fyzický Android. Etapa 29 native42098280995 SUCCESS, quick42098281099 ověřit.
+
+## Etapa 31 – SDK autorizace a durable account binding
+
+DriveAuthorizationTest (5) + DriveAccountsTest (3). Skutečné Google SDK typy s mock AuthorizationClient; task/cache/account/scope/401/consent/error/interrupt/UI a confirmed AtomicFile/reopen/oddělení/vadné Unicode. Native CI musí potvrdit dependency/kompilaci/běh; skutečný GMS/OAuth účet/registrace ani UI zatím nejsou zapojené. Etapa 30 už má plné native170/quick SUCCESS v 17b8c87.
+
+## Etapa 32 – produkční účet/backend a UI
+
+CloudStorageTest4 + DriveAccountFlowTest6 + MainCloudSelectionTest2 + merged-permission test SDK. Picker/consent/lifecycle/recreated Activity, late grant a account/složka CAS, scope/cancel/offline/metered/factory a samostatné odpojení bez fallbacku. Nový browser drive-accounts3 a dosavadní peer-sync3/backup-history1 místně prošly. Node/Python47 (2skipy bez javac) prošly; novou native/quick CI ověřit. Google projekt a fyzický účet stále neověřené, current default UI tuto konfiguraci poctivě blokuje. Zvlášť ještě otestovat nový cloud namespace po globálním ACK, frekvenci a Android výběr route. Etapa31 už má178/quick SUCCESS v edab326.
+
+## Etapa 33 – global ACK vs nová kopie a kauzálně obsolete partial intent
+
+CloudPublicationsTest+1, CloudInboxTest+1 a SafSyncV2Test+6. Nová namespace i po globálním potvrzení musí obsahovat celý ověřený snapshot/média; historický podpis nesmí uzavřít chybějící velký blob na metered. Repair po finálním ACK obnoví fallback data. Skutečný purge po nedokončeném médiu se přenese jako tombstone a starý intent se místně vyřadí jen po důkazu; remote ACK se nepodvrhne. Concurrent nebo aktuálně potřebný missing soubor se nevyřadí. Nové native/quick ověřit, místní Node/Python/QA úspěšné. Etapa32 má191/quick SUCCESS v505ac68. Neznámá ztracená metadata/bit-rot/process-kill/fyzický účet zůstávají samostatné limity.

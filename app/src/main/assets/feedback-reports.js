@@ -425,14 +425,14 @@
     const blob=await new Promise(ok=>active.canvas.toBlob(ok,'image/png'));
     if(blob&&native){
      const id=makeId();
-     Native.beginMedia(id,'image/png','oznacena-chyba.png');
      const bytes=new Uint8Array(await blob.arrayBuffer());
+     if(!Native.beginMediaChecked(id,'image/png','oznacena-chyba.png',bytes.length))throw new Error('Snímek nelze připravit');
      for(let off=0;off<bytes.length;off+=48*1024){
       const part=bytes.subarray(off,off+48*1024);
       let str='';for(const x of part)str+=String.fromCharCode(x);
-      Native.appendMedia(id,btoa(str));
+      if(!Native.appendMedia(id,btoa(str)))throw new Error('Snímek nelze zapsat');
      }
-     Native.finishMedia(id);
+     if(!Native.finishMedia(id))throw new Error('Snímek není úplný');
      r.annotatedId=id;
     }
    }

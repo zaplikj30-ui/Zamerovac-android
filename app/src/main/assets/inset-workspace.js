@@ -19,8 +19,8 @@
   const anchor=worldToScreen(it.a||{x:0,y:0});
   // Původní poznámky zůstanou na svém místě.
   // Výchozí vložený obrázek nesmí začínat mimo dostupný displej.
-  const initialX=clamp(anchor.x+8,8,Math.max(8,stageCanvas.clientWidth-w-8));
-  const initialY=clamp(anchor.y+23,8,Math.max(8,stageCanvas.clientHeight-h-8));
+  const initialX=clamp(anchor.x+8,8,Math.max(8,(window.__exportingAnnotations?photoSize.w*zoom:stageCanvas.clientWidth)-w-8));
+  const initialY=clamp(anchor.y+23,8,Math.max(8,(window.__exportingAnnotations?photoSize.h*zoom:stageCanvas.clientHeight)-h-8));
   const x=Number.isFinite(it.insetX)?it.insetX*zoom+view.dx:initialX;
   const y=Number.isFinite(it.insetY)?it.insetY*zoom+view.dy:initialY;
   return {x,y,w,h,anchor,cx:x+w/2,cy:y+h/2,angle:(Number(it.insetRotation)||0)*Math.PI/180};
@@ -95,6 +95,14 @@
   const width=clamp(c.measureText(text).width+18,88,Math.max(88,stageCanvas.clientWidth-20));
   return {x:p.x-width/2,y:p.y-fs/2-7,w:width,h:fs+15,p,text,fs};
  }
+ // Shared bounds use the same geometry and default caption placement as rendering.
+ window.insetAnnotationBounds=function(c,it){
+  const image=window.__detailPhotoCache?.[it.media?.[0]];if(!image?.naturalWidth)return null;
+  const g=layout(it,image),corners=[turn({x:-g.w/2,y:-g.h/2},g),turn({x:g.w/2,y:-g.h/2},g),turn({x:g.w/2,y:g.h/2},g),turn({x:-g.w/2,y:g.h/2},g)];
+  const label=labelRect(c,it,g);
+  if(label)corners.push({x:label.x,y:label.y},{x:label.x+label.w,y:label.y+label.h});
+  return {minX:Math.min(...corners.map(p=>p.x))-18,minY:Math.min(...corners.map(p=>p.y))-18,maxX:Math.max(...corners.map(p=>p.x))+18,maxY:Math.max(...corners.map(p=>p.y))+18};
+ };
  function renderLabel(c,it,g){
   const box=labelRect(c,it,g);
   if(!box)return;

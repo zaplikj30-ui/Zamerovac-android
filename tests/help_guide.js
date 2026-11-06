@@ -22,6 +22,8 @@ finds('Bosch','bosch');
 finds('soukromí','customer');
 finds('s pen','handles');
 finds('video','video');
+finds('ruian','search');
+finds('mapa','search');
 assert.equal(help.searchChapters('  ').length,help.chapters.length);
 assert.equal(help.searchChapters('zzzz--neexistuje').length,0);
 const src=fs.readFileSync(path.join(root,'app/src/main/assets/help.js'),'utf8');
@@ -35,3 +37,43 @@ assert.match(extra,/\['Nápověda'/,'Overflow menu must link to help');
 assert.doesNotMatch(src,/\bfetch\s*\(|XMLHttpRequest|localStorage\.|Native\.|state\./,'Help must not make network requests or mutate project data');
 assert.match(src,/root\.handleAndroidBack=function/,'Physical Back must close help');
 console.log('PASS full offline help: 25 chapters, Czech search, offline scripts, safe menus and Back');
+assert.deepEqual(help.matchingRanges('Kóta kóta KOTA','kota'),[[0,4],[5,9],[10,14]]);
+assert.deepEqual(help.matchingRanges('<script> & kóta','<script>'),[[0,8]]);
+assert.deepEqual(help.matchingRanges('žádný výskyt','zzzz'),[]);
+assert.deepEqual(help.matchingRanges('kóta',''),[]);
+
+finds('sha-256','backup');finds('neulozeno','backup');
+
+finds('wifi direct','cloud');finds('párování','cloud');finds('čekající potvrzení','cloud');
+
+finds('historické zálohy','backup');finds('sdílené bloky','backup');finds('měřená síť','backup');
+finds('webové odkazy','safety');finds('spustitelné přílohy','safety');
+finds('rádiovou adresu','cloud');
+finds('oznámení','cloud');finds('úspora baterie','cloud');
+finds('chyba mikrofonu','notes');
+finds('původní složky','photo');finds('1024 souborů','photo');
+finds('další dávku zpráv','cloud');finds('změní povolené připojení','cloud');
+finds('podepsanou žádostí','cloud');
+
+finds('starší záložní kopie','cloud');finds('ztrátu všech kopií','cloud');
+
+finds('poskytovatel zálohy','backup');
+
+finds('Google účet','cloud');finds('soukromý prostor','backup');finds('odpojit Disk','cloud');
+
+finds('změně cloudového úložiště','cloud');finds('místně vyřadí','cloud');
+
+finds("frekvence","cloud");
+for(const phrase of ["15, 30 či 60 minut","Ručně zastaví vlastní automatické pokusy","příchozí místní spojení"])assert(src.includes(phrase),"Missing scheduling meaning: "+phrase);
+
+for(const phrase of ['souběhu ověřených místních relací','ostatní příchozí zprávy','místní kontroly velkých originálů'])assert(src.includes(phrase),'Missing transport limitation: '+phrase);
+
+assert(src.includes('bezpečnostní klíč zařízení není dostupný'),'Identity initialization failure must be explained');
+
+assert(src.includes('další ověřenou kopii'),'Backup repair and original preservation must be explained');
+
+assert(src.includes('povolený testovací účet'),'Google Testing restriction must be explained without exposing the account');
+
+assert(src.includes('Registrace a konfigurace této testovací verze jsou propojené'),'Registered preview setup must no longer be described as missing');
+
+finds('20 MiB','backup');finds('20 000','backup');finds('časový limit','backup');finds('OPRAVENÝ CYKLUS SLOŽEK','cloud');finds('dokončované spojení','cloud');finds('přílohy historie','trash');

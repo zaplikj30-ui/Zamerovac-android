@@ -44,7 +44,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
   for(const [w,h] of icons){assert(w<=32.1&&h<=32.1);assert(Math.abs(w-h)<.2,'Square icon proportions')}
   await reachable('#editorExtraToolbar > [data-toolbar-key]:first-child');await reachable('#editorExtraToolbar > [data-toolbar-key]:last-child');
   await page.click('#toolsToggle');assert(await page.locator('#toolMenu').isVisible());
-  await reachable('#toolMenu .choice:last-child');await page.evaluate(()=>window.handleAndroidBack());
+  await reachable('#toolMenu .toolList .choice:last-child');await page.evaluate(()=>window.handleAndroidBack());
  }
  fs.mkdirSync('/tmp/zamerovac-orientation',{recursive:true});await page.screenshot({path:'/tmp/zamerovac-orientation/editor-landscape.png'});
  // Rotation with an unsaved numeric dialog must retain exactly what was typed.
@@ -70,13 +70,15 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
   const send=(type,distance)=>{const touches=[new Touch({identifier:1,target:image,clientX:100,clientY:100}),new Touch({identifier:2,target:image,clientX:100+distance,clientY:100})];image.dispatchEvent(new TouchEvent(type,{touches,bubbles:true,cancelable:true}))};
   send('touchstart',60);send('touchmove',120);
  });
- const transform=await page.locator('.gallery-img').evaluate(el=>el.style.transform);
+ const galleryScale=await page.locator('.gallery-img').evaluate(el=>new DOMMatrix(getComputedStyle(el).transform).a);
  for(const size of sizes){
   await page.setViewportSize(size);
-  await page.waitForFunction(()=>{const c=document.querySelector('.gallery-img'),box=document.querySelector('.gallery-content');return parseFloat(c.style.width)<=box.clientWidth+1&&parseFloat(c.style.height)<=box.clientHeight+1});
+  await page.waitForFunction(()=>{const c=document.querySelector('.gallery-img'),box=document.querySelector('.gallery-content');return c.dataset.galleryViewport===box.clientWidth+'x'+box.clientHeight&&parseFloat(c.style.width)<=box.clientWidth+1&&parseFloat(c.style.height)<=box.clientHeight+1});
   const ratio=await page.locator('.gallery-img').evaluate(el=>{const r=el.getBoundingClientRect();return {rendered:r.width/r.height,image:el.width/el.height}});
   assert(Math.abs(ratio.rendered-ratio.image)<.01,'Gallery canvas proportions');
-  assert.equal(await page.locator('.gallery-img').evaluate(el=>el.style.transform),transform,'Gallery pinch zoom survives rotate');
+  const position=await page.locator('.gallery-img').evaluate(el=>{const matrix=new DOMMatrix(getComputedStyle(el).transform),viewport=document.querySelector('.gallery-content');return {scale:matrix.a,x:matrix.e,y:matrix.f,limitX:Math.max(0,(el.offsetWidth*matrix.a-viewport.clientWidth)/2),limitY:Math.max(0,(el.offsetHeight*matrix.a-viewport.clientHeight)/2)}});
+  assert.equal(position.scale,galleryScale,'Gallery zoom scale survives rotation');
+  assert(Math.abs(position.x)<=position.limitX+1&&Math.abs(position.y)<=position.limitY+1,'Rotation clamps pan to the new viewport');
   await reachable('.gallery-top [data-action="close"]');await reachable('.gallery-top [data-action="edit"]');
   assert.equal(await page.evaluate(()=>JSON.stringify(state.records)),saved);
  }

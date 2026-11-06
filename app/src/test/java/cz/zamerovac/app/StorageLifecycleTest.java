@@ -117,4 +117,73 @@ public class StorageLifecycleTest {
             assertEquals(before,invalid.toString());assertEquals(count,dir.list().length);
         }
     }
+    @Test public void missingAndEmptyNestedMediaAbortBeforeAnyArchiveBytes()throws Exception {
+        media();persist(fixture());String before=digest(new File(context.getFilesDir(),"projects.json"));
+        for(boolean empty:new boolean[]{false,true}){
+            File file=new File(dir,"original-video");if(empty)Files.write(file.toPath(),new byte[0]);else assertTrue(file.delete());
+            ByteArrayOutputStream out=new ByteArrayOutputStream();
+            try{call("exportArchive",new Class[]{OutputStream.class,String.class},out,null);fail("Incomplete backup accepted");}catch(IOException expected){assertTrue(expected.getMessage().contains("příloha"));}
+            assertEquals(0,out.size());assertEquals(before,digest(new File(context.getFilesDir(),"projects.json")));
+            media();
+        }
+    }
+    @Test public void exportWriteFailurePropagatesAndPreservesDatabaseAndOriginals()throws Exception {
+        media();persist(fixture());String before=digest(new File(context.getFilesDir(),"projects.json")),photo=digest(new File(dir,"original-photo"));
+        OutputStream rejected=new OutputStream(){public void write(int value)throws IOException{throw new IOException("simulated full destination");}};
+        try{call("exportArchive",new Class[]{OutputStream.class,String.class},rejected,null);fail("Write failure swallowed");}catch(IOException expected){}
+        assertEquals(before,digest(new File(context.getFilesDir(),"projects.json")));assertEquals(photo,digest(new File(dir,"original-photo")));
+    }
+    @Test public void compareAndSaveRejectsStaleSnapshotAndReportsDiskFailure()throws Exception {
+        persist(fixture());MainActivity.JsApi api=activity.new JsApi();String first=api.loadData();
+        String newer=fixture().put("sequence",1).toString();assertTrue(new JSONObject(api.saveDataChecked(newer,first)).getBoolean("ok"));
+        JSONObject stale=new JSONObject(api.saveDataChecked(fixture().put("sequence",2).toString(),first));
+        assertFalse(stale.getBoolean("ok"));assertEquals(newer,stale.getString("current"));assertEquals(newer,api.loadData());
+        File blocker=new File(context.getFilesDir(),"projects.tmp");assertTrue(blocker.mkdir());
+        try{JSONObject failed=new JSONObject(api.saveDataChecked(first,newer));assertFalse(failed.getBoolean("ok"));assertTrue(failed.has("error"));assertEquals(newer,api.loadData());}finally{blocker.delete();}
+    }
+    @Test public void failedAudioStopReleasesRecorderAndDoesNotAttachAnEmptyFile()throws Exception {
+        AudioCapture.Recorder recorder=org.mockito.Mockito.mock(AudioCapture.Recorder.class);
+        org.mockito.Mockito.doAnswer(call->{Files.write(((File)call.getArgument(0)).toPath(),new byte[]{1});return null;}).when(recorder).start(org.mockito.ArgumentMatchers.any());
+        org.mockito.Mockito.doThrow(new RuntimeException("interrupted")).when(recorder).stop();
+        AudioCapture capture=new AudioCapture(dir,prefs,()->recorder);assertTrue(capture.start("failed-recording"));ReflectionHelpers.setField(activity,"audioCapture",capture);
+        assertFalse(activity.new JsApi().stopAudio());org.mockito.Mockito.verify(recorder).release();assertFalse(capture.active());assertFalse(new File(dir,"failed-recording").exists());assertEquals(0,dir.listFiles(file->file.getName().startsWith(".capture-")).length);
+    }
+
+    File archiveEntries(Map<String,byte[]> entries)throws Exception {
+        File file=File.createTempFile("integrity-",".zip",context.getCacheDir());
+        try(ZipOutputStream out=new ZipOutputStream(new FileOutputStream(file))){for(Map.Entry<String,byte[]> item:entries.entrySet()){out.putNextEntry(new ZipEntry(item.getKey()));out.write(item.getValue());out.closeEntry();}}return file;
+    }
+    @Test public void v2ArchiveRoundtripAndTamperOrMissingManifestFailBeforeWrites()throws Exception {
+        media();persist(fixture());Map<String,byte[]> complete=entries(export());assertTrue(complete.containsKey("manifest.json"));
+        BackupImporter.Result restored=BackupImporter.importZip(context,Uri.fromFile(archiveEntries(complete)),fixture(),prefs);assertEquals(3,restored.recordCount);restored.rollback(context,prefs);
+        String before=digest(new File(context.getFilesDir(),"projects.json"));int count=dir.list().length;
+        for(boolean strip:new boolean[]{false,true}){
+            Map<String,byte[]> changed=new HashMap<>(complete);if(strip)changed.remove("manifest.json");else changed.put("media/original-photo",new byte[]{1,2,3,9});
+            try{BackupImporter.importZip(context,Uri.fromFile(archiveEntries(changed)),fixture(),prefs);fail("Damaged archive accepted");}catch(IOException expected){}
+            assertEquals(before,digest(new File(context.getFilesDir(),"projects.json")));assertEquals(count,dir.list().length);
+        }
+    }
+    @Test public void mediaUploadStagesAndAcknowledgesOnlyCompleteFilesWithoutOverwritingOriginals()throws Exception {
+        MainActivity.JsApi api=activity.new JsApi();String id="staged-upload";
+        assertTrue(api.beginMediaChecked(id,"application/octet-stream","Synthetic",4));assertTrue(api.appendMedia(id,"AQID"));assertFalse(new File(dir,id).exists());assertFalse(api.finishMedia(id));assertFalse(new File(dir,id).exists());
+        assertTrue(api.beginMediaChecked(id,"application/octet-stream","Synthetic",4));assertFalse(api.appendMedia("unrelated-upload","AQIDBA=="));assertFalse(api.finishMedia("unrelated-upload"));assertTrue(api.appendMedia(id,"AQIDBA=="));assertTrue(api.finishMedia(id));assertArrayEquals(new byte[]{1,2,3,4},Files.readAllBytes(new File(dir,id).toPath()));
+        assertFalse(api.beginMediaChecked(id,"application/octet-stream","overwrite",4));assertArrayEquals(new byte[]{1,2,3,4},Files.readAllBytes(new File(dir,id).toPath()));assertFalse(api.finishMedia("other-upload"));
+    }
+    @Test public void mediaUploadCannotAcknowledgeFailedMetadataOrUnsafeInputs()throws Exception {
+        SharedPreferences failed=org.mockito.Mockito.mock(SharedPreferences.class);SharedPreferences.Editor editor=org.mockito.Mockito.mock(SharedPreferences.Editor.class);org.mockito.Mockito.when(failed.edit()).thenReturn(editor);org.mockito.Mockito.when(editor.putString(org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.anyString())).thenReturn(editor);org.mockito.Mockito.when(editor.commit()).thenReturn(false);ReflectionHelpers.setField(activity,"settings",failed);MainActivity.JsApi api=activity.new JsApi();
+        assertFalse(api.beginMediaChecked("unsafe-input","image/png\r\nInjected: yes","file",1));assertFalse(api.beginMediaChecked("unsafe-input","image/png","line\n\nname",1));assertFalse(api.beginMediaChecked("unsafe-input","image/png","bad\ud800",1));assertTrue(api.beginMediaChecked("failed-metadata","image/png","Synthetic",4));assertTrue(api.appendMedia("failed-metadata","AQIDBA=="));assertFalse(api.finishMedia("failed-metadata"));assertFalse(new File(dir,"failed-metadata").exists());assertEquals(0,dir.listFiles(file->file.getName().contains(".upload-")).length);
+    }
+    @Test public void uriCopyStagesPartialDataAndDoesNotOverwriteExistingOriginal()throws Exception {
+        Uri uri=Uri.parse("content://synthetic/incoming");org.robolectric.Shadows.shadowOf(context.getContentResolver()).registerInputStream(uri,new InputStream(){int reads;public int read()throws IOException{if(reads++<3)return 1;throw new IOException("synthetic interrupted source");}});
+        try{call("filePicked",new Class[]{Uri.class,String.class,String.class,String.class},uri,"uri-partial","application/octet-stream","Synthetic");fail("Interrupted copy acknowledged");}catch(IOException expected){}assertFalse(new File(dir,"uri-partial").exists());assertFalse(prefs.contains("mime-uri-partial"));assertEquals(0,dir.listFiles(file->file.getName().startsWith(".capture-")).length);
+        org.robolectric.Shadows.shadowOf(context.getContentResolver()).registerInputStream(uri,new ByteArrayInputStream(new byte[]{1,2,3,4}));call("filePicked",new Class[]{Uri.class,String.class,String.class,String.class},uri,"uri-complete","application/octet-stream","Synthetic");assertArrayEquals(new byte[]{1,2,3,4},Files.readAllBytes(new File(dir,"uri-complete").toPath()));assertEquals("Synthetic",prefs.getString("name-uri-complete",""));
+        try{call("filePicked",new Class[]{Uri.class,String.class,String.class,String.class},uri,"uri-complete","image/png","Replacement");fail("Original overwritten");}catch(IOException expected){}assertArrayEquals(new byte[]{1,2,3,4},Files.readAllBytes(new File(dir,"uri-complete").toPath()));assertEquals("Synthetic",prefs.getString("name-uri-complete",""));
+    }
+
+    @Test public void annotationHistoryProtectsSharedMediaDuringAnotherRecordsPurge()throws Exception {
+        media();JSONObject db=fixture();JSONObject photo=db.getJSONArray("records").getJSONObject(1),video=db.getJSONArray("records").getJSONObject(2);
+        photo.put("versionHistory",new JSONArray().put(new JSONObject().put("items",new JSONArray().put(new JSONObject().put("media",new JSONArray().put("original-video"))).toString())));video.put("deleted",true);persist(db);
+        String snapshot=activity.new JsApi().loadData();JSONObject result=new JSONObject(activity.new JsApi().purgeTrash(snapshot,snapshot,"[\"video-record\"]"));assertFalse(result.has("error"));assertTrue(new File(dir,"original-video").isFile());
+    }
+
 }

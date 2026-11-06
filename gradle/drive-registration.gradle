@@ -1,0 +1,31 @@
+import java.nio.charset.StandardCharsets
+import java.security.KeyStore
+import java.security.MessageDigest
+
+// Public registration data only. Never accept OAuth secrets or account details here.
+ext.validateDriveRegistration = { Properties values, String applicationId, String signingSha1, String overrideProject ->
+    if (values.stringPropertyNames() != ['projectId', 'applicationId', 'certificateSha1'].toSet()) throw new GradleException('Drive registration must contain exactly the public project/package/certificate fields')
+    def projectId = values.getProperty('projectId')
+    if (projectId && !(projectId ==~ /[a-z][a-z0-9-]{4,28}[a-z0-9]/)) throw new GradleException('Invalid Drive project ID')
+    if (values.getProperty('applicationId') != applicationId) throw new GradleException('Drive registration does not match the preview application ID')
+    def certificate = values.getProperty('certificateSha1')
+    if (!(certificate ==~ /[A-F0-9]{2}(:[A-F0-9]{2}){19}/) || certificate != signingSha1) throw new GradleException('Drive registration does not match the preview signing certificate')
+    if (overrideProject != null && overrideProject != projectId) throw new GradleException('Drive project override does not match the registered preview project')
+    return [projectId: projectId, applicationId: applicationId, certificateSha1: certificate].asImmutable()
+}
+ext.readDriveRegistration = { File source, String applicationId, File storeFile, String storeType, String storePassword, String alias, String overrideProject ->
+    if (!source.isFile() || source.length() > 4096) throw new GradleException('Missing or oversized public Drive preview registration')
+    def values = new Properties()
+    source.withReader(StandardCharsets.UTF_8.name()) { reader -> values.load(reader) }
+    def keys = KeyStore.getInstance(storeType)
+    storeFile.withInputStream { stream -> keys.load(stream, storePassword.toCharArray()) }
+    def certificate = keys.getCertificate(alias)
+    if (certificate == null) throw new GradleException('Preview signing certificate is missing')
+    def sha1 = MessageDigest.getInstance('SHA-1').digest(certificate.encoded).collect { String.format(Locale.ROOT, '%02X', it & 255) }.join(':')
+    return validateDriveRegistration(values, applicationId, sha1, overrideProject)
+}
+
+ext.checkDriveActivation = { Map registration, boolean required ->
+    if (required && !registration.projectId) throw new GradleException('The registered Drive preview project ID must be confirmed before creating the test APK')
+    return !!registration.projectId
+}

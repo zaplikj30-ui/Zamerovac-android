@@ -9,7 +9,7 @@ function openEditor(r){
  editorViewport=null;
  polylineDraft=[];stroke=[];drawStart=null;drawCurrent=null;lastTap=0;lastTapAt=null;loupeSide=null;
  screen='editor';document.body.classList.add('in-editor');closeMenus();$('editorHint').hidden=true;
- current=r;selected=null;mode='dimension';lastDrawingTool='dimension';updateDrawingToolButton();
+ current=r;selected=null;mode='select';lastDrawingTool='dimension';updateDrawingToolButton();
  $('browserView').hidden=true;$('browserFoot').hidden=true;$('noteView').hidden=true;
  $('editorView').hidden=false;$('editorTitle').textContent=r.title;
  const photoMeta=$('editorPhotoMeta');
@@ -23,15 +23,10 @@ function openEditor(r){
    notify('Nepodařilo se načíst fotografii');paint();
   };
   photoLoadTimer=setTimeout(failed,20000);
-  assetUrl(r.media[0]).then(url=>{
-   const img=new Image();
-   const release=()=>{if(url.startsWith('blob:'))URL.revokeObjectURL(url)};
-   img.onload=()=>{
-    release();if(!active())return;clearTimeout(photoLoadTimer);photoLoadFailed=false;stageImg=img;
-    photoSize={w:img.naturalWidth,h:img.naturalHeight};r.width=photoSize.w;r.height=photoSize.h;
-    initialImageView();paint();
-   };
-   img.onerror=()=>{release();failed()};img.src=url;
+  loadPhotoImage(r.media[0]).then(img=>{
+   if(!active())return;clearTimeout(photoLoadTimer);photoLoadFailed=false;stageImg=img;
+   photoSize={w:img.naturalWidth,h:img.naturalHeight};
+   initialImageView();paint();
   }).catch(failed);
  }
  resizeEditor();initialImageView();paint();
@@ -98,7 +93,7 @@ function snap(p,ref=null,ignore=null){
  return boundsPoint(p);
 }
 function checkpoint(){editStack.push(JSON.stringify(current.items||[]));if(editStack.length>50)editStack.shift();redoStack=[]}
-function commitEditor(){touch(current);save();paint()}
+function commitEditor(){if(current?.kind==='photo'&&stageImg){current.width=photoSize.w;current.height=photoSize.h;}touch(current);const confirmed=save();paint();return confirmed}
 function undoEditor(){if(!editStack.length)return;redoStack.push(JSON.stringify(current.items));current.items=JSON.parse(editStack.pop());commitEditor()}
 function redoEditor(){if(!redoStack.length)return;editStack.push(JSON.stringify(current.items));current.items=JSON.parse(redoStack.pop());commitEditor()}
 $('undo').onclick=undoEditor;$('redo').onclick=redoEditor;$('selectTool').onclick=()=>setTool('select');$('toolsToggle').onclick=()=>showTools();$('activeTool').onclick=()=>{
@@ -468,7 +463,7 @@ function drawLoupe(){
     canvas.width=pixels;canvas.height=pixels;
   }
   canvas.hidden=false;
-  const zoom=Math.max(1.2,Math.min(2.5,Number(prefs.loupeZoom)||2));
+  const zoom=Math.max(1.2,Math.min(6,Number(prefs.loupeZoom)||2));
   const stageDensity=stageCanvas.width/width;
   loupeCtx.save();
   loupeCtx.setTransform(dpr,0,0,dpr,0,0);
@@ -876,7 +871,13 @@ if(['polyline','chain','cumulative','angle'].includes(mode)&&polylineDraft.lengt
      item.a={x:g.cx-rx,y:g.cy-ry};item.b={x:g.cx+rx,y:g.cy+ry};
     }
    }
-   magnifierPoint=null;
+   if(selectedHandle.dragged){
+    const item=selectedHandle.item;
+    if(item.type==='rect'){
+     const origin=worldToScreen(selectedHandle.startPoint);
+     magnifierPoint=boundsPoint(screenToWorld({x:origin.x+s.x-selectedHandle.startScreen.x,y:origin.y+s.y-selectedHandle.startScreen.y}));
+    }else magnifierPoint={...resizePoints(item)[selectedHandle.pointIndex]};
+   }else magnifierPoint=null;
   }else if(selectedHandle.kind==='target-caption'){
    const origin=worldToScreen(selectedHandle.startPoint);
    selectedHandle.item.b=boundsPoint(screenToWorld({x:origin.x+s.x-selectedHandle.startScreen.x,y:origin.y+s.y-selectedHandle.startScreen.y}));

@@ -35,6 +35,7 @@ async function createCanvas(page,name){
  // Fixture preferences only; every object and edit below goes through the real UI.
  await page.evaluate(()=>{prefs.snapPoints=false;prefs.snapGrid=false;prefs.snapHorizontal=false;prefs.snapCorners=false;prefs.snapContours=false;prefs.snapRightAngle=false;prefs.color='#f7dc27';prefs.loupe=true;save()});
 }
+async function chooseFiles(page,selector,files){const chooser=page.waitForEvent('filechooser');await page.click(selector);await(await chooser).setFiles(files);}
 async function tool(page,type){await page.click('#toolsToggle');await page.locator('[data-tool="'+type+'"]').click()}
 async function drag(page,a,b){const r=await page.locator('#drawCanvas').boundingBox();await page.mouse.move(r.x+a.x,r.y+a.y);await page.mouse.down();await page.mouse.move(r.x+b.x,r.y+b.y,{steps:12});await page.mouse.up()}
 async function clickAt(page,p){const r=await page.locator('#drawCanvas').boundingBox();await page.mouse.click(r.x+p.x,r.y+p.y)}
@@ -43,4 +44,4 @@ async function redo(page){await page.click('#editorMore');await page.locator('[d
 async function record(page){return page.evaluate(()=>JSON.parse(JSON.stringify(current.items[0])))}
 async function projected(page,p){return page.evaluate(p=>({x:p.x*view.zoom+view.dx,y:p.y*view.zoom+view.dy}),p)}
 function midpoint(a,b,t=.5){return {x:a.x+(b.x-a.x)*t,y:a.y+(b.y-a.y)*t}}
-module.exports={suite,assert,createCanvas,tool,drag,clickAt,editSelected,redo,record,projected,midpoint};
+module.exports={suite,assert,createCanvas,chooseFiles,tool,drag,clickAt,editSelected,redo,record,projected,midpoint};

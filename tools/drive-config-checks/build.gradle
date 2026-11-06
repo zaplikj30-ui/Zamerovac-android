@@ -1,0 +1,44 @@
+// Runs the actual Gradle validator with synthetic inputs; no Android plugin or APK.
+def repository = rootDir.parentFile.parentFile
+apply from: new File(repository, 'gradle/drive-registration.gradle')
+tasks.register('verify') {
+    doLast {
+        def packageId = 'cz.zamerovac.app.preview'
+        def fingerprint = '7D:00:35:7F:D9:50:B0:95:62:30:5C:92:86:EB:18:05:A7:F7:FB:42'
+        def fixture = { -> def p = new Properties(); p.setProperty('projectId', 'synthetic-drive-project'); p.setProperty('applicationId', packageId); p.setProperty('certificateSha1', fingerprint); return p }
+        assert validateDriveRegistration(fixture(), packageId, fingerprint, null).projectId == 'synthetic-drive-project'
+        assert validateDriveRegistration(fixture(), packageId, fingerprint, 'synthetic-drive-project').applicationId == packageId
+        def disabled = fixture(); disabled.setProperty('projectId', '')
+        assert validateDriveRegistration(disabled, packageId, fingerprint, null).projectId == ''
+        int rejected = 0
+        def refuses = { Closure action -> try { action.call() } catch (GradleException expected) { rejected++; return }; throw new GradleException('Invalid registration was accepted') }
+        for (value in ['short', 'Uppercase-id', '123456', 'contains space', 'project-id/', 'project-id"', 'a' * 31, 'ends-with-', '-starts-with', 'synthetic\nproject']) {
+            def p = fixture(); p.setProperty('projectId', value)
+            refuses { validateDriveRegistration(p, packageId, fingerprint, null) }
+        }
+        refuses { validateDriveRegistration(fixture(), 'cz.zamerovac.app', fingerprint, null) }
+        refuses { validateDriveRegistration(fixture(), packageId, '00:' * 19 + '00', null) }
+        refuses { validateDriveRegistration(fixture(), packageId, fingerprint, 'another-project') }
+        refuses { validateDriveRegistration(fixture(), packageId, fingerprint, '') }
+        def missing = fixture(); missing.remove('certificateSha1'); refuses { validateDriveRegistration(missing, packageId, fingerprint, null) }
+        def unexpected = fixture(); unexpected.setProperty('clientSecret', 'synthetic-must-not-be-logged'); refuses { validateDriveRegistration(unexpected, packageId, fingerprint, null) }
+        // Verify the real registered certificate independently of Android compilation.
+        temporaryDir.mkdirs()
+        def keyFile = File.createTempFile('public-preview-', '.p12', temporaryDir)
+        keyFile.bytes = Base64.mimeDecoder.decode(new File(repository, 'tools/debug-signing.p12.b64').text)
+        try {
+            def actual = readDriveRegistration(new File(repository, 'config/drive-preview.properties'), packageId, keyFile, 'PKCS12', 'android', 'zamerovacdev', null)
+            assert actual.certificateSha1 == fingerprint
+            assert actual.projectId == 'zamerovac-android'
+            assert checkDriveActivation(actual, true)
+            assert readDriveRegistration(new File(repository, 'config/drive-preview.properties'), packageId, keyFile, 'PKCS12', 'android', 'zamerovacdev', actual.projectId) == actual
+            refuses { readDriveRegistration(new File(temporaryDir, 'absent.properties'), packageId, keyFile, 'PKCS12', 'android', 'zamerovacdev', null) }
+            refuses { readDriveRegistration(new File(repository, 'config/drive-preview.properties'), packageId, keyFile, 'PKCS12', 'android', 'missing-alias', null) }
+        } finally { keyFile.delete() }
+        assert checkDriveActivation(validateDriveRegistration(fixture(), packageId, fingerprint, null), true)
+        assert !checkDriveActivation(validateDriveRegistration(disabled, packageId, fingerprint, null), false)
+        refuses { checkDriveActivation(validateDriveRegistration(disabled, packageId, fingerprint, null), true) }
+        assert rejected == 19
+        println 'PASS Drive Gradle registration: valid/disabled inputs, 19 rejected configurations, actual preview certificate; no APK or account access'
+    }
+}

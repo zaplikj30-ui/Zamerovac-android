@@ -1,0 +1,66 @@
+{
+  "input": {
+    "text": "žárovka 🧰",
+    "small": 1e-7,
+    "num": 1e+23,
+    "minusZero": 0,
+    "a": {
+      "z": 2,
+      "x": 1
+    },
+    "fraction": 12.125
+  },
+  "canonical": "{\"a\":{\"x\":1,\"z\":2},\"fraction\":12.125,\"minusZero\":0,\"num\":1e+23,\"small\":1e-7,\"text\":\"žárovka 🧰\"}",
+  "hash": "9be0234a47454e1a4b5e3ecf328aa6d323dd5de56545ecc097ea715d7d41e8f8",
+  "job": {
+    "format": "cz.zamerovac.sync.job",
+    "version": 2,
+    "peer": "22222222-2222-4222-8222-222222222222",
+    "kind": "metadata",
+    "hash": "9be0234a47454e1a4b5e3ecf328aa6d323dd5de56545ecc097ea715d7d41e8f8",
+    "sourceRef": "9be0234a47454e1a4b5e3ecf328aa6d323dd5de56545ecc097ea715d7d41e8f8",
+    "mediaId": null
+  },
+  "jobId": "5abf31a735aded8b21bf77a5aa4dfae65805b441c6e2aed665f3bcaac908afe5",
+  "conflict": {
+    "a": {
+      "id": "photo",
+      "title": "Stůl",
+      "rev": "local",
+      "items": [
+        {
+          "measure": "0,000000000123456789",
+          "unit": "mm"
+        }
+      ]
+    },
+    "b": {
+      "id": "photo",
+      "title": "Stůl",
+      "rev": "remote",
+      "items": [
+        {
+          "measure": "99999999,123456789",
+          "unit": "mm"
+        }
+      ]
+    },
+    "expected": {
+      "winner": "local",
+      "copy": {
+        "id": "conflict-62492437360385a68a8de61ac95bd81067965e31a68371c9a88403aadf9ce8c0",
+        "items": [
+          {
+            "measure": "99999999,123456789",
+            "unit": "mm"
+          }
+        ],
+        "rev": "remote",
+        "title": "Stůl (konflikt synchronizace)",
+        "conflict": true,
+        "conflictOf": "photo",
+        "conflictSource": "revision:62492437360385a68a8de61ac95bd81067965e31a68371c9a88403aadf9ce8c0"
+      }
+    }
+  }
+}

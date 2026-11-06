@@ -1,6 +1,7 @@
 package cz.zamerovac.app;
 
 import android.content.SharedPreferences;
+import android.content.Context;
 import android.util.AtomicFile;
 import org.json.*;
 import java.io.*;
@@ -14,27 +15,27 @@ final class TrashPurger {
     static final Object LOCK = new Object();
     interface Writer { void write(String data) throws Exception; }
     interface Unlink { boolean delete(File file); }
-    private final File home, cache;
+    private final File home, cache, identityDirectory;
     private final SharedPreferences prefs;
     private final Unlink unlink;
+    TrashPurger(Context context,SharedPreferences prefs){this(context.getFilesDir(),context.getCacheDir(),prefs,File::delete,context.getNoBackupFilesDir());}
     TrashPurger(File home, File cache, SharedPreferences prefs) { this(home,cache,prefs,File::delete); }
     TrashPurger(File home, File cache, SharedPreferences prefs, Unlink unlink) {
-        this.home=home;this.cache=cache;this.prefs=prefs;this.unlink=unlink;
+        this(home,cache,prefs,unlink,new File(home.getParentFile(),"no_backup"));
+    }
+    private TrashPurger(File home,File cache,SharedPreferences prefs,Unlink unlink,File identityDirectory){
+        this.home=home;this.cache=cache;this.prefs=prefs;this.unlink=unlink;this.identityDirectory=identityDirectory;
     }
     private File pendingFile(){return new File(home,"trash-cleanup.json");}
     private static boolean validId(String id){return id.matches("[a-zA-Z0-9_-]{3,120}");}
     // Include unknown fields/history in the protection set. Shared detail photos must survive.
     private static void strings(Object value, Set<String> found) throws JSONException {
-        if(value instanceof String)found.add((String)value);
+        if(value instanceof String){String text=(String)value;found.add(text);
+            // Older annotation versions store their item arrays as JSON strings.
+            if(text.trim().startsWith("["))try{JsonInput.check(text);strings(new JSONArray(text),found);}catch(JSONException|IOException ignored){}
+        }
         else if(value instanceof JSONObject){JSONObject o=(JSONObject)value;Iterator<String> keys=o.keys();while(keys.hasNext())strings(o.get(keys.next()),found);}
         else if(value instanceof JSONArray){JSONArray a=(JSONArray)value;for(int i=0;i<a.length();i++)strings(a.get(i),found);}
-    }
-    private static void media(Object value, Set<String> found) throws JSONException {
-        if(value instanceof JSONObject){
-            JSONObject o=(JSONObject)value;JSONArray a=o.optJSONArray("media");
-            if(a!=null)for(int i=0;i<a.length();i++){String id=a.optString(i);if(validId(id))found.add(id);}
-            Iterator<String> keys=o.keys();while(keys.hasNext())media(o.get(keys.next()),found);
-        }else if(value instanceof JSONArray){JSONArray a=(JSONArray)value;for(int i=0;i<a.length();i++)media(a.get(i),found);}
     }
     private Set<String> pending() throws Exception {
         Set<String> ids=new TreeSet<>();AtomicFile file=new AtomicFile(pendingFile());
@@ -57,16 +58,17 @@ final class TrashPurger {
         JSONArray records=db.getJSONArray("records"),kept=new JSONArray();
         Set<String> ids=new HashSet<>(),candidates=pending();
         for(int i=0;i<requested.length();i++)ids.add(requested.getString(i));
+        JSONObject tombstones=db.optJSONObject("syncTombstones");if(tombstones==null)tombstones=new JSONObject();
         int removed=0;
         for(int i=0;i<records.length();i++){
             JSONObject r=records.getJSONObject(i);
             if(ids.contains(r.getString("id"))){
                 if(!r.optBoolean("deleted"))throw new IOException("Položka již není v koši. Nic nebylo odstraněno.");
-                media(r,candidates);removed++;
+                tombstones.put(r.getString("id"),CausalClock.advance(CausalClock.merge(CausalClock.clock(r),tombstones.optJSONObject(r.getString("id"))==null?new JSONObject():tombstones.getJSONObject(r.getString("id"))),DeviceIdentity.get(identityDirectory)));candidates.addAll(PeerSnapshot.cleanupReferences(r));removed++;
             }else kept.put(r);
         }
         if(removed!=ids.size())throw new IOException("Obsah koše se změnil. Potvrď jej znovu.");
-        db.put("records",kept);
+        db.put("records",kept);db.put("syncTombstones",tombstones);db.put("syncProtocol",2);
         // Keep only IDs, never removed payloads. Sync must not reintroduce old deleted records.
         Set<String> purged=purgedIds(db);purged.addAll(ids);
         db.put("trashPurgedIds",new JSONArray(purged));

@@ -48,38 +48,46 @@ public class SyncEngine {
     }
     private static String slurp(InputStream in) throws Exception {
         ByteArrayOutputStream b=new ByteArrayOutputStream();byte[] block=new byte[65536];int n;
-        while((n=in.read(block))!=-1)b.write(block,0,n);
-        return b.toString("UTF-8");
+        while((n=in.read(block))!=-1){if(b.size()+n>20*1024*1024)throw new java.io.IOException("Cloudová databáze je příliš velká");b.write(block,0,n);}
+        return JsonInput.decode(b.toByteArray());
     }
-    private String loadLocal() throws Exception {
-        File f=new File(home,"projects.json");if(!f.isFile())return "";
-        try(InputStream in=new FileInputStream(f)){return slurp(in);}
-    }
-    private void saveLocal(String text) throws Exception {
-        File dest=new File(home,"projects.json"), tmp=new File(home,"projects.sync.tmp");
-        try(FileOutputStream out=new FileOutputStream(tmp)){out.write(text.getBytes(StandardCharsets.UTF_8));out.getFD().sync();}
-        if(!tmp.renameTo(dest))throw new Exception("Nelze uložit lokální databázi");
-    }
+    private String loadLocal() throws Exception {return LocalDatabase.read(home);}
+    private void saveLocal(String text) throws Exception {LocalDatabase.write(home,text);}
     private JSONObject parse(String text) throws Exception {
         if(text==null||text.isEmpty())return new JSONObject().put("schema",1).put("records",new JSONArray()).put("prefs",new JSONObject());
-        JSONObject o=new JSONObject(text);if(o.optInt("schema")!=1)throw new Exception("Nepodporovaná verze souboru zakázek");
+        LocalDatabase.validate(text);JSONObject o=new JSONObject(text);
         return o;
     }
     private Map<String,String> baseline(){Map<String,String> m=new HashMap<>();try{
         JSONObject j=new JSONObject(prefs.getString("syncBase","{}"));for(java.util.Iterator<String> it=j.keys();it.hasNext();){String k=it.next();m.put(k,j.optString(k));}
         }catch(Exception ignored){}return m;}
     private String nextBaseline="{}";
-    private JSONObject merge(JSONObject local, JSONObject remote) throws Exception {
+    JSONObject mergePeer(JSONObject local,JSONObject remote)throws Exception{LocalDatabase.validate(local.toString());LocalDatabase.validate(remote.toString());return merge(local,remote,java.util.Collections.emptyMap());}
+    private JSONObject merge(JSONObject local,JSONObject remote)throws Exception{return merge(local,remote,baseline());}
+    private JSONObject merge(JSONObject local,JSONObject remote,Map<String,String> base)throws Exception{
         Map<String,JSONObject> l=new HashMap<>(), r=new HashMap<>();
         JSONArray a=local.optJSONArray("records"), b=remote.optJSONArray("records");
         if(a!=null)for(int i=0;i<a.length();i++){JSONObject rec=a.optJSONObject(i);if(rec!=null&&rec.has("id"))l.put(rec.getString("id"),rec);}
         if(b!=null)for(int i=0;i<b.length();i++){JSONObject rec=b.optJSONObject(i);if(rec!=null&&rec.has("id"))r.put(rec.getString("id"),rec);}
         Set<String> purged=TrashPurger.purgedIds(local);purged.addAll(TrashPurger.purgedIds(remote));
-        Map<String,String> base=baseline();Set<String> all=new HashSet<>();all.addAll(l.keySet());all.addAll(r.keySet());
+        Set<String> all=new HashSet<>();all.addAll(l.keySet());all.addAll(r.keySet());
+        JSONObject tombstones=CausalClock.tombstones(local.optJSONObject("syncTombstones"),remote.optJSONObject("syncTombstones"));
+        for(String id:purged)if(!tombstones.has(id))tombstones.put(id,new JSONObject());
+        Set<String> generatedConflicts=new HashSet<>(),knownConflictSources=new HashSet<>();for(JSONObject record:l.values())if(record.has("conflictSource"))knownConflictSources.add(record.optString("conflictSource"));for(JSONObject record:r.values())if(record.has("conflictSource"))knownConflictSources.add(record.optString("conflictSource"));
         JSONArray merged=new JSONArray();JSONObject nextBase=new JSONObject();
         // Deterministic order keeps generated JSON stable.
         ArrayList<String> sorted=new ArrayList<>(all);java.util.Collections.sort(sorted);
         for(String id: sorted){JSONObject lv=l.get(id),rv=r.get(id), chosen;
+            if(tombstones.has(id)){
+                for(JSONObject record:new JSONObject[]{lv,rv})if(record!=null&&!record.optBoolean("deleted")){
+                    JSONObject clock=CausalClock.clock(record);String relation=CausalClock.compare(clock,tombstones.getJSONObject(id));
+                    if(clock.length()==0||"after".equals(relation)||"concurrent".equals(relation)){
+                        JSONObject copy=SyncConflicts.purged(id,record,tombstones.getJSONObject(id));String copyId=copy.getString("id"),source=copy.getString("conflictSource");
+                        if(!knownConflictSources.contains(source)&&!tombstones.has(copyId)&&!l.containsKey(copyId)&&!r.containsKey(copyId)&&generatedConflicts.add(copyId))merged.put(copy);
+                    }
+                }
+                continue;
+            }
             if(purged.contains(id)){
                 if(lv!=null&&lv.optBoolean("deleted"))lv=null;
                 if(rv!=null&&rv.optBoolean("deleted"))rv=null;
@@ -90,30 +98,34 @@ public class SyncEngine {
             else {
                 String lrev=lv.optString("rev",""),rrev=rv.optString("rev","");
                 String known=base.get(id);
-                if(lrev.equals(rrev))chosen=lv;
-                else if(known!=null&&known.equals(lrev))chosen=rv;
-                else if(known!=null&&known.equals(rrev))chosen=lv;
+                JSONObject lc=CausalClock.clock(lv),rc=CausalClock.clock(rv);String order=CausalClock.compare(lc,rc);
+                if(CausalClock.canonical(lv).equals(CausalClock.canonical(rv)))chosen=lv;
+                else if(lc.length()>0&&rc.length()>0&&"after".equals(order))chosen=lv;
+                else if(lc.length()>0&&rc.length()>0&&"before".equals(order))chosen=rv;
+                else if(FolderHierarchy.sameIntent(lv,rv))chosen=lv;
+                else if(FolderHierarchy.sameIntent(rv,lv))chosen=rv;
+                else if(!(lc.length()>0&&rc.length()>0)&&known!=null&&!lrev.equals(rrev)&&known.equals(lrev))chosen=rv;
+                else if(!(lc.length()>0&&rc.length()>0)&&known!=null&&!lrev.equals(rrev)&&known.equals(rrev))chosen=lv;
                 else {
                     // Preserve independent edits; do not discard either side.
-                    boolean localNewer=lv.optString("updatedAt","").compareTo(rv.optString("updatedAt",""))>=0;
-                    chosen=localNewer?lv:rv;
-                    JSONObject losing=new JSONObject((localNewer?rv:lv).toString());
-                    losing.put("id",UUID.randomUUID().toString());losing.put("title",losing.optString("title","Položka")+" (konflikt synchronizace)");
-                    losing.put("rev",UUID.randomUUID().toString());losing.put("conflict",true);
-                    merged.put(losing);
+                    JSONObject conflict=SyncConflicts.normal(lv,rv);chosen="local".equals(conflict.getString("winner"))?lv:rv;JSONObject losing=conflict.getJSONObject("copy");String conflictId=losing.getString("id");
+                    if(!tombstones.has(conflictId)&&!l.containsKey(conflictId)&&!r.containsKey(conflictId))merged.put(losing);
                 }
             }
             merged.put(chosen);nextBase.put(id,chosen.optString("rev",""));
         }
-        JSONObject result=new JSONObject(local.toString());result.put("records",merged);result.put("trashPurgedIds",new JSONArray(purged));
+        ArrayList<JSONObject> orderedRecords=new ArrayList<>();for(int i=0;i<merged.length();i++)orderedRecords.add(merged.getJSONObject(i));orderedRecords.sort(java.util.Comparator.comparing(record->record.optString("id")));JSONArray ordered=new JSONArray();for(JSONObject record:orderedRecords)ordered.put(record);
+        ArrayList<String> orderedPurged=new ArrayList<>(purged);java.util.Collections.sort(orderedPurged);JSONObject result=new JSONObject(local.toString());result.put("records",ordered);result.put("trashPurgedIds",new JSONArray(orderedPurged));result.put("syncTombstones",tombstones);
         // Preferences are device-local (screen size, tool order, colors). Never overwrite.
+        FolderHierarchy.repair(ordered);
         nextBaseline=nextBase.toString();
         return result;
     }
     private Uri dir(String parentId,String name,boolean create) throws Exception{
         Uri parent=DocumentsContract.buildChildDocumentsUriUsingTree(tree,parentId);
         try(Cursor c=resolver.query(parent,new String[]{Document.COLUMN_DOCUMENT_ID,Document.COLUMN_DISPLAY_NAME,Document.COLUMN_MIME_TYPE},null,null,null)){
-            if(c!=null)while(c.moveToNext())if(name.equals(c.getString(1))&&Document.MIME_TYPE_DIR.equals(c.getString(2))){
+            if(c==null)throw new java.io.IOException("Nelze načíst cloudovou složku");
+            while(c.moveToNext())if(name.equals(c.getString(1))&&Document.MIME_TYPE_DIR.equals(c.getString(2))){
                 return DocumentsContract.buildDocumentUriUsingTree(tree,c.getString(0));}
         }
         if(!create)return null;
@@ -123,7 +135,8 @@ public class SyncEngine {
     private Map<String,Entry> children(String parent) throws Exception{
         Map<String,Entry> result=new HashMap<>();Uri query=DocumentsContract.buildChildDocumentsUriUsingTree(tree,parent);
         try(Cursor c=resolver.query(query,new String[]{Document.COLUMN_DOCUMENT_ID,Document.COLUMN_DISPLAY_NAME,Document.COLUMN_MIME_TYPE},null,null,null)){
-            if(c!=null)while(c.moveToNext())result.put(c.getString(1),new Entry(DocumentsContract.buildDocumentUriUsingTree(tree,c.getString(0)),c.getString(2)));
+            if(c==null)throw new java.io.IOException("Nelze načíst cloudovou složku");
+            while(c.moveToNext())result.put(c.getString(1),new Entry(DocumentsContract.buildDocumentUriUsingTree(tree,c.getString(0)),c.getString(2)));
         }
         return result;
     }
@@ -132,45 +145,76 @@ public class SyncEngine {
     private String docId(Uri uri){return DocumentsContract.getDocumentId(uri);}
     private String contentType(String id){return prefs.getString("mime-"+id,"application/octet-stream");}
     private void copy(InputStream in,OutputStream out) throws Exception{byte[] buf=new byte[65536];int n;while((n=in.read(buf))!=-1)out.write(buf,0,n);}
-    private void syncMedia(Uri mediaFolder) throws Exception {
-        Map<String,Entry> remote=children(docId(mediaFolder));
-        for(File f:mediaDir.listFiles()==null?new File[0]:mediaDir.listFiles()){
-            if(!f.isFile()||!f.getName().matches("[a-zA-Z0-9_-]{3,120}"))continue;
-            if(!remote.containsKey(f.getName())){
-                Uri created=DocumentsContract.createDocument(resolver,mediaFolder,contentType(f.getName()),f.getName());
-                if(created==null)throw new Exception("Nelze vytvořit cloudový soubor "+f.getName());
-                try(InputStream in=new FileInputStream(f);OutputStream out=resolver.openOutputStream(created,"w")){if(out==null)throw new Exception("Cloudový zápis odmítnut");copy(in,out);}
+    private static void references(Object value,Set<String> ids)throws Exception{
+        if(value instanceof JSONObject){JSONObject o=(JSONObject)value;
+            for(String key:new String[]{"media","audioMedia"}){JSONArray media=o.optJSONArray(key);if(media!=null)for(int i=0;i<media.length();i++){String id=media.getString(i);if(!id.matches("[a-zA-Z0-9_-]{3,120}"))throw new java.io.IOException("Neplatná příloha synchronizace");ids.add(id);}}
+            for(java.util.Iterator<String> it=o.keys();it.hasNext();){String key=it.next();if(!"prefs".equals(key)){Object child=o.get(key);if("items".equals(key)&&child instanceof String&&((String)child).trim().startsWith("[")){JsonInput.check((String)child);references(new JSONArray((String)child),ids);}else references(child,ids);}}
+        }else if(value instanceof JSONArray){JSONArray a=(JSONArray)value;for(int i=0;i<a.length();i++)references(a.get(i),ids);}
+    }
+    protected void transferMedia(JSONObject data)throws Exception {
+        Uri mediaFolder=dir(DocumentsContract.getTreeDocumentId(tree),"media",true);if(mediaFolder==null)throw new java.io.IOException("Nelze vytvořit složku media");
+        Map<String,Entry> remote=children(docId(mediaFolder));Set<String> needed=new HashSet<>();references(data.optJSONArray("records"),needed);
+        for(String id:needed){
+            if(Thread.currentThread().isInterrupted())throw new java.io.InterruptedIOException("Přenos byl přerušen");
+            File file=new File(mediaDir,id);Entry entry=remote.get(id);
+            if(file.isFile()){
+                JSONObject localHash;try(InputStream in=new FileInputStream(file)){localHash=ArchiveIntegrity.copy(in,DISCARD);}
+                if(entry!=null){JSONObject remoteHash;try(InputStream in=resolver.openInputStream(entry.uri)){if(in==null)throw new java.io.IOException("Příloha není dostupná");remoteHash=ArchiveIntegrity.copy(in,DISCARD);}
+                    if(!localHash.toString().equals(remoteHash.toString()))throw new java.io.IOException("Obsah přílohy se liší; obě kopie zůstávají zachované: "+id);
+                }else{
+                    Uri target=DocumentsContract.createDocument(resolver,mediaFolder,contentType(id),id);if(target==null)throw new java.io.IOException("Nelze vytvořit přílohu");
+                    try{
+                        try(InputStream in=new FileInputStream(file);OutputStream out=resolver.openOutputStream(target,"w")){if(out==null)throw new java.io.IOException("Zápis odmítnut");copy(in,out);}
+                        JSONObject verified;try(InputStream in=resolver.openInputStream(target)){if(in==null)throw new java.io.IOException("Nelze ověřit zápis");verified=ArchiveIntegrity.copy(in,DISCARD);}
+                        if(!verified.toString().equals(localHash.toString()))throw new java.io.IOException("Neúplná cloudová příloha");
+                    }catch(Exception failure){try{DocumentsContract.deleteDocument(resolver,target);}catch(Exception ignored){}throw failure;}
+                }
+            }else{
+                if(entry==null)throw new java.io.IOException("Chybí příloha synchronizace: "+id);
+                File temporary=new File(mediaDir,id+".sync-"+UUID.randomUUID()+".tmp");
+                try{
+                    try(InputStream in=resolver.openInputStream(entry.uri);FileOutputStream out=new FileOutputStream(temporary)){if(in==null)throw new java.io.IOException("Chybí příloha "+id);copy(in,out);out.getFD().sync();}
+                    if(temporary.length()==0)throw new java.io.IOException("Prázdná příloha synchronizace");
+                    synchronized(TrashPurger.LOCK){
+                        // A concurrent trash purge must not bring back an orphaned media file.
+                        JSONObject latest=parse(loadLocal());Set<String> purged=TrashPurger.purgedIds(latest);boolean allowed=false;
+                        JSONArray records=data.optJSONArray("records");if(records!=null)for(int i=0;i<records.length();i++){JSONObject rec=records.optJSONObject(i);if(rec!=null&&!purged.contains(rec.optString("id"))){Set<String> used=new HashSet<>();references(rec,used);if(used.contains(id)){allowed=true;break;}}}
+                        if(allowed&&!file.exists())java.nio.file.Files.move(temporary.toPath(),file.toPath());
+                    }
+                }finally{temporary.delete();}
+                prefs.edit().putString("mime-"+id,entry.mime).apply();
             }
-        }
-        for(Map.Entry<String,Entry> it:remote.entrySet()){
-            String id=it.getKey();if(!id.matches("[a-zA-Z0-9_-]{3,120}"))continue;
-            File f=new File(mediaDir,id);
-            if(!f.exists()){
-                File tmp=new File(mediaDir,id+".tmp");
-                try(InputStream in=resolver.openInputStream(it.getValue().uri);OutputStream out=new FileOutputStream(tmp)){if(in==null)throw new Exception("Chybí příloha "+id);copy(in,out);}
-                if(!tmp.renameTo(f))throw new Exception("Nelze uložit přílohu "+id);
-            }
-            prefs.edit().putString("mime-"+id,it.getValue().mime).apply();
         }
     }
-    public synchronized Result sync() throws Exception{
-        synchronized(TrashPurger.LOCK){
+    protected JSONObject fetchRemote()throws Exception{
         if(tree==null)throw new Exception("Nejdřív vyber složku na Google Disku");
-        String rootId=DocumentsContract.getTreeDocumentId(tree);
-        Uri root=DocumentsContract.buildDocumentUriUsingTree(tree,rootId);
-        // The selected folder itself is the app-specific cloud directory.
-        Map<String,Entry> files=children(rootId);
-        Entry db=files.get("projects.json");
-        JSONObject local=parse(loadLocal());
-        JSONObject remote=db==null?parse(""):parse(readDoc(db.uri));
-        JSONObject merged=merge(local,remote);
-        Uri mdir=dir(rootId,"media",true);if(mdir==null)throw new Exception("Nelze vytvořit složku media");
-        syncMedia(mdir);
+        Entry db=children(DocumentsContract.getTreeDocumentId(tree)).get("projects.json");return db==null?parse(""):parse(readDoc(db.uri));
+    }
+    protected void publishRemote(JSONObject data)throws Exception{
+        String rootId=DocumentsContract.getTreeDocumentId(tree);Uri root=DocumentsContract.buildDocumentUriUsingTree(tree,rootId);
+        Entry db=children(rootId).get("projects.json");
         if(db==null){Uri uri=DocumentsContract.createDocument(resolver,root,"application/json","projects.json");if(uri==null)throw new Exception("Nelze založit cloudovou databázi");db=new Entry(uri,"application/json");}
-        writeDoc(db.uri,merged.toString());
-        saveLocal(merged.toString());
-        prefs.edit().putString("syncBase",nextBaseline).apply();
-        return new Result("Synchronizováno · "+merged.optJSONArray("records").length()+" položek",merged);
-        }
+        writeDoc(db.uri,data.toString());
+        // A successful close is insufficient with asynchronous document providers.
+        if(!parse(readDoc(db.uri)).toString().equals(data.toString()))throw new java.io.IOException("Cloudový zápis nebyl úplně potvrzen");
+    }
+    private static final OutputStream DISCARD=new OutputStream(){@Override public void write(int value){} @Override public void write(byte[] bytes,int offset,int length){}};
+    private static final java.util.concurrent.locks.ReentrantLock SESSION=new java.util.concurrent.locks.ReentrantLock();
+    public Result sync() throws Exception{
+        if(!SESSION.tryLock())throw new java.io.IOException("Jiná synchronizace již probíhá");
+        try{
+            String snapshot=loadLocal();JSONObject local=parse(snapshot),remote=fetchRemote();
+            JSONObject merged=merge(local,remote);String publishedBase=nextBaseline;
+            transferMedia(merged);publishRemote(merged);
+            boolean pending;
+            synchronized(TrashPurger.LOCK){
+                String latest=loadLocal();pending=!latest.equals(snapshot);
+                if(pending)merged=merge(parse(latest),merged);
+                saveLocal(merged.toString());
+                prefs.edit().putString("syncBase",publishedBase).putBoolean("syncPending",pending).commit();
+            }
+            return new Result(pending?"Přenos dokončen; novější místní změny čekají na další synchronizaci":"Synchronizováno · "+merged.optJSONArray("records").length()+" položek",merged);
+        }catch(Exception failure){prefs.edit().putBoolean("syncPending",true).commit();throw failure;}
+        finally{SESSION.unlock();}
     }
 }

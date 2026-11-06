@@ -13,11 +13,11 @@ window.setupNoteSketch=function(record){
  }
  const canvas=$('sketchCanvas'),brush=canvas.getContext('2d');
  let color='#f4f4f6',isDrawing=false,active=null,sketchRecord=record;
- if(!Array.isArray(sketchRecord.sketchStrokes))sketchRecord.sketchStrokes=[];
+
  const locked=!!window.isRecordLocked?.(record);
  function draw(){
   brush.fillStyle='#171720';brush.fillRect(0,0,canvas.width,canvas.height);
-  for(const stroke of sketchRecord.sketchStrokes){
+  for(const stroke of sketchRecord.sketchStrokes||[]){
    if(!Array.isArray(stroke.points)||!stroke.points.length)continue;
    brush.strokeStyle=stroke.color||'#fff';brush.lineWidth=stroke.width||4;
    brush.lineCap='round';brush.lineJoin='round';brush.beginPath();
@@ -44,7 +44,7 @@ window.setupNoteSketch=function(record){
   if(locked)return;
   e.preventDefault();canvas.setPointerCapture(e.pointerId);isDrawing=true;
   active={color,width:e.pointerType==='pen'&&e.pressure>0?Math.max(2,Math.round(e.pressure*8)):4,points:[point(e)]};
-  sketchRecord.sketchStrokes.push(active);draw();
+  if(!Array.isArray(sketchRecord.sketchStrokes))sketchRecord.sketchStrokes=[];sketchRecord.sketchStrokes.push(active);draw();
  };
  canvas.onpointermove=e=>{
   if(!isDrawing||!active||locked)return;
@@ -55,7 +55,7 @@ window.setupNoteSketch=function(record){
   isDrawing=false;active=null;touch(sketchRecord);save();
  }
  canvas.onpointerup=stop;canvas.onpointercancel=stop;
- $('undoSketch').onclick=()=>{if(locked)return;sketchRecord.sketchStrokes.pop();touch(sketchRecord);save();draw()};
+ $('undoSketch').onclick=()=>{if(locked)return;if(!sketchRecord.sketchStrokes?.length)return;sketchRecord.sketchStrokes.pop();touch(sketchRecord);save();draw()};
  $('clearSketch').onclick=()=>{if(locked)return;modal('Vymazat skicu?','<p>Vymažou se pouze čáry skici této poznámky, ne ostatní přílohy.</p>',()=>{
   sketchRecord.sketchStrokes=[];touch(sketchRecord);save();draw();
  },'Vymazat')};

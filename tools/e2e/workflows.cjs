@@ -1,5 +1,5 @@
 'use strict';
-const {suite,assert,createCanvas,tool,drag,editSelected,record}=require('./harness.cjs');
+const {suite,assert,createCanvas,chooseFiles,tool,drag,editSelected,record}=require('./harness.cjs');
 const row=(page,title)=>page.locator('.entry').filter({has:page.locator('.entry-title').filter({hasText:title})});
 async function add(page,label){await page.click('#createBtn');await page.locator('#newMenu .choice').filter({hasText:label}).click()}
 async function folder(page,title){await add(page,'Nová složka');await page.fill('#promptValue',title);await page.click('#okModal')}
@@ -11,7 +11,7 @@ async function actions(page,title){
 }
 async function trash(page){await page.click('#back');await page.locator('#navMenu .appMenuItem').filter({hasText:'Koš'}).click()}
 async function png(page,color='#a0a0a0',width=800,height=600){return Buffer.from(await page.evaluate(({color,width,height})=>{const c=document.createElement('canvas');c.width=width;c.height=height;c.getContext('2d').fillStyle=color;c.getContext('2d').fillRect(0,0,width,height);return c.toDataURL('image/png').split(',')[1]},{color,width,height}),'base64')}
-async function upload(page,name,color,width,height){const buffer=await png(page,color,width,height);await page.click('#galleryBtn');await page.setInputFiles('#filePick',{name,mimeType:'image/png',buffer});await page.waitForFunction(()=>screen==='editor'&&!!stageImg);return buffer}
+async function upload(page,name,color,width,height){const buffer=await png(page,color,width,height);await chooseFiles(page,'#galleryBtn',{name,mimeType:'image/png',buffer});await page.waitForFunction(()=>screen==='editor'&&!!stageImg);return buffer}
 async function hashes(page){return page.evaluate(async()=>{
  const db=await mediaDb(),pairs=await new Promise((resolve,reject)=>{const tx=db.transaction('files','readonly'),store=tx.objectStore('files'),req=store.openCursor(),pairs=[];req.onerror=reject;req.onsuccess=()=>{const cursor=req.result;if(!cursor)return resolve(pairs);pairs.push([cursor.key,cursor.value]);cursor.continue()}});
  const result={};for(const [id,blob] of pairs)result[id]=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await blob.arrayBuffer())),x=>x.toString(16).padStart(2,'0')).join('');return result;
@@ -68,7 +68,7 @@ async function line(page,type='dimension'){
    const count=await page.locator('#sketchCanvas').evaluate(c=>{const p=c.getContext('2d').getImageData(0,0,c.width,c.height).data;let n=0;for(let i=0;i<p.length;i+=4)if(p[i]>200&&p[i+1]>150&&p[i+2]<100)n++;return n});assert(count>50);
   });
   await step('Attach image and save/reload exact note',async()=>{
-   const buffer=await png(page,'#ff0000',64,128);await page.click('#attachFile');await page.setInputFiles('#filePick',{name:'detail.png',mimeType:'image/png',buffer});await page.waitForFunction(()=>noteActive.media.length===1);
+   const buffer=await png(page,'#ff0000',64,128);await chooseFiles(page,'#attachFile',{name:'detail.png',mimeType:'image/png',buffer});await page.waitForFunction(()=>noteActive.media.length===1);
    const before=await hashes(page);await page.click('#saveNote');await page.reload();await row(page,'Poznámka Č/Ř').click();
    assert.equal(await page.inputValue('#noteText'),'Řádek 1\nŘádek 2 😀');assert.equal(await page.locator('[data-check="0"]').isChecked(),true);assert.equal(await page.evaluate(()=>noteActive.sketchStrokes.length),1);assert.deepEqual(await hashes(page),before);evidence(await links(page));
   });
@@ -77,7 +77,7 @@ async function line(page,type='dimension'){
   await folder(page,'Fotografická zakázka');await row(page,'Fotografická zakázka').click();await upload(page,'original.png','#777777',1000,700);await line(page);
   await step('Note with two real uploaded images and nested dimension',async()=>{
    await tool(page,'note');const p=await page.evaluate(()=>({x:view.dx+photoSize.w*view.zoom*.35,y:view.dy+photoSize.h*view.zoom*.65}));await drag(page,p,{x:p.x+30,y:p.y+20});await editSelected(page);await page.fill('#richText','Soukromý detail\nobě fotografie');
-   const one=await png(page,'#ff0000',120,240),two=await png(page,'#0000ff',240,120);await page.click('#richPhotoPick');await page.setInputFiles('#filePick',[{name:'red.png',mimeType:'image/png',buffer:one},{name:'blue.png',mimeType:'image/png',buffer:two}]);
+   const one=await png(page,'#ff0000',120,240),two=await png(page,'#0000ff',240,120);await chooseFiles(page,'#richPhotoPick',[{name:'red.png',mimeType:'image/png',buffer:one},{name:'blue.png',mimeType:'image/png',buffer:two}]);
    await page.waitForFunction(()=>document.querySelectorAll('[data-attachment]').length===2);await page.click('#okModal');await editSelected(page);await page.click('#richEditDetail');await page.waitForFunction(()=>current._detailTemporary&&!!stageImg);
    await line(page);await page.click('#editorBack');await page.waitForFunction(()=>!current._detailTemporary&&!!stageImg);
    assert.equal(await page.evaluate(()=>current.items.find(i=>i.type==='note').detailItems[0].measure),'1585,800001');

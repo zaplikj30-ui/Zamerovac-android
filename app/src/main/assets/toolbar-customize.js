@@ -22,7 +22,45 @@
    all.slice(mainCount).forEach(k=>extra.append(byId.get(k)));
  }
  applyOrder(prefs.toolbarIconOrder);
+ const landscapeTools=allTools.filter(t=>!['select','pan'].includes(t[0]));
+ const landscapeButtons=new Map(landscapeTools.map(([key,icon,label])=>{
+  const button=document.createElement('button');button.type='button';button.className='ico landscape-tool';button.dataset.landscapeTool=key;
+  button.title=label;button.setAttribute('aria-label',label);button.innerHTML=toolIcon(key,icon);button.onclick=()=>setTool(key);
+  return [key,button];
+ }));
+ const landscapeDrawer=document.createElement('button');landscapeDrawer.type='button';landscapeDrawer.className='ico landscape-tool';landscapeDrawer.dataset.landscapeDrawer='';landscapeDrawer.textContent='⋮';landscapeDrawer.setAttribute('aria-label','Rozbalit další nástroje');landscapeDrawer.onclick=()=>window.setEditorExtraToolbarExpanded?.(extra.hidden);
+ let lastLandscape='';
+ function updateLandscape(){
+  const enabled=Array.isArray(prefs.landscapeTools)?prefs.landscapeTools:landscapeTools.map(t=>t[0]);
+  const landscape=window.innerWidth>window.innerHeight,drawer=landscape&&!main.contains($('editorMore'));
+  const capacity=landscape?Math.max(0,Math.floor((main.clientWidth-8-mainCount*48-(drawer?48:0))/48)):0;
+  const keys=[...new Set(enabled)].filter(k=>landscapeButtons.has(k)).slice(0,capacity),signature=keys.join(',')+'|'+drawer;
+  if(signature===lastLandscape)return;lastLandscape=signature;
+  for(const button of landscapeButtons.values())button.remove();landscapeDrawer.remove();
+  if(drawer)main.append(landscapeDrawer);
+  for(const key of keys)main.insertBefore(landscapeButtons.get(key),main.querySelector('#editorMore'));
+ }
+ function configureLandscape(){
+  const order=[...new Set([...(prefs.landscapeTools||landscapeTools.map(t=>t[0])),...landscapeTools.map(t=>t[0])])].filter(k=>landscapeButtons.has(k));
+  const chosen=new Set(prefs.landscapeTools||order);
+  modal('Lišta na šířku','<p>Vyber a uspořádej nástroje. Zobrazí se tolik ikon, kolik se vejde. Nabídka dalších nástrojů zůstane dostupná.</p><div id="landscapeToolChoices"></div>',()=>{
+   prefs.landscapeTools=order.filter(k=>chosen.has(k));if(!save())return false;lastLandscape='force';updateLandscape();
+  });
+  const list=$('landscapeToolChoices');
+  function renderChoices(){list.replaceChildren();for(const key of order){
+   const row=document.createElement('div');row.className='landscape-tool-choice';
+   const label=document.createElement('label'),check=document.createElement('input');check.type='checkbox';check.checked=chosen.has(key);check.dataset.landscapeChoice=key;
+   check.onchange=()=>check.checked?chosen.add(key):chosen.delete(key);label.append(check,document.createTextNode(landscapeTools.find(t=>t[0]===key)[2]));row.append(label);
+   for(const [delta,text] of [[-1,'↑'],[1,'↓']]){const move=document.createElement('button');move.type='button';move.textContent=text;move.setAttribute('aria-label',text==='↑'?'Posunout nahoru':'Posunout dolů');move.onclick=()=>{const i=order.indexOf(key),j=i+delta;if(j>=0&&j<order.length){[order[i],order[j]]=[order[j],order[i]];renderChoices()}};row.append(move)}list.append(row);
+  }}renderChoices();
+ }
+ const previousShowTools=showTools;
+ showTools=function(){previousShowTools();if($('toolMenu').hidden)return;
+  const config=document.createElement('button');config.id='configureLandscapeTools';config.className='choice';config.textContent='Nastavit lištu na šířku';config.onclick=()=>{closeMenus();configureLandscape()};$('toolMenu').append(config);
+ };
+ window.addEventListener('resize',updateLandscape);new ResizeObserver(updateLandscape).observe(main);updateLandscape();
  function status(){
+   for(const [key,button] of landscapeButtons)button.classList.toggle('active',mode===key);
    const u=$('undo'),r=byId.get('extra:redo');
    if(u){
      const off=!editStack.length;
@@ -77,7 +115,7 @@
        const to=order.indexOf(destination.dataset.toolbarKey);
        if(from!==-1&&to!==-1){
          [order[from],order[to]]=[order[to],order[from]];
-         applyOrder(order);prefs.toolbarIconOrder=order;save();
+         applyOrder(order);prefs.toolbarIconOrder=order;save();lastLandscape='force';updateLandscape();
          notify('Rozložení nástrojů uloženo');
        }
      }
@@ -140,6 +178,6 @@
  },true);
  window.__getToolbarIconOrder=orderNow;
  window.__applyToolbarIconOrder=order=>{
-   applyOrder(order);prefs.toolbarIconOrder=orderNow();save();status();
+   applyOrder(order);prefs.toolbarIconOrder=orderNow();save();lastLandscape='force';updateLandscape();status();
  };
 })();

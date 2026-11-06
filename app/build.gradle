@@ -9,16 +9,23 @@ if (!debugKey.exists()) {
     debugKey.bytes = java.util.Base64.getDecoder().decode(encoded)
 }
 def workflowBuildNumber = (System.getenv('GITHUB_RUN_NUMBER') ?: '1').toInteger()
+// Only the registered preview package may activate Google authorization.
+apply from: rootProject.file('gradle/drive-registration.gradle')
+def driveProjectOverride = providers.gradleProperty('driveCloudProject').orElse(providers.environmentVariable('ZAMEROVAC_DRIVE_PROJECT')).orNull
+def driveRequired = providers.gradleProperty('driveRequireConfigured').getOrElse('false')
+if (!(driveRequired in ['true', 'false'])) throw new GradleException('Invalid Drive activation requirement')
 
 android {
     namespace 'cz.zamerovac.app'
     compileSdk 35
+    buildFeatures { buildConfig true }
     defaultConfig {
         applicationId 'cz.zamerovac.app'
         minSdk 26
         targetSdk 35
         versionCode 1000 + workflowBuildNumber
         versionName "1.2.${workflowBuildNumber}"
+        buildConfigField 'String', 'DRIVE_CLOUD_PROJECT', '""'
     }
     signingConfigs {
         debug {
@@ -47,13 +54,37 @@ android {
     compileOptions { sourceCompatibility JavaVersion.VERSION_17; targetCompatibility JavaVersion.VERSION_17 }
 }
 
+def previewSigner = android.buildTypes.preview.signingConfig
+def driveRegistration = readDriveRegistration(rootProject.file('config/drive-preview.properties'),
+    android.defaultConfig.applicationId + android.buildTypes.preview.applicationIdSuffix,
+    previewSigner.storeFile, previewSigner.storeType, previewSigner.storePassword, previewSigner.keyAlias, driveProjectOverride)
+android.buildTypes.preview.buildConfigField 'String', 'DRIVE_CLOUD_PROJECT', '"' + driveRegistration.projectId + '"'
+tasks.register('verifyDriveRegistration') {
+    doLast {
+        def configured = checkDriveActivation(driveRegistration, driveRequired == 'true')
+        if (android.defaultConfig.buildConfigFields['DRIVE_CLOUD_PROJECT'].value != '""') throw new GradleException('Unregistered variants must not activate Drive')
+        def report = layout.buildDirectory.file('reports/drive-registration.json').get().asFile
+        report.parentFile.mkdirs()
+        report.text = groovy.json.JsonOutput.prettyPrint(groovy.json.JsonOutput.toJson(driveRegistration + [configured: configured])) + '\n'
+        println(configured ? 'PASS registered Drive preview project/package/signing certificate; no OAuth account was contacted' : 'PASS disabled Drive preview; exact public project ID is not yet confirmed; no OAuth account was contacted')
+    }
+}
+tasks.matching { it.name == 'generatePreviewBuildConfig' }.configureEach { dependsOn 'verifyDriveRegistration' }
+
 android.testOptions.unitTests.includeAndroidResources = true
+android.sourceSets.test.resources.srcDir(rootProject.file('config'))
 dependencies {
+    implementation 'com.google.android.gms:play-services-auth:22.0.0'
+    implementation 'io.github.erdtman:java-json-canonicalization:1.1'
     testImplementation 'junit:junit:4.13.2'
     testImplementation 'org.mockito:mockito-core:5.14.2'
     testImplementation 'org.robolectric:robolectric:4.16.1'
 }
 
 tasks.withType(Test).configureEach {
+    // JVM-only Conscrypt/Robolectric compatibility; does not alter Android TLS trust.
+    jvmArgs '--add-opens=java.base/java.net=ALL-UNNAMED'
+    // Canonical Maven Central endpoint; repo1 throttled large SDK downloads (HTTP 429).
+    systemProperty 'robolectric.dependency.repo.url', 'https://repo.maven.apache.org/maven2'
     testLogging { events 'failed', 'skipped'; exceptionFormat 'full' }
 }

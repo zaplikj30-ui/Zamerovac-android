@@ -12,3 +12,5 @@ __pycache__/
 
 /test-artifacts/
 /emulator-results/
+
+/tools/drive-config-checks/build/
