@@ -557,7 +557,7 @@ const chapters=[
       "V Editoru nastav lupu, přichytávání bodů/rastru, mřížku, odstup rastru a citlivost přesouvání.",
       "V Rozměrech nastav výchozí jednotky a počet zobrazovaných desetinných míst.",
       "Ve Vzhledu nastav barvu, tloušťku čar, velikost textu, zobrazení a další běžné chování.",
-      "V hlavním menu ☰ → Historie změn nebo v Nastavení → Novinky a historie změn si zobrazíš skutečné novinky, opravené chyby a vylepšení podle verzí.",
+      "V hlavním menu ☰ → Historie změn nebo v Nastavení → Novinky a historie změn si zobrazíš skutečné novinky, opravené chyby a vylepšení podle verzí. Od verze 1.3.0 se významnější změny projevují druhým číslem verze, menší opravy posledním číslem; číslo sestavení Androidu je samostatné.",
       "Jazyk aplikace zatím nabízí pouze 🇨🇿 Čeština; další překlady nejsou hotové."
     ],
     "notes": [

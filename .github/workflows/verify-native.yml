@@ -8,6 +8,7 @@ on:
       - 'app/src/main/res/**'
       - 'app/src/test/**'
       - 'app/build.gradle'
+      - 'config/app-version.properties'
       - 'config/drive-preview.properties'
       - 'gradle/drive-registration.gradle'
       - 'tools/drive-config-checks/**'

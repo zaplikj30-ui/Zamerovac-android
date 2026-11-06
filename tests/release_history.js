@@ -5,7 +5,7 @@ const path=require('node:path');
 const root=path.resolve(__dirname,'..');
 const history=require('../app/src/main/assets/release-history.js');
 const versions=history.releases.map(x=>x.version);
-assert.deepEqual(versions,['1.2.153','1.2.152','1.2.151','1.2.150','1.2.149','1.2.148','1.2.147','1.2','1.1']);
+assert.deepEqual(versions,['1.3.0','1.2.153','1.2.152','1.2.151','1.2.150','1.2.149','1.2.148','1.2.147','1.2','1.1']);
 assert.equal(new Set(versions).size,versions.length,'Version entries may not duplicate');
 assert.equal(history.compareVersions('1.2.150','1.2.151'),-1);
 assert.equal(history.compareVersions('1.2.151-test','1.2.151'),0);
@@ -17,6 +17,9 @@ assert.equal(history.forVersion('1.2.150-test')[0].version,'1.2.150');
 assert.equal(history.forVersion('1.2.149-test')[0].version,'1.2.149');
 assert.equal(history.forVersion('1.2.152-test')[0].version,'1.2.152');
 assert.equal(history.hasReleaseNotes('1.2.152'),true);
+assert.equal(history.hasReleaseNotes('1.3.0-test'),true);
+assert.equal(history.forVersion('1.3.0-test')[0].version,'1.3.0');
+assert.equal(history.forVersion('1.2.153-test')[0].version,'1.2.153');
 assert.equal(history.hasReleaseNotes('1.2.153-test'),true,
  'Exact planned 1.2.153 needs its own release entry, not relabeled old notes');
 assert.equal(history.forVersion('1.2.153-test')[0].version,'1.2.153');
@@ -59,7 +62,8 @@ console.log('PASS true versioned changelog: fixed releases, improvements, no fut
 assert.equal(history.releaseChanges.issue,39,'Release notes must match the update being published');
 assert.equal(history.releaseChanges.version,'1.2.153');
 assert(!history.forVersion('1.2.152').some(x=>x.version==='1.2.153'));
-assert(JSON.stringify(history.releases[0]).includes('A39-01 až A39-06'));
+assert(JSON.stringify(history.releases[1]).includes('A39-01 až A39-06'))
+assert(JSON.stringify(history.releases[0]).includes('smysluplná čísla vydání'));
 assert(JSON.stringify(history.releases[0]).includes('Oddělený výběr Google účtu'));
 assert(JSON.stringify(history.releaseChanges).includes('spustitelných příloh'));
 assert(JSON.stringify(history.releaseChanges).includes('zaniklá skupina Wi-Fi Direct'));

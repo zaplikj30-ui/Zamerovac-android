@@ -35,6 +35,8 @@ class BigUpdateSmokeTest(unittest.TestCase):
         self.assertIn("keyAlias 'zamerovacdev'", gradle)
         self.assertIn("manifestPlaceholders = [appLabel: 'Zaměřovač']", gradle)
         self.assertIn('versionCode 1000 + workflowBuildNumber', gradle)
+        self.assertIn('versionName marketingVersion', gradle)
+        self.assertIn('config/app-version.properties', gradle)
 
     def test_backup_includes_originals_and_isolated_restore(self):
         main = (JAVA / 'MainActivity.java').read_text(encoding='utf-8')
