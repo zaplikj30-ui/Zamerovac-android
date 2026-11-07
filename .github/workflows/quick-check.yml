@@ -157,6 +157,7 @@ jobs:
           export CHROMIUM_PATH="$(node -p "require('playwright').chromium.executablePath()")"
           node tools/e2e/latency.cjs
       - name: Regrese kvality – skutečné chování, přesnost a čitelné pixely
+        if: ${{ !cancelled() }}
         shell: bash
         run: |
           set -uo pipefail

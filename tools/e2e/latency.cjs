@@ -1,4 +1,5 @@
 'use strict';
+const fs=require('node:fs'),path=require('node:path');
 // Measurements, not invented speed limits. Native timings below are a JS bridge
 // model; Android filesystem/Bitmap/IME/CPU measurements still require Android.
 const {suite,assert,chooseFiles,createCanvas,tool,drag,editSelected}=require('./harness.cjs');
@@ -28,11 +29,15 @@ suite('latency',async test=>{
   await page.reload();assert.equal(await page.evaluate(()=>state.records.length),51);
   evidence({platform:'Linux Chromium/localStorage; synthetic hierarchy and exact editable dimensions',samples});
  });
- for(const size of [[1200,800],[6000,4000]])await test('photo_and_gallery_'+size.join('x'),async({page,evidence})=>{
+ for(const size of [[1200,800],[6000,4000]])await test('photo_and_gallery_'+size.join('x'),async({page,evidence,directory})=>{
   const bytes=await png(page,...size),samples=[];
+  // Use a real local file. Sending a 37 MB Buffer through Playwright's protocol
+  // exceeded the CI fileChooser timeout before the app could handle the input.
+  const fixture=path.join(directory,'synthetic-'+size.join('x')+'.png');fs.writeFileSync(fixture,bytes);
+  try{
   for(let i=0;i<3;i++){
    await page.evaluate(()=>window.latencyStart=performance.now());
-   await chooseFiles(page,'#galleryBtn',{name:'latency.png',mimeType:'image/png',buffer:bytes});
+   await chooseFiles(page,'#galleryBtn',fixture);
    await page.waitForFunction(()=>screen==='editor'&&!!stageImg);
    const open=await page.evaluate(()=>performance.now()-latencyStart);
    await page.evaluate(()=>{latencyStart=performance.now();document.querySelector('#galleryMode').click()});
@@ -42,8 +47,9 @@ suite('latency',async test=>{
    const save=await page.evaluate(()=>{const start=performance.now();if(!commitEditor())throw Error('save failed');const disk=JSON.parse(localStorage.getItem('zamerovac-data'));if(!disk.records.find(r=>r.id===current.id))throw Error('missing durable record');return performance.now()-start});
    samples.push({iteration:i,openMs:open,galleryMs:gallery,confirmedSaveReadbackMs:save});await page.click('#editorBack');
   }
+  }finally{fs.rmSync(fixture,{force:true})}
   await page.reload();assert.equal(await page.evaluate(()=>state.records.filter(r=>r.kind==='photo').length),3);
-  evidence({size,pngBytes:bytes.length,platform:'Linux Chromium/localStorage/IndexedDB; open includes UI file chooser automation',samples});
+  evidence({size,pngBytes:bytes.length,fixtureDelivery:'local file path',platform:'Linux Chromium/localStorage/IndexedDB; open includes UI file chooser automation',samples});
  });
  for(const size of [[320,240],[1440,2800]])await test('existing_feedback_'+size.join('x'),async({page,evidence})=>{
   const bytes=await png(page,...size);await nativeStorage(page);
