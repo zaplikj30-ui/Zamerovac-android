@@ -430,7 +430,7 @@
         },
         {
           "path": "tools/e2e/android-system.cjs",
-          "layer": "chromium"
+          "layer": "android-webview"
         }
       ],
       "coverage": "runtime-partial",
@@ -438,7 +438,8 @@
       "negative": "Start/stop/empty/cancel/disk, počáteční i pozdní kolize ID a neúspěšný formulář.",
       "limits": [
         "Recorder je řízený test double; fyzický mikrofon a omezení pozadí nejsou ověřené.",
-        "7. 11. 2026: skutečný WAV Play/Pause a explicitní textový fokus v Chromiu PASS po opravě timeru. android-system.cjs připraven pro skutečnou WebView/IME, zatím NOT RUN; žádné potvrzení Samsung IME."
+        "7. 11. 2026: skutečný WAV Play/Pause a explicitní textový fokus v Chromiu PASS po opravě timeru. android-system.cjs spuštěn v Android 13 CI: připojení skutečné WebView funguje, ale celkový průchod blokuje systémový System UI ANR. Explicitní IME timeout není za tímto překryvem důkaz chyby aplikace; Samsung IME neověřeno.",
+        "Android CI 42356263427: průchod uživatelským ovládáním BLOCKED systémovým ANR, žádný akceptační PASS. Opravená brána vyžaduje nativní focus aplikace a odmítá ANR; ověřena i na skutečném dumpu tohoto běhu. Picker scénář NOT RUN."
       ]
     },
     {
@@ -471,7 +472,7 @@
         },
         {
           "path": "tools/e2e/android-system.cjs",
-          "layer": "chromium"
+          "layer": "android-webview"
         }
       ],
       "coverage": "runtime-partial",
@@ -479,7 +480,8 @@
       "negative": "Timeout/cancel/unsafe URI, stale token/done, deleted/locked target a nový modal.",
       "limits": [
         "Skutečné poskytovatele a velké dávky na telefonu nutno ověřit.",
-        "7. 11. 2026: dvojklik, dva vlastníci, Back/Zrušit a pozdní callback PASS na modelu bridge. N4 zrušená importovaná příloha zůstává FAIL (nechráněný soubor v IndexedDB); bezpečná nativní retence vyžaduje samostatnou opravu."
+        "7. 11. 2026: dvojklik, dva vlastníci, Back/Zrušit a pozdní callback PASS na modelu bridge. N4 zrušená importovaná příloha zůstává FAIL (nechráněný soubor v IndexedDB); bezpečná nativní retence vyžaduje samostatnou opravu.",
+        "Android CI 42356263427: průchod uživatelským ovládáním BLOCKED systémovým ANR, žádný akceptační PASS. Opravená brána vyžaduje nativní focus aplikace a odmítá ANR; ověřena i na skutečném dumpu tohoto běhu. Picker scénář NOT RUN."
       ]
     },
     {
@@ -1408,6 +1410,6 @@
     "Kompletní mapování jednotlivých starších ovládacích prvků; nyní jsou mapované funkční oblasti.",
     "Fyzické OEM potvrzení route fallback/frekvence/Doze; auto/15/30/60/ručně a po-TLS nearby/LAN arbitráž jsou implementované a CI prošly.",
     "Známé brány: #50 galerie na main zůstává vadná, dokončení etapy B v #51 čeká na review; #42 N4 zrušená příloha bez retenčního vlastníka zůstává FAIL. Neobcházet expected-fail ani continue-on-error.",
-    "Android IME/picker gate tools/e2e/android-system.cjs je připravená v ručním emulator workflow, dosud NOT RUN; chybějící WebView CDP nebo IME důkaz musí workflow zastavit."
+    "Android IME/picker/glyph gate spuštěna ve stávajícím workflow. Připojení skutečné WebView funguje, ale CI 42356263427 blokuje System UI ANR. Canvas/bridge PASS za nativním dialogem se nepočítá jako uživatelský PASS. Brána nyní vyžaduje rozpoznaný nativní focus a absenci ANR; nový emulátorový průchod po této opravě NOT RUN."
   ]
 }

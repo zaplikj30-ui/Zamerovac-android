@@ -5,9 +5,15 @@
 const {execFileSync}=require('node:child_process'),fs=require('node:fs'),path=require('node:path');
 const {_android:android}=require('playwright');
 const {assert,createCanvas,tool,drag,editSelected}=require('./harness.cjs');
+const {assertInteractiveWindowDump}=require('./android-window.cjs');
 const out=path.resolve('emulator-results/system-dialogs');fs.mkdirSync(out,{recursive:true});
 const report={syntheticOnly:true,layer:'real-android-webview-and-adb',cases:[]};
 const adb=(...args)=>execFileSync('adb',args,{encoding:'utf8',timeout:15000});
+function interactiveWindow(name){
+ const windows=adb('shell','dumpsys','window');
+ fs.writeFileSync(path.join(out,name+'-windows.txt'),windows);
+ assertInteractiveWindowDump(windows,'cz.zamerovac.app.preview');
+}
 async function until(check){for(let i=0;i<35;i++){if(await check())return;await new Promise(r=>setTimeout(r,200))}throw Error('Timed out waiting for Android state')}
 function ime(){
  const dump=adb('shell','dumpsys','input_method');fs.writeFileSync(path.join(out,'input-method.txt'),dump);
@@ -20,7 +26,11 @@ function picker(){return /mResumedActivity[^\n]*(?:documentsui|DocumentsActivity
  let device,page;
  const run=async(name,body)=>{
   const entry={name,status:'running'};report.cases.push(entry);
-  try{await body();entry.status='PASS';console.log('PASS android-system/'+name)}
+  try{
+   if(page)interactiveWindow(name+'-before');
+   await body();interactiveWindow(name+'-after');
+   entry.status='PASS';console.log('PASS android-system/'+name);
+  }
   catch(e){entry.status='FAIL';entry.error=String(e.stack||e);throw e}
   finally{
    fs.writeFileSync(path.join(out,'report.json'),JSON.stringify(report,null,2));
@@ -41,10 +51,7 @@ function picker(){return /mResumedActivity[^\n]*(?:documentsui|DocumentsActivity
    const webview=await device.webView({pkg:'cz.zamerovac.app.preview'});
    page=await webview.page();assert(page,'Real WebView page missing');page.setDefaultTimeout(7000);
    assert(await page.evaluate(()=>typeof Native==='object'&&native),'Must use the real Android bridge');
-   const windows=adb('shell','dumpsys','window','windows');
-   fs.writeFileSync(path.join(out,'windows-before-ui.txt'),windows);
-   assert(!/mCurrentFocus=Window\{[^\n]*Application Not Responding/i.test(windows),
-    'NOT VERIFIED: a native ANR dialog blocks device input; see windows-before-ui.txt');
+   interactiveWindow('connect-native-focus');
    if(await page.locator('#modal').isVisible()){
     if(await page.locator('#cancelModal').isVisible())await page.click('#cancelModal');
     else await page.click('#okModal'); // Read-only release notes hide Cancel.

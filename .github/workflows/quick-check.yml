@@ -17,6 +17,7 @@ on:
       - 'tools/check-post*-browser.cjs'
       - 'tools/check-orientation-browser.cjs'
       - 'tools/check-loupe-exit-browser.cjs'
+      - 'tools/check-android-window.cjs'
       - 'tools/e2e/**'
       - 'tools/qa/**'
       - 'qa/**'
@@ -35,6 +36,7 @@ on:
       - 'tools/check-post*-browser.cjs'
       - 'tools/check-orientation-browser.cjs'
       - 'tools/check-loupe-exit-browser.cjs'
+      - 'tools/check-android-window.cjs'
       - 'tools/e2e/**'
       - 'tools/qa/**'
       - 'qa/**'
@@ -70,6 +72,7 @@ jobs:
         run: |
           set -euo pipefail
           node tools/qa/audit.cjs
+          node tools/check-android-window.cjs
           for script in tests/*.js; do
             node "$script"
           done

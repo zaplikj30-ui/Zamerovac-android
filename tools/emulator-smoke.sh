@@ -18,6 +18,7 @@ adb shell input keyevent 82 || true
 adb logcat -c || true
 collect_diagnostics() {
   timeout 20s adb shell dumpsys activity activities > "$OUT/activity-final.txt" || true
+  timeout 20s adb shell dumpsys window > "$OUT/windows-final.txt" || true
   timeout 20s adb logcat -d -v time > "$OUT/logcat.txt" || true
 }
 trap collect_diagnostics EXIT

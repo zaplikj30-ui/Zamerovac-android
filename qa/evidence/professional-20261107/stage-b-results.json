@@ -5,14 +5,18 @@
   "baselineServerSHA": "25055294a791790d7a20ecf87086887389c41a19",
   "applicationCommit": "343c172",
   "applicationAssetsTree": "ba7837998e8bc154cc406c040f218b3a4daefc22",
-  "finalTestsCommit": "361e15c",
   "testSHA256": {
     "tools/e2e/gallery-state.cjs": "6f634964b5c0f6032859c9da5a2eef3c9cfa4a53e7a3228495f2cddaa35f8d2e",
     "tools/e2e/gallery-readability.cjs": "88745ebb9d8384c37217eff0422590ca741e1410d04ea34dd27c0231b74b6dff",
     "tools/e2e/update39.cjs": "f1b94a5b4e466cc919d8cc585cae4f36ec5e3216111b1dd7f7ae74e9778470b5",
-    "tools/e2e/latency.cjs": "5d085458ad6b541d6d7131a3b1d5e4a519a58c2d3f46f86914fa65ce728de35f"
+    "tools/e2e/latency.cjs": "5d085458ad6b541d6d7131a3b1d5e4a519a58c2d3f46f86914fa65ce728de35f",
+    "tools/e2e/android-system.cjs": "8af49f3a5ddd04fd9bd19c6a37eb27b65479eb818e0b90e1e9b7a5529812da31",
+    "tools/e2e/android-window.cjs": "792a2f30f30e4829f3fe715c5234d1eeea15dd65f03da9f13dced31967b87203",
+    "tools/check-android-window.cjs": "2bce6c882aa9f7fb7234c635f3289683b88c471fc302a92f321f9e1d74b88456",
+    "tools/emulator-smoke.sh": "3cb66f181ba8fa798152d1e4f48b57628d0036854a8ee689a74436e638e22b12",
+    ".github/workflows/emulator-smoke.yml": "a0d56f4c2ad201b84710ac0dc8f00df64970515ce57517c078c3032de843b56e"
   },
-  "provenance": "Reports spanning 343c172/83fca00/287bab1 use the same application asset tree. Baseline latency uses immutable server 2505529; runner SHA alone is not server provenance. State/PNG and project probes rerun after test-only additions. No local Android/JVM run.",
+  "provenance": "Reports spanning 343c172/83fca00/287bab1 use the same application asset tree. Baseline latency uses immutable server 2505529; runner SHA alone is not server provenance. State/PNG and project probes rerun after test-only additions. No local Android/JVM run. Android CI attempts are separately recorded below; native-window blockers invalidate user-visible acceptance even when in-WebView checks returned PASS.",
   "chromiumCases": {
     "passed": 72,
     "failed": 1
@@ -3693,7 +3697,7 @@
     "error": "FATAL Not enough space to create userdata partition: 2866.88 MB available, 7372.80 MB required; Timeout waiting for emulator to boot",
     "functionalAndroidCases": "NOT RUN",
     "artifacts": [],
-    "fix": "Existing action disk-size 2048M and -no-snapshot; retry planned",
+    "fix": "Attempted existing disk-size=2048M; it did not remove the image minimum, see retry and later disk cleanup.",
     "userAPKRelease": false
   },
   "emulatorRetry": {
@@ -3703,5 +3707,128 @@
     "error": "AVD config got 2048M, but emulator still required 7372.80 MB with 2866.93 MB free",
     "functionalAndroidCases": "NOT RUN",
     "fix": "Free only unused .NET/NDK tools on ephemeral CI runner; check >=8 GiB after image install; retain -no-snapshot"
-  }
+  },
+  "browserTestsCommit": "361e15c",
+  "nativeCIOnB13e5ce": {
+    "run": 42356266572,
+    "status": "success",
+    "sha": "b13e5ce5d4ce1112456e612e0f84a99c8ae4de08",
+    "compile": "PASS",
+    "pdf": "PASS"
+  },
+  "quickCIOnB13e5ce": {
+    "run": 42356266633,
+    "status": "failure",
+    "onlyFailure": "quality-regressions/cancelled_attachment_has_no_unprotected_orphan (N4)",
+    "sourceAndSeparateBrowser": "PASS",
+    "workflowsAndGalleryState": "PASS",
+    "latency": 5,
+    "galleryReadability": 4,
+    "quality": "7 PASS / 1 FAIL N4"
+  },
+  "androidEmulatorRuns": [
+    {
+      "run": 42330025246,
+      "sha": "acf0005",
+      "status": "FAIL",
+      "stage": "before boot",
+      "reason": "2866.88 MB free, 7372.80 MB required",
+      "functionalAcceptance": "NOT RUN"
+    },
+    {
+      "run": 42331223641,
+      "sha": "bcf0647",
+      "status": "FAIL",
+      "stage": "before boot",
+      "reason": "disk-size=2048M did not reduce emulator minimum",
+      "functionalAcceptance": "NOT RUN"
+    },
+    {
+      "run": 42353737860,
+      "sha": "920cb83",
+      "status": "CANCELLED",
+      "reason": "superseded by known startup selector correction",
+      "functionalAcceptance": "NOT RUN"
+    },
+    {
+      "run": 42353860295,
+      "sha": "b8742f6",
+      "artifact": 13567261060,
+      "status": "FAIL",
+      "boot": "PASS",
+      "reason": "System UI ANR covers app, add action unavailable",
+      "functionalAcceptance": "BLOCKED"
+    },
+    {
+      "run": 42354395689,
+      "sha": "f3f1db2",
+      "artifact": 13566564675,
+      "status": "FAIL",
+      "boot": "PASS",
+      "reason": "Accessibility add selector expected Přidat, actual button text is ＋; corrected from real XML",
+      "functionalAcceptance": "NOT VERIFIED"
+    },
+    {
+      "run": 42354932647,
+      "sha": "63e7117",
+      "artifact": 13567248269,
+      "status": "FAIL",
+      "boot": "PASS",
+      "accessibilitySmoke": "PASS creating and opening sketch/editor, not dimension pixel proof",
+      "reason": "Desktop connectOverCDP rejects unsupported Browser.setDownloadBehavior on WebView; corrected to existing Playwright _android adapter",
+      "systemCases": "NOT RUN"
+    },
+    {
+      "run": 42355527200,
+      "sha": "eaa4de8",
+      "artifact": 13567532321,
+      "status": "FAIL",
+      "boot": "PASS",
+      "webviewConnection": "PASS",
+      "reason": "System UI ANR persists; explicit IME timeout cannot be attributed to application",
+      "functionalAcceptance": "BLOCKED",
+      "picker": "NOT RUN"
+    },
+    {
+      "run": 42356263427,
+      "sha": "b13e5ce",
+      "artifact": 13567917838,
+      "status": "FAIL",
+      "boot": "PASS",
+      "ramMB": 4096,
+      "rawReport": {
+        "syntheticOnly": true,
+        "layer": "real-android-webview-and-adb",
+        "cases": [
+          {
+            "name": "connect_real_preview_webview",
+            "status": "PASS"
+          },
+          {
+            "name": "gallery_pixels_exact_value_and_live_session",
+            "status": "PASS"
+          },
+          {
+            "name": "audio_play_pause_and_explicit_text_ime",
+            "status": "FAIL",
+            "error": "Error: Timed out waiting for Android state\n    at until (/home/runner/work/Zamerovac-android/Zamerovac-android/tools/e2e/android-system.cjs:11:121)\n    at async /home/runner/work/Zamerovac-android/Zamerovac-android/tools/e2e/android-system.cjs:127:34\n    at async run (/home/runner/work/Zamerovac-android/Zamerovac-android/tools/e2e/android-system.cjs:23:7)\n    at async /home/runner/work/Zamerovac-android/Zamerovac-android/tools/e2e/android-system.cjs:110:3"
+          }
+        ]
+      },
+      "inWebViewObservations": "Original PNG native ingest/readback SHA and exact value/session/canvas checks completed, but they do not prove on-screen interaction because native System UI ANR covered the app. Raw PASS entries are invalid as user acceptance.",
+      "functionalAcceptance": "BLOCKED",
+      "IME": "Timed out behind System UI ANR; no application root cause established",
+      "picker": "NOT RUN",
+      "evidenceImage": "stage-b-android-systemui-blocker.png"
+    }
+  ],
+  "androidWindowGateCorrection": {
+    "problem": "dumpsys window windows omits mCurrentFocus on Android 13; absence incorrectly passed the old negative-only check despite visible ANR Window #7",
+    "fix": "Full dumpsys window; require recognized focus owned by preview activity; reject every retained ANR window before/after each case",
+    "localRegression": "PASS valid app focus, OS/app ANR, missing/unrecognized focus, other activity; rejects actual run 42356263427 dump",
+    "emulatorRerunAfterCorrection": "NOT RUN; no further functional Android PASS claimed",
+    "casesNotRunAfterFailure": "gallery/IME/picker remain unverified at native acceptance layer"
+  },
+  "userAPKReleaseCreated": false,
+  "automaticMerge": false
 }
