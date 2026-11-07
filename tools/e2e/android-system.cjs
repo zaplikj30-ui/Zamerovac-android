@@ -47,6 +47,61 @@ function picker(){return /mResumedActivity[^\n]*(?:documentsui|DocumentsActivity
    }
    if(await page.locator('#editorView').isVisible())await page.click('#editorBack');
   });
+  await run('gallery_pixels_exact_value_and_live_session',async()=>{
+   const expected=await page.evaluate(async()=>{
+    const canvas=document.createElement('canvas');canvas.width=6000;canvas.height=4000;
+    const c=canvas.getContext('2d');c.fillStyle='#666';c.fillRect(0,0,6000,4000);
+    const blob=await new Promise(resolve=>canvas.toBlob(resolve));
+    const hash=bytes=>crypto.subtle.digest('SHA-256',bytes).then(b=>Array.from(new Uint8Array(b)).join(','));
+    const original=await hash(await blob.arrayBuffer()),id=await storeMedia(new File([blob],'qa-gallery.png',{type:'image/png'}));
+    const record=newRecord('photo','QA Android galerie');record.media=[id];state.records.push(record);
+    if(!save())throw Error('Native photo fixture save failed');openRecord(record.id);
+    window.__androidOriginalHash=hash;return {original,id};
+   });
+   await page.waitForFunction(()=>!!stageImg);
+   await page.evaluate(()=>{prefs.snapPoints=false;prefs.snapHorizontal=false;prefs.snapGrid=false;prefs.color='#f7dc27';save()});
+   await tool(page,'dimension');const points=await page.evaluate(()=>({
+    a:{x:view.dx+photoSize.w*view.zoom*.2,y:view.dy+photoSize.h*view.zoom*.45},
+    b:{x:view.dx+photoSize.w*view.zoom*.8,y:view.dy+photoSize.h*view.zoom*.55}
+   }));await drag(page,points.a,points.b);await editSelected(page);
+   await page.fill('#measureInput','1250,500001');await page.click('#okModal');
+   const before=await page.evaluate(()=>{
+    window.__androidGallerySession={current,view,selected,editStack,redoStack};
+    const fill=CanvasRenderingContext2D.prototype.fillText;window.__androidGalleryFill=fill;
+    CanvasRenderingContext2D.prototype.fillText=function(text,x,y,...args){
+     const result=fill.call(this,text,x,y,...args);
+     if(this.canvas.classList.contains('gallery-img')&&String(text).includes('1250,500001')){
+      const m=this.measureText(text),t=this.getTransform();
+      const a=t.transformPoint({x:x-m.actualBoundingBoxLeft,y:y-m.actualBoundingBoxAscent});
+      const b=t.transformPoint({x:x+m.actualBoundingBoxRight,y:y+m.actualBoundingBoxDescent});
+      window.__androidGalleryInk={x:Math.floor(a.x),y:Math.floor(a.y),w:Math.ceil(b.x-a.x),h:Math.ceil(b.y-a.y)};
+     }return result;
+    };return Native.loadData();
+   });
+   await page.click('#galleryMode');
+   for(const zoom of [1,2]){
+    if(zoom===2)await page.locator('.gallery-img').dblclick();
+    await page.waitForFunction(zoom=>{const c=document.querySelector('.gallery-img');return !!window.__androidGalleryInk&&c?.dataset.galleryView&&JSON.parse(c.dataset.galleryView).zoom===zoom},zoom);
+    const pixels=await page.evaluate(()=>{
+     const c=document.querySelector('.gallery-img'),s=__androidGalleryInk,x=c.getContext('2d');
+     const left=Math.max(0,s.x),top=Math.max(0,s.y),w=Math.min(c.width-left,s.w),h=Math.min(c.height-top,s.h);
+     if(w<=0||h<=0)return {yellow:0,inkHeight:0};
+     const p=x.getImageData(left,top,w,h).data;let yellow=0,minY=h,maxY=-1;
+     for(let row=0;row<h;row++)for(let col=0;col<w;col++){
+      const i=(row*w+col)*4;if(p[i]>180&&p[i+1]>150&&p[i+2]<100){yellow++;minY=Math.min(minY,row);maxY=Math.max(maxY,row)}
+     }return {yellow,inkHeight:(maxY-minY+1)*c.clientWidth/c.width};
+    });assert(pixels.yellow>15&&pixels.inkHeight>=8,'Actual Android gallery glyph ink must remain readable at '+zoom+'x');
+    fs.writeFileSync(path.join(out,'gallery-'+zoom+'x.png'),execFileSync('adb',['exec-out','screencap','-p'],{timeout:15000}));
+   }
+   await page.click('.gallery-top [data-action="edit"]');
+   assert(await page.evaluate(()=>Object.entries(__androidGallerySession).every(([k,v])=>({current,view,selected,editStack,redoStack})[k]===v)));
+   assert.equal(await page.evaluate(()=>Native.loadData()),before,'Gallery must not write native project data');
+   const original=await page.evaluate(async id=>__androidOriginalHash(await(await fetch(await assetUrl(id))).arrayBuffer()),expected.id);
+   assert.equal(original,expected.original,'Native original PNG bytes must remain unchanged');
+   await editSelected(page);assert.equal(await page.inputValue('#measureInput'),'1250,500001');await page.click('#cancelModal');
+   await page.evaluate(()=>CanvasRenderingContext2D.prototype.fillText=window.__androidGalleryFill);
+   await page.click('#editorBack');
+  });
   let noteId;
   await run('audio_play_pause_and_explicit_text_ime',async()=>{
    await createCanvas(page,'QA Android '+Date.now());await tool(page,'note');await drag(page,{x:100,y:210},{x:180,y:260});
