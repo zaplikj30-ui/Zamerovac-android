@@ -91,3 +91,13 @@ Porovnání původní a nové funkce před zápisem: 44000 deterministických PA
 Cílený test `tests/annotation_hit_geometry.js` PASS v izolovaném V8.
 Plná Node.js/Chromium/Android regrese stále NOT RUN, N4 známé FAIL.
 Bez merge/PR/Actions, změna pouze v samostatné následné větvi po B3.
+
+## Etapa B5 – oddělené rozhodování o úseku a úchopu (7. 11. 2026)
+
+Rozpoznání aktivního úseku pro laser je nyní v čistém `AnnotationGeometry.nearestEditableSegment`;
+priorita dotykového výběru v `AnnotationSelection.dragHandle`. Editor zůstává vlastníkem
+přesunů, checkpointu, Undo/Redo a zápisu. Zachovány přesné hodnoty, výběr koncového
+bodu a středu, priorita popisků, přiřazení hran obdélníku i původní schema a sync.
+Navazuje přímo na B4; cílená regrese `tests/annotation_selection_contract.js`.
+Plná Android/Chromium/JVM integrace zatím neproběhla, N4 je nadále známý FAIL.
+Bez nového PR, merge, Actions a APK.

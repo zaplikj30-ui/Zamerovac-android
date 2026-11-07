@@ -173,8 +173,29 @@ function nearestItem(point,items,transform,captionHit=()=>false){
  return best;
 }
 
+// B5: side-effect-free selected measuring segment.
+function nearestEditableSegment(candidate,s,transform){
+ if(!['chain','cumulative','polyline','area','angle','rect'].includes(candidate.type))return null;
+    const count=candidate.type==='area'||candidate.type==='rect'?4:
+     candidate.type==='angle'?2:Math.max(0,(candidate.points?.length||0)-1);
+    let nearest=0,dist=Infinity;
+    for(let i=0;i<count;i++){
+      let line=null;
+      if(candidate.type==='rect'){
+        const corners=rectCorners(candidate).map(p=>worldToScreen(p,transform));
+        line={a:corners[i],b:corners[(i+1)%4]};
+      }else line=segmentLineScreen(candidate,i,transform);
+      if(!line)continue;
+      const a=line.a,b=line.b,dx=b.x-a.x,dy=b.y-a.y;
+      const t=Math.max(0,Math.min(1,((s.x-a.x)*dx+(s.y-a.y)*dy)/(dx*dx+dy*dy||1)));
+      const d=Math.hypot(s.x-a.x-t*dx,s.y-a.y-t*dy);
+      if(d<dist){dist=d;nearest=i}
+    }
+    return candidate.type==='rect'?nearest%2:nearest;
+}
+
 const api=Object.freeze({screenToWorld,worldToScreen,boundsPoint,annotationProjectPoint,
- rectCorners,quadCorners,ellipseGeometry,resizePoints,cumulativeSegment,triangleArea,quadAreaFromMeasures,nearestHandle,segmentLineScreen,nearestItem});
+ rectCorners,quadCorners,ellipseGeometry,resizePoints,cumulativeSegment,triangleArea,quadAreaFromMeasures,nearestHandle,segmentLineScreen,nearestItem,nearestEditableSegment});
 root.AnnotationGeometry=api;
 if(typeof module==='object'&&module.exports)module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

@@ -599,24 +599,8 @@ function stageDown(e){
  if(candidate){
   // U řetězců si pamatuj konkrétní úsek, kterého se uživatel dotkl.
   // Další odečet z Bosche vyplní právě tento úsek, nikoli celý řetězec.
-  if(['chain','cumulative','polyline','area','angle','rect'].includes(candidate.type)){
-    const count=candidate.type==='area'||candidate.type==='rect'?4:
-     candidate.type==='angle'?2:Math.max(0,(candidate.points?.length||0)-1);
-    let nearest=0,dist=Infinity;
-    for(let i=0;i<count;i++){
-      let line=null;
-      if(candidate.type==='rect'){
-        const corners=rectCorners(candidate).map(worldToScreen);
-        line={a:corners[i],b:corners[(i+1)%4]};
-      }else if(typeof segmentLineScreen==='function')line=segmentLineScreen(candidate,i);
-      if(!line)continue;
-      const a=line.a,b=line.b,dx=b.x-a.x,dy=b.y-a.y;
-      const t=Math.max(0,Math.min(1,((s.x-a.x)*dx+(s.y-a.y)*dy)/(dx*dx+dy*dy||1)));
-      const d=Math.hypot(s.x-a.x-t*dx,s.y-a.y-t*dy);
-      if(d<dist){dist=d;nearest=i}
-    }
-    candidate.activeSegmentIndex=candidate.type==='rect'?nearest%2:nearest;
-   }
+  const activeSegment=AnnotationGeometry.nearestEditableSegment(candidate,s,view);
+  if(activeSegment!==null)candidate.activeSegmentIndex=activeSegment;
   const alreadySelected=selected===candidate.id;
   const isTextNote=candidate.type==='note'&&!candidate.media?.length;
   const captionBox=isTextNote?noteCaptionBounds(candidate):null;
@@ -634,19 +618,11 @@ function stageDown(e){
   const grip=nearestHandle(s,candidate);
   const label=nearestLabel(s);
   const segmentLabel=typeof nearestSegmentLabel==='function'?nearestSegmentLabel(s):null;
-  let hit;
-  if(wantsCaption)hit={item:candidate,kind:'note-caption'};
-   else if(grip?.item.id===candidate.id)hit=grip;
-   else if(candidate.type==='target'&&candidate.b&&Math.hypot(s.x-worldToScreen(candidate.b).x,s.y-worldToScreen(candidate.b).y)<40)
-    hit={item:candidate,kind:'target-caption'};
-   else if(segmentLabel?.item.id===candidate.id)hit=segmentLabel;
-    else if(label?.item.id===candidate.id)hit=label;
-   else if(['chain','cumulative','angle','area'].includes(candidate.type)&&candidate.points?.length>1)
-    hit={item:candidate,kind:'move-polyline'};
-   else if(['dimension','chain','cumulative','line','arrow','angle','target','rect','circle','ellipse'].includes(candidate.type))
-    hit={item:candidate,kind:'move-dimension'};
-   else if(candidate.type==='polyline'||candidate.type==='freehand')hit={item:candidate,kind:'move-polyline'};
-   else hit={item:candidate,kind:'open-selected'};
+  const hit=AnnotationSelection.dragHandle(candidate,{
+   wantsCaption,grip,label,segmentLabel,
+   targetCaption:candidate.type==='target'&&candidate.b&&
+    Math.hypot(s.x-worldToScreen(candidate.b).x,s.y-worldToScreen(candidate.b).y)<40
+  });
    selectedHandle=hit;
   hit.startScreen={...s};
   hit.initialSelection=!alreadySelected;
