@@ -106,6 +106,54 @@ public class TrashPurgerTest {
         assertEquals("image/png",prefs.getString("mime-trash-media",null));
         assertEquals("image/png",prefs.getString("mime-note-audio",null));
     }
+    @Test public void purgeKeepsSharedOriginalsReferencedInsideSerializedJsonObjects() throws Exception {
+        JSONObject db=fixture();
+        JSONObject active=db.getJSONArray("records").getJSONObject(0);
+        // A legacy entry contains a JSON OBJECT string instead of the already-tested
+        // JSON ARRAY string. Recursively nested object-encoded text is realistic
+        // for imported snapshots and future fields unknown to this app version.
+        active.put("packedSnapshot",new JSONObject()
+            .put("history",new JSONObject().put("nested",new JSONArray().put(
+                new JSONObject().put("media",new JSONArray().put("trash-media")))))
+            .put("otherLegacy",new JSONObject().put("text",new JSONObject()
+                .put("audioMedia",new JSONArray().put("note-audio")).toString()))
+            .toString());
+        for(String id:new String[]{"trash-media","note-audio","detail-photo"})file(id);
+        byte[] protectedPhoto=Files.readAllBytes(new File(home,"media/trash-media").toPath());
+        byte[] protectedAudio=Files.readAllBytes(new File(home,"media/note-audio").toPath());
+        persist(db.toString());
+        JSONObject result=purger.purge(db.toString(),db.toString(),targets(),this::persist);
+        assertEquals(0,result.getInt("pending"));
+        assertArrayEquals(protectedPhoto,Files.readAllBytes(new File(home,"media/trash-media").toPath()));
+        assertArrayEquals(protectedAudio,Files.readAllBytes(new File(home,"media/note-audio").toPath()));
+        assertTrue(prefs.contains("mime-trash-media"));
+        assertTrue(prefs.contains("mime-note-audio"));
+        assertFalse("Exclusively deleted original must still be cleaned",new File(home,"media/detail-photo").exists());
+        assertEquals(active.toString(),new JSONObject(read(new File(home,"projects.json")))
+            .getJSONArray("records").getJSONObject(0).toString());
+        // Repeated cleanup after restart must not delete these originals.
+        String stable=read(new File(home,"projects.json"));
+        new TrashPurger(home,cache,prefs).purge(stable,stable,new JSONArray(),this::persist);
+        assertArrayEquals(protectedPhoto,Files.readAllBytes(new File(home,"media/trash-media").toPath()));
+        assertArrayEquals(protectedAudio,Files.readAllBytes(new File(home,"media/note-audio").toPath()));
+    }
+    @Test public void pendingCleanupMustRecheckSerializedObjectReferencesAfterRestart() throws Exception {
+        String db=fixture().toString();
+        file("trash-media");
+        JSONObject result=new TrashPurger(home,cache,prefs,f->false)
+            .purge(db,db,targets(),this::persist);
+        assertTrue(result.getInt("pending")>0);
+        JSONObject changed=result.getJSONObject("data");
+        changed.getJSONArray("records").getJSONObject(0).put("legacyJson",
+            new JSONObject().put("deep",new JSONObject()
+                .put("media",new JSONArray().put("trash-media"))).toString());
+        persist(changed.toString());
+        String now=changed.toString();
+        new TrashPurger(home,cache,prefs).purge(now,now,new JSONArray(),this::persist);
+        assertTrue("Pending cleanup after reboot must preserve newly referenced original",
+            new File(home,"media/trash-media").isFile());
+        assertEquals(0,new TrashPurger(home,cache,prefs).pendingCount());
+    }
     @Test public void nativeBridgeChecksDiskSnapshotAndKeepsLegacyUnsavedDefaults() throws Exception {
         MainActivity activity=Robolectric.buildActivity(MainActivity.class).get();
         java.lang.reflect.Field field=MainActivity.class.getDeclaredField("settings");field.setAccessible(true);field.set(activity,prefs);

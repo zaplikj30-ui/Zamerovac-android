@@ -31,8 +31,14 @@ final class TrashPurger {
     // Include unknown fields/history in the protection set. Shared detail photos must survive.
     private static void strings(Object value, Set<String> found) throws JSONException {
         if(value instanceof String){String text=(String)value;found.add(text);
-            // Older annotation versions store their item arrays as JSON strings.
-            if(text.trim().startsWith("["))try{JsonInput.check(text);strings(new JSONArray(text),found);}catch(JSONException|IOException ignored){}
+            // Older and imported records may encode complete arrays OR objects
+            // as strings. A live reference inside either must block media unlinking.
+            String trimmed=text.trim();
+            if(trimmed.startsWith("[")||trimmed.startsWith("{"))try{
+                JsonInput.check(text);
+                if(trimmed.startsWith("["))strings(new JSONArray(text),found);
+                else strings(new JSONObject(text),found);
+            }catch(JSONException|IOException ignored){}
         }
         else if(value instanceof JSONObject){JSONObject o=(JSONObject)value;Iterator<String> keys=o.keys();while(keys.hasNext())strings(o.get(keys.next()),found);}
         else if(value instanceof JSONArray){JSONArray a=(JSONArray)value;for(int i=0;i<a.length();i++)strings(a.get(i),found);}
