@@ -51,6 +51,38 @@ function quadAreaFromMeasures(item){
  return first!==null&&second!==null?(first+second)/1000000:null;
 }
 
+// B9: pure magnetic/grid/axis snapping; all state is supplied by the editor.
+// Do not change the distance/order rules, especially when detaching a point.
+function snapPoint(p,ref,ignore,items,prefs,zoomLevel,imageSize){
+ p=boundsPoint({...p},imageSize);
+ const step=Math.max(5,Number(prefs.gridStep)||40),zoom=Math.max(.05,zoomLevel);
+ const pointDistance=12/zoom;
+ if(prefs.snapGrid){
+  const gridDistance=Math.min(11/zoom,step*.22);
+  const gx=Math.round(p.x/step)*step,gy=Math.round(p.y/step)*step;
+  if(Math.abs(gx-p.x)<gridDistance)p.x=gx;
+  if(Math.abs(gy-p.y)<gridDistance)p.y=gy;
+ }
+ if(prefs.snapPoints){
+  let best=null,bestDistance=pointDistance;
+  for(const item of items||[]){
+   // Vlastní kóta nesmí přichytávat svůj konec k druhému vlastnímu konci.
+   if(ignore?.item===item)continue;
+   for(const candidate of [item.a,item.b,...(item.points||[])]){
+    if(!candidate)continue;
+    const distance=Math.hypot(candidate.x-p.x,candidate.y-p.y);
+    if(distance<bestDistance){bestDistance=distance;best=candidate}
+   }
+  }
+  if(best)p={...best};
+ }
+ if(prefs.snapHorizontal&&ref){
+  if(Math.abs(p.y-ref.y)<pointDistance)p.y=ref.y;
+  if(Math.abs(p.x-ref.x)<pointDistance)p.x=ref.x;
+ }
+ return boundsPoint(p,imageSize);
+}
+
 // Pick a grip using only the candidate items and screen/world transform.
 function nearestHandle(point,items,transform,onlyItem=null){
  // Slightly widen the middle move zone while retaining precise endpoint grips.
@@ -195,7 +227,7 @@ function nearestEditableSegment(candidate,s,transform){
 }
 
 const api=Object.freeze({screenToWorld,worldToScreen,boundsPoint,annotationProjectPoint,
- rectCorners,quadCorners,ellipseGeometry,resizePoints,cumulativeSegment,triangleArea,quadAreaFromMeasures,nearestHandle,segmentLineScreen,nearestItem,nearestEditableSegment});
+ rectCorners,quadCorners,ellipseGeometry,resizePoints,cumulativeSegment,triangleArea,quadAreaFromMeasures,snapPoint,nearestHandle,segmentLineScreen,nearestItem,nearestEditableSegment});
 root.AnnotationGeometry=api;
 if(typeof module==='object'&&module.exports)module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

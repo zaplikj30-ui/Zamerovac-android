@@ -101,3 +101,18 @@ bodu a středu, priorita popisků, přiřazení hran obdélníku i původní sch
 Navazuje přímo na B4; cílená regrese `tests/annotation_selection_contract.js`.
 Plná Android/Chromium/JVM integrace zatím neproběhla, N4 je nadále známý FAIL.
 Bez nového PR, merge, Actions a APK.
+
+## Etapa B9 – čisté magnetické přichytávání (7. 11. 2026)
+
+Zbylý výpočet `snap` pro body, mřížku a vodorovné/svislé zarovnání byl vyjmut
+z `editor.js` do čistého `AnnotationGeometry.snapPoint`. Editor zůstává
+vlastníkem stavů `prefs`, `view`, `photoSize`, `current.items` a gest;
+předává je pouze jako explicitní argumenty. Zachováno pořadí mřížka → cizí
+body → osy, práh 12/zoom, oddělený gridDistance, tolerance, ochrana
+vlastních bodů (`ignore.item` podle reference), omezení na fotografie
+a možnost odtrhnout bod mimo přichytávací zónu. Žádný datový či sync protokol
+ani ukládané kóty se nemění. `index.html` se nemění: geometrie se již načítá
+před editorem. Regresní test `tests/annotation_snap_contract.js` drží
+nezávislou kopii původní implementace a 42 000 deterministických porovnání
+včetně kontroly neměnnosti originálních dat. Zatím pouze samostatná
+navazující větev z kontrolního PR #57; bez merge a bez samostatné APK.

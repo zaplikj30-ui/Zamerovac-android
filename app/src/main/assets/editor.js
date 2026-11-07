@@ -63,35 +63,7 @@ function eventPoint(e){let r=stageCanvas.getBoundingClientRect();return {x:e.cli
 function boundsPoint(p){return AnnotationGeometry.boundsPoint(p,photoSize)}
 // Magnetické přichytávání není vazba: výsledek se přepočítává z aktuální
 // polohy prstu. Vždy musí zbýt prostor mezi magnetickými zónami pro uvolnění.
-function snap(p,ref=null,ignore=null){
- p=boundsPoint({...p});
- const step=Math.max(5,Number(prefs.gridStep)||40),zoom=Math.max(.05,view.zoom);
- const pointDistance=12/zoom;
- if(prefs.snapGrid){
-  const gridDistance=Math.min(11/zoom,step*.22);
-  const gx=Math.round(p.x/step)*step,gy=Math.round(p.y/step)*step;
-  if(Math.abs(gx-p.x)<gridDistance)p.x=gx;
-  if(Math.abs(gy-p.y)<gridDistance)p.y=gy;
- }
- if(prefs.snapPoints){
-  let best=null,bestDistance=pointDistance;
-  for(const item of current.items||[]){
-   // Vlastní kóta nesmí přichytávat svůj konec k druhému vlastnímu konci.
-   if(ignore?.item===item)continue;
-   for(const candidate of [item.a,item.b,...(item.points||[])]){
-    if(!candidate)continue;
-    const distance=Math.hypot(candidate.x-p.x,candidate.y-p.y);
-    if(distance<bestDistance){bestDistance=distance;best=candidate}
-   }
-  }
-  if(best)p={...best};
- }
- if(prefs.snapHorizontal&&ref){
-  if(Math.abs(p.y-ref.y)<pointDistance)p.y=ref.y;
-  if(Math.abs(p.x-ref.x)<pointDistance)p.x=ref.x;
- }
- return boundsPoint(p);
-}
+function snap(p,ref=null,ignore=null){return AnnotationGeometry.snapPoint(p,ref,ignore,current.items||[],prefs,view.zoom,photoSize)}
 function checkpoint(){editStack.push(JSON.stringify(current.items||[]));if(editStack.length>50)editStack.shift();redoStack=[]}
 function finishHandleGesture(handle){
  // Only changed objects enter Undo; taps and rejected/pinch gestures preserve Redo.
