@@ -70,6 +70,13 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
   const send=(type,distance)=>{const touches=[new Touch({identifier:1,target:image,clientX:100,clientY:100}),new Touch({identifier:2,target:image,clientX:100+distance,clientY:100})];image.dispatchEvent(new TouchEvent(type,{touches,bubbles:true,cancelable:true}))};
   send('touchstart',60);send('touchmove',120);
  });
+ // A pinch updates galleryZoom synchronously, but the observable canvas
+ // snapshot is painted in the next requestAnimationFrame. A stale "1x"
+ // dataset must not be used as the reference for subsequent rotations.
+ await page.waitForFunction(()=>{
+  const raw=document.querySelector('.gallery-img')?.dataset.galleryView;
+  return raw&&JSON.parse(raw).zoom>1.5;
+ });
  const galleryScale=await page.locator('.gallery-img').evaluate(el=>JSON.parse(el.dataset.galleryView).zoom);
  for(const size of sizes){
   await page.setViewportSize(size);
