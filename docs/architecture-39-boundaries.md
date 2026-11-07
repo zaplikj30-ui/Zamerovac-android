@@ -80,3 +80,14 @@ proběhla v dostupném izolovaném V8. Samostatný regresní test je
 `tests/annotation_grip_geometry.js`; úplné Node, Chromium a Android testy
 ještě nebyly znovu spuštěny, N4 zůstává známý FAIL. Samostatná navazující
 větev z B2 bez PR a Actions; původní Codex B1 ani B2 se nemění.
+
+## Etapa B4 – geometrie výběru objektů bez živého stavu editoru (7. 11. 2026)
+
+`nearestItem` a `segmentLineScreen` pracují nyní v `annotation-geometry.js` se zadaným
+seznamem objektů a transformací. Editor si uchoval stejné API; pouze měření skutečné
+šířky popisku poskytuje callback `captionHit`. Původní pořadí výběru, 26px tolerance,
+odsazení kót, dotyky kruhů/ploch/úseček a přesná data jsou zachovány.
+Porovnání původní a nové funkce před zápisem: 44000 deterministických PASS.
+Cílený test `tests/annotation_hit_geometry.js` PASS v izolovaném V8.
+Plná Node.js/Chromium/Android regrese stále NOT RUN, N4 známé FAIL.
+Bez merge/PR/Actions, změna pouze v samostatné následné větvi po B3.

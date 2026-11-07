@@ -474,25 +474,7 @@ function labelInfo(item){
   const off=['line','arrow'].includes(item.type)?((flipped?1:-1)*((Number(item.fontSize)||Number(prefs.fontSize)||17)*.85+4)):((item.offset??0)-Math.max(26,(Number(item.fontSize)||Number(prefs.fontSize)||17)*1.5)),t=Number(item.labelT)||0;
   return {x:(a.x+b.x)/2-uy*off+dx*t,y:(a.y+b.y)/2+ux*off+dy*t,ux,uy,d};
 }
-function segmentLineScreen(item,index){
- const pts=item.points||[];
- if(['chain','cumulative','polyline'].includes(item.type)){
-  if(index<0||index>=pts.length-1)return null;
-  const projected=item.type==='cumulative'&&typeof cumulativeSegment==='function'?cumulativeSegment(item,index):null;
-  const a=projected?.from||worldToScreen(pts[index]),b=projected?.to||worldToScreen(pts[index+1]);
-  const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1;
-  const off=['chain','cumulative'].includes(item.type)?(Number(item.offset)||0)+(item.type==='cumulative'?index*26:0):0;
-  return {a:{x:a.x-dy/d*off,y:a.y+dx/d*off},b:{x:b.x-dy/d*off,y:b.y+dx/d*off}};
- }
- if(item.type==='angle'&&pts.length>=3)return {a:worldToScreen(pts[1]),b:worldToScreen(pts[index===0?0:2])};
- if(item.type==='area'){
-  const corners=quadCorners(item);return {a:worldToScreen(corners[index]),b:worldToScreen(corners[(index+1)%4])};
- }
- if(item.type==='rect'){
-  const corners=rectCorners(item);return {a:worldToScreen(corners[index]),b:worldToScreen(corners[index+1])};
- }
- return null;
-}
+function segmentLineScreen(item,index){return AnnotationGeometry.segmentLineScreen(item,index,view)}
 function nearestSegmentLabel(point){
  for(const item of [...(current.items||[])].reverse()){
   if(!['chain','cumulative','polyline','angle','area','rect'].includes(item.type))continue;
@@ -543,67 +525,13 @@ function nearestHandle(point,onlyItem=null){
  return AnnotationGeometry.nearestHandle(point,current.items||[],view,onlyItem);
 }
 function nearestItem(point){
- const world=screenToWorld(point);
- let best=null,distance=26/view.zoom;
- for(const item of [...(current.items||[])].reverse()){
-  if((item.type==='note'||item.type==='symbol')&&item.a){
-   const p=item.type==='note'?noteCaptionScreen(item):worldToScreen(item.a);
-   const caption=item.type==='symbol'?(item.icon||'⚑')+' '+(item.text||''):noteDisplayedCaption(item);
-   ctx.save();ctx.font='600 '+(item.fontSize||prefs.fontSize)+'px sans-serif';
-   const width=ctx.measureText(caption).width+22;ctx.restore();
-   if(Math.abs(point.x-p.x)<width/2+7&&Math.abs(point.y-p.y)<Math.max(23,(item.fontSize||prefs.fontSize)*.9))
-    return item;
-  }
-  if((['polyline','chain','cumulative','angle','freehand'].includes(item.type))&&Array.isArray(item.points)&&item.points.length>1){
-   for(let i=1;i<item.points.length;i++){
-    const line=['chain','cumulative'].includes(item.type)?segmentLineScreen(item,i-1):null;
-    const a=line?screenToWorld(line.a):item.points[i-1],b=line?screenToWorld(line.b):item.points[i],dx=b.x-a.x,dy=b.y-a.y;
-    const t=Math.max(0,Math.min(1,((world.x-a.x)*dx+(world.y-a.y)*dy)/(dx*dx+dy*dy||1)));
-    const d=Math.hypot(world.x-a.x-t*dx,world.y-a.y-t*dy);
-    if(d<distance){best=item;distance=d}
-   }
-   continue;
-  }
-  if(item.type==='circle'||item.type==='ellipse'){
-   const g=ellipseGeometry(item),dx=world.x-g.cx,dy=world.y-g.cy;
-   const norm=Math.sqrt(dx*dx/(g.rx*g.rx)+dy*dy/(g.ry*g.ry));
-   const d=norm<.32?Math.hypot(dx,dy):Math.abs(norm-1)*Math.min(g.rx,g.ry);
-   if(d<distance){best=item;distance=d}continue;
-  }
-  if(item.type==='area'||item.type==='rect'){
-   const corners=(item.type==='area'?quadCorners(item):rectCorners(item));
-   let inside=false,edgeDist=Infinity;
-   for(let i=0,j=corners.length-1;i<corners.length;j=i++){
-    const a=corners[j],b=corners[i],dx=b.x-a.x,dy=b.y-a.y;
-    if(((a.y>world.y)!=(b.y>world.y))&&(world.x<(b.x-a.x)*(world.y-a.y)/(b.y-a.y)+a.x))inside=!inside;
-    const t=Math.max(0,Math.min(1,((world.x-a.x)*dx+(world.y-a.y)*dy)/(dx*dx+dy*dy||1)));
-    edgeDist=Math.min(edgeDist,Math.hypot(world.x-a.x-t*dx,world.y-a.y-t*dy));
-   }
-   if(inside||edgeDist<distance){best=item;distance=0}continue;
-  }
-  if(item.type==='target'&&item.a){
-   const center=item.a,label=item.b||{x:center.x+30,y:center.y};
-   const d=Math.min(Math.hypot(world.x-center.x,world.y-center.y),Math.hypot(world.x-label.x,world.y-label.y));
-   if(d<distance){best=item;distance=d}continue;
-  }
-  const a=item.a,b=item.b;
-  if(a&&b){
-   let ux=b.x-a.x,uy=b.y-a.y,den=ux*ux+uy*uy||1;
-   // Testovat viditelnou odsazenou kótovací čáru, nejen geometrii pod ní.
-   let shift=0;
-   if(['dimension','chain','cumulative'].includes(item.type))
-    shift=(Number(item.offset)||0)/Math.max(0.0001,view.zoom);
-   const lineLength=Math.hypot(ux,uy)||1;
-   const ax=a.x-uy/lineLength*shift,ay=a.y+ux/lineLength*shift;
-   let t=Math.max(0,Math.min(1,((world.x-ax)*ux+(world.y-ay)*uy)/den));
-   let d=Math.hypot(world.x-ax-t*ux,world.y-ay-t*uy);
-   if(d<distance){best=item;distance=d}
-  }else if(a){
-   let d=Math.hypot(a.x-world.x,a.y-world.y);
-   if(d<distance){best=item;distance=d}
-  }
- }
- return best;
+ return AnnotationGeometry.nearestItem(point,current.items||[],view,(item,point)=>{
+  const p=item.type==='note'?noteCaptionScreen(item):worldToScreen(item.a);
+  const caption=item.type==='symbol'?(item.icon||'⚑')+' '+(item.text||''):noteDisplayedCaption(item);
+  ctx.save();ctx.font='600 '+(item.fontSize||prefs.fontSize)+'px sans-serif';
+  const width=ctx.measureText(caption).width+22;ctx.restore();
+  return Math.abs(point.x-p.x)<width/2+7&&Math.abs(point.y-p.y)<Math.max(23,(item.fontSize||prefs.fontSize)*.9);
+ });
 }
 function hitAnnotation(point){
  // Endpoint grips take priority over captions and the move area, even on

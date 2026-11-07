@@ -93,8 +93,88 @@ function nearestHandle(point,items,transform,onlyItem=null){
  return best;
 }
 
+// Stage B4: state-free hit geometry and segment projection.
+function segmentLineScreen(item,index,transform){
+ const pts=item.points||[];
+ if(['chain','cumulative','polyline'].includes(item.type)){
+  if(index<0||index>=pts.length-1)return null;
+  const projected=item.type==='cumulative'&&typeof cumulativeSegment==='function'?cumulativeSegment(item,index,transform):null;
+  const a=projected?.from||worldToScreen(pts[index],transform),b=projected?.to||worldToScreen(pts[index+1],transform);
+  const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1;
+  const off=['chain','cumulative'].includes(item.type)?(Number(item.offset)||0)+(item.type==='cumulative'?index*26:0):0;
+  return {a:{x:a.x-dy/d*off,y:a.y+dx/d*off},b:{x:b.x-dy/d*off,y:b.y+dx/d*off}};
+ }
+ if(item.type==='angle'&&pts.length>=3)return {a:worldToScreen(pts[1],transform),b:worldToScreen(pts[index===0?0:2],transform)};
+ if(item.type==='area'){
+  const corners=quadCorners(item);return {a:worldToScreen(corners[index],transform),b:worldToScreen(corners[(index+1)%4],transform)};
+ }
+ if(item.type==='rect'){
+  const corners=rectCorners(item);return {a:worldToScreen(corners[index],transform),b:worldToScreen(corners[index+1],transform)};
+ }
+ return null;
+}
+
+function nearestItem(point,items,transform,captionHit=()=>false){
+ const world=screenToWorld(point,transform);
+ let best=null,distance=26/transform.zoom;
+ for(const item of [...(items||[])].reverse()){
+  if((item.type==='note'||item.type==='symbol')&&item.a){
+   if(captionHit(item,point))return item;
+  }
+  if((['polyline','chain','cumulative','angle','freehand'].includes(item.type))&&Array.isArray(item.points)&&item.points.length>1){
+   for(let i=1;i<item.points.length;i++){
+    const line=['chain','cumulative'].includes(item.type)?segmentLineScreen(item,i-1,transform):null;
+    const a=line?screenToWorld(line.a,transform):item.points[i-1],b=line?screenToWorld(line.b,transform):item.points[i],dx=b.x-a.x,dy=b.y-a.y;
+    const t=Math.max(0,Math.min(1,((world.x-a.x)*dx+(world.y-a.y)*dy)/(dx*dx+dy*dy||1)));
+    const d=Math.hypot(world.x-a.x-t*dx,world.y-a.y-t*dy);
+    if(d<distance){best=item;distance=d}
+   }
+   continue;
+  }
+  if(item.type==='circle'||item.type==='ellipse'){
+   const g=ellipseGeometry(item),dx=world.x-g.cx,dy=world.y-g.cy;
+   const norm=Math.sqrt(dx*dx/(g.rx*g.rx)+dy*dy/(g.ry*g.ry));
+   const d=norm<.32?Math.hypot(dx,dy):Math.abs(norm-1)*Math.min(g.rx,g.ry);
+   if(d<distance){best=item;distance=d}continue;
+  }
+  if(item.type==='area'||item.type==='rect'){
+   const corners=(item.type==='area'?quadCorners(item):rectCorners(item));
+   let inside=false,edgeDist=Infinity;
+   for(let i=0,j=corners.length-1;i<corners.length;j=i++){
+    const a=corners[j],b=corners[i],dx=b.x-a.x,dy=b.y-a.y;
+    if(((a.y>world.y)!=(b.y>world.y))&&(world.x<(b.x-a.x)*(world.y-a.y)/(b.y-a.y)+a.x))inside=!inside;
+    const t=Math.max(0,Math.min(1,((world.x-a.x)*dx+(world.y-a.y)*dy)/(dx*dx+dy*dy||1)));
+    edgeDist=Math.min(edgeDist,Math.hypot(world.x-a.x-t*dx,world.y-a.y-t*dy));
+   }
+   if(inside||edgeDist<distance){best=item;distance=0}continue;
+  }
+  if(item.type==='target'&&item.a){
+   const center=item.a,label=item.b||{x:center.x+30,y:center.y};
+   const d=Math.min(Math.hypot(world.x-center.x,world.y-center.y),Math.hypot(world.x-label.x,world.y-label.y));
+   if(d<distance){best=item;distance=d}continue;
+  }
+  const a=item.a,b=item.b;
+  if(a&&b){
+   let ux=b.x-a.x,uy=b.y-a.y,den=ux*ux+uy*uy||1;
+   // Testovat viditelnou odsazenou kótovací čáru, nejen geometrii pod ní.
+   let shift=0;
+   if(['dimension','chain','cumulative'].includes(item.type))
+    shift=(Number(item.offset)||0)/Math.max(0.0001,transform.zoom);
+   const lineLength=Math.hypot(ux,uy)||1;
+   const ax=a.x-uy/lineLength*shift,ay=a.y+ux/lineLength*shift;
+   let t=Math.max(0,Math.min(1,((world.x-ax)*ux+(world.y-ay)*uy)/den));
+   let d=Math.hypot(world.x-ax-t*ux,world.y-ay-t*uy);
+   if(d<distance){best=item;distance=d}
+  }else if(a){
+   let d=Math.hypot(a.x-world.x,a.y-world.y);
+   if(d<distance){best=item;distance=d}
+  }
+ }
+ return best;
+}
+
 const api=Object.freeze({screenToWorld,worldToScreen,boundsPoint,annotationProjectPoint,
- rectCorners,quadCorners,ellipseGeometry,resizePoints,cumulativeSegment,triangleArea,quadAreaFromMeasures,nearestHandle});
+ rectCorners,quadCorners,ellipseGeometry,resizePoints,cumulativeSegment,triangleArea,quadAreaFromMeasures,nearestHandle,segmentLineScreen,nearestItem});
 root.AnnotationGeometry=api;
 if(typeof module==='object'&&module.exports)module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);
