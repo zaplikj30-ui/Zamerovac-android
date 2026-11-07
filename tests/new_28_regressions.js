@@ -11,7 +11,7 @@ const fake=Array.from({length:60},(_,i)=>({tag:'test-'+i,autonym:'Jazyk '+i,name
 assert.equal(i18n.availableLanguages(fake).length,60,'List is not capped at four locales');
 assert.equal(i18n.findLanguages('example 35',fake).length,1,'Scalable search');
 const editor=fs.readFileSync(base+'editor.js','utf8');
-const a=editor.indexOf('function rectCorners(item){'),b=editor.indexOf('function drawItem(c,item){',a);
+const a=editor.indexOf('function rectCorners(item){'),b=editor.indexOf('function drawItem(',a);
 assert(a>=0&&b>a);
 const ctx={worldToScreen:x=>x,Math,Number,String,console};
 vm.createContext(ctx);vm.runInContext(editor.slice(a,b),ctx);

@@ -343,6 +343,10 @@ async function renderGallery(){
  const generation=++galleryRenderGeneration,display=gallery,r=galleryList[galleryIndex];
  if(!r){closeGallery();return}
  const canvas=display.querySelector('.gallery-img');
+ // Invalidate the previous photo immediately; an in-flight load has no drawable frame.
+ display.__drawGallery=null;display.__galleryExtent=null;
+ delete canvas.dataset.galleryView;delete canvas.dataset.galleryViewport;
+ canvas.getContext('2d').clearRect(0,0,canvas.width,canvas.height);
  display.querySelector('.gallery-title').textContent=r.title+' · '+(galleryIndex+1)+'/'+galleryList.length;
  try{
   const image=await loadPhotoImage(r.media?.[0]);
@@ -364,9 +368,11 @@ async function renderGallery(){
   // Rendering uses a viewport-sized canvas instead of a downsized bitmap.
   // Measure the full annotated workspace using the actual inset/caption renderer.
   let minX=0,minY=0,maxX=image.naturalWidth,maxY=image.naturalHeight;
-  const measure=canvas.getContext('2d'),previousView=view,previousPhoto=photoSize,previousExport=window.__exportingAnnotations;
-  try{
-   view={zoom:1,dx:0,dy:0};photoSize={w:image.naturalWidth,h:image.naturalHeight};window.__exportingAnnotations=true;
+  const measure=canvas.getContext('2d');
+  const measureRender=annotationRenderContext(measure,{view:{zoom:1,dx:0,dy:0},
+   photoSize:{w:image.naturalWidth,h:image.naturalHeight},
+   viewport:{w:available.clientWidth,h:available.clientHeight},selected:null,exporting:true});
+  measure.save();try{
    for(const item of r.items||[]){
     const fs=Number(item.fontSize)||Number(prefs.fontSize)||17;
     measure.font='600 '+fs+'px sans-serif';
@@ -375,10 +381,10 @@ async function renderGallery(){
     for(const p of [item.a,item.b,...(item.points||[])])if(p&&Number.isFinite(p.x)&&Number.isFinite(p.y)){
      minX=Math.min(minX,p.x-padding);minY=Math.min(minY,p.y-fs*3);maxX=Math.max(maxX,p.x+padding);maxY=Math.max(maxY,p.y+fs*3);
     }
-    const bounds=item.type==='note'&&item.media?.length?window.insetAnnotationBounds?.(measure,item):null;
+    const bounds=item.type==='note'&&item.media?.length?window.insetAnnotationBounds?.(measure,item,measureRender):null;
     if(bounds){minX=Math.min(minX,bounds.minX);minY=Math.min(minY,bounds.minY);maxX=Math.max(maxX,bounds.maxX);maxY=Math.max(maxY,bounds.maxY)}
    }
-  }finally{view=previousView;photoSize=previousPhoto;window.__exportingAnnotations=previousExport}
+  }finally{measure.restore()}
   const margin=38;
   const workspaceW=maxX-minX+2*margin,workspaceH=maxY-minY+2*margin;
   // Never resample already-tiny text and lines: draw annotations directly
@@ -402,17 +408,14 @@ async function renderGallery(){
    const dx=w/2+(startX-w/2)*zoom+pan.x;
    const dy=h/2+(startY-h/2)*zoom+pan.y,s=fit*zoom;
    c.drawImage(image,dx,dy,image.naturalWidth*s,image.naturalHeight*s);
-   const oldCtx=ctx,oldView=view,oldCurrent=current,oldPhoto=photoSize,oldSelected=selected;
-   const oldExport=window.__exportingAnnotations;
-   try{
-    ctx=c;view={zoom:s,dx,dy};current=r;
-    photoSize={w:image.naturalWidth,h:image.naturalHeight};
-    selected=null;window.__exportingAnnotations=true;
-    for(const item of r.items||[])drawItem(c,item);
-   }finally{
-    ctx=oldCtx;view=oldView;current=oldCurrent;
-    photoSize=oldPhoto;selected=oldSelected;window.__exportingAnnotations=oldExport;
-   }
+   const render=annotationRenderContext(c,{view:{zoom:s,dx,dy},
+    photoSize:{w:image.naturalWidth,h:image.naturalHeight},viewport:{w,h},selected:null,exporting:true});
+   c.save();try{
+    for(const item of r.items||[])drawItem(c,item,render);
+   }finally{c.restore()}
+   // Observational metadata for viewport/gesture regression checks, never saved data.
+   canvas.dataset.galleryViewport=w+'x'+h;
+   canvas.dataset.galleryView=JSON.stringify({zoom,pan,fit,dx,dy,scale:s,recordId:r.id});
   };
   display.__galleryExtent=()=>({w:workspaceW,h:workspaceH});
   display.__updateGalleryZoom?.();
@@ -425,6 +428,7 @@ window.addEventListener('resize',()=>{
  galleryResizeFrame=requestAnimationFrame(()=>{if(gallery)renderGallery()});
 });
 function openGallery(index,records=null){
+ if(gallery)closeGallery();
  galleryList=records||galleryPhotos();galleryIndex=Math.min(Math.max(index,0),galleryList.length-1);
  if(!galleryList.length){notify('Ve složce nejsou fotografie');return}
  gallery=document.createElement('div');gallery.className='galleryOverlay';
@@ -433,7 +437,7 @@ function openGallery(index,records=null){
  gallery.querySelectorAll('[data-action]').forEach(b=>b.onclick=()=>{
   const a=b.dataset.action;
   if(a==='close')return closeGallery();
-  if(a==='edit'){const r=galleryList[galleryIndex];closeGallery();openEditor(r);return}
+  if(a==='edit'){const r=galleryList[galleryIndex];closeGallery();if(screen!=='editor'||current!==r)openEditor(r);return}
   galleryIndex=(galleryIndex+(a==='next'?1:-1)+galleryList.length)%galleryList.length;renderGallery();
  });
  const image=gallery.querySelector('.gallery-img');
@@ -453,7 +457,6 @@ function openGallery(index,records=null){
  gallery.__updateGalleryZoom=updateZoom;
  const resetZoom=()=>{galleryZoom=1;galleryTx=0;galleryTy=0;updateZoom()};
  const distance=(a,b)=>Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);
- const oldRender=renderGallery;
  const galleryNavigate=step=>{
   galleryIndex=(galleryIndex+step+galleryList.length)%galleryList.length;
   resetZoom();renderGallery();
@@ -503,7 +506,7 @@ function openGallery(index,records=null){
 
  renderGallery();
 }
-function closeGallery(){gallery?.remove();gallery=null;if(galleryFrame!==null){cancelAnimationFrame(galleryFrame);galleryFrame=null}}
+function closeGallery(){++galleryRenderGeneration;gallery?.remove();gallery=null;if(galleryFrame!==null){cancelAnimationFrame(galleryFrame);galleryFrame=null}}
 function renderEditorNavigation(){
  let nav=$('photoNavigation');
  if(!nav){nav=document.createElement('div');nav.id='photoNavigation';nav.innerHTML='<button id="galleryMode" title="Prohlížet fotografie"><img class="editor-gallery-thumbnail" alt="" draggable="false"></button>';const head=document.querySelector('.editor-head');head.insertBefore(nav,$('editorTopMenu'))}
@@ -574,17 +577,18 @@ function openLayers(){
  });
 }
 const drawItemOriginal=drawItem;
-drawItem=function(c,item){
+drawItem=function(c,item,render=annotationRenderContext(c)){
+ if(!render||typeof render!=='object')render=annotationRenderContext(c);
  const kind=Object.entries(grouped).find(([name,kinds])=>kinds.includes(item.type))?.[0];
- if(kind&&prefs.layerVisible[kind]===false)return;
+ if(kind&&render.prefs.layerVisible[kind]===false)return;
  if(item.type==='note'&&Array.isArray(item.media)&&item.media.length){
   const imageId=item.media[0],image=window.__detailPhotoCache?.[imageId];
   if(image?.complete&&image.naturalWidth&&typeof window.renderPhotoInset==='function'){
-    window.renderPhotoInset(c,item,image,drawItemOriginal);
+    window.renderPhotoInset(c,item,image,drawItemOriginal,render);
     return;
   }
  }
- drawItemOriginal(c,item);
+ drawItemOriginal(c,item,render);
 };
 window.__detailPhotoCache={};
 function preloadDetail(item){

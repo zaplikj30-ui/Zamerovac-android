@@ -31,6 +31,10 @@
         {
           "path": "app/src/test/java/cz/zamerovac/app/DatabaseRecoveryTest.java",
           "layer": "native-jvm"
+        },
+        {
+          "path": "tools/e2e/latency.cjs",
+          "layer": "chromium"
         }
       ],
       "coverage": "runtime-partial",
@@ -227,10 +231,16 @@
       "issues": [
         35,
         36,
-        37
+        37,
+        28,
+        42,
+        50
       ],
       "sources": [
-        "app/src/main/assets/upgrade.js"
+        "app/src/main/assets/upgrade.js",
+        "app/src/main/assets/editor.js",
+        "app/src/main/assets/inset-workspace.js",
+        "app/src/main/assets/customer-export.js"
       ],
       "tests": [
         {
@@ -248,14 +258,27 @@
         {
           "path": "tools/e2e/gallery-readability.cjs",
           "layer": "chromium"
+        },
+        {
+          "path": "tools/e2e/gallery-state.cjs",
+          "layer": "chromium"
+        },
+        {
+          "path": "tools/e2e/gallery-visual.cjs",
+          "layer": "chromium"
+        },
+        {
+          "path": "tools/e2e/latency.cjs",
+          "layer": "chromium"
         }
       ],
       "coverage": "runtime-partial",
-      "positive": "Omezený posun fotografie a skutečné pixely anotací i mimo originální obrázek.",
-      "negative": "Detail/popisek za okrajem se nesmí oříznout; chybějící foto musí být rozpoznatelné.",
+      "positive": "Viditelné pixely glyfů/čar/hrotů při fit/zoom/pan, přesné kotvy, popisek vně fotky, DPR 1/2, rotace, návrat ke stejné editaci.",
+      "negative": "Galerie a export nesmějí přepsat živý kontext ani během kreslení/výjimky; starý async výsledek po zavření či listování se nezobrazí; originály a historie se nemění.",
       "limits": [
-        "Fyzická gesta a kodeky zařízení nejsou součástí Chromia.",
-        "7. 11. 2026: skutečné pixely/velikost glyfů pro tři rozlišení FAIL na main f543af7; stejný test PASS na odděleném head PR #51 5684cff. Tento QA PR galerii neopravuje a brána zůstává červená do opravy."
+        "Fyzická gesta telefonu/tabletu nejsou ověřena Chromiem.",
+        "Etapa B pokračuje v #51 s integrovaným #52. N4 zůstává povinný FAIL; výkon Chromium/bridge modelu není měření Androidu.",
+        "Extrémně husté či dlouhé překrývající se popisky nemají automatické rozmisťování; širší rozmanitost uložených zakázek ještě vyžaduje akceptaci."
       ]
     },
     {
@@ -278,6 +301,10 @@
         },
         {
           "path": "tools/e2e/update39.cjs",
+          "layer": "chromium"
+        },
+        {
+          "path": "tools/e2e/latency.cjs",
           "layer": "chromium"
         }
       ],
@@ -1049,7 +1076,8 @@
     {
       "id": "local-feedback",
       "issues": [
-        28
+        28,
+        53
       ],
       "sources": [
         "app/src/main/assets/feedback-reports.js",
@@ -1059,13 +1087,18 @@
         {
           "path": "tests/feedback_report_structure.js",
           "layer": "node"
+        },
+        {
+          "path": "tools/e2e/latency.cjs",
+          "layer": "chromium"
         }
       ],
       "coverage": "static-only",
       "positive": "Statická struktura vlaječky, lokální evidence a odkazů na screenshot/ZIP API.",
       "negative": "Staticky odmítnuté staré web.draw screenshot řešení.",
       "limits": [
-        "Toto je pouze statická kontrola; celý PixelCopy/ZIP/externí sdílecí UI tok není automaticky pokrytý."
+        "Toto je pouze statická kontrola; celý PixelCopy/ZIP/externí sdílecí UI tok není automaticky pokrytý.",
+        "Baseline #53: opakovaná změna Vyřešeno překóduje PNG; časy a počty bridge chunků v protokolu etapy B. Native disk/Bitmap/12 s na Samsungu nejsou tímto modelem potvrzeny."
       ]
     },
     {
@@ -1374,7 +1407,7 @@
     "Low-memory/process-kill a poškození/ztráta všech kopií úložiště; fallback/inbox má od etapy 28 cílené testy.",
     "Kompletní mapování jednotlivých starších ovládacích prvků; nyní jsou mapované funkční oblasti.",
     "Fyzické OEM potvrzení route fallback/frekvence/Doze; auto/15/30/60/ručně a po-TLS nearby/LAN arbitráž jsou implementované a CI prošly.",
-    "Známé selhávající brány 7. 11. 2026: #50 galerie na main (oprava odděleně #51), #42 N4 zrušená příloha bez retenčního vlastníka. Neobcházet expected-fail ani continue-on-error.",
+    "Známé brány: #50 galerie na main zůstává vadná, dokončení etapy B v #51 čeká na review; #42 N4 zrušená příloha bez retenčního vlastníka zůstává FAIL. Neobcházet expected-fail ani continue-on-error.",
     "Android IME/picker gate tools/e2e/android-system.cjs je připravená v ručním emulator workflow, dosud NOT RUN; chybějící WebView CDP nebo IME důkaz musí workflow zastavit."
   ]
 }

@@ -7,9 +7,15 @@ suite('gallery-readability',async test=>{
  for(const fixture of [
   {photo:[1200,800],viewport:{width:412,height:850}},
   {photo:[6000,4000],viewport:{width:412,height:850}},
-  {photo:[1600,4800],viewport:{width:1100,height:700}}
- ])await test('pixels_'+fixture.photo.join('x')+'_'+fixture.viewport.width,async({page,step,evidence,directory})=>{
+  {photo:[1600,4800],viewport:{width:1100,height:700}},
+  {photo:[6000,4000],viewport:{width:412,height:850},density:2}
+ ])await test('pixels_'+fixture.photo.join('x')+'_'+fixture.viewport.width+(fixture.density?'_dpr2':''),async({page,step,evidence,directory})=>{
   await page.setViewportSize(fixture.viewport);
+  if(fixture.density){
+   const session=await page.context().newCDPSession(page);
+   await session.send('Emulation.setDeviceMetricsOverride',{...fixture.viewport,deviceScaleFactor:fixture.density,mobile:false});
+   assert.equal(await page.evaluate(()=>devicePixelRatio),fixture.density);
+  }
   const buffer=Buffer.from(await page.evaluate(([w,h])=>{
    const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d');x.fillStyle='#666';x.fillRect(0,0,w,h);
    return c.toDataURL().split(',')[1];

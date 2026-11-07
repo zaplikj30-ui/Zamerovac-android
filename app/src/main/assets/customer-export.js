@@ -53,20 +53,12 @@
   canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
   const c=canvas.getContext('2d');
   c.fillStyle='#fff';c.fillRect(0,0,canvas.width,canvas.height);c.drawImage(image,0,0,canvas.width,canvas.height);
-  const old={ctx,view,current,photoSize,selected,layers:prefs.layerVisible,exporting:window.__exportingAnnotations};
-  try{
-   ctx=c;view={zoom:scale,dx:0,dy:0};current=record;
-   photoSize={w:image.naturalWidth,h:image.naturalHeight};selected=null;
-   prefs.layerVisible={dimensions:true,drawing:true,notes:options.notes};
-   window.__exportingAnnotations=true;
-   // Use the same screen-space labels/strokes as the editor. Downsampling a
-   // large camera photo must not shrink a 17 px caption into unreadable pixels.
-   for(const item of items)drawItem(c,item);
-   return canvas;
-  }finally{
-   ctx=old.ctx;view=old.view;current=old.current;photoSize=old.photoSize;selected=old.selected;
-   prefs.layerVisible=old.layers;window.__exportingAnnotations=old.exporting;
-  }
+  const render=annotationRenderContext(c,{view:{zoom:scale,dx:0,dy:0},
+   photoSize:{w:image.naturalWidth,h:image.naturalHeight},viewport:{w:canvas.width,h:canvas.height},
+   selected:null,exporting:true,prefs:{...prefs,layerVisible:{dimensions:true,drawing:true,notes:options.notes}}});
+  // Geometry scales with the photo; captions/strokes stay readable in output pixels.
+  for(const item of items)drawItem(c,item,render);
+  return canvas;
  }
  const encode=canvas=>canvas.toDataURL('image/png').split(',')[1];
  async function render(record,options){return encode(await renderCanvas(record,options))}

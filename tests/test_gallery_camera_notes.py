@@ -17,10 +17,14 @@ class PhotoNotesGalleryTests(unittest.TestCase):
     def test_gallery_includes_outside_insets(self):
         source=(ASSETS/'upgrade.js').read_text(encoding='utf-8')
         self.assertIn('let minX=0,minY=0,maxX=image.naturalWidth,maxY=image.naturalHeight',source)
-        self.assertIn('window.insetAnnotationBounds?.(measure,item)',source)
+        self.assertIn('window.insetAnnotationBounds?.(measure,item,measureRender)',source)
         self.assertIn('const workspaceW=maxX-minX+2*margin',source)
-        self.assertIn('c.translate(shiftX,shiftY);c.scale(scale,scale)',source)
-        self.assertIn('view={zoom:1,dx:0,dy:0}',source)
+        # Runtime bounds/pixels are checked in update39 and gallery-state. This
+        # static guard forbids the old editor-global swap and resampled raster.
+        gallery=source[source.index('async function renderGallery()'):source.index('let galleryResizeFrame')]
+        self.assertNotIn('current=r',gallery)
+        self.assertNotIn('ctx=c',gallery)
+        self.assertIn('drawItem(c,item,render)',gallery)
 
     def test_camera_cancellation_cleans_state(self):
         source=JAVA.read_text(encoding='utf-8')

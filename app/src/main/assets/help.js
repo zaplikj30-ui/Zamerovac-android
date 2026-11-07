@@ -92,7 +92,8 @@ const chapters=[
       "Podpora formátů videa závisí na kodecích konkrétního telefonu. Nepodporované video může zobrazit chybu nebo náhradní miniaturu.",
       "Přehrání videa a vytvoření miniatury nemá změnit jeho původní obsah.",
       "V galerii se fotografie i všechny anotace posouvají jen k dostupným okrajům. Po oddálení na 1× se vycentrují; gesta zůstávají dostupná bez spodního pokynu.",
-      "Galerie je jen pro prohlížení: při přiblížení znovu vykresluje kóty a jejich hodnoty ostře v rozlišení obrazovky. Samotné prohlížení nesmí změnit měřené hodnoty, pozici kót ani původní fotografii."
+      "Galerie je jen pro prohlížení: při přiblížení znovu vykresluje kóty a jejich hodnoty ostře v rozlišení obrazovky. Samotné prohlížení nesmí změnit měřené hodnoty, pozici kót ani původní fotografii.",
+      "Šipka zpět zavře galerii a ponechá původní výběr i kroky Zpět/Znovu v editoru. Upravit u stejné fotografie pokračuje v otevřené práci; u jiné fotografie otevře její editor. Při načítání dalšího snímku počkej na jeho zobrazení."
     ],
     "keywords": [
       "mp4",

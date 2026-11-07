@@ -135,6 +135,7 @@ jobs:
           node tools/e2e/interactions.cjs
           node tools/e2e/zoom-grid.cjs
           node tools/e2e/update39.cjs
+          node tools/e2e/gallery-state.cjs
           node tools/e2e/peer-sync.cjs
           node tools/e2e/drive-accounts.cjs
           node tools/e2e/sync-cadence.cjs
@@ -146,6 +147,15 @@ jobs:
           node tools/e2e/media-import.cjs
           node tools/e2e/help.cjs
           node tools/e2e/release-history.cjs
+      - name: Výchozí odezva syntetických fotografií a připomínek (bez vymyšleného SLA)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 8765 --bind 127.0.0.1 --directory app/src/main/assets > /tmp/zamerovac-latency-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID"' EXIT
+          export CHROMIUM_PATH="$(node -p "require('playwright').chromium.executablePath()")"
+          node tools/e2e/latency.cjs
       - name: Regrese kvality – skutečné chování, přesnost a čitelné pixely
         shell: bash
         run: |

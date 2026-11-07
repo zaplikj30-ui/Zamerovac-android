@@ -6,6 +6,7 @@ function part(a,b){const i=src.indexOf(a),j=src.indexOf(b,i);assert(i>=0&&j>i);r
 const operations=[],labels=[];
 const c=new Proxy({save(){},restore(){},measureText(){return {width:10}}},{get(o,k){return o[k]||((...args)=>operations.push([k,...args]))}});
 const env={view:{zoom:.25,dx:40,dy:80},prefs:{unit:'mm',color:'#f7dc27',lineWidth:2,fontSize:17},console,
+ photoSize:{w:1400,h:900},stageCanvas:{clientWidth:600,clientHeight:900},selected:null,window:{},
  canvasText:(...args)=>labels.push(args),drawArrow(){},Math,Number,String,
  worldToScreen:p=>({x:p.x*env.view.zoom+env.view.dx,y:p.y*env.view.zoom+env.view.dy})};
 vm.createContext(env);

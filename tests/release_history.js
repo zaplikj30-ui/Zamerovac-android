@@ -4,6 +4,7 @@ const fs=require('node:fs');
 const path=require('node:path');
 const root=path.resolve(__dirname,'..');
 const history=require('../app/src/main/assets/release-history.js');
+assert(JSON.stringify(history.unreleasedChanges).includes('dosud nevydáno'));
 const versions=history.releases.map(x=>x.version);
 assert.deepEqual(versions,['1.3.0','1.2.153','1.2.152','1.2.151','1.2.150','1.2.149','1.2.148','1.2.147','1.2','1.1']);
 assert.equal(new Set(versions).size,versions.length,'Version entries may not duplicate');
