@@ -2,6 +2,7 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const src=fs.readFileSync('app/src/main/assets/editor.js','utf8');
+const plain=x=>JSON.parse(JSON.stringify(x)); // node:vm values have foreign prototypes
 const a=src.indexOf('function rectCorners(item){'),b=src.indexOf('function editItem(item){',a);
 assert.ok(a>=0&&b>a);
 function scenario(item,selected=true){
@@ -31,7 +32,7 @@ const quad={id:'area1',type:'area',a:{x:20,y:20},b:{x:200,y:200},
 let v=scenario(quad);
 v.pointer('Down',20,20);v.pointer('Move',40,45);v.pointer('Up',40,45);
 assert.equal(quad.points[0].x,40);assert.equal(quad.points[0].y,45);
-assert.deepEqual(quad.points.slice(1).map(p=>p.x),[200,200,20],'Other quadrilateral corners unchanged');
+assert.deepEqual(plain(quad.points.slice(1).map(p=>p.x)),[200,200,20],'Other quadrilateral corners unchanged');
 const circle={id:'circle1',type:'circle',a:{x:50,y:50},b:{x:150,y:150}};
 v=scenario(circle);
 v.pointer('Down',50,100);v.pointer('Move',30,100);v.pointer('Up',30,100);
@@ -41,13 +42,13 @@ assert.equal(circle.a.x,30,'Circle radius increases when edge handle moved');
 const cross={id:'target1',type:'target',a:{x:100,y:100},b:{x:160,y:130},measure:'500',text:'Voda'};
 v=scenario(cross);
 v.pointer('Down',160,130);v.pointer('Move',190,160);v.pointer('Up',190,160);
-assert.deepEqual(cross.a,{x:100,y:100},'Target marker stays while label moves');
-assert.deepEqual(cross.b,{x:190,y:160},'Target label independent movement');
+assert.deepEqual(plain(cross.a),{x:100,y:100},'Target marker stays while label moves');
+assert.deepEqual(plain(cross.b),{x:190,y:160},'Target label independent movement');
 // B7: rectangle crossing its opposite corner and ellipse X/Y independent axis.
 const rect={id:'rect',type:'rect',a:{x:100,y:100},b:{x:300,y:300},measure:'1720,000001'};
 v=scenario(rect);
 v.pointer('Down',100,100);v.pointer('Move',350,370);v.pointer('Up',350,370);
-assert.deepEqual(rect.a,{x:300,y:300});assert.deepEqual(rect.b,{x:350,y:370});
+assert.deepEqual(plain(rect.a),{x:300,y:300});assert.deepEqual(plain(rect.b),{x:350,y:370});
 assert.equal(rect.measure,'1720,000001','Rect drag must not modify exact user value');
 const ellipse={id:'ellipse',type:'ellipse',a:{x:100,y:100},b:{x:300,y:200},measure:'550,000001'};
 v=scenario(ellipse);

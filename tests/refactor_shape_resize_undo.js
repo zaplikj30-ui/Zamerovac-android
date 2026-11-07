@@ -4,6 +4,7 @@
 'use strict';
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const asset=name=>fs.readFileSync('app/src/main/assets/'+name,'utf8');
+const plain=x=>JSON.parse(JSON.stringify(x));
 const editor=asset('editor.js');
 function extract(start,end){
  const a=editor.indexOf(start),b=editor.indexOf(end,a+start.length);
@@ -65,22 +66,22 @@ function runShape(type,shape,from,to,check){
 }
 runShape('rect',{a:{x:100,y:100},b:{x:300,y:300}},
  {x:100,y:100},{x:350,y:370},item=>{
-  assert.deepEqual(item.a,{x:300,y:300});assert.deepEqual(item.b,{x:350,y:370});
+  assert.deepEqual(plain(item.a),{x:300,y:300});assert.deepEqual(plain(item.b),{x:350,y:370});
  });
 runShape('area',{a:{x:20,y:20},b:{x:200,y:200},
  points:[{x:20,y:20},{x:200,y:20},{x:200,y:200},{x:20,y:200}],
  sideMeasures:['100,000001','200','300','400']},
  {x:20,y:20},{x:40,y:45},item=>{
-  assert.deepEqual(item.points[0],{x:40,y:45});
-  assert.deepEqual(item.points[1],{x:200,y:20});
+  assert.deepEqual(plain(item.points[0]),{x:40,y:45});
+  assert.deepEqual(plain(item.points[1]),{x:200,y:20});
   assert.equal(item.sideMeasures[0],'100,000001');
  });
 runShape('circle',{a:{x:50,y:50},b:{x:150,y:150}},
  {x:50,y:100},{x:30,y:100},item=>{
-  assert.deepEqual(item.a,{x:30,y:30});assert.deepEqual(item.b,{x:170,y:170});
+  assert.deepEqual(plain(item.a),{x:30,y:30});assert.deepEqual(plain(item.b),{x:170,y:170});
  });
 runShape('ellipse',{a:{x:100,y:100},b:{x:300,y:200}},
  {x:100,y:150},{x:60,y:150},item=>{
-  assert.deepEqual(item.a,{x:60,y:100});assert.deepEqual(item.b,{x:340,y:200});
+  assert.deepEqual(plain(item.a),{x:60,y:100});assert.deepEqual(plain(item.b),{x:340,y:200});
  });
 console.log('PASS B7: real rect/area/circle/ellipse gesture, Undo/Redo, exact laser and side values');

@@ -20,7 +20,8 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
  const touch=async(type,x,y)=>cdp.send('Input.dispatchTouchEvent',{type,touchPoints:type==='touchEnd'?[]:[{x:stage.x+x,y:stage.y+y,id:7,force:.7}]});
  await touch('touchStart',100,200);await touch('touchMove',122,215);
  assert(await page.locator('#loupe').isVisible(),'Loupe remains functional during genuine endpoint drag');
- const beforeBack=await page.evaluate(()=>JSON.stringify(current.items));
+ // Saving a real drag may add revision/clock metadata; compare exact user content.
+ const beforeBack=await page.evaluate(()=>JSON.stringify(current.items.map(({id,type,a,b,measure,unit})=>({id,type,a,b,measure,unit}))));
  const oldPointer=await page.evaluate(()=>[...pointers.keys()][0]);
  await page.evaluate(()=>{
   window.__leaving=false;window.__loupeFlashes=0;
@@ -40,7 +41,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
  },oldPointer);
  for(let i=0;i<3;i++)await page.evaluate(()=>new Promise(requestAnimationFrame));
  assert.equal(await page.evaluate(()=>__loupeFlashes),0);assert.equal(await page.locator('#loupe').isVisible(),false);
- assert.equal(await page.evaluate(()=>JSON.stringify(state.records[0].items)),beforeBack,'Back preserves dragged geometry and exact measurement');
+ assert.equal(await page.evaluate(()=>JSON.stringify(state.records[0].items.map(({id,type,a,b,measure,unit})=>({id,type,a,b,measure,unit})))),beforeBack,'Back preserves dragged geometry and exact measurement');
  await page.evaluate(()=>{__leaving=false;openRecord(state.records[0].id)});await page.waitForFunction(()=>!!stageImg);await prepare();
  await page.evaluate(id=>{
   stageCanvas.dispatchEvent(new PointerEvent('pointerup',{pointerId:id,bubbles:true}));
@@ -55,7 +56,7 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict');
  assert(await page.locator('#loupe').isVisible());await touch('touchEnd');
  if(await page.locator('#modal').isVisible())await page.click('#cancelModal');
  await page.click('#editorBack');assert.equal(await page.locator('#loupe').isVisible(),false);
- await page.reload();assert.equal(await page.evaluate(()=>JSON.stringify(state.records[0].items)),beforeBack);
+ await page.reload();assert.equal(await page.evaluate(()=>JSON.stringify(state.records[0].items.map(({id,type,a,b,measure,unit})=>({id,type,a,b,measure,unit})))),beforeBack);
  // Returning from an annotated inset uses a separate exit wrapper.
  await page.evaluate(()=>{
   const parent=state.records[0],note={id:'nested-note',type:'note',a:{x:600,y:500},text:'Detail',media:[parent.media[0]],detailItems:JSON.parse(JSON.stringify(parent.items))};

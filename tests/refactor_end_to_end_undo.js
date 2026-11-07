@@ -7,6 +7,7 @@ const fs=require('node:fs');
 const vm=require('node:vm');
 const assert=require('node:assert/strict');
 const asset=name=>fs.readFileSync('app/src/main/assets/'+name,'utf8');
+const plain=x=>JSON.parse(JSON.stringify(x));
 const editor=asset('editor.js');
 function extract(start,end){
  const a=editor.indexOf(start),b=editor.indexOf(end,a+start.length);
@@ -87,8 +88,8 @@ const beforePolylineSaves=app.saves;
 event('Down',190,100);event('Up',190,100);
 const beforePolyline=JSON.stringify(app.current.items[0]);
 event('Down',190,100);event('Move',250,150);event('Up',250,150);
-assert.deepEqual(polyline.points.map(p=>[p.x,p.y]),[[160,150],[340,150],[340,310]]);
-assert.deepEqual(polyline.a,{x:160,y:150});assert.deepEqual(polyline.b,{x:340,y:310});
+assert.deepEqual(plain(polyline.points.map(p=>[p.x,p.y])),[[160,150],[340,150],[340,310]]);
+assert.deepEqual(plain(polyline.a),{x:160,y:150});assert.deepEqual(plain(polyline.b),{x:340,y:310});
 assert.equal(polyline.measure,'1585,800001');
 assert.equal(polyline.segmentData[0].measure,'120,000001');
 assert.equal(app.editStack.length,1,'One checkpoint for complete polyline drag');
