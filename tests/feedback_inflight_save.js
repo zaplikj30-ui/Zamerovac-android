@@ -13,8 +13,9 @@ const code=[
  extract(' async function saveReport(){','\n // Android Zpět'),
  extract(' const previousBack=window.handleAndroidBack;','\n window.__openFeedbackList=')
 ].join('\n');
-const nav=src.split('\n').find(x=>x.includes("overlay.querySelector('#feedbackToList').onclick="));
-assert(nav,'Actual ToList handler required');
+const nav=extract("  overlay.querySelector('#feedbackToList').onclick=()=>{",
+ '\n  overlay.querySelector(\'#feedbackTitle\').value=');
+assert(nav.includes('showReportList();'),'Actual ToList handler required');
 function scenario(){
  const report={id:'report_abc',type:'bug',title:'Pomalé uložení',description:'Original',screenshotId:'screen_abc',
   annotatedId:null,annotations:[{type:'pen',points:[[.1,.2],[.3,.4]]}],videos:[]};
