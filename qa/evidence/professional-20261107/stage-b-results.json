@@ -1,0 +1,3674 @@
+{
+  "date": "2026-11-07",
+  "syntheticOnly": true,
+  "fullApplicationVerified": false,
+  "baselineServerSHA": "25055294a791790d7a20ecf87086887389c41a19",
+  "applicationCommit": "343c172",
+  "applicationAssetsTree": "ba7837998e8bc154cc406c040f218b3a4daefc22",
+  "finalTestsCommit": "361e15c",
+  "testSHA256": {
+    "tools/e2e/gallery-state.cjs": "6f634964b5c0f6032859c9da5a2eef3c9cfa4a53e7a3228495f2cddaa35f8d2e",
+    "tools/e2e/gallery-readability.cjs": "88745ebb9d8384c37217eff0422590ca741e1410d04ea34dd27c0231b74b6dff",
+    "tools/e2e/update39.cjs": "f1b94a5b4e466cc919d8cc585cae4f36ec5e3216111b1dd7f7ae74e9778470b5",
+    "tools/e2e/latency.cjs": "5d085458ad6b541d6d7131a3b1d5e4a519a58c2d3f46f86914fa65ce728de35f"
+  },
+  "provenance": "Reports spanning 343c172/83fca00/287bab1 use the same application asset tree. Baseline latency uses immutable server 2505529; runner SHA alone is not server provenance. State/PNG and project probes rerun after test-only additions. No local Android/JVM run.",
+  "chromiumCases": {
+    "passed": 72,
+    "failed": 1
+  },
+  "browserScripts": [
+    {
+      "suite": "backup-history",
+      "exit": 0
+    },
+    {
+      "suite": "drawing",
+      "exit": 0
+    },
+    {
+      "suite": "drive-accounts",
+      "exit": 0
+    },
+    {
+      "suite": "gallery-readability",
+      "exit": 0
+    },
+    {
+      "suite": "gallery-state",
+      "exit": 0
+    },
+    {
+      "suite": "gallery-visual",
+      "exit": 0
+    },
+    {
+      "suite": "help",
+      "exit": 0
+    },
+    {
+      "suite": "interactions",
+      "exit": 0
+    },
+    {
+      "suite": "media-import",
+      "exit": 0
+    },
+    {
+      "suite": "note-sync",
+      "exit": 0
+    },
+    {
+      "suite": "peer-sync",
+      "exit": 0
+    },
+    {
+      "suite": "quality-regressions",
+      "exit": 1
+    },
+    {
+      "suite": "read-only-sync",
+      "exit": 0
+    },
+    {
+      "suite": "release-history",
+      "exit": 0
+    },
+    {
+      "suite": "sync-cadence",
+      "exit": 0
+    },
+    {
+      "suite": "sync-edit-guard",
+      "exit": 0
+    },
+    {
+      "suite": "update39",
+      "exit": 0
+    },
+    {
+      "suite": "web-content-policy",
+      "exit": 0
+    },
+    {
+      "suite": "workflows",
+      "exit": 0
+    },
+    {
+      "suite": "zoom-grid",
+      "exit": 0
+    },
+    {
+      "suite": "check-address-map-browser",
+      "exit": 0
+    },
+    {
+      "suite": "check-loupe-exit-browser",
+      "exit": 0
+    },
+    {
+      "suite": "check-orientation-browser",
+      "exit": 1
+    },
+    {
+      "suite": "check-post148-browser",
+      "exit": 0
+    },
+    {
+      "suite": "check-post149-browser",
+      "exit": 0
+    },
+    {
+      "suite": "check-post17-browser",
+      "exit": 0
+    },
+    {
+      "suite": "check-untrusted-ids-browser",
+      "exit": 0
+    }
+  ],
+  "nodeScripts": 27,
+  "python": {
+    "passed": 45,
+    "skipped": 2,
+    "reason": "javac missing"
+  },
+  "negativeControls": {
+    "liveStateBefore": "FAIL during nested drawing on 2505529",
+    "transparentCaption": "FAIL actual glyph pixel assertion with fillText calls retained on isolated copy of 343c172",
+    "N4": "FAIL, mandatory and not hidden"
+  },
+  "reports": {
+    "backup-history": {
+      "suite": "backup-history",
+      "sha": "343c1727980222306281b1c48d098a1f05fccdf1",
+      "startedAt": "2026-11-07T02:22:31.922Z",
+      "syntheticOnly": true,
+      "cases": [
+        {
+          "name": "offline-ui-two-histories-confirmation-and-network-exception",
+          "status": "passed",
+          "steps": [],
+          "evidence": []
+        }
+      ]
+    },
+    "drawing": {
+      "suite": "drawing",
+      "sha": "343c1727980222306281b1c48d098a1f05fccdf1",
+      "startedAt": "2026-11-07T02:22:33.717Z",
+      "syntheticOnly": true,
+      "cases": [
+        {
+          "name": "dimension",
+          "status": "passed",
+          "steps": [
+            "Create canvas through UI",
+            "Draw using real pointer gestures",
+            "Pixel oracle + fault injection",
+            "Edit exact measurements and text via dialog",
+            "Move + Undo/Redo using controls",
+            "Endpoint/corner edit preserves measurements",
+            "Close/reopen/reload retain exact object and rendered outline"
+          ],
+          "evidence": [
+            {
+              "faultInjectionRejected": true,
+              "hiddenHits": [
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "outline": [
+                true,
+                true,
+                true,
+                true
+              ],
+              "colorPixels": 1099
+            }
+          ]
+        },
+        {
+          "name": "line",
+          "status": "passed",
+          "steps": [
+            "Create canvas through UI",
+            "Draw using real pointer gestures",
+            "Pixel oracle + fault injection",
+            "Edit exact measurements and text via dialog",
+            "Move + Undo/Redo using controls",
+            "Endpoint/corner edit preserves measurements",
+            "Close/reopen/reload retain exact object and rendered outline"
+          ],
+          "evidence": [
+            {
+              "faultInjectionRejected": true,
+              "hiddenHits": [
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "outline": [
+                true,
+                true,
+                true,
+                true
+              ],
+              "colorPixels": 755
+            }
+          ]
+        },
+        {
+          "name": "arrow",
+          "status": "passed",
+          "steps": [
+            "Create canvas through UI",
+            "Draw using real pointer gestures",
+            "Pixel oracle + fault injection",
+            "Edit exact measurements and text via dialog",
+            "Move + Undo/Redo using controls",
+            "Endpoint/corner edit preserves measurements",
+            "Close/reopen/reload retain exact object and rendered outline"
+          ],
+          "evidence": [
+            {
+              "faultInjectionRejected": true,
+              "hiddenHits": [
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "outline": [
+                true,
+                true,
+                true,
+                true
+              ],
+              "colorPixels": 801
+            }
+          ]
+        },
+        {
+          "name": "circle",
+          "status": "passed",
+          "steps": [
+            "Create canvas through UI",
+            "Draw using real pointer gestures",
+            "Pixel oracle + fault injection",
+            "Edit exact measurements and text via dialog",
+            "Move + Undo/Redo using controls",
+            "Endpoint/corner edit preserves measurements",
+            "Close/reopen/reload retain exact object and rendered outline"
+          ],
+          "evidence": [
+            {
+              "faultInjectionRejected": true,
+              "hiddenHits": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "outline": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "colorPixels": 2187
+            }
+          ]
+        },
+        {
+          "name": "ellipse",
+          "status": "passed",
+          "steps": [
+            "Create canvas through UI",
+            "Draw using real pointer gestures",
+            "Pixel oracle + fault injection",
+            "Edit exact measurements and text via dialog",
+            "Move + Undo/Redo using controls",
+            "Endpoint/corner edit preserves measurements",
+            "Close/reopen/reload retain exact object and rendered outline"
+          ],
+          "evidence": [
+            {
+              "faultInjectionRejected": true,
+              "hiddenHits": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "outline": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "colorPixels": 1674
+            }
+          ]
+        },
+        {
+          "name": "rect",
+          "status": "passed",
+          "steps": [
+            "Create canvas through UI",
+            "Draw using real pointer gestures",
+            "Pixel oracle + fault injection",
+            "Edit exact measurements and text via dialog",
+            "Move + Undo/Redo using controls",
+            "Endpoint/corner edit preserves measurements",
+            "Close/reopen/reload retain exact object and rendered outline"
+          ],
+          "evidence": [
+            {
+              "faultInjectionRejected": true,
+              "hiddenHits": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "outline": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "colorPixels": 2254
+            }
+          ]
+        },
+        {
+          "name": "area",
+          "status": "passed",
+          "steps": [
+            "Create canvas through UI",
+            "Draw using real pointer gestures",
+            "Pixel oracle + fault injection",
+            "Edit exact measurements and text via dialog",
+            "Move + Undo/Redo using controls",
+            "Endpoint/corner edit preserves measurements",
+            "Close/reopen/reload retain exact object and rendered outline"
+          ],
+          "evidence": [
+            {
+              "faultInjectionRejected": true,
+              "hiddenHits": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "outline": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "colorPixels": 2254
+            }
+          ]
+        },
+        {
+          "name": "polyline",
+          "status": "passed",
+          "steps": [
+            "Create canvas through UI",
+            "Draw using real pointer gestures",
+            "Pixel oracle + fault injection",
+            "Edit exact measurements and text via dialog",
+            "Move + Undo/Redo using controls",
+            "Endpoint/corner edit preserves measurements",
+            "Close/reopen/reload retain exact object and rendered outline"
+          ],
+          "evidence": [
+            {
+              "faultInjectionRejected": true,
+              "hiddenHits": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "outline": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "colorPixels": 883
+            }
+          ]
+        },
+        {
+          "name": "chain",
+          "status": "passed",
+          "steps": [
+            "Create canvas through UI",
+            "Draw using real pointer gestures",
+            "Pixel oracle + fault injection",
+            "Edit exact measurements and text via dialog",
+            "Move + Undo/Redo using controls",
+            "Endpoint/corner edit preserves measurements",
+            "Close/reopen/reload retain exact object and rendered outline"
+          ],
+          "evidence": [
+            {
+              "faultInjectionRejected": true,
+              "hiddenHits": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "outline": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "colorPixels": 1119
+            }
+          ]
+        },
+        {
+          "name": "cumulative",
+          "status": "passed",
+          "steps": [
+            "Create canvas through UI",
+            "Draw using real pointer gestures",
+            "Pixel oracle + fault injection",
+            "Edit exact measurements and text via dialog",
+            "Move + Undo/Redo using controls",
+            "Endpoint/corner edit preserves measurements",
+            "Close/reopen/reload retain exact object and rendered outline"
+          ],
+          "evidence": [
+            {
+              "faultInjectionRejected": true,
+              "hiddenHits": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "outline": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "colorPixels": 1545
+            }
+          ]
+        },
+        {
+          "name": "angle",
+          "status": "passed",
+          "steps": [
+            "Create canvas through UI",
+            "Draw using real pointer gestures",
+            "Pixel oracle + fault injection",
+            "Edit exact measurements and text via dialog",
+            "Move + Undo/Redo using controls",
+            "Endpoint/corner edit preserves measurements",
+            "Close/reopen/reload retain exact object and rendered outline"
+          ],
+          "evidence": [
+            {
+              "faultInjectionRejected": true,
+              "hiddenHits": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "outline": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "colorPixels": 1250
+            }
+          ]
+        },
+        {
+          "name": "freehand",
+          "status": "passed",
+          "steps": [
+            "Create canvas through UI",
+            "Draw using real pointer gestures",
+            "Pixel oracle + fault injection",
+            "Edit exact measurements and text via dialog",
+            "Move + Undo/Redo using controls",
+            "Close/reopen/reload retain exact object and rendered outline"
+          ],
+          "evidence": [
+            {
+              "faultInjectionRejected": true,
+              "hiddenHits": [
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "outline": [
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true,
+                true
+              ],
+              "colorPixels": 854
+            }
+          ]
+        },
+        {
+          "name": "target",
+          "status": "passed",
+          "steps": [
+            "Create canvas through UI",
+            "Draw using real pointer gestures",
+            "Pixel oracle + fault injection",
+            "Edit exact measurements and text via dialog",
+            "Move + Undo/Redo using controls",
+            "Endpoint/corner edit preserves measurements",
+            "Close/reopen/reload retain exact object and rendered outline"
+          ],
+          "evidence": [
+            {
+              "faultInjectionRejected": true,
+              "hiddenHits": [
+                false,
+                false,
+                false,
+                false
+              ]
+            },
+            {
+              "outline": [
+                true,
+                true,
+                true,
+                true
+              ],
+              "colorPixels": 213
+            }
+          ]
+        },
+        {
+          "name": "note",
+          "status": "passed",
+          "steps": [
+            "Create canvas through UI",
+            "Draw using real pointer gestures",
+            "Pixel oracle + fault injection",
+            "Edit exact measurements and text via dialog",
+            "Move + Undo/Redo using controls",
+            "Close/reopen/reload retain exact object and rendered outline"
+          ],
+          "evidence": [
+            {
+              "outline": [],
+              "colorPixels": 1621
+            }
+          ]
+        },
+        {
+          "name": "symbol",
+          "status": "passed",
+          "steps": [
+            "Create canvas through UI",
+            "Draw using real pointer gestures",
+            "Pixel oracle + fault injection",
+            "Edit exact measurements and text via dialog",
+            "Move + Undo/Redo using controls",
+            "Close/reopen/reload retain exact object and rendered outline"
+          ],
+          "evidence": [
+            {
+              "outline": [],
+              "colorPixels": 535
+            }
+          ]
+        }
+      ]
+    },
+    "drive-accounts": {
+      "suite": "drive-accounts",
+      "sha": "343c1727980222306281b1c48d098a1f05fccdf1",
+      "startedAt": "2026-11-07T02:23:10.251Z",
+      "syntheticOnly": true,
+      "cases": [
+        {
+          "name": "independent-explicit-account-controls-and-cancelled-disconnect",
+          "status": "passed",
+          "steps": [],
+          "evidence": []
+        },
+        {
+          "name": "unconfigured-or-invalid-state-never-pretends-account-is-ready-and-text-is-escaped",
+          "status": "passed",
+          "steps": [],
+          "evidence": []
+        },
+        {
+          "name": "backup-account-switch-clears-old-history-and-stale-verification",
+          "status": "passed",
+          "steps": [],
+          "evidence": []
+        }
+      ]
+    },
+    "gallery-readability": {
+      "suite": "gallery-readability",
+      "sha": "343c1727980222306281b1c48d098a1f05fccdf1",
+      "startedAt": "2026-11-07T02:23:13.605Z",
+      "syntheticOnly": true,
+      "cases": [
+        {
+          "name": "pixels_1200x800_412",
+          "status": "passed",
+          "steps": [
+            "Actual visible glyph ink and line pixels at fit",
+            "Actual visible glyph ink and line pixels at zoom"
+          ],
+          "evidence": [
+            {
+              "fixture": {
+                "photo": [
+                  1200,
+                  800
+                ],
+                "viewport": {
+                  "width": 412,
+                  "height": 850
+                }
+              },
+              "zoom": "fit",
+              "fontCssPx": 16.89602340227151,
+              "inkHeightCssPx": 20,
+              "inkPixels": 347,
+              "yellowPixels": 945,
+              "ratio": 1
+            },
+            {
+              "fixture": {
+                "photo": [
+                  1200,
+                  800
+                ],
+                "viewport": {
+                  "width": 412,
+                  "height": 850
+                }
+              },
+              "zoom": "zoom",
+              "fontCssPx": 16.896023402271506,
+              "inkHeightCssPx": 20,
+              "inkPixels": 347,
+              "yellowPixels": 1139,
+              "ratio": 1
+            }
+          ]
+        },
+        {
+          "name": "pixels_6000x4000_412",
+          "status": "passed",
+          "steps": [
+            "Actual visible glyph ink and line pixels at fit",
+            "Actual visible glyph ink and line pixels at zoom"
+          ],
+          "evidence": [
+            {
+              "fixture": {
+                "photo": [
+                  6000,
+                  4000
+                ],
+                "viewport": {
+                  "width": 412,
+                  "height": 850
+                }
+              },
+              "zoom": "fit",
+              "fontCssPx": 16.896023402271506,
+              "inkHeightCssPx": 20,
+              "inkPixels": 347,
+              "yellowPixels": 963,
+              "ratio": 1
+            },
+            {
+              "fixture": {
+                "photo": [
+                  6000,
+                  4000
+                ],
+                "viewport": {
+                  "width": 412,
+                  "height": 850
+                }
+              },
+              "zoom": "zoom",
+              "fontCssPx": 16.896023402271506,
+              "inkHeightCssPx": 20,
+              "inkPixels": 347,
+              "yellowPixels": 1139,
+              "ratio": 1
+            }
+          ]
+        },
+        {
+          "name": "pixels_1600x4800_1100",
+          "status": "passed",
+          "steps": [
+            "Actual visible glyph ink and line pixels at fit",
+            "Actual visible glyph ink and line pixels at zoom"
+          ],
+          "evidence": [
+            {
+              "fixture": {
+                "photo": [
+                  1600,
+                  4800
+                ],
+                "viewport": {
+                  "width": 1100,
+                  "height": 700
+                }
+              },
+              "zoom": "fit",
+              "fontCssPx": 15.205261271176258,
+              "inkHeightCssPx": 51,
+              "inkPixels": 411,
+              "yellowPixels": 755,
+              "ratio": 1
+            },
+            {
+              "fixture": {
+                "photo": [
+                  1600,
+                  4800
+                ],
+                "viewport": {
+                  "width": 1100,
+                  "height": 700
+                }
+              },
+              "zoom": "zoom",
+              "fontCssPx": 15.205261271176258,
+              "inkHeightCssPx": 51,
+              "inkPixels": 411,
+              "yellowPixels": 1010,
+              "ratio": 1
+            }
+          ]
+        },
+        {
+          "name": "pixels_6000x4000_412_dpr2",
+          "status": "passed",
+          "steps": [
+            "Actual visible glyph ink and line pixels at fit",
+            "Actual visible glyph ink and line pixels at zoom"
+          ],
+          "evidence": [
+            {
+              "fixture": {
+                "photo": [
+                  6000,
+                  4000
+                ],
+                "viewport": {
+                  "width": 412,
+                  "height": 850
+                },
+                "density": 2
+              },
+              "zoom": "fit",
+              "fontCssPx": 16.896023402271506,
+              "inkHeightCssPx": 20.5,
+              "inkPixels": 1519,
+              "yellowPixels": 3898,
+              "ratio": 0.5
+            },
+            {
+              "fixture": {
+                "photo": [
+                  6000,
+                  4000
+                ],
+                "viewport": {
+                  "width": 412,
+                  "height": 850
+                },
+                "density": 2
+              },
+              "zoom": "zoom",
+              "fontCssPx": 16.896023402271506,
+              "inkHeightCssPx": 20,
+              "inkPixels": 347,
+              "yellowPixels": 1139,
+              "ratio": 1
+            }
+          ]
+        }
+      ]
+    },
+    "gallery-state": {
+      "suite": "gallery-state",
+      "sha": "287bab1fca912be5cde787396ebed2e58958369a",
+      "startedAt": "2026-11-07T02:27:24.635Z",
+      "syntheticOnly": true,
+      "cases": [
+        {
+          "name": "render_is_read_only_even_during_nested_drawing_and_failure",
+          "status": "passed",
+          "steps": [],
+          "evidence": [
+            {
+              "duringRenderUnchanged": true,
+              "exceptionPreservesState": true,
+              "nestedExactValue": "987,000001",
+              "png": {
+                "yellow": 448,
+                "width": 1250,
+                "height": 1070
+              }
+            }
+          ]
+        },
+        {
+          "name": "gestures_navigation_stale_load_and_exact_anchor_pixels",
+          "status": "passed",
+          "steps": [],
+          "evidence": [
+            {
+              "fitInk": [
+                24,
+                28
+              ],
+              "zoomInk": [
+                null,
+                28
+              ],
+              "originalSHA256": "173,201,0,229,70,100,60,128,36,224,146,139,9,140,208,39,93,61,224,162,171,147,50,222,135,174,59,181,80,35,40,29",
+              "lateLoadCannotReopenGallery": true
+            }
+          ]
+        }
+      ]
+    },
+    "gallery-visual": {
+      "suite": "gallery-visual",
+      "sha": "343c1727980222306281b1c48d098a1f05fccdf1",
+      "startedAt": "2026-11-07T02:23:28.821Z",
+      "syntheticOnly": true,
+      "cases": [
+        {
+          "name": "gallery_text_and_lines_remain_sharp_at_real_screen_scale",
+          "status": "passed",
+          "steps": [
+            "Upload high-resolution image and draw a precise measurement through UI",
+            "Capture real rasterized line width and text height at 1x",
+            "Zoom changes geometry, not line thickness or font pixels, and must never modify the record"
+          ],
+          "evidence": []
+        }
+      ]
+    },
+    "help": {
+      "suite": "help",
+      "sha": "343c1727980222306281b1c48d098a1f05fccdf1",
+      "startedAt": "2026-11-07T02:23:31.786Z",
+      "syntheticOnly": true,
+      "cases": [
+        {
+          "name": "main_menu_search_offline_and_android_back",
+          "status": "passed",
+          "steps": [
+            "Open directly from main hamburger menu",
+            "Search Czech text including diacritic-free query",
+            "Guide stays functional offline and Android Back closes it"
+          ],
+          "evidence": [
+            {
+              "topics": 25,
+              "offline": true,
+              "search": true,
+              "androidBack": true,
+              "dataUnchanged": true
+            }
+          ]
+        },
+        {
+          "name": "overflow_menu_and_small_large_screens",
+          "status": "passed",
+          "steps": [
+            "Global search finds records, not help articles",
+            "Help on 320px display",
+            "Help on 1000px display"
+          ],
+          "evidence": [
+            {
+              "viewports": [
+                "320x568",
+                "1000x750"
+              ],
+              "dataUnchanged": true
+            }
+          ]
+        }
+      ]
+    },
+    "interactions": {
+      "suite": "interactions",
+      "sha": "343c1727980222306281b1c48d098a1f05fccdf1",
+      "startedAt": "2026-11-07T02:23:35.533Z",
+      "syntheticOnly": true,
+      "cases": [
+        {
+          "name": "rapid_grips_jitter_cancel",
+          "status": "passed",
+          "steps": [
+            "One/two/three taps and one-pixel jitter do not collapse or delete measurement",
+            "Trusted touch cancel leaves committed geometry and exact dimensions intact"
+          ],
+          "evidence": [
+            {
+              "events": [
+                {
+                  "type": "pointerdown",
+                  "id": 2,
+                  "trusted": true
+                },
+                {
+                  "type": "touchstart",
+                  "trusted": true
+                },
+                {
+                  "type": "pointercancel",
+                  "id": 2,
+                  "trusted": true
+                },
+                {
+                  "type": "touchcancel",
+                  "trusted": true
+                }
+              ],
+              "pointers": [],
+              "magnifierPoint": null,
+              "hidden": true
+            },
+            {
+              "taps": [
+                1,
+                2,
+                3
+              ],
+              "endpoints": 2,
+              "jitterPx": 0.5,
+              "touchCancel": true
+            }
+          ]
+        },
+        {
+          "name": "pan_zoom_fit_and_repeated_reopen",
+          "status": "passed",
+          "steps": [
+            "Ten rapid save/exit/reopen cycles retain one record and exact annotation"
+          ],
+          "evidence": [
+            {
+              "reopenCycles": 10,
+              "pan": true,
+              "wheelZoom": true,
+              "fit": true
+            }
+          ]
+        },
+        {
+          "name": "chain_finish_insert_remove_history",
+          "status": "passed",
+          "steps": [
+            "Insert/remove middle point through dialog, unaffected segment stays exact"
+          ],
+          "evidence": [
+            {
+              "finishByToolSwitch": true,
+              "insert": true,
+              "remove": true
+            }
+          ]
+        }
+      ]
+    },
+    "media-import": {
+      "suite": "media-import",
+      "sha": "343c1727980222306281b1c48d098a1f05fccdf1",
+      "startedAt": "2026-11-07T02:23:46.719Z",
+      "syntheticOnly": true,
+      "cases": [
+        {
+          "name": "delayed-native-results-stay-in-original-folder-and-stale-token-cannot-complete-new-picker",
+          "status": "passed",
+          "steps": [],
+          "evidence": []
+        },
+        {
+          "name": "deleted-or-locked-destination-and-closed-owner-dialog-do-not-redirect-file",
+          "status": "passed",
+          "steps": [],
+          "evidence": []
+        },
+        {
+          "name": "picker-cancel-and-rejected-write-keep-data-and-file-draft",
+          "status": "passed",
+          "steps": [],
+          "evidence": []
+        }
+      ]
+    },
+    "note-sync": {
+      "suite": "note-sync",
+      "sha": "343c1727980222306281b1c48d098a1f05fccdf1",
+      "startedAt": "2026-11-07T02:23:50.396Z",
+      "syntheticOnly": true,
+      "cases": [
+        {
+          "name": "read-only-note-and-checklist-attachment-causal-autosave",
+          "status": "passed",
+          "steps": [],
+          "evidence": []
+        },
+        {
+          "name": "incoming-note-data-waits-and-read-only-close-does-not-create-conflict",
+          "status": "passed",
+          "steps": [],
+          "evidence": []
+        },
+        {
+          "name": "sketch-stroke-keeps-live-points-through-debounced-note-cas",
+          "status": "passed",
+          "steps": [],
+          "evidence": []
+        },
+        {
+          "name": "failed-note-write-keeps-form-and-retry-and-lock-protects-checks",
+          "status": "passed",
+          "steps": [],
+          "evidence": []
+        },
+        {
+          "name": "voice-keeps-owner-finishes-on-save-and-failed-stop-keeps-form",
+          "status": "passed",
+          "steps": [],
+          "evidence": []
+        },
+        {
+          "name": "rich-voice-failed-stop-and-disk-keep-modal-back-retry-and-cancel",
+          "status": "passed",
+          "steps": [],
+          "evidence": []
+        }
+      ]
+    },
+    "peer-sync": {
+      "suite": "peer-sync",
+      "sha": "343c1727980222306281b1c48d098a1f05fccdf1",
+      "startedAt": "2026-11-07T02:23:59.702Z",
+      "syntheticOnly": true,
+      "cases": [
+        {
+          "name": "offline-folder-cycle-repair-is-visible-reachable-and-exact",
+          "status": "passed",
+          "steps": [],
+          "evidence": []
+        },
+        {
+          "name": "menu-settings-offline-and-data-preserved",
+          "status": "passed",
+          "steps": [],
+          "evidence": []
+        },
+        {
+          "name": "explicit-approval-full-code-reject-back-and-stale-session",
+          "status": "passed",
+          "steps": [],
+          "evidence": []
+        },
+        {
+          "name": "untrusted-names-pending-errors-and-cloud-isolation",
+          "status": "passed",
+          "steps": [],
+          "evidence": []
+        }
+      ]
+    },
+    "quality-regressions": {
+      "suite": "quality-regressions",
+      "sha": "343c1727980222306281b1c48d098a1f05fccdf1",
+      "startedAt": "2026-11-07T02:24:04.152Z",
+      "syntheticOnly": true,
+      "cases": [
+        {
+          "name": "existing_note_undo_redo_save",
+          "status": "passed",
+          "steps": [
+            "Undo restores the entire existing note; Redo restores the edit"
+          ],
+          "evidence": [
+            {
+              "close": "save",
+              "undoRestoredWholeObject": true
+            }
+          ]
+        },
+        {
+          "name": "existing_note_undo_redo_back",
+          "status": "passed",
+          "steps": [
+            "Undo restores the entire existing note; Redo restores the edit"
+          ],
+          "evidence": [
+            {
+              "close": "back",
+              "undoRestoredWholeObject": true
+            }
+          ]
+        },
+        {
+          "name": "audio_play_pause_must_not_focus_text",
+          "status": "passed",
+          "steps": [
+            "Allow modal focus timer to run; text is focused only after explicit text action"
+          ],
+          "evidence": [
+            {
+              "realWavPlayback": true,
+              "androidIME": "NOT RUN; Chromium focus assertion only"
+            }
+          ]
+        },
+        {
+          "name": "two_notes_explicit_picker_double_click_cancel_back_and_late_result",
+          "status": "passed",
+          "steps": [],
+          "evidence": [
+            {
+              "nativePicker": "model only",
+              "lateCallbacksRejected": true,
+              "explicitRequests": 2
+            }
+          ]
+        },
+        {
+          "name": "cancelled_attachment_has_no_unprotected_orphan",
+          "status": "failed",
+          "steps": [
+            "Cancelled imported bytes must be removed or tracked by a durable retention owner"
+          ],
+          "evidence": [
+            {
+              "before": [],
+              "after": [
+                "72dbb306-51d0-42fa-9233-6becd3d5e6da"
+              ]
+            }
+          ],
+          "error": "AssertionError [ERR_ASSERTION]: Cancel leaked a published file without a reference or retention owner (N4)\n+ actual - expected\n\n+ [\n+   '72dbb306-51d0-42fa-9233-6becd3d5e6da'\n+ ]\n- []\n\n    at /workspace/Zamerovac-android/tools/e2e/quality-regressions.cjs:101:66\n    at async /workspace/Zamerovac-android/tools/e2e/quality-regressions.cjs:98:3\n    at async /workspace/Zamerovac-android/tools/e2e/harness.cjs:16:26\n    at async /workspace/Zamerovac-android/tools/e2e/quality-regressions.cjs:92:2\n    at async suite (/workspace/Zamerovac-android/tools/e2e/harness.cjs:8:6)",
+          "runtimeErrors": [],
+          "consoleErrors": []
+        },
+        {
+          "name": "note_controls_reachable_412",
+          "status": "passed",
+          "steps": [],
+          "evidence": [
+            {
+              "viewport": {
+                "width": 412,
+                "height": 850
+              },
+              "controls": [
+                {
+                  "id": "richPhotoCamera",
+                  "x": 16,
+                  "y": 200,
+                  "w": 132.046875,
+                  "h": 42,
+                  "font": 15,
+                  "target": "richPhotoCamera"
+                },
+                {
+                  "id": "richPhotoPick",
+                  "x": 156.046875,
+                  "y": 200,
+                  "w": 155.390625,
+                  "h": 42,
+                  "font": 15,
+                  "target": "richPhotoPick"
+                },
+                {
+                  "id": "richVoice",
+                  "x": 16,
+                  "y": 250,
+                  "w": 127.59375,
+                  "h": 42,
+                  "font": 15,
+                  "target": "richVoice"
+                },
+                {
+                  "id": "okModal",
+                  "x": 343.484375,
+                  "y": 8.5,
+                  "w": 61.515625,
+                  "h": 38,
+                  "font": 15,
+                  "target": "okModal"
+                },
+                {
+                  "id": "cancelModal",
+                  "x": 277.984375,
+                  "y": 8.5,
+                  "w": 61.5,
+                  "h": 38,
+                  "font": 15,
+                  "target": "cancelModal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "note_controls_reachable_1100",
+          "status": "passed",
+          "steps": [],
+          "evidence": [
+            {
+              "viewport": {
+                "width": 1100,
+                "height": 700
+              },
+              "controls": [
+                {
+                  "id": "richPhotoCamera",
+                  "x": 150,
+                  "y": 200,
+                  "w": 132.046875,
+                  "h": 42,
+                  "font": 15,
+                  "target": "richPhotoCamera"
+                },
+                {
+                  "id": "richPhotoPick",
+                  "x": 290.046875,
+                  "y": 200,
+                  "w": 155.390625,
+                  "h": 42,
+                  "font": 15,
+                  "target": "richPhotoPick"
+                },
+                {
+                  "id": "richVoice",
+                  "x": 453.4375,
+                  "y": 200,
+                  "w": 127.59375,
+                  "h": 42,
+                  "font": 15,
+                  "target": "richVoice"
+                },
+                {
+                  "id": "okModal",
+                  "x": 1031.484375,
+                  "y": 8.5,
+                  "w": 61.515625,
+                  "h": 38,
+                  "font": 15,
+                  "target": "okModal"
+                },
+                {
+                  "id": "cancelModal",
+                  "x": 965.984375,
+                  "y": 8.5,
+                  "w": 61.5,
+                  "h": 38,
+                  "font": 15,
+                  "target": "cancelModal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "project_photo_dimension_note_reopen_and_export",
+          "status": "passed",
+          "steps": [
+            "Reopened note and measurement remain editable; exported PNG contains real yellow pixels"
+          ],
+          "evidence": [
+            {
+              "exportYellowPixels": 2713,
+              "originalSHA256": {
+                "a8bb4e0f-fdbd-485e-a844-5f9f46d45552": "adc900e546643c8024e0928b098cd0275d3de0a2ab9332de87ae3bb55023281d"
+              },
+              "exactMeasure": "1585,800001"
+            }
+          ]
+        }
+      ]
+    },
+    "read-only-sync": {
+      "suite": "read-only-sync",
+      "sha": "83fca003c6f56809d826d2f116f0ca56fc22a9dc",
+      "startedAt": "2026-11-07T02:24:21.690Z",
+      "syntheticOnly": true,
+      "cases": [
+        {
+          "name": "view-photo-and-detail-without-revision-then-edit-with-history",
+          "status": "passed",
+          "steps": [],
+          "evidence": []
+        }
+      ]
+    },
+    "release-history": {
+      "suite": "release-history",
+      "sha": "83fca003c6f56809d826d2f116f0ca56fc22a9dc",
+      "startedAt": "2026-11-07T02:24:24.110Z",
+      "syntheticOnly": true,
+      "cases": [
+        {
+          "name": "versioned_history_main_menu_offline_and_help_navigation",
+          "status": "passed",
+          "steps": [
+            "History in hamburger shows actual versions and categorized fixes",
+            "Offline versioned fixes are readable without modifying records",
+            "Navigate from 1.2.151 to real offline help"
+          ],
+          "evidence": [
+            {
+              "testedVersions": [
+                "1.3.0",
+                "1.2.153",
+                "1.2.152",
+                "1.2.151",
+                "1.2.150"
+              ],
+              "menu": true,
+              "offline": true,
+              "dataUnchanged": true
+            }
+          ]
+        },
+        {
+          "name": "settings_history_and_responsive_layout",
+          "status": "passed",
+          "steps": [
+            "History fits 320px display",
+            "History fits 1000px display"
+          ],
+          "evidence": [
+            {
+              "viewports": [
+                "320x568",
+                "1000x760"
+              ],
+              "dataUnchanged": true
+            }
+          ]
+        }
+      ]
+    },
+    "sync-cadence": {
+      "suite": "sync-cadence",
+      "sha": "83fca003c6f56809d826d2f116f0ca56fc22a9dc",
+      "startedAt": "2026-11-07T02:24:27.611Z",
+      "syntheticOnly": true,
+      "cases": [
+        {
+          "name": "frequency-selection-persists-without-changing-records-and-old-switch-can-reenable",
+          "status": "passed",
+          "steps": [],
+          "evidence": []
+        },
+        {
+          "name": "failed-persistence-does-not-activate-new-frequency",
+          "status": "passed",
+          "steps": [],
+          "evidence": []
+        }
+      ]
+    },
+    "sync-edit-guard": {
+      "suite": "sync-edit-guard",
+      "sha": "83fca003c6f56809d826d2f116f0ca56fc22a9dc",
+      "startedAt": "2026-11-07T02:24:30.147Z",
+      "syntheticOnly": true,
+      "cases": [
+        {
+          "name": "native-callback-during-grip-and-measure-form-preserves-both-edits",
+          "status": "passed",
+          "steps": [],
+          "evidence": []
+        },
+        {
+          "name": "status-message-cannot-drop-deferred-data-when-form-is-cancelled",
+          "status": "passed",
+          "steps": [],
+          "evidence": []
+        },
+        {
+          "name": "detail-parent-cas-keeps-live-item-references-after-conflict",
+          "status": "passed",
+          "steps": [],
+          "evidence": []
+        }
+      ]
+    },
+    "update39": {
+      "suite": "update39",
+      "sha": "83fca003c6f56809d826d2f116f0ca56fc22a9dc",
+      "startedAt": "2026-11-07T02:24:35.560Z",
+      "syntheticOnly": true,
+      "cases": [
+        {
+          "name": "gallery_bounded_pan_and_caption_pixels",
+          "status": "passed",
+          "steps": [],
+          "evidence": [
+            {
+              "yellowCaptionPixels": 1080,
+              "originalDataUnchanged": true
+            }
+          ]
+        },
+        {
+          "name": "default_selection_corner_loupe_and_landscape_tools",
+          "status": "passed",
+          "steps": [],
+          "evidence": []
+        },
+        {
+          "name": "real_save_failure_and_photo_loading_errors",
+          "status": "passed",
+          "steps": [],
+          "evidence": []
+        },
+        {
+          "name": "help_occurrences_and_neutral_bluetooth",
+          "status": "passed",
+          "steps": [],
+          "evidence": []
+        }
+      ]
+    },
+    "web-content-policy": {
+      "suite": "web-content-policy",
+      "sha": "83fca003c6f56809d826d2f116f0ca56fc22a9dc",
+      "startedAt": "2026-11-07T02:24:41.660Z",
+      "syntheticOnly": true,
+      "cases": [
+        {
+          "name": "native-csp-blocks-injected-scripts-media-and-frames-keeps-real-drawing",
+          "status": "passed",
+          "steps": [],
+          "evidence": []
+        }
+      ]
+    },
+    "workflows": {
+      "suite": "workflows",
+      "sha": "83fca003c6f56809d826d2f116f0ca56fc22a9dc",
+      "startedAt": "2026-11-07T02:24:44.315Z",
+      "syntheticOnly": true,
+      "cases": [
+        {
+          "name": "folders_move_rename_trash_restore",
+          "status": "passed",
+          "steps": [
+            "Create project/room/canvas through UI",
+            "Rename and move preserve exact annotations",
+            "Delete/restore folder descendants without restart"
+          ],
+          "evidence": [
+            {
+              "records": 3,
+              "referencedMedia": 0
+            }
+          ]
+        },
+        {
+          "name": "bulk_copy_move_lock",
+          "status": "passed",
+          "steps": [
+            "Long press/copy preserves values with new record and item IDs",
+            "Move copy, inherited lock blocks writing"
+          ],
+          "evidence": [
+            {
+              "records": 3,
+              "referencedMedia": 0
+            }
+          ]
+        },
+        {
+          "name": "note_checklist_sketch_attachment",
+          "status": "passed",
+          "steps": [
+            "Actual sketch, undo, draw again",
+            "Attach image and save/reload exact note"
+          ],
+          "evidence": [
+            {
+              "records": 1,
+              "referencedMedia": 1
+            }
+          ]
+        },
+        {
+          "name": "photo_details_nested_gallery_png_hashes",
+          "status": "passed",
+          "steps": [
+            "Note with two real uploaded images and nested dimension",
+            "Actual PNG output, not just clicking export"
+          ],
+          "evidence": [
+            {
+              "records": 2,
+              "referencedMedia": 3
+            }
+          ]
+        },
+        {
+          "name": "trash_restore_purge_and_live_media",
+          "status": "passed",
+          "steps": [],
+          "evidence": [
+            {
+              "records": 1,
+              "referencedMedia": 1
+            }
+          ]
+        },
+        {
+          "name": "focus_cancel_layers_history_search",
+          "status": "passed",
+          "steps": [
+            "Delayed autofocus must not steal another field",
+            "Layer hide does not delete; choosing tool restores its layer"
+          ],
+          "evidence": [
+            {
+              "records": 1,
+              "referencedMedia": 0
+            }
+          ]
+        }
+      ]
+    },
+    "zoom-grid": {
+      "suite": "zoom-grid",
+      "sha": "83fca003c6f56809d826d2f116f0ca56fc22a9dc",
+      "startedAt": "2026-11-07T02:25:03.242Z",
+      "syntheticOnly": true,
+      "cases": [
+        {
+          "name": "buttons_grid_pixels_and_snap_independence",
+          "status": "passed",
+          "steps": [
+            "Zoom + then - uses actual buttons, without changing saved measurements",
+            "Visual raster is controlled by showGrid, not magnetic snapGrid"
+          ],
+          "evidence": [
+            {
+              "magnetOnly": 0,
+              "visibleGrid": 70984,
+              "totalPixels": 496800,
+              "gridStep": 40,
+              "zoom": 0.4764285714285714
+            }
+          ]
+        },
+        {
+          "name": "trusted_two_finger_pinch_and_limits",
+          "status": "passed",
+          "steps": [
+            "Two real touch points pinch out and preserve exact annotation",
+            "Zoom extremes clamp safely and fit restores finite canvas geometry"
+          ],
+          "evidence": [
+            {
+              "zoom": 0.4142857142857143,
+              "dx": 10,
+              "dy": 134.07142857142856,
+              "items": 1
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "androidAttempt": {
+    "status": "not-run",
+    "error": "spawnSync adb ENOENT",
+    "emulatorSDK": "missing"
+  },
+  "ui49Compatibility": {
+    "head": "a408d4b",
+    "temporaryCombinedWith": "287bab1",
+    "mergedIntoPR51": false,
+    "nodeInset": "PASS",
+    "pythonInset": 5,
+    "physical": "NOT RUN"
+  },
+  "latencyPreviousBufferTransport": {
+    "baselinePhoto": {
+      "suite": "latency",
+      "sha": "25055294a791790d7a20ecf87086887389c41a19",
+      "startedAt": "2026-11-07T02:20:31.994Z",
+      "syntheticOnly": true,
+      "cases": [
+        {
+          "name": "photo_and_gallery_1200x800",
+          "status": "passed",
+          "steps": [],
+          "evidence": [
+            {
+              "size": [
+                1200,
+                800
+              ],
+              "pngBytes": 1504385,
+              "platform": "Linux Chromium/localStorage/IndexedDB; open includes UI file chooser automation",
+              "samples": [
+                {
+                  "iteration": 0,
+                  "openMs": 392,
+                  "galleryMs": 26.699999999953434,
+                  "confirmedSaveReadbackMs": 0.7000000000698492
+                },
+                {
+                  "iteration": 1,
+                  "openMs": 307.0999999999767,
+                  "galleryMs": 22.29999999993015,
+                  "confirmedSaveReadbackMs": 0.5
+                },
+                {
+                  "iteration": 2,
+                  "openMs": 293.30000000004657,
+                  "galleryMs": 23.699999999953434,
+                  "confirmedSaveReadbackMs": 0.30000000004656613
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "photo_and_gallery_6000x4000",
+          "status": "passed",
+          "steps": [],
+          "evidence": [
+            {
+              "size": [
+                6000,
+                4000
+              ],
+              "pngBytes": 37578667,
+              "platform": "Linux Chromium/localStorage/IndexedDB; open includes UI file chooser automation",
+              "samples": [
+                {
+                  "iteration": 0,
+                  "openMs": 5790.79999999993,
+                  "galleryMs": 18,
+                  "confirmedSaveReadbackMs": 1.599999999976717
+                },
+                {
+                  "iteration": 1,
+                  "openMs": 5000.5,
+                  "galleryMs": 20.599999999976717,
+                  "confirmedSaveReadbackMs": 1.1999999999534339
+                },
+                {
+                  "iteration": 2,
+                  "openMs": 5215.300000000047,
+                  "galleryMs": 23.199999999953434,
+                  "confirmedSaveReadbackMs": 1
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "baselineFeedback": {
+      "suite": "latency",
+      "sha": "25055294a791790d7a20ecf87086887389c41a19",
+      "startedAt": "2026-11-07T02:17:34.787Z",
+      "syntheticOnly": true,
+      "cases": [
+        {
+          "name": "existing_feedback_320x240",
+          "status": "passed",
+          "steps": [],
+          "evidence": [
+            {
+              "size": [
+                320,
+                240
+              ],
+              "originalPngBytes": 121559,
+              "platform": "Chromium with Native bridge model; no Android disk delay",
+              "samples": [
+                {
+                  "iteration": 0,
+                  "totalMs": 31.399999999906868,
+                  "saved": {
+                    "id": "feedback-latency",
+                    "title": "Syntetická připomínka",
+                    "description": "Výkon",
+                    "screenshotId": "synthetic-screen",
+                    "annotations": [
+                      {
+                        "type": "pen",
+                        "points": [
+                          [
+                            0.1,
+                            0.1
+                          ],
+                          [
+                            0.4,
+                            0.4
+                          ]
+                        ],
+                        "color": "#f7dc27",
+                        "width": 3
+                      }
+                    ],
+                    "videos": [],
+                    "createdAt": "2026-11-07T02:17:35.457Z",
+                    "updatedAt": "2026-11-07T02:17:35.851Z",
+                    "type": "change",
+                    "resolved": true,
+                    "annotatedId": "c79cdeb4-2059-40ca-ad5b-2a553988669c"
+                  },
+                  "stats": {
+                    "begin": 1,
+                    "chunks": 3,
+                    "finish": 1,
+                    "bytes": 123545,
+                    "bridgeMs": 0,
+                    "encodeMs": 19.199999999953434
+                  }
+                },
+                {
+                  "iteration": 1,
+                  "totalMs": 22.699999999953434,
+                  "saved": {
+                    "id": "feedback-latency",
+                    "title": "Syntetická připomínka",
+                    "description": "Výkon",
+                    "screenshotId": "synthetic-screen",
+                    "annotations": [
+                      {
+                        "type": "pen",
+                        "points": [
+                          [
+                            0.1,
+                            0.1
+                          ],
+                          [
+                            0.4,
+                            0.4
+                          ]
+                        ],
+                        "color": "#f7dc27",
+                        "width": 3
+                      }
+                    ],
+                    "videos": [],
+                    "createdAt": "2026-11-07T02:17:35.457Z",
+                    "updatedAt": "2026-11-07T02:17:36.016Z",
+                    "type": "change",
+                    "resolved": true,
+                    "annotatedId": "540dec51-29b2-439f-9154-139044ee6658"
+                  },
+                  "stats": {
+                    "begin": 1,
+                    "chunks": 3,
+                    "finish": 1,
+                    "bytes": 123545,
+                    "bridgeMs": 0.30000000004656613,
+                    "encodeMs": 17.800000000046566
+                  }
+                },
+                {
+                  "iteration": 2,
+                  "totalMs": 19.099999999976717,
+                  "saved": {
+                    "id": "feedback-latency",
+                    "title": "Syntetická připomínka",
+                    "description": "Výkon",
+                    "screenshotId": "synthetic-screen",
+                    "annotations": [
+                      {
+                        "type": "pen",
+                        "points": [
+                          [
+                            0.1,
+                            0.1
+                          ],
+                          [
+                            0.4,
+                            0.4
+                          ]
+                        ],
+                        "color": "#f7dc27",
+                        "width": 3
+                      }
+                    ],
+                    "videos": [],
+                    "createdAt": "2026-11-07T02:17:35.457Z",
+                    "updatedAt": "2026-11-07T02:17:36.170Z",
+                    "type": "change",
+                    "resolved": true,
+                    "annotatedId": "4accf771-e61b-4f36-abd6-67f553cbd290"
+                  },
+                  "stats": {
+                    "begin": 1,
+                    "chunks": 3,
+                    "finish": 1,
+                    "bytes": 123545,
+                    "bridgeMs": 0,
+                    "encodeMs": 14.800000000046566
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "existing_feedback_1440x2800",
+          "status": "passed",
+          "steps": [],
+          "evidence": [
+            {
+              "size": [
+                1440,
+                2800
+              ],
+              "originalPngBytes": 6311031,
+              "platform": "Chromium with Native bridge model; no Android disk delay",
+              "samples": [
+                {
+                  "iteration": 0,
+                  "totalMs": 6903.70000000007,
+                  "saved": {
+                    "id": "feedback-latency",
+                    "title": "Syntetická připomínka",
+                    "description": "Výkon",
+                    "screenshotId": "synthetic-screen",
+                    "annotations": [
+                      {
+                        "type": "pen",
+                        "points": [
+                          [
+                            0.1,
+                            0.1
+                          ],
+                          [
+                            0.4,
+                            0.4
+                          ]
+                        ],
+                        "color": "#f7dc27",
+                        "width": 3
+                      }
+                    ],
+                    "videos": [],
+                    "createdAt": "2026-11-07T02:17:37.385Z",
+                    "updatedAt": "2026-11-07T02:17:37.959Z",
+                    "type": "change",
+                    "resolved": true,
+                    "annotatedId": "03276a9f-5d90-457d-aaa0-2d11d201b9ce"
+                  },
+                  "stats": {
+                    "begin": 1,
+                    "chunks": 129,
+                    "finish": 1,
+                    "bytes": 6322507,
+                    "bridgeMs": 8.500000000116415,
+                    "encodeMs": 6790.699999999953
+                  }
+                },
+                {
+                  "iteration": 1,
+                  "totalMs": 208.69999999995343,
+                  "saved": {
+                    "id": "feedback-latency",
+                    "title": "Syntetická připomínka",
+                    "description": "Výkon",
+                    "screenshotId": "synthetic-screen",
+                    "annotations": [
+                      {
+                        "type": "pen",
+                        "points": [
+                          [
+                            0.1,
+                            0.1
+                          ],
+                          [
+                            0.4,
+                            0.4
+                          ]
+                        ],
+                        "color": "#f7dc27",
+                        "width": 3
+                      }
+                    ],
+                    "videos": [],
+                    "createdAt": "2026-11-07T02:17:37.385Z",
+                    "updatedAt": "2026-11-07T02:17:45.003Z",
+                    "type": "change",
+                    "resolved": true,
+                    "annotatedId": "b070ca63-5bad-4aff-acae-49a1a13e989c"
+                  },
+                  "stats": {
+                    "begin": 1,
+                    "chunks": 129,
+                    "finish": 1,
+                    "bytes": 6322507,
+                    "bridgeMs": 4.899999999906868,
+                    "encodeMs": 122.09999999997672
+                  }
+                },
+                {
+                  "iteration": 2,
+                  "totalMs": 3075.8000000000466,
+                  "saved": {
+                    "id": "feedback-latency",
+                    "title": "Syntetická připomínka",
+                    "description": "Výkon",
+                    "screenshotId": "synthetic-screen",
+                    "annotations": [
+                      {
+                        "type": "pen",
+                        "points": [
+                          [
+                            0.1,
+                            0.1
+                          ],
+                          [
+                            0.4,
+                            0.4
+                          ]
+                        ],
+                        "color": "#f7dc27",
+                        "width": 3
+                      }
+                    ],
+                    "videos": [],
+                    "createdAt": "2026-11-07T02:17:37.385Z",
+                    "updatedAt": "2026-11-07T02:17:45.346Z",
+                    "type": "change",
+                    "resolved": true,
+                    "annotatedId": "57889dd4-10e4-4855-8e33-31100ca9434b"
+                  },
+                  "stats": {
+                    "begin": 1,
+                    "chunks": 129,
+                    "finish": 1,
+                    "bytes": 6322507,
+                    "bridgeMs": 5.3999999994412065,
+                    "encodeMs": 2975
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "baselineProject": {
+      "suite": "latency",
+      "sha": "83fca003c6f56809d826d2f116f0ca56fc22a9dc",
+      "startedAt": "2026-11-07T02:26:10.832Z",
+      "syntheticOnly": true,
+      "cases": [
+        {
+          "name": "project_1_10_50_editable_documents",
+          "status": "passed",
+          "steps": [],
+          "evidence": [
+            {
+              "platform": "Linux Chromium/localStorage; synthetic hierarchy and exact editable dimensions",
+              "samples": [
+                {
+                  "count": 1,
+                  "iteration": 0,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 7608,
+                  "confirmedSaveReadbackMs": 0.30000000004656613
+                },
+                {
+                  "count": 1,
+                  "iteration": 1,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 7608,
+                  "confirmedSaveReadbackMs": 0.19999999995343387
+                },
+                {
+                  "count": 1,
+                  "iteration": 2,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 7608,
+                  "confirmedSaveReadbackMs": 0
+                },
+                {
+                  "count": 10,
+                  "iteration": 0,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 65478,
+                  "confirmedSaveReadbackMs": 2.2999999998137355
+                },
+                {
+                  "count": 10,
+                  "iteration": 1,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 65478,
+                  "confirmedSaveReadbackMs": 1
+                },
+                {
+                  "count": 10,
+                  "iteration": 2,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 65478,
+                  "confirmedSaveReadbackMs": 0.7000000001862645
+                },
+                {
+                  "count": 50,
+                  "iteration": 0,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 323518,
+                  "confirmedSaveReadbackMs": 5.699999999953434
+                },
+                {
+                  "count": 50,
+                  "iteration": 1,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 323518,
+                  "confirmedSaveReadbackMs": 5.300000000046566
+                },
+                {
+                  "count": 50,
+                  "iteration": 2,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 323518,
+                  "confirmedSaveReadbackMs": 4.5
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "afterPhotoFeedback": {
+      "suite": "latency",
+      "sha": "83fca003c6f56809d826d2f116f0ca56fc22a9dc",
+      "startedAt": "2026-11-07T02:25:18.555Z",
+      "syntheticOnly": true,
+      "cases": [
+        {
+          "name": "photo_and_gallery_1200x800",
+          "status": "passed",
+          "steps": [],
+          "evidence": [
+            {
+              "size": [
+                1200,
+                800
+              ],
+              "pngBytes": 1504385,
+              "platform": "Linux Chromium/localStorage/IndexedDB; open includes UI file chooser automation",
+              "samples": [
+                {
+                  "iteration": 0,
+                  "openMs": 476.5,
+                  "galleryMs": 28.5,
+                  "confirmedSaveReadbackMs": 0.8999999999068677
+                },
+                {
+                  "iteration": 1,
+                  "openMs": 343.20000000006985,
+                  "galleryMs": 57.5,
+                  "confirmedSaveReadbackMs": 0.5999999999767169
+                },
+                {
+                  "iteration": 2,
+                  "openMs": 359.30000000004657,
+                  "galleryMs": 30.199999999953434,
+                  "confirmedSaveReadbackMs": 0.5999999999767169
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "photo_and_gallery_6000x4000",
+          "status": "passed",
+          "steps": [],
+          "evidence": [
+            {
+              "size": [
+                6000,
+                4000
+              ],
+              "pngBytes": 37578667,
+              "platform": "Linux Chromium/localStorage/IndexedDB; open includes UI file chooser automation",
+              "samples": [
+                {
+                  "iteration": 0,
+                  "openMs": 8090.599999999977,
+                  "galleryMs": 23.5,
+                  "confirmedSaveReadbackMs": 3.3999999999068677
+                },
+                {
+                  "iteration": 1,
+                  "openMs": 6595.5,
+                  "galleryMs": 17.699999999953434,
+                  "confirmedSaveReadbackMs": 1.1999999999534339
+                },
+                {
+                  "iteration": 2,
+                  "openMs": 5217.800000000047,
+                  "galleryMs": 16.699999999953434,
+                  "confirmedSaveReadbackMs": 1.2999999999301508
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "existing_feedback_320x240",
+          "status": "passed",
+          "steps": [],
+          "evidence": [
+            {
+              "size": [
+                320,
+                240
+              ],
+              "originalPngBytes": 121559,
+              "platform": "Chromium with Native bridge model; no Android disk delay",
+              "samples": [
+                {
+                  "iteration": 0,
+                  "totalMs": 16.800000000046566,
+                  "saved": {
+                    "id": "feedback-latency",
+                    "title": "Syntetická připomínka",
+                    "description": "Výkon",
+                    "screenshotId": "synthetic-screen",
+                    "annotations": [
+                      {
+                        "type": "pen",
+                        "points": [
+                          [
+                            0.1,
+                            0.1
+                          ],
+                          [
+                            0.4,
+                            0.4
+                          ]
+                        ],
+                        "color": "#f7dc27",
+                        "width": 3
+                      }
+                    ],
+                    "videos": [],
+                    "createdAt": "2026-11-07T02:25:45.039Z",
+                    "updatedAt": "2026-11-07T02:25:45.459Z",
+                    "type": "change",
+                    "resolved": true,
+                    "annotatedId": "6d519b3c-8714-4f0d-9f4e-6074b10a850b"
+                  },
+                  "stats": {
+                    "begin": 1,
+                    "chunks": 3,
+                    "finish": 1,
+                    "bytes": 123545,
+                    "bridgeMs": 0.19999999995343387,
+                    "encodeMs": 6.099999999976717
+                  }
+                },
+                {
+                  "iteration": 1,
+                  "totalMs": 21.199999999953434,
+                  "saved": {
+                    "id": "feedback-latency",
+                    "title": "Syntetická připomínka",
+                    "description": "Výkon",
+                    "screenshotId": "synthetic-screen",
+                    "annotations": [
+                      {
+                        "type": "pen",
+                        "points": [
+                          [
+                            0.1,
+                            0.1
+                          ],
+                          [
+                            0.4,
+                            0.4
+                          ]
+                        ],
+                        "color": "#f7dc27",
+                        "width": 3
+                      }
+                    ],
+                    "videos": [],
+                    "createdAt": "2026-11-07T02:25:45.039Z",
+                    "updatedAt": "2026-11-07T02:25:45.618Z",
+                    "type": "change",
+                    "resolved": true,
+                    "annotatedId": "8ead503e-933e-4c5f-a692-4f259be7d488"
+                  },
+                  "stats": {
+                    "begin": 1,
+                    "chunks": 3,
+                    "finish": 1,
+                    "bytes": 123545,
+                    "bridgeMs": 0.2000000000698492,
+                    "encodeMs": 14.300000000046566
+                  }
+                },
+                {
+                  "iteration": 2,
+                  "totalMs": 17.29999999993015,
+                  "saved": {
+                    "id": "feedback-latency",
+                    "title": "Syntetická připomínka",
+                    "description": "Výkon",
+                    "screenshotId": "synthetic-screen",
+                    "annotations": [
+                      {
+                        "type": "pen",
+                        "points": [
+                          [
+                            0.1,
+                            0.1
+                          ],
+                          [
+                            0.4,
+                            0.4
+                          ]
+                        ],
+                        "color": "#f7dc27",
+                        "width": 3
+                      }
+                    ],
+                    "videos": [],
+                    "createdAt": "2026-11-07T02:25:45.039Z",
+                    "updatedAt": "2026-11-07T02:25:45.761Z",
+                    "type": "change",
+                    "resolved": true,
+                    "annotatedId": "96529d22-1476-4f2f-8c0e-52b4d2869608"
+                  },
+                  "stats": {
+                    "begin": 1,
+                    "chunks": 3,
+                    "finish": 1,
+                    "bytes": 123545,
+                    "bridgeMs": 0,
+                    "encodeMs": 9.099999999976717
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "existing_feedback_1440x2800",
+          "status": "passed",
+          "steps": [],
+          "evidence": [
+            {
+              "size": [
+                1440,
+                2800
+              ],
+              "originalPngBytes": 6311031,
+              "platform": "Chromium with Native bridge model; no Android disk delay",
+              "samples": [
+                {
+                  "iteration": 0,
+                  "totalMs": 6918.599999999977,
+                  "saved": {
+                    "id": "feedback-latency",
+                    "title": "Syntetická připomínka",
+                    "description": "Výkon",
+                    "screenshotId": "synthetic-screen",
+                    "annotations": [
+                      {
+                        "type": "pen",
+                        "points": [
+                          [
+                            0.1,
+                            0.1
+                          ],
+                          [
+                            0.4,
+                            0.4
+                          ]
+                        ],
+                        "color": "#f7dc27",
+                        "width": 3
+                      }
+                    ],
+                    "videos": [],
+                    "createdAt": "2026-11-07T02:25:47.014Z",
+                    "updatedAt": "2026-11-07T02:25:47.688Z",
+                    "type": "change",
+                    "resolved": true,
+                    "annotatedId": "d9c93a78-9927-420c-97e7-4786ae890e44"
+                  },
+                  "stats": {
+                    "begin": 1,
+                    "chunks": 129,
+                    "finish": 1,
+                    "bytes": 6322507,
+                    "bridgeMs": 6.8999999994412065,
+                    "encodeMs": 6792.29999999993
+                  }
+                },
+                {
+                  "iteration": 1,
+                  "totalMs": 225.79999999993015,
+                  "saved": {
+                    "id": "feedback-latency",
+                    "title": "Syntetická připomínka",
+                    "description": "Výkon",
+                    "screenshotId": "synthetic-screen",
+                    "annotations": [
+                      {
+                        "type": "pen",
+                        "points": [
+                          [
+                            0.1,
+                            0.1
+                          ],
+                          [
+                            0.4,
+                            0.4
+                          ]
+                        ],
+                        "color": "#f7dc27",
+                        "width": 3
+                      }
+                    ],
+                    "videos": [],
+                    "createdAt": "2026-11-07T02:25:47.014Z",
+                    "updatedAt": "2026-11-07T02:25:54.754Z",
+                    "type": "change",
+                    "resolved": true,
+                    "annotatedId": "70d63164-2bee-4380-bfa7-80433d99f9d4"
+                  },
+                  "stats": {
+                    "begin": 1,
+                    "chunks": 129,
+                    "finish": 1,
+                    "bytes": 6322507,
+                    "bridgeMs": 4.599999999627471,
+                    "encodeMs": 129.09999999997672
+                  }
+                },
+                {
+                  "iteration": 2,
+                  "totalMs": 221.19999999995343,
+                  "saved": {
+                    "id": "feedback-latency",
+                    "title": "Syntetická připomínka",
+                    "description": "Výkon",
+                    "screenshotId": "synthetic-screen",
+                    "annotations": [
+                      {
+                        "type": "pen",
+                        "points": [
+                          [
+                            0.1,
+                            0.1
+                          ],
+                          [
+                            0.4,
+                            0.4
+                          ]
+                        ],
+                        "color": "#f7dc27",
+                        "width": 3
+                      }
+                    ],
+                    "videos": [],
+                    "createdAt": "2026-11-07T02:25:47.014Z",
+                    "updatedAt": "2026-11-07T02:25:55.123Z",
+                    "type": "change",
+                    "resolved": true,
+                    "annotatedId": "9ef6beb1-e332-4dc4-b496-954c0445f16f"
+                  },
+                  "stats": {
+                    "begin": 1,
+                    "chunks": 129,
+                    "finish": 1,
+                    "bytes": 6322507,
+                    "bridgeMs": 4.7000000005355105,
+                    "encodeMs": 130.59999999997672
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "afterProject": {
+      "suite": "latency",
+      "sha": "287bab1fca912be5cde787396ebed2e58958369a",
+      "startedAt": "2026-11-07T02:27:29.827Z",
+      "syntheticOnly": true,
+      "cases": [
+        {
+          "name": "project_1_10_50_editable_documents",
+          "status": "passed",
+          "steps": [],
+          "evidence": [
+            {
+              "platform": "Linux Chromium/localStorage; synthetic hierarchy and exact editable dimensions",
+              "samples": [
+                {
+                  "count": 1,
+                  "iteration": 0,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 7608,
+                  "confirmedSaveReadbackMs": 0.39999999990686774
+                },
+                {
+                  "count": 1,
+                  "iteration": 1,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 7608,
+                  "confirmedSaveReadbackMs": 0.5
+                },
+                {
+                  "count": 1,
+                  "iteration": 2,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 7608,
+                  "confirmedSaveReadbackMs": 0.19999999995343387
+                },
+                {
+                  "count": 10,
+                  "iteration": 0,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 65478,
+                  "confirmedSaveReadbackMs": 1
+                },
+                {
+                  "count": 10,
+                  "iteration": 1,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 65478,
+                  "confirmedSaveReadbackMs": 1.5
+                },
+                {
+                  "count": 10,
+                  "iteration": 2,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 65478,
+                  "confirmedSaveReadbackMs": 1
+                },
+                {
+                  "count": 50,
+                  "iteration": 0,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 323518,
+                  "confirmedSaveReadbackMs": 4.800000000046566
+                },
+                {
+                  "count": 50,
+                  "iteration": 1,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 323518,
+                  "confirmedSaveReadbackMs": 4.099999999860302
+                },
+                {
+                  "count": 50,
+                  "iteration": 2,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 323518,
+                  "confirmedSaveReadbackMs": 4
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "latency": {
+    "before": {
+      "suite": "latency",
+      "sha": "361e15c50e857235830c1cf4c135a8583e1b15d6",
+      "startedAt": "2026-11-07T02:29:18.816Z",
+      "syntheticOnly": true,
+      "cases": [
+        {
+          "name": "project_1_10_50_editable_documents",
+          "status": "passed",
+          "steps": [],
+          "evidence": [
+            {
+              "platform": "Linux Chromium/localStorage; synthetic hierarchy and exact editable dimensions",
+              "samples": [
+                {
+                  "count": 1,
+                  "iteration": 0,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 7608,
+                  "confirmedSaveReadbackMs": 0.20000000018626451
+                },
+                {
+                  "count": 1,
+                  "iteration": 1,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 7608,
+                  "confirmedSaveReadbackMs": 0.2999999998137355
+                },
+                {
+                  "count": 1,
+                  "iteration": 2,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 7608,
+                  "confirmedSaveReadbackMs": 0
+                },
+                {
+                  "count": 10,
+                  "iteration": 0,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 65478,
+                  "confirmedSaveReadbackMs": 0.8000000000465661
+                },
+                {
+                  "count": 10,
+                  "iteration": 1,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 65478,
+                  "confirmedSaveReadbackMs": 1.6999999999534339
+                },
+                {
+                  "count": 10,
+                  "iteration": 2,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 65478,
+                  "confirmedSaveReadbackMs": 1.3999999999068677
+                },
+                {
+                  "count": 50,
+                  "iteration": 0,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 323518,
+                  "confirmedSaveReadbackMs": 6.300000000046566
+                },
+                {
+                  "count": 50,
+                  "iteration": 1,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 323518,
+                  "confirmedSaveReadbackMs": 6.199999999953434
+                },
+                {
+                  "count": 50,
+                  "iteration": 2,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 323518,
+                  "confirmedSaveReadbackMs": 4.399999999906868
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "photo_and_gallery_1200x800",
+          "status": "passed",
+          "steps": [],
+          "evidence": [
+            {
+              "size": [
+                1200,
+                800
+              ],
+              "pngBytes": 1504385,
+              "fixtureDelivery": "local file path",
+              "platform": "Linux Chromium/localStorage/IndexedDB; open includes UI file chooser automation",
+              "samples": [
+                {
+                  "iteration": 0,
+                  "openMs": 218.80000000004657,
+                  "galleryMs": 23.399999999906868,
+                  "confirmedSaveReadbackMs": 0.6999999999534339
+                },
+                {
+                  "iteration": 1,
+                  "openMs": 138.30000000004657,
+                  "galleryMs": 26.899999999906868,
+                  "confirmedSaveReadbackMs": 0.39999999990686774
+                },
+                {
+                  "iteration": 2,
+                  "openMs": 189.5,
+                  "galleryMs": 23.699999999953434,
+                  "confirmedSaveReadbackMs": 0.30000000004656613
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "photo_and_gallery_6000x4000",
+          "status": "passed",
+          "steps": [],
+          "evidence": [
+            {
+              "size": [
+                6000,
+                4000
+              ],
+              "pngBytes": 37578667,
+              "fixtureDelivery": "local file path",
+              "platform": "Linux Chromium/localStorage/IndexedDB; open includes UI file chooser automation",
+              "samples": [
+                {
+                  "iteration": 0,
+                  "openMs": 1649.3000000000466,
+                  "galleryMs": 42.800000000046566,
+                  "confirmedSaveReadbackMs": 3.1000000000931323
+                },
+                {
+                  "iteration": 1,
+                  "openMs": 2218.7000000001863,
+                  "galleryMs": 27.9000000001397,
+                  "confirmedSaveReadbackMs": 1.6000000000931323
+                },
+                {
+                  "iteration": 2,
+                  "openMs": 1803.3999999999069,
+                  "galleryMs": 20.9000000001397,
+                  "confirmedSaveReadbackMs": 1.3000000000465661
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "existing_feedback_320x240",
+          "status": "passed",
+          "steps": [],
+          "evidence": [
+            {
+              "size": [
+                320,
+                240
+              ],
+              "originalPngBytes": 121559,
+              "platform": "Chromium with Native bridge model; no Android disk delay",
+              "samples": [
+                {
+                  "iteration": 0,
+                  "totalMs": 24.600000000093132,
+                  "saved": {
+                    "id": "feedback-latency",
+                    "title": "Syntetická připomínka",
+                    "description": "Výkon",
+                    "screenshotId": "synthetic-screen",
+                    "annotations": [
+                      {
+                        "type": "pen",
+                        "points": [
+                          [
+                            0.1,
+                            0.1
+                          ],
+                          [
+                            0.4,
+                            0.4
+                          ]
+                        ],
+                        "color": "#f7dc27",
+                        "width": 3
+                      }
+                    ],
+                    "videos": [],
+                    "createdAt": "2026-11-07T02:29:32.600Z",
+                    "updatedAt": "2026-11-07T02:29:33.066Z",
+                    "type": "change",
+                    "resolved": true,
+                    "annotatedId": "cd25ff20-809a-40ed-a340-edb8b7b09eb8"
+                  },
+                  "stats": {
+                    "begin": 1,
+                    "chunks": 3,
+                    "finish": 1,
+                    "bytes": 123545,
+                    "bridgeMs": 0.10000000009313226,
+                    "encodeMs": 11.800000000046566
+                  }
+                },
+                {
+                  "iteration": 1,
+                  "totalMs": 18.300000000046566,
+                  "saved": {
+                    "id": "feedback-latency",
+                    "title": "Syntetická připomínka",
+                    "description": "Výkon",
+                    "screenshotId": "synthetic-screen",
+                    "annotations": [
+                      {
+                        "type": "pen",
+                        "points": [
+                          [
+                            0.1,
+                            0.1
+                          ],
+                          [
+                            0.4,
+                            0.4
+                          ]
+                        ],
+                        "color": "#f7dc27",
+                        "width": 3
+                      }
+                    ],
+                    "videos": [],
+                    "createdAt": "2026-11-07T02:29:32.600Z",
+                    "updatedAt": "2026-11-07T02:29:33.235Z",
+                    "type": "change",
+                    "resolved": true,
+                    "annotatedId": "b1d4e7c4-ee13-4702-8a75-ef368f1b7646"
+                  },
+                  "stats": {
+                    "begin": 1,
+                    "chunks": 3,
+                    "finish": 1,
+                    "bytes": 123545,
+                    "bridgeMs": 0.19999999995343387,
+                    "encodeMs": 5.899999999906868
+                  }
+                },
+                {
+                  "iteration": 2,
+                  "totalMs": 24.399999999906868,
+                  "saved": {
+                    "id": "feedback-latency",
+                    "title": "Syntetická připomínka",
+                    "description": "Výkon",
+                    "screenshotId": "synthetic-screen",
+                    "annotations": [
+                      {
+                        "type": "pen",
+                        "points": [
+                          [
+                            0.1,
+                            0.1
+                          ],
+                          [
+                            0.4,
+                            0.4
+                          ]
+                        ],
+                        "color": "#f7dc27",
+                        "width": 3
+                      }
+                    ],
+                    "videos": [],
+                    "createdAt": "2026-11-07T02:29:32.600Z",
+                    "updatedAt": "2026-11-07T02:29:33.395Z",
+                    "type": "change",
+                    "resolved": true,
+                    "annotatedId": "703e509f-8417-40ae-b648-50f7a96a9de1"
+                  },
+                  "stats": {
+                    "begin": 1,
+                    "chunks": 3,
+                    "finish": 1,
+                    "bytes": 123545,
+                    "bridgeMs": 0.10000000009313226,
+                    "encodeMs": 18.399999999906868
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "existing_feedback_1440x2800",
+          "status": "passed",
+          "steps": [],
+          "evidence": [
+            {
+              "size": [
+                1440,
+                2800
+              ],
+              "originalPngBytes": 6311031,
+              "platform": "Chromium with Native bridge model; no Android disk delay",
+              "samples": [
+                {
+                  "iteration": 0,
+                  "totalMs": 259.69999999995343,
+                  "saved": {
+                    "id": "feedback-latency",
+                    "title": "Syntetická připomínka",
+                    "description": "Výkon",
+                    "screenshotId": "synthetic-screen",
+                    "annotations": [
+                      {
+                        "type": "pen",
+                        "points": [
+                          [
+                            0.1,
+                            0.1
+                          ],
+                          [
+                            0.4,
+                            0.4
+                          ]
+                        ],
+                        "color": "#f7dc27",
+                        "width": 3
+                      }
+                    ],
+                    "videos": [],
+                    "createdAt": "2026-11-07T02:29:34.809Z",
+                    "updatedAt": "2026-11-07T02:29:35.439Z",
+                    "type": "change",
+                    "resolved": true,
+                    "annotatedId": "9310087c-2f20-417c-9a2d-90802d3a3b27"
+                  },
+                  "stats": {
+                    "begin": 1,
+                    "chunks": 129,
+                    "finish": 1,
+                    "bytes": 6322507,
+                    "bridgeMs": 9.499999999534339,
+                    "encodeMs": 122.4000000001397
+                  }
+                },
+                {
+                  "iteration": 1,
+                  "totalMs": 213.60000000009313,
+                  "saved": {
+                    "id": "feedback-latency",
+                    "title": "Syntetická připomínka",
+                    "description": "Výkon",
+                    "screenshotId": "synthetic-screen",
+                    "annotations": [
+                      {
+                        "type": "pen",
+                        "points": [
+                          [
+                            0.1,
+                            0.1
+                          ],
+                          [
+                            0.4,
+                            0.4
+                          ]
+                        ],
+                        "color": "#f7dc27",
+                        "width": 3
+                      }
+                    ],
+                    "videos": [],
+                    "createdAt": "2026-11-07T02:29:34.809Z",
+                    "updatedAt": "2026-11-07T02:29:35.850Z",
+                    "type": "change",
+                    "resolved": true,
+                    "annotatedId": "9f357ccf-37db-4ff2-8a80-e323202f445b"
+                  },
+                  "stats": {
+                    "begin": 1,
+                    "chunks": 129,
+                    "finish": 1,
+                    "bytes": 6322507,
+                    "bridgeMs": 5.399999998509884,
+                    "encodeMs": 121.30000000004657
+                  }
+                },
+                {
+                  "iteration": 2,
+                  "totalMs": 237.30000000004657,
+                  "saved": {
+                    "id": "feedback-latency",
+                    "title": "Syntetická připomínka",
+                    "description": "Výkon",
+                    "screenshotId": "synthetic-screen",
+                    "annotations": [
+                      {
+                        "type": "pen",
+                        "points": [
+                          [
+                            0.1,
+                            0.1
+                          ],
+                          [
+                            0.4,
+                            0.4
+                          ]
+                        ],
+                        "color": "#f7dc27",
+                        "width": 3
+                      }
+                    ],
+                    "videos": [],
+                    "createdAt": "2026-11-07T02:29:34.809Z",
+                    "updatedAt": "2026-11-07T02:29:36.197Z",
+                    "type": "change",
+                    "resolved": true,
+                    "annotatedId": "8bad76d7-c18f-4a49-a52c-3694fa5a1324"
+                  },
+                  "stats": {
+                    "begin": 1,
+                    "chunks": 129,
+                    "finish": 1,
+                    "bytes": 6322507,
+                    "bridgeMs": 5.000000000931323,
+                    "encodeMs": 118.30000000004657
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    },
+    "after": {
+      "suite": "latency",
+      "sha": "361e15c50e857235830c1cf4c135a8583e1b15d6",
+      "startedAt": "2026-11-07T02:29:37.429Z",
+      "syntheticOnly": true,
+      "cases": [
+        {
+          "name": "project_1_10_50_editable_documents",
+          "status": "passed",
+          "steps": [],
+          "evidence": [
+            {
+              "platform": "Linux Chromium/localStorage; synthetic hierarchy and exact editable dimensions",
+              "samples": [
+                {
+                  "count": 1,
+                  "iteration": 0,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 7608,
+                  "confirmedSaveReadbackMs": 0.5
+                },
+                {
+                  "count": 1,
+                  "iteration": 1,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 7608,
+                  "confirmedSaveReadbackMs": 0.19999999995343387
+                },
+                {
+                  "count": 1,
+                  "iteration": 2,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 7608,
+                  "confirmedSaveReadbackMs": 0.19999999995343387
+                },
+                {
+                  "count": 10,
+                  "iteration": 0,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 65478,
+                  "confirmedSaveReadbackMs": 1.1999999999534339
+                },
+                {
+                  "count": 10,
+                  "iteration": 1,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 65478,
+                  "confirmedSaveReadbackMs": 1.6000000000931323
+                },
+                {
+                  "count": 10,
+                  "iteration": 2,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 65478,
+                  "confirmedSaveReadbackMs": 0.6999999999534339
+                },
+                {
+                  "count": 50,
+                  "iteration": 0,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 323518,
+                  "confirmedSaveReadbackMs": 7.599999999860302
+                },
+                {
+                  "count": 50,
+                  "iteration": 1,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 323518,
+                  "confirmedSaveReadbackMs": 5.400000000139698
+                },
+                {
+                  "count": 50,
+                  "iteration": 2,
+                  "itemsPerDocument": 20,
+                  "jsonBytes": 323518,
+                  "confirmedSaveReadbackMs": 5
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "photo_and_gallery_1200x800",
+          "status": "passed",
+          "steps": [],
+          "evidence": [
+            {
+              "size": [
+                1200,
+                800
+              ],
+              "pngBytes": 1504385,
+              "fixtureDelivery": "local file path",
+              "platform": "Linux Chromium/localStorage/IndexedDB; open includes UI file chooser automation",
+              "samples": [
+                {
+                  "iteration": 0,
+                  "openMs": 217.69999999995343,
+                  "galleryMs": 26.100000000093132,
+                  "confirmedSaveReadbackMs": 0.8000000000465661
+                },
+                {
+                  "iteration": 1,
+                  "openMs": 147.5,
+                  "galleryMs": 25.5,
+                  "confirmedSaveReadbackMs": 0.2999999998137355
+                },
+                {
+                  "iteration": 2,
+                  "openMs": 149.79999999981374,
+                  "galleryMs": 12.199999999953434,
+                  "confirmedSaveReadbackMs": 0.7000000001862645
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "photo_and_gallery_6000x4000",
+          "status": "passed",
+          "steps": [],
+          "evidence": [
+            {
+              "size": [
+                6000,
+                4000
+              ],
+              "pngBytes": 37578667,
+              "fixtureDelivery": "local file path",
+              "platform": "Linux Chromium/localStorage/IndexedDB; open includes UI file chooser automation",
+              "samples": [
+                {
+                  "iteration": 0,
+                  "openMs": 1503.3999999999069,
+                  "galleryMs": 25.800000000046566,
+                  "confirmedSaveReadbackMs": 1.6999999999534339
+                },
+                {
+                  "iteration": 1,
+                  "openMs": 1438.6000000000931,
+                  "galleryMs": 20.9000000001397,
+                  "confirmedSaveReadbackMs": 1.4000000001396984
+                },
+                {
+                  "iteration": 2,
+                  "openMs": 1542,
+                  "galleryMs": 22.0999999998603,
+                  "confirmedSaveReadbackMs": 2
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "existing_feedback_320x240",
+          "status": "passed",
+          "steps": [],
+          "evidence": [
+            {
+              "size": [
+                320,
+                240
+              ],
+              "originalPngBytes": 121559,
+              "platform": "Chromium with Native bridge model; no Android disk delay",
+              "samples": [
+                {
+                  "iteration": 0,
+                  "totalMs": 17.199999999953434,
+                  "saved": {
+                    "id": "feedback-latency",
+                    "title": "Syntetická připomínka",
+                    "description": "Výkon",
+                    "screenshotId": "synthetic-screen",
+                    "annotations": [
+                      {
+                        "type": "pen",
+                        "points": [
+                          [
+                            0.1,
+                            0.1
+                          ],
+                          [
+                            0.4,
+                            0.4
+                          ]
+                        ],
+                        "color": "#f7dc27",
+                        "width": 3
+                      }
+                    ],
+                    "videos": [],
+                    "createdAt": "2026-11-07T02:29:48.941Z",
+                    "updatedAt": "2026-11-07T02:29:49.430Z",
+                    "type": "change",
+                    "resolved": true,
+                    "annotatedId": "83a0e011-cfb9-4698-9379-bb59d1ca934d"
+                  },
+                  "stats": {
+                    "begin": 1,
+                    "chunks": 3,
+                    "finish": 1,
+                    "bytes": 123545,
+                    "bridgeMs": 0.19999999995343387,
+                    "encodeMs": 7.800000000046566
+                  }
+                },
+                {
+                  "iteration": 1,
+                  "totalMs": 21.199999999953434,
+                  "saved": {
+                    "id": "feedback-latency",
+                    "title": "Syntetická připomínka",
+                    "description": "Výkon",
+                    "screenshotId": "synthetic-screen",
+                    "annotations": [
+                      {
+                        "type": "pen",
+                        "points": [
+                          [
+                            0.1,
+                            0.1
+                          ],
+                          [
+                            0.4,
+                            0.4
+                          ]
+                        ],
+                        "color": "#f7dc27",
+                        "width": 3
+                      }
+                    ],
+                    "videos": [],
+                    "createdAt": "2026-11-07T02:29:48.941Z",
+                    "updatedAt": "2026-11-07T02:29:49.594Z",
+                    "type": "change",
+                    "resolved": true,
+                    "annotatedId": "f2497032-f859-446b-9726-a7b78df00a69"
+                  },
+                  "stats": {
+                    "begin": 1,
+                    "chunks": 3,
+                    "finish": 1,
+                    "bytes": 123545,
+                    "bridgeMs": 0.10000000009313226,
+                    "encodeMs": 10.300000000046566
+                  }
+                },
+                {
+                  "iteration": 2,
+                  "totalMs": 19.700000000186265,
+                  "saved": {
+                    "id": "feedback-latency",
+                    "title": "Syntetická připomínka",
+                    "description": "Výkon",
+                    "screenshotId": "synthetic-screen",
+                    "annotations": [
+                      {
+                        "type": "pen",
+                        "points": [
+                          [
+                            0.1,
+                            0.1
+                          ],
+                          [
+                            0.4,
+                            0.4
+                          ]
+                        ],
+                        "color": "#f7dc27",
+                        "width": 3
+                      }
+                    ],
+                    "videos": [],
+                    "createdAt": "2026-11-07T02:29:48.941Z",
+                    "updatedAt": "2026-11-07T02:29:49.756Z",
+                    "type": "change",
+                    "resolved": true,
+                    "annotatedId": "1e5faad2-649e-4c01-9a37-6ebf9a96911b"
+                  },
+                  "stats": {
+                    "begin": 1,
+                    "chunks": 3,
+                    "finish": 1,
+                    "bytes": 123545,
+                    "bridgeMs": 0.30000000004656613,
+                    "encodeMs": 14.800000000046566
+                  }
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "existing_feedback_1440x2800",
+          "status": "passed",
+          "steps": [],
+          "evidence": [
+            {
+              "size": [
+                1440,
+                2800
+              ],
+              "originalPngBytes": 6311031,
+              "platform": "Chromium with Native bridge model; no Android disk delay",
+              "samples": [
+                {
+                  "iteration": 0,
+                  "totalMs": 254.80000000004657,
+                  "saved": {
+                    "id": "feedback-latency",
+                    "title": "Syntetická připomínka",
+                    "description": "Výkon",
+                    "screenshotId": "synthetic-screen",
+                    "annotations": [
+                      {
+                        "type": "pen",
+                        "points": [
+                          [
+                            0.1,
+                            0.1
+                          ],
+                          [
+                            0.4,
+                            0.4
+                          ]
+                        ],
+                        "color": "#f7dc27",
+                        "width": 3
+                      }
+                    ],
+                    "videos": [],
+                    "createdAt": "2026-11-07T02:29:50.995Z",
+                    "updatedAt": "2026-11-07T02:29:51.647Z",
+                    "type": "change",
+                    "resolved": true,
+                    "annotatedId": "c69cfeaa-c90d-4619-9ac1-08be88943c0f"
+                  },
+                  "stats": {
+                    "begin": 1,
+                    "chunks": 129,
+                    "finish": 1,
+                    "bytes": 6322507,
+                    "bridgeMs": 6.900000001071021,
+                    "encodeMs": 132.30000000004657
+                  }
+                },
+                {
+                  "iteration": 1,
+                  "totalMs": 207.4000000001397,
+                  "saved": {
+                    "id": "feedback-latency",
+                    "title": "Syntetická připomínka",
+                    "description": "Výkon",
+                    "screenshotId": "synthetic-screen",
+                    "annotations": [
+                      {
+                        "type": "pen",
+                        "points": [
+                          [
+                            0.1,
+                            0.1
+                          ],
+                          [
+                            0.4,
+                            0.4
+                          ]
+                        ],
+                        "color": "#f7dc27",
+                        "width": 3
+                      }
+                    ],
+                    "videos": [],
+                    "createdAt": "2026-11-07T02:29:50.995Z",
+                    "updatedAt": "2026-11-07T02:29:52.050Z",
+                    "type": "change",
+                    "resolved": true,
+                    "annotatedId": "a4808b4c-dc84-4306-8aee-52497323c913"
+                  },
+                  "stats": {
+                    "begin": 1,
+                    "chunks": 129,
+                    "finish": 1,
+                    "bytes": 6322507,
+                    "bridgeMs": 5.70000000228174,
+                    "encodeMs": 119.20000000018626
+                  }
+                },
+                {
+                  "iteration": 2,
+                  "totalMs": 239.5,
+                  "saved": {
+                    "id": "feedback-latency",
+                    "title": "Syntetická připomínka",
+                    "description": "Výkon",
+                    "screenshotId": "synthetic-screen",
+                    "annotations": [
+                      {
+                        "type": "pen",
+                        "points": [
+                          [
+                            0.1,
+                            0.1
+                          ],
+                          [
+                            0.4,
+                            0.4
+                          ]
+                        ],
+                        "color": "#f7dc27",
+                        "width": 3
+                      }
+                    ],
+                    "videos": [],
+                    "createdAt": "2026-11-07T02:29:50.995Z",
+                    "updatedAt": "2026-11-07T02:29:52.396Z",
+                    "type": "change",
+                    "resolved": true,
+                    "annotatedId": "c7815ffe-5f13-4fa8-bed9-a694b275bb43"
+                  },
+                  "stats": {
+                    "begin": 1,
+                    "chunks": 129,
+                    "finish": 1,
+                    "bytes": 6322507,
+                    "bridgeMs": 5.500000000931323,
+                    "encodeMs": 117.80000000004657
+                  }
+                }
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "latencyProvenance": "Paired serial run on Linux Chromium: before server 2505529 on 8766, after unchanged assets tree ba7837998e8bc154cc406c040f218b3a4daefc22 on 8765, exact runner/test 361e15c, local file fixtures. Previous Buffer-transport measurements retained separately; they include protocol/trace overhead and are not app-only timings. No speed SLA or speedup claim.",
+  "nativeCI": {
+    "sha": "83fca003c6f56809d826d2f116f0ca56fc22a9dc",
+    "run": 42329076426,
+    "status": "success",
+    "xml": {
+      "suites": 43,
+      "tests": 257,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0
+    },
+    "pdf": "3 fixture ZIPs passed strict parser and independent raster checks",
+    "artifact": 13556946311
+  },
+  "firstQuickCI": {
+    "sha": "83fca00",
+    "run": 42329076418,
+    "status": "failure",
+    "oldBrowserAndSource": "PASS",
+    "practical": "PASS existing workflows and state test; latency FAIL fileChooser.setFiles timeout for 6000x4000 Buffer; quality step SKIP",
+    "fix": "361e15c local file fixture, quality always runs unless cancelled; no suppression of failure"
+  }
+}

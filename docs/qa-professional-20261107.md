@@ -140,3 +140,70 @@ testovaný head `c3a41064db8bf10d9631ea1c8e8585170c93ccdb`:
 
 Toto závěrečné doplnění mění jen dokumentaci, nikoli otestované zdroje/testy.
 Finální přehled a návazná etapa: [issue #28](https://github.com/zaplikj30-ui/Zamerovac-android/issues/28#issuecomment-6700313256).
+
+## Etapa B1 – pokračování galerie v PR #51 (7. 11. 2026)
+
+Tato část navazuje na původní QA #52 výše. **Implementace je nyní v existujícím draft [PR #51](https://github.com/zaplikj30-ui/Zamerovac-android/pull/51)**; #52 byl převzat merge commitem `2505529`, jeho větev nebyla přepsána. #49 zůstává samostatný. Výchozí main `00478e6`, následné upřesnění testovacího provozu `3de1d53` přečteno a zachováno. Uživatel nemá v aplikaci ostré zakázky; ochrana dat zde znamená požadavek na kvalitu a regresní invarianty.
+
+**Aplikační změna:** `343c172`, stejný strom assets `ba7837998e8bc154cc406c040f218b3a4daefc22` také po dalších testovacích/dokumentačních commitech. Doplňující testy `287bab1`, oprava doručení velké fixture do Playwrightu `361e15c`.
+
+- `drawItem` a jeho texty, kótovací řetězce a poznámky přijímají vlastní kontext (canvas, transformace, rozměry fotografie/výstupu, preference a režim prohlížení). Galerie, vnořené detaily, PNG a zákaznický raster už kvůli kreslení nepřepisují `current`, `ctx`, `view`, výběr ani preference editoru. Editor používá stejný renderer přes výchozí adaptér. Přesné souřadnice/hodnoty se nemění; čáry a písmo zůstávají ve výstupních pixelech.
+- Vložený popisek používá šířku skutečného výstupu místo skrytého editoru s nulovou šířkou. PNG zahrne skutečné hranice natočeného detailu **i jeho textu**. Zachována nápověda; nevydané změny jsou oddělené v katalogu historie, bez přiřazení ke staré APK či vymyšlenému budoucímu číslu.
+- Načítání dalšího snímku zneplatní starou kreslicí funkci. Generační kontrola chrání zavřenou/přepnutou galerii. Návrat přes **Upravit ke stejné fotografii** ponechá živý výběr, pohled a Undo/Redo; úmyslné otevření jiné fotografie zachovává dosavadní postup.
+- Bez změny schématu, přesných měření, ukládání, sync protokolů, oprávnění, přihlašování, podpisu, package nebo verzování APK. Žádný merge do main, žádná uživatelská ani emulátorová APK.
+
+### Provedené kontroly a jejich hranice
+
+| Kontrola | Skutečný výsledek |
+| --- | --- |
+| Nový test živých referencí **během** vnořeného vykreslení | FAIL na výchozí integraci `2505529` → PASS po oddělení kontextu; také řízená výjimka a zachování historie/dat |
+| Čitelnost galerie #52 | Původní tři scénáře PASS již na #51; po etapě **4 PASS**, nově DPR 2. Reálné glyfy, tahy, fit/zoom, 1200×800 / 6000×4000 / 1600×4800 |
+| Širší Chromium E2E | **72 PASS / 1 FAIL N4** ve 20 sadách; z toho všech původních **58 PASS**, nové stavové/gestové scénáře **2 PASS**, původní galerijní test #51 **1 PASS**, #52 pozitivní regrese **7 PASS** |
+| Samostatné browser kontroly | **7/7 PASS**, včetně 11 viewportů/orientací, dialogů a neměnných hodnot |
+| Node / syntax / registr | **27/27 skriptů PASS**, JS syntax PASS, registr 40 oblastí PASS; registr sám není důkaz všech funkcí |
+| Python místně | **45 PASS / 2 SKIP** (47 celkem; chybí `javac`) |
+| Výkonnostní průchody | **5/5 PASS před i po**, vždy 3 opakování; skutečný readback a reload. Nejde o plnění časového SLA |
+| Negativní pixelová kontrola | Na izolované kopii `343c172` ponechán `fillText` i žlutý rámeček, ale text průhledný → test **FAIL právě na glyfových pixelech** |
+| #49 kompatibilita | Dočasná kombinace `287bab1` + `a408d4b`: čisté sloučení, Node inset PASS, **5 Python inset PASS**. Do #51 není #49 začleněn; jeho větev beze změny |
+| Nativní CI bez APK | [`83fca00` / 42329076426 SUCCESS](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42329076426): ověřeno XML artefaktu, **257 testů / 43 sad, 0 FAIL/ERROR/SKIP**, kompilace, Drive konfigurace a tři nezávislé PDF parser/raster fixtures PASS |
+| První rychlé CI etapy | [42329076418 FAILURE](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42329076418): source a browser jobs PASS, dosavadní workflow + nové stavové testy PASS; velký Buffer pro `fileChooser.setFiles` překročil timeout testovacího přenosu. Následná kvalita byla SKIP, **nikoli PASS**. `361e15c` vybírá soubor z disku a vynucuje povinnou kvalitu i po předchozím selhání. Finální CI viz aktuální PR a komentáře #28 |
+| Android systémový test | Skutečný pokus `node tools/e2e/android-system.cjs` skončil `spawnSync adb ENOENT`; chybí místní SDK/adb/emulátor. **NOT RUN**, nikoli fyzický FAIL/PASS aplikace |
+
+Syntetické screenshoty galerie a PNG byly také prohlédnuty. [Strojové výsledky, přesné SHA testů a časy](../qa/evidence/professional-20261107/stage-b-results.json) uchovávají původ testovacího runneru **i serveru**; první širší běh přešel přes docs-only merge main, aplikační strom zůstal identický. [Popisek před](../qa/evidence/professional-20261107/stage-b-caption-before.png) / [po](../qa/evidence/professional-20261107/stage-b-caption-after.png) mají různý viewport, nejsou golden pixel-diff. [Skutečný PNG export natočeného detailu](../qa/evidence/professional-20261107/stage-b-rotated-export.png).
+
+### Mapa skutečně procházených akcí této etapy
+
+| Uživatelská cesta | Automatická evidence |
+| --- | --- |
+| Import fotografie → + → kóta → změna přesné hodnoty | gallery-readability, gallery-visual, quality-regressions; skutečný file input, tahy a dialog |
+| Galerie z otevřeného editoru → pinch → posun → listování → zavření/Upravit | gallery-state: kotevní pixely, reference relace, historie, SHA-256 originálu, pomalý callback po zavření |
+| Otočení/velikost displeje s dialogem, rozepsaným textem a galerií | check-orientation-browser; dataset zaznamenává skutečnou renderovací transformaci místo již nepoužívané CSS transformace |
+| Vložený detail mimo fotku → text → galerie → export PNG | update39 + gallery-state; pixely glyfů podle jejich výsledné polohy, nikoli starý pevný spodní pás bitmapy |
+| Zakázka → fotografie → poznámka → Undo/Redo → uložení → reload → editace → PNG | quality-regressions a dosavadní workflows/drawing; celé JSON a originální hashe |
+| Moje připomínky → existující záznam → rozbalit popis → Vyřešeno → dvakrát Uložit → reload | latency; skutečný formulář a kód ukládání, **model Native bridge**, nikoli Android disk |
+| Další menu, koš, import/export, sync, zálohy, nastavení | Původní sady a [existující registr](../qa/coverage-v1.json); pokrytí zůstává částečné. Skutečné IME/DocumentsUI, hardware, živý účet a OS lifecycle NOT RUN |
+
+### Odezva #53 a zakázek – skutečná baseline, bez optimalizace ukládání
+
+Linux Chromium, syntetický deterministický PNG, localStorage/IndexedDB; Native připomínek je model s potvrzením begin/append/finish. Fotografie používají stejnou cestu přes **soubor na disku** před/po; čas od automatizované volby souboru k použitelnému editoru zahrnuje režii UI automatiky. Galerie od tlačítka k hotovému canvasu. Ukládání zakázky měří potvrzený zápis **i načtení zpět**, nikoli jen stisk. Celé sekvence i jejich 3 opakování jsou v JSON.
+
+| Operace | Před – 3 výsledky (ms) | Po – 3 výsledky (ms) |
+| --- | --- | --- |
+| Fotografie 1200×800, import→editor | 218,8 / 138,3 / 189,5 | 217,7 / 147,5 / 149,8 |
+| Fotografie 6000×4000, import→editor | 1649,3 / 2218,7 / 1803,4 | 1503,4 / 1438,6 / 1542,0 |
+| Galerie u 6000×4000 | 42,8 / 27,9 / 20,9 | 25,8 / 20,9 / 22,1 |
+| Existující připomínka 320×240 | 24,6 / 18,3 / 24,4 | 17,2 / 21,2 / 19,7 |
+| Existující připomínka 1440×2800 | 259,7 / 213,6 / 237,3 | 254,8 / 207,4 / 239,5 |
+| Zakázka 50 dokumentů × 20 přesných kót, 323 518 B JSON, zápis+readback | 6,3 / 6,2 / 4,4 | 7,6 / 5,4 / 5,0 |
+
+Také 1/10 dokumentů (7 608 / 65 478 B JSON) a malé/velké fotografie po reloadu PASS. Z těchto několika běhů **nevyhlašujeme zrychlení ani hardwarový limit**. Starší měření s Buffer transportem měla výrazný rozptyl včetně ~6,9 s při prvním kódování a zůstávají v JSON odděleně; neopírat o ně závěr o výkonu aplikace.
+
+**Prokázaná trasa #53:** i pouhé opakované Vyřešeno znovu volá PNG `toBlob` a modelový `beginMediaChecked` + **129 append bloků / 6 322 507 B** + `finishMedia` (u malého 3 bloky / 123 545 B). Dvojklik publikuje jednou, seznam/readback/reload zachová stav. Je to podklad pro diagnózu, **ne prokázaná příčina ~12 s na Samsungu**. Při této etapě se kód ukládání připomínek neměnil a nezkrátilo se čekání na potvrzení zápisu. Navazující #53 má oddělit skutečný Android Bitmap/PNG, bridge, filesystem a metadata, pak teprve bezpečně zvážit opětovné použití již potvrzeného nezměněného rasteru.
+
+### Samostatná následující etapa N4 – připravené bezpečné podmínky
+
+N4 po Zrušit zůstává **FAIL**, bez cleanupu v testu i aplikaci. Nejprve navrhnout vlastníka každého importu (token dialogu/záznamu), staging a obnovitelný stav publish→potvrzení metadat. Cancel uzavře vlastníka; žádný okamžitý unlink finálního média. Před úklidem zkontrolovat odkazy živých i smazaných záznamů, `detailItems`, historie, Undo/Redo, rozpracovaných dialogů, peer outboxu a aktivních přenosů; immutable zálohy nečistit. Přerušení mezi publish a DB potvrzením musí po restartu skončit dokončením nebo bezpečně evidovanou retencí. Při nejistotě médium ponechat, failed cleanup opakovat. Přesný vnitřní journal/retenci posoudit samostatně bez neodsouhlasené změny schématu/sync.
+
+Akceptace další etapy: cancel/import/recording/pozdní callback a process restart, sdílené historické médium, Undo/Redo, failed metadata/failed unlink a retry; přesné hashe a reference musí přežít. Teprve bezpečné převzetí/retence dovolí změnit N4 na PASS. #46 fyzický picker, #47 překryv mikrofonu a přesné strany rect/area zůstávají otevřené.
+
+Nejbližší krok: cílené review rendereru a finálního CI v #51, pak uvedená samostatná mediální etapa a diagnostika #53. Podle nového upřesnění #42 lze při dalším architektonickém rozhodnutí férově porovnat pokračování B s čistším izolovaným jádrem při znovupoužití testů/komponent; **tato první etapa takový další přepis nezahajuje**. Jedna společná testovací APK až po celém schváleném balíku a kontrolách, žádný automatický merge.

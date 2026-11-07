@@ -44,3 +44,8 @@ Etapa37: BackupBlobs vlastní jen adresování/výběr ověřené immutable repa
 Etapa38: veřejnou preview registraci/parsing/signing/override hranici vlastní malý Gradle modul, runtime gate má jednotnou kontrolu ID pro SDK/UI/factory. Account flow ani datový/sync protokol se nepřepisují. Nové kontroly nemění triggers APK workflow. Připravené auditní zadání je v [audit-39-handoff.md](audit-39-handoff.md).
 
 Etapa39: aktivace potvrzeného veřejného ID nepřidává další účetní/datovou vrstvu. Stávající preview-only build hranice a společná továrna/UI používají stejnou konfiguraci; signing/package pin a default disabled ostatních variant zůstávají.
+
+
+## Etapa B1 po #39 – renderer (7. 11. 2026, PR #51)
+
+Galerie, detaily a exporty nyní předávají vlastní renderovací kontext; editor má výchozí adaptér. Vykreslení nepřepíná živý dokument/pohled/výběr, přesné body zůstávají v obrazových souřadnicích a popisky/tahy ve výstupních pixelech. Změna `343c172` nemění perzistenci, sync ani schéma. Není zaveden nový příkazový model či přepsán celý editor. [Implementace, FAIL/PASS, omezení a další hranice médií](qa-professional-20261107.md#etapa-b1--pokračování-galerie-v-pr-51-7-11-2026). #52 je koordinovaně převzat, #49 stále samostatný; N4 zůstává povinný FAIL.
