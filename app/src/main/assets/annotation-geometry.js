@@ -51,6 +51,14 @@ function quadAreaFromMeasures(item){
  return first!==null&&second!==null?(first+second)/1000000:null;
 }
 
+// B11: pure two-pointer pinch math; identity, gesture lifecycle and paint remain in editor.
+function pinchViewport(gesture,points){
+ const dist=Math.hypot(points[0].x-points[1].x,points[0].y-points[1].y);
+ const mid={x:(points[0].x+points[1].x)/2,y:(points[0].y+points[1].y)/2};
+ const zoom=Math.max(.05,Math.min(12,gesture.zoom*dist/Math.max(1,gesture.distance)));
+ return {zoom,dx:mid.x-gesture.world.x*zoom,dy:mid.y-gesture.world.y*zoom};
+}
+
 // B10: pure viewport calculations independent of live DOM/state.
 function fittedViewport(w,h,imageSize){
  const zoom=Math.min((w-24)/imageSize.w,(h-24)/imageSize.h);
@@ -237,7 +245,7 @@ function nearestEditableSegment(candidate,s,transform){
     return candidate.type==='rect'?nearest%2:nearest;
 }
 
-const api=Object.freeze({screenToWorld,worldToScreen,boundsPoint,annotationProjectPoint,fittedViewport,zoomedViewport,
+const api=Object.freeze({screenToWorld,worldToScreen,boundsPoint,annotationProjectPoint,fittedViewport,zoomedViewport,pinchViewport,
  rectCorners,quadCorners,ellipseGeometry,resizePoints,cumulativeSegment,triangleArea,quadAreaFromMeasures,snapPoint,nearestHandle,segmentLineScreen,nearestItem,nearestEditableSegment});
 root.AnnotationGeometry=api;
 if(typeof module==='object'&&module.exports)module.exports=api;

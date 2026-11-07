@@ -129,3 +129,20 @@ prstem, nulové rozměry plátna, Undo/Redo a uložené přesné hodnoty.
 algoritmus a 42 000 deterministických porovnání včetně kontroly
 neměnnosti souřadnic a transformace. Připravena společná regresní
 brána B9+B10, žádná samostatná APK ani změna technologie.
+
+## Etapa B11 – čistá matematika gesta dvěma prsty (7. 11. 2026)
+
+Výpočet přibližování/přesunu během `stageMove` pro současně dva
+doteky byl přesunut jako `AnnotationGeometry.pinchViewport(gesture,points)`.
+Editor stále vlastní pointer IDs, capture, začátek/ukončení gesta, kreslení,
+Undo/Redo i `paint`; nové jádro vrací jen `zoom/dx/dy`. Zachováváme
+historické minimum .05, maximum 12, stejné pořadí float operací,
+`Math.max(1,gesture.distance)` a kotvu `gesture.world`.
+`tests/annotation_pinch_contract.js` obsahuje předchozí nezávislou
+formuli a 42 000 deterministických shodných výsledků i kontrolu
+neměnnosti vstupů. Samostatný reálný Chromium/CDP test ve
+`tools/e2e/drawing.cjs` navíc provede skutečné dva doteky nad
+editovatelnou kótou, ověří zoom a zachování přesné kóty, Undo/Redo,
+datové persistence po reloadu i ukončení pointer capture. Android
+WebView/fyzické S Pen výsledky nelze ze simulace vyvozovat; žádná
+změna technologie, uloženého formátu, médií ani synchronizace.

@@ -109,4 +109,74 @@ function outline(result){assert(result.colored>15,'Missing colored drawing pixel
    await page.click('#editorBack');await page.reload();await page.locator('.entry-title',{hasText:title}).click();assert.deepEqual(await record(page),saved);outline(await pixels(page));
   });
  });
+ await test('two_finger_pinch_keeps_undo_redo_and_exact_measure',async({page,step,evidence})=>{
+  const title='Test přiblížení dvěma prsty';await step('Create and measure dimension',async()=>{
+   await createCanvas(page,title);await tool(page,'dimension');
+   const pts=await page.evaluate(()=>({
+    a:{x:view.dx+photoSize.w*view.zoom*.2,y:view.dy+photoSize.h*view.zoom*.25},
+    b:{x:view.dx+photoSize.w*view.zoom*.75,y:view.dy+photoSize.h*view.zoom*.65}
+   }));
+   await drag(page,pts.a,pts.b);
+   await editSelected(page);
+   await page.fill('#measureInput','1250,00000123');
+   await page.selectOption('#measureUnit','mm');
+   await page.click('#okModal');
+   assert.equal((await record(page)).measure,'1250,00000123');
+   await page.click('#undo');
+  });
+  const original=await page.evaluate(()=>({
+   items:JSON.stringify(current.items),undo:editStack.length,redo:redoStack.length,
+   zoom:view.zoom,save:localStorage.getItem('zamerovac-data')
+  }));
+  assert(original.redo>0,'Precondition: Redo must exist before pinch');
+  const frame=await page.locator('#drawCanvas').boundingBox();
+  assert(frame&&frame.width>220&&frame.height>200,'Editor canvas too small for pinch smoke');
+  const center={x:frame.x+frame.width*.5,y:frame.y+frame.height*.52};
+  const touch=(x,id)=>({id,x,y:center.y});
+  const points=[touch(center.x-55,0),touch(center.x+55,1)];
+  const cdp=await page.context().newCDPSession(page);
+  try{
+   await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[points[0]]});
+   await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:points});
+   const pinch=await page.evaluate(()=>({
+    gesture:gesture?JSON.parse(JSON.stringify(gesture)):null,
+    count:pointers.size
+   }));
+   assert.equal(pinch.count,2,'Browser must deliver two real pointers');
+   assert(pinch.gesture,'Editor must start its two-pointer gesture');
+   const moved=[touch(center.x-100,0),touch(center.x+100,1)];
+   await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:moved});
+   const currentZoom=await page.evaluate(()=>({zoom:view.zoom,dx:view.dx,dy:view.dy}));
+   assert(currentZoom.zoom>original.zoom*1.4,'Real two-finger gesture must zoom image');
+   const worldAtMid={
+    x:(center.x-frame.x-currentZoom.dx)/currentZoom.zoom,
+    y:(center.y-frame.y-currentZoom.dy)/currentZoom.zoom
+   };
+   assert(Math.abs(worldAtMid.x-pinch.gesture.world.x)<1e-7&&
+     Math.abs(worldAtMid.y-pinch.gesture.world.y)<1e-7,'Pinch must anchor original world center');
+   await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[moved[0]]});
+   await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
+  }finally{await cdp.detach()}
+  const after=await page.evaluate(()=>({
+   items:JSON.stringify(current.items),undo:editStack.length,redo:redoStack.length,
+   zoom:view.zoom,save:localStorage.getItem('zamerovac-data'),pointerCount:pointers.size
+  }));
+  assert.equal(after.items,original.items,'Pinch must never alter precise annotations');
+  assert.equal(after.undo,original.undo,'Pinch must not create Undo');
+  assert.equal(after.redo,original.redo,'Pinch must not clear Redo');
+  assert.equal(after.save,original.save,'Pinch must not write unnecessary records');
+  assert.equal(after.pointerCount,0,'Pinch must release both touch pointers');
+  await step('Redo, close and reload preserve exact original measurement',async()=>{
+   await redo(page);
+   assert.equal((await record(page)).measure,'1250,00000123');
+   await page.click('#editorBack');
+   await page.reload();
+   await page.locator('.entry-title',{hasText:title}).click();
+   assert.equal((await record(page)).measure,'1250,00000123');
+  });
+  evidence({scenario:'real two-pointer CDP input, unchanged Undo/Redo and exact saved value',
+   before:{zoom:original.zoom,undo:original.undo,redo:original.redo},
+   after:{zoom:after.zoom,undo:after.undo,redo:after.redo}});
+ });
+
 }))().catch(e=>{console.error(e);process.exitCode=1});
