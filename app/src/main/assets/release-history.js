@@ -13,7 +13,8 @@ const unreleasedChanges={title:'Rozpracováno – dosud nevydáno',groups:[{kind
  {text:'Klepnutí, nepatrný pohyb prstu, neúspěšné přichycení a přiblížení dvěma prsty již nemažou možnost Znovu ani nevytvářejí prázdné kroky v historii. Skutečný tah se uloží také při přerušení gesta.'},
  {text:'Vysypání koše chrání sdílené originály i při odkazech uložených ve starším JSON objektu jako text a při opakovaném úklidu po restartu.'},
  {text:'Hloubka historických odkazů na přílohy je nyní omezená pro celý průchod, včetně vnořeného JSON uloženého jako text. Neověřitelná historie vysypání koše bezpečně zastaví bez odstranění originálů.'},
- {text:'Uložení a smazání vyřešených připomínek nyní potvrzujeme až po ověřeném zápisu seznamu do zařízení. Při chybě úložiště rozpracovaná připomínka zůstane otevřená a nepotvrzené změny se neoznačí jako uložené.'}
+ {text:'Uložení a smazání vyřešených připomínek nyní potvrzujeme až po ověřeném zápisu seznamu do zařízení. Při chybě úložiště rozpracovaná připomínka zůstane otevřená a nepotvrzené změny se neoznačí jako uložené.'},
+ {text:'Během asynchronního ukládání obrázkové připomínky nelze nechtěně zavřít editor ani přejít do seznamu; pozdní dokončení jiné editační relace neuloží nesprávný záznam.'}
 ]}]};
 // Exact 1.2.153 test-release notes; available only to matching installed versions.
 // Automated verification is not physical acceptance of Google, Bosch or the devices.

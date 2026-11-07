@@ -9,6 +9,7 @@ assert(help.chapters.find(c=>c.id==='trash')?.notes.some(s=>s.includes('starší
 assert(help.chapters.find(c=>c.id==='trash')?.notes.some(s=>s.includes('nepřiměřeně zanořená')),'Trash help must explain fail-closed history check');
 assert(help.chapters.find(x=>x.id==='undo')?.notes.some(x=>x.includes('nevytvoří krok historie')&&x.includes('Znovu')),'Undo/Redo gesture preservation must be explained');
 assert(help.chapters.find(c=>c.id==='trouble')?.steps.some(s=>s.includes('rozpracovaná připomínka zůstane otevřená')),'Troubleshooting must explain retry after failed feedback save');
+assert(help.chapters.find(c=>c.id==='trouble')?.steps.some(s=>s.includes('Android Zpět')&&s.includes('bezpečně odmítnou')),'Busy feedback navigation must be documented');
 assert.equal(new Set(help.chapters.map(x=>x.id)).size,help.chapters.length,'Unique stable help chapter identifiers');
 for(const chapter of help.chapters){
  assert(chapter.title&&chapter.intro&&chapter.steps.length>0&&chapter.notes.length>0,chapter.id+' must be practical and qualified');

@@ -70,6 +70,8 @@
  flag.addEventListener('contextmenu',e=>{e.preventDefault();clearTimeout(longTimer);drag=null;showReportList()});
  let overlay=null,active=null,busy=false;
  function closeOverlay(){
+  // Keep the editable report until slow PNG/storage writes have finished.
+  if(busy&&active){notify('Probíhá ukládání připomínky. Nejdřív jej dokonči.');return}
   if(overlay)overlay.remove();overlay=null;active=null;flag.hidden=false;
  }
  function makeOverlay(markup){
@@ -199,7 +201,10 @@
    '</div><div class="feedback-foot"><button id="feedbackCancel" class="outline">Zavřít</button><button id="feedbackSave" class="primary">Uložit připomínku</button></div>');
   overlay.querySelector('#feedbackClose').onclick=closeOverlay;
   overlay.querySelector('#feedbackCancel').onclick=closeOverlay;
-  overlay.querySelector('#feedbackToList').onclick=showReportList;
+  overlay.querySelector('#feedbackToList').onclick=()=>{
+   if(busy){notify('Probíhá ukládání připomínky. Nejdřív jej dokonči.');return}
+   showReportList();
+  };
   overlay.querySelector('#feedbackTitle').value=report.title||'';
   overlay.querySelector('#feedbackDescription').value=report.description||'';
   overlay.querySelector('#feedbackType').value=report.type||'change';
@@ -422,7 +427,8 @@
  }
  async function saveReport(){
   if(!active||busy)return;
-  const r=active.report;
+  const editing=active;
+  const r=editing.report;
   r.type=overlay.querySelector('#feedbackType').value;
   r.title=overlay.querySelector('#feedbackTitle').value.trim().slice(0,130);
   r.description=overlay.querySelector('#feedbackDescription').value.trim();
@@ -439,11 +445,13 @@
      r.annotatedId===stored.annotatedId&&r.screenshotId===stored.screenshotId&&
      JSON.stringify(r.annotations||[])===JSON.stringify(stored.annotations||[]));
    if(!reuseRaster&&active.canvas&&active.image){
-    const blob=await new Promise(ok=>active.canvas.toBlob(ok,'image/png'));
+    const blob=await new Promise(ok=>editing.canvas.toBlob(ok,'image/png'));
+    if(editing!==active)throw new Error('Editor připomínky se během ukládání změnil');
     if(!blob)throw new Error('Vykreslený snímek se nepodařilo vytvořit');
     if(native){
      const id=makeId();
      const bytes=new Uint8Array(await blob.arrayBuffer());
+     if(editing!==active)throw new Error('Editor připomínky se během ukládání změnil');
      if(!Native.beginMediaChecked(id,'image/png','oznacena-chyba.png',bytes.length))throw new Error('Snímek nelze připravit');
      for(let off=0;off<bytes.length;off+=48*1024){
       const part=bytes.subarray(off,off+48*1024);
@@ -454,6 +462,7 @@
      r.annotatedId=id;
     }
    }
+   if(editing!==active)throw new Error('Editor připomínky se během ukládání změnil');
    const i=reports.findIndex(x=>x.id===r.id);
    const nextReports=reports.slice();
    if(i>=0)nextReports[i]=r;else nextReports.push(r);
