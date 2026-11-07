@@ -101,13 +101,13 @@ Uživatel schválil nové rozdělení práce kvůli rychlému vyčerpání týde
 | Práce | Výchozí odpovědnost |
 | --- | --- |
 | Čtení issues, PR, GitHub, CI; plánování, rozhodnutí, nálezy, dokumentace, nápověda, hodnocení | ChatGPT |
-| Menší izolované opravy, pokud je lze bezpečně změnit i testovat dostupnými nástroji | ChatGPT |
-| Složitý kód editoru/geometrie, ukládání, přílohy, synchronizace, nativní Android a iterace testů | Codex |
+| Menší a středně složité oddělitelné opravy, pokud je lze skutečně změnit a dostatečně ověřit | ChatGPT |
+| Složité provázané změny editoru/geometrie, ukládání, příloh, synchronizace, nativního Androidu a iterace testů | Codex |
 | Rozsáhlejší samostatná vícekroková analýza souborů, jen pokud skutečně zlepší výsledek | Work |
 | Automatické regresní testy | Existující infrastruktura/CI, průběžně v rámci příslušné implementace |
-| Nezávislé vyhodnocení a koordinace jediné APK | ChatGPT s důkazy z CI a fyzického testování |
+| Nezávislá kontrola změn a koordinace jediné APK | Přednostně jiný kontrolor než autor změny + CI; ChatGPT koordinuje, fyzické testy zvlášť |
 
-**Před předáním Codexu** ChatGPT zkontroluje aktuální repozitář a rozpracovanou práci, připraví jediné konkrétní české zadání s odkazy a akceptačními testy. Požadovat dokončitelnou etapu, ne opakované široké audity. Codex před změnou sám ověří aktuální HEAD a pravidla. Výsledky, skutečnou spotřebu kreditů (pokud je dostupná) a testy využít k dalšímu rozdělení. Kreditový ceník **není zárukou ceny celé aktualizace**.
+**Před předáním Codexu** ChatGPT nejprve posoudí, zda může danou opravu samo naprogramovat a otestovat; jinak zkontroluje aktuální repozitář a rozpracovanou práci a připraví jediné konkrétní české zadání s odkazy a akceptačními testy. Požadovat dokončitelnou etapu, ne opakované široké audity. Codex před změnou sám ověří aktuální HEAD a pravidla. Výsledky, skutečnou spotřebu kreditů (pokud je dostupná) a testy využít k dalšímu rozdělení. Kreditový ceník **není zárukou ceny celé aktualizace**.
 
 **Checkpoint 7. 11. 2026:** týdenní limit Codexu uživatele vyčerpán; nákup resetu nebyl nabídnut v dostupném rozhraní, placené kredity jsou alternativou, ale žádný nákup ani automatické dobíjení nejsou schválené. [Draft PR #51](https://github.com/zaplikj30-ui/Zamerovac-android/pull/51) zůstává rozpracované a **nebylo sloučeno**; N4 stále FAIL a Android emulátorový průchod neprokázal úplnou fyzickou akceptaci. Pokračovat nezávislou koordinací a bezpečnými úpravami mimo rozpracovanou větev; Codex naváže po dostupnosti limitu, pokud by nebyl schválen nákup. **Nevydávat další APK nyní.**
 
