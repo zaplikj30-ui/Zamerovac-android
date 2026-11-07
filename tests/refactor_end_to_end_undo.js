@@ -39,6 +39,7 @@ const app={
 vm.createContext(app);
 vm.runInContext(asset('annotation-geometry.js'),app);
 vm.runInContext(asset('annotation-selection.js'),app);
+vm.runInContext(asset('annotation-translation.js'),app);
 app.worldToScreen=p=>app.AnnotationGeometry.worldToScreen(p,app.view);
 app.screenToWorld=p=>app.AnnotationGeometry.screenToWorld(p,app.view);
 app.boundsPoint=p=>app.AnnotationGeometry.boundsPoint(p,app.photoSize);

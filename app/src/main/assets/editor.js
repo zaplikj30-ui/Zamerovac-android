@@ -671,27 +671,19 @@ if(['polyline','chain','cumulative','angle'].includes(mode)&&polylineDraft.lengt
   }
   if(selectedHandle.kind==='move-polyline'){
      if(selectedHandle.dragged){
-      const dx=(s.x-selectedHandle.startScreen.x)/view.zoom;
-      const dy=(s.y-selectedHandle.startScreen.y)/view.zoom;
-      const points=selectedHandle.startPoints;
-      const minX=Math.min(...points.map(p=>p.x)),maxX=Math.max(...points.map(p=>p.x));
-      const minY=Math.min(...points.map(p=>p.y)),maxY=Math.max(...points.map(p=>p.y));
-      const shiftX=Math.max(-minX,Math.min(dx,photoSize.w-maxX));
-      const shiftY=Math.max(-minY,Math.min(dy,photoSize.h-maxY));
-      selectedHandle.item.points=points.map(p=>({x:p.x+shiftX,y:p.y+shiftY}));
-      selectedHandle.item.a={...selectedHandle.item.points[0]};
-      selectedHandle.item.b={...selectedHandle.item.points[selectedHandle.item.points.length-1]};
+      const delta={x:s.x-selectedHandle.startScreen.x,y:s.y-selectedHandle.startScreen.y};
+      const translated=AnnotationTranslation.translatedPolyline(selectedHandle.startPoints,delta,view,photoSize);
+      selectedHandle.item.points=translated.points;
+      selectedHandle.item.a=translated.a;
+      selectedHandle.item.b=translated.b;
      }
      magnifierPoint=null;
   }else if(selectedHandle.kind==='move-dimension'){
     if(selectedHandle.dragged){
-      const a=selectedHandle.startA,b=selectedHandle.startB;
-      // Uchopení uprostřed posune oba konce společně. Zachovat délku a směr.
-      // Neprovádět magnet na jednom konci, který by změnil geometrii celé kóty.
-      const dx=Math.max(-Math.min(a.x,b.x),Math.min((s.x-selectedHandle.startScreen.x)/view.zoom,photoSize.w-Math.max(a.x,b.x)));
-      const dy=Math.max(-Math.min(a.y,b.y),Math.min((s.y-selectedHandle.startScreen.y)/view.zoom,photoSize.h-Math.max(a.y,b.y)));
-      selectedHandle.item.a={x:a.x+dx,y:a.y+dy};
-      selectedHandle.item.b={x:b.x+dx,y:b.y+dy};
+      const delta={x:s.x-selectedHandle.startScreen.x,y:s.y-selectedHandle.startScreen.y};
+      const translated=AnnotationTranslation.translatedEndpoints(selectedHandle.startA,selectedHandle.startB,delta,view,photoSize);
+      selectedHandle.item.a=translated.a;
+      selectedHandle.item.b=translated.b;
     }
     magnifierPoint=null;
   }else if(selectedHandle.kind==='shape-resize'){
