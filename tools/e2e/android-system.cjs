@@ -3,7 +3,7 @@
 // No Native mock and no extra framework. Missing CDP/IME evidence is a failure,
 // never a successful screenshot-only smoke. Creates synthetic records only.
 const {execFileSync}=require('node:child_process'),fs=require('node:fs'),path=require('node:path');
-const {chromium}=require('playwright');
+const {_android:android}=require('playwright');
 const {assert,createCanvas,tool,drag,editSelected}=require('./harness.cjs');
 const out=path.resolve('emulator-results/system-dialogs');fs.mkdirSync(out,{recursive:true});
 const report={syntheticOnly:true,layer:'real-android-webview-and-adb',cases:[]};
@@ -17,7 +17,7 @@ function ime(){
 }
 function picker(){return /mResumedActivity[^\n]*(?:documentsui|DocumentsActivity)/i.test(adb('shell','dumpsys','activity','activities'))}
 (async()=>{
- let browser,page;
+ let device,page;
  const run=async(name,body)=>{
   const entry={name,status:'running'};report.cases.push(entry);
   try{await body();entry.status='PASS';console.log('PASS android-system/'+name)}
@@ -33,9 +33,13 @@ function picker(){return /mResumedActivity[^\n]*(?:documentsui|DocumentsActivity
    // Debuggable preview WebView >=113 exposes this endpoint automatically.
    const sockets=adb('shell','cat','/proc/net/unix');
    assert(sockets.includes('@webview_devtools_remote_'+pid),'NOT RUN: preview WebView has no debugging endpoint; IME/picker gate cannot be verified');
-   adb('forward','tcp:9222','localabstract:webview_devtools_remote_'+pid);
-   browser=await chromium.connectOverCDP('http://127.0.0.1:9222');
-   page=browser.contexts()[0]?.pages()[0];assert(page,'Real WebView page missing');page.setDefaultTimeout(7000);
+   // WebView rejects Browser.setDownloadBehavior/context management used by a
+   // desktop connectOverCDP session. Use the Android adapter already shipped
+   // in this pinned Playwright, which connects through the same real adb.
+   const devices=await android.devices();
+   device=devices.find(d=>d.serial().startsWith('emulator-'));assert(device,'Real Android emulator missing');
+   const webview=await device.webView({pkg:'cz.zamerovac.app.preview'});
+   page=await webview.page();assert(page,'Real WebView page missing');page.setDefaultTimeout(7000);
    assert(await page.evaluate(()=>typeof Native==='object'&&native),'Must use the real Android bridge');
    if(await page.locator('#modal').isVisible()){
     if(await page.locator('#cancelModal').isVisible())await page.click('#cancelModal');
@@ -75,5 +79,5 @@ function picker(){return /mResumedActivity[^\n]*(?:documentsui|DocumentsActivity
    adb('shell','input','keyevent','4');await until(async()=>!(await page.locator('#modal').isVisible()));
    assert.equal(picker(),false);assert.equal(await page.evaluate(id=>current.items.find(i=>i.id===id).media.length,noteId),1,'Cancelled system selection must not attach another file');
   });
- }finally{if(browser)await browser.close();try{adb('forward','--remove','tcp:9222')}catch{}}
+ }finally{if(device)await device.close()}
 })().catch(e=>{console.error(e);process.exitCode=1});
