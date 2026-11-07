@@ -691,20 +691,9 @@ if(['polyline','chain','cumulative','angle'].includes(mode)&&polylineDraft.lengt
     const item=selectedHandle.item,index=selectedHandle.pointIndex;
     const origin=worldToScreen(selectedHandle.startPoint);
     const target=boundsPoint(screenToWorld({x:origin.x+s.x-selectedHandle.startScreen.x,y:origin.y+s.y-selectedHandle.startScreen.y}));
-    if(item.type==='area'){
-     const points=quadCorners(item).map(p=>({...p}));
-     points[index]=target;item.points=points;item.a={...points[0]};item.b={...points[2]};
-    }else if(item.type==='rect'){
-     const corners=rectCorners(item),opposite=corners[(index+2)%4];
-     item.a={x:Math.min(target.x,opposite.x),y:Math.min(target.y,opposite.y)};
-     item.b={x:Math.max(target.x,opposite.x),y:Math.max(target.y,opposite.y)};
-    }else{
-     const g=ellipseGeometry(item);let rx=g.rx,ry=g.ry;
-     if(item.type==='circle'){const radius=Math.max(1,index<2?Math.abs(target.x-g.cx):Math.abs(target.y-g.cy));rx=radius;ry=radius;}
-     else if(index<2)rx=Math.max(1,Math.abs(target.x-g.cx));
-     else ry=Math.max(1,Math.abs(target.y-g.cy));
-     item.a={x:g.cx-rx,y:g.cy-ry};item.b={x:g.cx+rx,y:g.cy+ry};
-    }
+    const resized=AnnotationResize.resizedShape(item,index,target,AnnotationGeometry);
+    if(resized.points)item.points=resized.points;
+    item.a=resized.a;item.b=resized.b;
    }
    if(selectedHandle.dragged){
     const item=selectedHandle.item;

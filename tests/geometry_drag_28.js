@@ -18,7 +18,7 @@ function scenario(item,selected=true){
   editStack:[],redoStack:[],undo:0,commits:0,edits:0,console,Math,Number,String,window:{},
   boundsPoint:p=>({x:Math.max(0,Math.min(1000,p.x)),y:Math.max(0,Math.min(800,p.y))})
  };
- vm.createContext(env);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-geometry.js','utf8'),env);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-selection.js','utf8'),env);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-translation.js','utf8'),env);vm.runInContext(src.slice(a,b),env);
+ vm.createContext(env);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-geometry.js','utf8'),env);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-selection.js','utf8'),env);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-translation.js','utf8'),env);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-resize.js','utf8'),env);vm.runInContext(src.slice(a,b),env);
  function pointer(method,x,y){
    env.pointerEvent={x,y,pointerId:1,button:0,preventDefault(){}};
    vm.runInContext('stage'+method+'(pointerEvent)',env);
@@ -43,4 +43,16 @@ v=scenario(cross);
 v.pointer('Down',160,130);v.pointer('Move',190,160);v.pointer('Up',190,160);
 assert.deepEqual(cross.a,{x:100,y:100},'Target marker stays while label moves');
 assert.deepEqual(cross.b,{x:190,y:160},'Target label independent movement');
-console.log('OK: independent four polygon corners, circle contour grip and target caption');
+// B7: rectangle crossing its opposite corner and ellipse X/Y independent axis.
+const rect={id:'rect',type:'rect',a:{x:100,y:100},b:{x:300,y:300},measure:'1720,000001'};
+v=scenario(rect);
+v.pointer('Down',100,100);v.pointer('Move',350,370);v.pointer('Up',350,370);
+assert.deepEqual(rect.a,{x:300,y:300});assert.deepEqual(rect.b,{x:350,y:370});
+assert.equal(rect.measure,'1720,000001','Rect drag must not modify exact user value');
+const ellipse={id:'ellipse',type:'ellipse',a:{x:100,y:100},b:{x:300,y:200},measure:'550,000001'};
+v=scenario(ellipse);
+v.pointer('Down',100,150);v.pointer('Move',60,150);v.pointer('Up',60,150);
+assert.equal(ellipse.a.x,60);assert.equal(ellipse.b.x,340);
+assert.equal(ellipse.a.y,100);assert.equal(ellipse.b.y,200);
+assert.equal(ellipse.measure,'550,000001');
+console.log('OK: quad, circle, target plus B7 rect and ellipse size changes preserve precise values');
