@@ -6,6 +6,7 @@ const root=path.resolve(__dirname,'..');
 const history=require('../app/src/main/assets/release-history.js');
 assert(JSON.stringify(history.unreleasedChanges).includes('dosud nevydáno'));
 assert(JSON.stringify(history.unreleasedChanges).includes('nevytvářejí prázdné kroky v historii'),'Gesture history fix must remain unreleased until a real APK is published');
+assert(JSON.stringify(history.unreleasedChanges).includes('starším JSON objektu'),'N4 retention fix must stay unreleased until its tests pass');
 const versions=history.releases.map(x=>x.version);
 assert.deepEqual(versions,['1.3.0','1.2.153','1.2.152','1.2.151','1.2.150','1.2.149','1.2.148','1.2.147','1.2','1.1']);
 assert.equal(new Set(versions).size,versions.length,'Version entries may not duplicate');

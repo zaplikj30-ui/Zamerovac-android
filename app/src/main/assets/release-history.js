@@ -10,7 +10,8 @@ const unreleasedChanges={title:'Rozpracováno – dosud nevydáno',groups:[{kind
  {text:'Galerie překresluje kóty, čáry a hodnoty v rozlišení displeje i při přiblížení. Prohlížení ani export nemění výběr a historii otevřeného editoru; návrat přes Upravit ke stejné fotografii zachová rozpracovanou práci.'},
  {text:'Popisky vložených fotografií používají šířku skutečného výstupu. PNG zahrnuje také natočený detail a jeho text mimo původní fotografii.'},
  {text:'Převzaté opravy poznámek a laseru: Undo obnoví původní text, přehrávání hlasu nevyžaduje textový fokus a druhý přesný odečet se neztratí při shodném zaokrouhlení.'},
- {text:'Klepnutí, nepatrný pohyb prstu, neúspěšné přichycení a přiblížení dvěma prsty již nemažou možnost Znovu ani nevytvářejí prázdné kroky v historii. Skutečný tah se uloží také při přerušení gesta.'}
+ {text:'Klepnutí, nepatrný pohyb prstu, neúspěšné přichycení a přiblížení dvěma prsty již nemažou možnost Znovu ani nevytvářejí prázdné kroky v historii. Skutečný tah se uloží také při přerušení gesta.'},
+ {text:'Vysypání koše chrání sdílené originály i při odkazech uložených ve starším JSON objektu jako text a při opakovaném úklidu po restartu.'}
 ]}]};
 // Exact 1.2.153 test-release notes; available only to matching installed versions.
 // Automated verification is not physical acceptance of Google, Bosch or the devices.
