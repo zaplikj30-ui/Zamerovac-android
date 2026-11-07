@@ -5,6 +5,7 @@ const path=require('node:path');
 const root=path.resolve(__dirname,'..');
 const help=require('../app/src/main/assets/help.js');
 assert.equal(help.chapters.length,25,'Every approved guide area needs a chapter');
+assert(help.chapters.find(x=>x.id==='undo')?.notes.some(x=>x.includes('nevytvoří krok historie')&&x.includes('Znovu')),'Undo/Redo gesture preservation must be explained');
 assert.equal(new Set(help.chapters.map(x=>x.id)).size,help.chapters.length,'Unique stable help chapter identifiers');
 for(const chapter of help.chapters){
  assert(chapter.title&&chapter.intro&&chapter.steps.length>0&&chapter.notes.length>0,chapter.id+' must be practical and qualified');

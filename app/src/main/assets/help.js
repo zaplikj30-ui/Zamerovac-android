@@ -278,6 +278,7 @@ const chapters=[
     ],
     "notes": [
       "Vrácení úpravy není plnohodnotná záloha celé zakázky; pro přenos dat slouží ZIP.",
+      "Pouhé označení kóty, drobný pohyb prstu nebo přiblížení dvěma prsty nevytvoří krok historie ani nesmaže možnost Znovu. Skutečné posunutí či změna velikosti se ukládá jako jeden vratný krok, také při přerušení gesta.",
       "Zobrazovací nastavení vrstev nepřepisuje původní fotografie."
     ],
     "keywords": [
