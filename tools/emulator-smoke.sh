@@ -16,6 +16,11 @@ adb shell wm size 1080x2340
 adb shell wm density 420
 adb shell input keyevent 82 || true
 adb logcat -c || true
+collect_diagnostics() {
+  timeout 20s adb shell dumpsys activity activities > "$OUT/activity-final.txt" || true
+  timeout 20s adb logcat -d -v time > "$OUT/logcat.txt" || true
+}
+trap collect_diagnostics EXIT
 adb install -r -t "$APK" | tee "$OUT/install.txt"
 adb shell am start -W -n "$PACKAGE/$ACTIVITY" | tee "$OUT/start.txt"
 sleep 12
@@ -62,6 +67,25 @@ PY
 }
 snap 01_domovska_obrazovka
 dump_ui 01_domovska_obrazovka
+# The cold CI image can show a System UI ANR over an otherwise started app.
+# Recover that OS dialog once using its real Wait action. Never dismiss an ANR
+# naming Zaměřovač, and retain the original screenshot/XML as environment evidence.
+if python3 - "$OUT/01_domovska_obrazovka.xml" <<'PY'
+import sys,xml.etree.ElementTree as ET
+try:
+    nodes=ET.parse(sys.argv[1]).getroot().iter('node')
+    found=any('System UI' in n.get('text','') and 'respond' in n.get('text','') for n in nodes)
+except Exception:
+    found=False
+sys.exit(0 if found else 1)
+PY
+then
+  echo 'ENV: Cold-boot System UI ANR; choosing Wait once, not closing the app.' | tee -a "$OUT/summary.txt"
+  if ! tap_text 'Wait'; then exit 1; fi
+  sleep 5
+  snap 01_po_system_ui_wait
+  dump_ui 01_po_system_ui_wait
+fi
 # A fresh preview opens its release notes. Dismiss only an existing visible
 # close control, then use the actual accessible add button rather than pixels.
 if tap_text 'Zavřít'; then sleep 1; fi
