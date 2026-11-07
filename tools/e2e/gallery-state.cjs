@@ -1,4 +1,5 @@
 'use strict';
+const fs=require('node:fs'),path=require('node:path');
 const {suite,assert,chooseFiles,tool,drag,editSelected}=require('./harness.cjs');
 async function photo(page){
  const buffer=Buffer.from(await page.evaluate(()=>{
@@ -11,7 +12,7 @@ async function photo(page){
  await page.fill('#measureInput','1585,800001');await page.click('#okModal');
 }
 suite('gallery-state',async test=>{
- await test('render_is_read_only_even_during_nested_drawing_and_failure',async({page,evidence})=>{
+ await test('render_is_read_only_even_during_nested_drawing_and_failure',async({page,evidence,directory})=>{
   await photo(page);
   await page.evaluate(()=>{
    // Nested fixture exercises the same renderer as saved detail photographs.
@@ -42,7 +43,32 @@ suite('gallery-state',async test=>{
   assert.equal(await page.evaluate(()=>current.items[0].measure),'1585,800001');
   await page.evaluate(()=>{observed=[];window.__customerExport.render(current,{notes:true,dimensions:true,drawing:true})});
   await page.waitForFunction(()=>observed.length>0);assert(await page.evaluate(()=>observed.every(Boolean)),'Customer export also leaves live editor state untouched');
-  evidence({duringRenderUnchanged:true,exceptionPreservesState:true,nestedExactValue:'987,000001'});
+  await page.evaluate(()=>{
+   const fill=CanvasRenderingContext2D.prototype.fillText;
+   CanvasRenderingContext2D.prototype.fillText=function(text,x,y,max){
+    const result=fill.call(this,text,x,y,max);
+    if(text==='Detail mimo fotografii'&&this.canvas!==stageCanvas){
+     const p=this.getTransform().transformPoint({x,y}),m=this.measureText(text);
+     window.exportCaption={x:p.x,y:p.y,w:Math.min(m.width,max||m.width),h:parseFloat(this.font.match(/[\d.]+px/)[0])};
+    }return result;
+   };
+  });
+  const exportBefore=await page.evaluate(()=>JSON.stringify({state,view,selected,editStack,redoStack}));
+  await page.click('#editorTopMenu');await page.getByText('Exportovat obrázek nebo PDF',{exact:true}).click();
+  const downloadPromise=page.waitForEvent('download');await page.click('#exportPng');
+  const output=path.join(directory,'rotated-inset-with-caption.png');await(await downloadPromise).saveAs(output);
+  const png=await page.evaluate(async data=>{
+   const image=new Image();image.src=data;await image.decode();
+   const c=document.createElement('canvas');c.width=image.width;c.height=image.height;const x=c.getContext('2d');x.drawImage(image,0,0);
+   const s=exportCaption,left=Math.floor(s.x-s.w/2),top=Math.floor(s.y-s.h/2);
+   if(left<0||top<0||s.x+s.w/2>=c.width||s.y+s.h/2>=c.height)return {clipped:true};
+   const bytes=x.getImageData(left,top,Math.ceil(s.w),Math.ceil(s.h)).data;let yellow=0;
+   for(let i=0;i<bytes.length;i+=4)if(bytes[i]>180&&bytes[i+1]>150&&bytes[i+2]<100)yellow++;
+   return {yellow,width:c.width,height:c.height};
+  },'data:image/png;base64,'+fs.readFileSync(output).toString('base64'));
+  assert(!png.clipped&&png.yellow>30,'PNG must include actual caption glyphs outside the rotated inset');
+  assert.equal(await page.evaluate(()=>JSON.stringify({state,view,selected,editStack,redoStack})),exportBefore);
+  evidence({duringRenderUnchanged:true,exceptionPreservesState:true,nestedExactValue:'987,000001',png});
  });
  await test('gestures_navigation_stale_load_and_exact_anchor_pixels',async({page,evidence})=>{
   await photo(page);

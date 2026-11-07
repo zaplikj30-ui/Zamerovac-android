@@ -1,7 +1,7 @@
 'use strict';
 // Measurements, not invented speed limits. Native timings below are a JS bridge
 // model; Android filesystem/Bitmap/IME/CPU measurements still require Android.
-const {suite,assert,chooseFiles}=require('./harness.cjs');
+const {suite,assert,chooseFiles,createCanvas,tool,drag,editSelected}=require('./harness.cjs');
 const nativeStorage=require('./native-storage-fixture.cjs');
 async function png(page,w,h){return Buffer.from(await page.evaluate(([w,h])=>{
  const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d'),p=x.createImageData(w,h);
@@ -9,6 +9,25 @@ async function png(page,w,h){return Buffer.from(await page.evaluate(([w,h])=>{
  x.putImageData(p,0,0);return c.toDataURL().split(',')[1];
 },[w,h]),'base64')}
 suite('latency',async test=>{
+ await test('project_1_10_50_editable_documents',async({page,evidence})=>{
+  await createCanvas(page,'Syntetická zakázka');await tool(page,'dimension');await drag(page,{x:100,y:240},{x:450,y:320});await editSelected(page);
+  await page.fill('#measureInput','1585,800001');await page.click('#okModal');
+  const samples=await page.evaluate(()=>{
+   const template=JSON.parse(JSON.stringify(current)),folder=newRecord('folder','Zakázka – baseline'),rows=[];
+   for(const count of [1,10,50]){
+    state.records=[folder,...Array.from({length:count},(_,i)=>({...template,id:'latency-document-'+i,parentId:folder.id,
+     items:Array.from({length:20},(_,j)=>({...template.items[0],id:'dimension-'+i+'-'+j}))}))];
+    for(let iteration=0;iteration<3;iteration++){
+     const start=performance.now();if(!save())throw Error('project save failed');
+     const text=localStorage.getItem('zamerovac-data'),disk=JSON.parse(text);
+     if(disk.records.length!==count+1||disk.records.at(-1).items[19].measure!=='1585,800001')throw Error('project readback mismatch');
+     rows.push({count,iteration,itemsPerDocument:20,jsonBytes:new TextEncoder().encode(text).length,confirmedSaveReadbackMs:performance.now()-start});
+    }
+   }return rows;
+  });
+  await page.reload();assert.equal(await page.evaluate(()=>state.records.length),51);
+  evidence({platform:'Linux Chromium/localStorage; synthetic hierarchy and exact editable dimensions',samples});
+ });
  for(const size of [[1200,800],[6000,4000]])await test('photo_and_gallery_'+size.join('x'),async({page,evidence})=>{
   const bytes=await png(page,...size),samples=[];
   for(let i=0;i<3;i++){

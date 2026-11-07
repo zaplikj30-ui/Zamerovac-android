@@ -10,8 +10,8 @@ const note={id:'note-1',type:'note',a:{x:100,y:100},media:['detail-1'],
  insetWidth:120,insetX:140,insetY:150,insetRotation:0};
 const sandbox={
  window:{__detailPhotoCache:{'detail-1':{complete:true,naturalWidth:100,naturalHeight:100}},isRecordLocked:()=>false},
- stageCanvas,current:{id:'photo',items:[note]},photoSize:{w:350,h:350},
- view:{zoom:1,dx:0,dy:0},screen:'editor',mode:'select',selected:null,prefs:{fontSize:17},
+ stageCanvas,current:{id:'photo',items:[note]},photoSize:{w:350,h:350},prefs:{fontSize:17},
+ view:{zoom:1,dx:0,dy:0},screen:'editor',mode:'select',selected:null,
  worldToScreen:p=>({...p}),screenToWorld:p=>({...p}),eventPoint:e=>({x:e.x,y:e.y}),
  boundsPoint:p=>({...p}),setTool:k=>{sandbox.mode=k},
  paint:()=>{},commitEditor:()=>{sandbox.commits++},checkpoint:()=>{},editStack:[],commits:0,
