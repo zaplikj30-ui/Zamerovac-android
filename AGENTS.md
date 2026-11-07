@@ -16,6 +16,15 @@ Uživatel vyrábí zakázkový nábytek. Vyvíjíme vlastní Android aplikaci na
 - **Model a kredity:** Doporučit jen skutečně dostupný model a úroveň přemýšlení; náročnější použít, pokud přínos pro kvalitu ospravedlňuje spotřebu. Nepředstírat přesný převod kreditů na programovací úkol. Samostatně nespouštět nákup ani automatické dobíjení. Při vyčerpání týdenního limitu lze pokračovat v kontrole a malých bezpečných změnách mimo rozpracované větve; neblokovat celý projekt a nepředávat Codexu rozsáhlou práci, která zůstane nedokončená.
 - **Testy nesmějí být obětí úspor:** Cílené testy průběžně, kombinované testy návazností, širší regrese před jedinou společnou testovací APK. Automatické/simulované/fyzické testy vždy odlišit; bez úspěšného ověření netvrdit, že je oprava hotová.
 
+### Praktické omezení spotřeby Codexu – 7. 11. 2026
+
+- Před zadáním vybrat **nejmenší smysluplný rozsah**, očekávaný výstup a relevantní již známé důkazy (konkrétní soubory, issue, PR, neúspěšný test); neposílat kvůli jedné chybě znovu všeobecný audit celé aplikace.
+- Reuse aktuálních GitHub podkladů a předchozího checkpointu, ale **nepřeskočit povinné načtení pravidel a ověření HEAD/CI**. Pokud důkazy chybí, Codex musí provést potřebnou diagnostiku – šetření nesmí založit opravu na domněnce.
+- V prvním průchodu reprodukovat problém a spustit dotčené cílené testy; širší relevantní regresi provést při dokončení balíku, před merge a před jedinou APK. **Neomezovat testy ukládání, přesnosti nebo dat jen kvůli tokenům.**
+- Nepřikazovat opakované zdlouhavé skenování nezměněného repozitáře ani zbytečně dlouhé průběžné reporty. Výsledek má být stručný: změny, důkazy, PASS/FAIL/SKIP/NOT RUN, otevřená rizika, odkazy; podrobný log ponechat v CI/PR.
+- Preferovat menší dokončitelné kroky se zachovanou kontinuitou v existujícím issue/PR. Nerozbíjet atomickou bezpečnostní opravu jen pro úsporu. Jakmile blokuje limit či infrastruktura, zapsat konkrétní checkpoint a přerušit bez předstírání dokončení.
+- Model, úroveň přemýšlení a skutečnou spotřebu vyhodnocovat podle **ověřené dostupnosti a reálných výsledků**, nikoli podle nedoloženého univerzálního tvrzení, že vyšší režim vždy spotřebuje přesný násobek.
+
 Tato změna je **jen rozdělení práce a limitů**; sama neautorizuje přepis, merge PR, novou technologii, změnu chování ani vydání APK.
 
 ## NEPŘEHLÉDNOUT – aplikace je dosud pouze testovací (uživatel opakovaně potvrdil 7. 11. 2026)
