@@ -64,6 +64,26 @@ jobs:
           done
           echo "::error::Systémový obraz se nepodařilo stáhnout ani po čtyřech pokusech."
           exit 1
+      - name: Připravit prokázaně potřebné místo pro testovací Android disk
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p emulator-results
+          SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
+          test -n "$SDK"
+          # This is an ephemeral Actions runner. Java/WebView tests use neither
+          # .NET nor the Android NDK; keep the SDK, Java, Gradle and all app data.
+          df -h . | tee emulator-results/disk-before.txt
+          sudo du -sh /usr/share/dotnet /usr/lib/dotnet "$SDK/ndk" 2>/dev/null || true
+          sudo rm -rf -- /usr/share/dotnet /usr/lib/dotnet "$SDK/ndk"
+          df -h . | tee emulator-results/disk-after.txt
+          # Emulator 37.2 required 7373 MB even when disk-size=2048M was set.
+          # Check actual capacity after system-image installation, with headroom.
+          AVAILABLE_KB=$(df --output=avail -k . | tail -1 | tr -d ' ')
+          if [ "$AVAILABLE_KB" -lt 8388608 ]; then
+            echo '::error::Android AVD needs at least 8 GiB free after installing its image.'
+            exit 1
+          fi
       - name: Spustit Android emulátor a ověřit Zaměřovač
         uses: reactivecircus/android-emulator-runner@v2
         with:
@@ -71,9 +91,6 @@ jobs:
           target: google_apis
           arch: x86_64
           profile: pixel_6
-          # The hosted runner had 2867 MB free; the profile default requested
-          # 7373 MB and exited before boot. This is a synthetic test AVD only.
-          disk-size: 2048M
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
           disable-animations: true
           script: |

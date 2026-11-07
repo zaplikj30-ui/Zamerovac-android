@@ -3695,5 +3695,13 @@
     "artifacts": [],
     "fix": "Existing action disk-size 2048M and -no-snapshot; retry planned",
     "userAPKRelease": false
+  },
+  "emulatorRetry": {
+    "sha": "bcf0647",
+    "run": 42331223641,
+    "status": "failure-before-app-boot",
+    "error": "AVD config got 2048M, but emulator still required 7372.80 MB with 2866.93 MB free",
+    "functionalAndroidCases": "NOT RUN",
+    "fix": "Free only unused .NET/NDK tools on ephemeral CI runner; check >=8 GiB after image install; retain -no-snapshot"
   }
 }
