@@ -42,6 +42,7 @@ function runShape(type,shape,from,to,check){
  ctx.worldToScreen=p=>ctx.AnnotationGeometry.worldToScreen(p,ctx.view);
  ctx.screenToWorld=p=>ctx.AnnotationGeometry.screenToWorld(p,ctx.view);
  ctx.boundsPoint=p=>ctx.AnnotationGeometry.boundsPoint(p,ctx.photoSize);
+ ctx.resizePoints=item=>ctx.AnnotationGeometry.resizePoints(item);
  vm.runInContext(code,ctx);
  function event(name,p){ctx['stage'+name]({x:p.x,y:p.y,pointerId:1,button:0,preventDefault(){}})}
  event('Down',from);event('Up',from); // selection, not data edit
