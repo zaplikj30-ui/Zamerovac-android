@@ -74,4 +74,31 @@ assert.equal(JSON.stringify(item()),afterRedo,'2px tap jitter must not mutate ge
 assert.equal(app.editStack.length,1,'Jitter must not add undo entry');
 assert.equal(app.saves,3,'Real commit+undo+redo saved, selection itself did not save');
 assert.equal(app.opens,0,'First-tap selection never opens edit dialog');
-console.log('PASS: B1-B5 actual select/drag/undo/redo/jitter preserve exact stored data');
+// B6: integrated polyline drag and complete Undo/Redo through real editor handlers.
+const polyline={id:'poly-1',type:'polyline',
+ points:[{x:100,y:100},{x:280,y:100},{x:280,y:260}],
+ a:{x:100,y:100},b:{x:280,y:260},
+ measure:'1585,800001',segmentData:[{measure:'120,000001',unit:'mm'}]};
+app.current.items=[polyline];app.selected=null;app.editStack=[];app.redoStack=[];
+const beforePolylineSaves=app.saves;
+// Selection stores the active segment index before checkpointing the drag.
+// Record that selection state as the baseline; it is not a geometry change.
+event('Down',190,100);event('Up',190,100);
+const beforePolyline=JSON.stringify(app.current.items[0]);
+event('Down',190,100);event('Move',250,150);event('Up',250,150);
+assert.deepEqual(polyline.points.map(p=>[p.x,p.y]),[[160,150],[340,150],[340,310]]);
+assert.deepEqual(polyline.a,{x:160,y:150});assert.deepEqual(polyline.b,{x:340,y:310});
+assert.equal(polyline.measure,'1585,800001');
+assert.equal(polyline.segmentData[0].measure,'120,000001');
+assert.equal(app.editStack.length,1,'One checkpoint for complete polyline drag');
+assert.equal(app.saves,beforePolylineSaves+1,'Selection did not persist; drag did');
+const afterPolyline=JSON.stringify(app.current.items[0]);
+app.undoEditor();
+assert.equal(JSON.stringify(app.current.items[0]),beforePolyline,'Polyline Undo restores pre-drag model');
+app.redoEditor();
+assert.equal(JSON.stringify(app.current.items[0]),afterPolyline,'Polyline Redo restores exact polyline');
+app.selected=null;
+event('Down',250,150);event('Move',252,151);event('Up',252,151);
+assert.equal(JSON.stringify(app.current.items[0]),afterPolyline,'Tap jitter cannot move polyline');
+assert.equal(app.editStack.length,1,'Tap jitter must not add history');
+console.log('PASS: B1-B6 dimension and polyline, actual drag/Undo/Redo, precise saved values and jitter');
