@@ -67,6 +67,7 @@ suite('latency',async test=>{
    HTMLCanvasElement.prototype.toBlob=function(callback,...args){const start=performance.now();return original.call(this,b=>{mediaStats.encodeMs+=performance.now()-start;callback(b)},...args)};
   });
   const samples=[];
+  let firstRasterId=null;
   for(let i=0;i<3;i++){
    await page.evaluate(()=>window.__openFeedbackList());await page.click('[data-feedback-edit="feedback-latency"]');
    await page.waitForFunction(([w,h])=>{const c=document.querySelector('#feedbackCanvas');return c?.width===w&&c?.height===h},size);
@@ -81,7 +82,22 @@ suite('latency',async test=>{
      resolve({totalMs:performance.now()-start,saved,stats:Object.fromEntries(Object.entries(mediaStats).map(([k,v])=>[k,v-before[k]]))});
     });watch.observe(document.body,{childList:true,subtree:true});button.click();button.click();
    }));
-   assert.equal(result.saved.resolved,true);assert.equal(result.saved.screenshotId,'synthetic-screen');assert.equal(result.stats.finish,1,'Double click must publish only once');
+   assert.equal(result.saved.resolved,true);
+   assert.equal(result.saved.screenshotId,'synthetic-screen');
+   assert.ok(result.saved.annotatedId,'Annotated original must stay linked');
+   // Legacy reports without an annotatedId get one PNG on first save.
+   // After that, status-only edits must reuse it and do zero re-encoding/uploads.
+   const expectedUploads=i===0?1:0;
+   assert.equal(result.stats.begin,expectedUploads,'Unexpected media staging for status-only edit');
+   assert.equal(result.stats.finish,expectedUploads,'Double click or reuse caused an unexpected media publish');
+   if(i===0)firstRasterId=result.saved.annotatedId;
+   else{
+    assert.equal(result.saved.annotatedId,firstRasterId,'Status-only edit replaced original annotated screenshot');
+    assert.equal(result.stats.chunks,0,'Unchanged annotation must not reupload chunks');
+    assert.equal(result.stats.bytes,0,'Unchanged annotation must not send raster over the Android bridge');
+   }
+   assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('zamerovac-feedback-v1')).length),1,
+    'Double click must not duplicate feedback records');
    samples.push({iteration:i,...result});
   }
   await page.reload();await page.evaluate(()=>window.__openFeedbackList());assert.equal(await page.locator('[data-feedback-edit]').count(),1);
