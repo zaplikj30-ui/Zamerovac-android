@@ -41,6 +41,10 @@ function picker(){return /mResumedActivity[^\n]*(?:documentsui|DocumentsActivity
    const webview=await device.webView({pkg:'cz.zamerovac.app.preview'});
    page=await webview.page();assert(page,'Real WebView page missing');page.setDefaultTimeout(7000);
    assert(await page.evaluate(()=>typeof Native==='object'&&native),'Must use the real Android bridge');
+   const windows=adb('shell','dumpsys','window','windows');
+   fs.writeFileSync(path.join(out,'windows-before-ui.txt'),windows);
+   assert(!/mCurrentFocus=Window\{[^\n]*Application Not Responding/i.test(windows),
+    'NOT VERIFIED: a native ANR dialog blocks device input; see windows-before-ui.txt');
    if(await page.locator('#modal').isVisible()){
     if(await page.locator('#cancelModal').isVisible())await page.click('#cancelModal');
     else await page.click('#okModal'); // Read-only release notes hide Cancel.
