@@ -67,7 +67,7 @@ adb shell input tap 66 2205
 sleep 2
 snap 02_nabidka_pridat
 dump_ui 02_nabidka_pridat
-if tap_text 'Nové plátno'; then
+if tap_text 'Nový náčrt'; then
   sleep 2
   snap 03_zalozeni_platna
   dump_ui 03_zalozeni_platna
@@ -94,13 +94,16 @@ if tap_text 'Nové plátno'; then
       snap 08_lupa_vlevo
       wait "$drag_pid" || true
     else
-      echo "INFO: Nelze otevřít nově vytvořené plátno přes přístupnost." | tee -a "$OUT/summary.txt"
+      echo "FAIL: Nelze otevřít nově vytvořené plátno přes přístupnost." | tee -a "$OUT/summary.txt"
+      exit 1
     fi
   else
-    echo "INFO: Nové plátno se nepodařilo uložit přes přístupnost." | tee -a "$OUT/summary.txt"
+    echo "FAIL: Nové plátno se nepodařilo uložit přes přístupnost." | tee -a "$OUT/summary.txt"
+    exit 1
   fi
 else
-  echo "INFO: Nové plátno se v přístupnosti nenašlo; snímky menu jsou k dispozici." | tee -a "$OUT/summary.txt"
+  echo "FAIL: Nový náčrt se v přístupnosti nenašel; postup nebyl proveden." | tee -a "$OUT/summary.txt"
+  exit 1
 fi
 adb shell dumpsys activity activities > "$OUT/activity-final.txt" || true
 adb logcat -d -v time > "$OUT/logcat.txt" || true
@@ -113,4 +116,4 @@ if ! adb shell pidof "$PACKAGE" >/dev/null; then
   echo "CHYBA: Aplikace není spuštěná." | tee -a "$OUT/summary.txt"
   exit 1
 fi
-echo "OK: Aplikace běží v emulátoru, snímky a logy jsou uložené." | tee -a "$OUT/summary.txt"
+echo "PASS: Smoke procesu a průchod do editoru. IME/picker ověřuje až android-system.cjs; samotné snímky nejsou funkční PASS." | tee -a "$OUT/summary.txt"

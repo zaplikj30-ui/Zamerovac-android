@@ -80,7 +80,7 @@
    }else{
     if(!Array.isArray(item.segmentData))item.segmentData=[];
     const segment=item.segmentData[index]||{measure:'',text:'',unit:'mm'};
-    if(segment.measure===text&&segment.unit===segmentUnit){notify('Bosch: hodnota už je u ramene');return true}
+    if(segment.measure===text&&segment.unit===segmentUnit&&segment.laserMeasuredMm===String(reading.millimeters)){notify('Bosch: hodnota už je u ramene');return true}
     checkpoint();item.segmentData[index]={...segment,measure:text,unit:segmentUnit,laserMeasuredMm:String(reading.millimeters)};
     commitEditor();
     const input=$(item.type==='angle'?'angleLength'+index:'segmentMeasure'+index);
@@ -101,7 +101,7 @@
    const index=Math.min(item.points.length-2,Math.max(0,Number(item.activeSegmentIndex)||0));
    if(!Array.isArray(item.segmentData))item.segmentData=[];
    const segment=item.segmentData[index]||{measure:'',text:'',unit:destUnit};
-   if(segment.measure===result&&segment.unit===destUnit){
+   if(segment.measure===result&&segment.unit===destUnit&&segment.laserMeasuredMm===String(reading.millimeters)){
     notify('Bosch: naměřený rozměr už je u úseku '+(index+1));return true;
    }
    checkpoint();
@@ -115,7 +115,7 @@
    notify('✓ Bosch: '+result+' '+destUnit+' zapsáno do úseku '+(index+1));
    return true;
   }
-  if(item.measure===result&&item.unit===destUnit){
+  if(item.measure===result&&item.unit===destUnit&&item.laserMeasuredMm===String(reading.millimeters)){
    notify('Bosch: '+result+' '+destUnit+' už je u vybrané kóty');
    return true;
   }
