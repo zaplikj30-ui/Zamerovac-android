@@ -421,9 +421,16 @@
   busy=true;
   const saveBtn=overlay.querySelector('#feedbackSave');saveBtn.disabled=true;saveBtn.textContent='Ukládám…';
   try{
-   if(active.canvas&&active.image){
+   // Text/status-only edits reuse the already confirmed annotated image.
+   // Re-rasterize if the source, annotations or saved image reference changed.
+   const stored=reports.find(x=>x.id===r.id);
+   const reuseRaster=!!(stored&&validId(stored.annotatedId)&&
+     r.annotatedId===stored.annotatedId&&r.screenshotId===stored.screenshotId&&
+     JSON.stringify(r.annotations||[])===JSON.stringify(stored.annotations||[]));
+   if(!reuseRaster&&active.canvas&&active.image){
     const blob=await new Promise(ok=>active.canvas.toBlob(ok,'image/png'));
-    if(blob&&native){
+    if(!blob)throw new Error('Vykreslený snímek se nepodařilo vytvořit');
+    if(native){
      const id=makeId();
      const bytes=new Uint8Array(await blob.arrayBuffer());
      if(!Native.beginMediaChecked(id,'image/png','oznacena-chyba.png',bytes.length))throw new Error('Snímek nelze připravit');
