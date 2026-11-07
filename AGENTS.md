@@ -48,6 +48,13 @@ Tento bod není pokyn spustit nový přepis ani sestavit APK. Kontrolní mechani
 
 Před zavedením nové technologie či významnější funkce vždy posoudit její kompatibilitu se stávajícím kódem a daty, závislosti na ostatních modulech, bezpečný postup výměny/rozšíření, návrat při neúspěchu a kombinované testy starého i nového chování. Preferovat jasně vymezené a vyměnitelné části, dokumentované a verzované datové formáty a oddělení společných pravidel od Android/Windows/iOS. Nesmí se měnit rozměry, ztrácet originály, zakázky ani editovatelnost. **Nenabírat technologie jen proto, že jsou nové**; vybrat je podle skutečného dlouhodobého přínosu. Pokud zjištěná architektura bezpečné rozšiřování neumožňuje, navrhnout cílené nebo případně větší přepracování s testy, porovnáním variant a schválením rozsahu.
 
+**Praktický postup, kterým snižujeme náklady a riziko budoucí výměny technologie (7. 11. 2026):**
+1. **Při dnešním vývoji** držet přesné hodnoty, jednotky, geometrii, ID objektů, editovatelné anotace a pravidla ukládání mimo konkrétní obrazovku, renderer a API telefonu. Nové části mají jasně vymezené vstupy/výstupy; nedělat závislosti na globálním stavu, pokud se jim lze rozumně vyhnout.
+2. **Udržovat ověřitelné kontrakty a testy:** výchozí syntetická data, původní fotografie, přesné laserové hodnoty, souřadnice, Undo/Redo, import/export, historie, synchronizace a obnovení po chybě. Při změně technologie musí stejný scénář ověřit starou i novou implementaci včetně skutečných pixelů a dotyků, ne jen úspěšné kompilace.
+3. **Před každým zásadním technologickým rozhodnutím** podle rozhodovací brány výše zkontrolovat podporu Android/Windows/iOS/iPadOS, výkonnost i slabších zařízení, bezpečnost, převzetí funkčního kódu/testů, skutečné náklady a rizika. Změnu navrhnout jen při podloženém přínosu; výběr a rozsah zásadní migrace schvaluje uživatel.
+4. **Pokud ke změně dojde:** nejprve malý reprezentativní prototyp nebo oddělený modul, potom postupná náhrada s regresními a chybovými testy, měřením odezvy, možností bezpečného návratu a kontrolou kompatibility dat. Nikdy nepřepisovat celý systém souběžně s rozpracovaným PR naslepo; skutečná fyzická kontrola zůstává samostatnou bránou.
+5. **Realistické očekávání:** cílem je omezit zbytečně rozsáhlý přepis a počet chyb, **nikoli slíbit bezchybný nebo levný přechod za všech okolností**. Pokud je starý a nový renderer zásadně odlišný, část UI a testů může vyžadovat novou implementaci; uvést to před schválením.
+
 **Stav:** pracovní pravidlo; žádný okamžitý přechod frameworku, změna kódu ani vydání APK.
 
 ### Výhledová nezávislost na technologiích, promítání a vzdálený tisk (5. 11. 2026)
