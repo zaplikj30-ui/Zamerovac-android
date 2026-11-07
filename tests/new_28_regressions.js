@@ -14,7 +14,7 @@ const editor=fs.readFileSync(base+'editor.js','utf8');
 const a=editor.indexOf('function rectCorners(item){'),b=editor.indexOf('function drawItem(',a);
 assert(a>=0&&b>a);
 const ctx={worldToScreen:x=>x,Math,Number,String,console};
-vm.createContext(ctx);vm.runInContext(editor.slice(a,b),ctx);
+vm.createContext(ctx);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-geometry.js','utf8'),ctx);vm.runInContext(editor.slice(a,b),ctx);
 const rect={type:'rect',a:{x:10,y:20},b:{x:200,y:300}};
 assert.equal(ctx.rectCorners(rect).length,4);
 const area={type:'area',points:[{x:10,y:20},{x:200,y:20},{x:200,y:300},{x:10,y:300}]};

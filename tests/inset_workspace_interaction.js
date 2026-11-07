@@ -20,7 +20,7 @@ const sandbox={
  native:false,Native:{},document:{createElement:()=>({})},
  console,
 };
-vm.createContext(sandbox);
+vm.createContext(sandbox);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-geometry.js','utf8'),sandbox);
 const editorSource=fs.readFileSync('app/src/main/assets/editor.js','utf8');
 vm.runInContext(editorSource.slice(editorSource.indexOf('function annotationProjectPoint('),editorSource.indexOf('function drawItem(')),sandbox);
 vm.runInContext(fs.readFileSync('app/src/main/assets/inset-workspace.js','utf8'),sandbox);

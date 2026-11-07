@@ -33,7 +33,7 @@ const sandbox={
  openRichNote:()=>{throw Error('Creating an empty note must not open a modal')},
  checkpoints:0,commits:0,edits:0,ids:0,console
 };
-vm.createContext(sandbox);
+vm.createContext(sandbox);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-geometry.js','utf8'),sandbox);
 vm.runInContext(methods,sandbox);
 function pointer(method,x,y){
  const e={x,y,button:0,pointerId:1,preventDefault(){}};

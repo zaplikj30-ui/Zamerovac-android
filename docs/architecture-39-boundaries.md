@@ -49,3 +49,20 @@ Etapa39: aktivace potvrzeného veřejného ID nepřidává další účetní/dat
 ## Etapa B1 po #39 – renderer (7. 11. 2026, PR #51)
 
 Galerie, detaily a exporty nyní předávají vlastní renderovací kontext; editor má výchozí adaptér. Vykreslení nepřepíná živý dokument/pohled/výběr, přesné body zůstávají v obrazových souřadnicích a popisky/tahy ve výstupních pixelech. Změna `343c172` nemění perzistenci, sync ani schéma. Není zaveden nový příkazový model či přepsán celý editor. [Implementace, FAIL/PASS, omezení a další hranice médií](qa-professional-20261107.md#etapa-b1--pokračování-galerie-v-pr-51-7-11-2026). #52 je koordinovaně převzat, #49 stále samostatný; N4 zůstává povinný FAIL.
+
+## Etapa B2 – geometrie bez editorových globálů (rozpracovaná větev z B1, 7. 11. 2026)
+
+Nový `annotation-geometry.js` obsahuje čisté výpočty převodu screen/world, hranic obrázku,
+čtyřúhelníků, kruhu/elipsy, kumulativních úseček a plochy ze známých stran/úhlopříčky.
+`editor.js` zachovává původní veřejné názvy jako tenké adaptéry na tento modul, tedy
+nezmění výchozí gesta, renderovací kontext B1 ani uložené `schema:1`. Číselné hodnoty,
+jednotky a souřadnice nejsou zaokrouhlovány; originály médií ani synchronizace se nemění.
+Modul se načítá před `editor.js`. Existující VM interakční testy používají stejné API
+v izolovaném kontextu; nový `tests/annotation_geometry_contract.js` hlídá kontrakt
+samostatného výpočtu, neporušené hodnoty a nezávislost na Androidu.
+
+**Integrace / důkazy:** lokální syntaktické a deterministické srovnání starých a vytažených
+funkcí ještě není náhradou všech regresních Node/Python/Playwright/JVM/Android testů.
+N4 a Android System UI ANR z B1 tím nejsou vyřešeny. Větev vzniká přímo z
+`ac23d1a`, původní PR #51 se nemění; žádný merge, nový PR, automatický Actions
+běh ani APK pouze kvůli této etapě.

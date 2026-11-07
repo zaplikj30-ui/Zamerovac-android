@@ -57,10 +57,10 @@ window.addEventListener('resize',resizeEditor);
 function fitImage(){let w=stageCanvas.clientWidth,h=stageCanvas.clientHeight;if(!w||!h)return;view.zoom=Math.min((w-24)/photoSize.w,(h-24)/photoSize.h);view.dx=(w-photoSize.w*view.zoom)/2;view.dy=(h-photoSize.h*view.zoom)/2;paint()}
 function initialImageView(){fitImage();const p=centerPoint();zoomAt(1.15,p.x,p.y)}
 function zoomAt(factor,x,y){let before=screenToWorld({x,y});view.zoom=Math.min(12,Math.max(.05,view.zoom*factor));view.dx=x-before.x*view.zoom;view.dy=y-before.y*view.zoom;paint()}
-function screenToWorld(p){return {x:(p.x-view.dx)/view.zoom,y:(p.y-view.dy)/view.zoom}}
-function worldToScreen(p){return {x:p.x*view.zoom+view.dx,y:p.y*view.zoom+view.dy}}
+function screenToWorld(p){return AnnotationGeometry.screenToWorld(p,view)}
+function worldToScreen(p){return AnnotationGeometry.worldToScreen(p,view)}
 function eventPoint(e){let r=stageCanvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top}}
-function boundsPoint(p){return{x:Math.max(0,Math.min(photoSize.w,p.x)),y:Math.max(0,Math.min(photoSize.h,p.y))}}
+function boundsPoint(p){return AnnotationGeometry.boundsPoint(p,photoSize)}
 // Magnetické přichytávání není vazba: výsledek se přepočítává z aktuální
 // polohy prstu. Vždy musí zbýt prostor mezi magnetickými zónami pro uvolnění.
 function snap(p,ref=null,ignore=null){
@@ -274,56 +274,20 @@ function readableSegmentAngle(a,b){
  return angle;
 }
 function drawArrow(c,point,to,size=10){let a=Math.atan2(point.y-to.y,point.x-to.x);c.beginPath();c.moveTo(point.x,point.y);c.lineTo(point.x-size*Math.cos(a-.48),point.y-size*Math.sin(a-.48));c.moveTo(point.x,point.y);c.lineTo(point.x-size*Math.cos(a+.48),point.y-size*Math.sin(a+.48));c.stroke()}
-function rectCorners(item){
- const a=item.a||{x:0,y:0},b=item.b||a;
- const x1=Math.min(a.x,b.x),x2=Math.max(a.x,b.x),y1=Math.min(a.y,b.y),y2=Math.max(a.y,b.y);
- return [{x:x1,y:y1},{x:x2,y:y1},{x:x2,y:y2},{x:x1,y:y2}];
-}
-function quadCorners(item){return item.type==='area'&&item.points?.length===4?item.points:rectCorners(item)}
-function ellipseGeometry(item){
- const a=item.a||{x:0,y:0},b=item.b||a;
- const cx=(a.x+b.x)/2,cy=(a.y+b.y)/2,rx=Math.abs(a.x-b.x)/2;
- const ry=item.type==='circle'?rx:Math.abs(a.y-b.y)/2;
- return {cx,cy,rx:Math.max(1,rx),ry:Math.max(1,ry)};
-}
-function resizePoints(item){
- if(item.type==='area')return quadCorners(item);
- if(item.type==='rect')return rectCorners(item);
- if(item.type==='circle'||item.type==='ellipse'){
-   const {cx,cy,rx,ry}=ellipseGeometry(item);
-   return [{x:cx-rx,y:cy},{x:cx+rx,y:cy},{x:cx,y:cy-ry},{x:cx,y:cy+ry}];
- }
- return null;
-}
-function cumulativeSegment(item,index,transform=view){
- const pts=item.points||[];
- if(pts.length<2)return null;
- const origin=annotationProjectPoint(pts[0],transform),first=annotationProjectPoint(pts[1],transform);
- const dx=first.x-origin.x,dy=first.y-origin.y,d=Math.hypot(dx,dy)||1;
- const ux=dx/d,uy=dy/d;
- const point=annotationProjectPoint(pts[index+1]||pts[1],transform);
- const distance=(point.x-origin.x)*ux+(point.y-origin.y)*uy;
- return {from:origin,to:{x:origin.x+ux*distance,y:origin.y+uy*distance}};
-}
-function triangleArea(a,b,c){
- const v=[a,b,c].map(x=>Number(String(x||'').replace(',','.')));
- if(v.some(x=>!Number.isFinite(x)||x<=0))return null;
- const p=(v[0]+v[1]+v[2])/2;
- const t=p*(p-v[0])*(p-v[1])*(p-v[2]);
- return t>0?Math.sqrt(t):null;
-}
-function quadAreaFromMeasures(item){
- const sides=item.sideMeasures||[],diag=item.diagonal||'';
- const first=triangleArea(sides[0],sides[1],diag),second=triangleArea(sides[2],sides[3],diag);
- return first!==null&&second!==null?(first+second)/1000000:null;
-}
+function rectCorners(item){return AnnotationGeometry.rectCorners(item)}
+function quadCorners(item){return AnnotationGeometry.quadCorners(item)}
+function ellipseGeometry(item){return AnnotationGeometry.ellipseGeometry(item)}
+function resizePoints(item){return AnnotationGeometry.resizePoints(item)}
+function cumulativeSegment(item,index,transform=view){return AnnotationGeometry.cumulativeSegment(item,index,transform)}
+function triangleArea(a,b,c){return AnnotationGeometry.triangleArea(a,b,c)}
+function quadAreaFromMeasures(item){return AnnotationGeometry.quadAreaFromMeasures(item)}
 // Unitless captions hide only the suffix; item.unit remains unchanged for measurements.
 function measureDisplay(value,unit,hideUnit=false){
  const text=String(value??'');
  return !text||hideUnit?text:text+' '+(unit||'mm');
 }
 // Each view owns its transform and canvas. Rendering never swaps editor globals.
-function annotationProjectPoint(p,transform){return {x:p.x*transform.zoom+transform.dx,y:p.y*transform.zoom+transform.dy}}
+function annotationProjectPoint(p,transform){return AnnotationGeometry.annotationProjectPoint(p,transform)}
 function annotationRenderContext(c,options={}){
  return {ctx:c,view:{...view},photoSize:{...photoSize},
   viewport:{w:stageCanvas.clientWidth,h:stageCanvas.clientHeight},prefs,selected,

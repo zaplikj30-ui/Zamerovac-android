@@ -9,7 +9,7 @@ const env={view:{zoom:.25,dx:40,dy:80},prefs:{unit:'mm',color:'#f7dc27',lineWidt
  photoSize:{w:1400,h:900},stageCanvas:{clientWidth:600,clientHeight:900},selected:null,window:{},
  canvasText:(...args)=>labels.push(args),drawArrow(){},Math,Number,String,
  worldToScreen:p=>({x:p.x*env.view.zoom+env.view.dx,y:p.y*env.view.zoom+env.view.dy})};
-vm.createContext(env);
+vm.createContext(env);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-geometry.js','utf8'),env);
 vm.runInContext(part('function readableSegmentAngle(', 'function drawArrow(')+part('function rectCorners(', 'function drawLoupe('),env);
 for(const type of ['circle','ellipse']){
  operations.length=0;

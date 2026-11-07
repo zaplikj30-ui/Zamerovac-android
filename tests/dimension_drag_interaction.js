@@ -27,7 +27,7 @@ const ctx={
  touch:()=>{},editItem:()=>{ctx.edits++},setTool:k=>{ctx.mode=k},
  checkpoints:0,commits:0,edits:0,console
 };
-vm.createContext(ctx);
+vm.createContext(ctx);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-geometry.js','utf8'),ctx);
 vm.runInContext(code.join('\n'),ctx);
 function pointer(name,x,y){
  ctx.pointerEvent={x,y,pointerId:1,button:0,preventDefault(){}};
