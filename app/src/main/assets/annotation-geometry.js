@@ -51,8 +51,50 @@ function quadAreaFromMeasures(item){
  return first!==null&&second!==null?(first+second)/1000000:null;
 }
 
+// Pick a grip using only the candidate items and screen/world transform.
+function nearestHandle(point,items,transform,onlyItem=null){
+ // Slightly widen the middle move zone while retaining precise endpoint grips.
+ const endpointFraction=.27;
+ let best=null,dist=31;
+ for(const item of items||[]){
+  if(onlyItem&&item!==onlyItem)continue;
+  if(['polyline','chain','cumulative','angle'].includes(item.type)&&Array.isArray(item.points)&&item.points.length>1){
+   item.points.forEach((vertex,index)=>{
+    const p=worldToScreen(vertex,transform),d=Math.hypot(point.x-p.x,point.y-p.y);
+    const endpointZone=[item.points[index-1],item.points[index+1]].filter(Boolean).every(neighbor=>{
+     const q=worldToScreen(neighbor,transform),dx=q.x-p.x,dy=q.y-p.y;
+     return ((point.x-p.x)*dx+(point.y-p.y)*dy)/(dx*dx+dy*dy||1)<=endpointFraction;
+    });
+    if(endpointZone&&d<dist){best={item,key:'points',point:vertex,pointIndex:index,kind:'point'};dist=d}
+   });continue;
+  }
+  if(item.type==='freehand')continue;
+  const corners=resizePoints(item);
+  if(corners){
+   corners.forEach((vertex,index)=>{
+    const p=worldToScreen(vertex,transform),d=Math.hypot(point.x-p.x,point.y-p.y);
+    if(d<dist){best={item,key:'shape',point:vertex,pointIndex:index,kind:'shape-resize'};dist=d}
+   });
+   continue;
+  }
+  if(item.type==='target')continue;
+  for(const key of ['a','b'])if(item[key]&&!(item.type==='note'&&key==='b')){
+   const p=worldToScreen(item[key],transform),d=Math.hypot(point.x-p.x,point.y-p.y);
+   const other=item[key==='a'?'b':'a'];
+   let endpointZone=true;
+   if(other&&['dimension','chain','cumulative','line','arrow','angle'].includes(item.type)){
+    const q=worldToScreen(other,transform),dx=q.x-p.x,dy=q.y-p.y;
+    const t=((point.x-p.x)*dx+(point.y-p.y)*dy)/(dx*dx+dy*dy||1);
+    endpointZone=t<=endpointFraction;
+   }
+   if(endpointZone&&d<dist){best={item,key,point:item[key],kind:'point'};dist=d}
+  }
+ }
+ return best;
+}
+
 const api=Object.freeze({screenToWorld,worldToScreen,boundsPoint,annotationProjectPoint,
- rectCorners,quadCorners,ellipseGeometry,resizePoints,cumulativeSegment,triangleArea,quadAreaFromMeasures});
+ rectCorners,quadCorners,ellipseGeometry,resizePoints,cumulativeSegment,triangleArea,quadAreaFromMeasures,nearestHandle});
 root.AnnotationGeometry=api;
 if(typeof module==='object'&&module.exports)module.exports=api;
 })(typeof globalThis!=='undefined'?globalThis:this);

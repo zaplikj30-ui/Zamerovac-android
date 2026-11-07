@@ -66,3 +66,17 @@ funkcí ještě není náhradou všech regresních Node/Python/Playwright/JVM/An
 N4 a Android System UI ANR z B1 tím nejsou vyřešeny. Větev vzniká přímo z
 `ac23d1a`, původní PR #51 se nemění; žádný merge, nový PR, automatický Actions
 běh ani APK pouze kvůli této etapě.
+
+## Etapa B3 – bezstavové vyhledávání úchopů (navazuje na B2, 7. 11. 2026)
+
+Z `editor.js` byla izolována původní geometrie `nearestHandle` do čistého
+`AnnotationGeometry.nearestHandle(point,items,transform,onlyItem)`.
+Editor zachovává původní kompatibilní signaturu; funkce dostává konkrétní seznam
+objektů a transformaci namísto čtení živého `current` a `view`.
+Nemění se 31px prahová vzdálenost, podíl krajního úchopu 0,27,
+pořadí kandidátů, reference na editovatelný objekt ani uložené hodnoty.
+Kontrola přímého porovnání původní/nové funkce nad 15200 případy
+proběhla v dostupném izolovaném V8. Samostatný regresní test je
+`tests/annotation_grip_geometry.js`; úplné Node, Chromium a Android testy
+ještě nebyly znovu spuštěny, N4 zůstává známý FAIL. Samostatná navazující
+větev z B2 bez PR a Actions; původní Codex B1 ani B2 se nemění.

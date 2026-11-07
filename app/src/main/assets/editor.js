@@ -540,44 +540,7 @@ function nearestLabel(point){
   return null;
 }
 function nearestHandle(point,onlyItem=null){
- // Slightly widen the middle move zone while retaining precise endpoint grips.
- const endpointFraction=.27;
- let best=null,dist=31;
- for(const item of current.items||[]){
-  if(onlyItem&&item!==onlyItem)continue;
-  if(['polyline','chain','cumulative','angle'].includes(item.type)&&Array.isArray(item.points)&&item.points.length>1){
-   item.points.forEach((vertex,index)=>{
-    const p=worldToScreen(vertex),d=Math.hypot(point.x-p.x,point.y-p.y);
-    const endpointZone=[item.points[index-1],item.points[index+1]].filter(Boolean).every(neighbor=>{
-     const q=worldToScreen(neighbor),dx=q.x-p.x,dy=q.y-p.y;
-     return ((point.x-p.x)*dx+(point.y-p.y)*dy)/(dx*dx+dy*dy||1)<=endpointFraction;
-    });
-    if(endpointZone&&d<dist){best={item,key:'points',point:vertex,pointIndex:index,kind:'point'};dist=d}
-   });continue;
-  }
-  if(item.type==='freehand')continue;
-  const corners=typeof resizePoints==='function'?resizePoints(item):null;
-  if(corners){
-   corners.forEach((vertex,index)=>{
-    const p=worldToScreen(vertex),d=Math.hypot(point.x-p.x,point.y-p.y);
-    if(d<dist){best={item,key:'shape',point:vertex,pointIndex:index,kind:'shape-resize'};dist=d}
-   });
-   continue;
-  }
-  if(item.type==='target')continue;
-  for(const key of ['a','b'])if(item[key]&&!(item.type==='note'&&key==='b')){
-   const p=worldToScreen(item[key]),d=Math.hypot(point.x-p.x,point.y-p.y);
-   const other=item[key==='a'?'b':'a'];
-   let endpointZone=true;
-   if(other&&['dimension','chain','cumulative','line','arrow','angle'].includes(item.type)){
-    const q=worldToScreen(other),dx=q.x-p.x,dy=q.y-p.y;
-    const t=((point.x-p.x)*dx+(point.y-p.y)*dy)/(dx*dx+dy*dy||1);
-    endpointZone=t<=endpointFraction;
-   }
-   if(endpointZone&&d<dist){best={item,key,point:item[key],kind:'point'};dist=d}
-  }
- }
- return best;
+ return AnnotationGeometry.nearestHandle(point,current.items||[],view,onlyItem);
 }
 function nearestItem(point){
  const world=screenToWorld(point);
