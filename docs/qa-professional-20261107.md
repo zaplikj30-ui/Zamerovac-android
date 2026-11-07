@@ -24,6 +24,12 @@ vybralo již existující poznámku); z chyby testu se nevyvozuje chyba aplikace
 Finální nezměněné testy znovu běžely i proti oddělenému checkoutu main.
 Zdroje aplikace při finálních lokálních bězích odpovídají `998467a`.
 
+Pole `sha` v surovém reportu zaznamenává HEAD procesu testovacího runneru.
+První běh proti serveru odděleného #51 měl runner na `9edf363`, ale server
+obsluhoval zdroje `5684cff`. Pro odstranění této nejasnosti byl stejný test
+znovu spuštěn přímo z checkoutu #51: runner i server mají
+`5684cfffc273baea61f575643bda950472f7edee`, znovu **3 PASS / 0 FAIL**.
+
 [Strojové výsledky, SHA-256 testů a prostředí](../qa/evidence/professional-20261107/results.json).
 [Galerie main](../qa/evidence/professional-20261107/gallery-main.png) a
 [galerie PR #51](../qa/evidence/professional-20261107/gallery-pr51.png) byly
@@ -113,4 +119,24 @@ node tools/e2e/gallery-readability.cjs
 nenulový exit. Stávající upload uloží reporty/screenshoty/DOM/stav/trace.
 Žádné expected-fail ani continue-on-error. Laser běží v `tests/*.js`.
 Nový JVM test používá existující `verify-native.yml` bez APK.
-Odkazy na PR/CI a finální přehled: issue #28.
+
+## Ověřené CI a předání
+
+[Draft PR #52](https://github.com/zaplikj30-ui/Zamerovac-android/pull/52),
+testovaný head `c3a41064db8bf10d9631ea1c8e8585170c93ccdb`:
+
+- [Nativní CI](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42324761865)
+  **SUCCESS**: kompilace bez APK, **257 JVM testů / 43 sad, 0 FAIL, 0 SKIP**.
+  XML artefakt ověřuje i nový `restartedCleanupKeepsExactBytesReusedByNoteHistory`.
+  Nezávislé parsování/rasterizace tří PDF fixture ZIP rovněž prošlo.
+- [Rychlé CI](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42324761877)
+  **FAILURE**: starých 58 E2E PASS, nová sada 7 PASS / 1 FAIL (N4),
+  galerie 3 FAIL. Zdrojový/Node job a samostatný browser job **SUCCESS**;
+  v CI Python **47 PASS / 0 SKIP** (lokální dva SKIP se týkají jen chybějícího JDK).
+- [CI diagnostika](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42324761877/artifacts/13555260652)
+  a [nativní XML/PDF artefakt](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42324761865/artifacts/13554996344)
+  jsou uložené. Retence CI artefaktů je 14 dní; základní syntetické snímky a
+  lokální report před/po zůstávají v repozitáři.
+
+Toto závěrečné doplnění mění jen dokumentaci, nikoli otestované zdroje/testy.
+Finální přehled a návazná etapa: [issue #28](https://github.com/zaplikj30-ui/Zamerovac-android/issues/28#issuecomment-6700313256).

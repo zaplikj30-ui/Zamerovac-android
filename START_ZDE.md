@@ -2,10 +2,12 @@
 
 **7. 11. 2026 – samostatný QA balík, bez APK:** větev `qa/professional-regressions-20261107`
 z main `f543af7`, [důkaz před/po a omezení](docs/qa-professional-20261107.md), evidence v [#28](https://github.com/zaplikj30-ui/Zamerovac-android/issues/28#issuecomment-6700313256).
-Malé opravy Undo existující poznámky, textového fokusu a přesného laserového odečtu;
+Draft [PR #52](https://github.com/zaplikj30-ui/Zamerovac-android/pull/52): malé opravy Undo existující poznámky, textového fokusu a přesného laserového odečtu;
 nové povinné regrese zůstávají **FAIL pro galerii #50 a osiřelou přílohu N4**.
 Galerie se opravuje odděleně v #51; #49/#51 nepřepsány. Emulátorová IME/picker
-kontrola připravena, **NESPUŠTĚNA**. Další krok: review QA PR, bezpečná retence
+kontrola připravena, **NESPUŠTĚNA**. Nativní CI **257 PASS**, rychlé CI **FAIL**
+přesně na N4 a třech galerijních scénářích; ostatní kontroly prošly.
+Další krok: review QA PR, bezpečná retence
 příloh a dokončení #51 včetně jeho neúspěšných kontrol. Bez merge či další APK.
 
 **6. 11. 2026 – upřesnění projektového plánování:** [PROJEKTOVY_PLAN_ZAMEROVACE.md](PROJEKTOVY_PLAN_ZAMEROVACE.md) je plán **současné aplikace**, jako bychom ji profesionálně navrhovali od začátku, ale využívá a zachovává všechno existující. Má první osnovu, stav a postup inventury; **není to schválení vývoje Zaměřovače 2 ani přepisu**. Doplnění detailní matice funkcí, obrazovek a diagramů teprve zbývá. Dokumentace **nespouští APK** a nemění přednost praktického testování 1.3.0.
