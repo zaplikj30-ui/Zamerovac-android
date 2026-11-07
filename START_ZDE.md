@@ -1,5 +1,13 @@
 # Zaměřovač – START ZDE (aktuální stav, rozhodnutí a další práce)
 
+**7. 11. 2026 – samostatný QA balík, bez APK:** větev `qa/professional-regressions-20261107`
+z main `f543af7`, [důkaz před/po a omezení](docs/qa-professional-20261107.md), evidence v [#28](https://github.com/zaplikj30-ui/Zamerovac-android/issues/28#issuecomment-6700313256).
+Malé opravy Undo existující poznámky, textového fokusu a přesného laserového odečtu;
+nové povinné regrese zůstávají **FAIL pro galerii #50 a osiřelou přílohu N4**.
+Galerie se opravuje odděleně v #51; #49/#51 nepřepsány. Emulátorová IME/picker
+kontrola připravena, **NESPUŠTĚNA**. Další krok: review QA PR, bezpečná retence
+příloh a dokončení #51 včetně jeho neúspěšných kontrol. Bez merge či další APK.
+
 **6. 11. 2026 – upřesnění projektového plánování:** [PROJEKTOVY_PLAN_ZAMEROVACE.md](PROJEKTOVY_PLAN_ZAMEROVACE.md) je plán **současné aplikace**, jako bychom ji profesionálně navrhovali od začátku, ale využívá a zachovává všechno existující. Má první osnovu, stav a postup inventury; **není to schválení vývoje Zaměřovače 2 ani přepisu**. Doplnění detailní matice funkcí, obrazovek a diagramů teprve zbývá. Dokumentace **nespouští APK** a nemění přednost praktického testování 1.3.0.
 
 **6. 11. 2026 – VYDÁNA TESTOVACÍ APK Zaměřovač 1.3.0.** [Stáhnout APK](https://github.com/zaplikj30-ui/Zamerovac-android/releases/download/test-v1.3.0/Zamerovac-v1.3.0.apk) · [Release](https://github.com/zaplikj30-ui/Zamerovac-android/releases/tag/test-v1.3.0) · [úspěšné sestavení a kontrola podpisu i vzestupného instalačního čísla](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42184626126). Nové významové číslování `1.3.0` je odděleno od Android `versionCode=1154` (předchozí APK 1.2.153 měla 1153); balíček `cz.zamerovac.app.preview` i podpis zachovány. [PR #45](https://github.com/zaplikj30-ui/Zamerovac-android/pull/45) úspěšně sloučen, nové CI [Android](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42184148443) a [editor/UI](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42184148404) **SUCCESS**. Nejde o novou sadu funkcí; ty zůstávají z velké aktualizace 1.2.153. [Pravidla číslování](docs/verzovani.md) · [povinná kontrola kvality 7/10](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42#issuecomment-6680208345). **Praktická aktualizace na telefonu/tabletu, zachování dat, Drive a Bosch stále NOT RUN.** Nejbližší krok: instalace 1.3.0 přes stávající testovací verzi **bez odinstalace či mazání dat**; nejprve zkušební zakázky a kontrola fotek, rozměrů, editovatelnosti a opětovného otevření. Výsledky zapisovat do #13.

@@ -88,6 +88,24 @@ public class TrashPurgerTest {
         purger.purge(updated.toString(),updated.toString(),new JSONArray(),this::persist);
         assertTrue(new File(home,"media/trash-media").exists());
     }
+    @Test public void restartedCleanupKeepsExactBytesReusedByNoteHistory() throws Exception {
+        String db=fixture().toString();file("trash-media");file("note-audio");
+        byte[] original=Files.readAllBytes(new File(home,"media/trash-media").toPath());
+        byte[] audio=Files.readAllBytes(new File(home,"media/note-audio").toPath());
+        // The unlink failed; retry will run after restart, when another owner may
+        // already need the same immutable IDs. Do not replace this with broad GC.
+        JSONObject result=new TrashPurger(home,cache,prefs,f->false).purge(db,db,targets(),this::persist);
+        assertTrue(result.getInt("pending")>0);
+        JSONObject next=result.getJSONObject("data");
+        next.getJSONArray("records").getJSONObject(0).put("versionHistory",new JSONArray()
+            .put(new JSONObject().put("items","[{\"media\":[\"trash-media\"],\"audioMedia\":[\"note-audio\"]}]")));
+        persist(next.toString());
+        new TrashPurger(home,cache,prefs).purge(next.toString(),next.toString(),new JSONArray(),this::persist);
+        assertArrayEquals(original,Files.readAllBytes(new File(home,"media/trash-media").toPath()));
+        assertArrayEquals(audio,Files.readAllBytes(new File(home,"media/note-audio").toPath()));
+        assertEquals("image/png",prefs.getString("mime-trash-media",null));
+        assertEquals("image/png",prefs.getString("mime-note-audio",null));
+    }
     @Test public void nativeBridgeChecksDiskSnapshotAndKeepsLegacyUnsavedDefaults() throws Exception {
         MainActivity activity=Robolectric.buildActivity(MainActivity.class).get();
         java.lang.reflect.Field field=MainActivity.class.getDeclaredField("settings");field.setAccessible(true);field.set(activity,prefs);

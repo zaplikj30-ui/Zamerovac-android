@@ -145,6 +145,20 @@ jobs:
           node tools/e2e/media-import.cjs
           node tools/e2e/help.cjs
           node tools/e2e/release-history.cjs
+      - name: Regrese kvality – skutečné chování, přesnost a čitelné pixely
+        shell: bash
+        run: |
+          set -uo pipefail
+          python3 -m http.server 8765 --bind 127.0.0.1 --directory app/src/main/assets > /tmp/zamerovac-quality-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID"' EXIT
+          export CHROMIUM_PATH="$(node -p "require('playwright').chromium.executablePath()")"
+          # Run both suites even when a known defect fails. Never turn a known
+          # regression into expected-fail/continue-on-error to get a green gate.
+          result=0
+          node tools/e2e/quality-regressions.cjs || result=1
+          node tools/e2e/gallery-readability.cjs || result=1
+          exit "$result"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
