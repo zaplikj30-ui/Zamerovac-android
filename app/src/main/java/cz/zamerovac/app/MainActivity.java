@@ -429,7 +429,7 @@ public class MainActivity extends Activity {
     private void filePicked(Uri uri,String id,String mime,String name)throws IOException{filePicked(uri,id,mime,name,null,null);}
     private void filePicked(Uri uri,String id,String mime,String name,String photoTakenAt)throws IOException{filePicked(uri,id,mime,name,photoTakenAt,null);}
     private void filePicked(Uri uri,String id,String mime,String name,String photoTakenAt,String token)throws IOException{
-        try{new MediaIngest(this,settings,()->activityDestroyed).copy(uri,id,mime,name);}catch(Exception failure){throw failure instanceof IOException?(IOException)failure:new IOException("Příloha nebyla potvrzena",failure);}
+        try{MediaImportOwnership ownership=new MediaImportOwnership(settings);ownership.reserve(id,token);new MediaIngest(this,settings,()->activityDestroyed).copy(uri,id,mime,name);if(!ownership.published(id,token))android.util.Log.w("Zamerovac","Import owner remains reserved for recovery");}catch(Exception failure){throw failure instanceof IOException?(IOException)failure:new IOException("Příloha nebyla potvrzena",failure);}
         String takenAt=photoTakenAt==null?null:readCaptureDate(mediaFile(id),photoTakenAt);
         js("window.onNativeMedia("+JSONObject.quote(id)+","+JSONObject.quote(mime)+","+JSONObject.quote(name)+","+(takenAt==null?"null":JSONObject.quote(takenAt))+","+JSONObject.quote(token)+")");
     }

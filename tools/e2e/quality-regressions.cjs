@@ -95,10 +95,16 @@ suite('quality-regressions',async test=>{
   await editSelected(page);await chooseFiles(page,'#richPhotoPick',{name:'cancelled.png',mimeType:'image/png',buffer:await image(page,64,64)});
   await page.waitForFunction(()=>document.querySelectorAll('[data-attachment]').length===1);
   await page.click('#cancelModal');assert.equal(await page.evaluate(()=>JSON.stringify(current.items)),data);
-  await step('Cancelled imported bytes must be removed or tracked by a durable retention owner',async()=>{
-   // Current implementation has no staging/retention owner for these IDs. Never clean up here:
-   // a test deleting the leaked file would mask N4 and could destroy history/sync references.
-   const after=await files(page);evidence({before,after});assert.deepEqual(after,before,'Cancel leaked a published file without a reference or retention owner (N4)');
+  await step('Cancelled bytes remain protected by durable ownership across reload',async()=>{
+   const after=await files(page),added=after.filter(id=>!before.includes(id));
+   assert.equal(added.length,1,'Selected import must have one retained media ID');
+   const receipt=await page.evaluate(id=>MediaImportOwnership.inspect(id),added[0]);
+   assert.ok(receipt&&/^[a-zA-Z0-9_-]{3,120}$/.test(receipt.owner),'Published original has no owner');
+   assert.equal(receipt.phase,'published','Ownership receipt must be confirmed');
+   await page.reload();
+   assert.deepEqual(await page.evaluate(id=>MediaImportOwnership.inspect(id),added[0]),receipt,'Retained owner lost on reload');
+   assert.deepEqual(await files(page),after,'Recovery must not delete an unverified original');
+   evidence({before,after,owner:receipt.owner,phase:receipt.phase});
   });
  });
  for(const viewport of [{width:412,height:850},{width:1100,height:700}])await test('note_controls_reachable_'+viewport.width,async({page,evidence})=>{
