@@ -195,7 +195,7 @@ public class TrashPurgerTest {
         // Brackets and quotes are balanced (JsonInput.check accepts structure),
         // but a broken legacy object cannot be traversed reliably.
         db.getJSONArray("records").getJSONObject(0).put("packedSnapshot",
-            "{\"media\":[\"trash-media\"],\"malformed\":???}");
+            "{\"media\":[\"trash-media\"],\"malformed\" \"value\"}");
         String saved=db.toString();persist(saved);file("trash-media");
         try{
             purger.purge(saved,saved,targets(),this::persist);
