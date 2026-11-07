@@ -93,9 +93,9 @@ jobs:
           profile: pixel_6
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          script: |
-            bash tools/emulator-smoke.sh
-            node tools/e2e/android-system.cjs
+          # Keep both real gates visible even if the older accessibility smoke
+          # fails; any failure still fails the job, without continue-on-error.
+          script: bash -c 'result=0; bash tools/emulator-smoke.sh || result=1; node tools/e2e/android-system.cjs || result=1; exit "$result"'
       - name: Uložit snímky, záznam obrazovek a chybové logy
         if: always()
         uses: actions/upload-artifact@v4

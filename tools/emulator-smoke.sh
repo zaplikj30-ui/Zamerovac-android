@@ -50,14 +50,19 @@ try:
     root=ET.parse(file).getroot()
     hits=[]
     for node in root.iter('node'):
-        text=(node.get('text','')+' '+node.get('content-desc',''))
+        own_text=node.get('text','').strip()
+        description=node.get('content-desc','').strip()
+        text=(own_text+' '+description)
         if label.lower() not in text.lower(): continue
         bounds=node.get('bounds','')
         m=re.match(r'\[(\d+),(\d+)\]\[(\d+),(\d+)\]',bounds)
         if m:
             x1,y1,x2,y2=map(int,m.groups())
-            hits.append(((x1+x2)//2,(y1+y2)//2))
-    if hits: print(*hits[0])
+            if x2<=x1 or y2<=y1: continue
+            exact=label.lower() in (own_text.lower(),description.lower())
+            button=node.get('class','').endswith('Button')
+            hits.append((not exact,not button,(x1+x2)//2,(y1+y2)//2))
+    if hits: print(*sorted(hits)[0][2:])
 except Exception: pass
 PY
 )"
@@ -89,7 +94,7 @@ fi
 # A fresh preview opens its release notes. Dismiss only an existing visible
 # close control, then use the actual accessible add button rather than pixels.
 if tap_text 'Zavřít'; then sleep 1; fi
-if ! tap_text 'Přidat'; then
+if ! tap_text 'Přidat' && ! tap_text '＋'; then
   echo 'FAIL: Tlačítko Přidat není dosažitelné.' | tee -a "$OUT/summary.txt"
   exit 1
 fi
