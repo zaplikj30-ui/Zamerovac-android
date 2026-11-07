@@ -473,7 +473,7 @@ const chapters=[
     ],
     "notes": [
       "Vysypání koše uchovává pouze identifikátory a revizi smazání. Nezávislá novější změna z jiného zařízení se může zachovat jako označená konfliktní kopie; původní vysypané ID se neobnovuje.",
-      "Trvalý úklid zahrnuje také výhradní hlasové poznámky a přílohy historie anotací. Soubor používaný jiným záznamem nebo jeho historií, včetně starších vložených záznamů, zůstane zachovaný; oddělené neměnné zálohy se tím nemažou.",
+      "Trvalý úklid zahrnuje také výhradní hlasové poznámky a přílohy historie anotací. Soubor používaný jiným záznamem nebo jeho historií, včetně starších vložených záznamů, zůstane zachovaný; oddělené neměnné zálohy se tím nemažou. Pokud je historie příloh poškozená nebo nepřiměřeně zanořená, bezpečnostní kontrola vysypání odmítne místo rizikového smazání.",
       "Obnovení z koše nenahrazuje samostatnou zálohu ZIP.",
       "Trvalé odstranění a synchronizace s dalšími zařízeními mohou mít nevratné následky."
     ],

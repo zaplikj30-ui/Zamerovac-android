@@ -50,7 +50,11 @@ final class TrashPurger {
                 Object parsed;
                 try{
                     parsed=trimmed.startsWith("[")?new JSONArray(text):new JSONObject(text);
-                }catch(JSONException notStructuredJson){return;}
+                }catch(JSONException malformed){
+                    // An invalid object-looking history may still contain media IDs.
+                    // The safe response is to reject cleanup, never unlink by guess.
+                    throw new IOException("Nelze ověřit historické odkazy na přílohy. Koš nebyl vysypán.",malformed);
+                }
                 strings(parsed,found,depth+1);
             }
         }

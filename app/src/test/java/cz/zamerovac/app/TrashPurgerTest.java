@@ -190,6 +190,24 @@ public class TrashPurgerTest {
         assertTrue(prefs.contains("mime-trash-media"));
         assertEquals(0,new TrashPurger(home,cache,prefs).pendingCount());
     }
+    @Test public void malformedBalancedJsonStringAlsoBlocksMediaDeletion() throws Exception {
+        JSONObject db=fixture();
+        // Brackets and quotes are balanced (JsonInput.check accepts structure),
+        // but a broken legacy object cannot be traversed reliably.
+        db.getJSONArray("records").getJSONObject(0).put("packedSnapshot",
+            "{\"media\":[\"trash-media\"],\"malformed\":???}");
+        String saved=db.toString();persist(saved);file("trash-media");
+        try{
+            purger.purge(saved,saved,targets(),this::persist);
+            fail("Unparseable legacy JSON would allow destructive cleanup");
+        }catch(IOException expected){
+            assertTrue(expected.getMessage().contains("příloh"));
+        }
+        assertEquals(saved,read(new File(home,"projects.json")));
+        assertTrue(new File(home,"media/trash-media").isFile());
+        assertTrue(prefs.contains("mime-trash-media"));
+        assertEquals(0,new TrashPurger(home,cache,prefs).pendingCount());
+    }
     @Test public void nativeBridgeChecksDiskSnapshotAndKeepsLegacyUnsavedDefaults() throws Exception {
         MainActivity activity=Robolectric.buildActivity(MainActivity.class).get();
         java.lang.reflect.Field field=MainActivity.class.getDeclaredField("settings");field.setAccessible(true);field.set(activity,prefs);
