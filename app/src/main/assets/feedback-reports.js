@@ -7,7 +7,16 @@
  const validId=id=>typeof id==='string'&&/^[a-zA-Z0-9_-]{3,120}$/.test(id);
  let reports=[];
  try{const v=JSON.parse(localStorage.getItem(KEY)||'[]');if(Array.isArray(v))reports=v.filter(x=>x&&typeof x==='object').slice(-300)}catch(e){}
- const persist=()=>{try{localStorage.setItem(KEY,JSON.stringify(reports))}catch(e){notify('Nepodařilo se uložit seznam připomínek')}};
+ // Commit the proposed list only after the device confirms its storage bytes.
+ // A quota/private-mode failure must never be reported as a successful save.
+ const persist=next=>{
+  try{
+   const serialized=JSON.stringify(next);
+   localStorage.setItem(KEY,serialized);
+   if(localStorage.getItem(KEY)!==serialized)throw new Error('Nepotvrzený zápis připomínek');
+   return true;
+  }catch(e){notify('Nepodařilo se uložit seznam připomínek');return false}
+ };
  const q=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const now=()=>new Date().toISOString();
  const makeId=()=>typeof uid==='function'?uid():'f-'+Date.now()+'-'+Math.random().toString(36).slice(2);
@@ -138,7 +147,9 @@
     notify('Pro smazání klepni ještě jednou');
     return;
    }
-   reports=reports.filter(r=>!r.resolved);persist();showReportList();
+   const remaining=reports.filter(r=>!r.resolved);
+   if(!persist(remaining))return;
+   reports=remaining;showReportList();
   };
   overlay.querySelector('#feedbackShareZip').onclick=()=>sendBatch(false);
   overlay.querySelector('#feedbackSaveZip').onclick=()=>sendBatch(true);
@@ -444,8 +455,12 @@
     }
    }
    const i=reports.findIndex(x=>x.id===r.id);
-   if(i>=0)reports[i]=r;else reports.push(r);
-   persist();showReportList();notify('Připomínka uložena');
+   const nextReports=reports.slice();
+   if(i>=0)nextReports[i]=r;else nextReports.push(r);
+   // Keep the previous in-memory list and editable form on failed storage.
+   if(!persist(nextReports))throw new Error('Připomínku nelze bezpečně uložit');
+   reports=nextReports;
+   showReportList();notify('Připomínka uložena');
   }catch(e){
    notify('Připomínku se nepodařilo uložit');
    if(saveBtn){saveBtn.disabled=false;saveBtn.textContent='Uložit připomínku'}

@@ -639,6 +639,7 @@ const chapters=[
       "Nevypisuje se kóta: ověř výběr nástroje, vrstvy, barvu a přiblížení; zkus zavřít a otevřít fotografii.",
       "Nejde vybrat ZIP: najdi soubor v systémovém správci a ověř, že jde o zálohu Zaměřovače, nikoli zákaznický PDF ZIP.",
       "Ztratil se obrázek po přiblížení nebo se zobrazila mřížka: ukonči gesto, obnov zobrazení; nemaž zakázku ani data aplikace.",
+      "Při hlášení chyby přímo v aplikaci se potvrzení Uloženo zobrazí až po ověření zápisu seznamu připomínek. Pokud zápis selže, rozpracovaná připomínka zůstane otevřená; nemaž ji, zkontroluj volné místo a uložení zopakuj.",
       "Pokud chyba přetrvává, poznamenej verzi aplikace a pošli popis kroků a případně snímek či video."
     ],
     "notes": [
