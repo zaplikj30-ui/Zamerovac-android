@@ -103,4 +103,75 @@ suite('latency',async test=>{
   await page.reload();await page.evaluate(()=>window.__openFeedbackList());assert.equal(await page.locator('[data-feedback-edit]').count(),1);
   evidence({size,originalPngBytes:bytes.length,platform:'Chromium with Native bridge model; no Android disk delay',samples});
  });
+
+ await test('feedback_slow_save_blocks_close_list_and_android_back',async({page,evidence})=>{
+  const screenshot=await png(page,480,800);
+  await nativeStorage(page);
+  await page.route('https://appassets.androidplatform.net/media/**',route=>route.fulfill({
+   status:200,contentType:'image/png',
+   headers:{'access-control-allow-origin':'*'},body:screenshot
+  }));
+  await page.addInitScript(()=>{
+   const ImageOriginal=window.Image;
+   window.Image=class extends ImageOriginal{constructor(...args){super(...args);this.crossOrigin='anonymous'}};
+  });
+  await page.evaluate(()=>{
+   const now=new Date().toISOString();
+   localStorage.setItem('zamerovac-feedback-v1',JSON.stringify([{
+    id:'feedback-save-guard',title:'Pomalá připomínka',description:'Rozpracovaný snímek',
+    screenshotId:'save-guard-screen',annotatedId:null,
+    annotations:[{type:'pen',points:[[.1,.1],[.3,.4]]}],videos:[],resolved:false,createdAt:now,updatedAt:now
+   }]));
+  });
+  await page.reload();
+  await page.evaluate(()=>{
+   window.__feedbackSaveCounts={begin:0,finish:0};
+   Native.beginMediaChecked=()=>{__feedbackSaveCounts.begin++;return true};
+   Native.appendMedia=()=>true;
+   Native.finishMedia=()=>{__feedbackSaveCounts.finish++;return true};
+   const original=HTMLCanvasElement.prototype.toBlob;
+   HTMLCanvasElement.prototype.toBlob=function(callback,...args){
+    if(this.id==='feedbackCanvas'){
+     const c=this;
+     window.__resumeFeedbackSave=()=>original.call(c,callback,...args);
+     return;
+    }
+    return original.call(this,callback,...args);
+   };
+  });
+  await page.evaluate(()=>window.__openFeedbackList());
+  await page.click('[data-feedback-edit="feedback-save-guard"]');
+  await page.waitForFunction(()=>document.querySelector('#feedbackCanvas')?.width===480);
+  await page.click('#feedbackSave');
+  await page.waitForFunction(()=>typeof window.__resumeFeedbackSave==='function');
+  await page.click('#feedbackClose');
+  await page.click('#feedbackToList');
+  assert.equal(await page.locator('#feedbackSave').count(),1,'Editor must remain visible while writing');
+  assert.equal(await page.locator('#feedbackSave').isDisabled(),true,'Prevent duplicate Save');
+  assert.equal(await page.evaluate(()=>window.handleAndroidBack()),'handled');
+  assert.equal(await page.locator('#feedbackSave').count(),1,'Android Back must not discard the pending draft');
+  assert.equal(await page.evaluate(()=>{
+   const r=JSON.parse(localStorage.getItem('zamerovac-feedback-v1'))[0];
+   return r.annotatedId||null;
+  }),null,'No annotated media must be published before PNG encoding completes');
+  await page.evaluate(()=>{
+   const complete=window.__resumeFeedbackSave;
+   window.__resumeFeedbackSave=null;
+   complete();
+  });
+  await page.waitForFunction(()=>{
+   const r=JSON.parse(localStorage.getItem('zamerovac-feedback-v1'))[0];
+   return !!r?.annotatedId&&!!document.querySelector('[data-feedback-edit="feedback-save-guard"]');
+  });
+  const result=await page.evaluate(()=>({
+   reports:JSON.parse(localStorage.getItem('zamerovac-feedback-v1')),
+   counts:window.__feedbackSaveCounts
+  }));
+  assert.equal(result.reports.length,1,'Delayed Save must not duplicate records');
+  assert.equal(result.reports[0].screenshotId,'save-guard-screen');
+  assert.ok(result.reports[0].annotatedId,'Original annotation must be saved after completion');
+  assert.equal(result.counts.begin,1);
+  assert.equal(result.counts.finish,1);
+  evidence({scenario:'actual Chromium clicks while PNG encode deliberately delayed',result});
+ });
 }).catch(e=>{console.error(e);process.exitCode=1});
