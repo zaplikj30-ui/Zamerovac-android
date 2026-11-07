@@ -11,6 +11,7 @@ function extract(start,end){
  return source.slice(a,b);
 }
 const methods=[
+ extract('function finishHandleGesture(handle){','function commitEditor(){'),
  extract('function noteDisplayedCaption(','function canvasText('),
  extract('function drawArrow(c,point,to,size=10){','function drawItem('),
  extract('function nearestHandle(point,onlyItem=null){','function selectAnnotation(item){'),
@@ -31,7 +32,7 @@ const sandbox={
  uid:()=>`new-note-${++sandbox.ids}`,
  finishDraw:item=>{sandbox.selected=item.id;sandbox.mode='select'},
  openRichNote:()=>{throw Error('Creating an empty note must not open a modal')},
- checkpoints:0,commits:0,edits:0,ids:0,console
+ checkpoints:0,commits:0,edits:0,ids:0,editStack:[],redoStack:[],console
 };
 vm.createContext(sandbox);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-geometry.js','utf8'),sandbox);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-selection.js','utf8'),sandbox);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-translation.js','utf8'),sandbox);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-resize.js','utf8'),sandbox);
 vm.runInContext(methods,sandbox);

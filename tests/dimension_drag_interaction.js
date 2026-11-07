@@ -8,6 +8,7 @@ const extract=(a,b)=>{
  return src.slice(i,j);
 };
 const code=[
+ extract('function finishHandleGesture(handle){','function commitEditor(){'),
  // The label-hit test executes editor methods in isolation; include their shared
  // caption formatter just as the full editor does.
  extract('function measureDisplay(', 'function drawItem('),
@@ -25,7 +26,7 @@ const ctx={
  nearestLabel:()=>null,snap:p=>({...p}),paint:()=>{},
  checkpoint:()=>{ctx.checkpoints++},commitEditor:()=>{ctx.commits++},
  touch:()=>{},editItem:()=>{ctx.edits++},setTool:k=>{ctx.mode=k},
- checkpoints:0,commits:0,edits:0,console
+ checkpoints:0,commits:0,edits:0,editStack:[],redoStack:[],console
 };
 vm.createContext(ctx);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-geometry.js','utf8'),ctx);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-selection.js','utf8'),ctx);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-translation.js','utf8'),ctx);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-resize.js','utf8'),ctx);
 vm.runInContext(code.join('\n'),ctx);

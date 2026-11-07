@@ -18,7 +18,7 @@ function scenario(item,selected=true){
   editStack:[],redoStack:[],undo:0,commits:0,edits:0,console,Math,Number,String,window:{},
   boundsPoint:p=>({x:Math.max(0,Math.min(1000,p.x)),y:Math.max(0,Math.min(800,p.y))})
  };
- vm.createContext(env);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-geometry.js','utf8'),env);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-selection.js','utf8'),env);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-translation.js','utf8'),env);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-resize.js','utf8'),env);vm.runInContext(src.slice(a,b),env);
+ vm.createContext(env);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-geometry.js','utf8'),env);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-selection.js','utf8'),env);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-translation.js','utf8'),env);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-resize.js','utf8'),env);vm.runInContext(src.slice(src.indexOf('function finishHandleGesture(handle){'),src.indexOf('function commitEditor(){'))+src.slice(a,b),env);
  function pointer(method,x,y){
    env.pointerEvent={x,y,pointerId:1,button:0,preventDefault(){}};
    vm.runInContext('stage'+method+'(pointerEvent)',env);

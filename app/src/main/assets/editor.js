@@ -36,7 +36,7 @@ function hideEditorLoupe(){
  for(const id of pointers.keys())try{stageCanvas.releasePointerCapture(id)}catch(error){}
  pointers.clear();
 }
-function exitEditor(){hideEditorLoupe();if(selectedHandle?.dragged)commitEditor();selectedHandle=null;finishPendingPath();current=null;screen='browser';showFolder()}
+function exitEditor(){hideEditorLoupe();finishHandleGesture(selectedHandle);selectedHandle=null;finishPendingPath();current=null;screen='browser';showFolder()}
 $('editorBack').onclick=exitEditor;
 // Hide before the Back click, and retire captured pointers before any queued move.
 $('editorBack').addEventListener('pointerdown',hideEditorLoupe,{capture:true});
@@ -93,6 +93,16 @@ function snap(p,ref=null,ignore=null){
  return boundsPoint(p);
 }
 function checkpoint(){editStack.push(JSON.stringify(current.items||[]));if(editStack.length>50)editStack.shift();redoStack=[]}
+function finishHandleGesture(handle){
+ // Only changed objects enter Undo; taps and rejected/pinch gestures preserve Redo.
+ if(!handle?.dragged||!handle.beforeDragItems||!current)return false;
+ if(JSON.stringify(current.items||[])===handle.beforeDragItems)return false;
+ editStack.push(handle.beforeDragItems);
+ if(editStack.length>50)editStack.shift();
+ redoStack=[];
+ touch(handle.item);commitEditor();
+ return true;
+}
 function commitEditor(){if(current?.kind==='photo'&&stageImg){current.width=photoSize.w;current.height=photoSize.h;}touch(current);const confirmed=save();paint();return confirmed}
 function undoEditor(){if(!editStack.length)return;redoStack.push(JSON.stringify(current.items));current.items=JSON.parse(editStack.pop());commitEditor()}
 function redoEditor(){if(!redoStack.length)return;editStack.push(JSON.stringify(current.items));current.items=JSON.parse(redoStack.pop());commitEditor()}
@@ -572,7 +582,7 @@ function stageDown(e){
   gesture={distance:Math.hypot(v[0].x-v[1].x,v[0].y-v[1].y),zoom:view.zoom,
    mid:{x:(v[0].x+v[1].x)/2,y:(v[0].y+v[1].y)/2},
    world:screenToWorld({x:(v[0].x+v[1].x)/2,y:(v[0].y+v[1].y)/2})};
-  drawStart=null;drawCurrent=null;selectedHandle=null;paint();return;
+  drawStart=null;drawCurrent=null;finishHandleGesture(selectedHandle);selectedHandle=null;paint();return;
  }
  if(pointers.size>2)return;
  if(['polyline','chain','cumulative','angle'].includes(mode)){
@@ -643,7 +653,9 @@ function stageDown(e){
     Number(hit.item.type==='area'?hit.item.sideLabelT?.[hit.index]:hit.item.segmentData?.[hit.index]?.labelT)||0:
     Number(hit.item.labelT)||0;
   hit.dragged=false;
-  if(['point','shape-resize','label','note-caption','target-caption','segment-label','round-label','move-dimension','move-polyline'].includes(hit.kind))checkpoint();
+  // Selection may update activeSegmentIndex but is not an edit.
+  if(['point','shape-resize','label','note-caption','target-caption','segment-label','round-label','move-dimension','move-polyline'].includes(hit.kind))
+   hit.beforeDragItems=JSON.stringify(current.items||[]);
   magnifierPoint=hit.kind==='point'?hit.point:null;
   paint();return;
  }
@@ -792,12 +804,11 @@ function stageUp(e){
   selectedHandle=null;magnifierPoint=null;loupeSide=null;
   if(handle.kind==='select-only'){paint();return}
   if(!moved){
-   if((['point','shape-resize','label','note-caption','target-caption','segment-label','round-label','move-dimension','move-polyline'].includes(handle.kind))&&editStack.length)editStack.pop();
    if(handle.initialSelection){paint();return}
    // Druhé samostatné klepnutí otevře úpravu bez časového limitu.
    editItem(item);
   }else if(['point','shape-resize','label','note-caption','target-caption','segment-label','round-label','move-dimension','move-polyline'].includes(handle.kind)){
-   touch(item);commitEditor();
+   if(!finishHandleGesture(handle))paint();
   }else paint();
   return;
  }
@@ -1143,6 +1154,6 @@ $('styleTool').onclick=()=>{
       else{prefs.lineWidth=w;prefs.fontSize=fs;prefs.color=color;save();paint()}
   });
 };
-stageCanvas.addEventListener('pointerdown',stageDown);stageCanvas.addEventListener('pointermove',stageMove);stageCanvas.addEventListener('pointerup',stageUp);stageCanvas.addEventListener('pointercancel',e=>{if(screen!=='editor'||!pointers.has(e.pointerId))return;pointers.delete(e.pointerId);magnifierPoint=null;drawStart=null;selectedHandle=null;paint()});stageCanvas.addEventListener('wheel',e=>{e.preventDefault();const p=eventPoint(e);zoomAt(e.deltaY<0?1.1:.9,p.x,p.y)},{passive:false});
+stageCanvas.addEventListener('pointerdown',stageDown);stageCanvas.addEventListener('pointermove',stageMove);stageCanvas.addEventListener('pointerup',stageUp);stageCanvas.addEventListener('pointercancel',e=>{if(screen!=='editor'||!pointers.has(e.pointerId))return;pointers.delete(e.pointerId);magnifierPoint=null;drawStart=null;finishHandleGesture(selectedHandle);selectedHandle=null;paint()});stageCanvas.addEventListener('wheel',e=>{e.preventDefault();const p=eventPoint(e);zoomAt(e.deltaY<0?1.1:.9,p.x,p.y)},{passive:false});
 $('exportBtn').onclick=()=>{modal('Export',`<div class="row wrap"><button id="exportPng" class="outline">Export PNG</button><button id="exportPdf" class="outline">Export PDF</button></div><div class="muted">Originální soubor a editovatelné kóty se zachovávají zvlášť.</div>`,()=>true,'Zavřít');$('exportPng').onclick=()=>{exportPng();$('modal').hidden=true};$('exportPdf').onclick=()=>{if(native)Native.printPdf();else window.print();$('modal').hidden=true}};
 function exportPng(){let o=document.createElement('canvas');o.width=photoSize.w;o.height=photoSize.h;let c=o.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,o.width,o.height);if(stageImg)c.drawImage(stageImg,0,0,o.width,o.height);const render=annotationRenderContext(c,{view:{zoom:1,dx:0,dy:0},viewport:{w:o.width,h:o.height},selected:null,exporting:true});for(let item of current.items||[])drawItem(c,item,render);const data=o.toDataURL('image/png');if(native)Native.exportPng((current.title||'zamerovani')+'.png',data.slice(data.indexOf(',')+1));else{let a=document.createElement('a');a.download='zamerovani.png';a.href=data;a.click()}notify('Export obrázku připraven')}
