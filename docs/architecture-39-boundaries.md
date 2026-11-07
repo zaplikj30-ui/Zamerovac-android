@@ -116,3 +116,16 @@ před editorem. Regresní test `tests/annotation_snap_contract.js` drží
 nezávislou kopii původní implementace a 42 000 deterministických porovnání
 včetně kontroly neměnnosti originálních dat. Zatím pouze samostatná
 navazující větev z kontrolního PR #57; bez merge a bez samostatné APK.
+
+## Etapa B10 – čisté přizpůsobení a přiblížení (7. 11. 2026)
+
+Výpočty `fitImage` a `zoomAt` byly odděleny jako
+`AnnotationGeometry.fittedViewport` a `AnnotationGeometry.zoomedViewport`.
+Vrací jen `zoom/dx/dy` bez přístupu k DOM/Androidu či živému objektu.
+Editor výsledky přiřazuje do původního `view` a volá stávající `paint`.
+Zachován okraj 24 px, minimální a maximální zoom 0,05–12, bod pod
+prstem, nulové rozměry plátna, Undo/Redo a uložené přesné hodnoty.
+`tests/annotation_viewport_contract.js` obsahuje nezávislý původní
+algoritmus a 42 000 deterministických porovnání včetně kontroly
+neměnnosti souřadnic a transformace. Připravena společná regresní
+brána B9+B10, žádná samostatná APK ani změna technologie.

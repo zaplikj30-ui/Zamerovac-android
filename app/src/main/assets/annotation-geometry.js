@@ -51,6 +51,17 @@ function quadAreaFromMeasures(item){
  return first!==null&&second!==null?(first+second)/1000000:null;
 }
 
+// B10: pure viewport calculations independent of live DOM/state.
+function fittedViewport(w,h,imageSize){
+ const zoom=Math.min((w-24)/imageSize.w,(h-24)/imageSize.h);
+ return {zoom,dx:(w-imageSize.w*zoom)/2,dy:(h-imageSize.h*zoom)/2};
+}
+function zoomedViewport(transform,factor,x,y){
+ const before=screenToWorld({x,y},transform);
+ const zoom=Math.min(12,Math.max(.05,transform.zoom*factor));
+ return {zoom,dx:x-before.x*zoom,dy:y-before.y*zoom};
+}
+
 // B9: pure magnetic/grid/axis snapping; all state is supplied by the editor.
 // Do not change the distance/order rules, especially when detaching a point.
 function snapPoint(p,ref,ignore,items,prefs,zoomLevel,imageSize){
@@ -226,7 +237,7 @@ function nearestEditableSegment(candidate,s,transform){
     return candidate.type==='rect'?nearest%2:nearest;
 }
 
-const api=Object.freeze({screenToWorld,worldToScreen,boundsPoint,annotationProjectPoint,
+const api=Object.freeze({screenToWorld,worldToScreen,boundsPoint,annotationProjectPoint,fittedViewport,zoomedViewport,
  rectCorners,quadCorners,ellipseGeometry,resizePoints,cumulativeSegment,triangleArea,quadAreaFromMeasures,snapPoint,nearestHandle,segmentLineScreen,nearestItem,nearestEditableSegment});
 root.AnnotationGeometry=api;
 if(typeof module==='object'&&module.exports)module.exports=api;

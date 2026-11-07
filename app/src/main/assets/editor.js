@@ -54,9 +54,9 @@ function resizeEditor(){
  ctx.setTransform(dpr,0,0,dpr,0,0);paint();
 }
 window.addEventListener('resize',resizeEditor);
-function fitImage(){let w=stageCanvas.clientWidth,h=stageCanvas.clientHeight;if(!w||!h)return;view.zoom=Math.min((w-24)/photoSize.w,(h-24)/photoSize.h);view.dx=(w-photoSize.w*view.zoom)/2;view.dy=(h-photoSize.h*view.zoom)/2;paint()}
+function fitImage(){let w=stageCanvas.clientWidth,h=stageCanvas.clientHeight;if(!w||!h)return;Object.assign(view,AnnotationGeometry.fittedViewport(w,h,photoSize));paint()}
 function initialImageView(){fitImage();const p=centerPoint();zoomAt(1.15,p.x,p.y)}
-function zoomAt(factor,x,y){let before=screenToWorld({x,y});view.zoom=Math.min(12,Math.max(.05,view.zoom*factor));view.dx=x-before.x*view.zoom;view.dy=y-before.y*view.zoom;paint()}
+function zoomAt(factor,x,y){Object.assign(view,AnnotationGeometry.zoomedViewport(view,factor,x,y));paint()}
 function screenToWorld(p){return AnnotationGeometry.screenToWorld(p,view)}
 function worldToScreen(p){return AnnotationGeometry.worldToScreen(p,view)}
 function eventPoint(e){let r=stageCanvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top}}
