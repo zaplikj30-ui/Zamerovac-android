@@ -3670,5 +3670,30 @@
     "oldBrowserAndSource": "PASS",
     "practical": "PASS existing workflows and state test; latency FAIL fileChooser.setFiles timeout for 6000x4000 Buffer; quality step SKIP",
     "fix": "361e15c local file fixture, quality always runs unless cancelled; no suppression of failure"
+  },
+  "ciOnAcf0005": {
+    "native": {
+      "run": 42329739840,
+      "status": "success"
+    },
+    "quick": {
+      "run": 42329739834,
+      "status": "failure",
+      "onlyFailure": "N4",
+      "latency": 5,
+      "galleryReadability": 4,
+      "oldBrowserAndSource": "PASS",
+      "quality": "7 PASS / 1 FAIL N4"
+    }
+  },
+  "emulatorAttempt": {
+    "sha": "acf0005",
+    "run": 42330025246,
+    "status": "failure-before-app-boot",
+    "error": "FATAL Not enough space to create userdata partition: 2866.88 MB available, 7372.80 MB required; Timeout waiting for emulator to boot",
+    "functionalAndroidCases": "NOT RUN",
+    "artifacts": [],
+    "fix": "Existing action disk-size 2048M and -no-snapshot; retry planned",
+    "userAPKRelease": false
   }
 }

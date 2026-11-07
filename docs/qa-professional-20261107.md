@@ -150,7 +150,7 @@ Tato část navazuje na původní QA #52 výše. **Implementace je nyní v exist
 - `drawItem` a jeho texty, kótovací řetězce a poznámky přijímají vlastní kontext (canvas, transformace, rozměry fotografie/výstupu, preference a režim prohlížení). Galerie, vnořené detaily, PNG a zákaznický raster už kvůli kreslení nepřepisují `current`, `ctx`, `view`, výběr ani preference editoru. Editor používá stejný renderer přes výchozí adaptér. Přesné souřadnice/hodnoty se nemění; čáry a písmo zůstávají ve výstupních pixelech.
 - Vložený popisek používá šířku skutečného výstupu místo skrytého editoru s nulovou šířkou. PNG zahrne skutečné hranice natočeného detailu **i jeho textu**. Zachována nápověda; nevydané změny jsou oddělené v katalogu historie, bez přiřazení ke staré APK či vymyšlenému budoucímu číslu.
 - Načítání dalšího snímku zneplatní starou kreslicí funkci. Generační kontrola chrání zavřenou/přepnutou galerii. Návrat přes **Upravit ke stejné fotografii** ponechá živý výběr, pohled a Undo/Redo; úmyslné otevření jiné fotografie zachovává dosavadní postup.
-- Bez změny schématu, přesných měření, ukládání, sync protokolů, oprávnění, přihlašování, podpisu, package nebo verzování APK. Žádný merge do main, žádná uživatelská ani emulátorová APK.
+- Bez změny schématu, přesných měření, ukládání, sync protokolů, oprávnění, přihlašování, podpisu, package nebo verzování APK. Žádný merge do main ani uživatelská APK/release. Dodatečný emulátorový běh používá pouze interní testovací sestavení.
 
 ### Provedené kontroly a jejich hranice
 
@@ -207,3 +207,10 @@ N4 po Zrušit zůstává **FAIL**, bez cleanupu v testu i aplikaci. Nejprve navr
 Akceptace další etapy: cancel/import/recording/pozdní callback a process restart, sdílené historické médium, Undo/Redo, failed metadata/failed unlink a retry; přesné hashe a reference musí přežít. Teprve bezpečné převzetí/retence dovolí změnit N4 na PASS. #46 fyzický picker, #47 překryv mikrofonu a přesné strany rect/area zůstávají otevřené.
 
 Nejbližší krok: cílené review rendereru a finálního CI v #51, pak uvedená samostatná mediální etapa a diagnostika #53. Podle nového upřesnění #42 lze při dalším architektonickém rozhodnutí férově porovnat pokračování B s čistším izolovaným jádrem při znovupoužití testů/komponent; **tato první etapa takový další přepis nezahajuje**. Jedna společná testovací APK až po celém schváleném balíku a kontrolách, žádný automatický merge.
+
+
+### Dodatečné CI na `acf0005` a pokus o skutečný Android
+
+[Native 42329739840 SUCCESS](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42329739840), [quick 42329739834 FAILURE](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42329739834) **pouze na N4**: source/browser jobs PASS, workflow+stav/PNG PASS, latency 5/5 PASS, galerie 4/4 PASS, kvalita 7 PASS/1 FAIL N4. Timeout Buffer přenosu se neopakoval.
+
+Po ověření CLI mimo místní sandbox byl spuštěn existující [Android 13 workflow 42330025246](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42330025246). Interní sestavení a stažení systémového obrazu PASS, avšak **emulátor nenabootoval**: `FATAL Not enough space to create userdata partition`, dostupných 2866,88 MB, profil požadoval 7372,80 MB. Po výchozím boot timeoutu FAILURE; aplikace a IME/picker scénáře **NOT RUN**, žádné emulator-results artefakty. Nejde o prokázaný pád aplikace. Stávající action podporuje `disk-size`; navazující malá oprava nastavuje syntetický oddíl na 2048M a obnovuje `-no-snapshot`. Praktická kontrola vyžaduje nový dokončený běh. Uživatelská APK/release nevznikly, poslední vydání stále 1.3.0.
