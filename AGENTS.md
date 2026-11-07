@@ -4,6 +4,10 @@
 Tento repozitář je SAMOSTATNÝ projekt `Zamerovac-android`. Neměň repozitář `Prevadec-spojitosti`.
 Uživatel vyrábí zakázkový nábytek. Vyvíjíme vlastní Android aplikaci na zaměřování zakázek, inspirovanou pracovním postupem ImageMeteru. Nejde o kopii původního kódu, designových prostředků ani o obcházení jeho licence. Komunikuj česky a používej jednoduché vysvětlení, nevyžaduj znovu už schválené volby.
 
+## NEPŘEHLÉDNOUT – aplikace je dosud pouze testovací (uživatel opakovaně potvrdil 7. 11. 2026)
+
+**FAKT:** Uživatel dosud **nemá v Zaměřovači žádné skutečné zákaznické/pracovní zakázky**; aplikaci jen testuje. Neodůvodňuj odmítání nové architektury/případného čistšího přepisu tvrzením, že bychom ohrozili jeho existující ostré zakázky. Uvažuj realisticky i o znovupoužití funkčního kódu a existujících testů. Zachování bezpečného ukládání, přesnosti a editovatelnosti je stále požadavek na **budoucí profesionální kvalitu** a na regresní testy, nikoli tvrzení o dnešních reálných datech. Při rozhodování o pokračování varianty B vs. čistším jádru odděluj skutečné dnešní náklady/limity od hypotetické migrace reálných zákaznických dat. Podrobné dřívější upřesnění a výjimka ze zálohování testovacích dat jsou níže v části [Současný testovací režim](#současný-testovací-režim--zálohy-nejsou-podmínkou-výslovné-upřesnění-uživatele-4-11-2026) a v [issue #42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42#issuecomment-6700933092). **Toto není automatický souhlas se změnou rozpracovaného PR, přepisem ani novou APK.**
+
 ## Povinná kontrola kolizí funkcí a proaktivní péče o architekturu (5. 11. 2026)
 
 **Závazný požadavek uživatele:** ChatGPT má samostatně řídit technickou kvalitu a dlouhodobou stavbu Zaměřovače, nikoli pouze reagovat na seznam viditelných funkcí. Uživatel není programátor. U nových funkcí, oprav i modernizace aktivně hledat, zda se části aplikace navzájem neovlivňují nebo „nebijí“; upozornit na skutečné důvody technických problémů ještě před jejich nahromaděním. Vysvětlovat jednoduše česky; odborné volby a priority navrhovat samostatně.
