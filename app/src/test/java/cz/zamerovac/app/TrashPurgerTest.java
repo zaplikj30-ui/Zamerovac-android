@@ -154,6 +154,42 @@ public class TrashPurgerTest {
             new File(home,"media/trash-media").isFile());
         assertEquals(0,new TrashPurger(home,cache,prefs).pendingCount());
     }
+    @Test public void excessiveCombinedDepthAbortsPurgeWithoutDeletingOriginals() throws Exception {
+        // The outer 45 levels and the embedded 65 levels are EACH within the
+        // JsonInput limit, but their combined reference traversal is not.
+        JSONObject inner=new JSONObject().put("media",new JSONArray().put("trash-media"));
+        for(int i=0;i<65;i++)inner=new JSONObject().put("next",inner);
+        JSONObject outer=new JSONObject().put("embedded",inner.toString());
+        for(int i=0;i<45;i++)outer=new JSONObject().put("next",outer);
+        JSONObject db=fixture();
+        db.getJSONArray("records").getJSONObject(0).put("legacyHistory",outer);
+        String saved=db.toString();persist(saved);file("trash-media");
+        byte[] original=Files.readAllBytes(new File(home,"media/trash-media").toPath());
+        try{
+            purger.purge(saved,saved,targets(),this::persist);
+            fail("Overdeep nested media references were allowed into cleanup");
+        }catch(IOException expected){
+            assertTrue(expected.getMessage().contains("příloh")||expected.getMessage().contains("zanořen"));
+        }
+        assertEquals(saved,read(new File(home,"projects.json")));
+        assertArrayEquals(original,Files.readAllBytes(new File(home,"media/trash-media").toPath()));
+        assertTrue(prefs.contains("mime-trash-media"));
+        assertEquals(0,new TrashPurger(home,cache,prefs).pendingCount());
+    }
+    @Test public void invalidStructuredHistoryAbortsPurgeInsteadOfDiscardingPossibleReference() throws Exception {
+        JSONObject db=fixture();
+        db.getJSONArray("records").getJSONObject(0).put("legacyHistory",
+            "{unfinished \"media\": [\"trash-media\"]");
+        String saved=db.toString();persist(saved);file("trash-media");
+        try{
+            purger.purge(saved,saved,targets(),this::persist);
+            fail("Invalid structured history was silently discarded");
+        }catch(IOException expected){}
+        assertEquals(saved,read(new File(home,"projects.json")));
+        assertTrue(new File(home,"media/trash-media").isFile());
+        assertTrue(prefs.contains("mime-trash-media"));
+        assertEquals(0,new TrashPurger(home,cache,prefs).pendingCount());
+    }
     @Test public void nativeBridgeChecksDiskSnapshotAndKeepsLegacyUnsavedDefaults() throws Exception {
         MainActivity activity=Robolectric.buildActivity(MainActivity.class).get();
         java.lang.reflect.Field field=MainActivity.class.getDeclaredField("settings");field.setAccessible(true);field.set(activity,prefs);
