@@ -18,7 +18,11 @@ function openRichNote(item,isNew){
  window.__activeRichNoteRelease=release;
  $('cancelModal').onclick=()=>{cleanRecording();release();$('modal').hidden=true;window.modalOK=null};
  function persist(){
-  if(recording){if(!Native.stopAudio()){recording=null;$('richVoice').textContent='🎙 Nahrát hlas';return false}attachments.push(recording);item.audioMedia=[...(item.audioMedia||[]),recording];recording=null;}
+  // Capture the committed note before mutating it. A checkpoint after text/media
+  // edits records the new value and makes Undo silently leave that value in place.
+  if(recording&&!Native.stopAudio()){recording=null;$('richVoice').textContent='🎙 Nahrát hlas';return false}
+  checkpoint();
+  if(recording){attachments.push(recording);item.audioMedia=[...(item.audioMedia||[]),recording];recording=null;}
   item.text=$('richText').value.trim();
   const hadAttachment=Array.isArray(item.media)&&item.media.length>0;
   item.media=attachments.slice();
@@ -34,8 +38,7 @@ function openRichNote(item,isNew){
    item.insetMoved=true;
    item.captionMoved=false;
   }
-  if(isNew){checkpoint();parent.items.push(item);finishDraw(item);isNew=false;}
-  else checkpoint();
+  if(isNew){parent.items.push(item);finishDraw(item);isNew=false;}
   if(!commitEditor())return false;
   release();
   return true;
@@ -56,6 +59,9 @@ function openRichNote(item,isNew){
  '<button type="button" class="outline" id="richDelete">🗑 Odstranit poznámku</button></div>'+
  '<p class="muted">Detail můžeš prstem přetáhnout i mimo hlavní fotografii. Žlutá šipka ukáže původní místo, bílý bod lze také přemístit. Dvojklepnutím na detail otevřeš jeho vlastní kóty.</p><p class="muted">Přílohy a kóty se ukládají editovatelně.</p>',
  ()=>persist(),'Uložit');
+ // Opening a note (or playing its audio) is not an explicit text-edit action.
+ // Keep the keyboard closed until the user taps the textarea.
+ clearTimeout(modalFocusTimer);$('okModal').focus();
  const render=()=>{
   const container=$('richAttachments');if(!container)return;
   container.innerHTML=attachments.length?attachments.map((id,i)=>'<div class="rich-attachment" data-attachment="'+i+'"><span>📎 Příloha '+(i+1)+'</span><button class="outline" data-preview="'+i+'">Otevřít</button><button data-remove="'+i+'">✕</button><div class="previewMedia" data-embed="'+i+'"></div></div>').join(''):'<p class="muted">Zatím bez příloh</p>';

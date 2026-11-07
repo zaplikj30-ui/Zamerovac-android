@@ -3,7 +3,8 @@ const fs=require('node:fs'),path=require('node:path');
 const {suite,assert,createCanvas,chooseFiles,tool,drag,editSelected,redo}=require('./harness.cjs');
 const nativeStorage=require('./native-storage-fixture.cjs');
 async function addNote(page,text){
- await tool(page,'note');await drag(page,{x:130,y:230},{x:220,y:290});
+ const n=await page.evaluate(()=>current.items.filter(i=>i.type==='note').length);
+ await tool(page,'note');await drag(page,{x:130+n*180,y:230+n*180},{x:220+n*180,y:290+n*180});
  await editSelected(page);await page.fill('#richText',text);await page.click('#okModal');
  return page.evaluate(()=>selected);
 }
@@ -45,9 +46,9 @@ suite('quality-regressions',async test=>{
  await test('audio_play_pause_must_not_focus_text',async({page,step,evidence})=>{
   await createCanvas(page,'Audio focus');await addNote(page,'Text bez klávesnice');await editSelected(page);
   // A real local WAV through the file input, no microphone permission or network.
-  const wav=Buffer.alloc(44+16000);wav.write('RIFF');wav.writeUInt32LE(wav.length-8,4);wav.write('WAVEfmt ',8);
+  const wav=Buffer.alloc(44+160000);wav.write('RIFF');wav.writeUInt32LE(wav.length-8,4);wav.write('WAVEfmt ',8);
   wav.writeUInt32LE(16,16);wav.writeUInt16LE(1,20);wav.writeUInt16LE(1,22);wav.writeUInt32LE(8000,24);
-  wav.writeUInt32LE(16000,28);wav.writeUInt16LE(2,32);wav.writeUInt16LE(16,34);wav.write('data',36);wav.writeUInt32LE(16000,40);
+  wav.writeUInt32LE(16000,28);wav.writeUInt16LE(2,32);wav.writeUInt16LE(16,34);wav.write('data',36);wav.writeUInt32LE(160000,40);
   await chooseFiles(page,'#richPhotoPick',{name:'synthetic.wav',mimeType:'audio/wav',buffer:wav});
   await page.locator('#richAttachments audio').waitFor();await page.click('#okModal');await editSelected(page);
   await step('Allow modal focus timer to run; text is focused only after explicit text action',async()=>{
@@ -99,6 +100,22 @@ suite('quality-regressions',async test=>{
    // a test deleting the leaked file would mask N4 and could destroy history/sync references.
    const after=await files(page);evidence({before,after});assert.deepEqual(after,before,'Cancel leaked a published file without a reference or retention owner (N4)');
   });
+ });
+ for(const viewport of [{width:412,height:850},{width:1100,height:700}])await test('note_controls_reachable_'+viewport.width,async({page,evidence})=>{
+  await page.setViewportSize(viewport);await createCanvas(page,'Ovládání');await addNote(page,'Delší český popisek poznámky – viditelný text');await editSelected(page);
+  const controls=[];
+  for(const id of ['richPhotoCamera','richPhotoPick','richVoice','okModal','cancelModal']){
+   const button=page.locator('#'+id);await button.scrollIntoViewIfNeeded();
+   const bounds=await button.evaluate(el=>{
+    const r=el.getBoundingClientRect(),hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2);
+    return {x:r.x,y:r.y,w:r.width,h:r.height,font:parseFloat(getComputedStyle(el).fontSize),target:hit?.closest('button')?.id};
+   });
+   assert.equal(bounds.target,id,'Control center must not be covered by another element');
+   assert(bounds.w>=32&&bounds.h>=32,'Control must have a usable touch area: '+id);
+   assert(bounds.x>=0&&bounds.x+bounds.w<=viewport.width+1&&bounds.y>=0&&bounds.y+bounds.h<=viewport.height+1,'Control must be reachable inside the screen');
+   assert(bounds.font>=12,'Control label must be readable');controls.push({id,...bounds});
+  }
+  evidence({viewport,controls});
  });
  await test('project_photo_dimension_note_reopen_and_export',async({page,step,evidence,directory})=>{
   await page.click('#createBtn');await page.locator('#newMenu .choice').filter({hasText:'Nová složka'}).click();
