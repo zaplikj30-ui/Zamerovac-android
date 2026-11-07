@@ -146,14 +146,23 @@ function outline(result){assert(result.colored>15,'Missing colored drawing pixel
    assert(pinch.gesture,'Editor must start its two-pointer gesture');
    const moved=[touch(center.x-100,0),touch(center.x+100,1)];
    await cdp.send('Input.dispatchTouchEvent',{type:'touchMove',touchPoints:moved});
-   const currentZoom=await page.evaluate(()=>({zoom:view.zoom,dx:view.dx,dy:view.dy}));
+   // CDP touch positions can be rounded by Chromium. Anchor against the
+   // actual delivered pointer coordinates, not the intended fractional pixels.
+   const currentZoom=await page.evaluate(()=>{
+    const p=[...pointers.values()];
+    return {zoom:view.zoom,dx:view.dx,dy:view.dy,pointerCount:p.length,
+     mid:{x:(p[0].x+p[1].x)/2,y:(p[0].y+p[1].y)/2}};
+   });
+   assert.equal(currentZoom.pointerCount,2,'Both fingers must remain active during pinch');
    assert(currentZoom.zoom>original.zoom*1.4,'Real two-finger gesture must zoom image');
    const worldAtMid={
-    x:(center.x-frame.x-currentZoom.dx)/currentZoom.zoom,
-    y:(center.y-frame.y-currentZoom.dy)/currentZoom.zoom
+    x:(currentZoom.mid.x-currentZoom.dx)/currentZoom.zoom,
+    y:(currentZoom.mid.y-currentZoom.dy)/currentZoom.zoom
    };
    assert(Math.abs(worldAtMid.x-pinch.gesture.world.x)<1e-7&&
-     Math.abs(worldAtMid.y-pinch.gesture.world.y)<1e-7,'Pinch must anchor original world center');
+     Math.abs(worldAtMid.y-pinch.gesture.world.y)<1e-7,
+    'Pinch must anchor the original world point under the actual finger midpoint: '+
+    JSON.stringify({worldAtMid,expected:pinch.gesture.world}));
    await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[moved[0]]});
    await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]});
   }finally{await cdp.detach()}
