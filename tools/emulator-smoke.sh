@@ -27,7 +27,7 @@ snap() {
 }
 dump_ui() {
   local name="$1"
-  if adb shell uiautomator dump /sdcard/window.xml >/dev/null 2>&1; then
+  if timeout 20s adb shell uiautomator dump /sdcard/window.xml >/dev/null 2>&1; then
     adb exec-out cat /sdcard/window.xml > "$OUT/$name.xml" || true
   fi
 }
@@ -62,8 +62,13 @@ PY
 }
 snap 01_domovska_obrazovka
 dump_ui 01_domovska_obrazovka
-# Open the new-item sheet using the bottom-left plus button.
-adb shell input tap 66 2205
+# A fresh preview opens its release notes. Dismiss only an existing visible
+# close control, then use the actual accessible add button rather than pixels.
+if tap_text 'Zavřít'; then sleep 1; fi
+if ! tap_text 'Přidat'; then
+  echo 'FAIL: Tlačítko Přidat není dosažitelné.' | tee -a "$OUT/summary.txt"
+  exit 1
+fi
 sleep 2
 snap 02_nabidka_pridat
 dump_ui 02_nabidka_pridat

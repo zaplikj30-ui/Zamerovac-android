@@ -37,7 +37,10 @@ function picker(){return /mResumedActivity[^\n]*(?:documentsui|DocumentsActivity
    browser=await chromium.connectOverCDP('http://127.0.0.1:9222');
    page=browser.contexts()[0]?.pages()[0];assert(page,'Real WebView page missing');page.setDefaultTimeout(7000);
    assert(await page.evaluate(()=>typeof Native==='object'&&native),'Must use the real Android bridge');
-   if(await page.locator('#modal').isVisible())await page.click('#cancelModal');
+   if(await page.locator('#modal').isVisible()){
+    if(await page.locator('#cancelModal').isVisible())await page.click('#cancelModal');
+    else await page.click('#okModal'); // Read-only release notes hide Cancel.
+   }
    if(await page.locator('#editorView').isVisible())await page.click('#editorBack');
   });
   let noteId;
