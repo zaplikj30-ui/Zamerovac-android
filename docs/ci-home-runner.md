@@ -1,6 +1,18 @@
 # Domácí GitHub Actions runner – zaměřování a stav migrace
 
 
+## Nezávislá bezpečnostní oprava stažení staré APK pro domácí vydání (8. 11. 2026)
+
+Při čtení vydaného APK přes `https://api.github.com/repos/.../releases/assets/{id}` umí standardní `urllib.request.HTTPRedirectHandler` zkopírovat původní hlavičku **Authorization: Bearer ...** do požadavku na jiný host (GitHub CDN). To je nežádoucí šíření oprávnění; **nemáme důkaz, že se to stalo v reálném provozu**, protože domácí release workflow dosud **NOT RUN**.
+
+V izolované větvi `infra/home-release-asset-auth-guard-20261108` je opraven soubor `.github/workflows/windows-home-apk-release.yml`: ověřuje HTTPS a host původního GitHub API požadavku, při HTTPS přesměrování na jiný host smaže citlivé hlavičky bez ohledu na velikost písmen, HTTP přesměrování odmítne. Vedle toho vzniklo **8 offline regresí** `tests/test_home_release_asset_redirect.py` s pouze falešným tokenem. Původní standardní přesměrování v testu prokazatelně obsahovalo Authorization, nová verze jej už nepřenáší.
+
+- [Původní domácí FAIL #42478884578](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42478884578): 7/8 PASS, jedna chyba v kontrole hlavičky GitHub API verze (neměla tajný token). Příčina opravena case-insensitive odstraněním hlaviček.
+- [Opravený domácí běh #42479032731](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42479032731): **8/8 redirect bezpečnostních PASS + 6/6 cloud release budget/version PASS**, ověřen checkout přesného SHA `92cf99f9`, domácí Windows 11. Testy se nedotkly žádného reálného tokenu, API, placeného cloudu ani APK.
+- Po získání PASS byly oba jednorázové workflow YAML odstraněny ze zdrojové větve; produkční skript i Python test zůstaly beze změny. Další krátký běh mohl být už zařazen do fronty; každý výsledek se posuzuje samostatně. Finální větev se po úklidu liší od testovaného SHA pouze odstraněním dočasných workflow a dokumentací.
+
+**NOT RUN:** skutečné přesměrování při stahování ostrého release assetu, kompletní workflow vydávání a update Android na fyzickém zařízení. Před jediným schváleným vydáním nadále vyžadujeme hlavní domácí QA 4/4 PASS na přesném `main` SHA a nezávislou revizi publikace.
+
 ## Ověřené spouštěče aktuálního main — proč ještě není bezpečné sloučit PR (8. 11. 2026)
 
 Na **main `4953d66`** existuje přesně pět původních workflow; domácí QA a domácí vydání jsou dosud jen v draftu. Zkontrolována skutečná GitHub YAML v `main`, nikoli jen popis z chatu:
