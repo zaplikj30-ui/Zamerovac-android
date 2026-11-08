@@ -8,7 +8,7 @@
 
 **Historie:** 1.2.153 je poslední vydání starého číslování a obsahuje velkou aktualizaci #39. Vydání 1.3.0 **nepřináší znovu tyto funkce**, pouze zavádí srozumitelnější verze. Historii, tag a APK 1.2.153 zpětně neměnit.
 
-**Dvě odlišné hodnoty:** `versionName` je pro člověka (1.3.0-test); `versionCode` je pro Android a musí být **vyšší než ve staré nainstalované APK**. Dosavadní pravidlo `1000 + GITHUB_RUN_NUMBER` zachovat. Příští workflow run číslo 154 by znamenalo `versionCode=1154`, nicméně skutečné číslo se vždy ověří. Název balíčku `cz.zamerovac.app.preview` a podpis zůstávají stejné.
+**Dvě odlišné hodnoty:** `versionName` je pro člověka (např. 1.3.0-test); `versionCode` je pro Android a musí být **vyšší než ve staré nainstalované APK**. Poslední skutečně vydaná APK **1.3.0 má `versionCode=1154`**, takže příští společná APK musí mít **nejméně 1155**. Stávající Gradle výpočet `1000 + GITHUB_RUN_NUMBER` je jen technická kompatibilita: vydávací workflow po ověření podpisu a balíčku skutečně poslední vydané APK nastaví pouze pro svůj sestavovací proces odpovídající offset. **Nesmí se spoléhat na počítadlo nového workflow.** Tuto ochranu má připravený domácí workflow v draft PR #61 a nouzový cloudový fallback v [draft PR #66](https://github.com/zaplikj30-ui/Zamerovac-android/pull/66); nejsou nasazené na `main`, živé vydání NOT RUN. Název balíčku `cz.zamerovac.app.preview` a podpis se nemění.
 
 **Jediný zdroj zobrazeného čísla:** `config/app-version.properties`. Před vydáním aktualizovat také `app/src/main/assets/release-history.js` podle skutečných změn; `node tools/release/versioning.js --release` vyžaduje shodu a vyšší číslo. Nepřeznačovat starší historii.
 
