@@ -6,14 +6,16 @@ on:
         description: 'Úplný commit SHA vydané APK pro zdrojový audit'
         required: false
         default: '2d1e4a45d4e35e8dd7e9c7109c92a8a62344b12e'
-  push:
-    branches: [main]
-    paths:
-      - '.github/workflows/export-audit-sources.yml'
+      cloud_run_approved:
+        description: 'Placený GitHub cloud pouze s výslovným souhlasem; měsíční strop 12 USD'
+        required: true
+        type: boolean
+        default: false
 permissions:
   contents: read
 jobs:
   export:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.cloud_run_approved == true }}
     runs-on: ubuntu-latest
     steps:
       - name: Načíst aktuální exportní skript (ne Android aplikaci)

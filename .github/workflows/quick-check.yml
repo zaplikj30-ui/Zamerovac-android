@@ -3,45 +3,13 @@ name: Zaměřovač – rychlá kontrola zdrojů (bez APK)
 # Po změně editoru/poznámek provést jen krátké testy.
 # Sestavení a vydání APK řídí zvlášť build-apk.yml na vyžádání.
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'app/src/main/assets/**'
-      - 'app/src/main/java/**'
-      - 'app/src/main/AndroidManifest.xml'
-      - 'app/src/test/**'
-      - 'app/build.gradle'
-      - 'config/app-version.properties'
-      - 'tests/**'
-      - 'sync/**'
-      - 'tools/check-post*-browser.cjs'
-      - 'tools/check-orientation-browser.cjs'
-      - 'tools/check-loupe-exit-browser.cjs'
-      - 'tools/check-android-window.cjs'
-      - 'tools/e2e/**'
-      - 'tools/qa/**'
-      - 'qa/**'
-      - '.github/workflows/quick-check.yml'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'app/src/main/assets/**'
-      - 'app/src/main/java/**'
-      - 'app/src/main/AndroidManifest.xml'
-      - 'app/src/test/**'
-      - 'app/build.gradle'
-      - 'config/app-version.properties'
-      - 'tests/**'
-      - 'sync/**'
-      - 'tools/check-post*-browser.cjs'
-      - 'tools/check-orientation-browser.cjs'
-      - 'tools/check-loupe-exit-browser.cjs'
-      - 'tools/check-android-window.cjs'
-      - 'tools/e2e/**'
-      - 'tools/qa/**'
-      - 'qa/**'
-      - '.github/workflows/quick-check.yml'
-
+  workflow_dispatch:
+    inputs:
+      cloud_run_approved:
+        description: 'Placený GitHub cloud jen s výslovným souhlasem; limit 12 USD/měsíc'
+        required: true
+        type: boolean
+        default: false
 permissions:
   contents: read
 
@@ -51,6 +19,7 @@ concurrency:
 
 jobs:
   fast-check:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.cloud_run_approved == true }}
     name: Syntaxe JS a regresní testy bez Gradlu
     runs-on: ubuntu-latest
     timeout-minutes: 6
@@ -79,6 +48,7 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_*.py' -v
 
   browser-check:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.cloud_run_approved == true }}
     name: Chromium – nabídky, rozpracované kóty a bezpečný koš
     runs-on: ubuntu-latest
     timeout-minutes: 8
@@ -110,6 +80,7 @@ jobs:
           node tools/check-untrusted-ids-browser.cjs
 
   practical-e2e:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.cloud_run_approved == true }}
     name: Praktické UI a barevné pixely (syntetická data)
     runs-on: ubuntu-latest
     timeout-minutes: 12
