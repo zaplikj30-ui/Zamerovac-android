@@ -47,7 +47,9 @@ def workflow_snapshot_violations(name, raw_bytes):
     expected = WORKFLOW_SHA256.get(name)
     if expected is None:
         return ["Neznámý důvěryhodný workflow soubor"]
-    actual = hashlib.sha256(raw_bytes).hexdigest()
+    # Windows git checkout může převést LF na CRLF; obsah jinak hlídáme celý.
+    canonical = raw_bytes.replace(b"\r\n", b"\n")
+    actual = hashlib.sha256(canonical).hexdigest()
     return [] if actual == expected else [
         f"Obsah {name} se změnil; vyžaduje nezávislou revizi a nový otisk"
     ]
