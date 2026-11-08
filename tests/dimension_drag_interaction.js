@@ -29,6 +29,7 @@ const ctx={
  checkpoints:0,commits:0,edits:0,editStack:[],redoStack:[],console
 };
 vm.createContext(ctx);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-geometry.js','utf8'),ctx);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-selection.js','utf8'),ctx);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-translation.js','utf8'),ctx);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-resize.js','utf8'),ctx);
+vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-history.js','utf8'),ctx);
 vm.runInContext(code.join('\n'),ctx);
 function pointer(name,x,y){
  ctx.pointerEvent={x,y,pointerId:1,button:0,preventDefault(){}};
