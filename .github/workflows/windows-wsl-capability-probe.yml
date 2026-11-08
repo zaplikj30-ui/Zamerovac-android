@@ -1,0 +1,27 @@
+name: Zaměřovač - diagnostika linuxové kompatibility domácího PC
+# Pouze read-only diagnostika. Neinstaluje WSL, nedotýká se systému ani APK.
+on:
+  push:
+    branches: [infra/windows-self-hosted-qa-20261108]
+    paths:
+      - '.github/workflows/windows-wsl-capability-probe.yml'
+permissions:
+  contents: read
+jobs:
+  probe:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' }}
+    name: Windows 11 - WSL read-only kontrola
+    runs-on: [self-hosted, Windows, X64, zamerovac-qa]
+    timeout-minutes: 5
+    steps:
+      - name: Ověřit dostupnost linuxového prostředí bez změn systému
+        shell: cmd
+        run: |
+          echo Existing WSL version (if present):
+          where wsl.exe
+          wsl.exe --version
+          echo Existing WSL status (if present):
+          wsl.exe --status
+          echo Existing WSL distributions for service account:
+          wsl.exe --list --quiet
+          echo Environment probe complete. No install, no APK, no paid runner.
