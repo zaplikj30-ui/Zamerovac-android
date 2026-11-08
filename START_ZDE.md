@@ -1,6 +1,13 @@
 # Zaměřovač – START ZDE (aktuální stav, rozhodnutí a další práce)
 
 
+**NOVÝ OVĚŘENÝ STAV 8. 11. 2026 — kompletní domácí QA sjednocené přestavby B12/B13 + bezpečné vydávání:**
+
+- [**Home run #42487162258 — 4/4 PASS**](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42487162258), testovaný přesný commit `ca8ea1420d7ee42dbc6f1bbf6147a8ab0cc1cd85`: **76/76 rychlé Node/Python PASS**, **21/21 Chromium s pixely, kreslením a ukládáním PASS**, **265/265 Java/Robolectric bez fail/error/skip PASS** a nezávisle parserem i rasterem kontrolovaná **PDF PASS**, technické **sestavení APK PASS** (`cz.zamerovac.app.preview`, shodný signing certifikát, `versionCode 1155 > 1154`, `versionName 1.3.0-test`). **Zkušební APK ihned odstraněna, není vydaná ani nahraná.** Vše 4/4 na 16GB domácím Windows runneru, **žádný placený cloud**.
+- Testovací workflow `.github/workflows/windows-integration-full-qa-temporary.yml` byl po PASS bezpečně odstraněn v `45ce325`. Tím má závěrečná větev **stejné produkční a regresní soubory** jako prokázané `ca8ea14`, ale její pozdější čistý HEAD není přímo nově přetestován. Domácí QA má být po bezpečném převodu ověřena **na skutečném main SHA**; stav `main` zůstává pro domácí QA **NOT RUN**.
+- Důležitá budoucí údržba: technické QA sestavení v `windows-self-hosted-qa.yml` dnes používá pevný kód **1155** vzhledem k vydané **1154**. Pro následující testovací APK toto vyhovuje, ale **po budoucím zveřejnění APK s kódem 1155 bude potřeba QA verzi přizpůsobit skutečnému nejnovějšímu vydání**, nikoli předstírat, že 1155 zůstává vyšší. Ostrý domácí/cloud release workflow počítá kód z poslední vydané APK, avšak hlavní QA smoke tento budoucí krok ještě neumí. Nemaže se žádný bezpečnostní test.
+- **Další krok:** review a koordinace #61/#64/#65/#66/#67, bezpečné vypnutí starých automatických placených triggerů **před** PR/merge směrem do `main` (se souhlasem uživatele). Ponechat ruční cloud zálohu, potom domácí ověření main se čtyřmi skutečnými PASS. Dřívější automatické výkazy ani tento staging nejsou fyzickým testem Androidu, S Pen nebo Bosch: **NOT RUN**. Žádná nová vydaná APK.
+
 **AKTUÁLNĚ 8. 11. 2026 — domácí testování, B12/B13 a bezpečný přechod CI (draft PR #64, #65, #66, #67; bez vydání APK):**
 
 - **Poslední vydaná testovací APK zůstává 1.3.0, Android `versionCode 1154`**, původní balíček `cz.zamerovac.app.preview` a podpis. Aplikace se nepřepisuje novou aplikací. Žádná nová APK nebyla zveřejněna.
