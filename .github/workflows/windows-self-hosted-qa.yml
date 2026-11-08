@@ -39,7 +39,6 @@ jobs:
     env:
       CI: '1'
       PYTHONUTF8: '1'
-      LOCALAPPDATA: ${{ runner.temp }}
     steps:
       - name: Read-only checkout - bez uložených GitHub přihlašovacích údajů
         uses: actions/checkout@v4
