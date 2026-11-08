@@ -1,6 +1,18 @@
 # Domácí GitHub Actions runner – zaměřování a stav migrace
 
 
+## Ověřené spouštěče aktuálního main — proč ještě není bezpečné sloučit PR (8. 11. 2026)
+
+Na **main `4953d66`** existuje přesně pět původních workflow; domácí QA a domácí vydání jsou dosud jen v draftu. Zkontrolována skutečná GitHub YAML v `main`, nikoli jen popis z chatu:
+
+- `quick-check.yml` – placený `ubuntu-latest` při `push main` i `pull_request` do `main`, s cestami včetně `app/**`, `tests/**` a **vlastního YAML souboru**. Nový PR zaměřený přímo na `main` s touto změnou **může spustit placený běh ještě před ochranným převodem**.
+- `verify-native.yml` – placený `ubuntu-latest` při `pull_request` do `main`, cesty Java/Gradle/tests/PDF a **vlastní YAML**. PR do `main` není rozpočtově bezpečný bez brány.
+- `export-audit-sources.yml` – placený `ubuntu-latest` při `push main` se změnou **vlastního YAML**, dále ruční spuštění.
+- `build-apk.yml` – placený `ubuntu-latest` ručně či při `push main` pouze se změnou `.github/apk-build-request.txt`; **ruční režim dosud nemá vyžadovaný budget checkbox**.
+- `emulator-smoke.yml` – ruční, ale placený `ubuntu-latest` bez budget checkboxu.
+
+**Praktická brána bez překročení 12 USD:** nejprve nezávisle revidovat připravený kompletní integrační balík #64 + #65 + #66; před jakoukoli změnou `main`, jeho PR spouštěčů či událostí zajistit prokazatelné dočasné zablokování placených automatických workflow (pokud je potřeba, zásah vlastníka do GitHub nastavení s výslovným souhlasem), potom **atomicky aktivovat všech pět ručně schvalovaných cloudových workflow** a domácí `main` QA. Až po opětovné kontrole a zelené domácí QA pustit navazující editor a regresi. Záložní cloud se nesmí natrvalo zrušit; vrátí se jen jako ruční schvalovaná možnost. **Bez potvrzené bezpečné cesty nic neslučovat; nemáme nástroj pro bezpečné administrativní pozastavení GitHub workflow v tomto chatu.** Není to důkaz, že změna automaticky spustí placený běh; je to doložené riziko podle přesných `on` + `paths` pravidel.
+
 ## Ověřený integrační checkpoint — B12 + B13 (8. 11. 2026)
 
 [Integrační draft PR #64](https://github.com/zaplikj30-ui/Zamerovac-android/pull/64) slučuje B12 QA testovací kód (včetně `tools/local-qa.cjs`, který chybí na `main`) se zajištěnou domácí infrastrukturou a pěti manuálními cloudovými fallback workflow. Jde o **staging**, nikoli aktivní `main`; původní automatické placené spouštěče na `main` stále existují. Další izolovaný [draft PR #65](https://github.com/zaplikj30-ui/Zamerovac-android/pull/65) opravuje jednu reprodukovanou chybu tří prstů v gestu bez úpravy uložených rozměrů.
