@@ -3,6 +3,12 @@ name: Zaměřovač – Android emulátor a snímky obrazovky
 # Emulator je narocny, spousti se pouze pred vetsim testovanim na vyzadani.
 on:
   workflow_dispatch:
+    inputs:
+      cloud_run_approved:
+        description: 'Placený GitHub cloud pouze s výslovným souhlasem; měsíční strop 12 USD'
+        required: true
+        type: boolean
+        default: false
 
 concurrency:
   group: zamerovac-android-emulator-main
@@ -13,6 +19,7 @@ permissions:
 
 jobs:
   emulator:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && inputs.cloud_run_approved == true }}
     name: Android 13 – kontrola obrazovek
     runs-on: ubuntu-latest
     timeout-minutes: 35
