@@ -40,13 +40,11 @@ jobs:
       PYTHONUTF8: '1'
     steps:
       - name: Zakazat jine spousteni nez vlastni main a infra
-        shell: powershell
+        shell: cmd
         run: |
-          if ($env:GITHUB_EVENT_NAME -notin @('push', 'workflow_dispatch') -or
-              $env:GITHUB_REF -notin @('refs/heads/main','refs/heads/infra/windows-self-hosted-qa-20261108')) {
-            throw 'FAIL: untrusted event or branch'
-          }
-          Write-Output "Trusted event, ref and repository owner gate"
+          if not "%GITHUB_EVENT_NAME%"=="push" if not "%GITHUB_EVENT_NAME%"=="workflow_dispatch" exit /b 1
+          if not "%GITHUB_REF%"=="refs/heads/main" if not "%GITHUB_REF%"=="refs/heads/infra/windows-self-hosted-qa-20261108" exit /b 1
+          echo PASS: trusted event and branch
 
       - name: Git CLI pro skutecny checkout SHA
         shell: cmd
@@ -63,13 +61,15 @@ jobs:
           submodules: false
 
       - name: Dolozit presny commit testovaneho kodu
-        shell: powershell
+        shell: cmd
         run: |
-          $actual = (git rev-parse HEAD).Trim()
-          if ($LASTEXITCODE -ne 0 -or $actual -cne $env:QA_TEST_REF) {
-            throw "Testovany checkout je jiny nez QA_TEST_REF"
-          }
-          Write-Output "TESTED_SOURCE_SHA=$actual"
+          for /f %%H in ('git rev-parse HEAD') do set "ACTUAL_SHA=%%H"
+          if not defined ACTUAL_SHA exit /b 1
+          if /I not "%ACTUAL_SHA%"=="%QA_TEST_REF%" (
+            echo FAIL: checkout SHA mismatch
+            exit /b 1
+          )
+          echo TESTED_SOURCE_SHA=%ACTUAL_SHA%
 
       - name: Python pro testovací službu (jen tento job)
         shell: cmd
@@ -115,13 +115,11 @@ jobs:
       # Pouze duveryhodny Git for Windows MinGit + pevny SHA256, bez instalatoru
       # a bez systemovych uprav na domacim 16GB Windows PC.
       - name: Zakazat jine spousteni nez vlastni main a infra
-        shell: powershell
+        shell: cmd
         run: |
-          if ($env:GITHUB_EVENT_NAME -notin @('push', 'workflow_dispatch') -or
-              $env:GITHUB_REF -notin @('refs/heads/main','refs/heads/infra/windows-self-hosted-qa-20261108')) {
-            throw 'FAIL: untrusted event or branch'
-          }
-          Write-Output "Trusted event, ref and repository owner gate"
+          if not "%GITHUB_EVENT_NAME%"=="push" if not "%GITHUB_EVENT_NAME%"=="workflow_dispatch" exit /b 1
+          if not "%GITHUB_REF%"=="refs/heads/main" if not "%GITHUB_REF%"=="refs/heads/infra/windows-self-hosted-qa-20261108" exit /b 1
+          echo PASS: trusted event and branch
 
       - name: Git CLI pro prohlizecove testy - pripnuty overeny MinGit
         shell: cmd
@@ -154,13 +152,15 @@ jobs:
           submodules: false
 
       - name: Dolozit presny commit testovaneho kodu
-        shell: powershell
+        shell: cmd
         run: |
-          $actual = (git rev-parse HEAD).Trim()
-          if ($LASTEXITCODE -ne 0 -or $actual -cne $env:QA_TEST_REF) {
-            throw "Testovany checkout je jiny nez QA_TEST_REF"
-          }
-          Write-Output "TESTED_SOURCE_SHA=$actual"
+          for /f %%H in ('git rev-parse HEAD') do set "ACTUAL_SHA=%%H"
+          if not defined ACTUAL_SHA exit /b 1
+          if /I not "%ACTUAL_SHA%"=="%QA_TEST_REF%" (
+            echo FAIL: checkout SHA mismatch
+            exit /b 1
+          )
+          echo TESTED_SOURCE_SHA=%ACTUAL_SHA%
 
       - name: Ověřit bezpečnost lokálního HTTP serveru
         shell: cmd
@@ -214,13 +214,11 @@ jobs:
       ANDROID_SDK_ROOT: 'C:\actions-runner\tools\AndroidSdk'
     steps:
       - name: Zakazat jine spousteni nez vlastni main a infra
-        shell: powershell
+        shell: cmd
         run: |
-          if ($env:GITHUB_EVENT_NAME -notin @('push', 'workflow_dispatch') -or
-              $env:GITHUB_REF -notin @('refs/heads/main','refs/heads/infra/windows-self-hosted-qa-20261108')) {
-            throw 'FAIL: untrusted event or branch'
-          }
-          Write-Output "Trusted event, ref and repository owner gate"
+          if not "%GITHUB_EVENT_NAME%"=="push" if not "%GITHUB_EVENT_NAME%"=="workflow_dispatch" exit /b 1
+          if not "%GITHUB_REF%"=="refs/heads/main" if not "%GITHUB_REF%"=="refs/heads/infra/windows-self-hosted-qa-20261108" exit /b 1
+          echo PASS: trusted event and branch
 
       - name: Git CLI pro skutecny checkout SHA
         shell: cmd
@@ -237,13 +235,15 @@ jobs:
           submodules: false
 
       - name: Dolozit presny commit testovaneho kodu
-        shell: powershell
+        shell: cmd
         run: |
-          $actual = (git rev-parse HEAD).Trim()
-          if ($LASTEXITCODE -ne 0 -or $actual -cne $env:QA_TEST_REF) {
-            throw "Testovany checkout je jiny nez QA_TEST_REF"
-          }
-          Write-Output "TESTED_SOURCE_SHA=$actual"
+          for /f %%H in ('git rev-parse HEAD') do set "ACTUAL_SHA=%%H"
+          if not defined ACTUAL_SHA exit /b 1
+          if /I not "%ACTUAL_SHA%"=="%QA_TEST_REF%" (
+            echo FAIL: checkout SHA mismatch
+            exit /b 1
+          )
+          echo TESTED_SOURCE_SHA=%ACTUAL_SHA%
 
       - name: Python 3.13 pro nezávislou kontrolu PDF
         shell: cmd
