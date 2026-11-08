@@ -29,8 +29,13 @@ WORKFLOW_NAMES = frozenset((
     "windows-self-hosted-qa.yml",
 ))
 WORKFLOW_SHA256 = {
-    "windows-self-hosted-qa.yml": "5619a1a787236a22eaed4f90671bc88b10791ab0af7e27996747d4a7443d26c4",
+    "build-apk.yml": "616e9cab9f7b7d40fd7ec9f515b52163b48ffff0f1aeafc269dd140046a94fdf",
+    "emulator-smoke.yml": "bc2487b881148fad35d093e3e91e3e58f02e33b1191977e007100dd0a43202d3",
+    "export-audit-sources.yml": "598245bd5c22bb5363d1623b12380c5c4aae04af4bbc8e0bf836f78c45f12445",
+    "quick-check.yml": "2a61de2a016bfd1ecbbe5a8cb3eb6be024c09ff7660273667b0702d383eb998c",
+    "verify-native.yml": "f7e8507bb49b88c2e850804d8f88be96e4a1dad96d6b393f6dcc4f56b9566048",
     "windows-home-apk-release.yml": "672c76ae8f0ac3a8ce38cf98adf8661ec5631cca5b483e5c356a7dfad1f76911",
+    "windows-self-hosted-qa.yml": "5619a1a787236a22eaed4f90671bc88b10791ab0af7e27996747d4a7443d26c4",
 }
 
 
