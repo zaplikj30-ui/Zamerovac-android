@@ -12,6 +12,7 @@ const unreleasedChanges={title:'Rozpracováno – dosud nevydáno',groups:[{kind
  {text:'Převzaté opravy poznámek a laseru: Undo obnoví původní text, přehrávání hlasu nevyžaduje textový fokus a druhý přesný odečet se neztratí při shodném zaokrouhlení.'},
  {text:'Klepnutí, nepatrný pohyb prstu, neúspěšné přichycení a přiblížení dvěma prsty již nemažou možnost Znovu ani nevytvářejí prázdné kroky v historii. Skutečný tah se uloží také při přerušení gesta.'},
  {text:'Při přechodu z posouvání obrazu na gesto dvěma prsty už nezůstává starý tah aktivní; po uvolnění prstu obraz neodskočí. Přerušené gesto také nezachová staré posouvání.'},
+ {text:'Při neúmyslném doteku třetího prstu se přeruší staré přiblížení, aby uvolnění jiného prstu nezpůsobilo skok obrazu. Nové gesto dvěma prsty lze opět zahájit po uvolnění doteků.'},
  {text:'Vysypání koše chrání sdílené originály i při odkazech uložených ve starším JSON objektu jako text a při opakovaném úklidu po restartu.'},
  {text:'Hloubka historických odkazů na přílohy je nyní omezená pro celý průchod, včetně vnořeného JSON uloženého jako text. Neověřitelná historie vysypání koše bezpečně zastaví bez odstranění originálů.'},
  {text:'Uložení a smazání vyřešených připomínek nyní potvrzujeme až po ověřeném zápisu seznamu do zařízení. Při chybě úložiště rozpracovaná připomínka zůstane otevřená a nepotvrzené změny se neoznačí jako uložené.'},

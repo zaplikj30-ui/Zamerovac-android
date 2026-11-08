@@ -6,6 +6,8 @@ on:
     paths:
       - 'tests/gesture_history_undo_redo.js'
       - 'app/src/main/assets/editor.js'
+      - 'app/src/main/assets/help.js'
+      - 'app/src/main/assets/release-history.js'
       - '.github/workflows/windows-b13-temporary-quick.yml'
 permissions:
   contents: read
@@ -38,4 +40,12 @@ jobs:
           node --check app\src\main\assets\editor.js
           if errorlevel 1 exit /b 1
           node tests\gesture_history_undo_redo.js
+          if errorlevel 1 exit /b 1
+          node --check app\src\main\assets\help.js
+          if errorlevel 1 exit /b 1
+          node --check app\src\main\assets\release-history.js
+          if errorlevel 1 exit /b 1
+          node tests\help_guide.js
+          if errorlevel 1 exit /b 1
+          node tests\release_history.js
           if errorlevel 1 exit /b 1
