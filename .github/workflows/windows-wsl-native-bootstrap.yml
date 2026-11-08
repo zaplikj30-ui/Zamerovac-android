@@ -1,0 +1,98 @@
+name: Zamerovac - domaci Linux Android Java SDK bootstrap
+
+# Pouze Linux distro QA servisniho uctu na domacim runneru, bez APK, bez cloud hostingu.
+on:
+  push:
+    branches: [infra/windows-self-hosted-qa-20261108]
+    paths:
+      - '.github/workflows/windows-wsl-native-bootstrap.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zamerovac-wsl-native-bootstrap
+  cancel-in-progress: false
+
+jobs:
+  bootstrap:
+    if: github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui'
+    name: Ubuntu 24.04 / Java 17 / Android SDK 35
+    runs-on: [self-hosted, Windows, X64, zamerovac-qa]
+    timeout-minutes: 35
+    steps:
+      - name: Zprovoznit nativni Linux Java a oficialni Android SDK s overenim SHA256
+        shell: 'C:\actions-runner\tools\Python313\python.exe {0}'
+        run: |
+          import os
+          import subprocess
+          import sys
+
+          if os.environ.get("USERNAME", "").lower() != "zamerovacqa":
+              raise SystemExit("STOP: Not the isolated ZamerovacQA service account")
+
+          linux = r"""
+          set -Eeuo pipefail
+          export DEBIAN_FRONTEND=noninteractive
+          export ANDROID_HOME=/opt/android-sdk
+          export ANDROID_SDK_ROOT=/opt/android-sdk
+
+          echo "[WSL] Ubuntu / memory and disk"
+          head -n 2 /etc/os-release
+          free -m
+          df -h /
+          test "$(uname -s)" = "Linux"
+
+          echo "[WSL] apt installing only base Java17, git, curl, unzip, certs"
+          apt-get update -qq
+          apt-get install -y -qq --no-install-recommends openjdk-17-jdk-headless git curl unzip ca-certificates
+          java -version
+          javac -version
+
+          sdk=/opt/android-sdk
+          mkdir -p "$sdk/cmdline-tools"
+          archive=/opt/android-sdk-cli-15859902.zip
+          expected=4e4c464f145a7512b57d088ac6c278c03c9eea610886b35a5e0804e74eedf583
+          if [ ! -f "$sdk/cmdline-tools/latest/bin/sdkmanager" ]; then
+            echo "[WSL] downloading pinned official Google SDK CLI"
+            curl --fail --location --silent --show-error --retry 2 --connect-timeout 20 --max-time 900 \
+              https://dl.google.com/android/repository/commandlinetools-linux-15859902_latest.zip \
+              --output "$archive"
+            echo "$expected  $archive" | sha256sum --check
+            unzip -q "$archive" -d "$sdk/cmdline-tools"
+            mv "$sdk/cmdline-tools/cmdline-tools" "$sdk/cmdline-tools/latest"
+            rm -f "$archive"
+          fi
+          tool="$sdk/cmdline-tools/latest/bin/sdkmanager"
+          test -f "$tool"
+          echo "[WSL] verifying Java SDK CLI and licenses"
+          printf 'y\n%.0s' {1..100} | "$tool" --sdk_root="$sdk" --licenses > /tmp/zamerovac-sdk-licenses.log
+          tail -n 8 /tmp/zamerovac-sdk-licenses.log
+          if ! grep -qi 'licenses accepted' /tmp/zamerovac-sdk-licenses.log ; then
+            echo "[WSL] FAIL: SDK license confirmation absent"
+            exit 1
+          fi
+
+          echo "[WSL] installing required Android platform 35 and build tools (single process)"
+          "$tool" --sdk_root="$sdk" --install "platform-tools" "platforms;android-35" "build-tools;34.0.0" "build-tools;35.0.0" >/tmp/zamerovac-sdk-install.log 2>&1 || {
+            tail -n 35 /tmp/zamerovac-sdk-install.log
+            exit 1
+          }
+          tail -n 10 /tmp/zamerovac-sdk-install.log
+          test -f "$sdk/platforms/android-35/android.jar"
+          test -f "$sdk/build-tools/34.0.0/aapt"
+          test -f "$sdk/build-tools/35.0.0/aapt"
+          echo "[WSL] PASS: Java 17, Android 35, Build Tools 34+35, official SDK licenses"
+          echo "[WSL] NO APK, NO CLOUD, NO EDITOR CHANGES"
+          """
+
+          cmd = ["wsl.exe", "--distribution", "Zamerovac-Ubuntu-QA", "--user",
+                 "root", "--exec", "/bin/bash", "-lc", linux]
+          print("RUNNING ON: isolated WSL2 service account; memory cap 4GB / 2 CPU", flush=True)
+          p = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                               stderr=subprocess.STDOUT)
+          for line in p.stdout:
+              print(line.decode("utf-8", errors="replace").rstrip(), flush=True)
+          rc = p.wait()
+          if rc != 0:
+              raise SystemExit("Linux SDK bootstrap FAIL, exit " + str(rc))
