@@ -265,6 +265,7 @@ jobs:
           import json
           import os
           from pathlib import Path
+          import re
           import urllib.error
           import urllib.parse
           import urllib.request
@@ -283,12 +284,38 @@ jobs:
               "X-GitHub-Api-Version": "2022-11-28",
               "User-Agent": "Zamerovac-home-release"}
 
+          def trusted_publish_url(url, method):
+              parts = urllib.parse.urlsplit(url)
+              prefix = "/repos/" + repo + "/releases"
+              if (parts.scheme != "https" or parts.username or parts.password
+                      or parts.port not in (None, 443) or parts.fragment):
+                  raise ValueError("STOP: invalid authenticated release URL")
+              if parts.hostname == "api.github.com":
+                  if (parts.path != prefix and not parts.path.startswith(prefix + "/")) or parts.query:
+                      raise ValueError("STOP: unexpected GitHub release API path")
+              elif parts.hostname == "uploads.github.com":
+                  if (method != "POST" or not re.fullmatch(re.escape(prefix) + r"/[0-9]+/assets", parts.path)):
+                      raise ValueError("STOP: unexpected GitHub upload path")
+                  values = urllib.parse.parse_qs(parts.query, keep_blank_values=True)
+                  if (set(values) != {"name"} or len(values["name"]) != 1
+                          or not re.fullmatch(r"Zamerovac-v[0-9]+\.[0-9]+\.[0-9]+\.apk", values["name"][0])):
+                      raise ValueError("STOP: invalid uploaded APK name")
+              else:
+                  raise ValueError("STOP: unknown authenticated release host")
+
+          class RejectAuthenticatedRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  raise ValueError("STOP: authenticated publishing must not redirect")
+
+          publish_opener = urllib.request.build_opener(RejectAuthenticatedRedirect())
+
           def api_call(url, method="GET", data=None, mime=None):
+              trusted_publish_url(url, method)
               h = dict(headers)
               if mime:
                   h["Content-Type"] = mime
               req = urllib.request.Request(url, data=data, method=method, headers=h)
-              with urllib.request.urlopen(req, timeout=120) as response:
+              with publish_opener.open(req, timeout=120) as response:
                   return json.loads(response.read())
 
           # Check again immediately before mutation: never replace existing release.
