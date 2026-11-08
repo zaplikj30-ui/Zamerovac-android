@@ -40,7 +40,7 @@ jobs:
       PYTHONUTF8: '1'
     steps:
       - name: Zakazat jine spousteni nez vlastni main a infra
-        shell: pwsh
+        shell: powershell
         run: |
           if ($env:GITHUB_EVENT_NAME -notin @('push', 'workflow_dispatch') -or
               $env:GITHUB_REF -notin @('refs/heads/main','refs/heads/infra/windows-self-hosted-qa-20261108')) {
@@ -63,7 +63,7 @@ jobs:
           submodules: false
 
       - name: Dolozit presny commit testovaneho kodu
-        shell: pwsh
+        shell: powershell
         run: |
           $actual = (git rev-parse HEAD).Trim()
           if ($LASTEXITCODE -ne 0 -or $actual -cne $env:QA_TEST_REF) {
@@ -115,7 +115,7 @@ jobs:
       # Pouze duveryhodny Git for Windows MinGit + pevny SHA256, bez instalatoru
       # a bez systemovych uprav na domacim 16GB Windows PC.
       - name: Zakazat jine spousteni nez vlastni main a infra
-        shell: pwsh
+        shell: powershell
         run: |
           if ($env:GITHUB_EVENT_NAME -notin @('push', 'workflow_dispatch') -or
               $env:GITHUB_REF -notin @('refs/heads/main','refs/heads/infra/windows-self-hosted-qa-20261108')) {
@@ -154,7 +154,7 @@ jobs:
           submodules: false
 
       - name: Dolozit presny commit testovaneho kodu
-        shell: pwsh
+        shell: powershell
         run: |
           $actual = (git rev-parse HEAD).Trim()
           if ($LASTEXITCODE -ne 0 -or $actual -cne $env:QA_TEST_REF) {
@@ -214,7 +214,7 @@ jobs:
       ANDROID_SDK_ROOT: 'C:\actions-runner\tools\AndroidSdk'
     steps:
       - name: Zakazat jine spousteni nez vlastni main a infra
-        shell: pwsh
+        shell: powershell
         run: |
           if ($env:GITHUB_EVENT_NAME -notin @('push', 'workflow_dispatch') -or
               $env:GITHUB_REF -notin @('refs/heads/main','refs/heads/infra/windows-self-hosted-qa-20261108')) {
@@ -237,7 +237,7 @@ jobs:
           submodules: false
 
       - name: Dolozit presny commit testovaneho kodu
-        shell: pwsh
+        shell: powershell
         run: |
           $actual = (git rev-parse HEAD).Trim()
           if ($LASTEXITCODE -ne 0 -or $actual -cne $env:QA_TEST_REF) {
