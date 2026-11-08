@@ -1,0 +1,66 @@
+name: Zaměřovač - důvěryhodná Windows QA
+
+# Domácí runner: žádné nedůvěryhodné PR ani fork. Automaticky jen main.
+# Pro rozpracované větve je nutné ruční workflow_dispatch.
+on:
+  workflow_dispatch:
+    inputs:
+      target_ref:
+        description: 'Důvěryhodný commit SHA nebo vlastní větev k otestování'
+        required: true
+        default: 'main'
+        type: string
+  push:
+    branches: [main]
+    paths:
+      - 'app/src/main/assets/**'
+      - 'app/src/main/java/**'
+      - 'app/src/test/**'
+      - 'tests/**'
+      - 'sync/**'
+      - 'tools/**'
+      - '.github/workflows/windows-self-hosted-qa.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zamerovac-trusted-windows-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  local-quick:
+    # Push na chráněný main nebo explicitní ruční spuštění vlastníkem.
+    # ZÁMĚRNĚ žádné pull_request ani pull_request_target.
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' }}
+    name: Windows 11 - Node + Python lokální QA
+    runs-on: [self-hosted, Windows, X64, zamerovac-qa]
+    timeout-minutes: 25
+    env:
+      CI: '1'
+      PYTHONUTF8: '1'
+      LOCALAPPDATA: ${{ runner.temp }}
+    steps:
+      - name: Read-only checkout - bez uložených GitHub přihlašovacích údajů
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ inputs.target_ref || github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+
+      - name: Kontrola prostředí
+        shell: powershell
+        run: |
+          $ErrorActionPreference = 'Stop'
+          Write-Host "Ucet:" ([Security.Principal.WindowsIdentity]::GetCurrent().Name)
+          node --version
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+          python --version
+          if ($LASTEXITCODE -ne 0) { exit 1 }
+
+      - name: Kompletní rychlé Node/Python testy - žádná APK
+        shell: powershell
+        run: |
+          node tools/local-qa.cjs --quick
+          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
