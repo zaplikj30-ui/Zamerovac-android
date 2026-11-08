@@ -1,0 +1,54 @@
+name: Zaměřovač - TEMP B16 ověření přesnosti CAS bez APK
+on:
+  push:
+    branches: [fix/b16-native-cas-response-guard-20261108]
+    paths: ['.github/workflows/b16-cas-values-oneoff.yml']
+permissions:
+  contents: read
+concurrency:
+  group: zamerovac-oneoff-b16-cas-values
+  cancel-in-progress: false
+jobs:
+  exact-b16-cas:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.event_name == 'push' && github.ref == 'refs/heads/fix/b16-native-cas-response-guard-20261108' }}
+    runs-on: [self-hosted, Windows, X64, zamerovac-qa]
+    timeout-minutes: 12
+    env:
+      CI: '1'
+      EXACT_B16_SHA: '1a61eee62e301f79e7c0492ccbce83069aa4fb8a'
+    steps:
+      - name: Důvěryhodný Git z pevné místní cesty
+        shell: cmd
+        run: |
+          if not exist "C:\actions-runner\tools\MinGit-2.56.0.4\cmd\git.exe" exit /b 1
+          echo C:\actions-runner\tools\MinGit-2.56.0.4\cmd>>"%GITHUB_PATH%"
+      - name: Jen přesný commit B16, ne PR/fork; bez uložených credentials
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ env.EXACT_B16_SHA }}
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+      - name: Ověřit checkout a domácí účet
+        shell: cmd
+        run: |
+          if /I not "%USERNAME%"=="ZamerovacQA" exit /b 1
+          for /f %%H in ('git rev-parse HEAD') do set "ACTUAL_SHA=%%H"
+          if /I not "%ACTUAL_SHA%"=="%EXACT_B16_SHA%" exit /b 1
+          echo TESTED_SOURCE_SHA=%ACTUAL_SHA%
+      - name: Cílené B16 CAS přesné měření a originální média
+        shell: cmd
+        run: |
+          node --check app\src\main\assets\app.js
+          if errorlevel 1 exit /b 1
+          node --check tests\save_acknowledgement.js
+          if errorlevel 1 exit /b 1
+          node tests\save_acknowledgement.js
+          if errorlevel 1 exit /b 1
+          node tests\save_cas_conflict_guard.js
+          if errorlevel 1 exit /b 1
+          node tests\save_blocked_load_regression.js
+          if errorlevel 1 exit /b 1
+          node tests\sync_conflict_bridge.js
+          if errorlevel 1 exit /b 1
+          echo PASS: 4 targeted CAS regressions, NO APK, NO cloud
