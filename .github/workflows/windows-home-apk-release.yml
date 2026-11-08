@@ -59,17 +59,19 @@ jobs:
           if /I not "%ACTUAL_SHA%"=="%GITHUB_SHA%" exit /b 1
           echo RELEASE_SOURCE_SHA=%ACTUAL_SHA%
 
-      - name: Java 17 and Gradle 8.10.2 (pinned actions)
+      - name: Java 17 from pinned setup-java
         uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
           java-version: '17'
 
-      - name: Gradle 8.10.2 on HOME runner
-        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
-        with:
-          gradle-version: '8.10.2'
-          cache-disabled: true
+      - name: Use preverified local Gradle 8.10.2 - no runtime download
+        shell: cmd
+        run: |
+          if not exist "C:\actions-runner\tools\Gradle-8.10.2\bin\gradle.bat" exit /b 1
+          echo C:\actions-runner\tools\Gradle-8.10.2\bin>>"%GITHUB_PATH%"
+          call "C:\actions-runner\tools\Gradle-8.10.2\bin\gradle.bat" --version
+          if errorlevel 1 exit /b 1
 
       - name: Validate real home QA run and previous released APK versionCode and signer
         shell: 'C:\actions-runner\tools\Python313\python.exe {0}'
