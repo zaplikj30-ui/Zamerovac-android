@@ -1,5 +1,14 @@
 # Domácí GitHub Actions runner – zaměřování a stav migrace
 
+## Aktualizace migrace 8. 11. 2026 – domácí B12/B13 + release guardy 4/4 PASS, na main zatím NE
+
+- **Cloudová fáze 1 HOTOVO:** `main` `45e1758` má přesně pět GitHub-hosted workflow pouze na `workflow_dispatch`, `cloud_run_approved=false` default, owner + repo + main guard, nouzový cloud APK navíc `publish_release=true`; při přepnutí **0 placených běhů**. [Záznam #68](https://github.com/zaplikj30-ui/Zamerovac-android/pull/68#issuecomment-6723218494).
+- **Fáze 2 STAGING, NIKOLIV MERGE:** [PR #69](https://github.com/zaplikj30-ui/Zamerovac-android/pull/69) integruje B1–B13, čtyři domácí joby, domácí release a dvě opravy [PR #70](https://github.com/zaplikj30-ui/Zamerovac-android/pull/70): technický APK smoke má živé ověření předchozí publikované podepsané APK + `versionCode=previous+1` místo pevné 1155; release uploader odmítá neověřené URL a autorizovaná přesměrování.
+- **Skutečný domácí full QA [#42496018861](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42496018861): 4/4 SUCCESS**, zdroj `9368cafae3be5f8ebaa06b0f851dd63833c9ca19`, domácí Windows 11 služba 16 GB, WSL2 ext4 4 GB RAM / 2 CPU, těžké práce postupně: rychlé **76 PASS/0 FAIL**, Chromium **21 PASS/0 FAIL**, Robolectric **265 PASS/0 failures/errors/skips** + PDF parser i pixely 3 fixtures **PASS**, podpis/package/versionName technické APK **PASS**. Živé read-only GitHub Releases API ověřilo poslední vydanou `test-v1.3.0`, code 1154, následná lokální testovací APK code 1155 správná a **odstraněná bez uploadu/release**. Nových **17/17 bezpečnostních offline Python testů PASS** [#42495643843](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42495643843).
+- Jednorázový čtyřjobový workflow po PASS odstraněn `dd9b51a7`; v následném `4be907b8` přibyla jen dokumentace. Testovaný aplikační/testovací/vydávací kód je nezměněný; **žádné nové runtime 4/4 na úklidovém nebo dokumentačním SHA**. `main` nemá domácí QA, proto na main **NOT RUN**, fyzický Samsung/S Pen/Bosch/Drive i ikony STOP/START **NOT RUN**.
+- **Bezpečnostní hranice:** zásadní merge do main pouze s výslovným schválením a po nezávislé finální kontrole. Po sloučení vyvolat ownerem HOME QA přesného main SHA a vyžadovat 4/4 PASS, nikoli SKIP. Žádný placený cloud bez souhlasu (12 USD/měsíční strop), žádná průběžně vydaná APK.
+
+
 
 ## Nový plný domácí integrační checkpoint 4/4 — 8. 11. 2026
 
