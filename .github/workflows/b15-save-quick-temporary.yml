@@ -1,0 +1,109 @@
+name: Zaměřovač - TEMP B15 domácí rychlé ověření bez APK
+
+# Domácí runner: jen důvěryhodný main commit; žádné PR/forky ani testovací infra checkouty.
+# Před sloučením odstranen dočasný pevný QA B12 ref i dočasný infra trigger.
+on:
+  workflow_dispatch:
+  push:
+    branches: [fix/b15-blocked-load-save-state-20261108]
+    paths:
+      - 'app/src/main/assets/**'
+      - 'app/src/main/java/**'
+      - 'app/src/main/res/**'
+      - 'app/src/main/AndroidManifest.xml'
+      - 'app/build.gradle'
+      - 'config/**'
+      - 'gradle/**'
+      - 'app/src/test/**'
+      - 'app/src/androidTest/**'
+      - 'tests/**'
+      - 'sync/**'
+      - 'tools/**'
+      - '.github/workflows/windows-self-hosted-qa.yml'
+      - '.github/workflows/b15-save-quick-temporary.yml'
+      - '.github/workflows/windows-home-apk-release.yml'
+
+permissions:
+  contents: read
+
+env:
+  # Všechny čtyři joby testují přesné SHA události pouze na main.
+  # Bez volného target_ref, pull_request ani pevného B12 ref.
+  QA_TEST_REF: ${{ github.sha }}
+
+concurrency:
+  group: zamerovac-trusted-windows-qa-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  local-quick:
+    # Push na main nebo explicitní ruční spuštění vlastníkem; job-level gate blokuje ostatní branche.
+    # ZÁMĚRNĚ žádné pull_request ani pull_request_target.
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/fix/b15-blocked-load-save-state-20261108' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
+    name: Windows 11 - Node + Python lokální QA
+    runs-on: [self-hosted, Windows, X64, zamerovac-qa]
+    timeout-minutes: 25
+    env:
+      CI: '1'
+      PYTHONUTF8: '1'
+    steps:
+      - name: Zakazat spousteni mimo vlastni main
+        shell: cmd
+        run: |
+          if not "%GITHUB_EVENT_NAME%"=="push" if not "%GITHUB_EVENT_NAME%"=="workflow_dispatch" exit /b 1
+          if not "%GITHUB_REF%"=="refs/heads/fix/b15-blocked-load-save-state-20261108" exit /b 1
+          echo PASS: trusted event and branch
+
+      - name: Git CLI pro skutecny checkout SHA
+        shell: cmd
+        run: |
+          if not exist "C:\actions-runner\tools\MinGit-2.56.0.4\cmd\git.exe" exit /b 1
+          echo C:\actions-runner\tools\MinGit-2.56.0.4\cmd>>"%GITHUB_PATH%"
+
+      - name: Read-only checkout - bez uložených GitHub přihlašovacích údajů
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ env.QA_TEST_REF }}
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+
+      - name: Dolozit presny commit testovaneho kodu
+        shell: cmd
+        run: |
+          for /f %%H in ('git rev-parse HEAD') do set "ACTUAL_SHA=%%H"
+          if not defined ACTUAL_SHA exit /b 1
+          if /I not "%ACTUAL_SHA%"=="%QA_TEST_REF%" (
+            echo FAIL: checkout SHA mismatch
+            exit /b 1
+          )
+          echo TESTED_SOURCE_SHA=%ACTUAL_SHA%
+
+      - name: Python pro testovací službu (jen tento job)
+        shell: cmd
+        run: |
+          if not exist "C:\actions-runner\tools\Python313\python.exe" (
+            echo CHYBI oddeleny Python 3.13 v runneru.
+            exit /b 1
+          )
+          "C:\actions-runner\tools\Python313\python.exe" -c "import sys,unittest;print(sys.version)"
+          if errorlevel 1 exit /b 1
+          echo C:\actions-runner\tools\Python313>>"%GITHUB_PATH%"
+
+      - name: Kontrola prostředí
+        shell: cmd
+        run: |
+          whoami
+          where node
+          node --version
+          if errorlevel 1 exit /b 1
+          where python
+          python --version
+          if errorlevel 1 exit /b 1
+
+      - name: Kompletní rychlé Node/Python testy - žádná APK
+        shell: cmd
+        run: |
+          node tools\local-qa.cjs --quick
+          if errorlevel 1 exit /b 1
+
