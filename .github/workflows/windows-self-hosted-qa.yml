@@ -48,6 +48,17 @@ jobs:
           persist-credentials: false
           submodules: false
 
+      - name: Python pro testovací službu (jen tento job)
+        shell: cmd
+        run: |
+          if not exist "C:\actions-runner\tools\Python313\python.exe" (
+            echo CHYBI oddeleny Python 3.13 v runneru.
+            exit /b 1
+          )
+          "C:\actions-runner\tools\Python313\python.exe" -c "import sys,unittest;print(sys.version)"
+          if errorlevel 1 exit /b 1
+          echo C:\actions-runner\tools\Python313>>"%GITHUB_PATH%"
+
       - name: Kontrola prostředí
         shell: cmd
         run: |
