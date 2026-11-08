@@ -444,7 +444,7 @@ const chapters=[
       "Nové ZIP zálohy obsahují kontrolní součty SHA-256 a velikosti souborů. Obnova je ověří před vytvořením kopií; starší ZIP zůstávají přijímány bez této dodatečné kontroly.",
       "Chybějící nebo prázdná příloha export zálohy zastaví. Neúspěšný zápis se neoznačí jako hotová záloha; původní zakázky zůstávají zachované.",
       "Místní databáze má limit 20 MiB skutečných UTF-8 bajtů; české znaky a emoji zabírají více bajtů než prostý text. Odmítnutý nadlimitní zápis zachová obě potvrzené kopie. Rozpracované změny ponech otevřené a omez nepotřebný obsah před dalším uložením.",
-      "Při hlášení Neuloženo zůstaň v aplikaci a uložení zopakuj. Aplikace potvrdí zápis až po úspěšném uložení; souběžné konfliktní změny uchová jako označenou kopii.",
+      "Při hlášení Neuloženo zůstaň v aplikaci a uložení zopakuj. Pokud se původní zakázky nepodařilo vůbec načíst, zápis zůstává z bezpečnostních důvodů zablokovaný a upozornění nezmizí. Nejprve vyřeš načtení dat; původní úložiště se automaticky nepřepisuje. Aplikace potvrdí zápis až po úspěšném uložení; souběžné konfliktní změny uchová jako označenou kopii.",
       "Poškozený nebo neplatný ZIP, neplatné kódování, neúplné znaky Unicode a příliš zanořená data aplikace odmítne. Pokud nelze soubor vybrat, zkontroluj filtr a umístění v systémovém správci.",
       "Změna účtu nebo úložiště vyčistí pouze zobrazený seznam a dočasná označení ověření; původní historie zůstává na původním místě. Znovu ji zpřístupníš jeho výběrem. Odpojení záloh nezmění účet synchronizace ani místní zakázky."
     ],
