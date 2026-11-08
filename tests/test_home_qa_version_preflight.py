@@ -31,16 +31,17 @@ class HomeQaCodePreflight(unittest.TestCase):
             v.latest_published([{"tag_name": "test-v9.9.9", "draft": True}])
 
     def test_prior_signature_package_and_version_code(self):
-        self.assertEqual(v.require_valid_old_apk(BADGING, SIGNATURE), 1154)
+        self.assertEqual(v.require_valid_old_apk(BADGING, SIGNATURE, "test-v1.3.0"), 1154)
         for data, signature in [
             (BADGING.replace("cz.zamerovac.app.preview", "evil.app"), SIGNATURE),
             (BADGING, "Signer certificate different"),
             (BADGING.replace("1154", "2147483646"), SIGNATURE),
             (BADGING.replace("1154", "999"), SIGNATURE),
+            (BADGING.replace("1.3.0-test", "1.2.153-test"), SIGNATURE),
         ]:
             with self.subTest(data=data, signature=signature):
                 with self.assertRaises(ValueError):
-                    v.require_valid_old_apk(data, signature)
+                    v.require_valid_old_apk(data, signature, "test-v1.3.0")
 
     def test_current_and_future_release_codes_not_fixed(self):
         actual = v.version_values(1154, "1.3.0", "test-v1.3.0")
@@ -84,6 +85,10 @@ class HomeQaCodePreflight(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "insecure"):
             v.SafeAssetRedirect().redirect_request(
                 original, None, 302, "Found", {}, "http://example.invalid/asset")
+
+    def test_version_name_mismatch_rejected(self):
+        with self.assertRaisesRegex(ValueError, "wrong package/version"):
+            v.require_valid_old_apk(BADGING, SIGNATURE, "test-v1.3.1")
 
     def test_api_only_correct_repo(self):
         for url in [
