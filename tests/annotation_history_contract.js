@@ -23,7 +23,7 @@ assert.equal(JSON.stringify(restored),before,'Undo changed original exact values
 assert.equal(redo[0],changedBytes,'Redo lost changed exact values');
 const reapplied=H.restore(restored,redo,undo);
 assert.equal(JSON.stringify(reapplied),changedBytes,'Redo did not restore exact snapshot');
-assert.equal(JSON.stringify(exact),before,'Undo/Redo mutated live original');
+assert.equal(JSON.stringify([exact]),before,'Undo/Redo mutated live original');
 
 // Compare valid historical behavior with the pre-B14 algorithms; no normalization.
 function legacyCheckpoint(items,stack,redoStack){
