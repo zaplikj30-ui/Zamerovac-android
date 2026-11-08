@@ -1,5 +1,13 @@
 # Zaměřovač – START ZDE (aktuální stav, rozhodnutí a další práce)
 
+**NOVÝ checkpoint 8. 11. 2026 – po bezpečném přepnutí cloudu a dokončení domácí integrační regrese (draft PR #69, bez merge/release):**
+
+- **main** nyní `45e1758d6078ff5c836b70d94240b707e1e80e28`: všech 5 původních cloudových workflow je pouze `workflow_dispatch` se schválením vlastníka (srov. [PR #68](https://github.com/zaplikj30-ui/Zamerovac-android/pull/68#issuecomment-6723218494)). **0 nových placených cloud běhů. Domácí QA ještě není sloučena do main.**
+- **Souhrnná příprava B1–B13 + domácí QA je v [draft PR #69](https://github.com/zaplikj30-ui/Zamerovac-android/pull/69)**, integrační branch `integration/b12-b13-cutover-reconciled-20261108`; zahrnuje také bezpečnostní opravy R18-01/R18-04 z [PR #70](https://github.com/zaplikj30-ui/Zamerovac-android/pull/70), sloučeného pouze do staging. Zrušen pevný code 1155 v domácím smoke; nově živě čte a ověřuje poslední publikovanou podepsanou APK a stanovuje nextCode; publishing token omezen na důvěryhodné GitHub API/upload URL bez přesměrování.
+- **Nová kompletní HOME regrese [#42496018861](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42496018861) 4/4 PASS** na přesném `9368cafae3be5f8ebaa06b0f851dd63833c9ca19`: 76 Node/Python PASS, 21 Chromium/pixel/E2E PASS, 265 Robolectric PASS (0 FAIL/ERROR/SKIP) + 3 PDF fixtures PASS, technické preview APK sestavení PASS. Nový **živý read-only GitHub Releases preflight** ověřil `test-v1.3.0` code 1154, signer/package; sestavil pouze lokální code 1155, versionName 1.3.0-test, **APK odstraněna a nevydána**. [Cílených 17/17 bezpečnostních testů PASS](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42495643843). Po 4/4 PASS odstraněno jen dočasné workflow v `dd9b51a7`, nikoli aplikační/testovací kód: **nový úklidový HEAD nemá své vlastní 4/4 spuštění**.
+- **Zbývá:** nezávislá finální revize významného diffu PR #69; **výslovný souhlas před zásadním sloučením do main**; poté HOME 4/4 PASS na *skutečném main SHA* (nesmí být SKIP). Nouzový cloud nikdy nespouštět bez souhlasu a respektovat limit 12 USD/měsíc. Fyzický Samsung/WebView, S Pen, Bosch, živá Drive/sync a ikony STOP/START stále **NOT RUN**. Jedna společná testovací APK teprve po celé schválené aktualizaci, samostatném ověření a výslovném schválení vydání.
+
+
 
 **NOVÝ OVĚŘENÝ STAV 8. 11. 2026 — kompletní domácí QA sjednocené přestavby B12/B13 + bezpečné vydávání:**
 
