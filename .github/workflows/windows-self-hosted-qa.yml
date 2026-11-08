@@ -9,11 +9,18 @@ on:
     paths:
       - 'app/src/main/assets/**'
       - 'app/src/main/java/**'
+      - 'app/src/main/res/**'
+      - 'app/src/main/AndroidManifest.xml'
+      - 'app/build.gradle'
+      - 'config/**'
+      - 'gradle/**'
       - 'app/src/test/**'
+      - 'app/src/androidTest/**'
       - 'tests/**'
       - 'sync/**'
       - 'tools/**'
       - '.github/workflows/windows-self-hosted-qa.yml'
+      - '.github/workflows/windows-home-apk-release.yml'
 
 permissions:
   contents: read
@@ -409,11 +416,13 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: Gradle 8.10.2
-        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
-        with:
-          gradle-version: '8.10.2'
-          cache-disabled: true
+      - name: Preverified Gradle 8.10.2 from LOCAL Windows tools - no HTTP
+        shell: cmd
+        run: |
+          if not exist "C:\actions-runner\tools\Gradle-8.10.2\bin\gradle.bat" exit /b 1
+          echo C:\actions-runner\tools\Gradle-8.10.2\bin>>"%GITHUB_PATH%"
+          call "C:\actions-runner\tools\Gradle-8.10.2\bin\gradle.bat" --version
+          if errorlevel 1 exit /b 1
       - name: Build Preview a kontrola podpisu, balicku a verze - bez uploadu
         shell: cmd
         run: |
