@@ -1,7 +1,7 @@
 name: Sestavit a vydat Zaměřovač (testovací verze)
-# STAGED ONLY. Emergency cloud fallback, explicit owner approval only; NO auto cloud build.
+# Emergency cloud fallback, explicit owner approval only; NO auto cloud build.
 # Publishing needs explicit owner dispatch with publish_release=true.
-# This staging branch is NOT main. Do not merge until paid automatic triggers are safely gated.
+# Manual-only: never build or publish without explicit owner approval.
 on:
   workflow_dispatch:
     inputs:
@@ -20,7 +20,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   android:
-    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && inputs.cloud_run_approved == true && inputs.publish_release == true }}
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.cloud_run_approved == true && inputs.publish_release == true }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
