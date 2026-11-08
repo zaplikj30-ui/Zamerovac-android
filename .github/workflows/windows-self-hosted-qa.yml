@@ -197,36 +197,25 @@ jobs:
           retention-days: 7
 
   native-jvm:
-    # Nezavisle na browser smoke, ale až po rychlém PASS; jediný místní runner
-    # vykonává jobs postupně. Žádné sestavení APK ani Android emulátor.
+    # All Linux tests on the SAME trusted Windows runner through an isolated WSL2 distro.
+    # Direct Windows Robolectric produced 85 filesystem-specific failures (not suppressed).
+    # Full 265 native tests, Drive negative cases, Java compile + independent PDF renderer.
     needs: local-quick
     if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' }}
-    name: Windows JVM + Robolectric (bez APK)
+    name: Home WSL2 native Java + 265 Robolectric + PDF
     runs-on: [self-hosted, Windows, X64, zamerovac-qa]
-    timeout-minutes: 55
-    permissions:
-      contents: read
+    timeout-minutes: 60
     env:
       CI: '1'
       PYTHONUTF8: '1'
-      # Vlastní izolovaný SDK adresář runneru, nezávislý na osobním profilu.
-      ANDROID_HOME: 'C:\actions-runner\tools\AndroidSdk'
-      ANDROID_SDK_ROOT: 'C:\actions-runner\tools\AndroidSdk'
     steps:
-      - name: Zakazat jine spousteni nez vlastni main a infra
-        shell: cmd
-        run: |
-          if not "%GITHUB_EVENT_NAME%"=="push" if not "%GITHUB_EVENT_NAME%"=="workflow_dispatch" exit /b 1
-          if not "%GITHUB_REF%"=="refs/heads/main" if not "%GITHUB_REF%"=="refs/heads/infra/windows-self-hosted-qa-20261108" exit /b 1
-          echo PASS: trusted event and branch
-
-      - name: Git CLI pro skutecny checkout SHA
+      - name: Pinned trusted Git before source checkout
         shell: cmd
         run: |
           if not exist "C:\actions-runner\tools\MinGit-2.56.0.4\cmd\git.exe" exit /b 1
           echo C:\actions-runner\tools\MinGit-2.56.0.4\cmd>>"%GITHUB_PATH%"
 
-      - name: Načíst pouze důvěryhodné zdroje
+      - name: Read-only checkout of same exact commit as quick and browser tests
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           ref: ${{ env.QA_TEST_REF }}
@@ -234,139 +223,147 @@ jobs:
           persist-credentials: false
           submodules: false
 
-      - name: Dolozit presny commit testovaneho kodu
+      - name: Verify exact source SHA on Windows
         shell: cmd
         run: |
           for /f %%H in ('git rev-parse HEAD') do set "ACTUAL_SHA=%%H"
           if not defined ACTUAL_SHA exit /b 1
-          if /I not "%ACTUAL_SHA%"=="%QA_TEST_REF%" (
-            echo FAIL: checkout SHA mismatch
-            exit /b 1
-          )
-          echo TESTED_SOURCE_SHA=%ACTUAL_SHA%
+          if /I not "%ACTUAL_SHA%"=="%QA_TEST_REF%" exit /b 1
+          echo TESTED_NATIVE_SOURCE_SHA=%ACTUAL_SHA%
 
-      - name: Python 3.13 pro nezávislou kontrolu PDF
+      - name: Linux ext4 testovni adresar, Gradle SHA256, vsechny Robolectric + Drive testy
+        shell: 'C:\actions-runner\tools\Python313\python.exe {0}'
+        run: |
+          import os
+          from pathlib import Path
+          import subprocess
+
+          expected = os.environ["QA_TEST_REF"]
+          if os.environ.get("USERNAME", "").lower() != "zamerovacqa":
+              raise SystemExit("STOP: unexpected Windows account")
+          workspace = os.environ["GITHUB_WORKSPACE"]
+          sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=workspace, text=True).strip()
+          if sha != expected:
+              raise SystemExit("STOP: checkout SHA mismatch")
+
+          linux = r"""
+          set -Eeuo pipefail
+          export CI=1
+          export DEBIAN_FRONTEND=noninteractive
+          export LC_ALL=C.UTF-8
+          export ANDROID_HOME=/opt/android-sdk
+          export ANDROID_SDK_ROOT=/opt/android-sdk
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          export GRADLE_USER_HOME=/root/.gradle
+
+          source_dir="$(wslpath -u "$1")"
+          reports="$(wslpath -u "$2")"
+          sha="$3"
+          destination="/root/zamerovac-qa-commits/$sha"
+          mkdir -p "$reports"
+          trap 'if [ -d "$destination/app/build/test-results/testPreviewUnitTest" ]; then cp -a "$destination/app/build/test-results/testPreviewUnitTest" "$reports/"; fi' EXIT
+
+          echo "[WSL] Linux ext4 isolated fixture and pinned SHA"
+          test -d "$source_dir/.git"
+          test -f "$source_dir/app/build.gradle"
+          if [ ! -d "$destination/.git" ]; then
+            mkdir -p "$destination"
+            cp -a "$source_dir/." "$destination/"
+          fi
+          cd "$destination"
+          actual="$(git rev-parse HEAD)"
+          echo "[WSL] TESTED_SOURCE_SHA=$actual"
+          test "$actual" = "$sha"
+          test -f "$ANDROID_HOME/platforms/android-35/android.jar"
+          test "$(uname -s)" = "Linux"
+          java -version
+
+          echo "[WSL] Pinned official Gradle 8.10.2 SHA256"
+          archive=/opt/gradle-8.10.2-bin.zip
+          check=31c55713e40233a8303827ceb42ca48a47267a0ad4bab9177123121e71524c26
+          if [ ! -x /opt/gradle-8.10.2/bin/gradle ]; then
+            curl --fail --silent --show-error --location --retry 2 --connect-timeout 20 --max-time 900 \
+              https://services.gradle.org/distributions/gradle-8.10.2-bin.zip --output "$archive"
+            echo "$check  $archive" | sha256sum --check
+            unzip -q "$archive" -d /opt
+            rm -f "$archive"
+          fi
+          gradle=/opt/gradle-8.10.2/bin/gradle
+          "$gradle" --version
+
+          # Force the exact tests to execute again; old cache must not masquerade as a new pass.
+          rm -rf app/build/test-results/testPreviewUnitTest
+          rm -f app/build/customer-pdf-1.zip app/build/customer-pdf-3.zip app/build/customer-pdf-multipage.zip
+
+          echo "[WSL] Negative Drive configuration test first"
+          "$gradle" --no-daemon --max-workers=1 \
+            -Dorg.gradle.jvmargs="-Xmx1536m -XX:MaxMetaspaceSize=384m" \
+            -p tools/drive-config-checks verify --console=plain
+
+          echo "[WSL] FULL native Java/Robolectric at exact source SHA"
+          "$gradle" --no-daemon --max-workers=1 \
+            -Dorg.gradle.jvmargs="-Xmx1536m -XX:MaxMetaspaceSize=384m" \
+            :app:verifyDriveRegistration :app:compilePreviewJavaWithJavac \
+            :app:testPreviewUnitTest -PdriveRequireConfigured=true --console=plain
+
+          echo "[WSL] Independent XML assertion for the full native suite"
+          python3 - <<'PY_XML'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          files = sorted(Path('app/build/test-results/testPreviewUnitTest').glob('TEST-*.xml'))
+          if not files:
+              raise SystemExit("FAIL: no native test reports")
+          totals = {'tests': 0, 'failures': 0, 'errors': 0, 'skipped': 0}
+          for path in files:
+              root = ET.parse(path).getroot()
+              for name in totals:
+                  totals[name] += int(root.attrib.get(name, '0'))
+          print("LINUX_ROBOLECTRIC_XML_COUNTS:", totals, "FILES:", len(files), flush=True)
+          if totals['tests'] < 265 or totals['failures'] or totals['errors'] or totals['skipped']:
+              raise SystemExit("FAIL: expected all 265+ native tests to pass without skips")
+          print("PASS: complete Java/Robolectric regression on Linux ext4, exact B12 SHA", flush=True)
+          PY_XML
+          for pdf_fixture in customer-pdf-1.zip customer-pdf-3.zip customer-pdf-multipage.zip; do
+            test -s "app/build/$pdf_fixture"
+            cp "app/build/$pdf_fixture" "$reports/$pdf_fixture"
+          done
+          echo "[WSL] PDF fixtures copied to Windows for independent renderer"
+          echo "[WSL] NO APK generated or uploaded, NO cloud hosted runner"
+          """
+
+          output_dir = str(Path(workspace) / "wsl-native-reports")
+          cmd = ["wsl.exe", "--distribution", "Zamerovac-Ubuntu-QA", "--user",
+                 "root", "--exec", "/bin/bash", "-lc", linux, "_", workspace,
+                 output_dir, expected]
+          print("WSL 2 capped 4GB RAM / 2 CPUs; serial Gradle; no emulator / no release", flush=True)
+          p = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                               stderr=subprocess.STDOUT)
+          for line in p.stdout:
+              print(line.decode("utf-8", errors="replace").rstrip(), flush=True)
+          rc = p.wait()
+          if rc != 0:
+              raise SystemExit("FAIL: Linux native QA returned " + str(rc))
+
+
+      - name: Independent PDF parse and render of ALL generated fixture ZIPs
         shell: cmd
         run: |
           if not exist "C:\actions-runner\tools\Python313\python.exe" exit /b 1
-          echo C:\actions-runner\tools\Python313>>"%GITHUB_PATH%"
-
-      - name: JDK 17 (uživatelská cache runneru)
-        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
-        with:
-          distribution: temurin
-          java-version: '17'
-
-      - name: Gradle 8.10.2 (bez wrapperu v repozitáři)
-        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
-        with:
-          gradle-version: '8.10.2'
-          cache-disabled: true
-
-      # setup-android@v4 na této Windows službě padá kvůli Expand-Archive
-      # na dočasném souboru bez .zip; používáme podporovaný přímo stažený ZIP.
-      # Oficiální Google Android SDK tools pro Windows; SHA-256 z developer.android.com/studio.
-      - name: Android command-line tools - oficiální ZIP a SHA256 kontrola
-        shell: cmd
-        run: |
-          if not exist "%ANDROID_HOME%\cmdline-tools\latest\bin\sdkmanager.bat" (
-            if not exist "%ANDROID_HOME%\cmdline-tools" mkdir "%ANDROID_HOME%\cmdline-tools"
-            if errorlevel 1 exit /b 1
-            curl.exe --fail --silent --show-error --location "https://dl.google.com/android/repository/commandlinetools-win-15859902_latest.zip" --output "%RUNNER_TEMP%\zamerovac-android-commandline-15859902.zip"
-            if errorlevel 1 exit /b 1
-            certutil.exe -hashfile "%RUNNER_TEMP%\zamerovac-android-commandline-15859902.zip" SHA256 | findstr.exe /i /c:"90ae805d20434428bffcb699c290860f19bb5f66a67e6b330067e3de801fb04a" >nul
-            if errorlevel 1 (
-              echo CHYBA: SHA256 oficialniho Android SDK archivu nesouhlasi.
-              exit /b 1
-            )
-            tar.exe -xf "%RUNNER_TEMP%\zamerovac-android-commandline-15859902.zip" -C "%ANDROID_HOME%\cmdline-tools"
-            if errorlevel 1 exit /b 1
-            ren "%ANDROID_HOME%\cmdline-tools\cmdline-tools" latest
-            if errorlevel 1 exit /b 1
-          )
-          if not exist "%ANDROID_HOME%\cmdline-tools\latest\bin\sdkmanager.bat" exit /b 1
-          echo %ANDROID_HOME%\cmdline-tools\latest\bin>>"%GITHUB_PATH%"
-          echo %ANDROID_HOME%\platform-tools>>"%GITHUB_PATH%"
-          echo %ANDROID_HOME%\build-tools\35.0.0>>"%GITHUB_PATH%"
-
-      - name: Android SDK licence a kontrola balicku (API 35, build-tools 34/35)
-        shell: python
-        run: |
-          import os
-          import subprocess
-          import sys
-          from pathlib import Path
-
-          sdk = Path(os.environ["ANDROID_HOME"])
-          manager = sdk / "cmdline-tools" / "latest" / "bin" / "sdkmanager.bat"
-          if not manager.is_file():
-              sys.exit("FAIL: no sdkmanager")
-
-          def check(label, arguments, answers):
-              result = subprocess.run(
-                  [str(manager), f"--sdk_root={sdk}", *arguments],
-                  input=answers, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
-                  encoding="utf-8", errors="replace", text=True, timeout=360
-              )
-              print(label, "exit:", result.returncode)
-              print("\n".join(result.stdout.splitlines()[-10:]))
-              if result.returncode:
-                  sys.exit("FAIL: " + label)
-              return result.stdout
-
-          check("Accept SDK licenses", ["--licenses"], "y\n" * 100)
-          licenses = sdk / "licenses"
-          if not licenses.is_dir() or not any(x.is_file() and x.stat().st_size for x in licenses.iterdir()):
-              sys.exit("FAIL: SDK license files absent")
-          status = check("Verify SDK licenses", ["--licenses"], "\n")
-          if "All SDK package licenses accepted" not in status:
-              sys.exit("FAIL: SDK licenses not accepted")
-          packages = ["platform-tools", "platforms;android-35", "build-tools;34.0.0", "build-tools;35.0.0"]
-          check("Install SDK packages", ["--install", *packages], "y\n" * 50)
-          for package in ("platform-tools", "platforms/android-35", "build-tools/34.0.0", "build-tools/35.0.0"):
-              if not (sdk / package / "source.properties").is_file():
-                  sys.exit("FAIL: SDK component missing: " + package)
-          print("PASS: Android SDK licenses, platform 35, build-tools 34 and 35")
-
-      - name: Ověření přesných verzí (bez APK)
-        shell: cmd
-        run: |
-          java -version
+          if not exist "wsl-native-reports\customer-pdf-1.zip" exit /b 1
+          if not exist "wsl-native-reports\customer-pdf-3.zip" exit /b 1
+          if not exist "wsl-native-reports\customer-pdf-multipage.zip" exit /b 1
+          "C:\actions-runner\tools\Python313\python.exe" -m pip install --disable-pip-version-check "pypdf[image]>=5,<7" "pymupdf>=1.24,<2"
           if errorlevel 1 exit /b 1
-          call gradle.bat --version
+          "C:\actions-runner\tools\Python313\python.exe" tools\check-customer-pdf.py wsl-native-reports\customer-pdf-1.zip wsl-native-reports\customer-pdf-3.zip wsl-native-reports\customer-pdf-multipage.zip
           if errorlevel 1 exit /b 1
-          call sdkmanager.bat --sdk_root="%ANDROID_HOME%" --list_installed
-          if errorlevel 1 exit /b 1
+          echo PASS native 265 and independent PDF renderer
 
-      - name: Veřejná Drive registrace a chybové konfigurace
-        shell: cmd
-        run: |
-          call gradle.bat --no-daemon --max-workers=2 -Dorg.gradle.jvmargs=-Xmx2048m -p tools/drive-config-checks verify
-          if errorlevel 1 exit /b 1
-
-      - name: Java kompilace + Robolectric jednotkové testy
-        shell: cmd
-        run: |
-          call gradle.bat --no-daemon --max-workers=2 -Dorg.gradle.jvmargs=-Xmx2048m :app:verifyDriveRegistration :app:compilePreviewJavaWithJavac :app:testPreviewUnitTest -PdriveRequireConfigured=true
-          if errorlevel 1 exit /b 1
-
-      - name: Nezávisle otevřít a vykreslit zákaznická PDF
-        shell: cmd
-        run: |
-          python -m pip install "pypdf[image]>=5,<7" "pymupdf>=1.24,<2"
-          if errorlevel 1 exit /b 1
-          python tools\check-customer-pdf.py app\build\customer-pdf-1.zip app\build\customer-pdf-3.zip app\build\customer-pdf-multipage.zip
-          if errorlevel 1 exit /b 1
-
-      - name: Uložit testovací důkazy (nikoliv APK)
+      - name: Preserve home Linux JUnit evidence; never upload APK
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: zamerovac-windows-native-jvm
-          path: |
-            app/build/test-results/testPreviewUnitTest/
-            app/build/reports/drive-registration.json
-            app/build/customer-pdf-*.zip
+          name: zamerovac-home-wsl-native-and-pdf
+          path: wsl-native-reports/
           if-no-files-found: ignore
           retention-days: 7
 
