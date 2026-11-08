@@ -35,6 +35,10 @@ Soubor `.github/workflows/windows-self-hosted-qa.yml` v infra PR #61:
 
 Větev `infra/stage-cloud-fallback-20261108` připravuje `quick-check.yml`, `verify-native.yml`, `build-apk.yml`, `emulator-smoke.yml` a `export-audit-sources.yml` jako **workflow_dispatch ONLY** s požadovaným `cloud_run_approved=true`, omezením na vlastníka. Cloud build k vydání navíc vyžaduje `publish_release=true` a `main`. **Staging není sloučen, ani se nyní nesmí otevřít PR bez vyhodnocení legacy `pull_request` cloud triggerů na `main`.** Jinak by placené kontroly mohly běžet před instalací nových bezpečných pravidel.
 
+## Pozor na navazující editor PR
+
+Editorové drafty **#60 → #62 → #63** navazují jeden na druhý, ale všechny v diffu proti `main` obsahují i `.github/workflows/quick-check.yml` a `.github/workflows/emulator-smoke.yml`. QA B12 `quick-check.yml` stále obsahuje **automatické `push` a `pull_request` cloud triggery**, a navíc přináší nové browser/latency/pixelové QA sady. **Při budoucím sloučení editoru nesmí dojít k vrácení těchto placených triggerů ani ke ztrátě nově přidaných kontrol.** Sloučení/rebase je nutné předem připravit tak, aby se zachovalo obojí: rozšířená QA a manuální cloud fallback s budget gate. Dosud se těchto větví nedotýkat bez potřeby.
+
 ## Co je ještě potřeba
 
 - Ověřit konečný **integrovaný** domácí běh na stejném SHA (předchozí dílčí PASS se nesmí zaměnit za celé PASS).
