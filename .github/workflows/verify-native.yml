@@ -1,21 +1,18 @@
 name: Zaměřovač – kontrola kompilace Androidu bez APK
+# Manual cloud fallback; Windows/WSL2 home QA is primary.
+# Cloud QA stays available as manual emergency regression backup; never run without owner approval.
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - 'app/src/main/java/**'
-      - 'app/src/main/AndroidManifest.xml'
-      - 'app/src/main/res/**'
-      - 'app/src/test/**'
-      - 'app/build.gradle'
-      - 'config/app-version.properties'
-      - 'config/drive-preview.properties'
-      - 'gradle/drive-registration.gradle'
-      - 'tools/drive-config-checks/**'
-      - 'tools/check-customer-pdf.py'
-      - '.github/workflows/verify-native.yml'
+  workflow_dispatch:
+    inputs:
+      cloud_run_approved:
+        description: 'Placený cloud jen s výslovným souhlasem vlastníka (limit 12 USD/měsíc)'
+        required: true
+        type: boolean
+        default: false
+
 jobs:
   compile:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.cloud_run_approved == true }}
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
