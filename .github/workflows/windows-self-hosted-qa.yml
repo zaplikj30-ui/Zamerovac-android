@@ -49,17 +49,18 @@ jobs:
           submodules: false
 
       - name: Kontrola prostředí
-        shell: powershell
+        shell: cmd
         run: |
-          $ErrorActionPreference = 'Stop'
-          Write-Host "Ucet:" ([Security.Principal.WindowsIdentity]::GetCurrent().Name)
+          whoami
+          where node
           node --version
-          if ($LASTEXITCODE -ne 0) { exit 1 }
+          if errorlevel 1 exit /b 1
+          where python
           python --version
-          if ($LASTEXITCODE -ne 0) { exit 1 }
+          if errorlevel 1 exit /b 1
 
       - name: Kompletní rychlé Node/Python testy - žádná APK
-        shell: powershell
+        shell: cmd
         run: |
-          node tools/local-qa.cjs --quick
-          if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
+          node tools\local-qa.cjs --quick
+          if errorlevel 1 exit /b 1
