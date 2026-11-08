@@ -3,43 +3,13 @@ name: Zaměřovač – rychlá kontrola zdrojů (bez APK)
 # Po změně editoru/poznámek provést jen krátké testy.
 # Sestavení a vydání APK řídí zvlášť build-apk.yml na vyžádání.
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'app/src/main/assets/**'
-      - 'app/src/main/java/**'
-      - 'app/src/main/AndroidManifest.xml'
-      - 'app/src/test/**'
-      - 'app/build.gradle'
-      - 'config/app-version.properties'
-      - 'tests/**'
-      - 'sync/**'
-      - 'tools/check-post*-browser.cjs'
-      - 'tools/check-orientation-browser.cjs'
-      - 'tools/check-loupe-exit-browser.cjs'
-      - 'tools/e2e/**'
-      - 'tools/qa/**'
-      - 'qa/**'
-      - '.github/workflows/quick-check.yml'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'app/src/main/assets/**'
-      - 'app/src/main/java/**'
-      - 'app/src/main/AndroidManifest.xml'
-      - 'app/src/test/**'
-      - 'app/build.gradle'
-      - 'config/app-version.properties'
-      - 'tests/**'
-      - 'sync/**'
-      - 'tools/check-post*-browser.cjs'
-      - 'tools/check-orientation-browser.cjs'
-      - 'tools/check-loupe-exit-browser.cjs'
-      - 'tools/e2e/**'
-      - 'tools/qa/**'
-      - 'qa/**'
-      - '.github/workflows/quick-check.yml'
-
+  workflow_dispatch:
+    inputs:
+      cloud_run_approved:
+        description: 'Placený GitHub cloud jen s výslovným souhlasem; limit 12 USD/měsíc'
+        required: true
+        type: boolean
+        default: false
 permissions:
   contents: read
 
@@ -49,6 +19,7 @@ concurrency:
 
 jobs:
   fast-check:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.cloud_run_approved == true }}
     name: Syntaxe JS a regresní testy bez Gradlu
     runs-on: ubuntu-latest
     timeout-minutes: 6
@@ -70,12 +41,14 @@ jobs:
         run: |
           set -euo pipefail
           node tools/qa/audit.cjs
+          node tools/check-android-window.cjs
           for script in tests/*.js; do
             node "$script"
           done
           python3 -m unittest discover -s tests -p 'test_*.py' -v
 
   browser-check:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.cloud_run_approved == true }}
     name: Chromium – nabídky, rozpracované kóty a bezpečný koš
     runs-on: ubuntu-latest
     timeout-minutes: 8
@@ -107,6 +80,7 @@ jobs:
           node tools/check-untrusted-ids-browser.cjs
 
   practical-e2e:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.cloud_run_approved == true }}
     name: Praktické UI a barevné pixely (syntetická data)
     runs-on: ubuntu-latest
     timeout-minutes: 12
@@ -130,10 +104,12 @@ jobs:
           trap 'kill "$SERVER_PID"' EXIT
           export CHROMIUM_PATH="$(node -p "require('playwright').chromium.executablePath()")"
           node tools/e2e/drawing.cjs
+          node tools/e2e/gallery-visual.cjs
           node tools/e2e/workflows.cjs
           node tools/e2e/interactions.cjs
           node tools/e2e/zoom-grid.cjs
           node tools/e2e/update39.cjs
+          node tools/e2e/gallery-state.cjs
           node tools/e2e/peer-sync.cjs
           node tools/e2e/drive-accounts.cjs
           node tools/e2e/sync-cadence.cjs
@@ -145,6 +121,30 @@ jobs:
           node tools/e2e/media-import.cjs
           node tools/e2e/help.cjs
           node tools/e2e/release-history.cjs
+      - name: Výchozí odezva syntetických fotografií a připomínek (bez vymyšleného SLA)
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -m http.server 8765 --bind 127.0.0.1 --directory app/src/main/assets > /tmp/zamerovac-latency-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID"' EXIT
+          export CHROMIUM_PATH="$(node -p "require('playwright').chromium.executablePath()")"
+          node tools/e2e/latency.cjs
+      - name: Regrese kvality – skutečné chování, přesnost a čitelné pixely
+        if: ${{ !cancelled() }}
+        shell: bash
+        run: |
+          set -uo pipefail
+          python3 -m http.server 8765 --bind 127.0.0.1 --directory app/src/main/assets > /tmp/zamerovac-quality-server.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID"' EXIT
+          export CHROMIUM_PATH="$(node -p "require('playwright').chromium.executablePath()")"
+          # Run both suites even when a known defect fails. Never turn a known
+          # regression into expected-fail/continue-on-error to get a green gate.
+          result=0
+          node tools/e2e/quality-regressions.cjs || result=1
+          node tools/e2e/gallery-readability.cjs || result=1
+          exit "$result"
       - uses: actions/upload-artifact@v4
         if: always()
         with:
