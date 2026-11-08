@@ -1,15 +1,9 @@
 name: Zaměřovač - důvěryhodná Windows QA
 
-# Domácí runner: žádné nedůvěryhodné PR ani fork. Automaticky jen main.
-# Pro rozpracované větve je nutné ruční workflow_dispatch.
+# Domácí runner: pouze main nebo dočasně vlastní infra větev; žádné PR/forky.
+# Infra push výslovně testuje připnutý QA B12 commit, nikoli SHA infra workflow.
 on:
   workflow_dispatch:
-    inputs:
-      target_ref:
-        description: 'Důvěryhodný commit SHA nebo vlastní větev k otestování'
-        required: true
-        default: 'main'
-        type: string
   push:
     branches: [main, infra/windows-self-hosted-qa-20261108] # pouze prvotní test, před merge odebrat
     paths:
@@ -23,6 +17,11 @@ on:
 
 permissions:
   contents: read
+
+env:
+  # main: přesně SHA události; infra: explicitně připnutá QA B12 integrace.
+  # Bez volného target_ref – nelze přepnout na nedůvěryhodný fork/PR.
+  QA_TEST_REF: ${{ github.ref == 'refs/heads/main' && github.sha || 'bc67b1a3507829a39be46a2b41e04198c71fe767' }}
 
 concurrency:
   group: zamerovac-trusted-windows-stage2-${{ github.ref }}
@@ -40,15 +39,37 @@ jobs:
       CI: '1'
       PYTHONUTF8: '1'
     steps:
+      - name: Zakazat jine spousteni nez vlastni main a infra
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_EVENT_NAME -notin @('push', 'workflow_dispatch') -or
+              $env:GITHUB_REF -notin @('refs/heads/main','refs/heads/infra/windows-self-hosted-qa-20261108')) {
+            throw 'FAIL: untrusted event or branch'
+          }
+          Write-Output "Trusted event, ref and repository owner gate"
+
+      - name: Git CLI pro skutecny checkout SHA
+        shell: cmd
+        run: |
+          if not exist "C:\actions-runner\tools\MinGit-2.56.0.4\cmd\git.exe" exit /b 1
+          echo C:\actions-runner\tools\MinGit-2.56.0.4\cmd>>"%GITHUB_PATH%"
+
       - name: Read-only checkout - bez uložených GitHub přihlašovacích údajů
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          # PRVOTNÍ VALIDACE: suite local-qa je zatím jen na B12, nikoli na main.
-          # Před sloučením tohoto workflow změnit výchozí ref zpět na github.sha.
-          ref: ${{ inputs.target_ref || 'fix/b12-pan-pinch-lifecycle-20261108' }}
+          ref: ${{ env.QA_TEST_REF }}
           fetch-depth: 1
           persist-credentials: false
           submodules: false
+
+      - name: Dolozit presny commit testovaneho kodu
+        shell: pwsh
+        run: |
+          $actual = (git rev-parse HEAD).Trim()
+          if ($LASTEXITCODE -ne 0 -or $actual -cne $env:QA_TEST_REF) {
+            throw "Testovany checkout je jiny nez QA_TEST_REF"
+          }
+          Write-Output "TESTED_SOURCE_SHA=$actual"
 
       - name: Python pro testovací službu (jen tento job)
         shell: cmd
@@ -93,6 +114,15 @@ jobs:
       # aby checkout vytvoril skutečny .git adresar pro E2E rev-parse HEAD.
       # Pouze duveryhodny Git for Windows MinGit + pevny SHA256, bez instalatoru
       # a bez systemovych uprav na domacim 16GB Windows PC.
+      - name: Zakazat jine spousteni nez vlastni main a infra
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_EVENT_NAME -notin @('push', 'workflow_dispatch') -or
+              $env:GITHUB_REF -notin @('refs/heads/main','refs/heads/infra/windows-self-hosted-qa-20261108')) {
+            throw 'FAIL: untrusted event or branch'
+          }
+          Write-Output "Trusted event, ref and repository owner gate"
+
       - name: Git CLI pro prohlizecove testy - pripnuty overeny MinGit
         shell: cmd
         run: |
@@ -118,11 +148,19 @@ jobs:
       - name: Načíst důvěryhodný testovaný commit
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          # Před merge vrátit github.sha; B12 zatím není na main.
-          ref: ${{ inputs.target_ref || 'fix/b12-pan-pinch-lifecycle-20261108' }}
+          ref: ${{ env.QA_TEST_REF }}
           fetch-depth: 1
           persist-credentials: false
           submodules: false
+
+      - name: Dolozit presny commit testovaneho kodu
+        shell: pwsh
+        run: |
+          $actual = (git rev-parse HEAD).Trim()
+          if ($LASTEXITCODE -ne 0 -or $actual -cne $env:QA_TEST_REF) {
+            throw "Testovany checkout je jiny nez QA_TEST_REF"
+          }
+          Write-Output "TESTED_SOURCE_SHA=$actual"
 
       - name: Ověřit bezpečnost lokálního HTTP serveru
         shell: cmd
@@ -175,14 +213,37 @@ jobs:
       ANDROID_HOME: 'C:\actions-runner\tools\AndroidSdk'
       ANDROID_SDK_ROOT: 'C:\actions-runner\tools\AndroidSdk'
     steps:
+      - name: Zakazat jine spousteni nez vlastni main a infra
+        shell: pwsh
+        run: |
+          if ($env:GITHUB_EVENT_NAME -notin @('push', 'workflow_dispatch') -or
+              $env:GITHUB_REF -notin @('refs/heads/main','refs/heads/infra/windows-self-hosted-qa-20261108')) {
+            throw 'FAIL: untrusted event or branch'
+          }
+          Write-Output "Trusted event, ref and repository owner gate"
+
+      - name: Git CLI pro skutecny checkout SHA
+        shell: cmd
+        run: |
+          if not exist "C:\actions-runner\tools\MinGit-2.56.0.4\cmd\git.exe" exit /b 1
+          echo C:\actions-runner\tools\MinGit-2.56.0.4\cmd>>"%GITHUB_PATH%"
+
       - name: Načíst pouze důvěryhodné zdroje
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          # DOČASNÉ B12: po integraci přepnout na github.sha stejně jako další jobs.
-          ref: ${{ inputs.target_ref || 'fix/b12-pan-pinch-lifecycle-20261108' }}
+          ref: ${{ env.QA_TEST_REF }}
           fetch-depth: 1
           persist-credentials: false
           submodules: false
+
+      - name: Dolozit presny commit testovaneho kodu
+        shell: pwsh
+        run: |
+          $actual = (git rev-parse HEAD).Trim()
+          if ($LASTEXITCODE -ne 0 -or $actual -cne $env:QA_TEST_REF) {
+            throw "Testovany checkout je jiny nez QA_TEST_REF"
+          }
+          Write-Output "TESTED_SOURCE_SHA=$actual"
 
       - name: Python 3.13 pro nezávislou kontrolu PDF
         shell: cmd
@@ -228,13 +289,44 @@ jobs:
           echo %ANDROID_HOME%\platform-tools>>"%GITHUB_PATH%"
           echo %ANDROID_HOME%\build-tools\35.0.0>>"%GITHUB_PATH%"
 
-      - name: Android SDK licence, API 35 a build tools (bez APK)
-        shell: cmd
+      - name: Android SDK licence a kontrola balicku (API 35, build-tools 34/35)
+        shell: python
         run: |
-          (for /L %%i in (1,1,50) do @echo y) | call sdkmanager.bat --sdk_root="%ANDROID_HOME%" --licenses
-          if errorlevel 1 exit /b 1
-          call sdkmanager.bat --sdk_root="%ANDROID_HOME%" --install "platform-tools" "platforms;android-35" "build-tools;35.0.0"
-          if errorlevel 1 exit /b 1
+          import os
+          import subprocess
+          import sys
+          from pathlib import Path
+
+          sdk = Path(os.environ["ANDROID_HOME"])
+          manager = sdk / "cmdline-tools" / "latest" / "bin" / "sdkmanager.bat"
+          if not manager.is_file():
+              sys.exit("FAIL: no sdkmanager")
+
+          def check(label, arguments, answers):
+              result = subprocess.run(
+                  [str(manager), f"--sdk_root={sdk}", *arguments],
+                  input=answers, stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                  encoding="utf-8", errors="replace", text=True, timeout=360
+              )
+              print(label, "exit:", result.returncode)
+              print("\n".join(result.stdout.splitlines()[-10:]))
+              if result.returncode:
+                  sys.exit("FAIL: " + label)
+              return result.stdout
+
+          check("Accept SDK licenses", ["--licenses"], "y\n" * 100)
+          licenses = sdk / "licenses"
+          if not licenses.is_dir() or not any(x.is_file() and x.stat().st_size for x in licenses.iterdir()):
+              sys.exit("FAIL: SDK license files absent")
+          status = check("Verify SDK licenses", ["--licenses"], "\n")
+          if "All SDK package licenses accepted" not in status:
+              sys.exit("FAIL: SDK licenses not accepted")
+          packages = ["platform-tools", "platforms;android-35", "build-tools;34.0.0", "build-tools;35.0.0"]
+          check("Install SDK packages", ["--install", *packages], "y\n" * 50)
+          for package in ("platform-tools", "platforms/android-35", "build-tools/34.0.0", "build-tools/35.0.0"):
+              if not (sdk / package / "source.properties").is_file():
+                  sys.exit("FAIL: SDK component missing: " + package)
+          print("PASS: Android SDK licenses, platform 35, build-tools 34 and 35")
 
       - name: Ověření přesných verzí (bez APK)
         shell: cmd
