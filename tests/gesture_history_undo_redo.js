@@ -114,11 +114,11 @@ assert.equal(app.redoStack.at(-1),pendingRedo,'Cancel without a drag removed Red
  // Cancellation of one pinch pointer clears stale gesture state.
  pointer('Down',750,650);pointer('Move',765,660);
  pointer('Down',900,650,2);pointer('Move',930,650,2);
- const beforeCancel={...app.view};
+ const b12BeforeCancel={...app.view};
  app.cancel({pointerId:2});
  assert.equal(app.gesture,null,'Cancelled pinch must reset gesture');
  pointer('Move',780,670);
- assert.deepEqual(app.view,beforeCancel,'Cancelled pinch must not restart old pan');
+ assert.deepEqual(app.view,b12BeforeCancel,'Cancelled pinch must not restart old pan');
  pointer('Up',780,670);
  assert.equal(model(),panItems,'Viewport gestures changed annotation coordinates');
  assert.equal(app.saves,panSaves,'Viewport gestures saved a measurement');
