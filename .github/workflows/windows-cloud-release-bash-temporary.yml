@@ -55,8 +55,8 @@ jobs:
               result = subprocess.run(
                   ['wsl.exe', '-d', 'Zamerovac-Ubuntu-QA', '--user', 'root', '--',
                    '/bin/bash', '-n'],
-                  input=script, text=True, capture_output=True, timeout=30)
+                  input=script.encode('utf-8'), capture_output=True, timeout=30)
               if result.returncode != 0:
-                  raise SystemExit(f'FAIL Bash syntax script {i}: {result.stderr}')
+                  raise SystemExit(f'FAIL Bash syntax script {i}: {result.stderr.decode("utf-8", "replace")}')
               print(f'PASS real Linux Bash -n script {i}', flush=True)
           print(f'PASS {len(scripts)} Bash syntax checks at source SHA {actual}', flush=True)
