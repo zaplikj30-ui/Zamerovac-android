@@ -1,19 +1,9 @@
 name: Zaměřovač – kontrola kompilace Androidu bez APK
+# STAGED ONLY, DO NOT MERGE BEFORE LOCAL WINDOWS LINUX-COMPATIBLE TEST PASS.
+# Cloud QA stays available as manual emergency regression backup; never run without owner approval.
 on:
-  pull_request:
-    branches: [main]
-    paths:
-      - 'app/src/main/java/**'
-      - 'app/src/main/AndroidManifest.xml'
-      - 'app/src/main/res/**'
-      - 'app/src/test/**'
-      - 'app/build.gradle'
-      - 'config/app-version.properties'
-      - 'config/drive-preview.properties'
-      - 'gradle/drive-registration.gradle'
-      - 'tools/drive-config-checks/**'
-      - 'tools/check-customer-pdf.py'
-      - '.github/workflows/verify-native.yml'
+  workflow_dispatch:
+
 jobs:
   compile:
     runs-on: ubuntu-latest
