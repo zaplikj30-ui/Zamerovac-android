@@ -246,7 +246,12 @@ function outline(result){assert(result.colored>15,'Missing colored drawing pixel
     await touch('touchEnd',[firstMoved]);
     await page.waitForFunction(()=>pointers.size===1&&!gesture);
     const previous=await page.evaluate(()=>[...pointers.values()][0]);
-    await touch('touchMove',[{...firstMoved,x:firstMoved.x+20,y:firstMoved.y+6}]);
+    // CDP touchEnd semantics can leave the OTHER finger active. Select the
+    // actual pointer by delivered canvas coordinates; never move a lifted ID.
+    const distance=t=>Math.hypot(previous.x-(t.x-r.x),previous.y-(t.y-r.y));
+    const remainingTouch=distance(firstMoved)<distance(secondMoved)?firstMoved:secondMoved;
+    assert(distance(remainingTouch)<10,'Unexpected active CDP pointer after touchEnd');
+    await touch('touchMove',[{...remainingTouch,x:remainingTouch.x+20,y:remainingTouch.y+6}]);
     await page.waitForFunction(old=>{
      const p=[...pointers.values()][0];
      return p&&Math.hypot(p.x-old.x,p.y-old.y)>10;
