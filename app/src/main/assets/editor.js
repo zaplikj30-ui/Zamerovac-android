@@ -556,7 +556,7 @@ function stageDown(e){
    world:screenToWorld({x:(v[0].x+v[1].x)/2,y:(v[0].y+v[1].y)/2})};
   drag=null;drawPointerId=null;drawStart=null;drawCurrent=null;finishHandleGesture(selectedHandle);selectedHandle=null;paint();return;
  }
- if(pointers.size>2)return;
+ if(pointers.size>2){gesture=null;return;} // extra pointer invalidates old pinch anchor
  if(['polyline','chain','cumulative','angle'].includes(mode)){
    const position=snap(screenToWorld(s),polylineDraft[polylineDraft.length-1]||null);
    const last=polylineDraft[polylineDraft.length-1];
