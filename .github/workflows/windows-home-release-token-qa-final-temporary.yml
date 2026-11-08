@@ -1,0 +1,38 @@
+name: Zaměřovač - závěrečná domácí kontrola přesměrování tokenu
+# Fresh one-off owner-only validation of fixed production code.
+on:
+  push:
+    branches:
+      - infra/home-release-asset-auth-guard-20261108
+    paths:
+      - '.github/workflows/windows-home-release-token-qa-final-temporary.yml'
+permissions:
+  contents: read
+jobs:
+  home-token-qa:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/infra/home-release-asset-auth-guard-20261108' }}
+    runs-on: [self-hosted, Windows, X64, zamerovac-qa]
+    timeout-minutes: 5
+    steps:
+      - name: Trusted Git
+        shell: cmd
+        run: |
+          if not exist "C:\actions-runner\tools\MinGit-2.56.0.4\cmd\git.exe" exit /b 1
+          echo C:\actions-runner\tools\MinGit-2.56.0.4\cmd>>"%GITHUB_PATH%"
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+      - name: Test exactly checked-out SHA using offline dummy tokens
+        shell: cmd
+        run: |
+          for /f %%H in ('git rev-parse HEAD') do set "ACTUAL_SHA=%%H"
+          if not defined ACTUAL_SHA exit /b 1
+          if /I not "%ACTUAL_SHA%"=="%GITHUB_SHA%" exit /b 1
+          "C:\actions-runner\tools\Python313\python.exe" -m unittest discover -s tests -p "test_home_release_asset_redirect.py" -v
+          if errorlevel 1 exit /b 1
+          "C:\actions-runner\tools\Python313\python.exe" -m unittest discover -s tests -p "test_ci_cloud_release_gate.py" -v
+          if errorlevel 1 exit /b 1
+          echo PASS: release security guards, NO APK, NO CLOUD
