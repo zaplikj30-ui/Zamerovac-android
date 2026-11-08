@@ -1,5 +1,5 @@
 name: Zaměřovač – kontrola kompilace Androidu bez APK
-# STAGED ONLY, DO NOT MERGE BEFORE LOCAL WINDOWS LINUX-COMPATIBLE TEST PASS.
+# Manual cloud fallback; Windows/WSL2 home QA is primary.
 # Cloud QA stays available as manual emergency regression backup; never run without owner approval.
 on:
   workflow_dispatch:
