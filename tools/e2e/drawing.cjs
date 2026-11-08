@@ -223,34 +223,49 @@ function outline(result){assert(result.colored>15,'Missing colored drawing pixel
   try{
    await step('Pan one finger, then start a pinch with a second finger',async()=>{
     await touch('touchStart',[first]);
+    await page.waitForFunction(()=>pointers.size===1);
     await touch('touchMove',[firstMoved]);
+    // CDP can acknowledge touch input before the browser's pointer handler runs.
+    await page.waitForFunction(dx=>Math.abs(view.dx-dx)>8,baseline.view.dx);
     const pan=await page.evaluate(()=>({view:{...view},drag:!!drag,count:pointers.size}));
     assert.equal(pan.count,1);
     assert.equal(pan.drag,true,'Pan should start before the second touch');
     assert(Math.abs(pan.view.dx-baseline.view.dx)>8,'First finger must actually pan');
     await touch('touchStart',[firstMoved,second]);
+    await page.waitForFunction(()=>pointers.size===2&&!!gesture);
     const start=await page.evaluate(()=>({count:pointers.size,drag,gesture:!!gesture}));
     assert.equal(start.count,2);
     assert.equal(start.drag,null,'Second finger must end previous pan');
     assert.equal(start.gesture,true,'Pinch must start');
     await touch('touchMove',[firstMoved,secondMoved]);
+    await page.waitForFunction(z=>view.zoom>z*1.12,pan.view.zoom);
     pinchView=await page.evaluate(()=>({...view}));
     assert(pinchView.zoom>pan.view.zoom*1.12,'Real CDP pinch must change zoom');
    });
    await step('Lift second finger; remaining finger must not revive old pan',async()=>{
     await touch('touchEnd',[firstMoved]);
+    await page.waitForFunction(()=>pointers.size===1&&!gesture);
+    const previous=await page.evaluate(()=>[...pointers.values()][0]);
     await touch('touchMove',[{...firstMoved,x:firstMoved.x+20,y:firstMoved.y+6}]);
+    await page.waitForFunction(old=>{
+     const p=[...pointers.values()][0];
+     return p&&Math.hypot(p.x-old.x,p.y-old.y)>10;
+    },previous);
     const remaining=await page.evaluate(()=>({...view}));
     assert.deepEqual(remaining,pinchView,'Remaining finger resumed stale pre-pinch pan');
     await touch('touchEnd',[]);
+    await page.waitForFunction(()=>pointers.size===0);
    });
    await step('A new contact must permit a fresh pan',async()=>{
     const fresh={id:43,x:r.x+r.width*.65,y:r.y+r.height*.10};
     await touch('touchStart',[fresh]);
+    await page.waitForFunction(()=>pointers.size===1&&!!drag);
     await touch('touchMove',[{...fresh,x:fresh.x+18,y:fresh.y+11}]);
+    await page.waitForFunction(dx=>Math.abs(view.dx-dx)>8,pinchView.dx);
     freshPan=await page.evaluate(()=>({...view}));
     assert(Math.abs(freshPan.dx-pinchView.dx)>8,'New finger must allow a new pan');
     await touch('touchEnd',[]);
+    await page.waitForFunction(()=>pointers.size===0);
    });
   }finally{
    await touch('touchCancel',[]).catch(()=>{});
