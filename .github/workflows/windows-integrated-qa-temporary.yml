@@ -31,7 +31,7 @@ jobs:
           if /I not "%ACTUAL_SHA%"=="%GITHUB_SHA%" exit /b 1
           echo VERIFIED_COMBINED_SOURCE_SHA=%ACTUAL_SHA%
           if not exist "C:\actions-runner\tools\Python313\python.exe" exit /b 1
-          echo C:\actions-runner\tools\Python313>>"%GITHUB_PATH%"
+          set "PATH=C:\actions-runner\tools\Python313;%PATH%"
           node --check app\src\main\assets\editor.js
           if errorlevel 1 exit /b 1
           node tests\gesture_history_undo_redo.js
