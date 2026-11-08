@@ -11,6 +11,8 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 QA = ROOT / ".github/workflows/windows-self-hosted-qa.yml"
 RELEASE = ROOT / ".github/workflows/windows-home-apk-release.yml"
+QA_JOB_GATE = "${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}"
+RELEASE_JOB_GATE = "${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && inputs.publish_release == true && inputs.qa_run_id != '' }}"
 
 
 def section(text, name):
@@ -61,16 +63,9 @@ def qa_violations(text):
     j = jobs(text)
     if set(j) != {"local-quick", "browser-smoke", "native-jvm", "preview-build-smoke"}:
         errors.append("Změněný počet/názvy QA jobů vyžaduje revizi")
-    required = (
-        "github.repository == 'zaplikj30-ui/Zamerovac-android'",
-        "github.actor == 'zaplikj30-ui'",
-        "github.ref == 'refs/heads/main'",
-        "github.event_name == 'push'",
-        "github.event_name == 'workflow_dispatch'",
-    )
     for name, body in j.items():
         gate = re.search(r"(?m)^    if:\s*(.+)$", body)
-        if not gate or any(token not in gate.group(1) for token in required):
+        if not gate or gate.group(1).strip() != QA_JOB_GATE:
             errors.append(f"QA job {name} nemá úplnou podmínku owner/main/event")
         if not re.search(r"(?m)^    runs-on:.*self-hosted.*zamerovac-qa", body):
             errors.append(f"QA job {name} nemá důvěryhodný runner label")
@@ -97,15 +92,7 @@ def release_violations(text):
         errors.append("Změna release jobů vyžaduje revizi")
     for name, body in j.items():
         gate = re.search(r"(?m)^    if:\s*(.+)$", body)
-        required = (
-            "github.repository == 'zaplikj30-ui/Zamerovac-android'",
-            "github.actor == 'zaplikj30-ui'",
-            "github.ref == 'refs/heads/main'",
-            "github.event_name == 'workflow_dispatch'",
-            "inputs.publish_release == true",
-            "inputs.qa_run_id != ''",
-        )
-        if not gate or any(token not in gate.group(1) for token in required):
+        if not gate or gate.group(1).strip() != RELEASE_JOB_GATE:
             errors.append(f"Vydání job {name}: chybí schválení nebo důvěryhodný main")
         if not re.search(r"(?m)^    runs-on:.*self-hosted.*zamerovac-qa", body):
             errors.append("Vydání nesměřuje na schválený domácí runner")
@@ -132,6 +119,7 @@ class HomeRunnerTrustContract(unittest.TestCase):
             source.replace("  push:\n    branches: [main]", "  pull_request:\n    branches: [main]", 1),
             source.replace("  contents: read", "  contents: write", 1),
             source.replace("github.actor == 'zaplikj30-ui'", "github.actor == 'anyone'", 1),
+            source.replace("&& github.actor == 'zaplikj30-ui'", "|| github.actor == 'zaplikj30-ui'", 1),
             source.replace("actions/checkout@11d5960a326750d5838078e36cf38b85af677262", "actions/checkout@v4", 1),
         )
         for bad in mutations:
@@ -144,6 +132,7 @@ class HomeRunnerTrustContract(unittest.TestCase):
             source.replace("  workflow_dispatch:\n", "  push:\n    branches: [main]\n", 1),
             source.replace("inputs.publish_release == true", "inputs.publish_release == false", 1),
             source.replace("github.actor == 'zaplikj30-ui'", "github.actor == 'anyone'", 1),
+            source.replace("&& inputs.publish_release == true", "|| inputs.publish_release == true", 1),
             source.replace("persist-credentials: false", "persist-credentials: true", 1),
         )
         for bad in mutations:
