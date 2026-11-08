@@ -102,14 +102,35 @@ jobs:
           if not aapt.is_file() or not signer.is_file():
               sys.exit("STOP: pinned Android SDK tools unavailable")
 
+          class VerifiedReleaseAssetRedirect(urllib.request.HTTPRedirectHandler):
+              """Never forward the GitHub API bearer token to an asset CDN."""
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  redirected = super().redirect_request(req, fp, code, msg, headers, newurl)
+                  if redirected is None:
+                      return None
+                  old = urllib.parse.urlsplit(req.full_url)
+                  new = urllib.parse.urlsplit(redirected.full_url)
+                  if new.scheme != "https":
+                      raise ValueError("STOP: insecure GitHub release asset redirect")
+                  if (new.hostname, new.port) != (old.hostname, old.port):
+                      redirected.remove_header("Authorization")
+                      redirected.remove_header("X-GitHub-Api-Version")
+                  return redirected
+
+          release_asset_opener = urllib.request.build_opener(VerifiedReleaseAssetRedirect())
+
           def request(url, method="GET", payload=None, accept="application/vnd.github+json"):
+              target = urllib.parse.urlsplit(url)
+              if (target.scheme != "https" or target.hostname != "api.github.com"
+                      or not target.path.startswith("/repos/zaplikj30-ui/Zamerovac-android/")):
+                  sys.exit("STOP: unexpected GitHub API asset URL")
               headers = {
                   "Authorization": "Bearer " + token,
                   "Accept": accept,
                   "X-GitHub-Api-Version": "2022-11-28",
                   "User-Agent": "Zamerovac-home-release"}
               req = urllib.request.Request(url, data=payload, method=method, headers=headers)
-              with urllib.request.urlopen(req, timeout=80) as response:
+              with release_asset_opener.open(req, timeout=80) as response:
                   return response.read()
 
           api = "https://api.github.com/repos/" + repo
