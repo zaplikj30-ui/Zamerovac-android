@@ -1,6 +1,21 @@
 # Domácí GitHub Actions runner – zaměřování a stav migrace
 
 
+## Nový plný domácí integrační checkpoint 4/4 — 8. 11. 2026
+
+[**Skutečná domácí Windows QA #42487162258](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42487162258) skončila 4/4 SUCCESS** na přesném trusted SHA `ca8ea1420d7ee42dbc6f1bbf6147a8ab0cc1cd85`. Nešlo o cloud nebo simulaci běhu, ale o skutečnou Windows 11 službu `Zamerovac-Win11-QA` a WSL2 omezené na 4 GB RAM / 2 CPU:
+
+1. **Quick Windows Node/Python: 76 PASS, 0 FAIL**; zahrnuje bezpečnostní testy vydávání a opravenou regresi verze.
+2. **Windows Chromium: 21 scénářů PASS, 0 FAIL**; kreslení, zobrazované pixely, galerie, zoom, přesnost, editace, synchronizační simulace a čitelnost.
+3. **WSL2 Java + Robolectric: 265/265 PASS** (44 XML reportů, 0 failures/errors/skipped), konfigurace Drive, tři PDF fixtures samostatně přezkoušené striktním parserem i vykreslením barev **PASS**.
+4. **Domácí Windows technické preview sestavení: PASS**, podpis shodný s 1.3.0, `cz.zamerovac.app.preview`, `versionCode=1155` nad skutečnou vydanou `1154`, `versionName=1.3.0-test`. **APK odstraněna, žádný upload, release ani instalace**.
+
+Dočasný owner-only workflow měl čtyři joby a přesně **stejná těla testovacích jobů a kroky** jako navržený `windows-self-hosted-qa.yml` (ověřeno přímým porovnáním od `permissions:`); rozdíl byl pouze bezpečně omezený `push` na připravenou větev a její čtyři vnitřní kontroly `github.ref`. Žádné `pull_request`, hostované cloud běhy ani release. Po PASS dočasné workflow odstraněno v `45ce325`. **Pozdější čistý HEAD nemá vlastní 4/4 run**: produkční a testové soubory jsou však stejné jako na testovaném SHA; další dokumentační commity je nemění. **Skutečná main-only workflow pořád NOT RUN**; hlavní větev `main` zatím neobsahuje migrované postupy.
+
+**Předvídaná budoucí slabina, nikoli dnešní FAIL:** smoke build v domácí QA stále používá pevně `GITHUB_RUN_NUMBER=155`, tedy `versionCode 1155`, a porovnává proti **zatím poslední vydané 1154**. Po budoucím vydání code 1155 už nesmí test tvrdit, že code 1155 je novější; bude nutné adaptovat QA smoke podle poslední vydané APK. Oddělený domácí a nouzový cloudový **vydávací** postup již používají code `latest+1` a staré APK ověřují. Tuto věc vést jako prioritu před **následujícím** vydáním, nesnižovat bezpečnost tím, že se test číslování odstraní.
+
+**Pořadí dalšího kroku:** technická nezávislá revize celého integračního staging; řešení rizika automatických placených `pull_request` workflow na dnešním `main` ještě **před založením PR do main**, uživatelovo schválení zásadního spojení, přechod všech pěti cloud fallbacků na ruční opt-in a hlavní domácí QA na skutečném `main` SHA. Bez toho sloučení ani vydání APK. **NOT RUN:** fyzický Samsung, S Pen, Bosch Bluetooth, Google Drive ostrá data a automatický provoz Windows služby bez uživatelského přihlášení. **Kontrolovaná kvalita domácí QA staging 8/10**; přímý main akceptační průchod dosud chybí.
+
 ## Sjednocená přípravná větev B12/B13 a obě vydávací ochrany — 8. 11. 2026
 
 **Větev `integration/b12-b13-safe-home-20261108` je čistý STAGING, bez PR do `main` a bez release.** Vznikla z [domácího release security PR #67](https://github.com/zaplikj30-ui/Zamerovac-android/pull/67) a přebrala bajtově identické čtyři B13 aplikační/testové bloby z [PR #65](https://github.com/zaplikj30-ui/Zamerovac-android/pull/65). Dále obsahuje [záložní cloud versionCode ochranu z #66](https://github.com/zaplikj30-ui/Zamerovac-android/pull/66) a bezpečně upravený regresní `tests/versioning.js`.
