@@ -94,6 +94,23 @@ Toto je **architektonická mapa existujícího systému**, ne příkaz k refakto
 
 **Pořadí:** mapování a dokumentace mohou probíhat bez čekání na další APK; stav „ověřeno na zařízení“ doplnit až po skutečném testování 1.3.0. Širokou inventuru a schémata je vhodné zpracovat v ChatGPT **Work** s přístupem k relevantním souborům; kontrolu GitHubu a koordinaci drobných dokumentačních změn lze dělat přímo v ChatGPT. Codex je potřeba až při konkrétním programování nebo testovacích zásazích, které vyžadují práci se zdroji. Výběr režimu sám nic nespouští.
 
+### 8.1 Úsporné řízení vývoje – rozdělení ChatGPT / Codex / Work (7. 11. 2026)
+
+Uživatel schválil nové rozdělení práce kvůli rychlému vyčerpání týdenního limitu Codexu a nejistým nákladům na další kredity. Cíl je efektivita **bez kompromisu v přesnosti, bezpečném ukládání, automatických testech a kvalitě**. Trvalé prováděcí pravidlo: [AGENTS.md](AGENTS.md#úsporné-rozdělení-práce-a-ochrana-limitů-codexu-rozhodnutí-7-11-2026).
+
+| Práce | Výchozí odpovědnost |
+| --- | --- |
+| Čtení issues, PR, GitHub, CI; plánování, rozhodnutí, nálezy, dokumentace, nápověda, hodnocení | ChatGPT |
+| Menší a středně složité oddělitelné opravy, pokud je lze skutečně změnit a dostatečně ověřit | ChatGPT |
+| Složité provázané změny editoru/geometrie, ukládání, příloh, synchronizace, nativního Androidu a iterace testů | Codex |
+| Rozsáhlejší samostatná vícekroková analýza souborů, jen pokud skutečně zlepší výsledek | Work |
+| Automatické regresní testy | Existující infrastruktura/CI, průběžně v rámci příslušné implementace |
+| Nezávislá kontrola změn a koordinace jediné APK | Přednostně jiný kontrolor než autor změny + CI; ChatGPT koordinuje, fyzické testy zvlášť |
+
+**Před předáním Codexu** ChatGPT nejprve posoudí, zda může danou opravu samo naprogramovat a otestovat; jinak zkontroluje aktuální repozitář a rozpracovanou práci a připraví jediné konkrétní české zadání s odkazy a akceptačními testy. Požadovat dokončitelnou etapu, ne opakované široké audity. Codex před změnou sám ověří aktuální HEAD a pravidla. Výsledky, skutečnou spotřebu kreditů (pokud je dostupná) a testy využít k dalšímu rozdělení. Kreditový ceník **není zárukou ceny celé aktualizace**.
+
+**Checkpoint 7. 11. 2026:** týdenní limit Codexu uživatele vyčerpán; nákup resetu nebyl nabídnut v dostupném rozhraní, placené kredity jsou alternativou, ale žádný nákup ani automatické dobíjení nejsou schválené. [Draft PR #51](https://github.com/zaplikj30-ui/Zamerovac-android/pull/51) zůstává rozpracované a **nebylo sloučeno**; N4 stále FAIL a Android emulátorový průchod neprokázal úplnou fyzickou akceptaci. Pokračovat nezávislou koordinací a bezpečnými úpravami mimo rozpracovanou větev; Codex naváže po dostupnosti limitu, pokud by nebyl schválen nákup. **Nevydávat další APK nyní.**
+
 ## 9. Co již nyní považujeme za dohodnuté
 
 - Plán se vztahuje k **existujícímu Zaměřovači**. Nic nemažeme, nespouštíme druhý projekt, nepřepisujeme program od nuly.
@@ -188,6 +205,5 @@ Rozhodovat až podle prototypu, dostupnosti API, nákladů, bezpečnosti a **vý
 **Oddělené nápady a rozsah:** více pohledů/stěn, Windows/iOS, 3D a Konfigurátor–Nářezák jsou budoucí možnosti, nikoliv automaticky schválené změny. Při tomto plánu **nepřepisovat od nuly**, neměnit bez důkazu schema/protokoly/úložiště a nepořizovat další testovací frameworky. Výchozí ověřený stav při této úpravě plánu: main `f543af7`, draft PR #49/#51/#52; u #51 a #52 je rychlé CI FAIL, nativní CI #52 SUCCESS; žádná nová aplikace ani APK.
 
 **Stav zápisu:** technická inventura a architektonická dohoda; **nikoli dokončený audit všech detailů, provedená přestavba, zelené CI, vytvořená APK či fyzické ověření.**
-
 
 **Provedení první etapy 7. 11. 2026:** zahájeno v existujícím draft PR #51, nikoli v nové aplikaci. Konkrétní hranice rendereru, převzetí #52, skutečné testy/měření a nevyřešené N4 jsou v [navazujícím protokolu](docs/qa-professional-20261107.md#etapa-b1--pokračování-galerie-v-pr-51-7-11-2026). Jde o implementaci první omezené etapy; ne o dokončení všech etap či fyzické ověření. Nové upřesnění testovacího provozu main `3de1d53` zachováno.
