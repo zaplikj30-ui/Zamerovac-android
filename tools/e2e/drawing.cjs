@@ -188,4 +188,90 @@ function outline(result){assert(result.colored>15,'Missing colored drawing pixel
    after:{zoom:after.zoom,undo:after.undo,redo:after.redo}});
  });
 
+ // B12 browser-level regression: use CDP touch events, not calls to stageDown/Move.
+ // A stale pre-pinch drag used to move the canvas after lifting only one finger.
+ await test('pan_then_pinch_does_not_resume_stale_drag',async({page,step,evidence})=>{
+  const title='Pan pinch skutečné doteky';
+  await step('Create a real editable measurement through UI',async()=>{
+   await createCanvas(page,title);
+   await tool(page,'dimension');
+   const p=await page.evaluate(()=>({
+    a:{x:view.dx+photoSize.w*view.zoom*.20,y:view.dy+photoSize.h*view.zoom*.25},
+    b:{x:view.dx+photoSize.w*view.zoom*.75,y:view.dy+photoSize.h*view.zoom*.65}
+   }));
+   await drag(page,p.a,p.b);
+   await editSelected(page);
+   await page.fill('#measureInput','1250,00000123');
+   await page.selectOption('#measureUnit','mm');
+   await page.click('#okModal');
+   assert.equal((await record(page)).measure,'1250,00000123');
+   await tool(page,'pan');
+  });
+  const baseline=await page.evaluate(()=>({
+   items:JSON.stringify(current.items),undo:editStack.length,redo:redoStack.length,
+   stored:localStorage.getItem('zamerovac-data'),view:{...view}
+  }));
+  const r=await page.locator('#drawCanvas').boundingBox();
+  assert(r&&r.width>220&&r.height>200,'Editor canvas too small for CDP multi-touch');
+  const first={id:41,x:r.x+r.width*.63,y:r.y+r.height*.17};
+  const second={id:42,x:r.x+r.width*.83,y:r.y+r.height*.17};
+  const firstMoved={...first,x:first.x+24,y:first.y+14};
+  const secondMoved={...second,x:second.x+44,y:second.y+12};
+  const cdp=await page.context().newCDPSession(page);
+  let pinchView,freshPan;
+  const touch=(type,touchPoints)=>cdp.send('Input.dispatchTouchEvent',{type,touchPoints});
+  try{
+   await step('Pan one finger, then start a pinch with a second finger',async()=>{
+    await touch('touchStart',[first]);
+    await touch('touchMove',[firstMoved]);
+    const pan=await page.evaluate(()=>({view:{...view},drag:!!drag,count:pointers.size}));
+    assert.equal(pan.count,1);
+    assert.equal(pan.drag,true,'Pan should start before the second touch');
+    assert(Math.abs(pan.view.dx-baseline.view.dx)>8,'First finger must actually pan');
+    await touch('touchStart',[firstMoved,second]);
+    const start=await page.evaluate(()=>({count:pointers.size,drag,gesture:!!gesture}));
+    assert.equal(start.count,2);
+    assert.equal(start.drag,null,'Second finger must end previous pan');
+    assert.equal(start.gesture,true,'Pinch must start');
+    await touch('touchMove',[firstMoved,secondMoved]);
+    pinchView=await page.evaluate(()=>({...view}));
+    assert(pinchView.zoom>pan.view.zoom*1.12,'Real CDP pinch must change zoom');
+   });
+   await step('Lift second finger; remaining finger must not revive old pan',async()=>{
+    await touch('touchEnd',[firstMoved]);
+    await touch('touchMove',[{...firstMoved,x:firstMoved.x+20,y:firstMoved.y+6}]);
+    const remaining=await page.evaluate(()=>({...view}));
+    assert.deepEqual(remaining,pinchView,'Remaining finger resumed stale pre-pinch pan');
+    await touch('touchEnd',[]);
+   });
+   await step('A new contact must permit a fresh pan',async()=>{
+    const fresh={id:43,x:r.x+r.width*.65,y:r.y+r.height*.10};
+    await touch('touchStart',[fresh]);
+    await touch('touchMove',[{...fresh,x:fresh.x+18,y:fresh.y+11}]);
+    freshPan=await page.evaluate(()=>({...view}));
+    assert(Math.abs(freshPan.dx-pinchView.dx)>8,'New finger must allow a new pan');
+    await touch('touchEnd',[]);
+   });
+  }finally{
+   await touch('touchCancel',[]).catch(()=>{});
+   await cdp.detach().catch(()=>{});
+  }
+  const after=await page.evaluate(()=>({
+   items:JSON.stringify(current.items),undo:editStack.length,redo:redoStack.length,
+   stored:localStorage.getItem('zamerovac-data'),pointerCount:pointers.size
+  }));
+  assert.equal(after.items,baseline.items,'Pan/pinch changed exact measurements');
+  assert.equal(after.undo,baseline.undo,'Viewport gesture added an Undo step');
+  assert.equal(after.redo,baseline.redo,'Viewport gesture cleared Redo');
+  assert.equal(after.stored,baseline.stored,'Viewport gesture modified stored records');
+  assert.equal(after.pointerCount,0,'Touch capture leaked after gesture');
+  await step('Reopen and verify the exact value remains editable',async()=>{
+   await page.click('#editorBack');
+   await page.locator('.entry-title',{hasText:title}).click();
+   assert.equal((await record(page)).measure,'1250,00000123');
+  });
+  evidence({kind:'CDP pan-pinch-pan lifecycle; exact stored dimension, Undo/Redo intact',
+   zoomBefore:baseline.view.zoom,zoomAfter:pinchView.zoom,panAfter:freshPan});
+ });
+
 }))().catch(e=>{console.error(e);process.exitCode=1});
