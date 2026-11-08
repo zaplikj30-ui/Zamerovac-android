@@ -115,9 +115,14 @@ function save(){
    state.syncProtocol=2;const text=JSON.stringify(state);
    if(!native){localStorage.setItem('zamerovac-data',text);persistedSnapshot=text;return reportSaveResult(true)}
    const result=JSON.parse(Native.saveDataChecked(text,persistedSnapshot));
-   if(result.ok){persistedSnapshot=text;return reportSaveResult(true)}
+   if(result?.ok===true){persistedSnapshot=text;return reportSaveResult(true)}
+   if(result?.ok!==false)throw new Error('Neplatné potvrzení zápisu');
    if(typeof result.current!=='string')throw new Error(result.error||'Zápis nebyl potvrzen');
    const disk=JSON.parse(result.current),base=persistedSnapshot?JSON.parse(persistedSnapshot):initial;
+   if(!disk||disk.schema!==1||!Array.isArray(disk.records)||
+      disk.records.some(r=>!r||typeof r!=='object'||Array.isArray(r)||typeof r.id!=='string'||!r.id)||
+      new Set(disk.records.map(r=>r.id)).size!==disk.records.length)
+     throw new Error('Neplatná databáze při souběžném zápisu');
    applySavedState(reconcileSavedState(base,state,disk));persistedSnapshot=result.current;
   }
   throw new Error('Zakázky se právě mění. Zkus uložení znovu.');
