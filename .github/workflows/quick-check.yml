@@ -6,6 +6,12 @@ name: Zaměřovač – rychlá kontrola zdrojů (bez APK)
 # Cloud QA stays available as manual emergency regression backup; never run without owner approval.
 on:
   workflow_dispatch:
+    inputs:
+      cloud_run_approved:
+        description: 'Placený cloud jen s výslovným souhlasem vlastníka (limit 12 USD/měsíc)'
+        required: true
+        type: boolean
+        default: false
 
 permissions:
   contents: read
@@ -17,6 +23,7 @@ concurrency:
 jobs:
   fast-check:
     name: Syntaxe JS a regresní testy bez Gradlu
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && inputs.cloud_run_approved == true }}
     runs-on: ubuntu-latest
     timeout-minutes: 6
     steps:
@@ -44,6 +51,7 @@ jobs:
 
   browser-check:
     name: Chromium – nabídky, rozpracované kóty a bezpečný koš
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && inputs.cloud_run_approved == true }}
     runs-on: ubuntu-latest
     timeout-minutes: 8
     steps:
@@ -75,6 +83,7 @@ jobs:
 
   practical-e2e:
     name: Praktické UI a barevné pixely (syntetická data)
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && inputs.cloud_run_approved == true }}
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
