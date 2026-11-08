@@ -91,6 +91,39 @@ app.undoEditor();assert.equal(model(),beforeCancel);
 const pendingRedo=app.redoStack.at(-1);
 pointer('Down',135,215);app.cancel({pointerId:1});
 assert.equal(app.redoStack.at(-1),pendingRedo,'Cancel without a drag removed Redo');
+
+ // B12: a one-finger pan must end when a second finger starts a pinch.
+ // Otherwise the remaining finger jumps back to stale pre-pinch offsets.
+ app.mode='pan';app.selected=null;app.view={zoom:1,dx:0,dy:0};
+ const panItems=model(),panSaves=app.saves,panRedo=JSON.stringify(app.redoStack);
+ pointer('Down',750,650);pointer('Move',780,665);
+ assert.deepEqual([app.view.dx,app.view.dy],[30,15]);
+ pointer('Down',880,660,2);
+ assert.equal(app.drag,null,'Starting a pinch must end previous pan');
+ pointer('Move',910,680,2);
+ const pinchView={...app.view};
+ assert.notEqual(pinchView.zoom,1,'Pinch must zoom after a pan');
+ pointer('Up',910,680,2);
+ pointer('Move',785,670);
+ assert.deepEqual(app.view,pinchView,'Remaining finger must not resume stale pan');
+ pointer('Up',785,670);
+ // A fresh contact must allow normal one-finger panning.
+ pointer('Down',750,650);pointer('Move',765,660);pointer('Up',765,660);
+ assert.equal(app.view.dx,pinchView.dx+15);
+ assert.equal(app.view.dy,pinchView.dy+10);
+ // Cancellation of one pinch pointer clears stale gesture state.
+ pointer('Down',750,650);pointer('Move',765,660);
+ pointer('Down',900,650,2);pointer('Move',930,650,2);
+ const beforeCancel={...app.view};
+ app.cancel({pointerId:2});
+ assert.equal(app.gesture,null,'Cancelled pinch must reset gesture');
+ pointer('Move',780,670);
+ assert.deepEqual(app.view,beforeCancel,'Cancelled pinch must not restart old pan');
+ pointer('Up',780,670);
+ assert.equal(model(),panItems,'Viewport gestures changed annotation coordinates');
+ assert.equal(app.saves,panSaves,'Viewport gestures saved a measurement');
+ assert.equal(JSON.stringify(app.redoStack),panRedo,'Viewport gestures erased Redo');
+ app.mode='select';app.view={zoom:1,dx:0,dy:0};
 // No history eviction, even if a tap happens when Undo is at capacity.
 app.editStack=['oldest',...Array.from({length:49},(_,x)=>'history-'+x)];
 app.redoStack=['future'];

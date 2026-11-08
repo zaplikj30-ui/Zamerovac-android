@@ -6,6 +6,7 @@ const root=path.resolve(__dirname,'..');
 const history=require('../app/src/main/assets/release-history.js');
 assert(JSON.stringify(history.unreleasedChanges).includes('dosud nevydáno'));
 assert(JSON.stringify(history.unreleasedChanges).includes('nevytvářejí prázdné kroky v historii'),'Gesture history fix must remain unreleased until a real APK is published');
+assert(JSON.stringify(history.unreleasedChanges).includes('po uvolnění prstu obraz neodskočí'),'Pinch/pan lifecycle fix must stay unreleased');
 assert(JSON.stringify(history.unreleasedChanges).includes('starším JSON objektu'),'N4 retention fix must stay unreleased until its tests pass');
 assert(JSON.stringify(history.unreleasedChanges).includes('Neověřitelná historie vysypání koše'),'Nested reference limit must stay unreleased');
 assert(JSON.stringify(history.unreleasedChanges).includes('nepotvrzené změny se neoznačí jako uložené'),'Feedback durable write must be documented as unreleased');

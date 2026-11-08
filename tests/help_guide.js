@@ -10,6 +10,7 @@ assert(help.chapters.find(c=>c.id==='trash')?.notes.some(s=>s.includes('nepřim�
 assert(help.chapters.find(x=>x.id==='undo')?.notes.some(x=>x.includes('nevytvoří krok historie')&&x.includes('Znovu')),'Undo/Redo gesture preservation must be explained');
 assert(help.chapters.find(c=>c.id==='trouble')?.steps.some(s=>s.includes('rozpracovaná připomínka zůstane otevřená')),'Troubleshooting must explain retry after failed feedback save');
 assert(help.chapters.find(c=>c.id==='trouble')?.steps.some(s=>s.includes('Android Zpět')&&s.includes('bezpečně odmítnou')),'Busy feedback navigation must be documented');
+assert(help.chapters.find(x=>x.id==='zoom')?.steps.some(x=>x.includes('oba zvedni')&&x.includes('nový tah')),'Pan after pinch must be explained');
 assert.equal(new Set(help.chapters.map(x=>x.id)).size,help.chapters.length,'Unique stable help chapter identifiers');
 for(const chapter of help.chapters){
  assert(chapter.title&&chapter.intro&&chapter.steps.length>0&&chapter.notes.length>0,chapter.id+' must be practical and qualified');

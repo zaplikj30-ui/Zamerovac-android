@@ -246,6 +246,7 @@ const chapters=[
     "intro": "Zobrazení fotografie nebo náčrtu můžeš měnit bez změny samotných uložených kót.",
     "steps": [
       "Tlačítky ＋ a − v editoru přibližuj a oddaluj; na displeji můžeš použít i gesto dvěma prsty.",
+      "Po přiblížení dvěma prsty oba zvedni a pro další posun obrazu začni nový tah. Původní posouvání se při zahájení dvouprstého gesta ukončí.",
       "V nabídce ⋮ použij Přizpůsobit fotografii pro návrat k přehlednému zobrazení.",
       "Pro přesouvání celého obrazu vyber Posun obrazu. Pro jemnou práci lze zapnout bodovou lupu.",
       "Magnetické přichytávání pomáhá k existujícím bodům, rohům či směrům; v Nastavení lze jednotlivé druhy vypnout.",
