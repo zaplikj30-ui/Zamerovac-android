@@ -76,6 +76,16 @@ assert.equal(JSON.stringify(previousRedo),b,'Malformed history mutated Redo');
 const broken=['{malformed'];
 assert.throws(()=>H.restore([exact],broken,previousRedo),SyntaxError);
 assert.equal(broken[0],'{malformed','Malformed snapshot was lost');
+for(const invalid of ['null','{}','"ztracena kota"','[null]','[5]','[[1,2]]']){
+ const failedUndo=[invalid],failedRedo=['keep-redo'];
+ const saveBefore=JSON.stringify([exact]),beforeUndo=JSON.stringify(failedUndo),beforeRedo=JSON.stringify(failedRedo);
+ assert.throws(()=>H.restore([exact],failedUndo,failedRedo),TypeError,
+  'Structurally invalid history must fail without writing data: '+invalid);
+ assert.equal(JSON.stringify(failedUndo),beforeUndo);
+ assert.equal(JSON.stringify(failedRedo),beforeRedo);
+ assert.equal(JSON.stringify([exact]),saveBefore);
+}
+
 const circular=[];circular.push(circular);
 assert.throws(()=>H.checkpoint(circular,previousHistory),TypeError);
 assert.equal(JSON.stringify(previousHistory),a,'Failed serialization erased working history');
