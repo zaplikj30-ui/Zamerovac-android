@@ -109,7 +109,7 @@ function reportSaveResult(ok){
  return false;
 }
 function save(){
- if(dataLoadFailed){notify('Zakázky nelze načíst. Zápis je zablokovaný, původní data zůstávají chráněná.');return false}
+ if(dataLoadFailed){notify('Zakázky nelze načíst. Zápis je zablokovaný, původní data zůstávají chráněná.');return reportSaveResult(false)}
  try{
   for(let attempt=0;attempt<3;attempt++){
    state.syncProtocol=2;const text=JSON.stringify(state);
