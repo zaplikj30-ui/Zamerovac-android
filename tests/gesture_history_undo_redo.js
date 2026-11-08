@@ -123,6 +123,25 @@ assert.equal(app.redoStack.at(-1),pendingRedo,'Cancel without a drag removed Red
  assert.equal(model(),panItems,'Viewport gestures changed annotation coordinates');
  assert.equal(app.saves,panSaves,'Viewport gestures saved a measurement');
  assert.equal(JSON.stringify(app.redoStack),panRedo,'Viewport gestures erased Redo');
+ // B13 regression (expected RED before fix): a third simultaneous pointer
+ // must invalidate the old two-pointer anchor, even if an original finger lifts.
+ app.mode='pan';app.selected=null;app.view={zoom:1,dx:0,dy:0};
+ const threeItems=model(),threeSaves=app.saves,threeRedo=JSON.stringify(app.redoStack);
+ pointer('Down',550,550,1);pointer('Down',700,550,2);pointer('Move',730,550,2);
+ const beforeThird={...app.view};
+ assert.notEqual(beforeThird.zoom,1,'Precondition: real pinch must zoom');
+ pointer('Down',770,630,3);
+ assert.equal(app.gesture,null,'Third finger must invalidate stale pinch anchor');
+ pointer('Up',550,550,1);
+ pointer('Move',790,650,3);
+ assert.deepEqual(app.view,beforeThird,'Remaining two different fingers resumed an invalid pinch');
+ pointer('Up',730,550,2);pointer('Up',790,650,3);
+ pointer('Down',550,550,1);pointer('Down',700,550,2);pointer('Move',735,550,2);
+ assert.notDeepEqual(app.view,beforeThird,'A completely new pinch must still work');
+ pointer('Up',735,550,2);pointer('Up',550,550,1);
+ assert.equal(model(),threeItems,'Third touch modified annotation geometry');
+ assert.equal(app.saves,threeSaves,'Third touch saved annotation changes');
+ assert.equal(JSON.stringify(app.redoStack),threeRedo,'Third touch removed Redo');
  app.mode='select';app.view={zoom:1,dx:0,dy:0};
 // No history eviction, even if a tap happens when Undo is at capacity.
 app.editStack=['oldest',...Array.from({length:49},(_,x)=>'history-'+x)];
@@ -138,4 +157,4 @@ app.exitEditor();
 assert.equal(app.saves,beforeExit+1);
 assert.equal(app.editStack.length,1);
 assert.equal(app.screen,'browser');assert.equal(app.current,null);
-console.log('PASS B8: tap, jitter, snap rejection, pinch, cancel, exit and exact Undo/Redo');
+console.log('PASS B8/B12/B13: tap, jitter, multi-touch, cancel, exit and exact Undo/Redo');
