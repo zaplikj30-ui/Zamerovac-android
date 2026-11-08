@@ -2,6 +2,17 @@
 const {suite,assert,createCanvas,tool,drag,projected}=require('./harness.cjs');
 (async()=>suite('update39',async test=>{
  await test('gallery_bounded_pan_and_caption_pixels',async({page,step,evidence})=>{
+  await page.evaluate(()=>{
+   window.captionInk=null;const fill=CanvasRenderingContext2D.prototype.fillText;
+   CanvasRenderingContext2D.prototype.fillText=function(text,x,y,max){
+    const result=fill.call(this,text,x,y,max);
+    if(this.canvas.classList.contains('gallery-img')&&text==='Všechny anotace'){
+     const t=this.getTransform(),m=this.measureText(text),p=t.transformPoint({x,y});
+     const sx=Math.hypot(t.a,t.b),sy=Math.hypot(t.c,t.d),density=this.canvas.width/this.canvas.clientWidth;
+     captionInk={x:p.x,y:p.y,w:Math.min(m.width,max||m.width)*sx,h:parseFloat(this.font.match(/[\d.]+px/)[0])*sy,density};
+    }return result;
+   };
+  });
   const before=await page.evaluate(async()=>{
    const c=document.createElement('canvas');c.width=1200;c.height=800;c.getContext('2d').fillRect(0,0,1200,800);
    const blob=await new Promise(r=>c.toBlob(r)),id=await storeMedia(new File([blob],'synthetic.png',{type:'image/png'}));
@@ -11,7 +22,19 @@ const {suite,assert,createCanvas,tool,drag,projected}=require('./harness.cjs');
   assert(await page.evaluate(async()=>await loadPhotoImage(state.records[0].media[0])===await loadPhotoImage(state.records[0].media[0])),'decoded photo reused without changing original');
   assert.equal(await page.locator('.gallery-bottom').count(),0);
   // Inspect the real rendered caption outside the source photo: yellow glyph pixels must exist below inset.
-  const pixels=await page.evaluate(()=>{const c=document.querySelector('.gallery-img'),ctx=c.getContext('2d'),data=ctx.getImageData(0,Math.floor(c.height*.86),c.width,Math.floor(c.height*.14)).data;let yellow=0;for(let i=0;i<data.length;i+=4)if(data[i]>180&&data[i+1]>150&&data[i+2]<100)yellow++;return yellow});assert(pixels>20,'default caption below inset must be rendered');
+  await page.waitForFunction(()=>!!captionInk);
+  const caption=await page.evaluate(()=>{
+   const c=document.querySelector('.gallery-img'),v=JSON.parse(c.dataset.galleryView),s=captionInk;
+   const x=Math.max(0,Math.floor(s.x-s.w/2)),y=Math.max(0,Math.floor(s.y-s.h/2));
+   const w=Math.min(c.width-x,Math.ceil(s.w)),h=Math.min(c.height-y,Math.ceil(s.h));
+   const data=c.getContext('2d').getImageData(x,y,w,h).data;let yellow=0;
+   for(let i=0;i<data.length;i+=4)if(data[i]>180&&data[i+1]>150&&data[i+2]<100)yellow++;
+   return {yellow,widthCss:s.w/s.density,heightCss:s.h/s.density,belowInset:s.y/s.density>v.dy+(780+200)*v.scale};
+  });
+  const pixels=caption.yellow;
+  assert(caption.belowInset,'Caption must follow the actual inset bottom');
+  assert(caption.widthCss>150,'Caption must not be squeezed to a hidden editor viewport');
+  assert(caption.heightCss>=20&&pixels>20,'Real caption glyph pixels must be visible below the inset');
   for(const viewport of [{width:600,height:950},{width:1100,height:650}]){
    await page.setViewportSize(viewport);await page.waitForTimeout(100);await page.locator('.gallery-img').dblclick();
    for(const [x,y] of [[8000,0],[-8000,0],[0,8000],[0,-8000]]){

@@ -7,7 +7,16 @@
  const validId=id=>typeof id==='string'&&/^[a-zA-Z0-9_-]{3,120}$/.test(id);
  let reports=[];
  try{const v=JSON.parse(localStorage.getItem(KEY)||'[]');if(Array.isArray(v))reports=v.filter(x=>x&&typeof x==='object').slice(-300)}catch(e){}
- const persist=()=>{try{localStorage.setItem(KEY,JSON.stringify(reports))}catch(e){notify('Nepodařilo se uložit seznam připomínek')}};
+ // Commit the proposed list only after the device confirms its storage bytes.
+ // A quota/private-mode failure must never be reported as a successful save.
+ const persist=next=>{
+  try{
+   const serialized=JSON.stringify(next);
+   localStorage.setItem(KEY,serialized);
+   if(localStorage.getItem(KEY)!==serialized)throw new Error('Nepotvrzený zápis připomínek');
+   return true;
+  }catch(e){notify('Nepodařilo se uložit seznam připomínek');return false}
+ };
  const q=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const now=()=>new Date().toISOString();
  const makeId=()=>typeof uid==='function'?uid():'f-'+Date.now()+'-'+Math.random().toString(36).slice(2);
@@ -61,6 +70,8 @@
  flag.addEventListener('contextmenu',e=>{e.preventDefault();clearTimeout(longTimer);drag=null;showReportList()});
  let overlay=null,active=null,busy=false;
  function closeOverlay(){
+  // Keep the editable report until slow PNG/storage writes have finished.
+  if(busy&&active){notify('Probíhá ukládání připomínky. Nejdřív jej dokonči.');return}
   if(overlay)overlay.remove();overlay=null;active=null;flag.hidden=false;
  }
  function makeOverlay(markup){
@@ -138,7 +149,9 @@
     notify('Pro smazání klepni ještě jednou');
     return;
    }
-   reports=reports.filter(r=>!r.resolved);persist();showReportList();
+   const remaining=reports.filter(r=>!r.resolved);
+   if(!persist(remaining))return;
+   reports=remaining;showReportList();
   };
   overlay.querySelector('#feedbackShareZip').onclick=()=>sendBatch(false);
   overlay.querySelector('#feedbackSaveZip').onclick=()=>sendBatch(true);
@@ -188,7 +201,10 @@
    '</div><div class="feedback-foot"><button id="feedbackCancel" class="outline">Zavřít</button><button id="feedbackSave" class="primary">Uložit připomínku</button></div>');
   overlay.querySelector('#feedbackClose').onclick=closeOverlay;
   overlay.querySelector('#feedbackCancel').onclick=closeOverlay;
-  overlay.querySelector('#feedbackToList').onclick=showReportList;
+  overlay.querySelector('#feedbackToList').onclick=()=>{
+   if(busy){notify('Probíhá ukládání připomínky. Nejdřív jej dokonči.');return}
+   showReportList();
+  };
   overlay.querySelector('#feedbackTitle').value=report.title||'';
   overlay.querySelector('#feedbackDescription').value=report.description||'';
   overlay.querySelector('#feedbackType').value=report.type||'change';
@@ -411,7 +427,8 @@
  }
  async function saveReport(){
   if(!active||busy)return;
-  const r=active.report;
+  const editing=active;
+  const r=editing.report;
   r.type=overlay.querySelector('#feedbackType').value;
   r.title=overlay.querySelector('#feedbackTitle').value.trim().slice(0,130);
   r.description=overlay.querySelector('#feedbackDescription').value.trim();
@@ -421,11 +438,20 @@
   busy=true;
   const saveBtn=overlay.querySelector('#feedbackSave');saveBtn.disabled=true;saveBtn.textContent='Ukládám…';
   try{
-   if(active.canvas&&active.image){
-    const blob=await new Promise(ok=>active.canvas.toBlob(ok,'image/png'));
-    if(blob&&native){
+   // Text/status-only edits reuse the already confirmed annotated image.
+   // Re-rasterize if the source, annotations or saved image reference changed.
+   const stored=reports.find(x=>x.id===r.id);
+   const reuseRaster=!!(stored&&validId(stored.annotatedId)&&
+     r.annotatedId===stored.annotatedId&&r.screenshotId===stored.screenshotId&&
+     JSON.stringify(r.annotations||[])===JSON.stringify(stored.annotations||[]));
+   if(!reuseRaster&&active.canvas&&active.image){
+    const blob=await new Promise(ok=>editing.canvas.toBlob(ok,'image/png'));
+    if(editing!==active)throw new Error('Editor připomínky se během ukládání změnil');
+    if(!blob)throw new Error('Vykreslený snímek se nepodařilo vytvořit');
+    if(native){
      const id=makeId();
      const bytes=new Uint8Array(await blob.arrayBuffer());
+     if(editing!==active)throw new Error('Editor připomínky se během ukládání změnil');
      if(!Native.beginMediaChecked(id,'image/png','oznacena-chyba.png',bytes.length))throw new Error('Snímek nelze připravit');
      for(let off=0;off<bytes.length;off+=48*1024){
       const part=bytes.subarray(off,off+48*1024);
@@ -436,9 +462,14 @@
      r.annotatedId=id;
     }
    }
+   if(editing!==active)throw new Error('Editor připomínky se během ukládání změnil');
    const i=reports.findIndex(x=>x.id===r.id);
-   if(i>=0)reports[i]=r;else reports.push(r);
-   persist();showReportList();notify('Připomínka uložena');
+   const nextReports=reports.slice();
+   if(i>=0)nextReports[i]=r;else nextReports.push(r);
+   // Keep the previous in-memory list and editable form on failed storage.
+   if(!persist(nextReports))throw new Error('Připomínku nelze bezpečně uložit');
+   reports=nextReports;
+   showReportList();notify('Připomínka uložena');
   }catch(e){
    notify('Připomínku se nepodařilo uložit');
    if(saveBtn){saveBtn.disabled=false;saveBtn.textContent='Uložit připomínku'}

@@ -4,12 +4,14 @@ import re
 import unittest
 
 EDITOR = (Path(__file__).resolve().parents[1] / 'app/src/main/assets/editor.js')
+GEOMETRY = (Path(__file__).resolve().parents[1] / 'app/src/main/assets/annotation-geometry.js')
 
 
 class DimensionSelectionTests(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         cls.script = EDITOR.read_text(encoding='utf-8')
+        cls.geometry = GEOMETRY.read_text(encoding='utf-8')
         cls.outline = cls.script.split('function drawSelectedOutline(c,item){', 1)[1].split('function drawSelectedGrips(c){', 1)[0]
 
     def test_white_selection_is_behind_yellow_line_not_drawn_over_it(self):
@@ -25,7 +27,8 @@ class DimensionSelectionTests(unittest.TestCase):
     def test_visual_rings_are_translucent_and_independent_of_touch_target(self):
         self.assertIn("c.fillStyle='rgba(255,255,255,.12)'", self.outline)
         self.assertIn('c.arc(point.x,point.y,14,0,Math.PI*2)', self.outline)
-        self.assertIn('let best=null,dist=31', self.script)
+        self.assertIn('let best=null,dist=31', self.geometry)
+        self.assertIn('return AnnotationGeometry.nearestHandle(point,current.items||[],view,onlyItem);', self.script)
         self.assertNotIn('current.items.push', self.outline)
 
     def test_other_selection_tools_remain(self):

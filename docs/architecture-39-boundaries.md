@@ -44,3 +44,105 @@ Etapa37: BackupBlobs vlastní jen adresování/výběr ověřené immutable repa
 Etapa38: veřejnou preview registraci/parsing/signing/override hranici vlastní malý Gradle modul, runtime gate má jednotnou kontrolu ID pro SDK/UI/factory. Account flow ani datový/sync protokol se nepřepisují. Nové kontroly nemění triggers APK workflow. Připravené auditní zadání je v [audit-39-handoff.md](audit-39-handoff.md).
 
 Etapa39: aktivace potvrzeného veřejného ID nepřidává další účetní/datovou vrstvu. Stávající preview-only build hranice a společná továrna/UI používají stejnou konfiguraci; signing/package pin a default disabled ostatních variant zůstávají.
+
+
+## Etapa B1 po #39 – renderer (7. 11. 2026, PR #51)
+
+Galerie, detaily a exporty nyní předávají vlastní renderovací kontext; editor má výchozí adaptér. Vykreslení nepřepíná živý dokument/pohled/výběr, přesné body zůstávají v obrazových souřadnicích a popisky/tahy ve výstupních pixelech. Změna `343c172` nemění perzistenci, sync ani schéma. Není zaveden nový příkazový model či přepsán celý editor. [Implementace, FAIL/PASS, omezení a další hranice médií](qa-professional-20261107.md#etapa-b1--pokračování-galerie-v-pr-51-7-11-2026). #52 je koordinovaně převzat, #49 stále samostatný; N4 zůstává povinný FAIL.
+
+## Etapa B2 – geometrie bez editorových globálů (rozpracovaná větev z B1, 7. 11. 2026)
+
+Nový `annotation-geometry.js` obsahuje čisté výpočty převodu screen/world, hranic obrázku,
+čtyřúhelníků, kruhu/elipsy, kumulativních úseček a plochy ze známých stran/úhlopříčky.
+`editor.js` zachovává původní veřejné názvy jako tenké adaptéry na tento modul, tedy
+nezmění výchozí gesta, renderovací kontext B1 ani uložené `schema:1`. Číselné hodnoty,
+jednotky a souřadnice nejsou zaokrouhlovány; originály médií ani synchronizace se nemění.
+Modul se načítá před `editor.js`. Existující VM interakční testy používají stejné API
+v izolovaném kontextu; nový `tests/annotation_geometry_contract.js` hlídá kontrakt
+samostatného výpočtu, neporušené hodnoty a nezávislost na Androidu.
+
+**Integrace / důkazy:** lokální syntaktické a deterministické srovnání starých a vytažených
+funkcí ještě není náhradou všech regresních Node/Python/Playwright/JVM/Android testů.
+N4 a Android System UI ANR z B1 tím nejsou vyřešeny. Větev vzniká přímo z
+`ac23d1a`, původní PR #51 se nemění; žádný merge, nový PR, automatický Actions
+běh ani APK pouze kvůli této etapě.
+
+## Etapa B3 – bezstavové vyhledávání úchopů (navazuje na B2, 7. 11. 2026)
+
+Z `editor.js` byla izolována původní geometrie `nearestHandle` do čistého
+`AnnotationGeometry.nearestHandle(point,items,transform,onlyItem)`.
+Editor zachovává původní kompatibilní signaturu; funkce dostává konkrétní seznam
+objektů a transformaci namísto čtení živého `current` a `view`.
+Nemění se 31px prahová vzdálenost, podíl krajního úchopu 0,27,
+pořadí kandidátů, reference na editovatelný objekt ani uložené hodnoty.
+Kontrola přímého porovnání původní/nové funkce nad 15200 případy
+proběhla v dostupném izolovaném V8. Samostatný regresní test je
+`tests/annotation_grip_geometry.js`; úplné Node, Chromium a Android testy
+ještě nebyly znovu spuštěny, N4 zůstává známý FAIL. Samostatná navazující
+větev z B2 bez PR a Actions; původní Codex B1 ani B2 se nemění.
+
+## Etapa B4 – geometrie výběru objektů bez živého stavu editoru (7. 11. 2026)
+
+`nearestItem` a `segmentLineScreen` pracují nyní v `annotation-geometry.js` se zadaným
+seznamem objektů a transformací. Editor si uchoval stejné API; pouze měření skutečné
+šířky popisku poskytuje callback `captionHit`. Původní pořadí výběru, 26px tolerance,
+odsazení kót, dotyky kruhů/ploch/úseček a přesná data jsou zachovány.
+Porovnání původní a nové funkce před zápisem: 44000 deterministických PASS.
+Cílený test `tests/annotation_hit_geometry.js` PASS v izolovaném V8.
+Plná Node.js/Chromium/Android regrese stále NOT RUN, N4 známé FAIL.
+Bez merge/PR/Actions, změna pouze v samostatné následné větvi po B3.
+
+## Etapa B5 – oddělené rozhodování o úseku a úchopu (7. 11. 2026)
+
+Rozpoznání aktivního úseku pro laser je nyní v čistém `AnnotationGeometry.nearestEditableSegment`;
+priorita dotykového výběru v `AnnotationSelection.dragHandle`. Editor zůstává vlastníkem
+přesunů, checkpointu, Undo/Redo a zápisu. Zachovány přesné hodnoty, výběr koncového
+bodu a středu, priorita popisků, přiřazení hran obdélníku i původní schema a sync.
+Navazuje přímo na B4; cílená regrese `tests/annotation_selection_contract.js`.
+Plná Android/Chromium/JVM integrace zatím neproběhla, N4 je nadále známý FAIL.
+Bez nového PR, merge, Actions a APK.
+
+## Etapa B9 – čisté magnetické přichytávání (7. 11. 2026)
+
+Zbylý výpočet `snap` pro body, mřížku a vodorovné/svislé zarovnání byl vyjmut
+z `editor.js` do čistého `AnnotationGeometry.snapPoint`. Editor zůstává
+vlastníkem stavů `prefs`, `view`, `photoSize`, `current.items` a gest;
+předává je pouze jako explicitní argumenty. Zachováno pořadí mřížka → cizí
+body → osy, práh 12/zoom, oddělený gridDistance, tolerance, ochrana
+vlastních bodů (`ignore.item` podle reference), omezení na fotografie
+a možnost odtrhnout bod mimo přichytávací zónu. Žádný datový či sync protokol
+ani ukládané kóty se nemění. `index.html` se nemění: geometrie se již načítá
+před editorem. Regresní test `tests/annotation_snap_contract.js` drží
+nezávislou kopii původní implementace a 42 000 deterministických porovnání
+včetně kontroly neměnnosti originálních dat. Zatím pouze samostatná
+navazující větev z kontrolního PR #57; bez merge a bez samostatné APK.
+
+## Etapa B10 – čisté přizpůsobení a přiblížení (7. 11. 2026)
+
+Výpočty `fitImage` a `zoomAt` byly odděleny jako
+`AnnotationGeometry.fittedViewport` a `AnnotationGeometry.zoomedViewport`.
+Vrací jen `zoom/dx/dy` bez přístupu k DOM/Androidu či živému objektu.
+Editor výsledky přiřazuje do původního `view` a volá stávající `paint`.
+Zachován okraj 24 px, minimální a maximální zoom 0,05–12, bod pod
+prstem, nulové rozměry plátna, Undo/Redo a uložené přesné hodnoty.
+`tests/annotation_viewport_contract.js` obsahuje nezávislý původní
+algoritmus a 42 000 deterministických porovnání včetně kontroly
+neměnnosti souřadnic a transformace. Připravena společná regresní
+brána B9+B10, žádná samostatná APK ani změna technologie.
+
+## Etapa B11 – čistá matematika gesta dvěma prsty (7. 11. 2026)
+
+Výpočet přibližování/přesunu během `stageMove` pro současně dva
+doteky byl přesunut jako `AnnotationGeometry.pinchViewport(gesture,points)`.
+Editor stále vlastní pointer IDs, capture, začátek/ukončení gesta, kreslení,
+Undo/Redo i `paint`; nové jádro vrací jen `zoom/dx/dy`. Zachováváme
+historické minimum .05, maximum 12, stejné pořadí float operací,
+`Math.max(1,gesture.distance)` a kotvu `gesture.world`.
+`tests/annotation_pinch_contract.js` obsahuje předchozí nezávislou
+formuli a 42 000 deterministických shodných výsledků i kontrolu
+neměnnosti vstupů. Samostatný reálný Chromium/CDP test ve
+`tools/e2e/drawing.cjs` navíc provede skutečné dva doteky nad
+editovatelnou kótou, ověří zoom a zachování přesné kóty, Undo/Redo,
+datové persistence po reloadu i ukončení pointer capture. Android
+WebView/fyzické S Pen výsledky nelze ze simulace vyvozovat; žádná
+změna technologie, uloženého formátu, médií ani synchronizace.

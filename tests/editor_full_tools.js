@@ -13,8 +13,9 @@ const env={view:{zoom:1,dx:0,dy:0},prefs:{unit:'mm',color:'#ffe000',lineWidth:2,
  worldToScreen:p=>({...p}),canvasText:(text)=>labels.push(text),
  drawArrow:(...args)=>arrows.push(args),drawNoteLeader:()=>{},
  noteDisplayedCaption:()=>'',noteCaptionScreen:()=>({x:0,y:0}),
+ photoSize:{w:1400,h:900},stageCanvas:{clientWidth:600,clientHeight:900},selected:null,window:{},
  Math,Number,console};
-vm.createContext(env);vm.runInContext(drawSource,env);
+vm.createContext(env);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-geometry.js','utf8'),env);vm.runInContext(drawSource,env);
 const draw=obj=>{labels.length=0;arrows.length=0;env.drawItem(graphics,{
  id:'sample',color:'#fbd000',width:2,fontSize:15,unit:'mm',...obj
  });return [...labels]};

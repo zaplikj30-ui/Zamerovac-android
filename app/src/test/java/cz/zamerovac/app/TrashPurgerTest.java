@@ -88,6 +88,126 @@ public class TrashPurgerTest {
         purger.purge(updated.toString(),updated.toString(),new JSONArray(),this::persist);
         assertTrue(new File(home,"media/trash-media").exists());
     }
+    @Test public void restartedCleanupKeepsExactBytesReusedByNoteHistory() throws Exception {
+        String db=fixture().toString();file("trash-media");file("note-audio");
+        byte[] original=Files.readAllBytes(new File(home,"media/trash-media").toPath());
+        byte[] audio=Files.readAllBytes(new File(home,"media/note-audio").toPath());
+        // The unlink failed; retry will run after restart, when another owner may
+        // already need the same immutable IDs. Do not replace this with broad GC.
+        JSONObject result=new TrashPurger(home,cache,prefs,f->false).purge(db,db,targets(),this::persist);
+        assertTrue(result.getInt("pending")>0);
+        JSONObject next=result.getJSONObject("data");
+        next.getJSONArray("records").getJSONObject(0).put("versionHistory",new JSONArray()
+            .put(new JSONObject().put("items","[{\"media\":[\"trash-media\"],\"audioMedia\":[\"note-audio\"]}]")));
+        persist(next.toString());
+        new TrashPurger(home,cache,prefs).purge(next.toString(),next.toString(),new JSONArray(),this::persist);
+        assertArrayEquals(original,Files.readAllBytes(new File(home,"media/trash-media").toPath()));
+        assertArrayEquals(audio,Files.readAllBytes(new File(home,"media/note-audio").toPath()));
+        assertEquals("image/png",prefs.getString("mime-trash-media",null));
+        assertEquals("image/png",prefs.getString("mime-note-audio",null));
+    }
+    @Test public void purgeKeepsSharedOriginalsReferencedInsideSerializedJsonObjects() throws Exception {
+        JSONObject db=fixture();
+        JSONObject active=db.getJSONArray("records").getJSONObject(0);
+        // A legacy entry contains a JSON OBJECT string instead of the already-tested
+        // JSON ARRAY string. Recursively nested object-encoded text is realistic
+        // for imported snapshots and future fields unknown to this app version.
+        active.put("packedSnapshot",new JSONObject()
+            .put("history",new JSONObject().put("nested",new JSONArray().put(
+                new JSONObject().put("media",new JSONArray().put("trash-media")))))
+            .put("otherLegacy",new JSONObject().put("text",new JSONObject()
+                .put("audioMedia",new JSONArray().put("note-audio")).toString()))
+            .toString());
+        for(String id:new String[]{"trash-media","note-audio","detail-photo"})file(id);
+        byte[] protectedPhoto=Files.readAllBytes(new File(home,"media/trash-media").toPath());
+        byte[] protectedAudio=Files.readAllBytes(new File(home,"media/note-audio").toPath());
+        persist(db.toString());
+        JSONObject result=purger.purge(db.toString(),db.toString(),targets(),this::persist);
+        assertEquals(0,result.getInt("pending"));
+        assertArrayEquals(protectedPhoto,Files.readAllBytes(new File(home,"media/trash-media").toPath()));
+        assertArrayEquals(protectedAudio,Files.readAllBytes(new File(home,"media/note-audio").toPath()));
+        assertTrue(prefs.contains("mime-trash-media"));
+        assertTrue(prefs.contains("mime-note-audio"));
+        assertFalse("Exclusively deleted original must still be cleaned",new File(home,"media/detail-photo").exists());
+        assertEquals(active.toString(),new JSONObject(read(new File(home,"projects.json")))
+            .getJSONArray("records").getJSONObject(0).toString());
+        // Repeated cleanup after restart must not delete these originals.
+        String stable=read(new File(home,"projects.json"));
+        new TrashPurger(home,cache,prefs).purge(stable,stable,new JSONArray(),this::persist);
+        assertArrayEquals(protectedPhoto,Files.readAllBytes(new File(home,"media/trash-media").toPath()));
+        assertArrayEquals(protectedAudio,Files.readAllBytes(new File(home,"media/note-audio").toPath()));
+    }
+    @Test public void pendingCleanupMustRecheckSerializedObjectReferencesAfterRestart() throws Exception {
+        String db=fixture().toString();
+        file("trash-media");
+        JSONObject result=new TrashPurger(home,cache,prefs,f->false)
+            .purge(db,db,targets(),this::persist);
+        assertTrue(result.getInt("pending")>0);
+        JSONObject changed=result.getJSONObject("data");
+        changed.getJSONArray("records").getJSONObject(0).put("legacyJson",
+            new JSONObject().put("deep",new JSONObject()
+                .put("media",new JSONArray().put("trash-media"))).toString());
+        persist(changed.toString());
+        String now=changed.toString();
+        new TrashPurger(home,cache,prefs).purge(now,now,new JSONArray(),this::persist);
+        assertTrue("Pending cleanup after reboot must preserve newly referenced original",
+            new File(home,"media/trash-media").isFile());
+        assertEquals(0,new TrashPurger(home,cache,prefs).pendingCount());
+    }
+    @Test public void excessiveCombinedDepthAbortsPurgeWithoutDeletingOriginals() throws Exception {
+        // The outer 45 levels and the embedded 65 levels are EACH within the
+        // JsonInput limit, but their combined reference traversal is not.
+        JSONObject inner=new JSONObject().put("media",new JSONArray().put("trash-media"));
+        for(int i=0;i<65;i++)inner=new JSONObject().put("next",inner);
+        JSONObject outer=new JSONObject().put("embedded",inner.toString());
+        for(int i=0;i<45;i++)outer=new JSONObject().put("next",outer);
+        JSONObject db=fixture();
+        db.getJSONArray("records").getJSONObject(0).put("legacyHistory",outer);
+        String saved=db.toString();persist(saved);file("trash-media");
+        byte[] original=Files.readAllBytes(new File(home,"media/trash-media").toPath());
+        try{
+            purger.purge(saved,saved,targets(),this::persist);
+            fail("Overdeep nested media references were allowed into cleanup");
+        }catch(IOException expected){
+            assertTrue(expected.getMessage().contains("příloh")||expected.getMessage().contains("zanořen"));
+        }
+        assertEquals(saved,read(new File(home,"projects.json")));
+        assertArrayEquals(original,Files.readAllBytes(new File(home,"media/trash-media").toPath()));
+        assertTrue(prefs.contains("mime-trash-media"));
+        assertEquals(0,new TrashPurger(home,cache,prefs).pendingCount());
+    }
+    @Test public void invalidStructuredHistoryAbortsPurgeInsteadOfDiscardingPossibleReference() throws Exception {
+        JSONObject db=fixture();
+        db.getJSONArray("records").getJSONObject(0).put("legacyHistory",
+            "{unfinished \"media\": [\"trash-media\"]");
+        String saved=db.toString();persist(saved);file("trash-media");
+        try{
+            purger.purge(saved,saved,targets(),this::persist);
+            fail("Invalid structured history was silently discarded");
+        }catch(IOException expected){}
+        assertEquals(saved,read(new File(home,"projects.json")));
+        assertTrue(new File(home,"media/trash-media").isFile());
+        assertTrue(prefs.contains("mime-trash-media"));
+        assertEquals(0,new TrashPurger(home,cache,prefs).pendingCount());
+    }
+    @Test public void malformedBalancedJsonStringAlsoBlocksMediaDeletion() throws Exception {
+        JSONObject db=fixture();
+        // Brackets and quotes are balanced (JsonInput.check accepts structure),
+        // but a broken legacy object cannot be traversed reliably.
+        db.getJSONArray("records").getJSONObject(0).put("packedSnapshot",
+            "{\"media\":[\"trash-media\"],\"malformed\" \"value\"}");
+        String saved=db.toString();persist(saved);file("trash-media");
+        try{
+            purger.purge(saved,saved,targets(),this::persist);
+            fail("Unparseable legacy JSON would allow destructive cleanup");
+        }catch(IOException expected){
+            assertTrue(expected.getMessage().contains("příloh"));
+        }
+        assertEquals(saved,read(new File(home,"projects.json")));
+        assertTrue(new File(home,"media/trash-media").isFile());
+        assertTrue(prefs.contains("mime-trash-media"));
+        assertEquals(0,new TrashPurger(home,cache,prefs).pendingCount());
+    }
     @Test public void nativeBridgeChecksDiskSnapshotAndKeepsLegacyUnsavedDefaults() throws Exception {
         MainActivity activity=Robolectric.buildActivity(MainActivity.class).get();
         java.lang.reflect.Field field=MainActivity.class.getDeclaredField("settings");field.setAccessible(true);field.set(activity,prefs);

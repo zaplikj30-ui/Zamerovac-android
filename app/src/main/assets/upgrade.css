@@ -45,7 +45,7 @@ button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-vis
 .mediaOverlay audio {display:block;max-width:90%;width:440px;margin:auto}
 .mediaOverlay p {color:#aaa;text-align:center}
 .gallery-content {flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden}
-.gallery-img {max-width:100%;max-height:100%;object-fit:contain;touch-action:pan-y pinch-zoom;user-select:none}
+.gallery-img {display:block;max-width:100%;max-height:100%;touch-action:none;user-select:none}
 .gallery-bottom {display:flex;align-items:center;justify-content:space-between;gap:8px;min-height:67px;padding:8px;background:#28252e}
 .gallery-bottom span {font-size:12px;color:#d0c2dc;text-align:center}
 .gallery-bottom button {font-size:25px}

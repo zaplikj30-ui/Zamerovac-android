@@ -1,0 +1,637 @@
+{
+  "syntheticOnly": true,
+  "fullApplicationVerified": false,
+  "baseline": {
+    "gallery-readability": {
+      "sha": "f543af718c343ea4ef1dc9d178bae16d604f0521",
+      "startedAt": "2026-11-07T01:29:41.787Z",
+      "cases": [
+        {
+          "name": "pixels_1200x800_412",
+          "status": "failed",
+          "evidence": [
+            {
+              "fixture": {
+                "photo": [
+                  1200,
+                  800
+                ],
+                "viewport": {
+                  "width": 412,
+                  "height": 850
+                }
+              },
+              "zoom": "fit",
+              "fontCssPx": 5.4554560120301225,
+              "inkHeightCssPx": 5,
+              "inkPixels": 21,
+              "yellowPixels": 111,
+              "ratio": 1
+            }
+          ],
+          "failure": "AssertionError [ERR_ASSERTION]: Readable font >=12 CSS px; actual 5.4554560120301225"
+        },
+        {
+          "name": "pixels_6000x4000_412",
+          "status": "failed",
+          "evidence": [
+            {
+              "fixture": {
+                "photo": [
+                  6000,
+                  4000
+                ],
+                "viewport": {
+                  "width": 412,
+                  "height": 850
+                }
+              },
+              "zoom": "fit",
+              "fontCssPx": 1.1456816901578752,
+              "inkHeightCssPx": -4,
+              "inkPixels": 0,
+              "yellowPixels": 0,
+              "ratio": 1
+            }
+          ],
+          "failure": "AssertionError [ERR_ASSERTION]: Real yellow glyph pixels must exist, including on zoom"
+        },
+        {
+          "name": "pixels_1600x4800_1100",
+          "status": "failed",
+          "evidence": [
+            {
+              "fixture": {
+                "photo": [
+                  1600,
+                  4800
+                ],
+                "viewport": {
+                  "width": 1100,
+                  "height": 700
+                }
+              },
+              "zoom": "fit",
+              "fontCssPx": 2.002005352278616,
+              "inkHeightCssPx": -9,
+              "inkPixels": 0,
+              "yellowPixels": 2,
+              "ratio": 1
+            }
+          ],
+          "failure": "AssertionError [ERR_ASSERTION]: Real yellow glyph pixels must exist, including on zoom"
+        }
+      ]
+    },
+    "quality-regressions": {
+      "sha": "f543af718c343ea4ef1dc9d178bae16d604f0521",
+      "startedAt": "2026-11-07T01:29:17.779Z",
+      "cases": [
+        {
+          "name": "existing_note_undo_redo_save",
+          "status": "failed",
+          "evidence": [],
+          "failure": "AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:"
+        },
+        {
+          "name": "existing_note_undo_redo_back",
+          "status": "failed",
+          "evidence": [],
+          "failure": "AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:"
+        },
+        {
+          "name": "audio_play_pause_must_not_focus_text",
+          "status": "failed",
+          "evidence": [],
+          "failure": "AssertionError [ERR_ASSERTION]: Opening an audio note must not request a keyboard"
+        },
+        {
+          "name": "two_notes_explicit_picker_double_click_cancel_back_and_late_result",
+          "status": "passed",
+          "evidence": [
+            {
+              "nativePicker": "model only",
+              "lateCallbacksRejected": true,
+              "explicitRequests": 2
+            }
+          ]
+        },
+        {
+          "name": "cancelled_attachment_has_no_unprotected_orphan",
+          "status": "failed",
+          "evidence": [
+            {
+              "before": [],
+              "after": [
+                "63db0e72-8b1e-40f0-ad1a-2fcc49d5d3d7"
+              ]
+            }
+          ],
+          "failure": "AssertionError [ERR_ASSERTION]: Cancel leaked a published file without a reference or retention owner (N4)"
+        },
+        {
+          "name": "note_controls_reachable_412",
+          "status": "passed",
+          "evidence": [
+            {
+              "viewport": {
+                "width": 412,
+                "height": 850
+              },
+              "controls": [
+                {
+                  "id": "richPhotoCamera",
+                  "x": 16,
+                  "y": 200,
+                  "w": 132.046875,
+                  "h": 42,
+                  "font": 15,
+                  "target": "richPhotoCamera"
+                },
+                {
+                  "id": "richPhotoPick",
+                  "x": 156.046875,
+                  "y": 200,
+                  "w": 155.390625,
+                  "h": 42,
+                  "font": 15,
+                  "target": "richPhotoPick"
+                },
+                {
+                  "id": "richVoice",
+                  "x": 16,
+                  "y": 250,
+                  "w": 127.59375,
+                  "h": 42,
+                  "font": 15,
+                  "target": "richVoice"
+                },
+                {
+                  "id": "okModal",
+                  "x": 343.484375,
+                  "y": 8.5,
+                  "w": 61.515625,
+                  "h": 38,
+                  "font": 15,
+                  "target": "okModal"
+                },
+                {
+                  "id": "cancelModal",
+                  "x": 277.984375,
+                  "y": 8.5,
+                  "w": 61.5,
+                  "h": 38,
+                  "font": 15,
+                  "target": "cancelModal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "note_controls_reachable_1100",
+          "status": "passed",
+          "evidence": [
+            {
+              "viewport": {
+                "width": 1100,
+                "height": 700
+              },
+              "controls": [
+                {
+                  "id": "richPhotoCamera",
+                  "x": 150,
+                  "y": 200,
+                  "w": 132.046875,
+                  "h": 42,
+                  "font": 15,
+                  "target": "richPhotoCamera"
+                },
+                {
+                  "id": "richPhotoPick",
+                  "x": 290.046875,
+                  "y": 200,
+                  "w": 155.390625,
+                  "h": 42,
+                  "font": 15,
+                  "target": "richPhotoPick"
+                },
+                {
+                  "id": "richVoice",
+                  "x": 453.4375,
+                  "y": 200,
+                  "w": 127.59375,
+                  "h": 42,
+                  "font": 15,
+                  "target": "richVoice"
+                },
+                {
+                  "id": "okModal",
+                  "x": 1031.484375,
+                  "y": 8.5,
+                  "w": 61.515625,
+                  "h": 38,
+                  "font": 15,
+                  "target": "okModal"
+                },
+                {
+                  "id": "cancelModal",
+                  "x": 965.984375,
+                  "y": 8.5,
+                  "w": 61.5,
+                  "h": 38,
+                  "font": 15,
+                  "target": "cancelModal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "project_photo_dimension_note_reopen_and_export",
+          "status": "passed",
+          "evidence": [
+            {
+              "exportYellowPixels": 2713,
+              "originalSHA256": {
+                "19da2f42-1000-483a-85b4-75150659bc35": "adc900e546643c8024e0928b098cd0275d3de0a2ab9332de87ae3bb55023281d"
+              },
+              "exactMeasure": "1585,800001"
+            }
+          ]
+        }
+      ]
+    },
+    "laser-precision": {
+      "statusLines": [
+        "FAIL laser-precision/dimension: A distinct exact reading must survive the same display text",
+        "FAIL laser-precision/line: A distinct exact reading must survive the same display text",
+        "FAIL laser-precision/arrow: A distinct exact reading must survive the same display text",
+        "FAIL laser-precision/circle: A distinct exact reading must survive the same display text",
+        "FAIL laser-precision/ellipse: A distinct exact reading must survive the same display text",
+        "FAIL laser-precision/target: A distinct exact reading must survive the same display text",
+        "FAIL laser-precision/chain: A distinct exact reading must survive the same display text",
+        "FAIL laser-precision/cumulative: A distinct exact reading must survive the same display text",
+        "FAIL laser-precision/polyline: A distinct exact reading must survive the same display text",
+        "FAIL laser-precision/angle: A distinct exact reading must survive the same display text"
+      ]
+    }
+  },
+  "after": {
+    "quality-regressions": {
+      "sha": "998467a2ab7796aaaf19b39b64594db4122f06b5",
+      "startedAt": "2026-11-07T01:28:16.592Z",
+      "cases": [
+        {
+          "name": "existing_note_undo_redo_save",
+          "status": "passed",
+          "evidence": [
+            {
+              "close": "save",
+              "undoRestoredWholeObject": true
+            }
+          ]
+        },
+        {
+          "name": "existing_note_undo_redo_back",
+          "status": "passed",
+          "evidence": [
+            {
+              "close": "back",
+              "undoRestoredWholeObject": true
+            }
+          ]
+        },
+        {
+          "name": "audio_play_pause_must_not_focus_text",
+          "status": "passed",
+          "evidence": [
+            {
+              "realWavPlayback": true,
+              "androidIME": "NOT RUN; Chromium focus assertion only"
+            }
+          ]
+        },
+        {
+          "name": "two_notes_explicit_picker_double_click_cancel_back_and_late_result",
+          "status": "passed",
+          "evidence": [
+            {
+              "nativePicker": "model only",
+              "lateCallbacksRejected": true,
+              "explicitRequests": 2
+            }
+          ]
+        },
+        {
+          "name": "cancelled_attachment_has_no_unprotected_orphan",
+          "status": "failed",
+          "evidence": [
+            {
+              "before": [],
+              "after": [
+                "8a8483ad-20d2-4741-91a3-142c01189123"
+              ]
+            }
+          ],
+          "failure": "AssertionError [ERR_ASSERTION]: Cancel leaked a published file without a reference or retention owner (N4)"
+        },
+        {
+          "name": "note_controls_reachable_412",
+          "status": "passed",
+          "evidence": [
+            {
+              "viewport": {
+                "width": 412,
+                "height": 850
+              },
+              "controls": [
+                {
+                  "id": "richPhotoCamera",
+                  "x": 16,
+                  "y": 200,
+                  "w": 132.046875,
+                  "h": 42,
+                  "font": 15,
+                  "target": "richPhotoCamera"
+                },
+                {
+                  "id": "richPhotoPick",
+                  "x": 156.046875,
+                  "y": 200,
+                  "w": 155.390625,
+                  "h": 42,
+                  "font": 15,
+                  "target": "richPhotoPick"
+                },
+                {
+                  "id": "richVoice",
+                  "x": 16,
+                  "y": 250,
+                  "w": 127.59375,
+                  "h": 42,
+                  "font": 15,
+                  "target": "richVoice"
+                },
+                {
+                  "id": "okModal",
+                  "x": 343.484375,
+                  "y": 8.5,
+                  "w": 61.515625,
+                  "h": 38,
+                  "font": 15,
+                  "target": "okModal"
+                },
+                {
+                  "id": "cancelModal",
+                  "x": 277.984375,
+                  "y": 8.5,
+                  "w": 61.5,
+                  "h": 38,
+                  "font": 15,
+                  "target": "cancelModal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "note_controls_reachable_1100",
+          "status": "passed",
+          "evidence": [
+            {
+              "viewport": {
+                "width": 1100,
+                "height": 700
+              },
+              "controls": [
+                {
+                  "id": "richPhotoCamera",
+                  "x": 150,
+                  "y": 200,
+                  "w": 132.046875,
+                  "h": 42,
+                  "font": 15,
+                  "target": "richPhotoCamera"
+                },
+                {
+                  "id": "richPhotoPick",
+                  "x": 290.046875,
+                  "y": 200,
+                  "w": 155.390625,
+                  "h": 42,
+                  "font": 15,
+                  "target": "richPhotoPick"
+                },
+                {
+                  "id": "richVoice",
+                  "x": 453.4375,
+                  "y": 200,
+                  "w": 127.59375,
+                  "h": 42,
+                  "font": 15,
+                  "target": "richVoice"
+                },
+                {
+                  "id": "okModal",
+                  "x": 1031.484375,
+                  "y": 8.5,
+                  "w": 61.515625,
+                  "h": 38,
+                  "font": 15,
+                  "target": "okModal"
+                },
+                {
+                  "id": "cancelModal",
+                  "x": 965.984375,
+                  "y": 8.5,
+                  "w": 61.5,
+                  "h": 38,
+                  "font": 15,
+                  "target": "cancelModal"
+                }
+              ]
+            }
+          ]
+        },
+        {
+          "name": "project_photo_dimension_note_reopen_and_export",
+          "status": "passed",
+          "evidence": [
+            {
+              "exportYellowPixels": 2713,
+              "originalSHA256": {
+                "aa160d7e-327f-46ea-90b4-e3ad04d61251": "adc900e546643c8024e0928b098cd0275d3de0a2ab9332de87ae3bb55023281d"
+              },
+              "exactMeasure": "1585,800001"
+            }
+          ]
+        }
+      ]
+    },
+    "laser-precision": {
+      "statusLines": [
+        "PASS laser-precision/dimension",
+        "PASS laser-precision/line",
+        "PASS laser-precision/arrow",
+        "PASS laser-precision/circle",
+        "PASS laser-precision/ellipse",
+        "PASS laser-precision/target",
+        "PASS laser-precision/chain",
+        "PASS laser-precision/cumulative",
+        "PASS laser-precision/polyline",
+        "PASS laser-precision/angle"
+      ]
+    }
+  },
+  "pr51": {
+    "gallery-readability": {
+      "sha": "9edf363c7a7d4ddfc0b9b795ff4723c5c0d55fb8",
+      "startedAt": "2026-11-07T01:25:31.627Z",
+      "cases": [
+        {
+          "name": "pixels_1200x800_412",
+          "status": "passed",
+          "evidence": [
+            {
+              "fixture": {
+                "photo": [
+                  1200,
+                  800
+                ],
+                "viewport": {
+                  "width": 412,
+                  "height": 850
+                }
+              },
+              "zoom": "fit",
+              "fontCssPx": 16.89602340227151,
+              "inkHeightCssPx": 20,
+              "inkPixels": 347,
+              "yellowPixels": 945,
+              "ratio": 1
+            },
+            {
+              "fixture": {
+                "photo": [
+                  1200,
+                  800
+                ],
+                "viewport": {
+                  "width": 412,
+                  "height": 850
+                }
+              },
+              "zoom": "zoom",
+              "fontCssPx": 16.896023402271506,
+              "inkHeightCssPx": 20,
+              "inkPixels": 347,
+              "yellowPixels": 1139,
+              "ratio": 1
+            }
+          ]
+        },
+        {
+          "name": "pixels_6000x4000_412",
+          "status": "passed",
+          "evidence": [
+            {
+              "fixture": {
+                "photo": [
+                  6000,
+                  4000
+                ],
+                "viewport": {
+                  "width": 412,
+                  "height": 850
+                }
+              },
+              "zoom": "fit",
+              "fontCssPx": 16.896023402271506,
+              "inkHeightCssPx": 20,
+              "inkPixels": 347,
+              "yellowPixels": 963,
+              "ratio": 1
+            },
+            {
+              "fixture": {
+                "photo": [
+                  6000,
+                  4000
+                ],
+                "viewport": {
+                  "width": 412,
+                  "height": 850
+                }
+              },
+              "zoom": "zoom",
+              "fontCssPx": 16.896023402271506,
+              "inkHeightCssPx": 20,
+              "inkPixels": 347,
+              "yellowPixels": 1139,
+              "ratio": 1
+            }
+          ]
+        },
+        {
+          "name": "pixels_1600x4800_1100",
+          "status": "passed",
+          "evidence": [
+            {
+              "fixture": {
+                "photo": [
+                  1600,
+                  4800
+                ],
+                "viewport": {
+                  "width": 1100,
+                  "height": 700
+                }
+              },
+              "zoom": "fit",
+              "fontCssPx": 15.205261271176258,
+              "inkHeightCssPx": 51,
+              "inkPixels": 411,
+              "yellowPixels": 755,
+              "ratio": 1
+            },
+            {
+              "fixture": {
+                "photo": [
+                  1600,
+                  4800
+                ],
+                "viewport": {
+                  "width": 1100,
+                  "height": 700
+                }
+              },
+              "zoom": "zoom",
+              "fontCssPx": 15.205261271176258,
+              "inkHeightCssPx": 51,
+              "inkPixels": 411,
+              "yellowPixels": 1010,
+              "ratio": 1
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "testSHA256": {
+    "tools/e2e/quality-regressions.cjs": "043be9fca468b2ad72fd75263516c03dc6df358b5196e9eef0f02b6f1da18171",
+    "tools/e2e/gallery-readability.cjs": "da395f276789ece27ff40933999b3fc8eedf2e165f4bed8fd5f6194e3ccdc6cd",
+    "tests/laser_precision_regression.js": "6188b58325d1820794368b531680fea3310b276a36a6d2b6d83ba03e4fcda3ad"
+  },
+  "environment": {
+    "node": "v24.22.1",
+    "chromium": "Chromium 156.0.8078.79 built on Debian GNU/Linux 13 (trixie)",
+    "python": "Python 3.12.14",
+    "playwright": "1.62.1"
+  },
+  "notRun": [
+    "Android emulator / real WebView IME and picker",
+    "native JVM locally (no SDK/Gradle/javac)",
+    "Samsung / S Pen / Bosch radio / live Drive"
+  ]
+}

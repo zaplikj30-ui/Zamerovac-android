@@ -3,8 +3,12 @@ const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=r
 const base=process.env.ZAMEROVAC_BASE_URL||process.argv[2]||'http://127.0.0.1:8765';
 async function suite(name,body){
  const directory=path.resolve(process.env.ZAMEROVAC_E2E_DIR||'test-artifacts',name);fs.mkdirSync(directory,{recursive:true});
+ // Resolve the actual checked-out commit before starting Chromium. If git.exe is
+ // missing from the Windows service PATH, fail immediately, never leave a
+ // headless browser alive waiting for the outer eight-minute kill timeout.
+ const sha=require('node:child_process').execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
  const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',args:['--no-sandbox']});
- const report={suite:name,sha:require('node:child_process').execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim(),startedAt:new Date().toISOString(),syntheticOnly:true,cases:[]};let failed=0;
+ const report={suite:name,sha,startedAt:new Date().toISOString(),syntheticOnly:true,cases:[]};let failed=0;
  try{await body(async(title,test)=>{
   if(process.env.ZAMEROVAC_CASES&&!process.env.ZAMEROVAC_CASES.split(',').includes(title))return;
   const slug=title.replace(/[^a-z0-9_-]/gi,'_'),context=await browser.newContext({viewport:{width:600,height:950},hasTouch:true});

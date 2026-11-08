@@ -12,17 +12,20 @@
   return (current?.items||[]).filter(it=>it.type==='note'&&it.media?.length&&
     window.__detailPhotoCache?.[it.media[0]]?.naturalWidth);
  }
- function layout(it,image){
-  const zoom=view.zoom;
+ function layout(it,image,render){
+  const transform=render?.view||view,size=render?.photoSize||photoSize;
+  const viewport=render?.viewport||{w:stageCanvas.clientWidth,h:stageCanvas.clientHeight};
+  const exporting=render?render.exporting:window.__exportingAnnotations;
+  const zoom=transform.zoom;
   const w=clamp(Number(it.insetWidth)||220,70,1500)*zoom;
   const h=w*image.naturalHeight/image.naturalWidth;
-  const anchor=worldToScreen(it.a||{x:0,y:0});
+  const anchor=render?annotationProjectPoint(it.a||{x:0,y:0},transform):worldToScreen(it.a||{x:0,y:0});
   // Původní poznámky zůstanou na svém místě.
   // Výchozí vložený obrázek nesmí začínat mimo dostupný displej.
-  const initialX=clamp(anchor.x+8,8,Math.max(8,(window.__exportingAnnotations?photoSize.w*zoom:stageCanvas.clientWidth)-w-8));
-  const initialY=clamp(anchor.y+23,8,Math.max(8,(window.__exportingAnnotations?photoSize.h*zoom:stageCanvas.clientHeight)-h-8));
-  const x=Number.isFinite(it.insetX)?it.insetX*zoom+view.dx:initialX;
-  const y=Number.isFinite(it.insetY)?it.insetY*zoom+view.dy:initialY;
+  const initialX=clamp(anchor.x+8,8,Math.max(8,(exporting?size.w*zoom:viewport.w)-w-8));
+  const initialY=clamp(anchor.y+23,8,Math.max(8,(exporting?size.h*zoom:viewport.h)-h-8));
+  const x=Number.isFinite(it.insetX)?it.insetX*zoom+transform.dx:initialX;
+  const y=Number.isFinite(it.insetY)?it.insetY*zoom+transform.dy:initialY;
   return {x,y,w,h,anchor,cx:x+w/2,cy:y+h/2,angle:(Number(it.insetRotation)||0)*Math.PI/180};
  }
  function unrotate(p,g){
@@ -81,50 +84,51 @@
   }
   c.restore();
  }
- function labelPosition(it,g){
+ function labelPosition(it,g,render){
   // Výchozí text je součástí rámečku fotografie, a proto jede spolu s ní.
   // Uživatelsky přetažený text (starší uložené poznámky) má vlastní souřadnici.
-  if(it.captionMoved&&it.b)return worldToScreen(it.b);
+  if(it.captionMoved&&it.b)return render?annotationProjectPoint(it.b,render.view):worldToScreen(it.b);
   return {x:g.cx,y:g.y+g.h+18};
  }
- function labelRect(c,it,g){
+ function labelRect(c,it,g,render){
   const text=String(it.text||'').trim();
   if(!text)return null;
-  const p=labelPosition(it,g),fs=Number(it.fontSize)||Math.max(14,Number(prefs.fontSize)||17);
+  const p=labelPosition(it,g,render),fs=Number(it.fontSize)||Math.max(14,Number((render?.prefs||prefs).fontSize)||17);
   c.font='500 '+fs+'px sans-serif';
-  const width=clamp(c.measureText(text).width+18,88,Math.max(88,stageCanvas.clientWidth-20));
+  const width=clamp(c.measureText(text).width+18,88,Math.max(88,(render?.viewport.w??stageCanvas.clientWidth)-20));
   return {x:p.x-width/2,y:p.y-fs/2-7,w:width,h:fs+15,p,text,fs};
  }
  // Shared bounds use the same geometry and default caption placement as rendering.
- window.insetAnnotationBounds=function(c,it){
+ window.insetAnnotationBounds=function(c,it,render){
   const image=window.__detailPhotoCache?.[it.media?.[0]];if(!image?.naturalWidth)return null;
-  const g=layout(it,image),corners=[turn({x:-g.w/2,y:-g.h/2},g),turn({x:g.w/2,y:-g.h/2},g),turn({x:g.w/2,y:g.h/2},g),turn({x:-g.w/2,y:g.h/2},g)];
-  const label=labelRect(c,it,g);
+  const g=layout(it,image,render),corners=[turn({x:-g.w/2,y:-g.h/2},g),turn({x:g.w/2,y:-g.h/2},g),turn({x:g.w/2,y:g.h/2},g),turn({x:-g.w/2,y:g.h/2},g)];
+  const label=labelRect(c,it,g,render);
   if(label)corners.push({x:label.x,y:label.y},{x:label.x+label.w,y:label.y+label.h});
   return {minX:Math.min(...corners.map(p=>p.x))-18,minY:Math.min(...corners.map(p=>p.y))-18,maxX:Math.max(...corners.map(p=>p.x))+18,maxY:Math.max(...corners.map(p=>p.y))+18};
  };
- function renderLabel(c,it,g){
-  const box=labelRect(c,it,g);
+ function renderLabel(c,it,g,render){
+  const box=labelRect(c,it,g,render);
   if(!box)return;
-  c.save();c.fillStyle='rgba(23,24,27,.8)';
+  c.save();try{c.fillStyle='rgba(23,24,27,.8)';
   c.strokeStyle='#f7dc27';c.lineWidth=1.3;
   c.fillRect(box.x,box.y,box.w,box.h);
   c.strokeRect(box.x,box.y,box.w,box.h);
   c.fillStyle='#f7dc27';c.font='500 '+box.fs+'px sans-serif';
   c.textAlign='center';c.textBaseline='middle';
   c.fillText(box.text,box.p.x,box.p.y,box.w-8);
-  c.restore();
+  }finally{c.restore();}
  }
- function shouldShowArrow(it,g){
-  const outside=(g.x<view.dx-2||g.y<view.dy-2||
-    g.x+g.w>view.dx+photoSize.w*view.zoom+2||
-    g.y+g.h>view.dy+photoSize.h*view.zoom+2);
+ function shouldShowArrow(it,g,render){
+  const transform=render?.view||view,size=render?.photoSize||photoSize;
+  const outside=(g.x<transform.dx-2||g.y<transform.dy-2||
+    g.x+g.w>transform.dx+size.w*transform.zoom+2||
+    g.y+g.h>transform.dy+size.h*transform.zoom+2);
   return !!it.insetMoved||outside;
  }
- window.renderPhotoInset=function(c,it,image,drawOriginal){
-  const g=layout(it,image),show=shouldShowArrow(it,g),isSelected=(selected===it.id)&&!window.__exportingAnnotations;
+ window.renderPhotoInset=function(c,it,image,drawOriginal,render=annotationRenderContext(c)){
+  const g=layout(it,image,render),show=shouldShowArrow(it,g,render),isSelected=(render.selected===it.id)&&!render.exporting;
   if(show)connector(c,g);
-  c.save();
+  c.save();try{
   c.translate(g.cx,g.cy);c.rotate(g.angle);c.translate(-g.cx,-g.cy);
   // Every attached photograph gets its own visible sheet. Draw the back
   // sheets before the front photograph, without changing selection or touch areas.
@@ -153,12 +157,10 @@
   // ImageMeter keeps the original thin yellow photo outline even while selected.
   c.strokeStyle='#f7dc27';c.lineWidth=isSelected?2.4:2;
   c.strokeRect(g.x-1,g.y-1,g.w+2,g.h+2);
-  const oldView=view;
-  try{
-   view={zoom:g.w/image.naturalWidth,dx:g.x,dy:g.y};
-   for(const note of it.detailItems||[])drawOriginal(c,note);
-  }finally{view=oldView}
-  if(imageCount>1&&!window.__exportingAnnotations){
+  const detailRender={...render,view:{zoom:g.w/image.naturalWidth,dx:g.x,dy:g.y},
+   photoSize:{w:image.naturalWidth,h:image.naturalHeight}};
+  for(const note of it.detailItems||[])drawOriginal(c,note,detailRender);
+  if(imageCount>1&&!render.exporting){
    c.save();
    c.font='bold 12px sans-serif';
    c.textAlign='center';c.textBaseline='middle';
@@ -168,17 +170,17 @@
    c.fillStyle='#271c35';c.fillText(String(imageCount),px,py+.5);
    c.restore();
   }
-  c.restore();
+  }finally{c.restore();}
   // ImageMeter zachovává textovou část poznámky i po vložení detailu.
-  renderLabel(c,it,g);
+  renderLabel(c,it,g,render);
   // Přítomnost hlasu vyznačujeme ikonou, i když není vyplněný text.
   if(Array.isArray(it.audioMedia)&&it.audioMedia.length){
-   const p=labelPosition(it,g);
+   const p=labelPosition(it,g,render);
    c.save();c.font='bold 22px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillStyle='#f7dc27';
    c.fillText('🎙',p.x+(it.text?Math.min(140,g.w/2):0),p.y+(it.text?0:3));c.restore();
   }
   // Bílý úchopový bod na konci šipky pouze při skutečném přetahování.
-  if(show&&active?.item===it&&active.kind==='anchor'&&active.changed&&!window.__exportingAnnotations)
+  if(show&&active?.item===it&&active.kind==='anchor'&&active.changed&&!render.exporting)
    handle(c,g.anchor,'',true);
   if(isSelected){
    // Referenční ImageMeter: poloprůhledný středový úchop pro tažení fotografie.
@@ -350,23 +352,15 @@
  // Export zahrne i vysunuté detailní fotografie mimo původní snímek.
  exportPng=function(){
   if(!current)return;
-  const oldCtx=ctx,oldView={...view};
   let minX=0,minY=0,maxX=photoSize.w,maxY=photoSize.h;
+  const measure=document.createElement('canvas').getContext('2d');
+  const boundsRender=annotationRenderContext(measure,{view:{zoom:1,dx:0,dy:0},
+   viewport:{w:photoSize.w,h:photoSize.h},selected:null,exporting:true});
   for(const it of photoItems()){
-   const im=window.__detailPhotoCache[it.media[0]];
-   if(!im)continue;
-   const x=Number.isFinite(it.insetX)?it.insetX:it.a.x+8/view.zoom;
-   const y=Number.isFinite(it.insetY)?it.insetY:it.a.y+23/view.zoom;
-   const width=clamp(Number(it.insetWidth)||220,70,1500);
-   const height=width*im.naturalHeight/im.naturalWidth;
-   // Rotace v exportu: konzervativně zahrneme oba rozměry.
-   const d=Math.hypot(width,height),angle=(Number(it.insetRotation)||0)*Math.PI/180;
-   const boxW=Math.abs(width*Math.cos(angle))+Math.abs(height*Math.sin(angle));
-   const boxH=Math.abs(width*Math.sin(angle))+Math.abs(height*Math.cos(angle));
-   minX=Math.min(minX,x+(width-boxW)/2);
-   minY=Math.min(minY,y+(height-boxH)/2);
-   maxX=Math.max(maxX,x+(width+boxW)/2);
-   maxY=Math.max(maxY,y+(height+boxH)/2);
+   const box=window.insetAnnotationBounds(measure,it,boundsRender);
+   if(!box)continue;
+   minX=Math.min(minX,box.minX);minY=Math.min(minY,box.minY);
+   maxX=Math.max(maxX,box.maxX);maxY=Math.max(maxY,box.maxY);
   }
   const margin=25;
   const width=Math.ceil(maxX-minX+margin*2),height=Math.ceil(maxY-minY+margin*2);
@@ -376,11 +370,9 @@
   c.fillStyle='#292a2f';c.fillRect(0,0,width,height);
   const shiftX=margin-minX,shiftY=margin-minY;
   if(stageImg)c.drawImage(stageImg,shiftX,shiftY,photoSize.w,photoSize.h);
-  try{
-   ctx=c;view={zoom:1,dx:shiftX,dy:shiftY};
-   window.__exportingAnnotations=true;
-   for(const it of current.items||[])drawItem(c,it);
-  }finally{window.__exportingAnnotations=false;ctx=oldCtx;view=oldView}
+  const render=annotationRenderContext(c,{view:{zoom:1,dx:shiftX,dy:shiftY},
+   viewport:{w:width,h:height},selected:null,exporting:true});
+  for(const it of current.items||[])drawItem(c,it,render);
   const data=canvas.toDataURL('image/png');
   if(native)Native.exportPng((current.title||'zamerovani')+'.png',data.substring(data.indexOf(',')+1));
   else{const a=document.createElement('a');a.download='zamerovani.png';a.href=data;a.click()}

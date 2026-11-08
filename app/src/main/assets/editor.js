@@ -36,7 +36,7 @@ function hideEditorLoupe(){
  for(const id of pointers.keys())try{stageCanvas.releasePointerCapture(id)}catch(error){}
  pointers.clear();
 }
-function exitEditor(){hideEditorLoupe();if(selectedHandle?.dragged)commitEditor();selectedHandle=null;finishPendingPath();current=null;screen='browser';showFolder()}
+function exitEditor(){hideEditorLoupe();finishHandleGesture(selectedHandle);selectedHandle=null;finishPendingPath();current=null;screen='browser';showFolder()}
 $('editorBack').onclick=exitEditor;
 // Hide before the Back click, and retire captured pointers before any queued move.
 $('editorBack').addEventListener('pointerdown',hideEditorLoupe,{capture:true});
@@ -54,45 +54,27 @@ function resizeEditor(){
  ctx.setTransform(dpr,0,0,dpr,0,0);paint();
 }
 window.addEventListener('resize',resizeEditor);
-function fitImage(){let w=stageCanvas.clientWidth,h=stageCanvas.clientHeight;if(!w||!h)return;view.zoom=Math.min((w-24)/photoSize.w,(h-24)/photoSize.h);view.dx=(w-photoSize.w*view.zoom)/2;view.dy=(h-photoSize.h*view.zoom)/2;paint()}
+function fitImage(){let w=stageCanvas.clientWidth,h=stageCanvas.clientHeight;if(!w||!h)return;Object.assign(view,AnnotationGeometry.fittedViewport(w,h,photoSize));paint()}
 function initialImageView(){fitImage();const p=centerPoint();zoomAt(1.15,p.x,p.y)}
-function zoomAt(factor,x,y){let before=screenToWorld({x,y});view.zoom=Math.min(12,Math.max(.05,view.zoom*factor));view.dx=x-before.x*view.zoom;view.dy=y-before.y*view.zoom;paint()}
-function screenToWorld(p){return {x:(p.x-view.dx)/view.zoom,y:(p.y-view.dy)/view.zoom}}
-function worldToScreen(p){return {x:p.x*view.zoom+view.dx,y:p.y*view.zoom+view.dy}}
+function zoomAt(factor,x,y){Object.assign(view,AnnotationGeometry.zoomedViewport(view,factor,x,y));paint()}
+function screenToWorld(p){return AnnotationGeometry.screenToWorld(p,view)}
+function worldToScreen(p){return AnnotationGeometry.worldToScreen(p,view)}
 function eventPoint(e){let r=stageCanvas.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top}}
-function boundsPoint(p){return{x:Math.max(0,Math.min(photoSize.w,p.x)),y:Math.max(0,Math.min(photoSize.h,p.y))}}
+function boundsPoint(p){return AnnotationGeometry.boundsPoint(p,photoSize)}
 // Magnetické přichytávání není vazba: výsledek se přepočítává z aktuální
 // polohy prstu. Vždy musí zbýt prostor mezi magnetickými zónami pro uvolnění.
-function snap(p,ref=null,ignore=null){
- p=boundsPoint({...p});
- const step=Math.max(5,Number(prefs.gridStep)||40),zoom=Math.max(.05,view.zoom);
- const pointDistance=12/zoom;
- if(prefs.snapGrid){
-  const gridDistance=Math.min(11/zoom,step*.22);
-  const gx=Math.round(p.x/step)*step,gy=Math.round(p.y/step)*step;
-  if(Math.abs(gx-p.x)<gridDistance)p.x=gx;
-  if(Math.abs(gy-p.y)<gridDistance)p.y=gy;
- }
- if(prefs.snapPoints){
-  let best=null,bestDistance=pointDistance;
-  for(const item of current.items||[]){
-   // Vlastní kóta nesmí přichytávat svůj konec k druhému vlastnímu konci.
-   if(ignore?.item===item)continue;
-   for(const candidate of [item.a,item.b,...(item.points||[])]){
-    if(!candidate)continue;
-    const distance=Math.hypot(candidate.x-p.x,candidate.y-p.y);
-    if(distance<bestDistance){bestDistance=distance;best=candidate}
-   }
-  }
-  if(best)p={...best};
- }
- if(prefs.snapHorizontal&&ref){
-  if(Math.abs(p.y-ref.y)<pointDistance)p.y=ref.y;
-  if(Math.abs(p.x-ref.x)<pointDistance)p.x=ref.x;
- }
- return boundsPoint(p);
-}
+function snap(p,ref=null,ignore=null){return AnnotationGeometry.snapPoint(p,ref,ignore,current.items||[],prefs,view.zoom,photoSize)}
 function checkpoint(){editStack.push(JSON.stringify(current.items||[]));if(editStack.length>50)editStack.shift();redoStack=[]}
+function finishHandleGesture(handle){
+ // Only changed objects enter Undo; taps and rejected/pinch gestures preserve Redo.
+ if(!handle?.dragged||!handle.beforeDragItems||!current)return false;
+ if(JSON.stringify(current.items||[])===handle.beforeDragItems)return false;
+ editStack.push(handle.beforeDragItems);
+ if(editStack.length>50)editStack.shift();
+ redoStack=[];
+ touch(handle.item);commitEditor();
+ return true;
+}
 function commitEditor(){if(current?.kind==='photo'&&stageImg){current.width=photoSize.w;current.height=photoSize.h;}touch(current);const confirmed=save();paint();return confirmed}
 function undoEditor(){if(!editStack.length)return;redoStack.push(JSON.stringify(current.items));current.items=JSON.parse(editStack.pop());commitEditor()}
 function redoEditor(){if(!redoStack.length)return;editStack.push(JSON.stringify(current.items));current.items=JSON.parse(redoStack.pop());commitEditor()}
@@ -239,34 +221,34 @@ function drawSelectedGrips(c){
 /* Textová poznámka má dva nezávislé body: a = hrot šipky,
    b = střed rámečku (použije se až při prvním přesunu textu).
    U starších záznamů bez captionMoved zůstává vzhled beze změny. */
-function noteDisplayedCaption(item){
+function noteDisplayedCaption(item,exporting=window.__exportingAnnotations){
  const voice=Array.isArray(item.audioMedia)&&item.audioMedia.length?'🎙 ':'';
- const body=item.text||((item.media?.length||window.__exportingAnnotations)?'':'Klikněte pro zadání textu');
+ const body=item.text||((item.media?.length||exporting)?'':'Klikněte pro zadání textu');
  return voice+body;
 }
-function noteCaptionScreen(item){
- return worldToScreen(item.captionMoved&&item.b?item.b:item.a||{x:0,y:0});
+function noteCaptionScreen(item,transform=view){
+ return annotationProjectPoint(item.captionMoved&&item.b?item.b:item.a||{x:0,y:0},transform);
 }
-function noteCaptionBounds(item){
- const p=noteCaptionScreen(item),fs=Number(item.fontSize)||Number(prefs.fontSize)||17;
- const caption=noteDisplayedCaption(item);
+function noteCaptionBounds(item,render=annotationRenderContext(ctx)){
+ const ctx=render.ctx,p=noteCaptionScreen(item,render.view),fs=Number(item.fontSize)||Number(render.prefs.fontSize)||17;
+ const caption=noteDisplayedCaption(item,render.exporting);
  ctx.save();ctx.font='600 '+fs+'px sans-serif';
  const w=ctx.measureText(caption).width+10;ctx.restore();
  return {x:p.x-w/2,y:p.y-fs*.7,w,h:fs*1.4,p};
 }
-function drawNoteLeader(c,item,color){
+function drawNoteLeader(c,item,color,render=annotationRenderContext(c)){
  if(!item.captionMoved||!item.a)return;
- const p=worldToScreen(item.a),box=noteCaptionBounds(item),mid=box.p;
+ const p=annotationProjectPoint(item.a,render.view),box=noteCaptionBounds(item,render),mid=box.p;
  const dx=p.x-mid.x,dy=p.y-mid.y;
  const factor=Math.max(Math.abs(dx)/Math.max(1,box.w/2),Math.abs(dy)/Math.max(1,box.h/2));
  if(factor<=1||!Number.isFinite(factor))return;
  const edge={x:mid.x+dx/factor,y:mid.y+dy/factor};
  c.save();c.strokeStyle=color;c.fillStyle=color;
- c.lineWidth=Number(item.width)||Number(prefs.lineWidth)||2;c.lineCap='round';
+ c.lineWidth=Number(item.width)||Number(render.prefs.lineWidth)||2;c.lineCap='round';
  c.beginPath();c.moveTo(edge.x,edge.y);c.lineTo(p.x,p.y);c.stroke();
  drawArrow(c,p,edge,11);c.restore();
 }
-function canvasText(text,p,color,size,angle=0){ctx.save();ctx.translate(p.x,p.y);ctx.rotate(angle);ctx.font=`600 ${size}px sans-serif`;ctx.textAlign='center';ctx.textBaseline='middle';let width=ctx.measureText(text).width;ctx.fillStyle='#222d';ctx.fillRect(-width/2-5,-size*.67,width+10,size*1.4);ctx.fillStyle=color;ctx.fillText(text,0,0);ctx.restore()}
+function canvasText(text,p,color,size,angle=0,c=ctx){c.save();try{c.translate(p.x,p.y);c.rotate(angle);c.font=`600 ${size}px sans-serif`;c.textAlign='center';c.textBaseline='middle';let width=c.measureText(text).width;c.fillStyle='#222d';c.fillRect(-width/2-5,-size*.67,width+10,size*1.4);c.fillStyle=color;c.fillText(text,0,0);}finally{c.restore()}}
 function readableSegmentAngle(a,b){
  let angle=Math.atan2(b.y-a.y,b.x-a.x);
  if(angle>Math.PI/2)angle-=Math.PI;
@@ -274,55 +256,31 @@ function readableSegmentAngle(a,b){
  return angle;
 }
 function drawArrow(c,point,to,size=10){let a=Math.atan2(point.y-to.y,point.x-to.x);c.beginPath();c.moveTo(point.x,point.y);c.lineTo(point.x-size*Math.cos(a-.48),point.y-size*Math.sin(a-.48));c.moveTo(point.x,point.y);c.lineTo(point.x-size*Math.cos(a+.48),point.y-size*Math.sin(a+.48));c.stroke()}
-function rectCorners(item){
- const a=item.a||{x:0,y:0},b=item.b||a;
- const x1=Math.min(a.x,b.x),x2=Math.max(a.x,b.x),y1=Math.min(a.y,b.y),y2=Math.max(a.y,b.y);
- return [{x:x1,y:y1},{x:x2,y:y1},{x:x2,y:y2},{x:x1,y:y2}];
-}
-function quadCorners(item){return item.type==='area'&&item.points?.length===4?item.points:rectCorners(item)}
-function ellipseGeometry(item){
- const a=item.a||{x:0,y:0},b=item.b||a;
- const cx=(a.x+b.x)/2,cy=(a.y+b.y)/2,rx=Math.abs(a.x-b.x)/2;
- const ry=item.type==='circle'?rx:Math.abs(a.y-b.y)/2;
- return {cx,cy,rx:Math.max(1,rx),ry:Math.max(1,ry)};
-}
-function resizePoints(item){
- if(item.type==='area')return quadCorners(item);
- if(item.type==='rect')return rectCorners(item);
- if(item.type==='circle'||item.type==='ellipse'){
-   const {cx,cy,rx,ry}=ellipseGeometry(item);
-   return [{x:cx-rx,y:cy},{x:cx+rx,y:cy},{x:cx,y:cy-ry},{x:cx,y:cy+ry}];
- }
- return null;
-}
-function cumulativeSegment(item,index){
- const pts=item.points||[];
- if(pts.length<2)return null;
- const origin=worldToScreen(pts[0]),first=worldToScreen(pts[1]);
- const dx=first.x-origin.x,dy=first.y-origin.y,d=Math.hypot(dx,dy)||1;
- const ux=dx/d,uy=dy/d;
- const point=worldToScreen(pts[index+1]||pts[1]);
- const distance=(point.x-origin.x)*ux+(point.y-origin.y)*uy;
- return {from:origin,to:{x:origin.x+ux*distance,y:origin.y+uy*distance}};
-}
-function triangleArea(a,b,c){
- const v=[a,b,c].map(x=>Number(String(x||'').replace(',','.')));
- if(v.some(x=>!Number.isFinite(x)||x<=0))return null;
- const p=(v[0]+v[1]+v[2])/2;
- const t=p*(p-v[0])*(p-v[1])*(p-v[2]);
- return t>0?Math.sqrt(t):null;
-}
-function quadAreaFromMeasures(item){
- const sides=item.sideMeasures||[],diag=item.diagonal||'';
- const first=triangleArea(sides[0],sides[1],diag),second=triangleArea(sides[2],sides[3],diag);
- return first!==null&&second!==null?(first+second)/1000000:null;
-}
+function rectCorners(item){return AnnotationGeometry.rectCorners(item)}
+function quadCorners(item){return AnnotationGeometry.quadCorners(item)}
+function ellipseGeometry(item){return AnnotationGeometry.ellipseGeometry(item)}
+function resizePoints(item){return AnnotationGeometry.resizePoints(item)}
+function cumulativeSegment(item,index,transform=view){return AnnotationGeometry.cumulativeSegment(item,index,transform)}
+function triangleArea(a,b,c){return AnnotationGeometry.triangleArea(a,b,c)}
+function quadAreaFromMeasures(item){return AnnotationGeometry.quadAreaFromMeasures(item)}
 // Unitless captions hide only the suffix; item.unit remains unchanged for measurements.
 function measureDisplay(value,unit,hideUnit=false){
  const text=String(value??'');
  return !text||hideUnit?text:text+' '+(unit||'mm');
 }
-function drawItem(c,item){let a=item.a&&worldToScreen(item.a),b=item.b&&worldToScreen(item.b);let pts=(item.points||[]).map(worldToScreen);const color=item.color||prefs.color,fw=(item.width||prefs.lineWidth),fs=(item.fontSize||prefs.fontSize);c.save();c.strokeStyle=color;c.fillStyle=color;c.lineWidth=fw;c.lineJoin='round';c.lineCap='round';
+// Each view owns its transform and canvas. Rendering never swaps editor globals.
+function annotationProjectPoint(p,transform){return AnnotationGeometry.annotationProjectPoint(p,transform)}
+function annotationRenderContext(c,options={}){
+ return {ctx:c,view:{...view},photoSize:{...photoSize},
+  viewport:{w:stageCanvas.clientWidth,h:stageCanvas.clientHeight},prefs,selected,
+  exporting:!!window.__exportingAnnotations,...options};
+}
+function drawItem(c,item,render=annotationRenderContext(c)){
+ if(!render||typeof render!=='object')render=annotationRenderContext(c);
+ const view=render.view,prefs=render.prefs;
+ const project=p=>annotationProjectPoint(p,view);
+ const drawText=(value,p,color,size,angle=0)=>canvasText(value,p,color,size,angle,c);
+let a=item.a&&project(item.a),b=item.b&&project(item.b);let pts=(item.points||[]).map(project);const color=item.color||prefs.color,fw=(item.width||prefs.lineWidth),fs=(item.fontSize||prefs.fontSize);c.save();try{c.strokeStyle=color;c.fillStyle=color;c.lineWidth=fw;c.lineJoin='round';c.lineCap='round';
 function seg(){c.beginPath();c.moveTo(a.x,a.y);c.lineTo(b.x,b.y);c.stroke()};
 if(item.type==='angle'&&pts.length>=3){
  const p=pts[0],vertex=pts[1],q=pts[2];
@@ -334,17 +292,17 @@ if(item.type==='angle'&&pts.length>=3){
   Math.hypot(q.x-vertex.x,q.y-vertex.y)*.4));
  c.beginPath();c.arc(vertex.x,vertex.y,radius,a1,a1+angle,angle<0);c.stroke();
  const mid=a1+angle/2;
- canvasText((item.measure||degrees.toFixed(1))+(item.hideUnit?'':'°'),
+ drawText((item.measure||degrees.toFixed(1))+(item.hideUnit?'':'°'),
   {x:vertex.x+Math.cos(mid)*(radius+25),y:vertex.y+Math.sin(mid)*(radius+25)},color,fs);
  for(let i=0;i<2;i++){
   const end=i===0?p:q,row=item.segmentData?.[i]||{};
   const caption=[row.measure?measureDisplay(row.measure,row.unit,row.hideUnit):'',row.text||''].filter(Boolean).join(' · ');
-  if(caption)canvasText(caption,{x:(end.x+vertex.x)/2+(end.x-vertex.x)*(Number(row.labelT)||0),y:(end.y+vertex.y)/2-18+(end.y-vertex.y)*(Number(row.labelT)||0)},color,fs);
+  if(caption)drawText(caption,{x:(end.x+vertex.x)/2+(end.x-vertex.x)*(Number(row.labelT)||0),y:(end.y+vertex.y)/2-18+(end.y-vertex.y)*(Number(row.labelT)||0)},color,fs);
  }
 }
 else if(['chain','cumulative'].includes(item.type)&&pts.length>1){
  for(let i=0;i<pts.length-1;i++){
-  const projected=item.type==='cumulative'?cumulativeSegment(item,i):null;
+  const projected=item.type==='cumulative'?cumulativeSegment(item,i,view):null;
    const from=projected?.from||pts[i],to=projected?.to||pts[i+1];
   const data=item.segmentData?.[i]||{};
   const dx=to.x-from.x,dy=to.y-from.y,d=Math.hypot(dx,dy)||1;
@@ -360,16 +318,16 @@ else if(['chain','cumulative'].includes(item.type)&&pts.length>1){
   drawArrow(c,p,q,9);drawArrow(c,q,p,9);
   const caption=[data.measure?measureDisplay(data.measure,data.unit||item.unit,data.hideUnit):'?',data.text||''].filter(Boolean).join(' · ');
   let angle=Math.atan2(dy,dx);if(angle>Math.PI/2||angle< -Math.PI/2)angle+=Math.PI;
-  canvasText(caption,{x:(p.x+q.x)/2+(q.x-p.x)*(Number(data.labelT)||0),y:(p.y+q.y)/2+(q.y-p.y)*(Number(data.labelT)||0)},color,fs,angle);
+  drawText(caption,{x:(p.x+q.x)/2+(q.x-p.x)*(Number(data.labelT)||0),y:(p.y+q.y)/2+(q.y-p.y)*(Number(data.labelT)||0)},color,fs,angle);
  }
 }
-else if(item.type==='dimension'||item.type==='chain'||item.type==='cumulative'){if(a&&b){let dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1;let nx=-dy/d,ny=dx/d;let off=item.offset??0;let ao={x:a.x+nx*off,y:a.y+ny*off},bo={x:b.x+nx*off,y:b.y+ny*off};c.beginPath();c.moveTo(a.x+nx*(off-11),a.y+ny*(off-11));c.lineTo(a.x+nx*(off+11),a.y+ny*(off+11));c.moveTo(b.x+nx*(off-11),b.y+ny*(off-11));c.lineTo(b.x+nx*(off+11),b.y+ny*(off+11));c.moveTo(ao.x,ao.y);c.lineTo(bo.x,bo.y);c.stroke();drawArrow(c,ao,bo,9);drawArrow(c,bo,ao,9);let label=item.measure?measureDisplay(item.measure,item.unit,item.hideUnit):'?';if(item.text)label+=' · '+item.text;let ang=Math.atan2(dy,dx);if(ang>Math.PI/2||ang< -Math.PI/2)ang+=Math.PI;canvasText(label,{x:(ao.x+bo.x)/2+nx*(-Math.max(26,fs*1.5))+(bo.x-ao.x)*(Number(item.labelT)||0),y:(ao.y+bo.y)/2+ny*(-Math.max(26,fs*1.5))+(bo.y-ao.y)*(Number(item.labelT)||0)},color,fs,ang)}}
+else if(item.type==='dimension'||item.type==='chain'||item.type==='cumulative'){if(a&&b){let dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1;let nx=-dy/d,ny=dx/d;let off=item.offset??0;let ao={x:a.x+nx*off,y:a.y+ny*off},bo={x:b.x+nx*off,y:b.y+ny*off};c.beginPath();c.moveTo(a.x+nx*(off-11),a.y+ny*(off-11));c.lineTo(a.x+nx*(off+11),a.y+ny*(off+11));c.moveTo(b.x+nx*(off-11),b.y+ny*(off-11));c.lineTo(b.x+nx*(off+11),b.y+ny*(off+11));c.moveTo(ao.x,ao.y);c.lineTo(bo.x,bo.y);c.stroke();drawArrow(c,ao,bo,9);drawArrow(c,bo,ao,9);let label=item.measure?measureDisplay(item.measure,item.unit,item.hideUnit):'?';if(item.text)label+=' · '+item.text;let ang=Math.atan2(dy,dx);if(ang>Math.PI/2||ang< -Math.PI/2)ang+=Math.PI;drawText(label,{x:(ao.x+bo.x)/2+nx*(-Math.max(26,fs*1.5))+(bo.x-ao.x)*(Number(item.labelT)||0),y:(ao.y+bo.y)/2+ny*(-Math.max(26,fs*1.5))+(bo.y-ao.y)*(Number(item.labelT)||0)},color,fs,ang)}}
 else if(item.type==='target'){
  if(a){
    c.beginPath();c.arc(a.x,a.y,10,0,Math.PI*2);c.moveTo(a.x-14,a.y);c.lineTo(a.x+14,a.y);
    c.moveTo(a.x,a.y-14);c.lineTo(a.x,a.y+14);c.stroke();
    const text=[item.measure?measureDisplay(item.measure,item.unit,item.hideUnit):'',item.text||''].filter(Boolean).join(' · ');
-   if(text)canvasText(text,b||{x:a.x+35,y:a.y+12},color,fs);
+   if(text)drawText(text,b||{x:a.x+35,y:a.y+12},color,fs);
  }
 }
 else if(item.type==='line'||item.type==='arrow'||item.type==='angle'){
@@ -379,7 +337,7 @@ else if(item.type==='line'||item.type==='arrow'||item.type==='angle'){
   /* Fixed target has its own drawing branch above. */
   if(item.type==='angle'){
    const degree=(Math.atan2(b.y-a.y,b.x-a.x)*180/Math.PI+360)%360;
-   canvasText((item.measure||degree.toFixed(0))+(item.hideUnit?'':'°'),{x:(a.x+b.x)/2,y:(a.y+b.y)/2-23},color,fs);
+   drawText((item.measure||degree.toFixed(0))+(item.hideUnit?'':'°'),{x:(a.x+b.x)/2,y:(a.y+b.y)/2-23},color,fs);
   }else if(item.type==='line'||item.type==='arrow'){
    // Stejný postup pro čáru i šipku: libovolný text a/nebo kóta.
    const label=[item.measure?measureDisplay(item.measure,item.unit,item.hideUnit):'',item.text||''].filter(Boolean).join(' · ');
@@ -388,14 +346,14 @@ else if(item.type==='line'||item.type==='arrow'||item.type==='angle'){
     let angle=Math.atan2(dy,dx);
     if(angle>Math.PI/2||angle< -Math.PI/2)angle+=Math.PI;
     const gap=(Number(fs)||17)*.85+4;
-    canvasText(label,{x:(a.x+b.x)/2+Math.sin(angle)*gap+(b.x-a.x)*(Number(item.labelT)||0),
+    drawText(label,{x:(a.x+b.x)/2+Math.sin(angle)*gap+(b.x-a.x)*(Number(item.labelT)||0),
       y:(a.y+b.y)/2-Math.cos(angle)*gap+(b.y-a.y)*(Number(item.labelT)||0)},color,fs,angle);
    }
   }
  }
 }
 else if(item.type==='rect'||item.type==='area'){
- const corners=(item.type==='area'?quadCorners(item):rectCorners(item)).map(worldToScreen);
+ const corners=(item.type==='area'?quadCorners(item):rectCorners(item)).map(project);
  if(corners.length===4){
    c.beginPath();c.moveTo(corners[0].x,corners[0].y);
    corners.slice(1).forEach(p=>c.lineTo(p.x,p.y));c.closePath();c.stroke();
@@ -406,37 +364,37 @@ else if(item.type==='rect'||item.type==='area'){
      if(Number.isFinite(w)&&Number.isFinite(h)&&w>0&&h>0)measure=(w*h/1000000).toFixed(4).replace('.',',');
    }
    if(item.type==='area'){const calculated=quadAreaFromMeasures(item);if(calculated!==null)measure=calculated.toFixed(4).replace('.',',')}
-   if(measure)canvasText(measure+' m²',center,color,fs);
+   if(measure)drawText(measure+' m²',center,color,fs);
    if(item.type==='area'){
      if(!item.points?.length){
-       if(item.areaWidth)canvasText(item.areaWidth+' mm',{x:(corners[0].x+corners[1].x)/2,y:corners[0].y+14},color,Math.max(11,fs*.8));
-       if(item.areaHeight)canvasText(item.areaHeight+' mm',{x:corners[1].x+20,y:(corners[1].y+corners[2].y)/2},color,Math.max(11,fs*.8));
+       if(item.areaWidth)drawText(item.areaWidth+' mm',{x:(corners[0].x+corners[1].x)/2,y:corners[0].y+14},color,Math.max(11,fs*.8));
+       if(item.areaHeight)drawText(item.areaHeight+' mm',{x:corners[1].x+20,y:(corners[1].y+corners[2].y)/2},color,Math.max(11,fs*.8));
      }
      corners.forEach((p,i)=>{
        const q=corners[(i+1)%4],info=item.sideMeasures?.[i]||'';
        const txt=[info?info+' mm':'',item.sideTexts?.[i]||''].filter(Boolean).join(' · ');
        const t=Number(item.sideLabelT?.[i])||0;
-       if(txt)canvasText(txt,{x:(p.x+q.x)/2+(q.x-p.x)*t,y:(p.y+q.y)/2+(q.y-p.y)*t},color,Math.max(11,fs*.8));
+       if(txt)drawText(txt,{x:(p.x+q.x)/2+(q.x-p.x)*t,y:(p.y+q.y)/2+(q.y-p.y)*t},color,Math.max(11,fs*.8));
      });
    }else{
      const topText=[item.dimW?item.dimW+' mm':'',item.widthText||''].filter(Boolean).join(' · ');
      const rightText=[item.dimH?item.dimH+' mm':'',item.heightText||''].filter(Boolean).join(' · ');
-     if(topText){const t=Number(item.rectLabelT?.[0])||0;canvasText(topText,{x:(corners[0].x+corners[1].x)/2+(corners[1].x-corners[0].x)*t,y:corners[0].y+14},color,Math.max(11,fs*.8))}
-     if(rightText){const t=Number(item.rectLabelT?.[1])||0;canvasText(rightText,{x:corners[1].x+20,y:(corners[1].y+corners[2].y)/2+(corners[2].y-corners[1].y)*t},color,Math.max(11,fs*.8))}
-     if(item.text)canvasText(item.text,{x:center.x,y:center.y+fs*1.5},color,fs);
+     if(topText){const t=Number(item.rectLabelT?.[0])||0;drawText(topText,{x:(corners[0].x+corners[1].x)/2+(corners[1].x-corners[0].x)*t,y:corners[0].y+14},color,Math.max(11,fs*.8))}
+     if(rightText){const t=Number(item.rectLabelT?.[1])||0;drawText(rightText,{x:corners[1].x+20,y:(corners[1].y+corners[2].y)/2+(corners[2].y-corners[1].y)*t},color,Math.max(11,fs*.8))}
+     if(item.text)drawText(item.text,{x:center.x,y:center.y+fs*1.5},color,fs);
    }
  }
 }
 else if(item.type==='ellipse'||item.type==='circle'){
- const g=ellipseGeometry(item),center=worldToScreen({x:g.cx,y:g.cy});
+ const g=ellipseGeometry(item),center=project({x:g.cx,y:g.cy});
  const cx=center.x,cy=center.y,rx=g.rx*view.zoom,ry=g.ry*view.zoom;
  c.beginPath();c.ellipse(cx,cy,rx,ry,0,0,Math.PI*2);c.stroke();
  const label=[item.measure?(item.measureKind==='radius'?'R ':'Ø ')+measureDisplay(item.measure,item.unit,item.hideUnit):'',item.text||''].filter(Boolean).join(' · ');
- if(label)canvasText(label,{x:cx+Number(item.labelDx||0)*view.zoom,y:cy-28+Number(item.labelDy||0)*view.zoom},color,fs);
+ if(label)drawText(label,{x:cx+Number(item.labelDx||0)*view.zoom,y:cy-28+Number(item.labelDy||0)*view.zoom},color,fs);
 }
-else if(item.type==='freehand'||item.type==='polyline'){if(pts.length){c.beginPath();c.moveTo(pts[0].x,pts[0].y);for(let p of pts.slice(1))c.lineTo(p.x,p.y);c.stroke();if(item.type==='polyline')for(let i=0;i<pts.length-1;i++){const row=item.segmentData?.[i]||{};const text=[row.measure?measureDisplay(row.measure,row.unit||item.unit,row.hideUnit):'',row.text||''].filter(Boolean).join(' · ');if(text)canvasText(text,{x:(pts[i].x+pts[i+1].x)/2+(pts[i+1].x-pts[i].x)*(Number(row.labelT)||0),y:(pts[i].y+pts[i+1].y)/2+(pts[i+1].y-pts[i].y)*(Number(row.labelT)||0)},color,fs,readableSegmentAngle(pts[i],pts[i+1]))}}}
-else if(item.type==='note'||item.type==='symbol'){if(a){if(item.type==='note'){drawNoteLeader(c,item,color);(noteDisplayedCaption(item)&&canvasText(noteDisplayedCaption(item),noteCaptionScreen(item),color,fs))}else canvasText((item.icon||'⚑')+' '+(item.text||''),a,color,fs)}}
-c.restore();}
+else if(item.type==='freehand'||item.type==='polyline'){if(pts.length){c.beginPath();c.moveTo(pts[0].x,pts[0].y);for(let p of pts.slice(1))c.lineTo(p.x,p.y);c.stroke();if(item.type==='polyline')for(let i=0;i<pts.length-1;i++){const row=item.segmentData?.[i]||{};const text=[row.measure?measureDisplay(row.measure,row.unit||item.unit,row.hideUnit):'',row.text||''].filter(Boolean).join(' · ');if(text)drawText(text,{x:(pts[i].x+pts[i+1].x)/2+(pts[i+1].x-pts[i].x)*(Number(row.labelT)||0),y:(pts[i].y+pts[i+1].y)/2+(pts[i+1].y-pts[i].y)*(Number(row.labelT)||0)},color,fs,readableSegmentAngle(pts[i],pts[i+1]))}}}
+else if(item.type==='note'||item.type==='symbol'){if(a){if(item.type==='note'){drawNoteLeader(c,item,color,render);(noteDisplayedCaption(item,render.exporting)&&drawText(noteDisplayedCaption(item,render.exporting),noteCaptionScreen(item,view),color,fs))}else drawText((item.icon||'⚑')+' '+(item.text||''),a,color,fs)}}
+}finally{c.restore();}}
 function drawLoupe(){
   if(screen!=='editor'||!current||!magnifierPoint||pointers.size===0){$('loupe').hidden=true;return;}
   const pointer=worldToScreen(magnifierPoint);
@@ -498,25 +456,7 @@ function labelInfo(item){
   const off=['line','arrow'].includes(item.type)?((flipped?1:-1)*((Number(item.fontSize)||Number(prefs.fontSize)||17)*.85+4)):((item.offset??0)-Math.max(26,(Number(item.fontSize)||Number(prefs.fontSize)||17)*1.5)),t=Number(item.labelT)||0;
   return {x:(a.x+b.x)/2-uy*off+dx*t,y:(a.y+b.y)/2+ux*off+dy*t,ux,uy,d};
 }
-function segmentLineScreen(item,index){
- const pts=item.points||[];
- if(['chain','cumulative','polyline'].includes(item.type)){
-  if(index<0||index>=pts.length-1)return null;
-  const projected=item.type==='cumulative'&&typeof cumulativeSegment==='function'?cumulativeSegment(item,index):null;
-  const a=projected?.from||worldToScreen(pts[index]),b=projected?.to||worldToScreen(pts[index+1]);
-  const dx=b.x-a.x,dy=b.y-a.y,d=Math.hypot(dx,dy)||1;
-  const off=['chain','cumulative'].includes(item.type)?(Number(item.offset)||0)+(item.type==='cumulative'?index*26:0):0;
-  return {a:{x:a.x-dy/d*off,y:a.y+dx/d*off},b:{x:b.x-dy/d*off,y:b.y+dx/d*off}};
- }
- if(item.type==='angle'&&pts.length>=3)return {a:worldToScreen(pts[1]),b:worldToScreen(pts[index===0?0:2])};
- if(item.type==='area'){
-  const corners=quadCorners(item);return {a:worldToScreen(corners[index]),b:worldToScreen(corners[(index+1)%4])};
- }
- if(item.type==='rect'){
-  const corners=rectCorners(item);return {a:worldToScreen(corners[index]),b:worldToScreen(corners[index+1])};
- }
- return null;
-}
+function segmentLineScreen(item,index){return AnnotationGeometry.segmentLineScreen(item,index,view)}
 function nearestSegmentLabel(point){
  for(const item of [...(current.items||[])].reverse()){
   if(!['chain','cumulative','polyline','angle','area','rect'].includes(item.type))continue;
@@ -564,107 +504,16 @@ function nearestLabel(point){
   return null;
 }
 function nearestHandle(point,onlyItem=null){
- // Slightly widen the middle move zone while retaining precise endpoint grips.
- const endpointFraction=.27;
- let best=null,dist=31;
- for(const item of current.items||[]){
-  if(onlyItem&&item!==onlyItem)continue;
-  if(['polyline','chain','cumulative','angle'].includes(item.type)&&Array.isArray(item.points)&&item.points.length>1){
-   item.points.forEach((vertex,index)=>{
-    const p=worldToScreen(vertex),d=Math.hypot(point.x-p.x,point.y-p.y);
-    const endpointZone=[item.points[index-1],item.points[index+1]].filter(Boolean).every(neighbor=>{
-     const q=worldToScreen(neighbor),dx=q.x-p.x,dy=q.y-p.y;
-     return ((point.x-p.x)*dx+(point.y-p.y)*dy)/(dx*dx+dy*dy||1)<=endpointFraction;
-    });
-    if(endpointZone&&d<dist){best={item,key:'points',point:vertex,pointIndex:index,kind:'point'};dist=d}
-   });continue;
-  }
-  if(item.type==='freehand')continue;
-  const corners=typeof resizePoints==='function'?resizePoints(item):null;
-  if(corners){
-   corners.forEach((vertex,index)=>{
-    const p=worldToScreen(vertex),d=Math.hypot(point.x-p.x,point.y-p.y);
-    if(d<dist){best={item,key:'shape',point:vertex,pointIndex:index,kind:'shape-resize'};dist=d}
-   });
-   continue;
-  }
-  if(item.type==='target')continue;
-  for(const key of ['a','b'])if(item[key]&&!(item.type==='note'&&key==='b')){
-   const p=worldToScreen(item[key]),d=Math.hypot(point.x-p.x,point.y-p.y);
-   const other=item[key==='a'?'b':'a'];
-   let endpointZone=true;
-   if(other&&['dimension','chain','cumulative','line','arrow','angle'].includes(item.type)){
-    const q=worldToScreen(other),dx=q.x-p.x,dy=q.y-p.y;
-    const t=((point.x-p.x)*dx+(point.y-p.y)*dy)/(dx*dx+dy*dy||1);
-    endpointZone=t<=endpointFraction;
-   }
-   if(endpointZone&&d<dist){best={item,key,point:item[key],kind:'point'};dist=d}
-  }
- }
- return best;
+ return AnnotationGeometry.nearestHandle(point,current.items||[],view,onlyItem);
 }
 function nearestItem(point){
- const world=screenToWorld(point);
- let best=null,distance=26/view.zoom;
- for(const item of [...(current.items||[])].reverse()){
-  if((item.type==='note'||item.type==='symbol')&&item.a){
-   const p=item.type==='note'?noteCaptionScreen(item):worldToScreen(item.a);
-   const caption=item.type==='symbol'?(item.icon||'⚑')+' '+(item.text||''):noteDisplayedCaption(item);
-   ctx.save();ctx.font='600 '+(item.fontSize||prefs.fontSize)+'px sans-serif';
-   const width=ctx.measureText(caption).width+22;ctx.restore();
-   if(Math.abs(point.x-p.x)<width/2+7&&Math.abs(point.y-p.y)<Math.max(23,(item.fontSize||prefs.fontSize)*.9))
-    return item;
-  }
-  if((['polyline','chain','cumulative','angle','freehand'].includes(item.type))&&Array.isArray(item.points)&&item.points.length>1){
-   for(let i=1;i<item.points.length;i++){
-    const line=['chain','cumulative'].includes(item.type)?segmentLineScreen(item,i-1):null;
-    const a=line?screenToWorld(line.a):item.points[i-1],b=line?screenToWorld(line.b):item.points[i],dx=b.x-a.x,dy=b.y-a.y;
-    const t=Math.max(0,Math.min(1,((world.x-a.x)*dx+(world.y-a.y)*dy)/(dx*dx+dy*dy||1)));
-    const d=Math.hypot(world.x-a.x-t*dx,world.y-a.y-t*dy);
-    if(d<distance){best=item;distance=d}
-   }
-   continue;
-  }
-  if(item.type==='circle'||item.type==='ellipse'){
-   const g=ellipseGeometry(item),dx=world.x-g.cx,dy=world.y-g.cy;
-   const norm=Math.sqrt(dx*dx/(g.rx*g.rx)+dy*dy/(g.ry*g.ry));
-   const d=norm<.32?Math.hypot(dx,dy):Math.abs(norm-1)*Math.min(g.rx,g.ry);
-   if(d<distance){best=item;distance=d}continue;
-  }
-  if(item.type==='area'||item.type==='rect'){
-   const corners=(item.type==='area'?quadCorners(item):rectCorners(item));
-   let inside=false,edgeDist=Infinity;
-   for(let i=0,j=corners.length-1;i<corners.length;j=i++){
-    const a=corners[j],b=corners[i],dx=b.x-a.x,dy=b.y-a.y;
-    if(((a.y>world.y)!=(b.y>world.y))&&(world.x<(b.x-a.x)*(world.y-a.y)/(b.y-a.y)+a.x))inside=!inside;
-    const t=Math.max(0,Math.min(1,((world.x-a.x)*dx+(world.y-a.y)*dy)/(dx*dx+dy*dy||1)));
-    edgeDist=Math.min(edgeDist,Math.hypot(world.x-a.x-t*dx,world.y-a.y-t*dy));
-   }
-   if(inside||edgeDist<distance){best=item;distance=0}continue;
-  }
-  if(item.type==='target'&&item.a){
-   const center=item.a,label=item.b||{x:center.x+30,y:center.y};
-   const d=Math.min(Math.hypot(world.x-center.x,world.y-center.y),Math.hypot(world.x-label.x,world.y-label.y));
-   if(d<distance){best=item;distance=d}continue;
-  }
-  const a=item.a,b=item.b;
-  if(a&&b){
-   let ux=b.x-a.x,uy=b.y-a.y,den=ux*ux+uy*uy||1;
-   // Testovat viditelnou odsazenou kótovací čáru, nejen geometrii pod ní.
-   let shift=0;
-   if(['dimension','chain','cumulative'].includes(item.type))
-    shift=(Number(item.offset)||0)/Math.max(0.0001,view.zoom);
-   const lineLength=Math.hypot(ux,uy)||1;
-   const ax=a.x-uy/lineLength*shift,ay=a.y+ux/lineLength*shift;
-   let t=Math.max(0,Math.min(1,((world.x-ax)*ux+(world.y-ay)*uy)/den));
-   let d=Math.hypot(world.x-ax-t*ux,world.y-ay-t*uy);
-   if(d<distance){best=item;distance=d}
-  }else if(a){
-   let d=Math.hypot(a.x-world.x,a.y-world.y);
-   if(d<distance){best=item;distance=d}
-  }
- }
- return best;
+ return AnnotationGeometry.nearestItem(point,current.items||[],view,(item,point)=>{
+  const p=item.type==='note'?noteCaptionScreen(item):worldToScreen(item.a);
+  const caption=item.type==='symbol'?(item.icon||'⚑')+' '+(item.text||''):noteDisplayedCaption(item);
+  ctx.save();ctx.font='600 '+(item.fontSize||prefs.fontSize)+'px sans-serif';
+  const width=ctx.measureText(caption).width+22;ctx.restore();
+  return Math.abs(point.x-p.x)<width/2+7&&Math.abs(point.y-p.y)<Math.max(23,(item.fontSize||prefs.fontSize)*.9);
+ });
 }
 function hitAnnotation(point){
  // Endpoint grips take priority over captions and the move area, even on
@@ -705,9 +554,9 @@ function stageDown(e){
   gesture={distance:Math.hypot(v[0].x-v[1].x,v[0].y-v[1].y),zoom:view.zoom,
    mid:{x:(v[0].x+v[1].x)/2,y:(v[0].y+v[1].y)/2},
    world:screenToWorld({x:(v[0].x+v[1].x)/2,y:(v[0].y+v[1].y)/2})};
-  drawStart=null;drawCurrent=null;selectedHandle=null;paint();return;
+  drag=null;drawPointerId=null;drawStart=null;drawCurrent=null;finishHandleGesture(selectedHandle);selectedHandle=null;paint();return;
  }
- if(pointers.size>2)return;
+ if(pointers.size>2){gesture=null;return;} // extra pointer invalidates old pinch anchor
  if(['polyline','chain','cumulative','angle'].includes(mode)){
    const position=snap(screenToWorld(s),polylineDraft[polylineDraft.length-1]||null);
    const last=polylineDraft[polylineDraft.length-1];
@@ -732,24 +581,8 @@ function stageDown(e){
  if(candidate){
   // U řetězců si pamatuj konkrétní úsek, kterého se uživatel dotkl.
   // Další odečet z Bosche vyplní právě tento úsek, nikoli celý řetězec.
-  if(['chain','cumulative','polyline','area','angle','rect'].includes(candidate.type)){
-    const count=candidate.type==='area'||candidate.type==='rect'?4:
-     candidate.type==='angle'?2:Math.max(0,(candidate.points?.length||0)-1);
-    let nearest=0,dist=Infinity;
-    for(let i=0;i<count;i++){
-      let line=null;
-      if(candidate.type==='rect'){
-        const corners=rectCorners(candidate).map(worldToScreen);
-        line={a:corners[i],b:corners[(i+1)%4]};
-      }else if(typeof segmentLineScreen==='function')line=segmentLineScreen(candidate,i);
-      if(!line)continue;
-      const a=line.a,b=line.b,dx=b.x-a.x,dy=b.y-a.y;
-      const t=Math.max(0,Math.min(1,((s.x-a.x)*dx+(s.y-a.y)*dy)/(dx*dx+dy*dy||1)));
-      const d=Math.hypot(s.x-a.x-t*dx,s.y-a.y-t*dy);
-      if(d<dist){dist=d;nearest=i}
-    }
-    candidate.activeSegmentIndex=candidate.type==='rect'?nearest%2:nearest;
-   }
+  const activeSegment=AnnotationGeometry.nearestEditableSegment(candidate,s,view);
+  if(activeSegment!==null)candidate.activeSegmentIndex=activeSegment;
   const alreadySelected=selected===candidate.id;
   const isTextNote=candidate.type==='note'&&!candidate.media?.length;
   const captionBox=isTextNote?noteCaptionBounds(candidate):null;
@@ -767,19 +600,11 @@ function stageDown(e){
   const grip=nearestHandle(s,candidate);
   const label=nearestLabel(s);
   const segmentLabel=typeof nearestSegmentLabel==='function'?nearestSegmentLabel(s):null;
-  let hit;
-  if(wantsCaption)hit={item:candidate,kind:'note-caption'};
-   else if(grip?.item.id===candidate.id)hit=grip;
-   else if(candidate.type==='target'&&candidate.b&&Math.hypot(s.x-worldToScreen(candidate.b).x,s.y-worldToScreen(candidate.b).y)<40)
-    hit={item:candidate,kind:'target-caption'};
-   else if(segmentLabel?.item.id===candidate.id)hit=segmentLabel;
-    else if(label?.item.id===candidate.id)hit=label;
-   else if(['chain','cumulative','angle','area'].includes(candidate.type)&&candidate.points?.length>1)
-    hit={item:candidate,kind:'move-polyline'};
-   else if(['dimension','chain','cumulative','line','arrow','angle','target','rect','circle','ellipse'].includes(candidate.type))
-    hit={item:candidate,kind:'move-dimension'};
-   else if(candidate.type==='polyline'||candidate.type==='freehand')hit={item:candidate,kind:'move-polyline'};
-   else hit={item:candidate,kind:'open-selected'};
+  const hit=AnnotationSelection.dragHandle(candidate,{
+   wantsCaption,grip,label,segmentLabel,
+   targetCaption:candidate.type==='target'&&candidate.b&&
+    Math.hypot(s.x-worldToScreen(candidate.b).x,s.y-worldToScreen(candidate.b).y)<40
+  });
    selectedHandle=hit;
   hit.startScreen={...s};
   hit.initialSelection=!alreadySelected;
@@ -800,7 +625,9 @@ function stageDown(e){
     Number(hit.item.type==='area'?hit.item.sideLabelT?.[hit.index]:hit.item.segmentData?.[hit.index]?.labelT)||0:
     Number(hit.item.labelT)||0;
   hit.dragged=false;
-  if(['point','shape-resize','label','note-caption','target-caption','segment-label','round-label','move-dimension','move-polyline'].includes(hit.kind))checkpoint();
+  // Selection may update activeSegmentIndex but is not an edit.
+  if(['point','shape-resize','label','note-caption','target-caption','segment-label','round-label','move-dimension','move-polyline'].includes(hit.kind))
+   hit.beforeDragItems=JSON.stringify(current.items||[]);
   magnifierPoint=hit.kind==='point'?hit.point:null;
   paint();return;
  }
@@ -810,7 +637,7 @@ function stageDown(e){
  drawPointerId=e.pointerId;drawStart=mode==='freehand'?boundsPoint(screenToWorld(s)):snap(screenToWorld(s));
  drawCurrent=drawStart;stroke=[drawStart];magnifierPoint=drawStart;paint();
 }
-function stageMove(e){if(screen!=='editor')return;const s=eventPoint(e);if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,s);if(pointers.size===2&&gesture){let v=[...pointers.values()],dist=Math.hypot(v[0].x-v[1].x,v[0].y-v[1].y);let mid={x:(v[0].x+v[1].x)/2,y:(v[0].y+v[1].y)/2};view.zoom=Math.max(.05,Math.min(12,gesture.zoom*dist/Math.max(1,gesture.distance)));view.dx=mid.x-gesture.world.x*view.zoom;view.dy=mid.y-gesture.world.y*view.zoom;paint();return}
+function stageMove(e){if(screen!=='editor')return;const s=eventPoint(e);if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,s);if(pointers.size===2&&gesture){Object.assign(view,AnnotationGeometry.pinchViewport(gesture,[...pointers.values()]));paint();return}
 if(['polyline','chain','cumulative','angle'].includes(mode)&&polylineDraft.length&&pointers.size===1){
   drawCurrent=snap(screenToWorld(s),polylineDraft[polylineDraft.length-1]);
   const last=polylineDraft[polylineDraft.length-1];
@@ -828,27 +655,19 @@ if(['polyline','chain','cumulative','angle'].includes(mode)&&polylineDraft.lengt
   }
   if(selectedHandle.kind==='move-polyline'){
      if(selectedHandle.dragged){
-      const dx=(s.x-selectedHandle.startScreen.x)/view.zoom;
-      const dy=(s.y-selectedHandle.startScreen.y)/view.zoom;
-      const points=selectedHandle.startPoints;
-      const minX=Math.min(...points.map(p=>p.x)),maxX=Math.max(...points.map(p=>p.x));
-      const minY=Math.min(...points.map(p=>p.y)),maxY=Math.max(...points.map(p=>p.y));
-      const shiftX=Math.max(-minX,Math.min(dx,photoSize.w-maxX));
-      const shiftY=Math.max(-minY,Math.min(dy,photoSize.h-maxY));
-      selectedHandle.item.points=points.map(p=>({x:p.x+shiftX,y:p.y+shiftY}));
-      selectedHandle.item.a={...selectedHandle.item.points[0]};
-      selectedHandle.item.b={...selectedHandle.item.points[selectedHandle.item.points.length-1]};
+      const delta={x:s.x-selectedHandle.startScreen.x,y:s.y-selectedHandle.startScreen.y};
+      const translated=AnnotationTranslation.translatedPolyline(selectedHandle.startPoints,delta,view,photoSize);
+      selectedHandle.item.points=translated.points;
+      selectedHandle.item.a=translated.a;
+      selectedHandle.item.b=translated.b;
      }
      magnifierPoint=null;
   }else if(selectedHandle.kind==='move-dimension'){
     if(selectedHandle.dragged){
-      const a=selectedHandle.startA,b=selectedHandle.startB;
-      // Uchopení uprostřed posune oba konce společně. Zachovat délku a směr.
-      // Neprovádět magnet na jednom konci, který by změnil geometrii celé kóty.
-      const dx=Math.max(-Math.min(a.x,b.x),Math.min((s.x-selectedHandle.startScreen.x)/view.zoom,photoSize.w-Math.max(a.x,b.x)));
-      const dy=Math.max(-Math.min(a.y,b.y),Math.min((s.y-selectedHandle.startScreen.y)/view.zoom,photoSize.h-Math.max(a.y,b.y)));
-      selectedHandle.item.a={x:a.x+dx,y:a.y+dy};
-      selectedHandle.item.b={x:b.x+dx,y:b.y+dy};
+      const delta={x:s.x-selectedHandle.startScreen.x,y:s.y-selectedHandle.startScreen.y};
+      const translated=AnnotationTranslation.translatedEndpoints(selectedHandle.startA,selectedHandle.startB,delta,view,photoSize);
+      selectedHandle.item.a=translated.a;
+      selectedHandle.item.b=translated.b;
     }
     magnifierPoint=null;
   }else if(selectedHandle.kind==='shape-resize'){
@@ -856,20 +675,9 @@ if(['polyline','chain','cumulative','angle'].includes(mode)&&polylineDraft.lengt
     const item=selectedHandle.item,index=selectedHandle.pointIndex;
     const origin=worldToScreen(selectedHandle.startPoint);
     const target=boundsPoint(screenToWorld({x:origin.x+s.x-selectedHandle.startScreen.x,y:origin.y+s.y-selectedHandle.startScreen.y}));
-    if(item.type==='area'){
-     const points=quadCorners(item).map(p=>({...p}));
-     points[index]=target;item.points=points;item.a={...points[0]};item.b={...points[2]};
-    }else if(item.type==='rect'){
-     const corners=rectCorners(item),opposite=corners[(index+2)%4];
-     item.a={x:Math.min(target.x,opposite.x),y:Math.min(target.y,opposite.y)};
-     item.b={x:Math.max(target.x,opposite.x),y:Math.max(target.y,opposite.y)};
-    }else{
-     const g=ellipseGeometry(item);let rx=g.rx,ry=g.ry;
-     if(item.type==='circle'){const radius=Math.max(1,index<2?Math.abs(target.x-g.cx):Math.abs(target.y-g.cy));rx=radius;ry=radius;}
-     else if(index<2)rx=Math.max(1,Math.abs(target.x-g.cx));
-     else ry=Math.max(1,Math.abs(target.y-g.cy));
-     item.a={x:g.cx-rx,y:g.cy-ry};item.b={x:g.cx+rx,y:g.cy+ry};
-    }
+    const resized=AnnotationResize.resizedShape(item,index,target,AnnotationGeometry);
+    if(resized.points)item.points=resized.points;
+    item.a=resized.a;item.b=resized.b;
    }
    if(selectedHandle.dragged){
     const item=selectedHandle.item;
@@ -968,12 +776,11 @@ function stageUp(e){
   selectedHandle=null;magnifierPoint=null;loupeSide=null;
   if(handle.kind==='select-only'){paint();return}
   if(!moved){
-   if((['point','shape-resize','label','note-caption','target-caption','segment-label','round-label','move-dimension','move-polyline'].includes(handle.kind))&&editStack.length)editStack.pop();
    if(handle.initialSelection){paint();return}
    // Druhé samostatné klepnutí otevře úpravu bez časového limitu.
    editItem(item);
   }else if(['point','shape-resize','label','note-caption','target-caption','segment-label','round-label','move-dimension','move-polyline'].includes(handle.kind)){
-   touch(item);commitEditor();
+   if(!finishHandleGesture(handle))paint();
   }else paint();
   return;
  }
@@ -1319,6 +1126,6 @@ $('styleTool').onclick=()=>{
       else{prefs.lineWidth=w;prefs.fontSize=fs;prefs.color=color;save();paint()}
   });
 };
-stageCanvas.addEventListener('pointerdown',stageDown);stageCanvas.addEventListener('pointermove',stageMove);stageCanvas.addEventListener('pointerup',stageUp);stageCanvas.addEventListener('pointercancel',e=>{if(screen!=='editor'||!pointers.has(e.pointerId))return;pointers.delete(e.pointerId);magnifierPoint=null;drawStart=null;selectedHandle=null;paint()});stageCanvas.addEventListener('wheel',e=>{e.preventDefault();const p=eventPoint(e);zoomAt(e.deltaY<0?1.1:.9,p.x,p.y)},{passive:false});
+stageCanvas.addEventListener('pointerdown',stageDown);stageCanvas.addEventListener('pointermove',stageMove);stageCanvas.addEventListener('pointerup',stageUp);stageCanvas.addEventListener('pointercancel',e=>{if(screen!=='editor'||!pointers.has(e.pointerId))return;pointers.delete(e.pointerId);gesture=null;drag=null;drawPointerId=null;magnifierPoint=null;drawStart=null;drawCurrent=null;finishHandleGesture(selectedHandle);selectedHandle=null;paint()});stageCanvas.addEventListener('wheel',e=>{e.preventDefault();const p=eventPoint(e);zoomAt(e.deltaY<0?1.1:.9,p.x,p.y)},{passive:false});
 $('exportBtn').onclick=()=>{modal('Export',`<div class="row wrap"><button id="exportPng" class="outline">Export PNG</button><button id="exportPdf" class="outline">Export PDF</button></div><div class="muted">Originální soubor a editovatelné kóty se zachovávají zvlášť.</div>`,()=>true,'Zavřít');$('exportPng').onclick=()=>{exportPng();$('modal').hidden=true};$('exportPdf').onclick=()=>{if(native)Native.printPdf();else window.print();$('modal').hidden=true}};
-function exportPng(){let o=document.createElement('canvas');o.width=photoSize.w;o.height=photoSize.h;let c=o.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,o.width,o.height);if(stageImg)c.drawImage(stageImg,0,0,o.width,o.height);let oldCtx=ctx,oldView={...view};ctx=c;view={zoom:1,dx:0,dy:0};for(let item of current.items||[])drawItem(c,item,false);ctx=oldCtx;view=oldView;const data=o.toDataURL('image/png');if(native)Native.exportPng((current.title||'zamerovani')+'.png',data.slice(data.indexOf(',')+1));else{let a=document.createElement('a');a.download='zamerovani.png';a.href=data;a.click()}notify('Export obrázku připraven')}
+function exportPng(){let o=document.createElement('canvas');o.width=photoSize.w;o.height=photoSize.h;let c=o.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,o.width,o.height);if(stageImg)c.drawImage(stageImg,0,0,o.width,o.height);const render=annotationRenderContext(c,{view:{zoom:1,dx:0,dy:0},viewport:{w:o.width,h:o.height},selected:null,exporting:true});for(let item of current.items||[])drawItem(c,item,render);const data=o.toDataURL('image/png');if(native)Native.exportPng((current.title||'zamerovani')+'.png',data.slice(data.indexOf(',')+1));else{let a=document.createElement('a');a.download='zamerovani.png';a.href=data;a.click()}notify('Export obrázku připraven')}

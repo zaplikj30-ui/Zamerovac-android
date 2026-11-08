@@ -4,6 +4,20 @@
  */
 (function(root){
 'use strict';
+// Recorded with the implementation; assign an actual release only at the joint
+// release gate. These notes must never be attributed to an already issued APK.
+const unreleasedChanges={title:'Rozpracováno – dosud nevydáno',groups:[{kind:'Opraveno',items:[
+ {text:'Galerie překresluje kóty, čáry a hodnoty v rozlišení displeje i při přiblížení. Prohlížení ani export nemění výběr a historii otevřeného editoru; návrat přes Upravit ke stejné fotografii zachová rozpracovanou práci.'},
+ {text:'Popisky vložených fotografií používají šířku skutečného výstupu. PNG zahrnuje také natočený detail a jeho text mimo původní fotografii.'},
+ {text:'Převzaté opravy poznámek a laseru: Undo obnoví původní text, přehrávání hlasu nevyžaduje textový fokus a druhý přesný odečet se neztratí při shodném zaokrouhlení.'},
+ {text:'Klepnutí, nepatrný pohyb prstu, neúspěšné přichycení a přiblížení dvěma prsty již nemažou možnost Znovu ani nevytvářejí prázdné kroky v historii. Skutečný tah se uloží také při přerušení gesta.'},
+ {text:'Při přechodu z posouvání obrazu na gesto dvěma prsty už nezůstává starý tah aktivní; po uvolnění prstu obraz neodskočí. Přerušené gesto také nezachová staré posouvání.'},
+ {text:'Při neúmyslném doteku třetího prstu se přeruší staré přiblížení, aby uvolnění jiného prstu nezpůsobilo skok obrazu. Nové gesto dvěma prsty lze opět zahájit po uvolnění doteků.'},
+ {text:'Vysypání koše chrání sdílené originály i při odkazech uložených ve starším JSON objektu jako text a při opakovaném úklidu po restartu.'},
+ {text:'Hloubka historických odkazů na přílohy je nyní omezená pro celý průchod, včetně vnořeného JSON uloženého jako text. Neověřitelná historie vysypání koše bezpečně zastaví bez odstranění originálů.'},
+ {text:'Uložení a smazání vyřešených připomínek nyní potvrzujeme až po ověřeném zápisu seznamu do zařízení. Při chybě úložiště rozpracovaná připomínka zůstane otevřená a nepotvrzené změny se neoznačí jako uložené.'},
+ {text:'Během asynchronního ukládání obrázkové připomínky nelze nechtěně zavřít editor ani přejít do seznamu; pozdní dokončení jiné editační relace neuloží nesprávný záznam.'}
+]}]};
 // Exact 1.2.153 test-release notes; available only to matching installed versions.
 // Automated verification is not physical acceptance of Google, Bosch or the devices.
 const releaseChanges={issue:39,version:'1.2.153',groups:[{kind:'Nové funkce',items:[{text:'Volba četnosti vlastních automatických pokusů synchronizace: automaticky, 15, 30, 60 minut nebo ručně. Nastavení potvrzuje Android; příchozí důvěryhodné místní spojení zůstává při zapnuté službě povolené.'},{text:'Oddělený výběr Google účtu pro synchronizaci a zálohy, souhlas k soukromým datům aplikace, API přenos a odpojení bez mazání historie. Potvrzený projekt Google Cloud je propojený s testovací aplikací; sestavení ověřuje balíček a skutečný podpis. Živý účet zatím nebyl fyzicky ověřen.'},{text:'Samostatné historické zálohy po instalaci, sdílené neměnné datové bloky, kontrola úplnosti a obnova jako nové kopie. Systémové úložiště včetně Disku závisí na poskytovateli; skutečný Drive účet dosud neověřen.'},{text:'Obrazovka synchronizace zařízení, oboustranné TLS párování, přímý přenos celých zakázek přes místní Wi-Fi / Wi-Fi Direct a trvalá fronta příloh. Rádio a zařízení zatím čekají na fyzické ověření; Drive a historie záloh se dále dokončují.'}]},{kind:'Opraveno',items:[
@@ -318,7 +332,7 @@ function forVersion(installedVersion){
 function hasReleaseNotes(installedVersion){
  return releases.some(r=>compareVersions(r.version,installedVersion)===0);
 }
-const api=Object.freeze({releaseChanges,releases,parseVersion,compareVersions,forVersion,hasReleaseNotes});
+const api=Object.freeze({unreleasedChanges,releaseChanges,releases,parseVersion,compareVersions,forVersion,hasReleaseNotes});
 root.ZamerovacReleaseHistory=api;
 if(typeof module!=='undefined'&&module.exports)module.exports=api;
 })(typeof window!=='undefined'?window:globalThis);

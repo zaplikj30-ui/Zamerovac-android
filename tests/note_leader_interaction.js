@@ -11,8 +11,9 @@ function extract(start,end){
  return source.slice(a,b);
 }
 const methods=[
- extract('function noteDisplayedCaption(item){','function canvasText(text,p,color,size,angle=0){'),
- extract('function drawArrow(c,point,to,size=10){','function drawItem(c,item){'),
+ extract('function finishHandleGesture(handle){','function commitEditor(){'),
+ extract('function noteDisplayedCaption(','function canvasText('),
+ extract('function drawArrow(c,point,to,size=10){','function drawItem('),
  extract('function nearestHandle(point,onlyItem=null){','function selectAnnotation(item){'),
  extract('function selectAnnotation(item){','function editItem(item){')
 ].join('\n');
@@ -20,7 +21,7 @@ const note={id:'note-1',type:'note',a:{x:100,y:100},b:{x:100,y:100},text:'Zásuv
 const stageCanvas={setPointerCapture(){},releasePointerCapture(){}};
 const sandbox={
  window:{},current:{id:'photo',items:[note]},screen:'editor',mode:'select',selected:null,
- selectedHandle:null,pointers:new Map(),stageCanvas,
+ selectedHandle:null,pointers:new Map(),stageCanvas,photoSize:{w:1400,h:900},
  gesture:null,drawStart:null,drawCurrent:null,drag:null,drawPointerId:null,
  magnifierPoint:null,loupeSide:null,stroke:[],prefs:{fontSize:17},
  view:{zoom:1,dx:0,dy:0},ctx:{font:'',save(){},restore(){},measureText(s){return {width:s.length*9}}},
@@ -31,9 +32,9 @@ const sandbox={
  uid:()=>`new-note-${++sandbox.ids}`,
  finishDraw:item=>{sandbox.selected=item.id;sandbox.mode='select'},
  openRichNote:()=>{throw Error('Creating an empty note must not open a modal')},
- checkpoints:0,commits:0,edits:0,ids:0,console
+ checkpoints:0,commits:0,edits:0,ids:0,editStack:[],redoStack:[],console
 };
-vm.createContext(sandbox);
+vm.createContext(sandbox);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-geometry.js','utf8'),sandbox);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-selection.js','utf8'),sandbox);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-translation.js','utf8'),sandbox);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-resize.js','utf8'),sandbox);
 vm.runInContext(methods,sandbox);
 function pointer(method,x,y){
  const e={x,y,button:0,pointerId:1,preventDefault(){}};
@@ -77,7 +78,7 @@ assert.equal(empty.captionMoved,true,'Arrow appears after first drag without tex
 // Ověřit i skutečný směr hrotu, ne pouze pozice v datovém modelu.
 const ops=[];
 const pen={save(){},restore(){},beginPath(){},moveTo(x,y){ops.push(['M',x,y])},
- lineTo(x,y){ops.push(['L',x,y])},stroke(){}};
+ lineTo(x,y){ops.push(['L',x,y])},stroke(){},measureText:sandbox.ctx.measureText};
 sandbox.testContext=pen;sandbox.testItem=empty;
 vm.runInContext("drawNoteLeader(testContext,testItem,'#ffee22')",sandbox);
 const starts=ops.filter(o=>o[0]==='M');

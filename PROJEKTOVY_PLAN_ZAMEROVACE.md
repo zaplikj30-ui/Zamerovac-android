@@ -205,3 +205,5 @@ Rozhodovat až podle prototypu, dostupnosti API, nákladů, bezpečnosti a **vý
 **Oddělené nápady a rozsah:** více pohledů/stěn, Windows/iOS, 3D a Konfigurátor–Nářezák jsou budoucí možnosti, nikoliv automaticky schválené změny. Při tomto plánu **nepřepisovat od nuly**, neměnit bez důkazu schema/protokoly/úložiště a nepořizovat další testovací frameworky. Výchozí ověřený stav při této úpravě plánu: main `f543af7`, draft PR #49/#51/#52; u #51 a #52 je rychlé CI FAIL, nativní CI #52 SUCCESS; žádná nová aplikace ani APK.
 
 **Stav zápisu:** technická inventura a architektonická dohoda; **nikoli dokončený audit všech detailů, provedená přestavba, zelené CI, vytvořená APK či fyzické ověření.**
+
+**Provedení první etapy 7. 11. 2026:** zahájeno v existujícím draft PR #51, nikoli v nové aplikaci. Konkrétní hranice rendereru, převzetí #52, skutečné testy/měření a nevyřešené N4 jsou v [navazujícím protokolu](docs/qa-professional-20261107.md#etapa-b1--pokračování-galerie-v-pr-51-7-11-2026). Jde o implementaci první omezené etapy; ne o dokončení všech etap či fyzické ověření. Nové upřesnění testovacího provozu main `3de1d53` zachováno.

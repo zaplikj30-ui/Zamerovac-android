@@ -1,0 +1,36 @@
+/* B5: laser segment and selection decision, without mutating measured data. */
+'use strict';
+const assert=require('node:assert/strict'),fs=require('node:fs');
+const Geometry=require('../app/src/main/assets/annotation-geometry.js');
+const Selection=require('../app/src/main/assets/annotation-selection.js');
+const transform={zoom:2,dx:10,dy:20},project=p=>Geometry.worldToScreen(p,transform);
+const chain={id:'chain',type:'chain',points:[{x:0,y:0},{x:100,y:0},{x:100,y:100}],
+ segmentData:[{measure:'1250,000001',unit:'mm'},{measure:'1250,000001',unit:'mm'}]};
+const area={id:'area',type:'area',points:[{x:0,y:0},{x:120,y:0},{x:120,y:100},{x:0,y:100}]};
+const rect={id:'rect',type:'rect',a:{x:0,y:0},b:{x:120,y:100}};
+const snapshot=JSON.stringify([chain,area,rect]);
+assert.equal(Geometry.nearestEditableSegment(chain,project({x:50,y:0}),transform),0);
+assert.equal(Geometry.nearestEditableSegment(chain,project({x:100,y:65}),transform),1);
+assert.equal(Geometry.nearestEditableSegment(area,project({x:120,y:50}),transform),1);
+assert.equal(Geometry.nearestEditableSegment(rect,project({x:120,y:50}),transform),1);
+assert.equal(Geometry.nearestEditableSegment(rect,project({x:0,y:50}),transform),1);
+assert.equal(Geometry.nearestEditableSegment(rect,project({x:65,y:100}),transform),0);
+assert.equal(Geometry.nearestEditableSegment({type:'dimension',id:'d'},project({x:5,y:5}),transform),null);
+assert.equal(JSON.stringify([chain,area,rect]),snapshot);
+const dim={id:'d',type:'dimension',a:{x:0,y:0},b:{x:200,y:0},measure:'1585,800001'};
+const grip={item:dim,kind:'point',key:'a'},label={item:dim,kind:'label'},segmentLabel={item:dim,kind:'segment-label'};
+assert.equal(Selection.dragHandle(dim,{grip,label,segmentLabel}),grip);
+assert.equal(Selection.dragHandle(dim,{label,segmentLabel}),segmentLabel);
+assert.equal(Selection.dragHandle(dim,{label}),label);
+assert.equal(Selection.dragHandle(dim,{}).kind,'move-dimension');
+assert.equal(Selection.dragHandle({id:'p',type:'polyline',points:[{x:0,y:0},{x:100,y:0}]},{}).kind,'move-polyline');
+assert.equal(Selection.dragHandle({id:'n',type:'note',a:{x:0,y:0}},{wantsCaption:true,grip}).kind,'note-caption');
+assert.equal(Selection.dragHandle({id:'t',type:'target',b:{x:1,y:1}},{targetCaption:true}).kind,'target-caption');
+assert.equal(Selection.dragHandle({id:'n2',type:'note'},{}).kind,'open-selected');
+assert.equal(dim.measure,'1585,800001');
+const html=fs.readFileSync('app/src/main/assets/index.html','utf8');
+assert.ok(html.indexOf('src="annotation-selection.js"')<html.indexOf('src="editor.js"'));
+const editor=fs.readFileSync('app/src/main/assets/editor.js','utf8');
+assert.ok(editor.includes('AnnotationGeometry.nearestEditableSegment(candidate,s,view)'));
+assert.ok(editor.includes('AnnotationSelection.dragHandle(candidate,{'));
+console.log('PASS B5: laser target segments, grip precedence, selection, unchanged precise data');

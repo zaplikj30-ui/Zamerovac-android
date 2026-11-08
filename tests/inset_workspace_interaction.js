@@ -10,7 +10,7 @@ const note={id:'note-1',type:'note',a:{x:100,y:100},media:['detail-1'],
  insetWidth:120,insetX:140,insetY:150,insetRotation:0};
 const sandbox={
  window:{__detailPhotoCache:{'detail-1':{complete:true,naturalWidth:100,naturalHeight:100}},isRecordLocked:()=>false},
- stageCanvas,current:{id:'photo',items:[note]},photoSize:{w:350,h:350},
+ stageCanvas,current:{id:'photo',items:[note]},photoSize:{w:350,h:350},prefs:{fontSize:17},
  view:{zoom:1,dx:0,dy:0},screen:'editor',mode:'select',selected:null,
  worldToScreen:p=>({...p}),screenToWorld:p=>({...p}),eventPoint:e=>({x:e.x,y:e.y}),
  boundsPoint:p=>({...p}),setTool:k=>{sandbox.mode=k},
@@ -20,7 +20,9 @@ const sandbox={
  native:false,Native:{},document:{createElement:()=>({})},
  console,
 };
-vm.createContext(sandbox);
+vm.createContext(sandbox);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-geometry.js','utf8'),sandbox);
+const editorSource=fs.readFileSync('app/src/main/assets/editor.js','utf8');
+vm.runInContext(editorSource.slice(editorSource.indexOf('function annotationProjectPoint('),editorSource.indexOf('function drawItem(')),sandbox);
 vm.runInContext(fs.readFileSync('app/src/main/assets/inset-workspace.js','utf8'),sandbox);
 function pointer(type,x,y,id=1){
  const e={pointerId:id,button:0,x,y,

@@ -14,18 +14,18 @@ class SourceSmokeTest(unittest.TestCase):
         for path in (ROOT/'app/src/main/AndroidManifest.xml',ROOT/'app/src/main/res/values/styles.xml',ROOT/'app/src/main/res/drawable/ic_launcher.xml'):
             ET.parse(path)
     def test_editor_controls_present(self):
-        scripts=(ASSETS/'app.js').read_text()+(ASSETS/'editor.js').read_text()
+        scripts=(ASSETS/'app.js').read_text(encoding='utf-8')+(ASSETS/'editor.js').read_text(encoding='utf-8')
         for item in ('drawLoupe','checkpoint','commitEditor','onNativeMedia','onNativeSync','onLaserValue','syncCloud','openNote'):
             self.assertIn(item,scripts)
     def test_excluded_tools(self):
-        tools=(ASSETS/'editor.js').read_text()
+        tools=(ASSETS/'editor.js').read_text(encoding='utf-8')
         for forbidden in ('Počítadlo','Výsledková listina','Perspektivní délka','Referenční měřítko'):
             self.assertNotIn(forbidden,tools)
     def test_dimension_endpoints_match_grips_and_loupe(self):
         # Regression: the previous -22px visual offset put the dimension's
         # visible endpoint at a different location than its editable anchor.
         # The magnifier correctly centered the anchor, not the visible arrow.
-        editor=(ASSETS/'editor.js').read_text()
+        editor=(ASSETS/'editor.js').read_text(encoding='utf-8')
         # Geometrie, popisek i bílé zvýraznění používají stejný posun.
         self.assertEqual(editor.count('item.offset??0'), 3)
         self.assertNotIn('item.offset??-22', editor)
@@ -40,8 +40,8 @@ class SourceSmokeTest(unittest.TestCase):
         self.assertIn("generation===photoLoadGeneration&&current===r&&screen==='editor'",editor)
 
     def test_reference_magnifier_geometry(self):
-        editor=(ASSETS/'editor.js').read_text()
-        css=(ASSETS/'style.css').read_text()
+        editor=(ASSETS/'editor.js').read_text(encoding='utf-8')
+        css=(ASSETS/'style.css').read_text(encoding='utf-8')
         # Comparison screenshots: ~160 actual pixels on phone = 136 CSS px.
         self.assertIn('const size=136;', editor)
         self.assertIn('border-radius:32px', css)
@@ -49,18 +49,18 @@ class SourceSmokeTest(unittest.TestCase):
         self.assertIn('size*.5-pointer.x*zoom,size*.5-pointer.y*zoom', editor)
 
     def test_installed_version_visible_to_user(self):
-        activity=(ROOT/'app/src/main/java/cz/zamerovac/app/MainActivity.java').read_text()
-        app=(ASSETS/'app.js').read_text()
-        css=(ASSETS/'style.css').read_text()
+        activity=(ROOT/'app/src/main/java/cz/zamerovac/app/MainActivity.java').read_text(encoding='utf-8')
+        app=(ASSETS/'app.js').read_text(encoding='utf-8')
+        css=(ASSETS/'style.css').read_text(encoding='utf-8')
         self.assertIn('getPackageManager().getPackageInfo(getPackageName(),0).versionName', activity)
         self.assertIn('Native.getAppVersion()', app)
         self.assertIn('id="appVersionInfo"', app)
         self.assertIn('#screenTitle .app-version', css)
 
     def test_photo_thumbnails_and_menu(self):
-        app=(ASSETS/'app.js').read_text()
-        css=(ASSETS/'style.css').read_text()
-        activity=(ROOT/'app/src/main/java/cz/zamerovac/app/MainActivity.java').read_text()
+        app=(ASSETS/'app.js').read_text(encoding='utf-8')
+        css=(ASSETS/'style.css').read_text(encoding='utf-8')
+        activity=(ROOT/'app/src/main/java/cz/zamerovac/app/MainActivity.java').read_text(encoding='utf-8')
         self.assertIn('function browserEntryIcon(r)', app)
         self.assertIn('entry-thumb', app)
         self.assertIn('photoThumbnail(id)', activity)
@@ -70,10 +70,10 @@ class SourceSmokeTest(unittest.TestCase):
         self.assertNotIn("['📁  Zakázky',()=>showFolder()]", app)
 
     def test_photo_capture_time_and_readable_location(self):
-        app=(ASSETS/'app.js').read_text()
-        activity=(ROOT/'app/src/main/java/cz/zamerovac/app/MainActivity.java').read_text()
-        resolver=(ROOT/'app/src/main/java/cz/zamerovac/app/PhotoAddressResolver.java').read_text()
-        manifest=(ROOT/'app/src/main/AndroidManifest.xml').read_text()
+        app=(ASSETS/'app.js').read_text(encoding='utf-8')
+        activity=(ROOT/'app/src/main/java/cz/zamerovac/app/MainActivity.java').read_text(encoding='utf-8')
+        resolver=(ROOT/'app/src/main/java/cz/zamerovac/app/PhotoAddressResolver.java').read_text(encoding='utf-8')
+        manifest=(ROOT/'app/src/main/AndroidManifest.xml').read_text(encoding='utf-8')
         self.assertIn('java.time.Instant.now().toString()', activity)
         self.assertIn('ExifInterface.TAG_DATETIME_ORIGINAL', activity)
         self.assertIn('PhotoAddressResolver.resolve', activity)

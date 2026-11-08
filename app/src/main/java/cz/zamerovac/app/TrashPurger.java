@@ -29,13 +29,43 @@ final class TrashPurger {
     private File pendingFile(){return new File(home,"trash-cleanup.json");}
     private static boolean validId(String id){return id.matches("[a-zA-Z0-9_-]{3,120}");}
     // Include unknown fields/history in the protection set. Shared detail photos must survive.
-    private static void strings(Object value, Set<String> found) throws JSONException {
-        if(value instanceof String){String text=(String)value;found.add(text);
-            // Older annotation versions store their item arrays as JSON strings.
-            if(text.trim().startsWith("["))try{JsonInput.check(text);strings(new JSONArray(text),found);}catch(JSONException|IOException ignored){}
+    // A separate JSON string may be valid at depth 100 while its enclosing record
+    // is also at depth 100. Count the combined walk, not just each parsed fragment.
+    private static final int MAX_REFERENCE_DEPTH=100;
+    private static void strings(Object value, Set<String> found) throws JSONException,IOException {
+        strings(value,found,0);
+    }
+    private static void strings(Object value, Set<String> found,int depth) throws JSONException,IOException {
+        // An uncertain reference graph must abort the purge BEFORE any unlink.
+        if(depth>MAX_REFERENCE_DEPTH)throw new IOException("Historie příloh je příliš zanořená. Koš nebyl vysypán.");
+        if(value instanceof String){
+            String text=(String)value;found.add(text);
+            // Older and imported records may encode complete arrays OR objects
+            // as strings. A live reference inside either must block media unlinking.
+            String trimmed=text.trim();
+            if(trimmed.startsWith("[")||trimmed.startsWith("{")){
+                // Limit failures must propagate; silently ignoring them could let
+                // a still-referenced original become an unlink candidate.
+                JsonInput.check(text);
+                Object parsed;
+                try{
+                    parsed=trimmed.startsWith("[")?new JSONArray(text):new JSONObject(text);
+                }catch(JSONException malformed){
+                    // An invalid object-looking history may still contain media IDs.
+                    // The safe response is to reject cleanup, never unlink by guess.
+                    throw new IOException("Nelze ověřit historické odkazy na přílohy. Koš nebyl vysypán.",malformed);
+                }
+                strings(parsed,found,depth+1);
+            }
         }
-        else if(value instanceof JSONObject){JSONObject o=(JSONObject)value;Iterator<String> keys=o.keys();while(keys.hasNext())strings(o.get(keys.next()),found);}
-        else if(value instanceof JSONArray){JSONArray a=(JSONArray)value;for(int i=0;i<a.length();i++)strings(a.get(i),found);}
+        else if(value instanceof JSONObject){
+            JSONObject o=(JSONObject)value;Iterator<String> keys=o.keys();
+            while(keys.hasNext())strings(o.get(keys.next()),found,depth+1);
+        }
+        else if(value instanceof JSONArray){
+            JSONArray a=(JSONArray)value;
+            for(int i=0;i<a.length();i++)strings(a.get(i),found,depth+1);
+        }
     }
     private Set<String> pending() throws Exception {
         Set<String> ids=new TreeSet<>();AtomicFile file=new AtomicFile(pendingFile());

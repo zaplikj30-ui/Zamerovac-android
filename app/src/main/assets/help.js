@@ -91,7 +91,9 @@ const chapters=[
     "notes": [
       "Podpora formátů videa závisí na kodecích konkrétního telefonu. Nepodporované video může zobrazit chybu nebo náhradní miniaturu.",
       "Přehrání videa a vytvoření miniatury nemá změnit jeho původní obsah.",
-      "V galerii se fotografie i všechny anotace posouvají jen k dostupným okrajům. Po oddálení na 1× se vycentrují; gesta zůstávají dostupná bez spodního pokynu."
+      "V galerii se fotografie i všechny anotace posouvají jen k dostupným okrajům. Po oddálení na 1× se vycentrují; gesta zůstávají dostupná bez spodního pokynu.",
+      "Galerie je jen pro prohlížení: při přiblížení znovu vykresluje kóty a jejich hodnoty ostře v rozlišení obrazovky. Samotné prohlížení nesmí změnit měřené hodnoty, pozici kót ani původní fotografii.",
+      "Šipka zpět zavře galerii a ponechá původní výběr i kroky Zpět/Znovu v editoru. Upravit u stejné fotografie pokračuje v otevřené práci; u jiné fotografie otevře její editor. Při načítání dalšího snímku počkej na jeho zobrazení."
     ],
     "keywords": [
       "mp4",
@@ -244,6 +246,8 @@ const chapters=[
     "intro": "Zobrazení fotografie nebo náčrtu můžeš měnit bez změny samotných uložených kót.",
     "steps": [
       "Tlačítky ＋ a − v editoru přibližuj a oddaluj; na displeji můžeš použít i gesto dvěma prsty.",
+      "Po přiblížení dvěma prsty oba zvedni a pro další posun obrazu začni nový tah. Původní posouvání se při zahájení dvouprstého gesta ukončí.",
+      "Při nechtěném doteku třetího prstu se právě probíhající přiblížení přeruší bez skoku; pro další přiblížení začni po uvolnění doteků nové dvouprsté gesto.",
       "V nabídce ⋮ použij Přizpůsobit fotografii pro návrat k přehlednému zobrazení.",
       "Pro přesouvání celého obrazu vyber Posun obrazu. Pro jemnou práci lze zapnout bodovou lupu.",
       "Magnetické přichytávání pomáhá k existujícím bodům, rohům či směrům; v Nastavení lze jednotlivé druhy vypnout.",
@@ -276,6 +280,7 @@ const chapters=[
     ],
     "notes": [
       "Vrácení úpravy není plnohodnotná záloha celé zakázky; pro přenos dat slouží ZIP.",
+      "Pouhé označení kóty, drobný pohyb prstu nebo přiblížení dvěma prsty nevytvoří krok historie ani nesmaže možnost Znovu. Skutečné posunutí či změna velikosti se ukládá jako jeden vratný krok, také při přerušení gesta.",
       "Zobrazovací nastavení vrstev nepřepisuje původní fotografie."
     ],
     "keywords": [
@@ -470,7 +475,7 @@ const chapters=[
     ],
     "notes": [
       "Vysypání koše uchovává pouze identifikátory a revizi smazání. Nezávislá novější změna z jiného zařízení se může zachovat jako označená konfliktní kopie; původní vysypané ID se neobnovuje.",
-      "Trvalý úklid zahrnuje také výhradní hlasové poznámky a přílohy historie anotací. Soubor používaný jiným záznamem nebo jeho historií zůstane zachovaný; oddělené neměnné zálohy se tím nemažou.",
+      "Trvalý úklid zahrnuje také výhradní hlasové poznámky a přílohy historie anotací. Soubor používaný jiným záznamem nebo jeho historií, včetně starších vložených záznamů, zůstane zachovaný; oddělené neměnné zálohy se tím nemažou. Pokud je historie příloh poškozená nebo nepřiměřeně zanořená, bezpečnostní kontrola vysypání odmítne místo rizikového smazání.",
       "Obnovení z koše nenahrazuje samostatnou zálohu ZIP.",
       "Trvalé odstranění a synchronizace s dalšími zařízeními mohou mít nevratné následky."
     ],
@@ -636,6 +641,8 @@ const chapters=[
       "Nevypisuje se kóta: ověř výběr nástroje, vrstvy, barvu a přiblížení; zkus zavřít a otevřít fotografii.",
       "Nejde vybrat ZIP: najdi soubor v systémovém správci a ověř, že jde o zálohu Zaměřovače, nikoli zákaznický PDF ZIP.",
       "Ztratil se obrázek po přiblížení nebo se zobrazila mřížka: ukonči gesto, obnov zobrazení; nemaž zakázku ani data aplikace.",
+      "Při hlášení chyby přímo v aplikaci se potvrzení Uloženo zobrazí až po ověření zápisu seznamu připomínek. Pokud zápis selže, rozpracovaná připomínka zůstane otevřená; nemaž ji, zkontroluj volné místo a uložení zopakuj.",
+      "Při ukládání obrázkové připomínky zůstane editor otevřený, dokud zápis neskončí. Zavření, Android Zpět a přepnutí do seznamu se během ukládání bezpečně odmítnou.",
       "Pokud chyba přetrvává, poznamenej verzi aplikace a pošli popis kroků a případně snímek či video."
     ],
     "notes": [
