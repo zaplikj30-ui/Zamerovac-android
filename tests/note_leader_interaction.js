@@ -35,6 +35,7 @@ const sandbox={
  checkpoints:0,commits:0,edits:0,ids:0,editStack:[],redoStack:[],console
 };
 vm.createContext(sandbox);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-geometry.js','utf8'),sandbox);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-selection.js','utf8'),sandbox);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-translation.js','utf8'),sandbox);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-resize.js','utf8'),sandbox);
+vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-history.js','utf8'),sandbox);
 vm.runInContext(methods,sandbox);
 function pointer(method,x,y){
  const e={x,y,button:0,pointerId:1,preventDefault(){}};

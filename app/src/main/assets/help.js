@@ -280,6 +280,8 @@ const chapters=[
     ],
     "notes": [
       "Vrácení úpravy není plnohodnotná záloha celé zakázky; pro přenos dat slouží ZIP.",
+      "Když se objeví Neuloženo, nech aplikaci otevřenou a použij Zkusit uložit znovu. Historie Zpět/Znovu v paměti nenahrazuje úspěšně potvrzené uložení.",
+      "Při upozornění na poškozenou historii se chybný krok Zpět/Znovu nepoužije. Přesné kóty zůstanou beze změny.",
       "Pouhé označení kóty, drobný pohyb prstu nebo přiblížení dvěma prsty nevytvoří krok historie ani nesmaže možnost Znovu. Skutečné posunutí či změna velikosti se ukládá jako jeden vratný krok, také při přerušení gesta.",
       "Zobrazovací nastavení vrstev nepřepisuje původní fotografie."
     ],

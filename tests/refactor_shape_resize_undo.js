@@ -38,7 +38,7 @@ function runShape(type,shape,from,to,check){
  };
  vm.createContext(ctx);
  for(const module of ['annotation-geometry.js','annotation-selection.js',
-  'annotation-translation.js','annotation-resize.js'])
+  'annotation-translation.js','annotation-resize.js','annotation-history.js'])
   vm.runInContext(asset(module),ctx);
  ctx.worldToScreen=p=>ctx.AnnotationGeometry.worldToScreen(p,ctx.view);
  ctx.screenToWorld=p=>ctx.AnnotationGeometry.screenToWorld(p,ctx.view);

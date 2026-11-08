@@ -11,6 +11,7 @@ const unreleasedChanges={title:'Rozpracováno – dosud nevydáno',groups:[{kind
  {text:'Popisky vložených fotografií používají šířku skutečného výstupu. PNG zahrnuje také natočený detail a jeho text mimo původní fotografii.'},
  {text:'Převzaté opravy poznámek a laseru: Undo obnoví původní text, přehrávání hlasu nevyžaduje textový fokus a druhý přesný odečet se neztratí při shodném zaokrouhlení.'},
  {text:'Klepnutí, nepatrný pohyb prstu, neúspěšné přichycení a přiblížení dvěma prsty již nemažou možnost Znovu ani nevytvářejí prázdné kroky v historii. Skutečný tah se uloží také při přerušení gesta.'},
+ {text:'Poškozený krok historie Zpět/Znovu je bezpečně odmítnut s upozorněním. Přesné uložené hodnoty a vazby na fotografie se tím nemění.'},
  {text:'Při přechodu z posouvání obrazu na gesto dvěma prsty už nezůstává starý tah aktivní; po uvolnění prstu obraz neodskočí. Přerušené gesto také nezachová staré posouvání.'},
  {text:'Při neúmyslném doteku třetího prstu se přeruší staré přiblížení, aby uvolnění jiného prstu nezpůsobilo skok obrazu. Nové gesto dvěma prsty lze opět zahájit po uvolnění doteků.'},
  {text:'Vysypání koše chrání sdílené originály i při odkazech uložených ve starším JSON objektu jako text a při opakovaném úklidu po restartu.'},

@@ -64,20 +64,25 @@ function boundsPoint(p){return AnnotationGeometry.boundsPoint(p,photoSize)}
 // Magnetické přichytávání není vazba: výsledek se přepočítává z aktuální
 // polohy prstu. Vždy musí zbýt prostor mezi magnetickými zónami pro uvolnění.
 function snap(p,ref=null,ignore=null){return AnnotationGeometry.snapPoint(p,ref,ignore,current.items||[],prefs,view.zoom,photoSize)}
-function checkpoint(){editStack.push(JSON.stringify(current.items||[]));if(editStack.length>50)editStack.shift();redoStack=[]}
+function checkpoint(){AnnotationHistory.checkpoint(current.items,editStack);redoStack=[]}
 function finishHandleGesture(handle){
  // Only changed objects enter Undo; taps and rejected/pinch gestures preserve Redo.
  if(!handle?.dragged||!handle.beforeDragItems||!current)return false;
  if(JSON.stringify(current.items||[])===handle.beforeDragItems)return false;
- editStack.push(handle.beforeDragItems);
- if(editStack.length>50)editStack.shift();
+ AnnotationHistory.recordSnapshot(handle.beforeDragItems,editStack);
  redoStack=[];
  touch(handle.item);commitEditor();
  return true;
 }
 function commitEditor(){if(current?.kind==='photo'&&stageImg){current.width=photoSize.w;current.height=photoSize.h;}touch(current);const confirmed=save();paint();return confirmed}
-function undoEditor(){if(!editStack.length)return;redoStack.push(JSON.stringify(current.items));current.items=JSON.parse(editStack.pop());commitEditor()}
-function redoEditor(){if(!redoStack.length)return;editStack.push(JSON.stringify(current.items));current.items=JSON.parse(redoStack.pop());commitEditor()}
+function undoEditor(){if(!editStack.length)return;let restored;
+ try{restored=AnnotationHistory.restore(current.items,editStack,redoStack)}
+ catch(error){notify('Historie úprav je poškozená. Změny nebyly použity.');return false}
+ current.items=restored;return commitEditor()}
+function redoEditor(){if(!redoStack.length)return;let restored;
+ try{restored=AnnotationHistory.restore(current.items,redoStack,editStack)}
+ catch(error){notify('Historie úprav je poškozená. Změny nebyly použity.');return false}
+ current.items=restored;return commitEditor()}
 $('undo').onclick=undoEditor;$('redo').onclick=redoEditor;$('selectTool').onclick=()=>setTool('select');$('toolsToggle').onclick=()=>showTools();$('activeTool').onclick=()=>{
   if(suppressToolClick){suppressToolClick=false;return;}
   if(mode==='select'||mode==='pan')setTool(lastDrawingTool);
