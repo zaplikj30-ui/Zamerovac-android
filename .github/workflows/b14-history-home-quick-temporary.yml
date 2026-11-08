@@ -1,0 +1,90 @@
+name: Zamerovac - TEMP B14 trusted home quick history QA NO APK
+# One owner-controlled branch, single path push trigger, no forks/PR, no cloud host.
+on:
+  push:
+    branches: [refactor/b14-editor-history-boundary-20261108]
+    paths:
+      - '.github/workflows/b14-history-home-quick-temporary.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: b14-trusted-home-quick
+  cancel-in-progress: false
+
+env:
+  QA_TEST_REF: ${{ github.sha }}
+
+jobs:
+  local-quick:
+    # Push na main nebo explicitní ruční spuštění vlastníkem; job-level gate blokuje ostatní branche.
+    # ZÁMĚRNĚ žádné pull_request ani pull_request_target.
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/refactor/b14-editor-history-boundary-20261108' && github.event_name == 'push' }}
+    name: Windows 11 - Node + Python lokální QA
+    runs-on: [self-hosted, Windows, X64, zamerovac-qa]
+    timeout-minutes: 25
+    env:
+      CI: '1'
+      PYTHONUTF8: '1'
+    steps:
+      - name: Zakazat spousteni mimo vlastni main
+        shell: cmd
+        run: |
+          if not "%GITHUB_EVENT_NAME%"=="push" exit /b 1
+          if not "%GITHUB_REF%"=="refs/heads/refactor/b14-editor-history-boundary-20261108" exit /b 1
+          echo PASS: trusted event and branch
+
+      - name: Git CLI pro skutecny checkout SHA
+        shell: cmd
+        run: |
+          if not exist "C:\actions-runner\tools\MinGit-2.56.0.4\cmd\git.exe" exit /b 1
+          echo C:\actions-runner\tools\MinGit-2.56.0.4\cmd>>"%GITHUB_PATH%"
+
+      - name: Read-only checkout - bez uložených GitHub přihlašovacích údajů
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ env.QA_TEST_REF }}
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+
+      - name: Dolozit presny commit testovaneho kodu
+        shell: cmd
+        run: |
+          for /f %%H in ('git rev-parse HEAD') do set "ACTUAL_SHA=%%H"
+          if not defined ACTUAL_SHA exit /b 1
+          if /I not "%ACTUAL_SHA%"=="%QA_TEST_REF%" (
+            echo FAIL: checkout SHA mismatch
+            exit /b 1
+          )
+          echo TESTED_SOURCE_SHA=%ACTUAL_SHA%
+
+      - name: Python pro testovací službu (jen tento job)
+        shell: cmd
+        run: |
+          if not exist "C:\actions-runner\tools\Python313\python.exe" (
+            echo CHYBI oddeleny Python 3.13 v runneru.
+            exit /b 1
+          )
+          "C:\actions-runner\tools\Python313\python.exe" -c "import sys,unittest;print(sys.version)"
+          if errorlevel 1 exit /b 1
+          echo C:\actions-runner\tools\Python313>>"%GITHUB_PATH%"
+
+      - name: Kontrola prostředí
+        shell: cmd
+        run: |
+          whoami
+          where node
+          node --version
+          if errorlevel 1 exit /b 1
+          where python
+          python --version
+          if errorlevel 1 exit /b 1
+
+      - name: Kompletní rychlé Node/Python testy - žádná APK
+        shell: cmd
+        run: |
+          node tools\local-qa.cjs --quick
+          if errorlevel 1 exit /b 1
+
