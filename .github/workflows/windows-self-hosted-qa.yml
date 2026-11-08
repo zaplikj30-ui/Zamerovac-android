@@ -89,6 +89,32 @@ jobs:
       CI: '1'
       PLAYWRIGHT_BROWSERS_PATH: 'C:\actions-runner\tools\ms-playwright'
     steps:
+      # GitHub Desktop neni potreba. Git musime dat do PATH JESTE PRED checkout,
+      # aby checkout vytvoril skutečny .git adresar pro E2E rev-parse HEAD.
+      # Pouze duveryhodny Git for Windows MinGit + pevny SHA256, bez instalatoru
+      # a bez systemovych uprav na domacim 16GB Windows PC.
+      - name: Git CLI pro prohlizecove testy - pripnuty overeny MinGit
+        shell: cmd
+        run: |
+          if not exist "C:\actions-runner\tools\MinGit-2.56.0.4\cmd\git.exe" (
+            if not exist "C:\actions-runner\tools\MinGit-2.56.0.4" mkdir "C:\actions-runner\tools\MinGit-2.56.0.4"
+            if errorlevel 1 exit /b 1
+            curl.exe --fail --silent --show-error --location "https://github.com/git-for-windows/git/releases/download/v2.56.0.windows.4/MinGit-2.56.0.4-64-bit.zip" --output "%RUNNER_TEMP%\zamerovac-MinGit-2.56.0.4.zip"
+            if errorlevel 1 exit /b 1
+            certutil.exe -hashfile "%RUNNER_TEMP%\zamerovac-MinGit-2.56.0.4.zip" SHA256 | findstr.exe /i /c:"e3bf78351fe777fba47ddee5950082f8a98bb0f02604fdc7ba3ee2cb68ffa877" >nul
+            if errorlevel 1 (
+              echo CHYBA: SHA256 MinGit nesouhlasi s GitHub release.
+              exit /b 1
+            )
+            tar.exe -xf "%RUNNER_TEMP%\zamerovac-MinGit-2.56.0.4.zip" -C "C:\actions-runner\tools\MinGit-2.56.0.4"
+            if errorlevel 1 exit /b 1
+          )
+          if not exist "C:\actions-runner\tools\MinGit-2.56.0.4\cmd\git.exe" exit /b 1
+          set "PATH=C:\actions-runner\tools\MinGit-2.56.0.4\cmd;%PATH%"
+          git --version
+          if errorlevel 1 exit /b 1
+          echo C:\actions-runner\tools\MinGit-2.56.0.4\cmd>>"%GITHUB_PATH%"
+
       - name: Načíst důvěryhodný testovaný commit
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
@@ -117,7 +143,9 @@ jobs:
         run: |
           set "LOCALAPPDATA=%GITHUB_WORKSPACE%\test-artifacts"
           where git
-          if errorlevel 1 echo WARNING: git.exe neni v PATH uctu sluzby. E2E harness muze selhat na git rev-parse.
+          if errorlevel 1 exit /b 1
+          git rev-parse --verify HEAD
+          if errorlevel 1 exit /b 1
           node tools\local-browser-qa.cjs --smoke
           if errorlevel 1 exit /b 1
 
