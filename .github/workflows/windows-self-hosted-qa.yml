@@ -25,8 +25,8 @@ permissions:
   contents: read
 
 concurrency:
-  group: zamerovac-trusted-windows-${{ github.ref }}
-  cancel-in-progress: true
+  group: zamerovac-trusted-windows-stage2-${{ github.ref }}
+  cancel-in-progress: false
 
 jobs:
   local-quick:
@@ -116,6 +116,8 @@ jobs:
         shell: cmd
         run: |
           set "LOCALAPPDATA=%GITHUB_WORKSPACE%\test-artifacts"
+          where git
+          if errorlevel 1 echo WARNING: git.exe neni v PATH uctu sluzby. E2E harness muze selhat na git rev-parse.
           node tools\local-browser-qa.cjs --smoke
           if errorlevel 1 exit /b 1
 
@@ -125,5 +127,89 @@ jobs:
         with:
           name: zamerovac-windows-browser-smoke
           path: test-artifacts/Zamerovac-QA/browser/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  native-jvm:
+    # Nezavisle na browser smoke, ale až po rychlém PASS; jediný místní runner
+    # vykonává jobs postupně. Žádné sestavení APK ani Android emulátor.
+    needs: local-quick
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' }}
+    name: Windows JVM + Robolectric (bez APK)
+    runs-on: [self-hosted, Windows, X64, zamerovac-qa]
+    timeout-minutes: 55
+    permissions:
+      contents: read
+    env:
+      CI: '1'
+      PYTHONUTF8: '1'
+      # SDK jen v profilu neadministrátorské služby, bez zásahů do systémové PATH.
+      ANDROID_HOME: C:\\Users\\ZamerovacQA\\.android\\sdk
+      ANDROID_SDK_ROOT: C:\\Users\\ZamerovacQA\\.android\\sdk
+    steps:
+      - name: Načíst pouze důvěryhodné zdroje
+        uses: actions/checkout@v4
+        with:
+          # DOČASNÉ B12: po integraci přepnout na github.sha stejně jako další jobs.
+          ref: ${{ inputs.target_ref || 'fix/b12-pan-pinch-lifecycle-20261108' }}
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+
+      - name: JDK 17 (uživatelská cache runneru)
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Gradle 8.10.2 (bez wrapperu v repozitáři)
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+          cache-disabled: true
+
+      - name: Android SDK command-line tools a platform-tools
+        uses: android-actions/setup-android@v4
+        with:
+          cmdline-tools-version: '12266719'
+          packages: 'platform-tools'
+          log-accepted-android-sdk-licenses: 'false'
+
+      - name: Android API 35 a build tools potřebné pro Android Gradle Plugin 8.6.1
+        shell: cmd
+        run: |
+          call sdkmanager.bat --install "platforms;android-35" "build-tools;35.0.0"
+          if errorlevel 1 exit /b 1
+
+      - name: Ověření přesných verzí (bez APK)
+        shell: cmd
+        run: |
+          java -version
+          if errorlevel 1 exit /b 1
+          call gradle.bat --version
+          if errorlevel 1 exit /b 1
+          call sdkmanager.bat --list_installed
+          if errorlevel 1 exit /b 1
+
+      - name: Veřejná Drive registrace a chybové konfigurace
+        shell: cmd
+        run: |
+          call gradle.bat --no-daemon --max-workers=2 -Dorg.gradle.jvmargs=-Xmx2048m -p tools/drive-config-checks verify
+          if errorlevel 1 exit /b 1
+
+      - name: Java kompilace + Robolectric jednotkové testy
+        shell: cmd
+        run: |
+          call gradle.bat --no-daemon --max-workers=2 -Dorg.gradle.jvmargs=-Xmx2048m :app:verifyDriveRegistration :app:compilePreviewJavaWithJavac :app:testPreviewUnitTest -PdriveRequireConfigured=true
+          if errorlevel 1 exit /b 1
+
+      - name: Uložit testovací důkazy (nikoliv APK)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: zamerovac-windows-native-jvm
+          path: |
+            app/build/test-results/testPreviewUnitTest/
+            app/build/reports/drive-registration.json
           if-no-files-found: ignore
           retention-days: 7
