@@ -113,8 +113,11 @@ jobs:
                   if new.scheme != "https":
                       raise ValueError("STOP: insecure GitHub release asset redirect")
                   if (new.hostname, new.port) != (old.hostname, old.port):
-                      redirected.remove_header("Authorization")
-                      redirected.remove_header("X-GitHub-Api-Version")
+                      sensitive = {"authorization", "proxy-authorization",
+                                   "cookie", "x-github-api-version"}
+                      for key in tuple(redirected.headers):
+                          if key.lower() in sensitive:
+                              redirected.remove_header(key)
                   return redirected
 
           release_asset_opener = urllib.request.build_opener(VerifiedReleaseAssetRedirect())
