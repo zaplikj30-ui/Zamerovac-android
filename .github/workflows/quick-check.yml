@@ -2,43 +2,10 @@ name: Zaměřovač – rychlá kontrola zdrojů (bez APK)
 
 # Po změně editoru/poznámek provést jen krátké testy.
 # Sestavení a vydání APK řídí zvlášť build-apk.yml na vyžádání.
+# STAGED ONLY, DO NOT MERGE BEFORE LOCAL WINDOWS LINUX-COMPATIBLE TEST PASS.
+# Cloud QA stays available as manual emergency regression backup; never run without owner approval.
 on:
-  push:
-    branches: [main]
-    paths:
-      - 'app/src/main/assets/**'
-      - 'app/src/main/java/**'
-      - 'app/src/main/AndroidManifest.xml'
-      - 'app/src/test/**'
-      - 'app/build.gradle'
-      - 'config/app-version.properties'
-      - 'tests/**'
-      - 'sync/**'
-      - 'tools/check-post*-browser.cjs'
-      - 'tools/check-orientation-browser.cjs'
-      - 'tools/check-loupe-exit-browser.cjs'
-      - 'tools/e2e/**'
-      - 'tools/qa/**'
-      - 'qa/**'
-      - '.github/workflows/quick-check.yml'
-  pull_request:
-    branches: [main]
-    paths:
-      - 'app/src/main/assets/**'
-      - 'app/src/main/java/**'
-      - 'app/src/main/AndroidManifest.xml'
-      - 'app/src/test/**'
-      - 'app/build.gradle'
-      - 'config/app-version.properties'
-      - 'tests/**'
-      - 'sync/**'
-      - 'tools/check-post*-browser.cjs'
-      - 'tools/check-orientation-browser.cjs'
-      - 'tools/check-loupe-exit-browser.cjs'
-      - 'tools/e2e/**'
-      - 'tools/qa/**'
-      - 'qa/**'
-      - '.github/workflows/quick-check.yml'
+  workflow_dispatch:
 
 permissions:
   contents: read
