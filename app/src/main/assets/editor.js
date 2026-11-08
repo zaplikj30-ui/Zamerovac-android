@@ -75,8 +75,14 @@ function finishHandleGesture(handle){
  return true;
 }
 function commitEditor(){if(current?.kind==='photo'&&stageImg){current.width=photoSize.w;current.height=photoSize.h;}touch(current);const confirmed=save();paint();return confirmed}
-function undoEditor(){if(!editStack.length)return;current.items=AnnotationHistory.restore(current.items,editStack,redoStack);commitEditor()}
-function redoEditor(){if(!redoStack.length)return;current.items=AnnotationHistory.restore(current.items,redoStack,editStack);commitEditor()}
+function undoEditor(){if(!editStack.length)return;let restored;
+ try{restored=AnnotationHistory.restore(current.items,editStack,redoStack)}
+ catch(error){notify('Historie úprav je poškozená. Změny nebyly použity.');return false}
+ current.items=restored;return commitEditor()}
+function redoEditor(){if(!redoStack.length)return;let restored;
+ try{restored=AnnotationHistory.restore(current.items,redoStack,editStack)}
+ catch(error){notify('Historie úprav je poškozená. Změny nebyly použity.');return false}
+ current.items=restored;return commitEditor()}
 $('undo').onclick=undoEditor;$('redo').onclick=redoEditor;$('selectTool').onclick=()=>setTool('select');$('toolsToggle').onclick=()=>showTools();$('activeTool').onclick=()=>{
   if(suppressToolClick){suppressToolClick=false;return;}
   if(mode==='select'||mode==='pan')setTool(lastDrawingTool);
