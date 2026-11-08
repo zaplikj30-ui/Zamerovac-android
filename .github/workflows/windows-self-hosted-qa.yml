@@ -43,7 +43,9 @@ jobs:
       - name: Read-only checkout - bez uložených GitHub přihlašovacích údajů
         uses: actions/checkout@v4
         with:
-          ref: ${{ inputs.target_ref || github.sha }}
+          # PRVOTNÍ VALIDACE: suite local-qa je zatím jen na B12, nikoli na main.
+          # Před sloučením tohoto workflow změnit výchozí ref zpět na github.sha.
+          ref: ${{ inputs.target_ref || 'fix/b12-pan-pinch-lifecycle-20261108' }}
           fetch-depth: 1
           persist-credentials: false
           submodules: false
