@@ -22,6 +22,10 @@ function checkpoint(items,undoStack){
 function restore(items,fromStack,toStack){
  if(!fromStack.length)return null;
  const previous=JSON.parse(fromStack[fromStack.length-1]);
+ // A syntactically valid JSON object/null is still not an annotation list.
+ // Refuse it before changing the model, Undo, Redo, or the saved state.
+ if(!Array.isArray(previous)||previous.some(item=>!item||typeof item!=='object'||Array.isArray(item)))
+  throw new TypeError('Poškozená historie kót: očekáván seznam objektů');
  const current=JSON.stringify(items);
  toStack.push(current);
  fromStack.pop();
