@@ -11,7 +11,7 @@ on:
         default: 'main'
         type: string
   push:
-    branches: [main]
+    branches: [main, infra/windows-self-hosted-qa-20261108] # pouze prvotní test, před merge odebrat
     paths:
       - 'app/src/main/assets/**'
       - 'app/src/main/java/**'
