@@ -1,5 +1,25 @@
 # Domácí GitHub Actions runner – zaměřování a stav migrace
 
+
+## Ověřený integrační checkpoint — B12 + B13 (8. 11. 2026)
+
+[Integrační draft PR #64](https://github.com/zaplikj30-ui/Zamerovac-android/pull/64) slučuje B12 QA testovací kód (včetně `tools/local-qa.cjs`, který chybí na `main`) se zajištěnou domácí infrastrukturou a pěti manuálními cloudovými fallback workflow. Jde o **staging**, nikoli aktivní `main`; původní automatické placené spouštěče na `main` stále existují. Další izolovaný [draft PR #65](https://github.com/zaplikj30-ui/Zamerovac-android/pull/65) opravuje jednu reprodukovanou chybu tří prstů v gestu bez úpravy uložených rozměrů.
+
+**Nový společný domácí běh [#42474058575](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42474058575): 4/4 SUCCESS** na přesném checkoutu B13 commitu `d59eea0c1aac476bac68b5fd8c97367b99ffac1d`:
+
+- Windows Node/Python: **76 PASS, 0 FAIL**.
+- Windows skutečný Chromium CDP, kreslení a pixely: **21 PASS, 0 FAIL**.
+- WSL2 ext4 / Java 17 / Robolectric: **265/265 PASS, 0 fail, 0 error, 0 skipped**, 44 XML reportů; nezávislý Python PDF parser a renderer kontrolovaly 1stránkovou, 3stránkovou a vícestránkovou sadu, včetně barev fixtures – **PASS**.
+- Windows technická `assemblePreview`: **PASS**, certifikát a `cz.zamerovac.app.preview` zachovány, testovací `versionCode=1155` > vydané `1154`, `versionName=1.3.0-test`. Kontrolní APK ihned smazána; **žádné vydání/artefakt APK**.
+
+Regrese tří prstů má [RED důkaz #42473552211](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42473552211) a [GREEN #42473642573](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42473642573); po celé regresi byl **dočasný** `.github/workflows/windows-b13-full-qa.yml` odstraněn v B13 `63c6e45`. **Finální B13 HEAD není totožný s testovaným SHA**, ale rozdíl spočívá výlučně v odstranění dočasného CI YAML (produkční a testové soubory beze změny). Není tedy pravdivé tvrdit 4/4 přímý PASS na finálním HEAD.
+
+Pro integrační #64 byl zkontrolován obsah **všech pěti** cloudových workflow: pouze `workflow_dispatch` + explicitní `cloud_run_approved` + omezení vlastníka a `main`; cloudové vydání ještě vyžaduje `publish_release`. Domácí release je samostatný manuální workflow a **NOT RUN**; existující fallback cloud release `build-apk.yml` používá odvození versionCode z workflow run-number a může při ručním použití nesplnit monotonicitu oproti vydané APK 1154 (zastaví se, ale může spotřebovat placený běh). **Před zapnutím/reálným použitím musí projít nezávislou revizí**, preferovaný release je připravený domácí workflow, který bere versionCode ze skutečného předchozího vydání. V žádném případě nespouštět placenou alternativu bez výslovného souhlasu vlastníka.
+
+Na PC byl vytvořen ZIP ovládacích ikon STOP/START a uživatel nahlásil úspěšné vytvoření ikon na ploše. **Jejich skutečná funkce NOT RUN**; stop služby může přerušit job. Fyzický Android, S Pen, Bosch, živá sync, instalace přes původní verzi a test služby bez hlavního Windows přihlášení **NOT RUN**.
+
+**Rozhodovací brána:** všechno stage, nic neslučovat/vydávat bez bezpečné migrace placených triggerů a souhlasu. Po schválení nejdříve aktivovat ochranu cloud fallback na `main`, ověřit `main` self-hosted QA se skutečným main SHA, až potom sloučit editor a B13, po společné regresi připravit **jedinou** APK. Stávající starší kapitoly níže jsou historické checkpointy.
+
 **Datum:** 8. 11. 2026. **Účel:** zdrojový kód, výsledky, PR a schválená vydání zůstávají na GitHubu; samotné výpočty QA a build preview APK provádí Windows 11 domácí počítač, bez placeného GitHub-hosted runneru.
 
 ## Provoz a zabezpečení
