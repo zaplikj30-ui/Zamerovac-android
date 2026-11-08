@@ -39,7 +39,8 @@ def api_read(url, token, accept="application/vnd.github+json", opener=None):
     target = urllib.parse.urlsplit(url)
     if (target.scheme != "https" or target.hostname != "api.github.com"
             or target.port not in (None, 443) or target.username or target.password
-            or not target.path.startswith("/repos/" + REPO + "/releases")):
+            or not (target.path == "/repos/" + REPO + "/releases"
+                    or target.path.startswith("/repos/" + REPO + "/releases/"))):
         raise ValueError("STOP: unexpected GitHub release API URL")
     request = urllib.request.Request(url, headers={
         "Authorization": "Bearer " + token,
@@ -61,10 +62,12 @@ def latest_published(releases):
     return max(options, key=lambda x: x["published_at"])
 
 
-def require_valid_old_apk(package_text, cert_text):
+def require_valid_old_apk(package_text, cert_text, previous_tag):
     match = re.search(r"^package: name='([^']+)' versionCode='([0-9]+)' versionName='([^']+)'",
                       package_text, flags=re.MULTILINE)
-    if not match or match.group(1) != PACKAGE or match.group(3) == "":
+    if (not match or match.group(1) != PACKAGE or
+            not SEMVER.fullmatch(previous_tag) or
+            match.group(3) != previous_tag[len("test-v"):] + "-test"):
         raise ValueError("STOP: previous release APK has wrong package/version")
     if CERT_SHA256 not in cert_text.lower():
         raise ValueError("STOP: previous release APK signing certificate differs")
@@ -118,7 +121,7 @@ def main():
                                   capture_output=True, text=True).stdout
         old_package = subprocess.run([str(aapt), "dump", "badging", str(target)],
                                      check=True, capture_output=True, text=True).stdout
-        prior = require_valid_old_apk(old_package, old_sign)
+        prior = require_valid_old_apk(old_package, old_sign, previous["tag_name"])
         values = version_values(prior, version, previous["tag_name"])
     finally:
         target.unlink(missing_ok=True)
