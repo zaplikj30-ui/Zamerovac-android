@@ -1,5 +1,12 @@
 # Domácí GitHub Actions runner – zaměřování a stav migrace
 
+## Aktuální kontrolní bod 8. 11. 2026 – domácí migrace je na main 4/4 PASS; B14 otestována
+
+- **Migrace skutečně hotová na `main` `a309a060dad7075b16cd9d23fd2a3f4c6e12972f`:** [HOME run #42497594300](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42497594300) – **4/4 SUCCESS** (76 rychlých, 21 Chromium, 265 Java/Robolectric + PDF, podepsaný lokální APK smoke). PR #69 byl výslovně schválen a sloučen. Níže uvedený původní text „main nemá QA“ je starý historický záznam.
+- **Navazující B14 v [draft PR #71](https://github.com/zaplikj30-ui/Zamerovac-android/pull/71):** [home full run #42519327260](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42519327260), ověřený zdroj `050fab53f48890d1eca2bc12d9b2938f49d67191`: **4/4 SUCCESS** – 79 rychlých Node/Python, 21 Chromium/CDP/pixely, 265 Java/Robolectric + PDF a místní APK smoke (signer/package/code 1155 > 1154), pak **APK smazána**. Jednorázový owner-only workflow byl smazán, zůstaly nové testy a runtime; následně jen doplnění uživatelských textů/dokumentace před integrací. **Přesný B14 main SHA je nutné samostatně otestovat po merge, neodvozovat PASS z této branch.**
+- Cloud fallback pouze manuální se schválením vlastníka a limitem 12 USD/měsíc. Domácí runner 16 GB RAM a WSL2 s omezením paměti, sériové těžké joby. **Nezvyšovat HW; nezapínat automatický placený cloud.** Fyzická zkouška STOP/START, Samsung, Bosch, Drive/sync zatím NOT RUN. Schválené vydání jediné APK je samostatný krok a nebylo provedeno.
+
+
 ## Aktualizace migrace 8. 11. 2026 – domácí B12/B13 + release guardy 4/4 PASS, na main zatím NE
 
 - **Cloudová fáze 1 HOTOVO:** `main` `45e1758` má přesně pět GitHub-hosted workflow pouze na `workflow_dispatch`, `cloud_run_approved=false` default, owner + repo + main guard, nouzový cloud APK navíc `publish_release=true`; při přepnutí **0 placených běhů**. [Záznam #68](https://github.com/zaplikj30-ui/Zamerovac-android/pull/68#issuecomment-6723218494).
