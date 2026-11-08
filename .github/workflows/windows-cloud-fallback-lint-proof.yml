@@ -1,0 +1,67 @@
+name: Zamerovac - domaci staticka kontrola manual cloud fallback budget
+on:
+  push:
+    branches: [infra/windows-self-hosted-qa-20261108]
+    paths:
+      - '.github/workflows/windows-cloud-fallback-lint-proof.yml'
+permissions:
+  contents: read
+jobs:
+  cloud-guard-lint:
+    if: github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui'
+    name: Audit 5 staged cloud workflows - NO paid cloud work
+    runs-on: [self-hosted, Windows, X64, zamerovac-qa]
+    timeout-minutes: 8
+    steps:
+      - name: Local trusted MinGit
+        shell: cmd
+        run: |
+          if not exist "C:\actions-runner\tools\MinGit-2.56.0.4\cmd\git.exe" exit /b 1
+          echo C:\actions-runner\tools\MinGit-2.56.0.4\cmd>>"%GITHUB_PATH%"
+      - name: Checkout exact owner-controlled staging sha only
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: 9bfd36e03e6ded40a0cc5f4f9511764768a918cc
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+      - name: Staged workflow manual triggers, actor/approval gating and no unsafe release
+        shell: 'C:\actions-runner\tools\Python313\python.exe {0}'
+        run: |
+          import os
+          from pathlib import Path
+          import subprocess
+          import sys
+          import yaml
+
+          actual = subprocess.check_output(["git", "rev-parse", "HEAD"], text=True).strip()
+          expected = "9bfd36e03e6ded40a0cc5f4f9511764768a918cc"
+          if actual != expected or os.environ.get("USERNAME", "").lower() != "zamerovacqa":
+              sys.exit("STOP: unexpected staging commit or Windows user")
+          names = ("quick-check.yml", "verify-native.yml", "build-apk.yml",
+                   "emulator-smoke.yml", "export-audit-sources.yml")
+          for filename in names:
+              path = Path(".github/workflows") / filename
+              data = yaml.safe_load(path.read_text(encoding="utf-8"))
+              event = data.get("on") or data.get(True)
+              if not isinstance(event, dict) or set(event) != {"workflow_dispatch"}:
+                  sys.exit("FAIL: paid cloud auto trigger in " + filename)
+              approved = event["workflow_dispatch"]["inputs"]["cloud_run_approved"]
+              if approved["type"] != "boolean" or approved["default"] is not False or not approved["required"]:
+                  sys.exit("FAIL: paid cloud confirmation missing " + filename)
+              jobs = data["jobs"]
+              if len(jobs) != (3 if filename == "quick-check.yml" else 1):
+                  sys.exit("FAIL: incomplete cloud fallback jobs " + filename)
+              for key, job in jobs.items():
+                  if job.get("runs-on") != "ubuntu-latest":
+                      sys.exit("FAIL: unexpected cloud runner " + filename)
+                  guard = job.get("if", "")
+                  if "inputs.cloud_run_approved == true" not in guard or "github.actor == 'zaplikj30-ui'" not in guard:
+                      sys.exit("FAIL: missing owner and budget acknowledgement on " + filename + "/" + key)
+              if filename == "build-apk.yml":
+                  flag = event["workflow_dispatch"]["inputs"]["publish_release"]
+                  cond = next(iter(jobs.values()))["if"]
+                  if flag["default"] is not False or "inputs.publish_release == true" not in cond or "github.ref == 'refs/heads/main'" not in cond:
+                      sys.exit("FAIL: unauthorized APK release workflow")
+              print("PASS: manual-only owner-approved paid cloud fallback", filename)
+          print("PASS: 5/5 protected, no GitHub-hosted jobs started by this lint")
