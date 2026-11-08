@@ -1,17 +1,26 @@
 name: Sestavit a vydat Zaměřovač (testovací verze)
-# APK spustit jen rucne nebo zmenou vyhrazeneho spousteciho souboru.
-# Obycejne commity na main nesestavuji aplikaci.
+# Emergency cloud fallback, explicit owner approval only; NO auto cloud build.
+# Publishing needs explicit owner dispatch with publish_release=true.
+# Manual-only: never build or publish without explicit owner approval.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - '.github/apk-build-request.txt'
+    inputs:
+      cloud_run_approved:
+        description: 'Placený cloud jen s výslovným souhlasem vlastníka (limit 12 USD/měsíc)'
+        required: true
+        type: boolean
+        default: false
+      publish_release:
+        description: 'Explicitni souhlas se zverejnenim (vyzaduje predepsane kontroly)'
+        required: true
+        type: boolean
+        default: false
 concurrency:
   group: zamerovac-test-apk-${{ github.ref }}
   cancel-in-progress: true
 jobs:
   android:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.cloud_run_approved == true && inputs.publish_release == true }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -24,6 +33,58 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
+      - name: PŘED sestavením ověřit poslední vydanou APK, podpis a vyšší versionCode
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          APP_VERSION="$(node tools/release/versioning.js --release)"
+          if gh release view "test-v${APP_VERSION}" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "STOP: vydání této verze již existuje." >&2
+            exit 1
+          fi
+          PREVIOUS_TAG="$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq '.tagName')"
+          if [[ ! "$PREVIOUS_TAG" =~ ^test-v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
+            echo "STOP: nelze bezpečně určit poslední testovací release." >&2
+            exit 1
+          fi
+          node - "$APP_VERSION" "${PREVIOUS_TAG#test-v}" <<'NODE'
+          const [next, previous] = process.argv.slice(2).map(s => s.split('.').map(Number));
+          if (![next, previous].every(v => v.length === 3 && v.every(Number.isSafeInteger))) process.exit(1);
+          for (let i = 0; i < 3; i++) {
+            if (next[i] !== previous[i]) process.exit(next[i] > previous[i] ? 0 : 1);
+          }
+          process.exit(1);
+          NODE
+          mkdir -p previous
+          gh release download "$PREVIOUS_TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.apk' --dir previous
+          mapfile -t MATCHES < <(find previous -maxdepth 1 -type f -name '*.apk')
+          if (( ${#MATCHES[@]} != 1 )); then
+            echo "STOP: poslední vydání nemá právě jednu APK." >&2
+            exit 1
+          fi
+          PREVIOUS_APK="${MATCHES[0]}"
+          AAPT="$(find "${ANDROID_HOME}/build-tools" -type f -name aapt | sort -V | tail -n 1)"
+          SIGNER="$(find "${ANDROID_HOME}/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          test -x "$AAPT" && test -x "$SIGNER"
+          PREVIOUS_SIGN="$("$SIGNER" verify --min-sdk-version 26 --print-certs "$PREVIOUS_APK")"
+          printf '%s\n' "$PREVIOUS_SIGN" | grep -Fqi 'c828c96739e554e8da4f5851913356134f1359a98d5013772ad5587e74a2d229'
+          BADGING="$("$AAPT" dump badging "$PREVIOUS_APK")"
+          PREVIOUS_INFO="${BADGING%%$'\n'*}"
+          printf '%s\n' "$PREVIOUS_INFO" | grep -Fq "name='cz.zamerovac.app.preview'"
+          PREVIOUS_CODE="$(printf '%s\n' "$PREVIOUS_INFO" | grep -oE "versionCode='[0-9]+'" | cut -d "'" -f 2)"
+          if [[ ! "$PREVIOUS_CODE" =~ ^[0-9]+$ ]] || (( PREVIOUS_CODE < 1001 || PREVIOUS_CODE >= 2147483646 )); then
+            echo "STOP: neplatné či nepoužitelné číslo poslední vydané APK." >&2
+            exit 1
+          fi
+          NEW_CODE=$((PREVIOUS_CODE + 1))
+          echo "APP_VERSION=$APP_VERSION" >> "$GITHUB_ENV"
+          echo "PREVIOUS_TAG=$PREVIOUS_TAG" >> "$GITHUB_ENV"
+          echo "PREVIOUS_VERSION_CODE=$PREVIOUS_CODE" >> "$GITHUB_ENV"
+          echo "RELEASE_VERSION_CODE=$NEW_CODE" >> "$GITHUB_ENV"
+          echo "VERSION_WORKFLOW_OFFSET=$((NEW_CODE - 1000))" >> "$GITHUB_ENV"
+          echo "PASS: vydaná APK code=$PREVIOUS_CODE; nový code=$NEW_CODE, totožný podpis."
       - name: Kontrola JavaScriptu a struktury projektu
         run: |
           node --check app/src/main/assets/app.js
@@ -43,20 +104,13 @@ jobs:
           node tests/laser_auto_interaction.js
           node tests/extra_toolbar_interaction.js
           python3 -m unittest discover -s tests -p "test_*.py" -v
-      - name: Před vydáním ověřit verzi a nepřepisovat existující APK
+      - name: Sestavit testovací variantu aplikace Zaměřovač
         shell: bash
-        env:
-          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
-          APP_VERSION="$(node tools/release/versioning.js --release)"
-          if gh release view "test-v${APP_VERSION}" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "Vydání této verze již existuje a nesmí být přepsáno." >&2
-            exit 1
-          fi
-          echo "APP_VERSION=${APP_VERSION}" >> "$GITHUB_ENV"
-      - name: Sestavit testovací variantu aplikace Zaměřovač
-        run: gradle --no-daemon :app:verifyDriveRegistration assemblePreview -PdriveRequireConfigured=true
+          # GITHUB_* nejde přepsat přes GITHUB_ENV; pouze pro subprocess Gradlu.
+          export GITHUB_RUN_NUMBER="$VERSION_WORKFLOW_OFFSET"
+          gradle --no-daemon :app:verifyDriveRegistration assemblePreview -PdriveRequireConfigured=true
       - name: Ověřit podpis a jednoznačnou verzi testovací APK
         shell: bash
         env:
@@ -78,25 +132,18 @@ jobs:
           PACKAGE_INFO="$("$AAPT" dump badging "$APK" | head -n 1)"
           echo "$PACKAGE_INFO"
           echo "$PACKAGE_INFO" | grep -q "name='cz.zamerovac.app.preview'"
-          echo "$PACKAGE_INFO" | grep -q "versionCode='$((1000 + GITHUB_RUN_NUMBER))'"
+          echo "$PACKAGE_INFO" | grep -q "versionCode='${RELEASE_VERSION_CODE}'"
           echo "$PACKAGE_INFO" | grep -q "versionName='${APP_VERSION}-test'"
-          # An update must have a strictly higher versionCode and the unchanged signature.
-          PREVIOUS_TAG="$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq '.tagName')"
-          test -n "$PREVIOUS_TAG"
-          mkdir -p previous dist
-          gh release download "$PREVIOUS_TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.apk' --dir previous
-          PREVIOUS_APK="$(find previous -maxdepth 1 -name '*.apk' -type f | head -n 1)"
-          test -n "$PREVIOUS_APK"
-          PREVIOUS_INFO="$("$AAPT" dump badging "$PREVIOUS_APK" | head -n 1)"
-          echo "$PREVIOUS_INFO" | grep -q "name='cz.zamerovac.app.preview'"
-          "$SIGNER" verify --min-sdk-version 26 --print-certs "$PREVIOUS_APK" | grep -qi 'c828c96739e554e8da4f5851913356134f1359a98d5013772ad5587e74a2d229'
-          PREVIOUS_CODE="$(echo "$PREVIOUS_INFO" | grep -oE "versionCode='[0-9]+'" | grep -oE '[0-9]+')"
-          NEW_CODE="$((1000 + GITHUB_RUN_NUMBER))"
-          test -n "$PREVIOUS_CODE"
-          if (( NEW_CODE <= PREVIOUS_CODE )); then
-            echo "Nová APK by nemohla aktualizovat předchozí versionCode." >&2
+          if (( RELEASE_VERSION_CODE <= PREVIOUS_VERSION_CODE )); then
+            echo "STOP: nevzestupný versionCode." >&2
             exit 1
           fi
+          CURRENT_PREVIOUS_TAG="$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq '.tagName')"
+          if [ "$CURRENT_PREVIOUS_TAG" != "$PREVIOUS_TAG" ]; then
+            echo "STOP: během sestavení se změnilo poslední vydání, nutná nová kontrola." >&2
+            exit 1
+          fi
+          mkdir -p dist
           cp "$APK" "dist/Zamerovac-v${APP_VERSION}.apk"
           sha256sum dist/*.apk
       - uses: actions/upload-artifact@v4
@@ -105,7 +152,7 @@ jobs:
           path: dist/*.apk
           retention-days: 30
       - name: Vydat APK přímo do GitHub Releases (bez ZIP)
-        if: github.ref == 'refs/heads/main'
+        if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.publish_release == true }}
         shell: bash
         env:
           GH_TOKEN: ${{ github.token }}
@@ -122,7 +169,7 @@ jobs:
                 --repo "$GITHUB_REPOSITORY" \
                 --target "$GITHUB_SHA" \
                 --title "Zaměřovač ${APP_VERSION}" \
-                --notes "Testovací Zaměřovač. Nově používá přehledné číslování vydání; funkce z 1.2.153 zůstaly zachovány. Instaluj jako aktualizaci přes stávající testovací verzi bez odinstalování nebo mazání dat. Fyzická akceptace zatím nebyla provedena." \
+                --notes "Testovací Zaměřovač ${APP_VERSION}. Aktuální změny a opravy popisuje historie změn přímo v aplikaci. Jde o aktualizaci stávající testovací aplikace, nikoliv o novou aplikaci. Fyzické ověření po instalaci je samostatný krok." \
                 --latest; then
               exit 0
             fi
