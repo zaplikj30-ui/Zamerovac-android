@@ -171,7 +171,9 @@ jobs:
     env:
       CI: '1'
       PYTHONUTF8: '1'
-      # SDK cestu nastaví setup-android v účtu služby; nehardcodovat profil.
+      # Vlastní izolovaný SDK adresář runneru, nezávislý na osobním profilu.
+      ANDROID_HOME: 'C:\actions-runner\tools\AndroidSdk'
+      ANDROID_SDK_ROOT: 'C:\actions-runner\tools\AndroidSdk'
     steps:
       - name: Načíst pouze důvěryhodné zdroje
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
@@ -200,17 +202,38 @@ jobs:
           gradle-version: '8.10.2'
           cache-disabled: true
 
-      - name: Android SDK command-line tools a platform-tools
-        uses: android-actions/setup-android@be39fa834029ff78f1a44aa3bb0819b8fc2bd8fd # v4
-        with:
-          cmdline-tools-version: '12266719'
-          packages: 'platform-tools'
-          log-accepted-android-sdk-licenses: 'false'
-
-      - name: Android API 35 a build tools potřebné pro Android Gradle Plugin 8.6.1
+      # setup-android@v4 na této Windows službě padá kvůli Expand-Archive
+      # na dočasném souboru bez .zip; používáme podporovaný přímo stažený ZIP.
+      # Oficiální Google Android SDK tools pro Windows; SHA-256 z developer.android.com/studio.
+      - name: Android command-line tools - oficiální ZIP a SHA256 kontrola
         shell: cmd
         run: |
-          call sdkmanager.bat --install "platforms;android-35" "build-tools;35.0.0"
+          if not exist "%ANDROID_HOME%\cmdline-tools\latest\bin\sdkmanager.bat" (
+            if not exist "%ANDROID_HOME%\cmdline-tools" mkdir "%ANDROID_HOME%\cmdline-tools"
+            if errorlevel 1 exit /b 1
+            curl.exe --fail --silent --show-error --location "https://dl.google.com/android/repository/commandlinetools-win-15859902_latest.zip" --output "%RUNNER_TEMP%\zamerovac-android-commandline-15859902.zip"
+            if errorlevel 1 exit /b 1
+            certutil.exe -hashfile "%RUNNER_TEMP%\zamerovac-android-commandline-15859902.zip" SHA256 | findstr.exe /i /c:"90ae805d20434428bffcb699c290860f19bb5f66a67e6b330067e3de801fb04a" >nul
+            if errorlevel 1 (
+              echo CHYBA: SHA256 oficialniho Android SDK archivu nesouhlasi.
+              exit /b 1
+            )
+            tar.exe -xf "%RUNNER_TEMP%\zamerovac-android-commandline-15859902.zip" -C "%ANDROID_HOME%\cmdline-tools"
+            if errorlevel 1 exit /b 1
+            ren "%ANDROID_HOME%\cmdline-tools\cmdline-tools" latest
+            if errorlevel 1 exit /b 1
+          )
+          if not exist "%ANDROID_HOME%\cmdline-tools\latest\bin\sdkmanager.bat" exit /b 1
+          echo %ANDROID_HOME%\cmdline-tools\latest\bin>>"%GITHUB_PATH%"
+          echo %ANDROID_HOME%\platform-tools>>"%GITHUB_PATH%"
+          echo %ANDROID_HOME%\build-tools\35.0.0>>"%GITHUB_PATH%"
+
+      - name: Android SDK licence, API 35 a build tools (bez APK)
+        shell: cmd
+        run: |
+          (for /L %%i in (1,1,50) do @echo y) | call sdkmanager.bat --sdk_root="%ANDROID_HOME%" --licenses
+          if errorlevel 1 exit /b 1
+          call sdkmanager.bat --sdk_root="%ANDROID_HOME%" --install "platform-tools" "platforms;android-35" "build-tools;35.0.0"
           if errorlevel 1 exit /b 1
 
       - name: Ověření přesných verzí (bez APK)
@@ -220,7 +243,7 @@ jobs:
           if errorlevel 1 exit /b 1
           call gradle.bat --version
           if errorlevel 1 exit /b 1
-          call sdkmanager.bat --list_installed
+          call sdkmanager.bat --sdk_root="%ANDROID_HOME%" --list_installed
           if errorlevel 1 exit /b 1
 
       - name: Veřejná Drive registrace a chybové konfigurace
