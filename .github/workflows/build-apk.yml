@@ -5,6 +5,11 @@ name: Sestavit a vydat Zaměřovač (testovací verze)
 on:
   workflow_dispatch:
     inputs:
+      cloud_run_approved:
+        description: 'Placený cloud jen s výslovným souhlasem vlastníka (limit 12 USD/měsíc)'
+        required: true
+        type: boolean
+        default: false
       publish_release:
         description: 'Explicitni souhlas se zverejnenim (vyzaduje predepsane kontroly)'
         required: true
@@ -15,6 +20,7 @@ concurrency:
   cancel-in-progress: true
 jobs:
   android:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && inputs.cloud_run_approved == true && inputs.publish_release == true }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
