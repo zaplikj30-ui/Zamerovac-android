@@ -1,4 +1,5 @@
 name: Zaměřovač - dočasný domácí test ochrany GitHub tokenu
+# Second local run after case-insensitive header removal.
 on:
   push:
     branches:
