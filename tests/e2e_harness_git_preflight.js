@@ -15,7 +15,7 @@ const sandbox={
   if(id==='node:child_process')return {execFileSync(cmd,args){
    gitChecks++;
    assert.equal(cmd,'git');
-   assert.deepEqual(args,['rev-parse','HEAD']);
+   assert.equal(Array.from(args).join(' '),'rev-parse HEAD');
    const error=new Error('spawnSync git ENOENT');error.code='ENOENT';throw error;
   }};
   return require(id);
