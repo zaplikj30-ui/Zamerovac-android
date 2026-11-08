@@ -1,6 +1,20 @@
 # Domácí GitHub Actions runner – zaměřování a stav migrace
 
 
+## Sjednocená přípravná větev B12/B13 a obě vydávací ochrany — 8. 11. 2026
+
+**Větev `integration/b12-b13-safe-home-20261108` je čistý STAGING, bez PR do `main` a bez release.** Vznikla z [domácího release security PR #67](https://github.com/zaplikj30-ui/Zamerovac-android/pull/67) a přebrala bajtově identické čtyři B13 aplikační/testové bloby z [PR #65](https://github.com/zaplikj30-ui/Zamerovac-android/pull/65). Dále obsahuje [záložní cloud versionCode ochranu z #66](https://github.com/zaplikj30-ui/Zamerovac-android/pull/66) a bezpečně upravený regresní `tests/versioning.js`.
+
+[Domácí kontrola celého kombinovaného kódu #42479492037](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42479492037), testovaný SHA `807ce643c8424522448da334098c0675ae035d65`:
+
+- **76 PASS, 0 FAIL, 0 SKIP** rychlé Node/Python testy, včetně B13 tři prsty, historie, verze, a přímé kontroly přesného zdrojového SHA. `tools/local-qa.cjs --quick` vypsal 4 nesouvisející `NOT RUN` pro těžší kontroly (Chromium/APK/fyzická zařízení).
+- **8/8 PASS** off-line ochrana přesměrování GitHub tokenu; pouze falešné tokeny, bez internetu a bez skutečného GitHub API.
+- **6/6 PASS** offline brány cloud fallbacku pro rozpočet a monotonicitu Android versionCode.
+- **FAIL [předchozí pokus #42479354813](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42479354813)**: v rámci integrace se projevil zastaralý JS test (očekával staré `NEW_CODE <= PREVIOUS_CODE` místo bezpečného `RELEASE_VERSION_CODE <= PREVIOUS_VERSION_CODE`) a neúplný `PATH` pro Python v dočasném workflow. Test `tests/versioning.js` byl v **původní vlastnící větvi #66** aktualizován, do integrace přesně převzat a nyní ověřuje **silnější** pravidlo (nezmizel); Python nastaven ve stejném `cmd` prostředí. Následný PASS není maskovaný či vynechaný test.
+- **Dočasný workflow** pro integrační test po PASS odstraněn; současný integrační HEAD má stejné aplikační/testovací a vydávací soubory jako zdroj testovaný v #42479492037, ale změněné SHA kvůli úklidu a dokumentaci.
+
+**Důležité rozlišení:** kompletní 4/4 home QA na aplikaci s B13 má [starší PASS #42474058575](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42474058575), nikoli na novém kombinovaném HEAD. **Na finálním staging commitu 4/4 NOT RUN**. Neproběhla žádná nová APK release ani ověření na fyzickém Samsung/Bosch. K budoucímu spojení do `main` je potřeba nezávislé review a bezpečný přechod placených spouštěčů (stále aktivní na současném main), který nesmí vyvolat překročení měsíčního limitu 12 USD.
+
 ## Nezávislá bezpečnostní oprava stažení staré APK pro domácí vydání (8. 11. 2026)
 
 Při čtení vydaného APK přes `https://api.github.com/repos/.../releases/assets/{id}` umí standardní `urllib.request.HTTPRedirectHandler` zkopírovat původní hlavičku **Authorization: Bearer ...** do požadavku na jiný host (GitHub CDN). To je nežádoucí šíření oprávnění; **nemáme důkaz, že se to stalo v reálném provozu**, protože domácí release workflow dosud **NOT RUN**.
