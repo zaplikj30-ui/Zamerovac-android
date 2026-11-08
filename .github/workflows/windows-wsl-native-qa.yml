@@ -1,0 +1,157 @@
+name: Zamerovac - domaci Linux Robolectric komplet B12
+
+# Samostatna lokalni WSL QA, zamerne nepouziva GitHub-hosted runner.
+# Bez pull_request a bez checkoutu forku. Pred merge odstranit docasny B12 pin/infra trigger.
+on:
+  push:
+    branches: [infra/windows-self-hosted-qa-20261108]
+    paths:
+      - '.github/workflows/windows-wsl-native-qa.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zamerovac-wsl-native-regression
+  cancel-in-progress: false
+
+jobs:
+  native:
+    if: github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui'
+    name: Ubuntu WSL2 / Gradle 8.10.2 / 265 Robolectric
+    runs-on: [self-hosted, Windows, X64, zamerovac-qa]
+    timeout-minutes: 60
+    steps:
+      - name: Duveryhodny Git v PATH pred checkoutem
+        shell: cmd
+        run: |
+          if not exist "C:\actions-runner\tools\MinGit-2.56.0.4\cmd\git.exe" exit /b 1
+          echo C:\actions-runner\tools\MinGit-2.56.0.4\cmd>>"%GITHUB_PATH%"
+
+      - name: Checkout pouze nemenneho overeneho B12 QA commitu
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: bc67b1a3507829a39be46a2b41e04198c71fe767
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+
+      - name: Nezavisle dokazat commit pro nativni testy
+        shell: cmd
+        run: |
+          for /f %%H in ('git rev-parse HEAD') do set "ACTUAL_SHA=%%H"
+          if /I not "%ACTUAL_SHA%"=="bc67b1a3507829a39be46a2b41e04198c71fe767" exit /b 1
+          echo TESTED_SOURCE_SHA=%ACTUAL_SHA%
+
+      - name: Linux ext4 testovni adresar, Gradle SHA256, vsechny Robolectric + Drive testy
+        shell: 'C:\actions-runner\tools\Python313\python.exe {0}'
+        run: |
+          import os
+          from pathlib import Path
+          import subprocess
+
+          expected = "bc67b1a3507829a39be46a2b41e04198c71fe767"
+          if os.environ.get("USERNAME", "").lower() != "zamerovacqa":
+              raise SystemExit("STOP: unexpected Windows account")
+          workspace = os.environ["GITHUB_WORKSPACE"]
+          sha = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=workspace, text=True).strip()
+          if sha != expected:
+              raise SystemExit("STOP: checkout SHA mismatch")
+
+          linux = r"""
+          set -Eeuo pipefail
+          export CI=1
+          export DEBIAN_FRONTEND=noninteractive
+          export LC_ALL=C.UTF-8
+          export ANDROID_HOME=/opt/android-sdk
+          export ANDROID_SDK_ROOT=/opt/android-sdk
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          export GRADLE_USER_HOME=/root/.gradle
+
+          source_dir="$(wslpath -u "$1")"
+          reports="$(wslpath -u "$2")"
+          sha="$3"
+          destination="/root/zamerovac-qa-commits/$sha"
+          mkdir -p "$reports"
+          trap 'if [ -d "$destination/app/build/test-results/testPreviewUnitTest" ]; then cp -a "$destination/app/build/test-results/testPreviewUnitTest" "$reports/"; fi' EXIT
+
+          echo "[WSL] Linux ext4 isolated fixture and pinned SHA"
+          test -d "$source_dir/.git"
+          test -f "$source_dir/app/build.gradle"
+          if [ ! -d "$destination/.git" ]; then
+            mkdir -p "$destination"
+            cp -a "$source_dir/." "$destination/"
+          fi
+          cd "$destination"
+          actual="$(git rev-parse HEAD)"
+          echo "[WSL] TESTED_SOURCE_SHA=$actual"
+          test "$actual" = "$sha"
+          test -f "$ANDROID_HOME/platforms/android-35/android.jar"
+          test "$(uname -s)" = "Linux"
+          java -version
+
+          echo "[WSL] Pinned official Gradle 8.10.2 SHA256"
+          archive=/opt/gradle-8.10.2-bin.zip
+          check=31c55713e40233a8303827ceb42ca48a47267a0ad4bab9177123121e71524c26
+          if [ ! -x /opt/gradle-8.10.2/bin/gradle ]; then
+            curl --fail --silent --show-error --location --retry 2 --connect-timeout 20 --max-time 900 \
+              https://services.gradle.org/distributions/gradle-8.10.2-bin.zip --output "$archive"
+            echo "$check  $archive" | sha256sum --check
+            unzip -q "$archive" -d /opt
+            rm -f "$archive"
+          fi
+          gradle=/opt/gradle-8.10.2/bin/gradle
+          "$gradle" --version
+
+          echo "[WSL] Negative Drive configuration test first"
+          "$gradle" --no-daemon --max-workers=1 \
+            -Dorg.gradle.jvmargs="-Xmx1536m -XX:MaxMetaspaceSize=384m" \
+            -p tools/drive-config-checks verify --console=plain
+
+          echo "[WSL] FULL native Java/Robolectric at exact source SHA"
+          "$gradle" --no-daemon --max-workers=1 \
+            -Dorg.gradle.jvmargs="-Xmx1536m -XX:MaxMetaspaceSize=384m" \
+            :app:verifyDriveRegistration :app:compilePreviewJavaWithJavac \
+            :app:testPreviewUnitTest -PdriveRequireConfigured=true --console=plain
+
+          echo "[WSL] Independent XML assertion for the full native suite"
+          python3 - <<'PY_XML'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          files = sorted(Path('app/build/test-results/testPreviewUnitTest').glob('TEST-*.xml'))
+          if not files:
+              raise SystemExit("FAIL: no native test reports")
+          totals = {'tests': 0, 'failures': 0, 'errors': 0, 'skipped': 0}
+          for path in files:
+              root = ET.parse(path).getroot()
+              for name in totals:
+                  totals[name] += int(root.attrib.get(name, '0'))
+          print("LINUX_ROBOLECTRIC_XML_COUNTS:", totals, "FILES:", len(files), flush=True)
+          if totals['tests'] < 265 or totals['failures'] or totals['errors'] or totals['skipped']:
+              raise SystemExit("FAIL: expected all 265+ native tests to pass without skips")
+          print("PASS: complete Java/Robolectric regression on Linux ext4, exact B12 SHA", flush=True)
+          PY_XML
+          echo "[WSL] NO APK generated or uploaded, NO cloud hosted runner"
+          """
+
+          output_dir = str(Path(workspace) / "wsl-native-reports")
+          cmd = ["wsl.exe", "--distribution", "Zamerovac-Ubuntu-QA", "--user",
+                 "root", "--exec", "/bin/bash", "-lc", linux, "_", workspace,
+                 output_dir, expected]
+          print("WSL 2 capped 4GB RAM / 2 CPUs; serial Gradle; no emulator / no release", flush=True)
+          p = subprocess.Popen(cmd, stdin=subprocess.DEVNULL, stdout=subprocess.PIPE,
+                               stderr=subprocess.STDOUT)
+          for line in p.stdout:
+              print(line.decode("utf-8", errors="replace").rstrip(), flush=True)
+          rc = p.wait()
+          if rc != 0:
+              raise SystemExit("FAIL: Linux native QA returned " + str(rc))
+
+      - name: Dolozit vysledky testu bez APK
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: zamerovac-home-wsl-native-junit
+          path: wsl-native-reports/testPreviewUnitTest/
+          if-no-files-found: ignore
+          retention-days: 3
