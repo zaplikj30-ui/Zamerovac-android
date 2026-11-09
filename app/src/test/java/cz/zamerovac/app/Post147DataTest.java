@@ -84,6 +84,14 @@ public class Post147DataTest {
         File primary=new File(activity.getFilesDir(),"projects.json"),backup=new File(activity.getFilesDir(),"projects.bak");
         java.nio.file.Files.write(primary.toPath(),"broken-primary".getBytes(StandardCharsets.UTF_8));
         java.nio.file.Files.write(backup.toPath(),"broken-backup".getBytes(StandardCharsets.UTF_8));
+        // Real original bytes survive both failed recovery and the later
+        // out-of-band replacement of stale backup. No promotion occurs here.
+        File mediaDir=new File(activity.getFilesDir(),"media");
+        assertTrue(mediaDir.isDirectory()||mediaDir.mkdirs());
+        byte[] photoBytes=new byte[]{17,11,5,3,2},videoBytes=new byte[]{0,0,0,8,102,116,121,112};
+        File photo=new File(mediaDir,"original-photo"),video=new File(mediaDir,"original-video");
+        java.nio.file.Files.write(photo.toPath(),photoBytes);
+        java.nio.file.Files.write(video.toPath(),videoBytes);
         String loaded=activity.new JsApi().loadData();assertTrue(new JSONObject(loaded).getBoolean("_loadError"));
         java.lang.reflect.Method write=MainActivity.class.getDeclaredMethod("writeDb",String.class);write.setAccessible(true);
         try{write.invoke(activity,"{\"schema\":1,\"records\":[]}");fail("Write after failed load must be blocked");}
@@ -106,6 +114,8 @@ public class Post147DataTest {
         assertEquals("broken-primary",new String(java.nio.file.Files.readAllBytes(primary.toPath()),StandardCharsets.UTF_8));
         assertArrayEquals(restoredBackup,java.nio.file.Files.readAllBytes(backup.toPath()));
         assertTrue(DatabaseRecovery.pending(activity.getFilesDir()));
+        assertArrayEquals(photoBytes,java.nio.file.Files.readAllBytes(photo.toPath()));
+        assertArrayEquals(videoBytes,java.nio.file.Files.readAllBytes(video.toPath()));
         assertEquals("1250,123456",new JSONObject(recovered).getJSONArray("records")
             .getJSONObject(0).getJSONArray("items").getJSONObject(0).getString("measure"));
     }
