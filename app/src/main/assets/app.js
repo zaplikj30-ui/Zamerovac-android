@@ -83,7 +83,21 @@ function reconcileSavedState(base,local,remote){
   }
   if(purged.has(id)&&(!l||l.deleted)&&(!d||d.deleted))continue;
   if(sameSavedValue(l,d)){if(l)records.push(l);continue}
-  if(sameSavedValue(l,o)){if(d)records.push(d);continue}
+  if(sameSavedValue(l,o)){
+   if(d)records.push(d);
+   else if(!native&&l&&!l.deleted&&l.conflict===true&&
+       typeof l.conflictOf==='string'&&l.id!==l.conflictOf&&
+       typeof l.conflictSource==='string'&&
+       l.conflictSource.startsWith('purge:'+l.conflictOf+':')&&
+       purged.has(l.conflictOf)&&Object.hasOwn(tombstones,l.conflictOf)&&
+       !purged.has(l.id)&&!Object.hasOwn(tombstones,l.id)){
+    // Browser-only stale callback does not prove deletion of a previously
+    // persisted, renamed legacy conflict copy. A tombstone for the COPY id
+    // still wins. Native CAS authority never enters this fallback.
+    records.push(l);
+   }
+   continue;
+  }
   if(sameSavedValue(d,o)){if(l)records.push(l);continue}
   if(sameHierarchyIntent(l,d)){records.push(l);continue}
   if(sameHierarchyIntent(d,l)){records.push(d);continue}
