@@ -365,7 +365,8 @@ final class RecoveryProtectionArchive {
         if(listed.length()>MAX_FILES)return false;
         Set<String> seen=new HashSet<>();
         for(int i=0;i<listed.length();i++){
-            JSONObject entry=listed.getJSONObject(i),path=entry.getString("path");
+            JSONObject entry=listed.getJSONObject(i);
+            String path=entry.getString("path");
             validatePath(path);
             if(!seen.add(path))return false;
             File candidate=new File(payload,path);
