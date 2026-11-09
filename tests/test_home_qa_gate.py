@@ -28,6 +28,7 @@ jobs:
     steps:
       - uses: actions/checkout@%s
         with:
+          ref: %s
           persist-credentials: false
       - name: Gate before expensive work
         run: |
@@ -39,7 +40,7 @@ jobs:
           python3 tools/home_qa_gate.py wsl-native --expected-sha %s
           /opt/gradle-8.10.2/bin/gradle :app:testPreviewUnitTest
           \"\"\"
-""" % (CHECKOUT, SHA, SHA)
+""" % (CHECKOUT, SHA, SHA, SHA)
 
 
 class GateUnitTest(unittest.TestCase):
@@ -147,6 +148,16 @@ class GateUnitTest(unittest.TestCase):
             "echo skipping_wsl_native_preflight --expected-sha",
         )
         with self.assertRaisesRegex(GATE.GateError, "reusable Windows and WSL"):
+            GATE.check_workflow(bad, strict=True)
+
+    def test_strict_rejects_untrusted_checkout_ref(self):
+        for replacement in ("main", "refs/heads/qa/old", "0" * 40):
+            with self.subTest(replacement=replacement), self.assertRaises(GATE.GateError):
+                GATE.check_workflow(valid_workflow().replace("ref: " + SHA, "ref: " + replacement), strict=True)
+
+    def test_strict_rejects_disagreement_of_source_and_expected(self):
+        bad = valid_workflow().replace("--expected-sha " + SHA, "--expected-sha " + ("f" * 40))
+        with self.assertRaisesRegex(GATE.GateError, "must match a pinned checkout"):
             GATE.check_workflow(bad, strict=True)
 
     def test_current_trusted_home_workflows_are_safe_from_wsl_node_discovery(self):
