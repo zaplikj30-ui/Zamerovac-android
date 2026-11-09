@@ -162,10 +162,10 @@ def check_workflow(content: str, strict: bool = False) -> None:
                and "wsl-native" in content,
                "new HOME workflow must invoke BOTH reusable Windows and WSL preflight")
         demand("lint-workflow" in content, "workflow self-lint missing")
-        ref_lines = re.findall(r"(?m)^\\s*ref:\\s*([^\\s#]+)", content)
+        ref_lines = re.findall(r"(?m)^\s*ref:\s*([^\s#]+)", content)
         demand(bool(ref_lines) and all(SHA.fullmatch(value) for value in ref_lines),
                "each trusted one-shot checkout ref must be a literal exact SOURCE/workflow SHA")
-        target_sha = re.findall(r"--expected-sha\\s+([0-9a-f]{40})(?![0-9a-f])", content)
+        target_sha = re.findall(r"--expected-sha\s+([0-9a-f]{40})(?![0-9a-f])", content)
         demand(bool(target_sha) and len(set(target_sha)) == 1 and target_sha[0] in ref_lines,
                "one exact expected application SOURCE SHA must match a pinned checkout")
         native = content.find("wsl-native")
