@@ -1,4 +1,4 @@
-name: Zaměřovač - TEMP Chat29 Stage3A GREEN 11
+name: Zaměřovač - TEMP Chat29 Stage3A 69 related tests
 # One-shot owner-controlled branch; fixed source SHA, no pull_request/fork or cloud runner.
 on:
   push:
@@ -13,7 +13,7 @@ concurrency:
 jobs:
   targeted-native:
     if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/qa/chat29-stage3a-readonly-20261109' && github.event_name == 'push' }}
-    name: Windows WSL2 Stage3A read-only candidate 11
+    name: Windows WSL2 Stage3A inventory archive sync 69
     runs-on: [self-hosted, Windows, X64, zamerovac-qa]
     timeout-minutes: 45
     env:
@@ -77,10 +77,17 @@ jobs:
           echo "PHASE_1_JAVAC compilePreviewJavaWithJavac"
           "$gradle" "${common[@]}" :app:verifyDriveRegistration :app:compilePreviewJavaWithJavac
           echo "PASS PHASE_1_JAVAC"
-          echo "PHASE_2_TESTS 11 Stage3A candidate checks GREEN"
+          echo "PHASE_2_TESTS 69 Stage3A and related archive inventory recovery sync"
           set +e
           "$gradle" "${common[@]}" :app:testPreviewUnitTest \
-            --tests cz.zamerovac.app.RecoveryCandidateReviewTest
+            --tests cz.zamerovac.app.RecoveryCandidateReviewTest \
+            --tests cz.zamerovac.app.RecoveryInventoryTest \
+            --tests cz.zamerovac.app.RecoveryProtectionArchiveTest \
+            --tests cz.zamerovac.app.DatabaseRecoveryTest \
+            --tests cz.zamerovac.app.SafSyncV2Test.signedImmutableMessagesConvergeAndNoMutableProjectsFileExists \
+            --tests cz.zamerovac.app.SafSyncV2Test.observedReceiverRecoveryCannotReuseHistoricalSignedCloudAck \
+            --tests cz.zamerovac.app.PeerTransferTest.firstSyncIntoCleanReceiverKeepsExactPhotoAndNoDuplicateOnRetry \
+            --tests cz.zamerovac.app.PeerTransferTest.recoveryQuarantineWithMoreThanSixteenOldJobsDoesNotBlockDirectTls
           test_rc=$?
           set -e
           python3 - <<'PY_XML'
@@ -98,8 +105,13 @@ jobs:
           print("B16_JUNIT_SUITES:",suite_counts,flush=True)
           expected_suites={
               "cz.zamerovac.app.RecoveryCandidateReviewTest":11,
+              "cz.zamerovac.app.RecoveryInventoryTest":7,
+              "cz.zamerovac.app.RecoveryProtectionArchiveTest":40,
+              "cz.zamerovac.app.DatabaseRecoveryTest":7,
+              "cz.zamerovac.app.SafSyncV2Test":2,
+              "cz.zamerovac.app.PeerTransferTest":2,
           }
-          if len(files)!=1 or suite_counts!=expected_suites or stats["tests"]!=11 or any(stats[k] for k in ("failures","errors","skipped")):
+          if len(files)!=6 or suite_counts!=expected_suites or stats["tests"]!=69 or any(stats[k] for k in ("failures","errors","skipped")):
               raise SystemExit("FAIL or SKIP: check exact JUnit XML and Gradle log")
           PY_XML
           test "$test_rc" -eq 0
@@ -115,7 +127,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: chat29-stage3a-green-b25d7b7
+          name: chat29-stage3a-regression-69-b25d7b7
           path: b16-junit-reports/${{ github.run_id }}-${{ github.run_attempt }}/
           if-no-files-found: ignore
           retention-days: 7
