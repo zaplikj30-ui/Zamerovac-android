@@ -988,8 +988,8 @@ public class MainActivity extends Activity {
         } catch(IOException error){databaseReadFailed=true;throw error;}
     }
     private String readDb() throws IOException {
-        try{String text=LocalDatabase.read(getFilesDir());if(text.isEmpty()&&databaseReadFailed)throw new IOException("Původní databáze nebyla bezpečně načtena");databaseReadFailed=false;return text;}
-        catch(IOException error){databaseReadFailed=true;throw error;}
+        // Export, trash and background notifications cannot treat recovery backup as live DB.
+        return readDbForCas();
     }
     private void writeDb(String data) throws IOException {
         if(databaseReadFailed)throw new IOException("Zápis zablokován: uložené zakázky nebyly bezpečně načteny");

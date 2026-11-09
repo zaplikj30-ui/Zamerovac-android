@@ -51,7 +51,7 @@ public class SyncEngine {
         while((n=in.read(block))!=-1){if(b.size()+n>20*1024*1024)throw new java.io.IOException("Cloudová databáze je příliš velká");b.write(block,0,n);}
         return JsonInput.decode(b.toByteArray());
     }
-    private String loadLocal() throws Exception {return LocalDatabase.read(home);}
+    private String loadLocal() throws Exception {return LocalDatabase.readForCas(home);}
     private void saveLocal(String text) throws Exception {LocalDatabase.write(home,text);}
     private JSONObject parse(String text) throws Exception {
         if(text==null||text.isEmpty())return new JSONObject().put("schema",1).put("records",new JSONArray()).put("prefs",new JSONObject());

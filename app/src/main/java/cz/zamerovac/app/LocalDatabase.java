@@ -70,7 +70,10 @@ final class LocalDatabase {
         synchronized(TrashPurger.LOCK){
             validate(text);File primary=new File(home,"projects.json"),backup=new File(home,"projects.bak"),next=new File(home,"projects.tmp"),backupNext=new File(home,"projects.backup.tmp");
             // If an existing primary and its recovery copy are BOTH unreadable, do not overwrite either.
-            if(primary.exists()||backup.exists())read(home);
+            // An automatic writer must never promote a damaged primary's stale backup.
+            // Keep the legacy first-write path for media staged before any DB existed.
+            if(primary.exists()||backup.exists()||DatabaseRecovery.exists(home)||
+                next.exists()||backupNext.exists())readForCas(home);
             DatabaseRecovery.healthy(home,true);
             try{
                 writeSynced(next,text.getBytes(StandardCharsets.UTF_8));

@@ -197,6 +197,8 @@ public class StorageLifecycleTest {
             assertFalse("Old backup must not be a mergeable current",denied.has("current"));
             assertArrayEquals(corrupt,Files.readAllBytes(primary.toPath()));
             assertEquals(oldText,LocalDatabase.readFile(backup));
+            try{LocalDatabase.write(context.getFilesDir(),oldText);fail("Direct writer replaced corrupt primary with stale backup");}catch(IOException expected){}
+            try{PeerSnapshot.capture(context,prefs);fail("Background snapshot accepted stale backup");}catch(IOException expected){}
             assertEquals(newMediaDigest,digest(new File(dir,"new-photo-id")));
             assertEquals(photoDigest,digest(new File(dir,"original-photo")));
         } finally {Files.write(primary.toPath(),latestBytes);}
@@ -224,6 +226,7 @@ public class StorageLifecycleTest {
                 assertFalse(denied.getBoolean("ok"));assertTrue(denied.has("error"));
                 assertFalse(denied.has("current"));
                 assertFalse(primary.exists());assertFalse(backup.exists());
+                try{LocalDatabase.write(context.getFilesDir(),confirmed);fail("Automatic writer recreated a missing initialized DB");}catch(IOException expected){}
             }
             assertEquals(photo,digest(new File(dir,"original-photo")));
         } finally {
