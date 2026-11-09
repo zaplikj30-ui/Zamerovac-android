@@ -130,6 +130,22 @@ suite('legacy-conflict-persistence',async run=>{
    assert.deepEqual(final.records[0].history,before.originalRecord.history);
    assert.deepEqual(JSON.parse(final.disk).records.map(r=>r.id),[copyId]);
   });
+  await step('explicit tombstone for the conflict copy still removes it',async()=>{
+   const purgeCopy={schema:1,syncProtocol:2,records:[],
+    trashPurgedIds:[ORIGINAL,copyId],
+    syncTombstones:{...PURGE.syncTombstones,[copyId]:{[A]:43}}};
+   const removal=await page.evaluate((data)=>{
+    const ok=window.onNativeSync(JSON.stringify({data,message:'explicit second deletion'}));
+    return {ok,ids:state.records.map(r=>r.id),
+      persisted:JSON.parse(localStorage.getItem('zamerovac-data'))};
+   },purgeCopy);
+   assert.equal(removal.ok,true);
+   assert.deepEqual(removal.ids,[],'explicitly purged conflict copy was revived');
+   assert.deepEqual(removal.persisted.records,[]);
+   await page.reload();await page.waitForFunction(()=>typeof window.onNativeSync==='function');
+   assert.deepEqual(await page.evaluate(()=>state.records.map(r=>r.id)),[],
+    'explicit copy tombstone lost across restart');
+  });
   evidence({source:'actual app.js in Chromium browser-only synthetic callback',
    oldIdNeverRevived:true,copyId,editorRebound:true,persistAndReopen:true,
    repeatedCallbacks:2,mediaSHA256Unchanged:mediaAfter,androidCas:'NOT RUN'});
