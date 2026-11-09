@@ -127,7 +127,7 @@ public class DatabaseInstallEvidenceTest {
         assertEquals("",new SyncPeerRegistry(noBackup).lastAck(peerId));
         assertTrue(DeviceIdentity.valid(DatabaseRecovery.id(home)));
         assertEquals(DatabaseRecovery.id(home),new JSONObject(
-            Files.readString(new File(noBackup,"sync-peers-v2.json").toPath())).getString("localRecovery"));
+            new String(Files.readAllBytes(new File(noBackup,"sync-peers-v2.json").toPath()),StandardCharsets.UTF_8)).getString("localRecovery"));
         assertTrue(DatabaseRecovery.pending(home));
     }
     @Test public void firstInstallWithIdentityAloneIsStillClean()throws Exception{
