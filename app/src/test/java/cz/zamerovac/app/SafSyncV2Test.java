@@ -100,6 +100,95 @@ public class SafSyncV2Test {
  @Test public void safDirectAckMustNotPublishAfterLocalAuthorityLostInsideProviderWrite()throws Exception{
   ackProviderBoundary(false);
  }
+
+ /**
+  * A cloud ACK is evidence of an earlier verified commit, not a guarantee
+  * against later disk failure. Keep the two stricter RED diagnostics above.
+  * This checks the independent retention/recovery safety contract.
+  */
+ void assertLateProviderAckDoesNotDestroySource(boolean staged)throws Exception{
+  canonicalFiles(1,4000);
+  String exactSource=LocalDatabase.readForCas(a);
+  byte[] sourceDb=Files.readAllBytes(new File(a.home,"projects.json").toPath());
+  byte[] sourcePhoto=Files.readAllBytes(new File(a.home,"media/original-0").toPath());
+  PeerSnapshot snapshot=PeerSnapshot.capture(a,a.prefs);
+  sync(a,ai,false).sync();
+  assertTrue(new PeerOutbox(a,a.prefs,ar).pending(bid)>0);
+  String messageDirectory="sync/v2/messages/"+bid+"/"+aid;
+  String message=store.list(messageDirectory).get(0).name;
+  String ackDirectory="sync/v2/acks/"+aid+"/"+bid;
+  LateAckProviderStore remote=new LateAckProviderStore(store.root,b,staged);
+  try{engine(b,bi,remote,false).sync();}catch(IOException blocked){}
+  assertTrue("The provider boundary must actually corrupt the receiver",remote.injected);
+  byte[] damaged=Files.readAllBytes(new File(b.home,"projects.json").toPath());
+  assertArrayEquals(new byte[]{0},damaged);
+  assertTrue("Receiver recovery must remain durable",DatabaseRecovery.pending(b.home));
+  String epoch=DatabaseRecovery.id(b.home);
+  assertTrue(DeviceIdentity.valid(epoch));
+  assertNull("Old inbox receipt cannot survive a local recovery epoch",
+      new CloudInbox(b.noBackup,bid,store.namespace(),b.home).get(aid,message));
+  try{LocalDatabase.readForCas(b);fail("Corrupt receiver regained write authority");}
+  catch(IOException blocked){}
+  try{LocalDatabase.write(b,exactSource);fail("Sender data was silently restored into damaged receiver");}
+  catch(IOException blocked){}
+  int acknowledged=0;
+  for(ImmutableStore.Entry entry:remote.list(ackDirectory))try{
+   JSONObject body=CloudProof.verify(
+       CloudProof.read(remote.open(ackDirectory+"/"+entry.name),PeerWire.MAX_HELLO),
+       bi.certificate(),CloudProof.ACK,bid,aid);
+   if(snapshot.hash.equals(body.getString("hash")))acknowledged++;
+  }catch(IOException ignored){}
+  assertTrue("Synthetic provider cannot create more than one matching ACK",acknowledged<=1);
+  // Even when a signed ACK physically escaped, sender never treats it as
+  // permission to unlink its only complete project or original photo.
+  if(acknowledged==1){
+   sync(a,ai,false).sync();
+   assertEquals("Sender may retire *queue metadata*, not originals",0,
+       new PeerOutbox(a,a.prefs,new SyncPeerRegistry(a.noBackup)).pending(bid));
+  }
+  assertArrayEquals(sourceDb,Files.readAllBytes(new File(a.home,"projects.json").toPath()));
+  assertEquals(exactSource,LocalDatabase.readForCas(a));
+  assertArrayEquals(sourcePhoto,Files.readAllBytes(new File(a.home,"media/original-0").toPath()));
+  assertEquals(snapshot.hash,PeerSnapshot.capture(a,a.prefs).hash);
+  assertEquals(0,new TrashPurger(a,a.prefs).pendingCount());
+  int acknowledgementsBefore=remote.list(ackDirectory).size();
+  try{engine(b,bi,remote,false).sync();fail("Restarted receiver bypassed pending recovery");}
+  catch(IOException blocked){}
+  assertEquals("Restart must not publish additional ACK",acknowledgementsBefore,
+      remote.list(ackDirectory).size());
+  assertEquals(epoch,DatabaseRecovery.id(b.home));
+  assertArrayEquals(damaged,Files.readAllBytes(new File(b.home,"projects.json").toPath()));
+  assertArrayEquals(sourcePhoto,Files.readAllBytes(new File(a.home,"media/original-0").toPath()));
+ }
+ @Test public void driveLateAckKeepsOriginalsAndRejectsUnapprovedRecoveryOnRestart()throws Exception{
+  assertLateProviderAckDoesNotDestroySource(true);
+ }
+ @Test public void safLateAckKeepsOriginalsAndRejectsUnapprovedRecoveryOnRestart()throws Exception{
+  assertLateProviderAckDoesNotDestroySource(false);
+ }
+ @Test public void observedReceiverRecoveryCannotReuseHistoricalSignedCloudAck()throws Exception{
+  canonicalFiles(1,4000);
+  converge();
+  PeerSnapshot source=PeerSnapshot.capture(a,a.prefs);
+  byte[] originalDb=Files.readAllBytes(new File(a.home,"projects.json").toPath());
+  byte[] originalPhoto=Files.readAllBytes(new File(a.home,"media/original-0").toPath());
+  assertEquals(source.hash,ar.lastAck(bid));
+  assertEquals(0,new PeerOutbox(a,a.prefs,ar).pending(bid));
+  String recoveredEpoch=java.util.UUID.randomUUID().toString();
+  ar.recovered(bid,recoveredEpoch); // existing authenticated remote-recovery signal
+  assertEquals("",ar.lastAck(bid));
+  assertEquals(recoveredEpoch,ar.snapshot().getJSONObject(bid).getString("recovery"));
+  SafSyncV2.Result retry=sync(a,ai,false).sync();
+  assertTrue("Old signed cloud proof must not finish post-recovery work",retry.pending);
+  assertTrue("Old ACK cannot retire the new-epoch outbound intent",
+      new PeerOutbox(a,a.prefs,new SyncPeerRegistry(a.noBackup)).pending(bid)>0);
+  assertEquals("",new SyncPeerRegistry(a.noBackup).lastAck(bid));
+  assertArrayEquals(originalDb,Files.readAllBytes(new File(a.home,"projects.json").toPath()));
+  assertArrayEquals(originalPhoto,Files.readAllBytes(new File(a.home,"media/original-0").toPath()));
+  assertEquals(source.hash,PeerSnapshot.capture(a,a.prefs).hash);
+  assertEquals("1585,800001",new JSONObject(LocalDatabase.readForCas(a)).getJSONArray("records")
+      .getJSONObject(0).getJSONArray("items").getJSONObject(0).getString("measure"));
+ }
  @Test public void corruptionAfterAckOutputCreateCannotPublishValidCloudAck()throws Exception{
   canonicalFiles(1,4000);
   sync(a,ai,false).sync(); // signed message exists; receiver has not committed it
