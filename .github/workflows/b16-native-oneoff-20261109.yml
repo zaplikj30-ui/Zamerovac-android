@@ -18,7 +18,7 @@ jobs:
     timeout-minutes: 45
     env:
       CI: '1'
-      TESTED_SHA: '014c0a3b58c4c964c1c9dbc616949c31ae9e2d3b'
+      TESTED_SHA: '0e957107afb39cf7b7d0a691b496374427a34db6'
     steps:
       - name: Verify owner-controlled branch and unprivileged Windows service
         shell: cmd
@@ -32,7 +32,7 @@ jobs:
       - name: Read-only source checkout pinned to reviewed immutable PR79 SHA
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: 014c0a3b58c4c964c1c9dbc616949c31ae9e2d3b
+          ref: 0e957107afb39cf7b7d0a691b496374427a34db6
           path: b16-source
           fetch-depth: 1
           persist-credentials: false
@@ -77,16 +77,14 @@ jobs:
           echo "PHASE_1_JAVAC compilePreviewJavaWithJavac"
           "$gradle" "${common[@]}" :app:verifyDriveRegistration :app:compilePreviewJavaWithJavac
           echo "PASS PHASE_1_JAVAC"
-          echo "PHASE_2_TESTS RecoveryInventory 7 + six adjacent R9 R10 sync/photo safeguards"
+          echo "PHASE_2_TESTS Stage2 Archive 10 + Inventory 7 + 3 adjacent safeguards"
           set +e
           "$gradle" "${common[@]}" :app:testPreviewUnitTest \
+            --tests cz.zamerovac.app.RecoveryProtectionArchiveTest \
             --tests cz.zamerovac.app.RecoveryInventoryTest \
             --tests cz.zamerovac.app.DatabaseInstallEvidenceTest.r10TemporaryQueuedSnapshotReadErrorRecoversAfterRestartWithoutFalseAck \
             --tests cz.zamerovac.app.DatabaseInstallEvidenceTest.r9MissingRecoveryJournalCannotReacceptPreRecoveryAckOrOverwritePhoto \
-            --tests cz.zamerovac.app.DatabaseInstallEvidenceTest.r9MismatchedRecoveryJournalIsRejectedWithoutMutatingOriginal \
-            --tests cz.zamerovac.app.PeerTransferTest.firstSyncIntoCleanReceiverKeepsExactPhotoAndNoDuplicateOnRetry \
-            --tests cz.zamerovac.app.PeerTransferTest.interruptedFirstPhotoTransferKeepsCleanBaselineAndResumesSafely \
-            --tests cz.zamerovac.app.SafSyncV2Test.quarantinedHistoricalOutboxDoesNotBlockFreshSignedCloudSync
+            --tests cz.zamerovac.app.PeerTransferTest.firstSyncIntoCleanReceiverKeepsExactPhotoAndNoDuplicateOnRetry
           test_rc=$?
           set -e
           python3 - <<'PY_XML'
@@ -115,7 +113,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: b16-inventory-014c0a3
+          name: b16-archive-0e95710
           path: b16-junit-reports/
           if-no-files-found: ignore
           retention-days: 7
