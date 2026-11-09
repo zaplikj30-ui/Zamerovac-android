@@ -463,7 +463,12 @@ public class DatabaseInstallEvidenceTest {
                         new JSONObject().put("measure",measure)))))
             .toString();
         LocalDatabase.write(ctx,original);
-        PeerSnapshot before=PeerSnapshot.capture(ctx,prefs);
+        PeerOutbox initialOutbox=new PeerOutbox(ctx,prefs,registry);
+        PeerSnapshot before=initialOutbox.prepare(peer);
+        JSONObject oldQueuedJob=initialOutbox.messages(peer).get(0);
+        File originalOutbox=new File(noBackup,"sync-v2-outbox/"+before.hash+".json");
+        byte[] originalTransfer=Files.readAllBytes(originalOutbox.toPath());
+        assertTrue(initialOutbox.pending(peer)>0);
         registry.acknowledged(peer,before.hash);
         assertEquals(before.hash,registry.lastAck(peer));
 
@@ -509,9 +514,15 @@ public class DatabaseInstallEvidenceTest {
         try{LocalDatabase.write(restarted,text("999,999999999"));
             fail("R9: missing recovery epoch permitted an overwrite");}
         catch(IOException expected){}
-        try{new PeerOutbox(restarted,prefs,new SyncPeerRegistry(noBackup)).prepare(peer);
+        PeerOutbox restartedOutbox=new PeerOutbox(restarted,prefs,new SyncPeerRegistry(noBackup));
+        try{restartedOutbox.completed(peer,oldQueuedJob);
+            fail("R9: stale metadata ACK accepted after recovery journal loss");}
+        catch(IOException expected){}
+        try{restartedOutbox.prepare(peer);
             fail("R9: old ACK may be re-acknowledged by new outbox");}
         catch(IOException expected){}
+        assertTrue("Original queue was deleted on rejected ACK",restartedOutbox.pending(peer)>0);
+        assertArrayEquals(originalTransfer,Files.readAllBytes(originalOutbox.toPath()));
         assertArrayEquals(exact,Files.readAllBytes(primary.toPath()));
         assertArrayEquals(photo,Files.readAllBytes(photoFile.toPath()));
         assertEquals("",new SyncPeerRegistry(noBackup).lastAck(peer));
@@ -540,6 +551,8 @@ public class DatabaseInstallEvidenceTest {
         String forged=java.util.UUID.randomUUID().toString();
         assertNotEquals(epoch,forged);
         File journal=new File(home,"projects.recovery-v1.json");
+        File journalBak=new File(home,"projects.recovery-v1.json.bak");
+        if(journalBak.exists())assertTrue(journalBak.delete());
         Files.write(journal.toPath(),new JSONObject()
             .put("version",1).put("epoch",forged).put("recovering",false)
             .toString().getBytes(StandardCharsets.UTF_8));

@@ -93,6 +93,12 @@ final class LocalDatabase {
             new SyncPeerRegistry(noBackup).localRecovery(DatabaseRecovery.id(home));
         }catch(Exception failure){throw new IOException("Synchronizační doklady obnovy nelze zneplatnit",failure);}
     }
+    /** Check the durable independent no_backup recovery witness before trusting
+     * a valid primary, publishing a snapshot, accepting an ACK or writing. */
+    private static void requireRecoveryWitness(File home,File noBackup)throws IOException{
+        if(noBackup!=null)
+            SyncPeerRegistry.requireMatchingRecoveryEpoch(noBackup,DatabaseRecovery.id(home));
+    }
     static String readForCas(Context context)throws IOException{
         return readForCas(context.getFilesDir(),context.getNoBackupFilesDir());
     }
@@ -123,6 +129,7 @@ final class LocalDatabase {
             catch(ConfirmedCorruption confirmed){lost(home,noBackup);throw confirmed;}
             if(DatabaseRecovery.pending(home))
                 throw new IOException("Databáze vyžaduje výslovné dokončení obnovy");
+            requireRecoveryWitness(home,noBackup);
             DatabaseInstallEvidence.ensure(home,noBackup);
             SyncPeerRegistry.recordDatabaseInitialized(noBackup);
             return text;
@@ -165,6 +172,7 @@ final class LocalDatabase {
             }
             if(DatabaseRecovery.pending(home))
                 throw new IOException("Obnova databáze musí být výslovně potvrzena");
+            requireRecoveryWitness(home,noBackup);
             DatabaseInstallEvidence.ensure(home,noBackup);
             SyncPeerRegistry.recordDatabaseInitialized(noBackup);
             return text;
@@ -172,7 +180,9 @@ final class LocalDatabase {
     }
     static String recoveryId(Context context)throws IOException{
         synchronized(TrashPurger.LOCK){
-            read(context);
+            // A sync epoch is a write/ACK authority, not a diagnostic read.
+            // A stale backup must NEVER authorize publishing a new snapshot.
+            readForCas(context);
             return DatabaseRecovery.id(context.getFilesDir());
         }
     }

@@ -116,6 +116,36 @@ final class SyncPeerRegistry {
     Map<String,String> nearbyRoutes()throws Exception{synchronized(LOCK){Map<String,String> result=new HashMap<>();JSONObject peers=load().getJSONObject("peers");for(Iterator<String> it=peers.keys();it.hasNext();){String id=it.next(),address=peers.getJSONObject(id).optString("nearbyAddress");if(PeerWifiDirect.validAddress(address))result.put(address.toLowerCase(Locale.ROOT),id);}return result;}}
     void rememberCertificate(String id,java.security.cert.X509Certificate certificate)throws Exception{synchronized(LOCK){String fingerprint=SyncTls.fingerprint(certificate);if(!isTrusted(id,fingerprint))throw new IOException("Certifikát zařízení není schválený");String encoded=java.util.Base64.getEncoder().encodeToString(certificate.getEncoded());JSONObject data=load(),peer=data.getJSONObject("peers").getJSONObject(id);if(encoded.equals(peer.optString("certificate")))return;peer.put("certificate",encoded);write(data);}}
     java.security.cert.X509Certificate certificate(String id)throws Exception{synchronized(LOCK){JSONObject peer=load().getJSONObject("peers").optJSONObject(id);if(peer==null||!peer.has("certificate"))throw new IOException("Nejdříve znovu spoj spárovaná zařízení místní cestou, aby se uložil ověřený veřejný certifikát.");String encoded=peer.getString("certificate");if(encoded.length()>24000)throw new IOException("Certifikát je příliš velký");java.security.cert.X509Certificate certificate=(java.security.cert.X509Certificate)java.security.cert.CertificateFactory.getInstance("X.509").generateCertificate(new ByteArrayInputStream(java.util.Base64.getDecoder().decode(encoded)));if(!isTrusted(id,SyncTls.fingerprint(certificate)))throw new IOException("Certifikát není schválený");return certificate;}}
+    /**
+     * R9: independent no_backup evidence is authoritative after a recovery.
+     * A missing or substituted files/ recovery journal must NEVER turn a
+     * recovered peer snapshot back into its pre-recovery ACK hash.
+     *
+     * Legacy registries without localRecovery remain valid only while the
+     * journal has no recovery epoch. Unknown/invalid evidence fails closed.
+     * This method never authorizes ACKs or resets the recovery journal.
+     */
+    static void requireMatchingRecoveryEpoch(File noBackup,String journalEpoch)throws IOException{
+        if(noBackup==null)return;
+        synchronized(LOCK){
+            try{
+                if(journalEpoch==null||!journalEpoch.isEmpty()&&!DeviceIdentity.valid(journalEpoch))
+                    throw new IOException("Neplatná epocha databázové obnovy");
+                JSONObject registry=new SyncPeerRegistry(noBackup).load();
+                Object witness=registry.opt("localRecovery");
+                if(witness!=null){
+                    if(!(witness instanceof String)||!DeviceIdentity.valid((String)witness)||
+                        !witness.equals(journalEpoch))
+                        throw new IOException("Nesoulad evidence obnovy: synchronizace je bezpečně zablokována");
+                }else if(!journalEpoch.isEmpty()){
+                    // The peer registry is missing or predates this recovery;
+                    // do not approve new ACKs without an independent witness.
+                    throw new IOException("Chybí nezávislá evidence epochy obnovy");
+                }
+            }catch(IOException blocked){throw blocked;}
+            catch(Exception unknown){throw new IOException("Evidenci obnovy nelze nezávisle ověřit",unknown);}
+        }
+    }
     /** Durable local loss barrier: remove ALL cached success receipts once per recovery epoch. */
     void localRecovery(String epoch)throws Exception{synchronized(LOCK){
         if(!DeviceIdentity.valid(epoch))throw new IOException("Neplatná místní recovery epoch");

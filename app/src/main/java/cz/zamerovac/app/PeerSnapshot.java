@@ -70,7 +70,9 @@ final class PeerSnapshot {
         // A locally recovered installation must never reuse the hash of an older
         // signed cloud ACK, even when restored project JSON is byte-identical.
         // Optional envelope field: persistent project schema and media IDs do not change.
-        String epoch=DatabaseRecovery.id(context.getFilesDir());
+        // Revalidate primary AND the independent no_backup witness after media
+        // scanning. A vanished journal cannot silently emit the old signed ACK hash.
+        String epoch=LocalDatabase.recoveryId(context);
         if(!epoch.isEmpty())wire.put("recoveryEpoch",epoch);
         byte[] bytes=CausalClock.canonical(wire).getBytes(StandardCharsets.UTF_8);if(bytes.length>PeerWire.MAX_JSON)throw new IOException("Metadata synchronizace jsou příliš velká");PeerSnapshot result=parse(bytes,wire.getString("sourceId"));for(String id:result.media.keySet()){File file=new File(directory,id);result.localStats.put(id,new long[]{file.length(),file.lastModified()});}return result;
     }
