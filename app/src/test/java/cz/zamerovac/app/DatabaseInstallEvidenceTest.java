@@ -568,4 +568,145 @@ public class DatabaseInstallEvidenceTest {
             new File(noBackup,"sync-peers-v2.json").toPath()),StandardCharsets.UTF_8))
             .getString("localRecovery"));
     }
+
+    /**
+     * R10: while a previous same-epoch immutable snapshot is temporarily
+     * inaccessible, its metadata and photo jobs must remain durable and
+     * un-ACKable. Restoring the exact bytes and reopening the queue resumes
+     * both peers without duplicate IDs, false ACKs or lost dimensions/media.
+     */
+    @Test public void r10TemporaryQueuedSnapshotReadErrorRecoversAfterRestartWithoutFalseAck()throws Exception{
+        android.content.Context ctx=syntheticContext();
+        android.content.SharedPreferences prefs=ctx.getSharedPreferences(
+            "r10-transient-"+home.getName(),android.content.Context.MODE_PRIVATE);
+        String firstPeer=java.util.UUID.randomUUID().toString();
+        String secondPeer=java.util.UUID.randomUUID().toString();
+        SyncPeerRegistry registry=new SyncPeerRegistry(noBackup);
+        registry.approve(firstPeer,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","R10 TLS");
+        registry.approve(secondPeer,
+            "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","R10 cloud");
+
+        String empty="{\"schema\":1,\"records\":[]}";
+        LocalDatabase.write(ctx,empty);
+        File primary=new File(home,"projects.json");
+        assertTrue(primary.delete());
+        try{LocalDatabase.readForCas(ctx);fail("Loss did not start recovery");}
+        catch(IOException expected){}
+        String epoch=DatabaseRecovery.id(home);
+        assertTrue(DeviceIdentity.valid(epoch));
+        assertEquals(epoch,new JSONObject(new String(
+            Files.readAllBytes(new File(noBackup,"sync-peers-v2.json").toPath()),
+            StandardCharsets.UTF_8)).getString("localRecovery"));
+        Files.write(primary.toPath(),empty.getBytes(StandardCharsets.UTF_8));
+        DatabaseRecovery.healthy(home,false); // test-only explicit promotion stand-in
+
+        File mediaDir=new File(home,"media");assertTrue(mediaDir.mkdirs());
+        byte[] photo=new byte[]{1,3,5,8,13,21,34,55,89};
+        File originalPhoto=new File(mediaDir,"r10-photo");
+        Files.write(originalPhoto.toPath(),photo);
+        String oldMeasure="1585,800001234567890",newMeasure="1585,800001234567891";
+        JSONObject record=new JSONObject().put("id","r10-project")
+            .put("media",new org.json.JSONArray().put("r10-photo"))
+            .put("items",new org.json.JSONArray().put(
+                new JSONObject().put("measure",oldMeasure)
+                    .put("laserMeasuredMm","1585.800001234567890")));
+        JSONObject oldData=new JSONObject().put("schema",1)
+            .put("records",new org.json.JSONArray().put(record));
+        LocalDatabase.write(ctx,oldData.toString());
+        PeerOutbox prepared=new PeerOutbox(ctx,prefs,registry);
+        PeerSnapshot older=prepared.prepare(firstPeer);
+        assertEquals(epoch,older.wire.getString("recoveryEpoch"));
+        assertEquals(older.hash,prepared.prepare(secondPeer).hash);
+        JSONObject originalMetadata=prepared.messages(firstPeer).get(0);
+        String source=originalMetadata.getString("sourceRef");
+        assertEquals(older.hash,source);
+        File immutable=new File(noBackup,"sync-v2-outbox/"+source+".json");
+        byte[] immutableBytes=Files.readAllBytes(immutable.toPath());
+        assertArrayEquals(older.bytes,immutableBytes);
+        JSONObject newerData=new JSONObject(oldData.toString());
+        newerData.getJSONArray("records").getJSONObject(0)
+            .getJSONArray("items").getJSONObject(0).put("measure",newMeasure);
+        LocalDatabase.write(ctx,newerData.toString());
+
+        // Deterministic, exactly one attempt with queuedSnapshot's original
+        // read path unavailable. The immutable bytes are merely parked; no
+        // data is modified or deleted, and restoration simulates I/O recovery.
+        File parked=new File(immutable.getParentFile(),source+".temporarily-unreadable");
+        assertTrue(immutable.renameTo(parked));
+        String newHash;
+        try{
+            PeerSnapshot newer=prepared.prepare(firstPeer);
+            newHash=newer.hash;
+            assertNotEquals(older.hash,newHash);
+            assertEquals(epoch,newer.wire.getString("recoveryEpoch"));
+            assertEquals(newHash,prepared.prepare(secondPeer).hash);
+            assertEquals(0,prepared.quarantinedCount(firstPeer));
+            assertEquals(0,prepared.quarantinedCount(secondPeer));
+            assertEquals(4,prepared.pending(firstPeer)); // two metadata + two photo jobs
+            assertEquals(4,prepared.pending(secondPeer));
+            // Unknown old bytes cannot be used by either sender or its ACK.
+            java.util.List<JSONObject> safe=prepared.messages(firstPeer);
+            assertEquals(1,safe.size());
+            assertEquals(newHash,safe.get(0).getString("hash"));
+            try{prepared.completed(firstPeer,originalMetadata);
+                fail("Unverifiable historical queued metadata was ACKed");}
+            catch(IOException expected){}
+            assertEquals("",registry.lastAck(firstPeer));
+            assertEquals("",registry.lastAck(secondPeer));
+            assertArrayEquals(immutableBytes,Files.readAllBytes(parked.toPath()));
+            assertArrayEquals(photo,Files.readAllBytes(originalPhoto.toPath()));
+        }finally{
+            assertTrue("Original immutable source must be restorable",parked.renameTo(immutable));
+        }
+
+        PeerOutbox reopened=new PeerOutbox(syntheticContext(),prefs,new SyncPeerRegistry(noBackup));
+        assertEquals(newHash,reopened.prepare(firstPeer).hash);
+        assertEquals(newHash,reopened.prepare(secondPeer).hash);
+        assertEquals(0,reopened.quarantinedCount(firstPeer));
+        assertEquals(0,reopened.quarantinedCount(secondPeer));
+        assertArrayEquals(immutableBytes,Files.readAllBytes(immutable.toPath()));
+        assertEquals(oldMeasure,older.data.getJSONArray("records").getJSONObject(0)
+            .getJSONArray("items").getJSONObject(0).getString("measure"));
+        assertEquals(newMeasure,new JSONObject(LocalDatabase.readForCas(ctx))
+            .getJSONArray("records").getJSONObject(0)
+            .getJSONArray("items").getJSONObject(0).getString("measure"));
+        assertArrayEquals(photo,Files.readAllBytes(originalPhoto.toPath()));
+
+        // Both sender paths use this same persisted outbox. Verify every
+        // metadata/blob job and its ID before actual protected ACK/cleanup.
+        JSONObject persisted=new JSONObject(reopened.queue.read());
+        org.json.JSONArray jobs=persisted.getJSONArray("jobs");
+        java.util.Set<String> ids=new java.util.HashSet<>();
+        for(int i=0;i<jobs.length();i++)
+            assertTrue("Duplicate active job ID",ids.add(jobs.getJSONObject(i).getString("id")));
+        assertEquals(8,ids.size());
+        for(String peer:new String[]{firstPeer,secondPeer}){
+            java.util.List<JSONObject> metadata=reopened.messages(peer);
+            assertEquals(2,metadata.size());
+            assertEquals(older.hash,metadata.get(0).getString("hash"));
+            assertEquals(newHash,metadata.get(1).getString("hash"));
+            org.json.JSONArray active=new JSONObject(reopened.queue.read()).getJSONArray("jobs");
+            int confirmedPhotos=0;
+            for(int i=0;i<active.length();i++){
+                JSONObject job=active.getJSONObject(i);
+                if(!peer.equals(job.getString("peer"))||!"blob".equals(job.getString("kind")))continue;
+                assertTrue(reopened.acknowledge(job.getString("id"),job.getString("hash"),
+                    job.getLong("size"),false));
+                confirmedPhotos++;
+            }
+            assertEquals(2,confirmedPhotos);
+            for(JSONObject job:metadata)reopened.completed(peer,job);
+            assertEquals(newHash,registry.lastAck(peer));
+            assertEquals(0,reopened.pending(peer));
+            assertEquals(0,reopened.quarantinedCount(peer));
+            assertArrayEquals(photo,Files.readAllBytes(originalPhoto.toPath()));
+            assertEquals(newMeasure,new JSONObject(LocalDatabase.readForCas(ctx))
+                .getJSONArray("records").getJSONObject(0)
+                .getJSONArray("items").getJSONObject(0).getString("measure"));
+        }
+        assertEquals(epoch,DatabaseRecovery.id(home));
+        assertEquals(0,reopened.pending(firstPeer));
+        assertEquals(0,reopened.pending(secondPeer));
+    }
 }
