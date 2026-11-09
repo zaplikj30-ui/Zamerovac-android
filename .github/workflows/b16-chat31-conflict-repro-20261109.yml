@@ -14,7 +14,7 @@ jobs:
     runs-on: [self-hosted, Windows, X64, zamerovac-qa]
     timeout-minutes: 30
     env:
-      TESTED_SHA: '8fd52c451ed141cb788a6fb2211726f1693ccadb'
+      TESTED_SHA: '83e770d2e8975e8e6c98cb3cae72f4ef04096380'
       PLAYWRIGHT_BROWSERS_PATH: 'C:\actions-runner\tools\ms-playwright'
     steps:
       - name: Trusted owner Windows runner
@@ -26,7 +26,7 @@ jobs:
       - name: Read-only pinned application source
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: 8fd52c451ed141cb788a6fb2211726f1693ccadb
+          ref: 83e770d2e8975e8e6c98cb3cae72f4ef04096380
           path: b16-source
           persist-credentials: false
           submodules: false
@@ -52,7 +52,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: chat31-legacy-conflict-testfirst-8fd52c4
+          name: chat31-legacy-conflict-green-83e770d
           path: browser-evidence/Zamerovac-QA/browser/
           if-no-files-found: ignore
           retention-days: 7
