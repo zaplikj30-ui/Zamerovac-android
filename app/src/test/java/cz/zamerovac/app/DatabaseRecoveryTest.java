@@ -33,6 +33,14 @@ public class DatabaseRecoveryTest {
         assertFalse(new File(home,"projects.json").exists());
         assertFalse(DatabaseRecovery.exists(home));
         assertArrayEquals(untouched,Files.readAllBytes(original.toPath()));
+        assertTrue(original.delete());assertTrue(media.delete());
+        // A file (not a directory) at the media path must also fail closed.
+        Files.write(media.toPath(),new byte[]{5,6,7});
+        try{LocalDatabase.write(home,data("42,0001"));fail("Blocked media path treated as an empty directory");}
+        catch(IOException expected){}
+        assertArrayEquals(new byte[]{5,6,7},Files.readAllBytes(media.toPath()));
+        assertFalse(new File(home,"projects.json").exists());
+        assertTrue(media.delete());
         // A truly clean first launch must still create an initialized database.
         File clean=Files.createTempDirectory(home.toPath(),"clean-install-").toFile();
         String initial=data("1585,800001234567890");

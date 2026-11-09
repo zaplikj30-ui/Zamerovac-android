@@ -36,10 +36,15 @@ final class LocalDatabase {
             if(!primary.exists()){
                 File media=new File(home,"media");
                 File[] artifacts=media.listFiles();
+                // A blocked/unreadable media directory and a symlink are NOT
+                // proof of an empty installation. Never overwrite such state.
+                boolean mediaUnsafe=media.exists()&&(
+                    Files.isSymbolicLink(media.toPath())||!media.isDirectory()||
+                    artifacts==null||artifacts.length>0);
                 if(backup.exists()||DatabaseRecovery.exists(home)||
                     new File(home,"projects.tmp").exists()||
                     new File(home,"projects.backup.tmp").exists()||
-                    artifacts!=null&&artifacts.length>0)
+                    mediaUnsafe)
                     throw new IOException("Dříve uložená databáze chybí; obnovu je nutné potvrdit");
                 return "";
             }
