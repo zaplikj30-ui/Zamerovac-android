@@ -64,10 +64,11 @@ function reconcileSavedState(base,local,remote){
   if(Object.hasOwn(tombstones,id)){
    for(let record of [l,d])if(record&&!record.deleted){
     const editedLocal=record===l&&!sameSavedValue(record,o);
-    // A confirmed unchanged clocked record must not revive a remote purge.
-    // Legacy records WITHOUT causal clocks have unknown ordering: retain them
-    // as marked conflict copies rather than silently discarding exact measurements.
-    if(record===l&&!editedLocal&&Object.keys(record.syncClock||{}).length)continue;
+    // Native CAS has an authoritative persisted purge: an unchanged local
+    // record cannot revive it, including a legacy record without a clock.
+    // Browser-only reconciliation lacks that proof, so an unclocked legacy
+    // record stays a marked conflict copy instead of silently disappearing.
+    if(record===l&&!editedLocal&&(native||Object.keys(record.syncClock||{}).length))continue;
     if(editedLocal&&sameSavedValue(record.syncClock,o?.syncClock))record={...record,syncClock:advanceSyncClock(record.syncClock||{})};
     const order=compareSyncClocks(record.syncClock||{},tombstones[id]);
     // A local edit and remote purge can have identical clock counters when
