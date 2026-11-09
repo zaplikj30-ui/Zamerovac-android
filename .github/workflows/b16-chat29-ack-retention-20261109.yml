@@ -1,4 +1,4 @@
-name: Zaměřovač - TEMP B16 Chat29 ACK retence bez APK
+name: Zaměřovač - TEMP B16 Chat29 ACK GREEN po fixu
 # One-shot owner-controlled branch; fixed source SHA, no pull_request/fork or cloud runner.
 on:
   push:
@@ -18,7 +18,7 @@ jobs:
     timeout-minutes: 45
     env:
       CI: '1'
-      TESTED_SHA: 'd92ae074fb145a75e3fd64ca1876fb8b6f841b54'
+      TESTED_SHA: 'ff701274ba2d6a2fc43cb844fc338d97d652cef5'
     steps:
       - name: Verify owner-controlled branch and unprivileged Windows service
         shell: cmd
@@ -32,7 +32,7 @@ jobs:
       - name: Read-only source checkout pinned to exact Chat29 test-first SHA
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: d92ae074fb145a75e3fd64ca1876fb8b6f841b54
+          ref: ff701274ba2d6a2fc43cb844fc338d97d652cef5
           path: b16-source
           fetch-depth: 1
           persist-credentials: false
@@ -117,7 +117,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: chat29-b16-ack-retention-d92ae07
+          name: chat29-b16-ack-retention-ff70127
           path: b16-junit-reports/${{ github.run_id }}-${{ github.run_attempt }}/
           if-no-files-found: ignore
           retention-days: 7
