@@ -63,6 +63,8 @@ function reconcileSavedState(base,local,remote){
   const l=ours.get(id),d=theirs.get(id),o=old.get(id);
   if(Object.hasOwn(tombstones,id)){
    for(let record of [l,d])if(record&&!record.deleted){
+    // A confirmed unchanged local record must not resurrect a genuine remote purge.
+    if(record===l&&sameSavedValue(record,o))continue;
     if(record===l&&!sameSavedValue(record,o)&&sameSavedValue(record.syncClock,o?.syncClock))record={...record,syncClock:advanceSyncClock(record.syncClock||{})};
     if(!Object.keys(record.syncClock||{}).length||['after','concurrent'].includes(compareSyncClocks(record.syncClock||{},tombstones[id]))){
      const source='purge:'+id+':'+canonicalSavedValue(record);
@@ -125,14 +127,16 @@ function save(){
       disk.records.some(r=>!r||typeof r!=='object'||Array.isArray(r)||typeof r.id!=='string'||!r.id)||
       new Set(disk.records.map(r=>r.id)).size!==disk.records.length)
      throw new Error('Neplatná databáze při souběžném zápisu');
-   // Only the durable trash-purge receipts can justify a remote zero-record
-   // database when we have previously confirmed records.
-   if(!disk.records.length&&base.records?.length){
+   // A remote record may disappear only with durable native purge receipts.
+   // This also rejects a phantom empty DB without blocking confirmed trash purges.
+   const remoteIds=new Set(disk.records.map(r=>r.id));
+   const missing=(base.records||[]).filter(r=>!remoteIds.has(r.id));
+   if(missing.length){
     const purged=new Set(Array.isArray(disk.trashPurgedIds)?disk.trashPurgedIds:[]);
     const tombstones=disk.syncTombstones;
     if(!tombstones||typeof tombstones!=='object'||Array.isArray(tombstones)||
-       !base.records.every(r=>purged.has(r.id)&&Object.hasOwn(tombstones,r.id)))
-     throw new Error('Neověřené vyprázdnění databáze při souběžném zápisu');
+       missing.some(r=>!purged.has(r.id)||!Object.hasOwn(tombstones,r.id)))
+     throw new Error('Neověřené odstranění záznamů při souběžném zápisu');
    }
    candidate=reconcileSavedState(base,candidate,disk);expected=result.current;
   }

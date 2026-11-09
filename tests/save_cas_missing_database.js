@@ -9,9 +9,9 @@ const id='11111111-1111-4111-8111-111111111111',base={schema:1,syncProtocol:2,pr
  items:[{id:'dim-1',measure:'1585,800001234567890',laserMeasuredMm:'1585.800001234567890'}]
 }]},snapshot=JSON.stringify(base);
 let scenarios=0;
-function create(handler){
- const env={native:true,syncDeviceId:id,window:{},state:structuredClone(base),persistedSnapshot:snapshot,
-   initial:base,prefs:base.prefs,current:null,noteActive:null,screen:'browser',dataLoadFailed:false,
+function create(handler,seed=base){
+ const env={native:true,syncDeviceId:id,window:{},state:structuredClone(seed),persistedSnapshot:JSON.stringify(seed),
+   initial:seed,prefs:seed.prefs,current:null,noteActive:null,screen:'browser',dataLoadFailed:false,
    uid:()=> 'native-copy-id',notices:[],calls:[],notify(message){env.notices.push(message)},
    Native:{
     saveDataChecked(text,expected){env.calls.push({text,expected});return handler(text,expected,env)},
@@ -35,12 +35,22 @@ let unproven=create(()=>JSON.stringify({ok:false,current:JSON.stringify({
  schema:1,records:[],trashPurgedIds:['different-id'],syncTombstones:{'different-id':{}}
 })}));
 rejected(unproven);
+// Even a partly missing remote database may not silently drop an untouched photo.
+let partial=create(()=>JSON.stringify({ok:false,current:JSON.stringify({schema:1,records:[{id:'unrelated'}]})}));
+rejected(partial);
 // A real native purge records BOTH durable evidence fields; allow its zero records.
 let empty=JSON.stringify({schema:1,records:[],trashPurgedIds:['photo-1'],syncTombstones:{'photo-1':{[id]:2}}});
 let authorized=create((text,expected)=>{if(expected!==empty)return JSON.stringify({ok:false,current:empty});empty=text;return JSON.stringify({ok:true})});
 assert.equal(authorized.save(),true);assert.equal(authorized.state.records.length,0);
 assert.equal(authorized.persistedSnapshot,empty);assert.equal(authorized.save(),true);
 assert.equal(authorized.state.records.length,0);scenarios++;
+// Old imported photos may have no clock: an unchanged legacy record is not
+// an unsaved new edit and must not resurrect after a legitimate trash purge.
+let legacy=structuredClone(base);delete legacy.records[0].syncClock;
+let legacyDisk=JSON.stringify({schema:1,records:[],trashPurgedIds:['photo-1'],syncTombstones:{'photo-1':{[id]:2}}});
+let legacyPurge=create((text,expected)=>{if(expected!==legacyDisk)return JSON.stringify({ok:false,current:legacyDisk});legacyDisk=text;return JSON.stringify({ok:true})},legacy);
+assert.equal(legacyPurge.save(),true);assert.equal(legacyPurge.state.records.length,0);
+assert.equal(legacyPurge.persistedSnapshot,legacyDisk);scenarios++;
 // Valid native same-record conflict, then disk-full on retry: absolutely no
 // intermediate mutation, even if the merge created a native conflict copy.
 let remote=structuredClone(base);remote.records[0].rev='remote';
