@@ -123,6 +123,62 @@ public class RecoveryProtectionArchiveTest {
             .getJSONObject(0).getString("measure"));
     }
 
+    @Test public void atomicFileSidecarsAreArchivedByteForByteWithoutPromotingThem()throws Exception{
+        String exact="1585,800001234567890";
+        LocalDatabase.write(home,noBackup,db(exact).toString());
+        byte[] primary=read(new File(home,"projects.json"));
+        Map<String,byte[]> sidecars=new LinkedHashMap<>();
+        sidecars.put("no_backup/sync-queue-v2.json.bak",
+            "{\"version\":2,\"revision\":7,\"jobs\":[],\"recoveryQuarantine\":[]}".getBytes(StandardCharsets.UTF_8));
+        sidecars.put("no_backup/sync-queue-v2.json.new","{\"jobs\":[".getBytes(StandardCharsets.UTF_8));
+        sidecars.put("no_backup/sync-peers-v2.json.new","{\"ack\":".getBytes(StandardCharsets.UTF_8));
+        sidecars.put("files/trash-cleanup.json.new","[\"pending-photo\"]".getBytes(StandardCharsets.UTF_8));
+        sidecars.put("files/projects.bak.bak",db("1250,000000001").toString().getBytes(StandardCharsets.UTF_8));
+        sidecars.put("files/projects.bak.new",db("1360,000000001").toString().getBytes(StandardCharsets.UTF_8));
+        for(Map.Entry<String,byte[]> sidecar:sidecars.entrySet())
+            Files.write(new File(root,sidecar.getKey()).toPath(),sidecar.getValue());
+        File queue=new File(noBackup,"sync-queue-v2.json");
+        assertFalse(queue.exists());
+
+        JSONObject copy=RecoveryProtectionArchive.create(home,noBackup);
+        JSONObject verified=RecoveryProtectionArchive.verify(noBackup,copy.getString("id"));
+        assertTrue(verified.getBoolean("complete"));
+        for(Map.Entry<String,byte[]> sidecar:sidecars.entrySet()){
+            String path=sidecar.getKey();
+            byte[] bytes=sidecar.getValue();
+            JSONObject row=entry(verified.getJSONArray("files"),path);
+            assertEquals(PeerWire.hash(bytes),row.getString("sha256"));
+            assertEquals(path.endsWith(".new")?"UNCONFIRMED":"PRESENT",row.getString("state"));
+            assertArrayEquals(bytes,read(new File(archive(copy),"payload/"+path)));
+            assertArrayEquals(bytes,read(new File(root,path)));
+        }
+        assertFalse(verified.getBoolean("sourceComplete"));
+        assertFalse(verified.getBoolean("canPromote"));
+        assertFalse(queue.exists());
+        assertArrayEquals(primary,read(new File(home,"projects.json")));
+        assertEquals(exact,new JSONObject(new String(primary,StandardCharsets.UTF_8))
+            .getJSONArray("records").getJSONObject(0).getJSONArray("items")
+            .getJSONObject(0).getString("measure"));
+    }
+
+    @Test public void symbolicLinkInAtomicFileSidecarCannotBeCertified()throws Exception{
+        LocalDatabase.write(home,noBackup,db("1585,800001234567890").toString());
+        Path original=new File(home,"projects.json").toPath();
+        byte[] primary=Files.readAllBytes(original);
+        Path sidecar=new File(noBackup,"sync-queue-v2.json.bak").toPath();
+        Files.createSymbolicLink(sidecar,original);
+
+        try{
+            RecoveryProtectionArchive.create(home,noBackup);
+            fail("Symbolic link in an AtomicFile sidecar was certified");
+        }catch(IOException expected){
+            assertTrue(expected.getMessage().contains("no_backup/sync-queue-v2.json.bak"));
+        }
+        assertEquals(0,completedCount());
+        assertTrue(Files.isSymbolicLink(sidecar));
+        assertArrayEquals(primary,Files.readAllBytes(original));
+    }
+
     @Test public void damagedPrimaryIsPreservedAsEvidenceNeverReplacedByOldBackup()throws Exception{
         LocalDatabase.write(home,noBackup,db("111,00001").toString());
         LocalDatabase.write(home,noBackup,db("999,00002").toString());
