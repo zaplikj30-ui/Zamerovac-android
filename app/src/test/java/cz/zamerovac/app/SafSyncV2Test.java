@@ -12,12 +12,12 @@ import static org.junit.Assert.*;
 @RunWith(RobolectricTestRunner.class) @Config(sdk=35)
 public class SafSyncV2Test {
  static class Store extends BackupHistoryTest.FilesStore implements SyncStore {
-  int readsOfLarge,messageReads;String largeHash="",watchedMessages="";int writes,largeWritten;Runnable onLargeChunk;boolean failTwentieth,failAck;
+  int readsOfLarge,messageReads;String largeHash="",watchedMessages="";int writes,largeWritten;Runnable onLargeChunk,beforeAckWrite;boolean failTwentieth,failAck;
   Store(File root){super(root);}
   @Override public String namespace(){return root.getAbsolutePath();}
   @Override File file(String path)throws Exception{SyncStore.parts(path);return new File(root,path);}
   @Override public InputStream open(String path)throws Exception{if(!largeHash.isEmpty()&&path.contains(largeHash))readsOfLarge++;if(!watchedMessages.isEmpty()&&path.startsWith(watchedMessages))messageReads++;return super.open(path);}
-  @Override public OutputStream create(String path)throws Exception{OutputStream out=super.create(path);if(path.startsWith("sync/v2/acks/")&&failAck){failAck=false;return new FilterOutputStream(out){@Override public void write(byte[] bytes,int offset,int length)throws IOException{out.write(bytes,offset,Math.min(17,length));throw new IOException("synthetic lost ACK publication");}};}if(!largeHash.isEmpty()&&path.contains(largeHash)&&onLargeChunk!=null)return new FilterOutputStream(out){@Override public void write(byte[] bytes,int offset,int length)throws IOException{out.write(bytes,offset,length);largeWritten+=length;Runnable action=onLargeChunk;onLargeChunk=null;if(action!=null)action.run();}};if(path.startsWith("sync/v2/blobs/")&&++writes==20&&failTwentieth){failTwentieth=false;return new FilterOutputStream(out){@Override public void write(byte[] bytes,int offset,int length)throws IOException{out.write(bytes,offset,Math.min(17,length));throw new IOException("synthetic twentieth blob disconnected");}};}return out;}
+  @Override public OutputStream create(String path)throws Exception{OutputStream out=super.create(path);if(path.startsWith("sync/v2/acks/")&&beforeAckWrite!=null){Runnable action=beforeAckWrite;beforeAckWrite=null;action.run();}if(path.startsWith("sync/v2/acks/")&&failAck){failAck=false;return new FilterOutputStream(out){@Override public void write(byte[] bytes,int offset,int length)throws IOException{out.write(bytes,offset,Math.min(17,length));throw new IOException("synthetic lost ACK publication");}};}if(!largeHash.isEmpty()&&path.contains(largeHash)&&onLargeChunk!=null)return new FilterOutputStream(out){@Override public void write(byte[] bytes,int offset,int length)throws IOException{out.write(bytes,offset,length);largeWritten+=length;Runnable action=onLargeChunk;onLargeChunk=null;if(action!=null)action.run();}};if(path.startsWith("sync/v2/blobs/")&&++writes==20&&failTwentieth){failTwentieth=false;return new FilterOutputStream(out){@Override public void write(byte[] bytes,int offset,int length)throws IOException{out.write(bytes,offset,Math.min(17,length));throw new IOException("synthetic twentieth blob disconnected");}};}return out;}
  }
  PeerTransferTest.Device a,b;SyncTls ai,bi,rogue;SyncPeerRegistry ar,br;Store store;String aid,bid;JSONObject original;
  @Before public void setup()throws Exception{
@@ -28,6 +28,38 @@ public class SafSyncV2Test {
  SafSyncV2 sync(PeerTransferTest.Device device,SyncTls identity,boolean metered)throws Exception{return new SafSyncV2(device,device.prefs,store,identity,bytes->!metered||bytes<=1024*1024);}
  void converge()throws Exception{for(int i=0;i<6;i++){sync(a,ai,false).sync();sync(b,bi,false).sync();}}
  SafSyncV2 engine(PeerTransferTest.Device device,SyncTls identity,Store selected,boolean metered)throws Exception{return new SafSyncV2(device,device.prefs,selected,identity,bytes->!metered||bytes<=1024*1024);}
+ @Test public void corruptionAfterAckOutputCreateCannotPublishValidCloudAck()throws Exception{
+  canonicalFiles(1,4000);
+  sync(a,ai,false).sync(); // signed message exists; receiver has not committed it
+  String ackDirectory="sync/v2/acks/"+aid+"/"+bid;
+  assertTrue(store.list(ackDirectory).isEmpty());
+  byte[] originalMedia=Files.readAllBytes(new File(a.home,"media/original-0").toPath());
+  String originalDb=LocalDatabase.readForCas(a);
+  File primary=new File(b.home,"projects.json");
+  byte[] initialDb=Files.readAllBytes(primary.toPath());
+  java.util.concurrent.atomic.AtomicBoolean injected=new java.util.concurrent.atomic.AtomicBoolean();
+  store.beforeAckWrite=()->{
+   injected.set(true);
+   try{Files.write(primary.toPath(),new byte[]{0});}
+   catch(IOException failure){throw new UncheckedIOException(failure);}
+  };
+  try{sync(b,bi,false).sync();fail("Receiver acknowledged after primary corruption");}
+  catch(IOException expected){}
+  assertTrue("Failure injection must be at ACK output creation",injected.get());
+  assertTrue("Damaged database must require manual recovery",DatabaseRecovery.pending(b.home));
+  assertArrayEquals(new byte[]{0},Files.readAllBytes(primary.toPath()));
+  assertFalse(Arrays.equals(initialDb,Files.readAllBytes(primary.toPath())));
+  for(ImmutableStore.Entry entry:store.list(ackDirectory)){
+   assertEquals("No complete signed ACK may be published after loss of write authority",
+       0,Files.size(store.file(ackDirectory+"/"+entry.name).toPath()));
+  }
+  assertTrue("Unacknowledged source snapshot must stay pending",
+      new PeerOutbox(a,a.prefs,ar).pending(bid)>0);
+  assertEquals(originalDb,LocalDatabase.readForCas(a));
+  assertArrayEquals(originalMedia,Files.readAllBytes(new File(a.home,"media/original-0").toPath()));
+  try{sync(b,bi,false).sync();fail("Retry bypassed pending recovery");}
+  catch(IOException expected){}
+ }
  @Test public void authenticatedDirectArrivalDuringLocalHashReleasesCloudGateBeforePublication()throws Exception{
   canonicalFiles(1,2000000);byte[] before=Files.readAllBytes(new File(a.home,"media/original-0").toPath());java.util.concurrent.atomic.AtomicInteger hashChecks=new java.util.concurrent.atomic.AtomicInteger();java.util.concurrent.atomic.AtomicBoolean arrived=new java.util.concurrent.atomic.AtomicBoolean();
   SafSyncV2 engine=new SafSyncV2(a,a.prefs,store,ai,bytes->{for(StackTraceElement frame:Thread.currentThread().getStackTrace())if(frame.getClassName().startsWith(PeerMedia.class.getName())&&"read".equals(frame.getMethodName())){if(hashChecks.incrementAndGet()==3){arrived.set(true);PeerGates.direct(a,bid);}break;}return true;});try{SafSyncV2.Result result=engine.sync();assertTrue(arrived.get());assertTrue(result.pending);assertTrue(result.message.contains("místní přenos"));assertFalse(PeerGates.get(a,bid).isLocked());assertEquals(0,store.writes);assertTrue(store.list("sync/v2/messages/"+bid+"/"+aid).isEmpty());assertArrayEquals(before,Files.readAllBytes(new File(a.home,"media/original-0").toPath()));}finally{java.util.Map<String,Long> marks=org.robolectric.util.ReflectionHelpers.getStaticField(PeerGates.class,"DIRECT");marks.remove(a.noBackup.getAbsolutePath()+"/"+bid);}converge();assertArrayEquals(before,Files.readAllBytes(new File(b.home,"media/original-0").toPath()));assertEquals(0,new PeerOutbox(a,a.prefs,ar).pending(bid));
