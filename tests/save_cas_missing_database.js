@@ -15,7 +15,8 @@ function create(handler,seed=base){
    uid:()=> 'native-copy-id',notices:[],calls:[],notify(message){env.notices.push(message)},
    Native:{
     saveDataChecked(text,expected){env.calls.push({text,expected});return handler(text,expected,env)},
-    resolveSyncConflict(local,remote){return JSON.stringify({winner:'local',copy:{...JSON.parse(remote),id:'native-copy-id',conflictSource:'remote-change'}})}
+    resolveSyncConflict(local,remote){return JSON.stringify({winner:'local',copy:{...JSON.parse(remote),id:'native-copy-id',conflictSource:'remote-change'}})},
+    preservePurgedEdit(id,record,tombstone){return JSON.stringify({...JSON.parse(record),id:'purged-edit-copy',conflictSource:'purge-edit:'+id})}
    }};
  vm.createContext(env);vm.runInContext(app.slice(begin,end),env);return env;
 }
@@ -51,6 +52,24 @@ let legacyDisk=JSON.stringify({schema:1,records:[],trashPurgedIds:['photo-1'],sy
 let legacyPurge=create((text,expected)=>{if(expected!==legacyDisk)return JSON.stringify({ok:false,current:legacyDisk});legacyDisk=text;return JSON.stringify({ok:true})},legacy);
 assert.equal(legacyPurge.save(),true);assert.equal(legacyPurge.state.records.length,0);
 assert.equal(legacyPurge.persistedSnapshot,legacyDisk);scenarios++;
+// Concurrent local measurements must survive a legitimate remote purge,
+ // even if local and tombstone clocks compare equal on the same device.
+for(const alreadyTouched of [false,true]){
+ let purgeDisk=JSON.stringify({schema:1,records:[],trashPurgedIds:['photo-1'],
+   syncTombstones:{'photo-1':{[id]:2}}});
+ let amended=create((text,expected)=>{
+   if(expected!==purgeDisk)return JSON.stringify({ok:false,current:purgeDisk});
+   purgeDisk=text;return JSON.stringify({ok:true});
+ });
+ amended.state.records[0].items[0].measure='4444,123456789123456789';
+ if(alreadyTouched)amended.state.records[0].syncClock[id]=2;
+ assert.equal(amended.save(),true);
+ assert.equal(amended.state.records.length,1);
+ assert.equal(amended.state.records[0].id,'purged-edit-copy');
+ assert.equal(amended.state.records[0].items[0].measure,'4444,123456789123456789');
+ assert.deepEqual(amended.state.records[0].media,['original-image-id']);
+ scenarios++;
+}
 // Valid native same-record conflict, then disk-full on retry: absolutely no
 // intermediate mutation, even if the merge created a native conflict copy.
 let remote=structuredClone(base);remote.records[0].rev='remote';

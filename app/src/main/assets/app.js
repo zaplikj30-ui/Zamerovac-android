@@ -66,7 +66,11 @@ function reconcileSavedState(base,local,remote){
     // A confirmed unchanged local record must not resurrect a genuine remote purge.
     if(record===l&&sameSavedValue(record,o))continue;
     if(record===l&&!sameSavedValue(record,o)&&sameSavedValue(record.syncClock,o?.syncClock))record={...record,syncClock:advanceSyncClock(record.syncClock||{})};
-    if(!Object.keys(record.syncClock||{}).length||['after','concurrent'].includes(compareSyncClocks(record.syncClock||{},tombstones[id]))){
+    const order=compareSyncClocks(record.syncClock||{},tombstones[id]);
+    // A local edit and remote purge can have identical clock counters when
+    // interleaved on one device. Preserve the edit as a conflict copy.
+    if(!Object.keys(record.syncClock||{}).length||['after','concurrent'].includes(order)||
+       (record===l&&!sameSavedValue(record,o)&&order==='equal')){
      const source='purge:'+id+':'+canonicalSavedValue(record);
      if(!conflicts.has(source)){let copy;if(native&&typeof Native.preservePurgedEdit==='function'){copy=JSON.parse(Native.preservePurgedEdit(id,JSON.stringify(record),JSON.stringify(tombstones[id])));if(copy.error||!copy.id)throw Error('Konfliktní kopie nebyla potvrzena');}else copy={...record,id:uid(),conflict:true,conflictOf:id,conflictSource:source,title:(record.title||'Položka')+' (změna po vysypání koše)',syncClock:mergeSyncClocks(record.syncClock||{},tombstones[id])};if(!Object.hasOwn(tombstones,copy.id))records.push(copy);conflicts.add(source)}
     }
