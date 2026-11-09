@@ -1,4 +1,4 @@
-name: Zaměřovač - TEMP B16 souhrnná HOME regrese FULL JVM + Chromium + PDF + Python bez APK
+name: Zaměřovač - TEMP B16 souhrnná HOME FOLLOW-ON PDF + Chromium + Python (JVM 382 had 8 FAIL) bez APK
 # One-shot owner-controlled branch; fixed source SHA, no pull_request/fork or cloud runner.
 on:
   push:
@@ -13,9 +13,9 @@ concurrency:
 jobs:
   targeted-native:
     if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/qa/chat31-b16-full-premerge-20261109' && github.event_name == 'push' }}
-    name: Windows QA WSL2 ALL B16 + full JVM, Chromium, Python, PDF without APK
+    name: Windows FOLLOW-ON target PDF JVM, Chromium full, Python without APK
     runs-on: [self-hosted, Windows, X64, zamerovac-qa]
-    timeout-minutes: 130
+    timeout-minutes: 110
     env:
       CI: '1'
       TESTED_SHA: '83e770d2e8975e8e6c98cb3cae72f4ef04096380'
@@ -77,9 +77,11 @@ jobs:
           echo "PHASE_1_JAVAC compilePreviewJavaWithJavac"
           "$gradle" "${common[@]}" :app:verifyDriveRegistration :app:compilePreviewJavaWithJavac
           echo "PASS PHASE_1_JAVAC"
-          echo "PHASE_2_TESTS all complete JVM/Robolectric, not just B16"
+          echo "PHASE_2_TESTS only independent PDF fixture producers; 382-case full JVM was separately RED (8 FAIL)"
           set +e
-          "$gradle" "${common[@]}" :app:testPreviewUnitTest
+          "$gradle" "${common[@]}" :app:testPreviewUnitTest \
+            --tests cz.zamerovac.app.Post147DataTest.customerZipContainsOnlyRasterPdfForOneAndMultiplePhotos \
+            --tests cz.zamerovac.app.Post149NativeTest.pagesStayTogetherAndIncompletePdfCannotBeSaved
           test_rc=$?
           set -e
           python3 - <<'PY_XML'
@@ -96,21 +98,14 @@ jobs:
           print("B16_JUNIT_XML_COUNTS:",stats,"XML_FILES:",len(files),flush=True)
           print("B16_JUNIT_SUITES:",suite_counts,flush=True)
           expected_suites={
-              "cz.zamerovac.app.RecoveryProtectionArchiveTest":40,
-              "cz.zamerovac.app.RecoveryInventoryTest":7,
-              "cz.zamerovac.app.DatabaseInstallEvidenceTest":23,
-              "cz.zamerovac.app.DatabaseRecoveryTest":7,
-              "cz.zamerovac.app.PeerTransferTest":14,
-              "cz.zamerovac.app.SafSyncV2Test":34,
-              "cz.zamerovac.app.CloudInboxTest":5,
-              "cz.zamerovac.app.CloudPublicationsTest":4,
-              "cz.zamerovac.app.RecoveryCandidateReviewTest":20,
+              "cz.zamerovac.app.Post147DataTest":1,
+              "cz.zamerovac.app.Post149NativeTest":1,
           }
-          if any(suite_counts.get(name,0)!=count for name,count in expected_suites.items()) or len(files)<9 or stats["tests"]<265 or any(stats[k] for k in ("failures","errors","skipped")):
+          if suite_counts!=expected_suites or len(files)!=2 or stats["tests"]!=2 or any(stats[k] for k in ("failures","errors","skipped")):
               raise SystemExit("FAIL or SKIP: check exact JUnit XML and Gradle log")
           PY_XML
           test "$test_rc" -eq 0
-          echo "PASS ALL JVM/ROBOLECTRIC - exact SHA, no APK"
+          echo "PASS TWO PDF FIXTURE TESTS ONLY - full 382 JVM still FAIL 8; no APK"
           echo "PHASE_WSL_PYTHON - Java available under Linux JDK17"
           export PATH="$JAVA_HOME/bin:$PATH"
           python3 -m unittest discover -s tests -p 'test_*.py' -v 2>&1 | tee "$reports/python-wsl.log"
@@ -184,7 +179,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: chat31-b16-full-premerge-83e770d
+          name: chat31-b16-followon-pdf-chromium-83e770d
           path: |
             b16-junit-reports/${{ github.run_id }}-${{ github.run_attempt }}/
             local-evidence/Zamerovac-QA/results/
