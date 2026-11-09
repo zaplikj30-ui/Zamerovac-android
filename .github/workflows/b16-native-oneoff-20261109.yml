@@ -13,12 +13,12 @@ concurrency:
 jobs:
   targeted-native:
     if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/qa/b16-native-0d01fdb-20261109' && github.event_name == 'push' }}
-    name: Windows QA WSL2 - compile + focused Robolectric on pinned PR79 SHA
+    name: Windows QA WSL2 - compile + focused Robolectric on pinned PR80 SHA
     runs-on: [self-hosted, Windows, X64, zamerovac-qa]
     timeout-minutes: 45
     env:
       CI: '1'
-      TESTED_SHA: '807820f8ed3a47dcabd1f8e1ff9fda83e361f4e4'
+      TESTED_SHA: 'b6c092442c2cde08d92d8b858d6307805547974f'
     steps:
       - name: Verify owner-controlled branch and unprivileged Windows service
         shell: cmd
@@ -29,15 +29,15 @@ jobs:
           if not exist "C:\actions-runner\tools\Python313\python.exe" exit /b 1
           echo C:\actions-runner\tools\MinGit-2.56.0.4\cmd>>"%GITHUB_PATH%"
           echo PASS owner branch and local tooling
-      - name: Read-only source checkout pinned to reviewed immutable PR79 SHA
+      - name: Read-only source checkout pinned to reviewed immutable PR80 SHA
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: 807820f8ed3a47dcabd1f8e1ff9fda83e361f4e4
+          ref: b6c092442c2cde08d92d8b858d6307805547974f
           path: b16-source
           fetch-depth: 1
           persist-credentials: false
           submodules: false
-      - name: Compile Java and run four focused Robolectric classes in capped WSL2
+      - name: Compile Java and run three focused Robolectric classes in capped WSL2
         shell: 'C:\actions-runner\tools\Python313\python.exe {0}'
         run: |
           import os, subprocess
@@ -47,7 +47,7 @@ jobs:
           if repo != "zaplikj30-ui/Zamerovac-android" or os.environ.get("USERNAME", "").lower() != "zamerovacqa":
               raise SystemExit("STOP untrusted account/repository")
           source = str(Path(os.environ["GITHUB_WORKSPACE"]) / "b16-source")
-          reports = str(Path(os.environ["GITHUB_WORKSPACE"]) / "b16-junit-reports")
+          reports = str(Path(os.environ["GITHUB_WORKSPACE"]) / "b16-junit-reports" / (os.environ["GITHUB_RUN_ID"] + "-" + os.environ["GITHUB_RUN_ATTEMPT"]))
           actual = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=source, text=True).strip()
           if actual != expected:
               raise SystemExit("STOP checkout SHA mismatch "+actual)
@@ -77,14 +77,15 @@ jobs:
           echo "PHASE_1_JAVAC compilePreviewJavaWithJavac"
           "$gradle" "${common[@]}" :app:verifyDriveRegistration :app:compilePreviewJavaWithJavac
           echo "PASS PHASE_1_JAVAC"
-          echo "PHASE_2_TESTS Stage2 Archive 10 + Inventory 7 + 3 adjacent safeguards"
+          echo "PHASE_2_TESTS Stage2 Archive 17 + Inventory 7 + 4 adjacent safeguards"
           set +e
           "$gradle" "${common[@]}" :app:testPreviewUnitTest \
             --tests cz.zamerovac.app.RecoveryProtectionArchiveTest \
             --tests cz.zamerovac.app.RecoveryInventoryTest \
             --tests cz.zamerovac.app.DatabaseInstallEvidenceTest.r10TemporaryQueuedSnapshotReadErrorRecoversAfterRestartWithoutFalseAck \
             --tests cz.zamerovac.app.DatabaseInstallEvidenceTest.r9MissingRecoveryJournalCannotReacceptPreRecoveryAckOrOverwritePhoto \
-            --tests cz.zamerovac.app.PeerTransferTest.firstSyncIntoCleanReceiverKeepsExactPhotoAndNoDuplicateOnRetry
+            --tests cz.zamerovac.app.DatabaseInstallEvidenceTest.r9MismatchedRecoveryJournalIsRejectedWithoutMutatingOriginal \
+            --tests cz.zamerovac.app.DatabaseInstallEvidenceTest.approvedPairingWithoutAnyProjectCanInitializeButNeverResetAfterFirstSave
           test_rc=$?
           set -e
           python3 - <<'PY_XML'
@@ -93,11 +94,19 @@ jobs:
           directory=Path("app/build/test-results/testPreviewUnitTest")
           files=sorted(directory.glob("TEST-*.xml"))
           stats={k:0 for k in ("tests","failures","errors","skipped")}
+          suite_counts={}
           for p in files:
               root=ET.parse(p).getroot()
+              suite_counts[root.attrib["name"]]=int(root.attrib["tests"])
               for k in stats: stats[k]+=int(root.attrib.get(k,"0"))
           print("B16_JUNIT_XML_COUNTS:",stats,"XML_FILES:",len(files),flush=True)
-          if not files or stats["tests"]==0 or any(stats[k] for k in ("failures","errors","skipped")):
+          print("B16_JUNIT_SUITES:",suite_counts,flush=True)
+          expected_suites={
+              "cz.zamerovac.app.RecoveryProtectionArchiveTest":17,
+              "cz.zamerovac.app.RecoveryInventoryTest":7,
+              "cz.zamerovac.app.DatabaseInstallEvidenceTest":4,
+          }
+          if len(files)!=3 or suite_counts!=expected_suites or stats["tests"]!=28 or any(stats[k] for k in ("failures","errors","skipped")):
               raise SystemExit("FAIL or SKIP: check exact JUnit XML and Gradle log")
           PY_XML
           test "$test_rc" -eq 0
@@ -113,7 +122,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: b16-r2-807820f
-          path: b16-junit-reports/
+          name: b16-r2-f1-b6c09244
+          path: b16-junit-reports/${{ github.run_id }}-${{ github.run_attempt }}/
           if-no-files-found: ignore
           retention-days: 7
