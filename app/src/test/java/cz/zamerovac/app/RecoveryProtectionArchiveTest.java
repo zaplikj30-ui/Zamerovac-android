@@ -277,6 +277,38 @@ public class RecoveryProtectionArchiveTest {
             .getJSONObject(0).getString("measure"));
     }
 
+    @Test public void archivedMediaDirectorySymlinkToIdenticalLiveOriginalIsRejected()throws Exception{
+        String exact="1585,800001234567890";
+        LocalDatabase.write(home,noBackup,db(exact).toString());
+        byte[] photo=new byte[]{0,1,2,3,5,8,13,21};
+        media("original-photo",photo);
+        JSONObject copy=RecoveryProtectionArchive.create(home,noBackup);
+        assertTrue(RecoveryProtectionArchive.verify(noBackup,copy.getString("id"))
+            .getBoolean("complete"));
+        File archivedMedia=new File(archive(copy),"payload/files/media");
+        File savedMedia=new File(root,"saved-archived-media");
+        Files.move(archivedMedia.toPath(),savedMedia.toPath());
+        try{Files.createSymbolicLink(archivedMedia.toPath(),new File(home,"media").toPath());}
+        catch(IOException|UnsupportedOperationException|SecurityException unsupported){
+            Assume.assumeNoException(unsupported);return;
+        }
+        // The leaf is regular and both size and SHA match: only the ancestor is unsafe.
+        assertArrayEquals(photo,read(new File(archivedMedia,"original-photo")));
+        assertEquals(PeerWire.hash(photo),PeerWire.hash(read(new File(archivedMedia,"original-photo"))));
+        assertEquals(photo.length,Files.size(new File(archivedMedia,"original-photo").toPath()));
+        try{RecoveryProtectionArchive.verify(noBackup,copy.getString("id"));
+            fail("Archive referring to live original media was certified complete");}
+        catch(IOException expected){}
+        try{RecoveryProtectionArchive.create(home,noBackup);
+            fail("Unsafe existing archive was reused");}
+        catch(IOException expected){}
+        assertArrayEquals(photo,read(new File(home,"media/original-photo")));
+        assertArrayEquals(photo,read(new File(savedMedia,"original-photo")));
+        assertEquals(exact,new JSONObject(LocalDatabase.readForCas(home,noBackup))
+            .getJSONArray("records").getJSONObject(0).getJSONArray("items")
+            .getJSONObject(0).getString("measure"));
+    }
+
     @Test public void crashAfterAtomicArchiveRenameBeforeMarkerCanBeSafelyFinalized()throws Exception{
         LocalDatabase.write(home,noBackup,db("1585,800001234567890").toString());
         JSONObject completed=RecoveryProtectionArchive.create(home,noBackup);
