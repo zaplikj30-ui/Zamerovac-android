@@ -188,11 +188,11 @@ public class SafSyncV2Test {
   String epoch=java.util.UUID.randomUUID().toString();
   ar.recovered(bid,epoch);
   File registryFile=new File(a.noBackup,"sync-peers-v2.json");
-  JSONObject legacy=new JSONObject(Files.readString(registryFile.toPath()));
+  JSONObject legacy=new JSONObject(new String(Files.readAllBytes(registryFile.toPath()),java.nio.charset.StandardCharsets.UTF_8));
   assertEquals(epoch,legacy.getJSONObject("peers").getJSONObject(bid).getString("recovery"));
   legacy.remove("remoteRecoveryHolds");
   // A realistic old installation has peer.recovery but no global witness map.
-  Files.writeString(registryFile.toPath(),legacy.toString());
+  Files.write(registryFile.toPath(),legacy.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
   assertFalse(ar.cloudAckAllowed(bid));
   java.util.concurrent.CountDownLatch finished=new java.util.concurrent.CountDownLatch(1);
   PeerCoordinator coordinator=new PeerCoordinator(a,a.prefs,new PeerCoordinator.Events(){
@@ -208,7 +208,7 @@ public class SafSyncV2Test {
        finished.await(10,java.util.concurrent.TimeUnit.SECONDS));
   }finally{coordinator.close();}
   assertFalse(new SyncPeerRegistry(a.noBackup).snapshot().has(bid));
-  JSONObject persisted=new JSONObject(Files.readString(registryFile.toPath()));
+  JSONObject persisted=new JSONObject(new String(Files.readAllBytes(registryFile.toPath()),java.nio.charset.StandardCharsets.UTF_8));
   assertEquals("Legacy peer.recovery must migrate before removing contact",epoch,
       persisted.getJSONObject("remoteRecoveryHolds").getString(bid));
   ar.approve(bid,rogue.fingerprint(),"Replacement tablet with new cert");
