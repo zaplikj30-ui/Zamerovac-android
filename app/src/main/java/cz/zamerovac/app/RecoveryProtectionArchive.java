@@ -343,15 +343,36 @@ final class RecoveryProtectionArchive {
     private static DirectoryChain parents(File file)throws IOException{
         return new DirectoryChain(file.getAbsoluteFile().getParentFile());
     }
+    /**
+     * Both manifest reads are capped even if an already-open file grows.
+     * Observe at most MAX_META+1 bytes (the extra byte only detects overflow),
+     * then require the same regular file, size, mtime and identity.
+     */
     private static byte[] readChecked(File file)throws IOException{
         DirectoryChain chain=parents(file);
+        BasicFileAttributes before=attributes(file);
+        if(before==null||!before.isRegularFile()||before.isSymbolicLink()||
+           before.size()<0||before.size()>MAX_META)
+            throw new IOException("Manifest překročil limit nebo není bezpečně čitelný");
         byte[] bytes;
+        long total=0;
         try(InputStream in=Files.newInputStream(file.toPath(),LinkOption.NOFOLLOW_LINKS);
             ByteArrayOutputStream out=new ByteArrayOutputStream()){
             byte[] block=new byte[8192];int n;
-            while((n=in.read(block))!=-1)out.write(block,0,n);
+            while((n=in.read(block,0,(int)Math.min(block.length,MAX_META+1L-total)))!=-1){
+                if(n==0)throw new IOException("Čtení manifestu nepostupuje");
+                total+=n;
+                if(total>MAX_META)throw new IOException("Manifest překročil limit");
+                out.write(block,0,n);
+            }
             bytes=out.toByteArray();
         }
+        BasicFileAttributes after=attributes(file);
+        if(after==null||!after.isRegularFile()||after.isSymbolicLink()||
+           before.size()!=total||after.size()!=total||
+           !before.lastModifiedTime().equals(after.lastModifiedTime())||
+           !Objects.equals(before.fileKey(),after.fileKey()))
+            throw new IOException("Manifest se mezi ověřeními změnil (během čtení)");
         chain.check();return bytes;
     }
 
