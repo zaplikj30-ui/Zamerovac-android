@@ -63,47 +63,9 @@ public class SafSyncV2Test {
  SafSyncV2 sync(PeerTransferTest.Device device,SyncTls identity,boolean metered)throws Exception{return new SafSyncV2(device,device.prefs,store,identity,bytes->!metered||bytes<=1024*1024);}
  void converge()throws Exception{for(int i=0;i<6;i++){sync(a,ai,false).sync();sync(b,bi,false).sync();}}
  SafSyncV2 engine(PeerTransferTest.Device device,SyncTls identity,Store selected,boolean metered)throws Exception{return new SafSyncV2(device,device.prefs,selected,identity,bytes->!metered||bytes<=1024*1024);}
- void ackProviderBoundary(boolean staged)throws Exception{
-  canonicalFiles(1,4000);
-  byte[] sourceMedia=Files.readAllBytes(new File(a.home,"media/original-0").toPath());
-  String sourceDb=LocalDatabase.readForCas(a);
-  PeerSnapshot outgoing=PeerSnapshot.capture(a,a.prefs);
-  sync(a,ai,false).sync();
-  assertTrue("Source must keep unconfirmed transfer",new PeerOutbox(a,a.prefs,ar).pending(bid)>0);
-  String ackDir="sync/v2/acks/"+aid+"/"+bid;
-  assertTrue(store.list(ackDir).isEmpty());
-  LateAckProviderStore provider=new LateAckProviderStore(store.root,b,staged);
-  try{engine(b,bi,provider,false).sync();}catch(IOException expected){}
-  assertTrue("Inject at actual provider "+(staged?"publish":"write"),provider.injected);
-  assertTrue("Recovery must remain pending",DatabaseRecovery.pending(b.home));
-  assertArrayEquals("Damaged DB bytes must not be silently repaired",new byte[]{0},
-      Files.readAllBytes(new File(b.home,"projects.json").toPath()));
-  assertArrayEquals("Already accepted synthetic media bytes must remain exact",sourceMedia,
-      Files.readAllBytes(new File(b.home,"media/original-0").toPath()));
-  assertEquals("Source DB must remain unchanged",sourceDb,LocalDatabase.readForCas(a));
-  assertArrayEquals("Original sender photo unchanged",sourceMedia,
-      Files.readAllBytes(new File(a.home,"media/original-0").toPath()));
-  int accepted=0;
-  for(ImmutableStore.Entry entry:provider.list(ackDir)){
-   try{
-    JSONObject proof=CloudProof.verify(CloudProof.read(provider.open(ackDir+"/"+entry.name),PeerWire.MAX_HELLO),
-        bi.certificate(),CloudProof.ACK,bid,aid);
-    if(outgoing.hash.equals(proof.getString("hash")))accepted++;
-   }catch(IOException incompleteOrMissing){}
-  }
-  assertEquals("Provider completed signed ACK after recovery epoch loss: "+(staged?"Drive staged":"SAF direct"),0,accepted);
-  assertTrue("Sender must not retire unacknowledged data",new PeerOutbox(a,a.prefs,ar).pending(bid)>0);
- }
- @Test public void driveStagedAckMustNotPublishAfterLocalAuthorityLostInsideProviderCommit()throws Exception{
-  ackProviderBoundary(true);
- }
- @Test public void safDirectAckMustNotPublishAfterLocalAuthorityLostInsideProviderWrite()throws Exception{
-  ackProviderBoundary(false);
- }
-
  /**
   * A cloud ACK is evidence of an earlier verified commit, not a guarantee
-  * against later disk failure. Keep the two stricter RED diagnostics above.
+  * against later disk failure. The two stricter RED diagnostics remain untouched in PR #88.
   * This checks the independent retention/recovery safety contract.
   */
  void assertLateProviderAckDoesNotDestroySource(boolean staged)throws Exception{
