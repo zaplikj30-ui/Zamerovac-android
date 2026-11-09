@@ -18,7 +18,7 @@ jobs:
     timeout-minutes: 80
     env:
       CI: '1'
-      TESTED_SHA: '475bd4dd5fe773a97d991b5f3497ee6cb99e85fa'
+      TESTED_SHA: '50950b66919087062511b7f344a41f53c118c908'
     steps:
       - name: Verify owner-controlled branch and unprivileged Windows service
         shell: cmd
@@ -32,11 +32,26 @@ jobs:
       - name: Read-only checkout pinned to Chat31 B16 preintegration SOURCE SHA
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: 475bd4dd5fe773a97d991b5f3497ee6cb99e85fa
+          ref: 50950b66919087062511b7f344a41f53c118c908
           path: b16-source
           fetch-depth: 1
           persist-credentials: false
           submodules: false
+      - name: Trusted quick Node and Python tests at same source SHA (no APK)
+        shell: cmd
+        run: |
+          if not exist "C:\actions-runner\tools\Python313\python.exe" exit /b 1
+          set "PATH=C:\actions-runner\tools\Python313;%PATH%"
+          if not exist "%GITHUB_WORKSPACE%\b16-source\.git" exit /b 1
+          cd /d "%GITHUB_WORKSPACE%\b16-source"
+          for /f %%H in ('git rev-parse HEAD') do set "ACTUAL_SHA=%%H"
+          if /I not "%ACTUAL_SHA%"=="%TESTED_SHA%" exit /b 1
+          echo TESTED_QUICK_SOURCE_SHA=%ACTUAL_SHA%
+          set "LOCALAPPDATA=%GITHUB_WORKSPACE%\local-evidence"
+          node tools\local-qa.cjs --quick
+          if errorlevel 1 exit /b 1
+          echo PASS optional quick source checks - no APK
+
       - name: Compile Java and run nine complete B16 Robolectric classes in WSL2
         shell: 'C:\actions-runner\tools\Python313\python.exe {0}'
         run: |
@@ -127,21 +142,6 @@ jobs:
           result = subprocess.run(cmd, stdin=subprocess.DEVNULL, check=False)
           if result.returncode:
               raise SystemExit("NATIVE_TEST_EXIT="+str(result.returncode))
-      - name: Trusted quick Node and Python tests at same source SHA (no APK)
-        shell: cmd
-        run: |
-          if not exist "C:\actions-runner\tools\Python313\python.exe" exit /b 1
-          set "PATH=C:\actions-runner\tools\Python313;%PATH%"
-          if not exist "%GITHUB_WORKSPACE%\b16-source\.git" exit /b 1
-          cd /d "%GITHUB_WORKSPACE%\b16-source"
-          for /f %%H in ('git rev-parse HEAD') do set "ACTUAL_SHA=%%H"
-          if /I not "%ACTUAL_SHA%"=="%TESTED_SHA%" exit /b 1
-          echo TESTED_QUICK_SOURCE_SHA=%ACTUAL_SHA%
-          set "LOCALAPPDATA=%GITHUB_WORKSPACE%\local-evidence"
-          node tools\local-qa.cjs --quick
-          if errorlevel 1 exit /b 1
-          echo PASS optional quick source checks - no APK
-
       - name: Chromium pixel/UI smoke of same SHA (no APK, pinned Playwright)
         shell: cmd
         env:
@@ -167,7 +167,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: chat31-b16-preintegration-154-475bd4d
+          name: chat31-b16-preintegration-154-50950b6
           path: |
             b16-junit-reports/${{ github.run_id }}-${{ github.run_attempt }}/
             local-evidence/Zamerovac-QA/results/
