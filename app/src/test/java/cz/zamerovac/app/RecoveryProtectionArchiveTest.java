@@ -171,6 +171,156 @@ public class RecoveryProtectionArchiveTest {
         assertMarkerRejectionKeepsOriginals(copy,primary,photo,exact);
     }
 
+    /**
+     * Recreate a real file change *between* the authenticated first read and the
+     * second manifest read. The forged source metadata is valid JSON but its
+     * bytes do not hash to the snapshot's immutable ID.
+     */
+    void assertSecondManifestReadCannotSupplyUnauthenticatedMetadata(boolean interrupted)
+            throws Exception{
+        String exact="1585,800001234567890";
+        byte[] photo={1,3,5,7,9,11};
+        JSONObject snapshot=completeMarkerFixture(exact,photo);
+        File copy=archive(snapshot);
+        File manifestFile=new File(copy,"manifest.json");
+        Path manifestPath=manifestFile.toPath();
+        byte[] originalManifest=read(manifestFile);
+        JSONObject authenticated=JsonInput.object(originalManifest);
+        assertEquals(snapshot.getString("id"),PeerWire.hash(originalManifest));
+        JSONObject forged=JsonInput.object(originalManifest);
+        forged.put("sourceComplete",!authenticated.optBoolean("sourceComplete"));
+        forged.put("files",new JSONArray());
+        forged.put("missing",new JSONArray().put(new JSONObject()
+            .put("path","files/media/forged-missing")
+            .put("reason","MISSING_OR_UNSAFE")));
+        byte[] forgedManifest=forged.toString().getBytes(StandardCharsets.UTF_8);
+        assertNotEquals("Tampered JSON must not match the immutable snapshot ID",
+            snapshot.getString("id"),PeerWire.hash(forgedManifest));
+        assertNotEquals(authenticated.optBoolean("sourceComplete"),
+            forged.optBoolean("sourceComplete"));
+
+        File marker=new File(copy,"COMPLETE");
+        if(interrupted)assertTrue("Simulate crash before completing archive",marker.delete());
+        else assertTrue(marker.isFile());
+
+        byte[] primaryBefore=read(new File(home,"projects.json"));
+        byte[] archivedDb=read(new File(copy,"payload/files/projects.json"));
+        byte[] archivedPhoto=read(new File(copy,"payload/files/media/marker-photo"));
+        assertArrayEquals(primaryBefore,archivedDb);
+        assertArrayEquals(photo,archivedPhoto);
+        AtomicInteger opens=new AtomicInteger();
+        boolean[] actuallyTampered={false};
+        try{
+            try(MockedStatic<Files> mocked=mockStatic(Files.class,CALLS_REAL_METHODS)){
+                mocked.when(()->Files.newInputStream(any(Path.class),any(OpenOption[].class)))
+                    .thenAnswer(call->{
+                        Path opened=call.getArgument(0);
+                        if(manifestPath.equals(opened)&&opens.incrementAndGet()==2){
+                            // This must occur only after payloadVerified authenticated
+                            // the FIRST manifest and verified all archived payloads.
+                            Files.write(manifestPath,forgedManifest);
+                            actuallyTampered[0]=true;
+                        }
+                        return call.callRealMethod();
+                    });
+                try{
+                    if(interrupted)RecoveryProtectionArchive.create(home,noBackup);
+                    else RecoveryProtectionArchive.verify(noBackup,snapshot.getString("id"));
+                    fail("Accepted sourceComplete/files/missing from a forged second manifest");
+                }catch(IOException expected){
+                    assertNotNull(expected.getMessage());
+                }
+            }
+        }finally{
+            // Leave the historical archive byte-for-byte intact even after
+            // this intentionally destructive test-only race injection.
+            Files.write(manifestPath,originalManifest);
+        }
+        assertTrue("The second read must really be replaced",actuallyTampered[0]);
+        assertEquals("The test must inject into precisely the second manifest read",
+            2,opens.get());
+        assertArrayEquals(originalManifest,read(manifestFile));
+        assertArrayEquals(primaryBefore,read(new File(home,"projects.json")));
+        assertArrayEquals(archivedDb,read(new File(copy,"payload/files/projects.json")));
+        assertArrayEquals(photo,read(new File(home,"media/marker-photo")));
+        assertArrayEquals(archivedPhoto,read(new File(copy,"payload/files/media/marker-photo")));
+        JSONObject db=new JSONObject(new String(primaryBefore,StandardCharsets.UTF_8));
+        assertEquals(exact,db.getJSONArray("records").getJSONObject(0)
+            .getJSONArray("items").getJSONObject(0).getString("measure"));
+        assertEquals("history-exact",db.getJSONArray("records").getJSONObject(0)
+            .getJSONObject("history").getJSONArray("revisions")
+            .getJSONObject(0).getString("note"));
+        assertEquals(1,completedCount());
+        assertEquals("Failure must not certify a previously incomplete archive",
+            !interrupted,marker.exists());
+        if(interrupted){
+            try{
+                RecoveryProtectionArchive.verify(noBackup,snapshot.getString("id"));
+                fail("Unfinished archive became complete after a rejected forged manifest");
+            }catch(IOException expected){}
+        }else{
+            JSONObject reopened=RecoveryProtectionArchive.verify(noBackup,snapshot.getString("id"));
+            assertTrue(reopened.getBoolean("complete"));
+            assertFalse(reopened.getBoolean("canPromote"));
+        }
+    }
+
+    @Test public void forgedSecondManifestCannotChangeConfirmedArchiveMetadata()
+            throws Exception{
+        assertSecondManifestReadCannotSupplyUnauthenticatedMetadata(false);
+    }
+
+    @Test public void forgedSecondManifestCannotFinalizeInterruptedArchive()
+            throws Exception{
+        assertSecondManifestReadCannotSupplyUnauthenticatedMetadata(true);
+    }
+
+    @Test public void validManifestMetadataSurvivesVerifyReuseAndInterruptedFinalization()
+            throws Exception{
+        String exact="1585,800001234567890";
+        byte[] photo={1,3,5,7,9,11};
+        JSONObject copy=completeMarkerFixture(exact,photo);
+        File saved=archive(copy);
+        byte[] originalManifest=read(new File(saved,"manifest.json"));
+        JSONObject signed=JsonInput.object(originalManifest);
+        JSONArray originalFiles=signed.getJSONArray("files");
+        JSONObject reopened=RecoveryProtectionArchive.verify(noBackup,copy.getString("id"));
+        assertTrue(reopened.getBoolean("complete"));
+        assertFalse(reopened.getBoolean("canPromote"));
+        assertEquals(signed.getBoolean("sourceComplete"),reopened.getBoolean("sourceComplete"));
+        assertEquals(originalFiles.length(),reopened.getJSONArray("files").length());
+        assertEquals(signed.getJSONArray("missing").length(),reopened.getJSONArray("missing").length());
+        for(int i=0;i<originalFiles.length();i++){
+            JSONObject before=originalFiles.getJSONObject(i);
+            JSONObject after=reopened.getJSONArray("files").getJSONObject(i);
+            assertEquals(before.getString("path"),after.getString("path"));
+            assertEquals(before.getString("sha256"),after.getString("sha256"));
+            assertEquals(before.getLong("size"),after.getLong("size"));
+        }
+        JSONObject reused=RecoveryProtectionArchive.create(home,noBackup);
+        assertTrue(reused.getBoolean("reused"));
+        assertTrue(reused.getBoolean("complete"));
+        assertFalse(reused.getBoolean("canPromote"));
+        assertEquals(originalFiles.length(),reused.getJSONArray("files").length());
+        assertTrue(new File(saved,"COMPLETE").delete());
+        JSONObject finished=RecoveryProtectionArchive.create(home,noBackup);
+        assertTrue(finished.getBoolean("reused"));
+        assertTrue(finished.getBoolean("complete"));
+        assertFalse(finished.getBoolean("canPromote"));
+        assertEquals(originalFiles.length(),finished.getJSONArray("files").length());
+        assertArrayEquals(originalManifest,read(new File(saved,"manifest.json")));
+        assertArrayEquals(photo,read(new File(saved,"payload/files/media/marker-photo")));
+        assertArrayEquals(photo,read(new File(home,"media/marker-photo")));
+        JSONObject stored=new JSONObject(new String(read(new File(home,"projects.json")),
+            StandardCharsets.UTF_8));
+        assertEquals(exact,stored.getJSONArray("records").getJSONObject(0)
+            .getJSONArray("items").getJSONObject(0).getString("measure"));
+        assertEquals("history-exact",stored.getJSONArray("records").getJSONObject(0)
+            .getJSONObject("history").getJSONArray("revisions")
+            .getJSONObject(0).getString("note"));
+        assertEquals(1,completedCount());
+    }
+
     private static final String REUSE_EXACT="1585,800001234567890";
     private static final byte[] REUSE_PHOTO={1,3,5,7,9,11};
 
