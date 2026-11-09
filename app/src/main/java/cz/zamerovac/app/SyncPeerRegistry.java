@@ -159,8 +159,20 @@ final class SyncPeerRegistry {
         data.put("localRecovery",epoch);
         write(data);
     }}
+    /**
+     * Existing signed cloud ACKs do not identify the recipient's recovery era.
+     * Once a verified remote recovery is observed, old immutable receipts cannot
+     * establish delivery in the new era. Hold cloud ACK retirement until a
+     * separately authorized recovery reconciliation (Stage 3). No wire change.
+     */
+    boolean cloudAckAllowed(String id)throws Exception{synchronized(LOCK){
+        if(!DeviceIdentity.valid(id))throw new IOException("Neplatný partner cloudového potvrzení");
+        JSONObject peer=load().getJSONObject("peers").optJSONObject(id);
+        if(peer==null)throw new IOException("Cloudové potvrzení patří neznámému zařízení");
+        return peer.optString("recovery","").isEmpty();
+    }}
     String lastAck(String id)throws Exception{synchronized(LOCK){JSONObject peer=load().getJSONObject("peers").optJSONObject(id);return peer==null?"":peer.optString("lastAck","");}}
-    void recovered(String id,String epoch)throws Exception{synchronized(LOCK){if(!DeviceIdentity.valid(epoch))throw new IOException("Neplatná obnova zařízení");JSONObject data=load(),peer=data.getJSONObject("peers").optJSONObject(id);if(peer==null)throw new IOException("Zařízení už není spárované");if(epoch.equals(peer.optString("recovery")))return;peer.put("recovery",epoch);peer.remove("lastAck");write(data);}}
+    void recovered(String id,String epoch)throws Exception{synchronized(LOCK){if(!DeviceIdentity.valid(epoch))throw new IOException("Neplatná obnova zařízení");JSONObject data=load(),peer=data.getJSONObject("peers").optJSONObject(id);if(peer==null)throw new IOException("Zařízení už není spárované");if(epoch.equals(peer.optString("recovery")))return;peer.put("recovery",epoch);peer.remove("lastAck");peer.remove("lastSuccess");write(data);}}
     void acknowledged(String id,String hash)throws Exception{synchronized(LOCK){if(!hash.matches("[0-9a-f]{64}"))throw new IOException("Neplatné potvrzení");JSONObject data=load(),peer=data.getJSONObject("peers").optJSONObject(id);if(peer==null)throw new IOException("Zařízení už není spárované");peer.put("lastAck",hash).put("lastSuccess",java.time.Instant.now().toString());write(data);}}
     JSONObject snapshot()throws Exception{synchronized(LOCK){return new JSONObject(load().getJSONObject("peers").toString());}}
 }

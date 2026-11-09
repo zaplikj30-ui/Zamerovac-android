@@ -74,12 +74,12 @@ final class SafSyncV2 {
   repairRequests(peer,current,certificate);if(!publications.snapshotPublished(peer,current.hash)||repairPending(peer,current))data.outbox.prepare(peer,true,this::route);
   for(JSONObject job:data.outbox.messages(peer)){
    data.trusted(authenticated);PeerSnapshot snapshot=data.outbox.load(job);if(!snapshot.hash.equals(current.hash))repairRequests(peer,snapshot,certificate);
-   if(publications.snapshotPublished(peer,snapshot.hash)&&!repairPending(peer,snapshot)&&proof("acks",own,peer,snapshot.hash,snapshot.bytes.length,certificate,CloudProof.ACK)){LocalDatabase.readForCas(context);data.outbox.completed(peer,job);continue;}
+   if(publications.snapshotPublished(peer,snapshot.hash)&&!repairPending(peer,snapshot)&&peers.cloudAckAllowed(peer)&&proof("acks",own,peer,snapshot.hash,snapshot.bytes.length,certificate,CloudProof.ACK)){LocalDatabase.readForCas(context);data.outbox.completed(peer,job);continue;}
    if(!putPublished(peer,snapshot,snapshot.hash,snapshot.bytes.length,()->new ByteArrayInputStream(snapshot.bytes))){pending=true;continue;}
    // A signed message is a pending intent, not a claim that the receiver has committed the project.
    data.trusted(authenticated);if(!proof("messages",peer,own,snapshot.hash,snapshot.bytes.length,identity.certificate(),CloudProof.MESSAGE))publish(directory("messages",peer,own),snapshot.hash,CloudProof.sign(CloudProof.body(CloudProof.MESSAGE,own,peer,snapshot.hash,snapshot.bytes.length),identity));
    boolean complete=true;for(JSONObject media:snapshot.media.values()){data.trusted(authenticated);String id=media.getString("id");if(!putPublished(peer,snapshot,media.getString("hash"),media.getLong("size"),()->new FileInputStream(new File(data.outbox.mediaDirectory,id))))complete=false;}
-   if(complete){publications.publishedSnapshot(peer,snapshot.hash);if(proof("acks",own,peer,snapshot.hash,snapshot.bytes.length,certificate,CloudProof.ACK)){LocalDatabase.readForCas(context);data.outbox.completed(peer,job);continue;}}
+   if(complete){publications.publishedSnapshot(peer,snapshot.hash);if(peers.cloudAckAllowed(peer)&&proof("acks",own,peer,snapshot.hash,snapshot.bytes.length,certificate,CloudProof.ACK)){LocalDatabase.readForCas(context);data.outbox.completed(peer,job);continue;}}
    pending=true;
   }return pending;}catch(CloudScan.Deferred nextBatch){return true;}
  }

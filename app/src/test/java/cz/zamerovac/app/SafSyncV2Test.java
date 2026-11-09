@@ -173,11 +173,15 @@ public class SafSyncV2Test {
   byte[] originalDb=Files.readAllBytes(new File(a.home,"projects.json").toPath());
   byte[] originalPhoto=Files.readAllBytes(new File(a.home,"media/original-0").toPath());
   assertEquals(source.hash,ar.lastAck(bid));
+  assertTrue("Signed historical cloud proof must exist before recovery",!store.list("sync/v2/acks/"+aid+"/"+bid).isEmpty());
+  assertTrue("Healthy peer can accept ordinary cloud ACK",ar.cloudAckAllowed(bid));
   assertEquals(0,new PeerOutbox(a,a.prefs,ar).pending(bid));
   String recoveredEpoch=java.util.UUID.randomUUID().toString();
   ar.recovered(bid,recoveredEpoch); // existing authenticated remote-recovery signal
   assertEquals("",ar.lastAck(bid));
+  assertFalse("Old successful pairing status must be retired",ar.snapshot().getJSONObject(bid).has("lastSuccess"));
   assertEquals(recoveredEpoch,ar.snapshot().getJSONObject(bid).getString("recovery"));
+  assertFalse("Pre-recovery cloud ACK cannot confirm the new era",ar.cloudAckAllowed(bid));
   SafSyncV2.Result retry=sync(a,ai,false).sync();
   assertTrue("Old signed cloud proof must not finish post-recovery work",retry.pending);
   assertTrue("Old ACK cannot retire the new-epoch outbound intent",
