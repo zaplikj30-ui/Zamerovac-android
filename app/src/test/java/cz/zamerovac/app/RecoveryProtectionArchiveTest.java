@@ -237,7 +237,9 @@ public class RecoveryProtectionArchiveTest {
                     else RecoveryProtectionArchive.verify(noBackup,snapshot.getString("id"));
                     fail("Accepted sourceComplete/files/missing from a forged second manifest");
                 }catch(IOException expected){
-                    assertNotNull(expected.getMessage());
+                    assertTrue("The second manifest's SHA must be explicitly rejected",
+                        expected.getMessage()!=null&&
+                        expected.getMessage().contains("Manifest se mezi ověřeními změnil"));
                 }
             }
         }finally{
