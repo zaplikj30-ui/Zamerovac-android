@@ -241,6 +241,9 @@ public class RecoveryCandidateReviewTest {
 
     @Test public void legacyJournalBakAloneMustRemainByteExactAndUnknown()throws Exception{
         saved(db(exact,false));
+        // Fixture setup only: LocalDatabase.write may initialize the base journal.
+        // To model a legacy .bak alone, remove it BEFORE the protected snapshot.
+        Files.deleteIfExists(new File(home,"projects.recovery-v1.json").toPath());
         writeJournal("projects.recovery-v1.json.bak",
             recoveryJournal(UUID.randomUUID().toString(),true));
         SortedMap<String,byte[]> before=preserved();
