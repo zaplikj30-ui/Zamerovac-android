@@ -342,6 +342,38 @@ final class RecoveryProtectionArchive {
         chain.check();return bytes;
     }
 
+    /**
+     * COMPLETE is exactly 64 lowercase ASCII hash bytes followed by LF.
+     * Never allocate from untrusted file length: read at most 65 + one
+     * overflow byte, including when another writer grows an open file.
+     */
+    private static byte[] readCompleteMarker(File file)throws IOException{
+        DirectoryChain chain=parents(file);
+        BasicFileAttributes before=attributes(file);
+        if(before==null||!before.isRegularFile()||before.isSymbolicLink()||
+           before.size()!=65)
+            throw new IOException("Neplatná délka nebo typ potvrzení ochranné kopie");
+        byte[] stamp=new byte[65];
+        try(InputStream in=Files.newInputStream(file.toPath(),LinkOption.NOFOLLOW_LINKS)){
+            int used=0;
+            while(used<stamp.length){
+                int n=in.read(stamp,used,stamp.length-used);
+                if(n<=0)throw new IOException("Neúplné potvrzení ochranné kopie");
+                used+=n;
+            }
+            // Detect a file that gained bytes between the length check and EOF.
+            if(in.read()!=-1)
+                throw new IOException("Příliš dlouhé potvrzení ochranné kopie");
+        }
+        chain.check();
+        BasicFileAttributes after=attributes(file);
+        if(after==null||!after.isRegularFile()||after.isSymbolicLink()||
+           after.size()!=65||!Objects.equals(before.fileKey(),after.fileKey())||
+           !before.lastModifiedTime().equals(after.lastModifiedTime()))
+            throw new IOException("Potvrzení ochranné kopie se během čtení změnilo");
+        return stamp;
+    }
+
     private static String hashStable(File file,long max)throws Exception{
         DirectoryChain chain=parents(file);
         BasicFileAttributes before=attributes(file);
@@ -484,7 +516,7 @@ final class RecoveryProtectionArchive {
         if(exists(complete)){
             if(!attributes(complete).isRegularFile()||attributes(complete).isSymbolicLink())
                 throw new IOException("Neplatné potvrzení ochranné kopie");
-            byte[] stamp=readChecked(complete);
+            byte[] stamp=readCompleteMarker(complete);
             marked=Arrays.equals(stamp,(id+"\n").getBytes(StandardCharsets.US_ASCII));
             if(!marked)throw new IOException("Potvrzení ochranné kopie nesouhlasí");
         }
