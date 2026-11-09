@@ -1,0 +1,112 @@
+name: Zaměřovač - TEMP Chat31 HOME QA WSL-Node fail-fast gate, no APK
+on:
+  push:
+    branches: [qa/chat31-home-gate-20261110]
+    paths: ['.github/workflows/chat31-home-gate-oneoff-20261110.yml']
+permissions:
+  contents: read
+concurrency:
+  group: chat31-home-gate-oneoff-20261110
+  cancel-in-progress: false
+jobs:
+  preflight:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/qa/chat31-home-gate-20261110' && github.event_name == 'push' }}
+    runs-on: [self-hosted, Windows, X64, zamerovac-qa]
+    timeout-minutes: 40
+    env:
+      CI: '1'
+      PYTHONUTF8: '1'
+      TESTED_SHA: '11365f6dc209c3fb6659b22154e91bfb8908f39d'
+    steps:
+      - name: Verify owner, service account and pinned local Git and Python
+        shell: cmd
+        run: |
+          if /I not "%USERNAME%"=="ZamerovacQA" exit /b 1
+          if not "%GITHUB_REF%"=="refs/heads/qa/chat31-home-gate-20261110" exit /b 1
+          if not exist "C:\actions-runner\tools\MinGit-2.56.0.4\cmd\git.exe" exit /b 1
+          if not exist "C:\actions-runner\tools\Python313\python.exe" exit /b 1
+          echo C:\actions-runner\tools\MinGit-2.56.0.4\cmd>>"%GITHUB_PATH%"
+          echo C:\actions-runner\tools\Python313>>"%GITHUB_PATH%"
+          echo PASS trusted self-hosted Windows service
+
+      - name: Read-only checkout exact SOURCE SHA (not QA workflow commit)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: 11365f6dc209c3fb6659b22154e91bfb8908f39d
+          path: source
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+
+      - name: Read-only checkout owner QA recipe for self-lint (event commit only)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          path: runner-recipe
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+
+      - name: Strict workflow lint and positive + negative self-tests BEFORE any long suite
+        shell: cmd
+        run: |
+          cd /d "%GITHUB_WORKSPACE%\source"
+          for /f %%H in ('git rev-parse HEAD') do set "ACTUAL_SHA=%%H"
+          if /I not "%ACTUAL_SHA%"=="%TESTED_SHA%" exit /b 1
+          echo TESTED_PREFLIGHT_SOURCE_SHA=%ACTUAL_SHA%
+          python tools\home_qa_gate.py lint-workflow "..\runner-recipe\.github\workflows\chat31-home-gate-oneoff-20261110.yml" --strict
+          if errorlevel 1 exit /b 1
+          python -m unittest discover -s tests -p test_home_qa_gate.py -v
+          if errorlevel 1 exit /b 1
+          python tools\home_qa_gate.py windows-quick --expected-sha 11365f6dc209c3fb6659b22154e91bfb8908f39d --root . --check-only
+          if errorlevel 1 exit /b 1
+          echo PASS all positive and negative preflights before expensive tests
+
+      - name: Trusted Windows Node and all Python quick tests through shared entrypoint
+        shell: cmd
+        run: |
+          cd /d "%GITHUB_WORKSPACE%\source"
+          set "LOCALAPPDATA=%GITHUB_WORKSPACE%\local-evidence"
+          python tools\home_qa_gate.py windows-quick --expected-sha 11365f6dc209c3fb6659b22154e91bfb8908f39d --root .
+          if errorlevel 1 exit /b 1
+          echo PASS Windows Node/Python QUICK exact source
+
+      - name: Lightweight actual WSL native environment and previously skipped JDK Python probes
+        shell: 'C:\actions-runner\tools\Python313\python.exe {0}'
+        run: |
+          import os,subprocess
+          from pathlib import Path
+          expected = os.environ["TESTED_SHA"]
+          source = Path(os.environ["GITHUB_WORKSPACE"]) / "source"
+          actual = subprocess.check_output(["git","rev-parse","HEAD"],cwd=source,text=True).strip()
+          if actual != expected: raise SystemExit("STOP Windows SOURCE SHA mismatch")
+          print("TESTED_WINDOWS_SOURCE_SHA="+actual,flush=True)
+          linux = r"""
+          set -Eeuo pipefail
+          source_dir="$(wslpath -u "$1")"
+          expected="$2"
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+          export PATH="$JAVA_HOME/bin:$PATH"
+          export CI=1
+          mkdir -p /root/zamerovac-qa-commits
+          tmp="$(mktemp -d /root/zamerovac-qa-commits/chat31-preflight-XXXXXXXX)"
+          trap 'rc=$?; rm -rf "$tmp"; exit "$rc"' EXIT
+          cp -a "$source_dir/." "$tmp/"
+          cd "$tmp"
+          echo "WSL_TESTED_SOURCE_SHA=$(git rev-parse HEAD)"
+          python3 tools/home_qa_gate.py wsl-native --expected-sha "$expected" --root . --gradle /opt/gradle-8.10.2/bin/gradle
+          python3 tools/home_qa_gate.py wsl-jdk-probes --expected-sha "$expected" --root . --gradle /opt/gradle-8.10.2/bin/gradle
+          echo PASS WSL native preflight and 5 JDK Python probes; Node not installed or required
+          """
+          result = subprocess.run(["wsl.exe","--distribution","Zamerovac-Ubuntu-QA",
+              "--user","root","--exec","/bin/bash","-lc",linux,"_",
+              str(source),expected],stdin=subprocess.DEVNULL,check=False)
+          if result.returncode: raise SystemExit("WSL_GATE_EXIT="+str(result.returncode))
+
+      - name: Preserve only quick/preflight evidence – never APK
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: chat31-home-gate-preflight-11365f6
+          path: local-evidence/Zamerovac-QA/results/
+          if-no-files-found: ignore
+          retention-days: 7
