@@ -33,6 +33,56 @@ public class PeerTransferTest {
  void exchange(PeerTransfer.Progress sender,PeerTransfer.Progress receiver)throws Exception{
   tls.sockets(tls.b.context(br,()->false),tls.a.context(ar,()->false),socket->{PeerHandshake.Peer peer=PeerHandshake.negotiate(socket,bid,"Synthetic tablet",tls.b,br,()->false,request->false);new PeerTransfer(bs,receiver).exchange(socket,peer,false);},socket->{PeerHandshake.Peer peer=PeerHandshake.negotiate(socket,aid,"Synthetic phone",tls.a,ar,()->false,request->false);new PeerTransfer(as,sender).exchange(socket,peer,true);});
  }
+ @Test public void firstSyncIntoCleanReceiverKeepsExactPhotoAndNoDuplicateOnRetry()throws Exception{
+  JSONObject photo=record("photo-first",aid,"1585,800001234567890");
+  photo.getJSONArray("items").getJSONObject(0).put("laserMeasuredMm","1585.800001234567890");
+  media(a,photo,1);save(a,db(photo));
+  assertFalse(new File(b.home,"projects.json").exists());
+  exchange(null,null);exchange(null,null);
+  assertTrue(new File(b.home,"projects.json").isFile());
+  assertTrue(DatabaseRecovery.exists(b.home));
+  JSONArray received=read(b).getJSONArray("records");assertEquals(1,received.length());
+  JSONObject stored=received.getJSONObject(0);
+  assertEquals("photo-first",stored.getString("id"));
+  assertEquals("1585,800001234567890",stored.getJSONArray("items").getJSONObject(0).getString("measure"));
+  assertEquals("1585.800001234567890",stored.getJSONArray("items").getJSONObject(0).getString("laserMeasuredMm"));
+  assertEquals("media-0",stored.getJSONArray("media").getString(0));
+  assertArrayEquals(Files.readAllBytes(new File(a.home,"media/media-0").toPath()),
+      Files.readAllBytes(new File(b.home,"media/media-0").toPath()));
+  exchange(null,null);
+  assertEquals(1,read(b).getJSONArray("records").length());
+  assertEquals(0,as.outbox.pending(bid));
+ }
+ @Test public void interruptedFirstPhotoTransferKeepsCleanBaselineAndResumesSafely()throws Exception{
+  JSONObject photo=record("photo-first",aid,"1250,000000987654321");
+  photo.getJSONArray("items").getJSONObject(0).put("laserMeasuredMm","1250.000000987654321");
+  media(a,photo,2);save(a,db(photo));
+  AtomicBoolean interrupted=new AtomicBoolean();
+  try{
+   exchange(null,(peer,phase,done,total)->{
+    if("receiving".equals(phase)&&done==1&&interrupted.compareAndSet(false,true))
+     throw new IOException("synthetic first-install interruption");
+   });
+   fail("Interrupted first photo transfer was acknowledged");
+  }catch(Exception expected){assertTrue(PeerTlsTest.contains(expected,"synthetic first-install interruption"));}
+  assertTrue(interrupted.get());
+  assertTrue("First media must be preceded by a durable empty primary",new File(b.home,"projects.json").isFile());
+  assertEquals(0,new JSONObject(LocalDatabase.readForCas(b.home)).getJSONArray("records").length());
+  assertTrue(as.outbox.pending(bid)>0);
+  assertEquals("1250,000000987654321",read(a).getJSONArray("records").getJSONObject(0).getJSONArray("items").getJSONObject(0).getString("measure"));
+  as=store(a,new SyncPeerRegistry(a.noBackup));
+  bs=store(b,new SyncPeerRegistry(b.noBackup));
+  exchange(null,null);exchange(null,null);
+  JSONArray records=read(b).getJSONArray("records");assertEquals(1,records.length());
+  JSONObject stored=records.getJSONObject(0);
+  assertEquals("photo-first",stored.getString("id"));
+  assertEquals("1250,000000987654321",stored.getJSONArray("items").getJSONObject(0).getString("measure"));
+  assertEquals("1250.000000987654321",stored.getJSONArray("items").getJSONObject(0).getString("laserMeasuredMm"));
+  for(int i=0;i<2;i++)
+   assertArrayEquals(Files.readAllBytes(new File(a.home,"media/media-"+i).toPath()),
+       Files.readAllBytes(new File(b.home,"media/media-"+i).toPath()));
+  assertEquals(0,as.outbox.pending(bid));
+ }
  @Test public void completeBidirectionalMediaAndExactAnnotationsRemainIdempotent()throws Exception{
   JSONObject photo=record("photo-a",aid,"0,000000000123456789"),note=record("note-b",bid,"99999999,123456789");media(a,photo,3);photo.put("notes",new JSONArray().put(new JSONObject().put("text","Přesná poznámka").put("audioMedia",new JSONArray().put("media-1"))));photo.getJSONArray("items").put(new JSONObject().put("type","detail").put("detailItems",new JSONArray().put(new JSONObject().put("media",new JSONArray().put("media-2")).put("measure","1585,800001"))));save(a,db(photo));save(b,db(note));
   exchange(null,null);exchange(null,null);assertEquals(2,read(a).getJSONArray("records").length());assertEquals(CausalClock.canonical(read(a)),CausalClock.canonical(read(b)));assertEquals(CausalClock.canonical(photo),CausalClock.canonical(read(b).getJSONArray("records").getJSONObject(1)));

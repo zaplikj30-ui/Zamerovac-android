@@ -16,7 +16,18 @@ final class PeerDataStore {
         trusted(peer);JSONArray needed=new JSONArray();for(JSONObject media:snapshot.media.values())if(!PeerMedia.matches(new File(outbox.mediaDirectory,media.getString("id")),media,checkpoint))needed.put(media.getString("id"));return needed;
     }
     void receive(String id,InputStream input,JSONObject media,PeerHandshake.Peer peer)throws Exception{receive(id,input,media,peer,()->{});}
-    void receive(String id,InputStream input,JSONObject media,PeerHandshake.Peer peer,ImmutableStore.Checkpoint checkpoint)throws Exception{trusted(peer);PeerMedia.receive(outbox.mediaDirectory,id,input,media,checkpoint);trusted(peer);}
+    void receive(String id,InputStream input,JSONObject media,PeerHandshake.Peer peer,ImmutableStore.Checkpoint checkpoint)throws Exception{
+        trusted(peer);checkpoint.check();
+        // Before receiving the first media on a clean device, persist a real DB
+        // baseline. Otherwise an interrupted transfer leaves orphaned media with
+        // no primary DB and is indistinguishable from an initialized DB loss.
+        synchronized(TrashPurger.LOCK){
+            String baseline=LocalDatabase.readForCas(context.getFilesDir());
+            if(baseline.isEmpty())
+                LocalDatabase.write(context.getFilesDir(),"{\"schema\":1,\"records\":[]}");
+        }
+        PeerMedia.receive(outbox.mediaDirectory,id,input,media,checkpoint);trusted(peer);
+    }
     interface LocalReceipt {void save()throws Exception;}
     /** Retire an older intent only when a verified durable newer local state no longer needs its absent files. No network here. */
     boolean superseded(PeerSnapshot incoming,PeerHandshake.Peer peer,JSONArray needed,LocalReceipt receipt)throws Exception{return superseded(incoming,peer,needed,receipt,()->{});}
@@ -40,7 +51,7 @@ final class PeerDataStore {
         Map<String,long[]> verified=new HashMap<>();for(JSONObject media:snapshot.media.values()){File file=new File(outbox.mediaDirectory,media.getString("id"));if(!PeerMedia.matches(file,media,checkpoint))throw new IOException("Před potvrzením chybí příloha");verified.put(media.getString("id"),new long[]{file.length(),file.lastModified()});}
         JSONObject saved;boolean changed;
         synchronized(TrashPurger.LOCK){
-            trusted(peer);for(Map.Entry<String,long[]> entry:verified.entrySet()){File file=new File(outbox.mediaDirectory,entry.getKey());if(!file.isFile()||java.nio.file.Files.isSymbolicLink(file.toPath())||file.length()!=entry.getValue()[0]||file.lastModified()!=entry.getValue()[1])throw new IOException("Příloha se před potvrzením změnila. Přenos zůstává čekající.");}String text=LocalDatabase.read(context.getFilesDir());JSONObject current=text.isEmpty()?new JSONObject().put("schema",1).put("records",new JSONArray()).put("prefs",new JSONObject()):new JSONObject(text);
+            trusted(peer);for(Map.Entry<String,long[]> entry:verified.entrySet()){File file=new File(outbox.mediaDirectory,entry.getKey());if(!file.isFile()||java.nio.file.Files.isSymbolicLink(file.toPath())||file.length()!=entry.getValue()[0]||file.lastModified()!=entry.getValue()[1])throw new IOException("Příloha se před potvrzením změnila. Přenos zůstává čekající.");}String text=LocalDatabase.readForCas(context.getFilesDir());JSONObject current=text.isEmpty()?new JSONObject().put("schema",1).put("records",new JSONArray()).put("prefs",new JSONObject()):new JSONObject(text);
             saved=new SyncEngine(context,prefs).mergePeer(current,snapshot.data);changed=!CausalClock.canonical(current).equals(CausalClock.canonical(saved));
             SharedPreferences.Editor metadata=prefs.edit();for(JSONObject media:snapshot.media.values()){String id=media.getString("id");metadata.putString("mime-"+id,media.getString("mime")).putString("name-"+id,media.getString("name"));}
             if(!metadata.commit())throw new IOException("Metadata příloh nebyla potvrzena");if(changed)LocalDatabase.write(context.getFilesDir(),saved.toString());
