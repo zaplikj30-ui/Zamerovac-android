@@ -190,7 +190,7 @@ public class StorageLifecycleTest {
     }
     @Test public void missingDatabaseCannotMasqueradeAsEmptyCASAndCanRecover()throws Exception {
         media();persist(fixture());MainActivity.JsApi api=activity.new JsApi();
-        String confirmed=api.loadData(),photo=digest(new File(dir,"original-photo"));
+        String confirmed=api.loadData(),photo=digest(new File(dir,"original-photo")),video=digest(new File(dir,"original-video"));
         File primary=new File(context.getFilesDir(),"projects.json"),backup=new File(context.getFilesDir(),"projects.bak");
         byte[] original=Files.readAllBytes(primary.toPath());
         byte[] recovery=backup.isFile()?Files.readAllBytes(backup.toPath()):null;
@@ -218,6 +218,7 @@ public class StorageLifecycleTest {
         try{LocalDatabase.write(context.getFilesDir(),edited);fail("Direct write bypassed pending recovery");}catch(IOException expected){}
         assertArrayEquals(original,Files.readAllBytes(primary.toPath()));
         assertEquals(photo,digest(new File(dir,"original-photo")));
+        assertEquals(video,digest(new File(dir,"original-video")));
         assertEquals("0,000000123456789",new JSONObject(new String(original,StandardCharsets.UTF_8))
             .getJSONArray("records").getJSONObject(1).getJSONArray("items").getJSONObject(0).getString("measure"));
     }
@@ -237,7 +238,7 @@ public class StorageLifecycleTest {
         File primary=new File(context.getFilesDir(),"projects.json"),backup=new File(context.getFilesDir(),"projects.bak");
         assertEquals(oldText,LocalDatabase.readFile(backup));
         byte[] latestBytes=Files.readAllBytes(primary.toPath());
-        String photoDigest=digest(new File(dir,"original-photo"));
+        String photoDigest=digest(new File(dir,"original-photo")),videoDigest=digest(new File(dir,"original-video"));
         try {
             Files.write(primary.toPath(),"{broken".getBytes(StandardCharsets.UTF_8));
             byte[] corrupt=Files.readAllBytes(primary.toPath());
@@ -272,10 +273,11 @@ public class StorageLifecycleTest {
         assertArrayEquals(latestBytes,Files.readAllBytes(primary.toPath()));
         assertEquals(newMediaDigest,digest(new File(dir,"new-photo-id")));
         assertEquals(photoDigest,digest(new File(dir,"original-photo")));
+        assertEquals(videoDigest,digest(new File(dir,"original-video")));
     }
     @Test public void lostDatabaseAfterReopenCannotLookLikeFreshInstallation()throws Exception {
         media();persist(fixture());MainActivity.JsApi api=activity.new JsApi();
-        String confirmed=api.loadData(),photo=digest(new File(dir,"original-photo"));
+        String confirmed=api.loadData(),photo=digest(new File(dir,"original-photo")),video=digest(new File(dir,"original-video"));
         File primary=new File(context.getFilesDir(),"projects.json"),backup=new File(context.getFilesDir(),"projects.bak");
         byte[] primaryBytes=Files.readAllBytes(primary.toPath());
         byte[] backupBytes=backup.isFile()?Files.readAllBytes(backup.toPath()):null;
@@ -307,6 +309,7 @@ public class StorageLifecycleTest {
         catch(IOException expected){}
         assertArrayEquals(primaryBytes,Files.readAllBytes(primary.toPath()));
         assertEquals(photo,digest(new File(dir,"original-photo")));
+        assertEquals(video,digest(new File(dir,"original-video")));
         assertEquals("0,000000123456789",new JSONObject(new String(primaryBytes,StandardCharsets.UTF_8))
             .getJSONArray("records").getJSONObject(1).getJSONArray("items").getJSONObject(0).getString("measure"));
     }
