@@ -54,7 +54,12 @@ final class PeerDataStore {
             trusted(peer);for(Map.Entry<String,long[]> entry:verified.entrySet()){File file=new File(outbox.mediaDirectory,entry.getKey());if(!file.isFile()||java.nio.file.Files.isSymbolicLink(file.toPath())||file.length()!=entry.getValue()[0]||file.lastModified()!=entry.getValue()[1])throw new IOException("Příloha se před potvrzením změnila. Přenos zůstává čekající.");}String text=LocalDatabase.readForCas(context.getFilesDir());JSONObject current=text.isEmpty()?new JSONObject().put("schema",1).put("records",new JSONArray()).put("prefs",new JSONObject()):new JSONObject(text);
             saved=new SyncEngine(context,prefs).mergePeer(current,snapshot.data);changed=!CausalClock.canonical(current).equals(CausalClock.canonical(saved));
             SharedPreferences.Editor metadata=prefs.edit();for(JSONObject media:snapshot.media.values()){String id=media.getString("id");metadata.putString("mime-"+id,media.getString("mime")).putString("name-"+id,media.getString("name"));}
-            if(!metadata.commit())throw new IOException("Metadata příloh nebyla potvrzena");if(changed)LocalDatabase.write(context.getFilesDir(),saved.toString());
+            // Commit exact projects before metadata: disk-full must not publish
+            // new labels for media that are not yet referenced in the DB.
+            // A metadata failure after DB commit remains unacknowledged, and
+            // a deterministic retry can finish it without duplicating records.
+            if(changed)LocalDatabase.write(context.getFilesDir(),saved.toString());
+            if(!metadata.commit())throw new IOException("Metadata příloh nebyla potvrzena");
         }
         if(changed&&listener!=null)listener.saved(saved,"direct");return saved;
     }

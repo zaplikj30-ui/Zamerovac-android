@@ -83,6 +83,43 @@ public class PeerTransferTest {
        Files.readAllBytes(new File(b.home,"media/media-"+i).toPath()));
   assertEquals(0,as.outbox.pending(bid));
  }
+ @Test public void diskFailureBeforePeerDatabaseCommitLeavesMetadataAndExactDataUntouched()throws Exception{
+  JSONObject incoming=record("incoming-photo",aid,"1585,800001234567890");
+  incoming.getJSONArray("items").getJSONObject(0).put("laserMeasuredMm","1585.800001234567890");
+  media(a,incoming,1);save(a,db(incoming));
+  JSONObject local=record("local-project",bid,"1250,000000123456789");
+  save(b,db(local));String before=CausalClock.canonical(read(b));
+  b.prefs.edit().putString("name-media-0","Original local label").commit();
+  PeerSnapshot snapshot=PeerSnapshot.capture(a,a.prefs);
+  File directory=new File(b.home,"media");assertTrue(directory.mkdirs());
+  byte[] original=Files.readAllBytes(new File(a.home,"media/media-0").toPath());
+  PeerMedia.receive(directory,"media-0",new ByteArrayInputStream(original),snapshot.media.get("media-0"));
+  File blocker=new File(b.home,"projects.tmp");assertTrue(blocker.mkdir());
+  PeerHandshake.Peer peer=new PeerHandshake.Peer(aid,"Synthetic source",tls.a.fingerprint());
+  try{
+   bs.apply(snapshot,peer);
+   fail("Disk write fault was acknowledged as completed sync");
+  }catch(IOException expected){}
+  finally{assertTrue(blocker.delete());}
+  assertEquals(before,CausalClock.canonical(read(b)));
+  assertEquals("Original local label",b.prefs.getString("name-media-0",null));
+  assertArrayEquals(original,Files.readAllBytes(new File(b.home,"media/media-0").toPath()));
+  bs.apply(snapshot,peer);bs.apply(snapshot,peer);
+  JSONArray records=read(b).getJSONArray("records");assertEquals(2,records.length());
+  Set<String> ids=new HashSet<>();
+  for(int i=0;i<records.length();i++){
+   JSONObject item=records.getJSONObject(i);
+   ids.add(item.getString("id"));
+   if("incoming-photo".equals(item.getString("id"))){
+    assertEquals("1585,800001234567890",item.getJSONArray("items").getJSONObject(0).getString("measure"));
+    assertEquals("1585.800001234567890",item.getJSONArray("items").getJSONObject(0).getString("laserMeasuredMm"));
+    assertEquals("media-0",item.getJSONArray("media").getString(0));
+   }
+  }
+  assertEquals(Set.of("incoming-photo","local-project"),ids);
+  assertEquals("Zkušební foto 0",b.prefs.getString("name-media-0",null));
+  assertArrayEquals(original,Files.readAllBytes(new File(b.home,"media/media-0").toPath()));
+ }
  @Test public void completeBidirectionalMediaAndExactAnnotationsRemainIdempotent()throws Exception{
   JSONObject photo=record("photo-a",aid,"0,000000000123456789"),note=record("note-b",bid,"99999999,123456789");media(a,photo,3);photo.put("notes",new JSONArray().put(new JSONObject().put("text","Přesná poznámka").put("audioMedia",new JSONArray().put("media-1"))));photo.getJSONArray("items").put(new JSONObject().put("type","detail").put("detailItems",new JSONArray().put(new JSONObject().put("media",new JSONArray().put("media-2")).put("measure","1585,800001"))));save(a,db(photo));save(b,db(note));
   exchange(null,null);exchange(null,null);assertEquals(2,read(a).getJSONArray("records").length());assertEquals(CausalClock.canonical(read(a)),CausalClock.canonical(read(b)));assertEquals(CausalClock.canonical(photo),CausalClock.canonical(read(b).getJSONArray("records").getJSONObject(1)));
