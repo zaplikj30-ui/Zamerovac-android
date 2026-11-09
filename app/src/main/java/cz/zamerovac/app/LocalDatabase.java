@@ -41,7 +41,7 @@ final class LocalDatabase {
                 boolean mediaUnsafe=media.exists()&&(
                     Files.isSymbolicLink(media.toPath())||!media.isDirectory()||
                     artifacts==null||artifacts.length>0);
-                if(backup.exists()||DatabaseRecovery.exists(home)||
+                if(backup.exists()||DatabaseRecovery.exists(home)||DatabaseInstallEvidence.exists(home)||
                     new File(home,"projects.tmp").exists()||
                     new File(home,"projects.backup.tmp").exists()||
                     mediaUnsafe)
@@ -50,6 +50,9 @@ final class LocalDatabase {
             }
             // Deliberately never fall back to projects.bak for a writable CAS.
             String text=readFile(primary);
+            // Migrate legacy installations while the actual primary is still verifiably intact.
+            // A vanished text-only database is no longer indistinguishable from first launch.
+            DatabaseInstallEvidence.ensure(home);
             DatabaseRecovery.healthy(home,false);
             return text;
         }
@@ -57,10 +60,14 @@ final class LocalDatabase {
     static String read(File home)throws IOException {
         synchronized(TrashPurger.LOCK){
             File primary=new File(home,"projects.json"),backup=new File(home,"projects.bak");
-            if(!primary.exists()&&!backup.exists()){if(DatabaseRecovery.exists(home)&&DatabaseRecovery.recovered(home))changed(home);return "";}
+            if(!primary.exists()&&!backup.exists()){
+                if(DatabaseInstallEvidence.exists(home))throw new IOException("Dříve inicializovaná databáze chybí; ruční obnova je nutná");
+                if(DatabaseRecovery.exists(home)&&DatabaseRecovery.recovered(home))changed(home);
+                return "";
+            }
             String text;
-            try{text=readFile(primary);}catch(IOException error){try{text=readFile(backup);}catch(IOException ignored){throw new IOException("Uložené zakázky nelze načíst; původní soubory zůstaly beze změny",error);}if(DatabaseRecovery.recovered(home))changed(home);return text;}
-            DatabaseRecovery.healthy(home,false);return text;
+            try{text=readFile(primary);}catch(IOException error){try{text=readFile(backup);}catch(IOException ignored){throw new IOException("Uložené zakázky nelze načíst; původní soubory zůstaly beze změny",error);}DatabaseInstallEvidence.ensure(home);if(DatabaseRecovery.recovered(home))changed(home);return text;}
+            DatabaseInstallEvidence.ensure(home);DatabaseRecovery.healthy(home,false);return text;
         }
     }
     static String recoveryId(File home)throws IOException{synchronized(TrashPurger.LOCK){read(home);return DatabaseRecovery.id(home);}}
@@ -80,6 +87,10 @@ final class LocalDatabase {
             // Only a genuinely clean installation can create its first database.
             // Real media import paths bootstrap that database BEFORE staging files.
             readForCas(home);
+            // Persist independent installation evidence BEFORE the first database commit.
+            // If the process is killed here, the next launch fails closed instead of
+            // treating a previously used, text-only database as a clean installation.
+            DatabaseInstallEvidence.ensure(home);
             DatabaseRecovery.healthy(home,true);
             try{
                 writeSynced(next,text.getBytes(StandardCharsets.UTF_8));
