@@ -104,7 +104,7 @@ public class RecoveryCandidateReviewTest {
     }
 
     @Test public void verifiedExistingArchiveIsReadOnlyEvidenceNotPromotion()throws Exception{
-        media();saved(db(exact,true));
+        saved(db(older,false));media();saved(db(exact,true));
         JSONObject archive=RecoveryProtectionArchive.create(home,noBackup);
         String id=archive.getString("id");
         SortedMap<String,byte[]> before=preserved();
@@ -117,7 +117,7 @@ public class RecoveryCandidateReviewTest {
     }
 
     @Test public void archivedOldDatabaseNeverCertifiesNewerMeasurements()throws Exception{
-        media();saved(db(older,true));
+        saved(db(older,false));media();saved(db(older,true));
         JSONObject archive=RecoveryProtectionArchive.create(home,noBackup);
         saved(db(exact,true));
         SortedMap<String,byte[]> before=preserved();
@@ -132,7 +132,7 @@ public class RecoveryCandidateReviewTest {
     }
 
     @Test public void sameSizeChangedMediaCannotUseOldArchive()throws Exception{
-        media();saved(db(exact,true));
+        saved(db(older,false));media();saved(db(exact,true));
         String id=RecoveryProtectionArchive.create(home,noBackup).getString("id");
         byte[] different=photo.clone();different[0]^=0x55;
         Files.write(new File(home,"media/original-photo").toPath(),different);
@@ -145,7 +145,7 @@ public class RecoveryCandidateReviewTest {
     }
 
     @Test public void olderBackupCannotOverrideNewerDimensionAndTombstone()throws Exception{
-        media();saved(db(older,true));
+        saved(db(older,false));media();saved(db(older,true));
         JSONObject newest=db(exact,true);
         newest.put("trashPurgedIds",new JSONArray().put("deleted-1"));
         newest.put("syncTombstones",new JSONObject().put("deleted-1",
@@ -184,7 +184,7 @@ public class RecoveryCandidateReviewTest {
     }
 
     @Test public void secondReadAndRestartDoNotChangeAnyEvidenceOrPeerQueue()throws Exception{
-        media();saved(db(exact,true));
+        saved(db(older,false));media();saved(db(exact,true));
         File queue=new File(noBackup,"sync-queue-v2.json");
         Files.write(queue.toPath(),"{\"version\":2,\"jobs\":[]}".getBytes(StandardCharsets.UTF_8));
         SortedMap<String,byte[]> before=preserved();
@@ -215,7 +215,7 @@ public class RecoveryCandidateReviewTest {
     }
 
     @Test public void sameSizeMediaModifiedDuringScanIsBlocked()throws Exception{
-        media();saved(db(exact,true));
+        saved(db(older,false));media();saved(db(exact,true));
         File original=new File(home,"media/original-photo");
         byte[] changed=photo.clone();changed[4]=(byte)(changed[4]+1);
         final boolean[] injected={false};

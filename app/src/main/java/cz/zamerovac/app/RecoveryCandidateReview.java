@@ -203,8 +203,21 @@ final class RecoveryCandidateReview {
     }
     private static JSONObject readVerifiedDb(File path,JSONObject source)throws Exception{
         if(!matches(path,source,MAX_DB))throw new IOException("Kandidátní JSON změněn");
-        // Bounded by previously validated size; recheck exact bytes AFTER read.
-        byte[] bytes=Files.readAllBytes(path.toPath());
+        // Never follow a replacement symlink between the two source checks.
+        // Bound the second read too: this is inspection of untrusted damaged DB.
+        byte[] bytes;
+        try(InputStream in=Files.newInputStream(path.toPath(),LinkOption.NOFOLLOW_LINKS);
+            ByteArrayOutputStream out=new ByteArrayOutputStream()){
+            byte[] buffer=new byte[65536];int n;long total=0;
+            while((n=in.read(buffer))!=-1){
+                if(Thread.currentThread().isInterrupted())
+                    throw new InterruptedIOException("Kontrola přerušena");
+                if(n==0||total>MAX_DB-n)
+                    throw new IOException("Kandidátní JSON překročil limit");
+                total+=n;out.write(buffer,0,n);
+            }
+            bytes=out.toByteArray();
+        }
         if(bytes.length!=source.getLong("size")||
            !PeerWire.hash(bytes).equals(source.getString("sha256"))||
            !matches(path,source,MAX_DB))
