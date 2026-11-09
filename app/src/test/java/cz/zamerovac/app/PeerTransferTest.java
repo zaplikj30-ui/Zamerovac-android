@@ -227,8 +227,12 @@ public class PeerTransferTest {
   catch(IOException expected){}
   assertArrayEquals(original,Files.readAllBytes(evidence.toPath()));
   // Exercise the real production TLS exchange, not a fabricated queue-only read.
+  java.util.concurrent.atomic.AtomicReference<String> finalPhase=new java.util.concurrent.atomic.AtomicReference<>("");
+  exchange((peerName,phase,done,total)->{
+   if("done".equals(phase)||"waiting".equals(phase))finalPhase.set(phase);
+  },null);
   exchange(null,null);
-  exchange(null,null);
+  assertEquals("waiting",finalPhase.get()); // archived work must not claim all history ACKed
   JSONObject received=read(b);
   assertEquals(1,received.getJSONArray("records").length());
   assertEquals("historic-19",received.getJSONArray("records").getJSONObject(0).getString("id"));

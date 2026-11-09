@@ -178,7 +178,8 @@ public class SafSyncV2Test {
   assertNotEquals(old.getString("hash"),current.hash);
   assertEquals(20,new PeerOutbox(a,a.prefs,ar).quarantinedCount(bid));
   // The actual signed-cloud send/receive/ACK path must process the fresh job.
-  sync(a,ai,false).sync();
+  SafSyncV2.Result first=sync(a,ai,false).sync();
+  assertTrue("Archived evidence must not be reported as fully ACKed",first.pending);
   converge();
   JSONArray accepted=new JSONObject(LocalDatabase.read(b.home)).getJSONArray("records");
   assertEquals(1,accepted.length());
@@ -191,6 +192,7 @@ public class SafSyncV2Test {
   assertArrayEquals(originalBytes,Files.readAllBytes(originalFile.toPath()));
   assertTrue(new SyncPeerRegistry(a.noBackup).lastAck(bid).matches("[a-f0-9]{64}"));
   assertNotEquals(old.getString("hash"),new SyncPeerRegistry(a.noBackup).lastAck(bid));
+  assertFalse(store.list("sync/v2/acks/"+aid+"/"+bid).isEmpty());
   for(ImmutableStore.Entry entry:store.list("sync/v2/acks/"+aid+"/"+bid)){
    JSONObject signed=CloudProof.verify(CloudProof.read(
        store.open("sync/v2/acks/"+aid+"/"+bid+"/"+entry.name),PeerWire.MAX_HELLO),
