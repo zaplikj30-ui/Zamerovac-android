@@ -10,7 +10,8 @@ const root = path.resolve(__dirname, '..');
 const assetRoot = path.join(root, 'app', 'src', 'main', 'assets');
 const modes = Object.freeze({
  '--smoke': ['drawing', 'quality-regressions', 'gallery-readability'],
- '--all': ['drawing','gallery-visual','workflows','interactions','zoom-grid',
+ '--legacy-conflict': ['legacy-conflict-persistence'],
+ '--all': ['legacy-conflict-persistence','drawing','gallery-visual','workflows','interactions','zoom-grid',
   'update39','gallery-state','peer-sync','drive-accounts','sync-cadence',
   'backup-history','read-only-sync','sync-edit-guard','note-sync',
   'web-content-policy','media-import','help','release-history',
@@ -113,7 +114,7 @@ async function run(mode){
 async function main(){
  const mode=process.argv[2]||'--smoke';
  if(mode==='--help'){
-  console.log('node tools/local-browser-qa.cjs --smoke | --all | --self-test');
+  console.log('node tools/local-browser-qa.cjs --legacy-conflict | --smoke | --all | --self-test');
   console.log('Vyžaduje instalovaný Playwright 1.62.1 a Chromium, nevydává APK ani nespouští Actions.');
   return;
  }
@@ -136,7 +137,7 @@ async function main(){
   }finally{await close(server)}
   return;
  }
- if(!modes[mode])throw Error('Neplatný režim; použij --smoke, --all, --self-test nebo --help');
+ if(!modes[mode])throw Error('Neplatný režim; použij --legacy-conflict, --smoke, --all, --self-test nebo --help');
  await run(mode);
 }
 if(require.main===module)main().catch(error=>{console.error('FAIL local browser QA: '+String(error.stack||error));process.exitCode=1});
