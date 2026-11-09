@@ -16,7 +16,7 @@ final class DatabaseInstallEvidence {
     private static final String NAME="zamerovac-install-state-v1.marker";
     private static final byte[] MAGIC="zamerovac-database-initialized-v1\n".getBytes(StandardCharsets.US_ASCII);
     private static final String[] SYNC_TRACES={
-        "sync-peers-v2.json","sync-v2-outbox","sync-queue-v2.json",
+        "sync-v2-outbox","sync-queue-v2.json",
         "sync-inbox-v2-","sync-scan-v2-","sync-publications-v2-"
     };
 
@@ -108,6 +108,15 @@ final class DatabaseInstallEvidence {
         if(files==null)throw new IOException("Doklady synchronizace nelze prověřit");
         for(File entry:files){
             String name=entry.getName();
+            // New paired-only installations have an explicit, durable proof
+            // that pairing preceded the first database. Older unmarked peers
+            // and any successful ACK remain evidence of possible lost data.
+            if(name.equals("sync-peers-v2.json")){
+                if(!SyncPeerRegistry.pairingOnlyBeforeFirstDatabase(noBackup))return true;
+                continue;
+            }
+            if(name.equals("sync-peers-v2.json.bak")||
+                name.equals("sync-peers-v2.json.new"))return true;
             for(String prefix:SYNC_TRACES)
                 if(name.equals(prefix)||name.startsWith(prefix+".")||
                     (prefix.endsWith("-")&&name.startsWith(prefix)))

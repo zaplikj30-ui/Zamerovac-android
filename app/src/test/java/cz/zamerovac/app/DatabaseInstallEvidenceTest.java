@@ -127,7 +127,7 @@ public class DatabaseInstallEvidenceTest {
         assertEquals("",new SyncPeerRegistry(noBackup).lastAck(peerId));
         assertTrue(DeviceIdentity.valid(DatabaseRecovery.id(home)));
         assertEquals(DatabaseRecovery.id(home),new JSONObject(
-            Files.readString(new File(noBackup,"sync-peers-v2.json").toPath())).getString("localRecovery"));
+            new String(Files.readAllBytes(new File(noBackup,"sync-peers-v2.json").toPath()),StandardCharsets.UTF_8)).getString("localRecovery"));
         assertTrue(DatabaseRecovery.pending(home));
     }
     @Test public void firstInstallWithIdentityAloneIsStillClean()throws Exception{
@@ -380,5 +380,57 @@ public class DatabaseInstallEvidenceTest {
         assertEquals(exact,new JSONObject(LocalDatabase.readForCas(ctx))
             .getJSONArray("records").getJSONObject(0).getJSONArray("items")
             .getJSONObject(0).getString("measure"));
+    }
+
+    @Test public void approvedPairingWithoutAnyProjectCanInitializeButNeverResetAfterFirstSave()throws Exception{
+        android.content.Context ctx=syntheticContext();
+        assertFalse(new File(home,"projects.json").exists());
+        assertFalse(DatabaseInstallEvidence.exists(home,noBackup));
+        SyncPeerRegistry registry=new SyncPeerRegistry(noBackup);
+        String peer=java.util.UUID.randomUUID().toString();
+        registry.approve(peer,"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","Paired first");
+        assertFalse("A new pairing is not proof of a deleted project",
+            DatabaseInstallEvidence.legacySyncTraces(noBackup));
+        assertEquals("",LocalDatabase.readForCas(ctx));
+        String original=text("1585,800001234567890");
+        LocalDatabase.write(ctx,original);
+        DatabaseInstallEvidence.verify(home,noBackup);
+        JSONObject peers=new JSONObject(new String(
+            Files.readAllBytes(new File(noBackup,"sync-peers-v2.json").toPath()),StandardCharsets.UTF_8));
+        assertEquals(Boolean.TRUE,peers.get("databaseEverInitialized"));
+        assertEquals(original,LocalDatabase.readForCas(ctx));
+        // Simulate selective loss of all primary initialization traces, leaving
+        // the real no_backup registry that was paired BEFORE database creation.
+        byte[] exact=Files.readAllBytes(new File(home,"projects.json").toPath());
+        assertTrue(new File(home,"projects.json").delete());
+        assertTrue(new File(home,"projects.recovery-v1.json").delete());
+        assertTrue(new File(home,"zamerovac-install-state-v1.marker").delete());
+        assertTrue(new File(noBackup,"zamerovac-install-state-v1.marker").delete());
+        assertFalse(new File(home,"projects.bak").exists());
+        assertTrue("The monotonic peer receipt survives full marker loss",
+            DatabaseInstallEvidence.legacySyncTraces(noBackup));
+        try{LocalDatabase.readForCas(ctx);fail("Lost projects reset after pairing");}
+        catch(IOException expected){}
+        try{LocalDatabase.write(ctx,text("999,00"));fail("Missing projects overwritten");}
+        catch(IOException expected){}
+        assertEquals("Paired first",registry.snapshot().getJSONObject(peer).getString("name"));
+        assertArrayEquals("Original exact JSON bytes must be captured unchanged",
+            original.getBytes(StandardCharsets.UTF_8),exact);
+        assertFalse(new File(home,"projects.json").exists());
+    }
+
+    @Test public void unmarkedLegacyPairingRemainsFailClosedWithoutPrimary()throws Exception{
+        android.content.Context ctx=syntheticContext();
+        File saved=new File(noBackup,"sync-peers-v2.json");
+        String peer=java.util.UUID.randomUUID().toString();
+        new SyncPeerRegistry(noBackup).approve(peer,
+            "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","Old pairing");
+        JSONObject old=new JSONObject(new String(Files.readAllBytes(saved.toPath()),StandardCharsets.UTF_8));
+        old.remove("databaseEverInitialized"); // old app versions did not record a pairing-only state
+        Files.write(saved.toPath(),old.toString().getBytes(StandardCharsets.UTF_8));
+        assertTrue(DatabaseInstallEvidence.legacySyncTraces(noBackup));
+        try{LocalDatabase.readForCas(ctx);fail("Ambiguous legacy pairing accepted as new installation");}
+        catch(IOException expected){}
+        assertFalse(new File(home,"projects.json").exists());
     }
 }

@@ -248,4 +248,37 @@ public class PeerTransferTest {
   assertEquals(1,read(b).getJSONArray("records").length());
   assertArrayEquals(original,Files.readAllBytes(evidence.toPath()));
  }
+
+ @Test public void receiverFailureBeforeFirstPhotoBaselineIsNotDatabaseLoss()throws Exception{
+  // This exercises the receiving side of the two real TLS RED regressions.
+  JSONObject photo=record("photo-first",aid,"1585,800001234567890");
+  photo.getJSONArray("items").getJSONObject(0)
+      .put("laserMeasuredMm","1585.800001234567890");
+  media(a,photo,1);save(a,db(photo));
+  assertFalse(new File(b.home,"projects.json").exists());
+  assertTrue(new File(b.noBackup,"sync-peers-v2.json").isFile());
+  assertFalse("Only a fresh pairing exists, not a lost DB",
+      DatabaseInstallEvidence.legacySyncTraces(b.noBackup));
+  PeerSnapshot snapshot=PeerSnapshot.capture(a,a.prefs);
+  PeerHandshake.Peer sender=new PeerHandshake.Peer(aid,"Paired sender",tls.a.fingerprint());
+  String mediaId="media-0";
+  byte[] original=Files.readAllBytes(new File(a.home,"media/"+mediaId).toPath());
+  // Pre-fix readForCas(b) failed here, closing the receiver socket while
+  // the sender saw only EOF awaiting the first blob receipt.
+  bs.receive(mediaId,new ByteArrayInputStream(original),snapshot.media.get(mediaId),sender);
+  assertTrue("An interrupted first transfer must have a durable empty baseline",
+      new File(b.home,"projects.json").isFile());
+  assertEquals(0,new JSONObject(LocalDatabase.readForCas(b)).getJSONArray("records").length());
+  DatabaseInstallEvidence.verify(b.home,b.noBackup);
+  assertArrayEquals(original,Files.readAllBytes(new File(b.home,"media/"+mediaId).toPath()));
+  bs.apply(snapshot,sender);bs.apply(snapshot,sender);
+  JSONArray received=read(b).getJSONArray("records");
+  assertEquals(1,received.length());
+  assertEquals("photo-first",received.getJSONObject(0).getString("id"));
+  assertEquals("1585,800001234567890",
+      received.getJSONObject(0).getJSONArray("items").getJSONObject(0).getString("measure"));
+  assertEquals("1585.800001234567890",
+      received.getJSONObject(0).getJSONArray("items").getJSONObject(0).getString("laserMeasuredMm"));
+  assertArrayEquals(original,Files.readAllBytes(new File(b.home,"media/"+mediaId).toPath()));
+ }
 }

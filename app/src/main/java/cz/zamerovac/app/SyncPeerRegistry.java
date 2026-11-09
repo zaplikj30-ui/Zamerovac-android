@@ -3,6 +3,10 @@ import android.util.AtomicFile;
 import org.json.*;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.LinkOption;
+import java.nio.file.NoSuchFileException;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.*;
 
 /** Explicitly approved device-to-certificate bindings, outside Android Auto Backup. */
@@ -23,7 +27,15 @@ final class SyncPeerRegistry {
     }}
     SyncPeerRegistry(File noBackup){target=new File(noBackup,"sync-peers-v2.json");}
     private JSONObject load()throws Exception{
-        AtomicFile file=new AtomicFile(target);if(!target.exists()&&!new File(target+".bak").exists())return new JSONObject().put("version",2).put("peers",new JSONObject());
+        AtomicFile file=new AtomicFile(target);if(!target.exists()&&!new File(target+".bak").exists()){
+            // A parallel database bootstrap writes its no_backup marker BEFORE
+            // the first primary commit. Never create an apparently fresh peer
+            // registry in that window: it would weaken selective-loss safety.
+            boolean initialized=DatabaseInstallEvidence.exists(target.getParentFile());
+            if(initialized)DatabaseInstallEvidence.verify(target.getParentFile());
+            return new JSONObject().put("version",2).put("peers",new JSONObject())
+                .put("databaseEverInitialized",initialized);
+        }
         if(target.length()>1024*1024||new File(target+".bak").length()>1024*1024)throw new IOException("Seznam zařízení je příliš velký");JSONObject data=JsonInput.object(file.readFully());
         if(data.optInt("version")!=2||data.optJSONObject("peers")==null||data.getJSONObject("peers").length()>1024)throw new IOException("Neplatný seznam spárovaných zařízení");
         JSONObject peers=data.getJSONObject("peers");Set<String> fingerprints=new HashSet<>();for(Iterator<String> it=peers.keys();it.hasNext();){String id=it.next();JSONObject peer=peers.getJSONObject(id);if(!DeviceIdentity.valid(id)||!peer.getString("fingerprint").matches("[0-9a-f]{64}")||!fingerprints.add(peer.getString("fingerprint")))throw new IOException("Neplatná identita spárovaného zařízení");}
@@ -33,6 +45,67 @@ final class SyncPeerRegistry {
         if(!target.getParentFile().isDirectory()&&!target.getParentFile().mkdirs())throw new IOException("Nelze uložit párování");
         AtomicFile file=new AtomicFile(target);FileOutputStream out=null;byte[] bytes=data.toString().getBytes(StandardCharsets.UTF_8);
         try{out=file.startWrite();out.write(bytes);out.getFD().sync();file.finishWrite(out);out=null;if(!Arrays.equals(file.readFully(),bytes))throw new IOException("Párování nebylo potvrzeno");}catch(Exception failure){if(out!=null)file.failWrite(out);throw failure;}
+    }
+    /**
+     * The registry itself is not evidence of a prior project: devices can be
+     * paired BEFORE the first photo is received. A missing field in an older
+     * registry is deliberately ambiguous and therefore fails closed.
+     */
+    static boolean pairingOnlyBeforeFirstDatabase(File noBackup)throws IOException {
+        File target=new File(noBackup,"sync-peers-v2.json");
+        BasicFileAttributes attributes;
+        try {
+            attributes=Files.readAttributes(target.toPath(),BasicFileAttributes.class,LinkOption.NOFOLLOW_LINKS);
+        } catch(NoSuchFileException absent) {
+            return false; // Not a verified new pairing record.
+        }
+        if(!attributes.isRegularFile()||attributes.isSymbolicLink()||
+            attributes.size()<2||attributes.size()>1024*1024)
+            throw new IOException("Doklady párování nejsou bezpečně čitelné");
+        try {
+            JSONObject data=JsonInput.object(Files.readAllBytes(target.toPath()));
+            if(data.optInt("version")!=2||data.optJSONObject("peers")==null)
+                throw new IOException("Neplatná evidence spárování");
+            if(!Boolean.FALSE.equals(data.opt("databaseEverInitialized"))||
+                data.has("localRecovery"))return false;
+            JSONObject peers=data.getJSONObject("peers");
+            if(peers.length()>1024)throw new IOException("Příliš mnoho párovacích dokladů");
+            Set<String> fingerprints=new HashSet<>();
+            for(Iterator<String> it=peers.keys();it.hasNext();) {
+                String id=it.next();
+                JSONObject peer=peers.getJSONObject(id);
+                String fp=peer.getString("fingerprint");
+                if(!DeviceIdentity.valid(id)||!fp.matches("[0-9a-f]{64}")||
+                    !fingerprints.add(fp))
+                    throw new IOException("Neplatná identita historického párování");
+                if(peer.has("lastAck")||peer.has("lastSuccess")||
+                    peer.has("recovery"))return false;
+            }
+            return true;
+        } catch(IOException error){throw error;}
+        catch(Exception invalid){throw new IOException("Doklady spárování nelze prověřit",invalid);}
+    }
+    /** Monotonic proof recorded BEFORE the first database commit. */
+    static void recordDatabaseInitialized(File noBackup)throws IOException {
+        if(noBackup==null)return;
+        synchronized(LOCK){
+            File target=new File(noBackup,"sync-peers-v2.json");
+            try {
+                BasicFileAttributes attrs=Files.readAttributes(target.toPath(),
+                    BasicFileAttributes.class,LinkOption.NOFOLLOW_LINKS);
+                if(!attrs.isRegularFile()||attrs.isSymbolicLink()||attrs.size()>1024*1024)
+                    throw new IOException("Nelze ověřit uložené párování");
+                SyncPeerRegistry registry=new SyncPeerRegistry(noBackup);
+                JSONObject data=registry.load();
+                if(Boolean.TRUE.equals(data.opt("databaseEverInitialized")))return;
+                data.put("databaseEverInitialized",true);
+                registry.write(data);
+            } catch(NoSuchFileException absent){
+                // No pairing registry exists; the independent no_backup
+                // initialization marker already protects the first write.
+            } catch(IOException error){throw error;}
+            catch(Exception invalid){throw new IOException("Nelze potvrdit inicializaci párování",invalid);}
+        }
     }
     boolean hasFingerprint(String fingerprint)throws Exception{synchronized(LOCK){JSONObject peers=load().getJSONObject("peers");for(Iterator<String> it=peers.keys();it.hasNext();)if(fingerprint.equals(peers.getJSONObject(it.next()).getString("fingerprint")))return true;return false;}}
     boolean isTrusted(String id,String fingerprint)throws Exception{synchronized(LOCK){if(!DeviceIdentity.valid(id)||!fingerprint.matches("[0-9a-f]{64}"))throw new IOException("Neplatná identita zařízení");JSONObject peers=load().getJSONObject("peers");JSONObject known=peers.optJSONObject(id);if(known!=null&&!fingerprint.equals(known.getString("fingerprint")))throw new IOException("Identita zařízení se změnila. Nejdříve odeber staré párování.");for(Iterator<String> it=peers.keys();it.hasNext();){String other=it.next();if(!other.equals(id)&&fingerprint.equals(peers.getJSONObject(other).getString("fingerprint")))throw new IOException("Certifikát patří jinému zařízení");}return known!=null;}}

@@ -124,6 +124,7 @@ final class LocalDatabase {
             if(DatabaseRecovery.pending(home))
                 throw new IOException("Databáze vyžaduje výslovné dokončení obnovy");
             DatabaseInstallEvidence.ensure(home,noBackup);
+            SyncPeerRegistry.recordDatabaseInitialized(noBackup);
             return text;
         }
     }
@@ -165,6 +166,7 @@ final class LocalDatabase {
             if(DatabaseRecovery.pending(home))
                 throw new IOException("Obnova databáze musí být výslovně potvrzena");
             DatabaseInstallEvidence.ensure(home,noBackup);
+            SyncPeerRegistry.recordDatabaseInitialized(noBackup);
             return text;
         }
     }
@@ -196,6 +198,10 @@ final class LocalDatabase {
             // Persist BOTH proofs before the first DB commit; any failed write
             // remains visible to the next process and never authorizes a reset.
             DatabaseInstallEvidence.ensure(home,noBackup);
+            // Monotonic evidence in preexisting pairing metadata is written
+            // before the first durable database commit. A crash cannot turn
+            // an already-used installation into a fresh pairing-only device.
+            SyncPeerRegistry.recordDatabaseInitialized(noBackup);
             DatabaseRecovery.healthy(home,true);
             try{
                 writeSynced(next,text.getBytes(StandardCharsets.UTF_8));
