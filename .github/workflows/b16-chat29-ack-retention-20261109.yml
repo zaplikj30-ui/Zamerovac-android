@@ -1,4 +1,4 @@
-name: Zaměřovač - TEMP B16 Chat29 regrese 60 bez APK
+name: Zaměřovač - TEMP B16 Chat29 RED re-pair ACK
 # One-shot owner-controlled branch; fixed source SHA, no pull_request/fork or cloud runner.
 on:
   push:
@@ -13,12 +13,12 @@ concurrency:
 jobs:
   targeted-native:
     if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/qa/chat29-ack-retention-20261109' && github.event_name == 'push' }}
-    name: Windows QA WSL2 - 60 focused recovery, peer and cloud tests
+    name: Windows QA WSL2 - one re-pair recovery RED test
     runs-on: [self-hosted, Windows, X64, zamerovac-qa]
     timeout-minutes: 45
     env:
       CI: '1'
-      TESTED_SHA: 'ff701274ba2d6a2fc43cb844fc338d97d652cef5'
+      TESTED_SHA: '916ecd2d12ed313ae1e9a0572a4882271cf291f3'
     steps:
       - name: Verify owner-controlled branch and unprivileged Windows service
         shell: cmd
@@ -32,7 +32,7 @@ jobs:
       - name: Read-only source checkout pinned to exact Chat29 test-first SHA
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ff701274ba2d6a2fc43cb844fc338d97d652cef5
+          ref: 916ecd2d12ed313ae1e9a0572a4882271cf291f3
           path: b16-source
           fetch-depth: 1
           persist-credentials: false
@@ -77,69 +77,10 @@ jobs:
           echo "PHASE_1_JAVAC compilePreviewJavaWithJavac"
           "$gradle" "${common[@]}" :app:verifyDriveRegistration :app:compilePreviewJavaWithJavac
           echo "PASS PHASE_1_JAVAC"
-          echo "PHASE_2_TESTS 60 selected tests, 2 known diagnostic RED and one obsolete inbox fixture not selected"
+          echo "PHASE_2_TESTS one new re-pair recovery RED"
           set +e
           "$gradle" "${common[@]}" :app:testPreviewUnitTest \
-            --tests cz.zamerovac.app.SafSyncV2Test.driveLateAckKeepsOriginalsAndRejectsUnapprovedRecoveryOnRestart \
-            --tests cz.zamerovac.app.SafSyncV2Test.safLateAckKeepsOriginalsAndRejectsUnapprovedRecoveryOnRestart \
-            --tests cz.zamerovac.app.SafSyncV2Test.observedReceiverRecoveryCannotReuseHistoricalSignedCloudAck \
-            --tests cz.zamerovac.app.SafSyncV2Test.corruptionAfterAckOutputCreateCannotPublishValidCloudAck \
-            --tests cz.zamerovac.app.SafSyncV2Test.authenticatedDirectArrivalDuringLocalHashReleasesCloudGateBeforePublication \
-            --tests cz.zamerovac.app.SafSyncV2Test.unavailableOldMetadataDoesNotBlockNewerIncomingOrOwnOutgoingAndNeverGetsAcked \
-            --tests cz.zamerovac.app.SafSyncV2Test.newCloudNamespacePublishesCompleteCopyDespitePriorConfirmedPeerAck \
-            --tests cz.zamerovac.app.SafSyncV2Test.historicalSignedAckCannotHideIncompleteNewNamespaceOnMeteredNetwork \
-            --tests cz.zamerovac.app.SafSyncV2Test.repairAfterFinalAckRestoresFallbackReceiverAndNeverOverwritesCorruptRemoteCopy \
-            --tests cz.zamerovac.app.SafSyncV2Test.purgedPendingPhotoDoesNotBlockNewerTombstoneOrFalselyAckMissingOldMedia \
-            --tests cz.zamerovac.app.SafSyncV2Test.concurrentLocalVersionCannotRetireAnUnfinishedRemoteSnapshot \
-            --tests cz.zamerovac.app.SafSyncV2Test.missingFileStillRequiredByNewerLocalVersionCannotBeRetired \
-            --tests cz.zamerovac.app.SafSyncV2Test.fallbackAfterFinalCloudAckReappliesHistoricalMessageDespiteCachedInbox \
-            --tests cz.zamerovac.app.SafSyncV2Test.signedImmutableMessagesConvergeAndNoMutableProjectsFileExists \
-            --tests cz.zamerovac.app.SafSyncV2Test.interruptedBlobAndRestartResumeWithoutPublishingPartialDatabase \
-            --tests cz.zamerovac.app.SafSyncV2Test.forgedAcknowledgementCannotClearQueueAndRevokedAuthorCannotWrite \
-            --tests cz.zamerovac.app.SafSyncV2Test.meteredMetadataUsesExistingOriginalButMissingLargePhotoWaits \
-            --tests cz.zamerovac.app.SafSyncV2Test.committedInboxSurvivesLostAckAndAvoidsReadingOldMessagesAfterRestart \
-            --tests cz.zamerovac.app.SafSyncV2Test.signedBodyCannotBeChangedReaddressedOrUsedAsAnotherProofKind \
-            --tests cz.zamerovac.app.SafSyncV2Test.rejectedNetworkPolicyCannotExposeStaleFallbackAsConfirmed \
-            --tests cz.zamerovac.app.SafSyncV2Test.rejectedNetworkPolicyDoesNotEvenListOrReadProvider \
-            --tests cz.zamerovac.app.SafSyncV2Test.manyInvalidMessagesUseBoundedBatchesResumeAfterRestartAndCannotClearOutbox \
-            --tests cz.zamerovac.app.SafSyncV2Test.newlyAvailableDirectRouteYieldsCloudBetweenChunksWithoutClearingQueue \
-            --tests cz.zamerovac.app.SafSyncV2Test.networkPolicyChangeDuringLargeUploadStopsAtNextChunkAndRecovers \
-            --tests cz.zamerovac.app.SafSyncV2Test.pendingSourceReopenDoesNotReadAlreadyVerifiedLargeOriginalAgain \
-            --tests cz.zamerovac.app.SafSyncV2Test.deletedCloudCopyIsRepublishedWithoutOverwritingLocalOriginal \
-            --tests cz.zamerovac.app.SafSyncV2Test.signedRepairFixesSameSizeCorruptBlobAndReplayedRequestDoesNotRedownloadIt \
-            --tests cz.zamerovac.app.SafSyncV2Test.forgedOrUnreferencedRepairCannotTriggerLargeReadsOrClearOutbox \
-            --tests cz.zamerovac.app.SafSyncV2Test.largeRepairWaitsForUnmeteredPolicy \
-            --tests cz.zamerovac.app.SafSyncV2Test.missingSnapshotRequestsVerifiedMetadataAndLegacyStateStillConverges \
-            --tests cz.zamerovac.app.SafSyncV2Test.quarantinedHistoricalOutboxDoesNotBlockFreshSignedCloudSync \
-            --tests cz.zamerovac.app.PeerTransferTest.firstSyncIntoCleanReceiverKeepsExactPhotoAndNoDuplicateOnRetry \
-            --tests cz.zamerovac.app.PeerTransferTest.interruptedFirstPhotoTransferKeepsCleanBaselineAndResumesSafely \
-            --tests cz.zamerovac.app.PeerTransferTest.diskFailureBeforePeerDatabaseCommitLeavesMetadataAndExactDataUntouched \
-            --tests cz.zamerovac.app.PeerTransferTest.completeBidirectionalMediaAndExactAnnotationsRemainIdempotent \
-            --tests cz.zamerovac.app.PeerTransferTest.corruptReceiverCannotAcceptOldBackupOrAckPeerSnapshot \
-            --tests cz.zamerovac.app.PeerTransferTest.fallbackOnResponderInvalidatesRemoteAckAndRestoresExactDataWithoutNewUserEdit \
-            --tests cz.zamerovac.app.PeerTransferTest.recoveryOnInitiatorInvalidatesRemoteAckBeforeResponderPreparesSnapshot \
-            --tests cz.zamerovac.app.PeerTransferTest.disconnectNineteenthOfThirtyKeepsDatabaseAndResumesAfterReopen \
-            --tests cz.zamerovac.app.PeerTransferTest.editDuringMediaTransferIsMergedFromLatestDatabase \
-            --tests cz.zamerovac.app.PeerTransferTest.sameMediaIdDifferentBytesRefusesWithoutOverwritingOrFalseAck \
-            --tests cz.zamerovac.app.PeerTransferTest.corruptAndPartialStreamsDoNotPublishMedia \
-            --tests cz.zamerovac.app.PeerTransferTest.coalescesOnlyObservedRevisionsAndRejectsUnsafeMetadata \
-            --tests cz.zamerovac.app.PeerTransferTest.recoveryQuarantineWithMoreThanSixteenOldJobsDoesNotBlockDirectTls \
-            --tests cz.zamerovac.app.PeerTransferTest.receiverFailureBeforeFirstPhotoBaselineIsNotDatabaseLoss \
-            --tests cz.zamerovac.app.CloudInboxTest.committedReceiptSurvivesReopenAndIsScopedToInstallationAndStore \
-            --tests cz.zamerovac.app.CloudInboxTest.failedReceiptWriteCannotTurnUnacknowledgedCommitIntoCachedSuccess \
-            --tests cz.zamerovac.app.CloudInboxTest.missingCommitAndChangedImmutableMessageCannotBeAcknowledged \
-            --tests cz.zamerovac.app.CloudInboxTest.supersededLocalIntentCannotBecomeRemoteAcknowledgementAndRecoveryInvalidatesIt \
-            --tests cz.zamerovac.app.DatabaseRecoveryTest.fallbackRotatesDurablyOnceAndNeverOverwritesEitherOriginal \
-            --tests cz.zamerovac.app.DatabaseRecoveryTest.orphanOriginalNeverAuthorizesImplicitFreshDatabase \
-            --tests cz.zamerovac.app.DatabaseRecoveryTest.failedRecoveryJournalCannotReturnOlderDataAsConfirmed \
-            --tests cz.zamerovac.app.DatabaseRecoveryTest.deletedDatabaseInvalidatesReceiptsAndMalformedJournalFailsClosed \
-            --tests cz.zamerovac.app.DatabaseRecoveryTest.partialAndCompleteUnconfirmedTemporaryFilesNeverReplaceConfirmedDatabaseOnRead \
-            --tests cz.zamerovac.app.DatabaseRecoveryTest.restartResidueAfterBackupPublicationKeepsPrimaryAndFallbackDoesNotPromotePendingData \
-            --tests cz.zamerovac.app.DatabaseRecoveryTest.failedDatabaseStagingPreservesConfirmedPrimaryAndRecoveryCopy \
-            --tests cz.zamerovac.app.CloudPublicationsTest.verifiedReceiptSurvivesRestartButMissingChangedExpiredOrForeignStoreCannotReuseIt \
-            --tests cz.zamerovac.app.CloudPublicationsTest.repairRequestUsesDurableCounterBackoffAndNeverTreatsPublicationAsDataAck \
-            --tests cz.zamerovac.app.CloudPublicationsTest.failedAtomicReceiptCannotEnterCacheOrAdvanceRepair \
-            --tests cz.zamerovac.app.CloudPublicationsTest.completeSnapshotPublicationIsScopedDurableExpiringAndStillNotADataAck
+            --tests cz.zamerovac.app.SafSyncV2Test.recoveredPeerCannotClearCloudAckBarrierByUnpairAndRepair
           test_rc=$?
           set -e
           python3 - <<'PY_XML'
@@ -156,13 +97,9 @@ jobs:
           print("B16_JUNIT_XML_COUNTS:",stats,"XML_FILES:",len(files),flush=True)
           print("B16_JUNIT_SUITES:",suite_counts,flush=True)
           expected_suites={
-              "cz.zamerovac.app.SafSyncV2Test":31,
-              "cz.zamerovac.app.PeerTransferTest":14,
-              "cz.zamerovac.app.CloudInboxTest":4,
-              "cz.zamerovac.app.DatabaseRecoveryTest":7,
-              "cz.zamerovac.app.CloudPublicationsTest":4,
+              "cz.zamerovac.app.SafSyncV2Test":1,
           }
-          if len(files)!=1 or suite_counts!=expected_suites or stats["tests"]!=60 or any(stats[k] for k in ("failures","errors","skipped")):
+          if len(files)!=1 or suite_counts!=expected_suites or stats["tests"]!=1 or any(stats[k] for k in ("failures","errors","skipped")):
               raise SystemExit("FAIL or SKIP: check exact JUnit XML and Gradle log")
           PY_XML
           test "$test_rc" -eq 0
@@ -178,7 +115,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: chat29-b16-ack-regression60-ff70127
+          name: chat29-b16-repair-red-916ecd2
           path: b16-junit-reports/${{ github.run_id }}-${{ github.run_attempt }}/
           if-no-files-found: ignore
           retention-days: 7
