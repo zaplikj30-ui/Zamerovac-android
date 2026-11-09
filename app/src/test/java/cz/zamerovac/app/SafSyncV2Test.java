@@ -179,6 +179,97 @@ public class SafSyncV2Test {
   assertArrayEquals(sourcePhoto,Files.readAllBytes(new File(a.home,"media/original-0").toPath()));
   assertEquals(source.hash,PeerSnapshot.capture(a,a.prefs).hash);
  }
+
+ @Test public void legacyRemoteRecoveryHoldSurvivesCoordinatorForgetNewCertificateAndRestart()throws Exception{
+  canonicalFiles(1,4000);converge();
+  PeerSnapshot before=PeerSnapshot.capture(a,a.prefs);
+  byte[] source=Files.readAllBytes(new File(a.home,"projects.json").toPath());
+  byte[] originalPhoto=Files.readAllBytes(new File(a.home,"media/original-0").toPath());
+  String epoch=java.util.UUID.randomUUID().toString();
+  ar.recovered(bid,epoch);
+  File registryFile=new File(a.noBackup,"sync-peers-v2.json");
+  JSONObject legacy=new JSONObject(Files.readString(registryFile.toPath()));
+  assertEquals(epoch,legacy.getJSONObject("peers").getJSONObject(bid).getString("recovery"));
+  legacy.remove("remoteRecoveryHolds");
+  // A realistic old installation has peer.recovery but no global witness map.
+  Files.writeString(registryFile.toPath(),legacy.toString());
+  assertFalse(ar.cloudAckAllowed(bid));
+  java.util.concurrent.CountDownLatch finished=new java.util.concurrent.CountDownLatch(1);
+  PeerCoordinator coordinator=new PeerCoordinator(a,a.prefs,new PeerCoordinator.Events(){
+   public void state(JSONObject state){
+    if(!state.optJSONObject("peers").has(bid))finished.countDown();
+   }
+   public void pairing(JSONObject request){}
+   public void saved(JSONObject data,String transport){}
+  });
+  try{
+   coordinator.forget(bid);
+   assertTrue("Coordinator forget did not finish full discard",
+       finished.await(10,java.util.concurrent.TimeUnit.SECONDS));
+  }finally{coordinator.close();}
+  assertFalse(new SyncPeerRegistry(a.noBackup).snapshot().has(bid));
+  JSONObject persisted=new JSONObject(Files.readString(registryFile.toPath()));
+  assertEquals("Legacy peer.recovery must migrate before removing contact",epoch,
+      persisted.getJSONObject("remoteRecoveryHolds").getString(bid));
+  ar.approve(bid,rogue.fingerprint(),"Replacement tablet with new cert");
+  ar.rememberCertificate(bid,rogue.certificate());
+  SyncPeerRegistry restarted=new SyncPeerRegistry(a.noBackup);
+  assertEquals(epoch,restarted.snapshot().getJSONObject(bid).getString("recovery"));
+  assertFalse(restarted.cloudAckAllowed(bid));
+  assertEquals("",restarted.lastAck(bid));
+  SafSyncV2.Result retry=sync(a,ai,false).sync();
+  assertTrue("An old cloud ACK must not finish a re-paired recovered device",retry.pending);
+  assertEquals("",new SyncPeerRegistry(a.noBackup).lastAck(bid));
+  assertArrayEquals(source,Files.readAllBytes(new File(a.home,"projects.json").toPath()));
+  assertArrayEquals(originalPhoto,Files.readAllBytes(new File(a.home,"media/original-0").toPath()));
+  assertEquals(before.hash,PeerSnapshot.capture(a,a.prefs).hash);
+  assertEquals("1585,800001",new JSONObject(LocalDatabase.readForCas(a)).getJSONArray("records")
+      .getJSONObject(0).getJSONArray("items").getJSONObject(0).getString("measure"));
+ }
+ @Test public void coordinatorRevocationDuringCloudAckProofCannotCompleteStaleOutbox()throws Exception{
+  canonicalFiles(1,4000);converge();
+  PeerSnapshot before=PeerSnapshot.capture(a,a.prefs);
+  byte[] source=Files.readAllBytes(new File(a.home,"projects.json").toPath());
+  byte[] originalPhoto=Files.readAllBytes(new File(a.home,"media/original-0").toPath());
+  assertEquals(before.hash,ar.lastAck(bid));
+  new PeerOutbox(a,a.prefs,ar).prepare(bid,true);
+  assertTrue(new PeerOutbox(a,a.prefs,ar).pending(bid)>0);
+  java.util.concurrent.CountDownLatch revoked=new java.util.concurrent.CountDownLatch(1);
+  PeerCoordinator coordinator=new PeerCoordinator(a,a.prefs,new PeerCoordinator.Events(){
+   public void state(JSONObject state){
+    if(!state.optJSONObject("peers").has(bid))revoked.countDown();
+   }
+   public void pairing(JSONObject request){}
+   public void saved(JSONObject data,String transport){}
+  });
+  java.util.concurrent.atomic.AtomicBoolean injected=new java.util.concurrent.atomic.AtomicBoolean();
+  final String ackDirectory="sync/v2/acks/"+aid+"/"+bid+"/";
+  Store blocking=new Store(store.root){
+   @Override public InputStream open(String path)throws Exception{
+    if(path.startsWith(ackDirectory)&&injected.compareAndSet(false,true)){
+     // The control thread revokes pairing WHILE proof() reads immutable cloud evidence.
+     coordinator.forget(bid);
+     assertTrue("Revocation did not finish during proof",
+         revoked.await(10,java.util.concurrent.TimeUnit.SECONDS));
+    }
+    return super.open(path);
+   }
+  };
+  try{
+   SafSyncV2.Result result=engine(a,ai,blocking,false).sync();
+   assertTrue("Revocation cannot result in a confirmed transfer",result.pending);
+  }finally{coordinator.close();}
+  assertTrue("Revocation must occur inside signed cloud proof",injected.get());
+  SyncPeerRegistry restarted=new SyncPeerRegistry(a.noBackup);
+  assertFalse(restarted.snapshot().has(bid));
+  assertEquals("",restarted.lastAck(bid));
+  assertEquals(0,new PeerOutbox(a,a.prefs,restarted).pending(bid)); // explicit forget discards old jobs
+  assertArrayEquals(source,Files.readAllBytes(new File(a.home,"projects.json").toPath()));
+  assertArrayEquals(originalPhoto,Files.readAllBytes(new File(a.home,"media/original-0").toPath()));
+  assertEquals(before.hash,PeerSnapshot.capture(a,a.prefs).hash);
+  assertEquals("1585,800001",new JSONObject(LocalDatabase.readForCas(a)).getJSONArray("records")
+      .getJSONObject(0).getJSONArray("items").getJSONObject(0).getString("measure"));
+ }
  @Test public void corruptionAfterAckOutputCreateCannotPublishValidCloudAck()throws Exception{
   canonicalFiles(1,4000);
   sync(a,ai,false).sync(); // signed message exists; receiver has not committed it
