@@ -1,0 +1,72 @@
+'use strict';
+// B16-R1: test the actual production reconcile/apply/save functions (no stubs).
+const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
+const app=fs.readFileSync('app/src/main/assets/app.js','utf8');
+const begin=app.indexOf('function checkedSyncClock'),end=app.indexOf('function notify(',begin);
+assert(begin>=0&&end>begin);
+const id='11111111-1111-4111-8111-111111111111',base={schema:1,syncProtocol:2,prefs:{unit:'mm'},records:[{
+ id:'photo-1',rev:'base',kind:'photo',syncClock:{[id]:1},media:['original-image-id'],
+ items:[{id:'dim-1',measure:'1585,800001234567890',laserMeasuredMm:'1585.800001234567890'}]
+}]},snapshot=JSON.stringify(base);
+let scenarios=0;
+function create(handler){
+ const env={native:true,syncDeviceId:id,window:{},state:structuredClone(base),persistedSnapshot:snapshot,
+   initial:base,prefs:base.prefs,current:null,noteActive:null,screen:'browser',dataLoadFailed:false,
+   uid:()=> 'native-copy-id',notices:[],calls:[],notify(message){env.notices.push(message)},
+   Native:{
+    saveDataChecked(text,expected){env.calls.push({text,expected});return handler(text,expected,env)},
+    resolveSyncConflict(local,remote){return JSON.stringify({winner:'local',copy:{...JSON.parse(remote),id:'native-copy-id',conflictSource:'remote-change'}})}
+   }};
+ vm.createContext(env);vm.runInContext(app.slice(begin,end),env);return env;
+}
+function rejected(env,original=snapshot){
+ assert.equal(env.save(),false);assert.equal(JSON.stringify(env.state),original,'live draft modified');
+ assert.equal(env.persistedSnapshot,snapshot,'confirmed snapshot changed');
+ assert.equal(env.window.__lastSaveFailed,true,'false saved acknowledgement');
+ assert.match(env.notices.at(-1),/^Neuloženo:/);scenarios++;
+}
+// Missing / unreadable native DB must not become a synthetic empty valid DB.
+let missing=create(()=>JSON.stringify({ok:false,error:'Database unavailable'}));
+rejected(missing);assert.equal(missing.calls.length,1);
+// Guard even a legacy Android bridge that sends a synthetic empty response.
+let oldBridge=create(()=>JSON.stringify({ok:false,current:JSON.stringify({schema:1,records:[]})}));
+rejected(oldBridge);assert.equal(oldBridge.calls.length,1);
+let unproven=create(()=>JSON.stringify({ok:false,current:JSON.stringify({
+ schema:1,records:[],trashPurgedIds:['different-id'],syncTombstones:{'different-id':{}}
+})}));
+rejected(unproven);
+// A real native purge records BOTH durable evidence fields; allow its zero records.
+let empty=JSON.stringify({schema:1,records:[],trashPurgedIds:['photo-1'],syncTombstones:{'photo-1':{[id]:2}}});
+let authorized=create((text,expected)=>{if(expected!==empty)return JSON.stringify({ok:false,current:empty});empty=text;return JSON.stringify({ok:true})});
+assert.equal(authorized.save(),true);assert.equal(authorized.state.records.length,0);
+assert.equal(authorized.persistedSnapshot,empty);assert.equal(authorized.save(),true);
+assert.equal(authorized.state.records.length,0);scenarios++;
+// Valid native same-record conflict, then disk-full on retry: absolutely no
+// intermediate mutation, even if the merge created a native conflict copy.
+let remote=structuredClone(base);remote.records[0].rev='remote';
+remote.records[0].items[0].measure='0,000000000000987654321';
+let onDisk=JSON.stringify(remote);
+let retryFails=create((text,expected)=>expected!==onDisk
+ ?JSON.stringify({ok:false,current:onDisk}):JSON.stringify({ok:false,error:'disk full'}));
+retryFails.state.records[0].rev='local';
+retryFails.state.records[0].items[0].measure='999999999,123456789';
+const draft=JSON.stringify(retryFails.state);
+rejected(retryFails,draft);assert.equal(retryFails.calls.length,2);
+// After native storage is restored, retry succeeds without dropping originals.
+let disk=snapshot;
+let restored=create((text,expected)=>{if(expected!==disk)return JSON.stringify({ok:false,current:disk});disk=text;return JSON.stringify({ok:true})});
+assert.equal(restored.save(),true);assert.equal(restored.persistedSnapshot,disk);
+assert.equal(JSON.parse(disk).records[0].items[0].laserMeasuredMm,'1585.800001234567890');
+assert.deepEqual(JSON.parse(disk).records[0].media,['original-image-id']);scenarios++;
+// Real reconcile plus native resolver: preserve both exact records and photos.
+disk=onDisk;
+let collision=create((text,expected)=>{if(expected!==disk)return JSON.stringify({ok:false,current:disk});disk=text;return JSON.stringify({ok:true})});
+collision.state.records[0].rev='local';
+collision.state.records[0].items[0].measure='999999999,123456789';
+assert.equal(collision.save(),true);assert.equal(collision.calls.length,2);
+assert.equal(collision.state.records.length,2);assert.equal(collision.state.records[1].id,'native-copy-id');
+assert.deepEqual(JSON.parse(disk).records.map(r=>r.items[0].measure).sort(),
+ ['0,000000000000987654321','999999999,123456789']);
+assert.deepEqual(JSON.parse(disk).records.map(r=>r.media),[['original-image-id'],['original-image-id']]);
+assert.equal(collision.save(),true);assert.equal(JSON.parse(disk).records.length,2);scenarios++;
+console.log('PASS B16-R1: '+scenarios+' native CAS / true merge / no phantom purge / retry / exact media scenarios');

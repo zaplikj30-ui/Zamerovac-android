@@ -141,6 +141,36 @@ public class StorageLifecycleTest {
         File blocker=new File(context.getFilesDir(),"projects.tmp");assertTrue(blocker.mkdir());
         try{JSONObject failed=new JSONObject(api.saveDataChecked(first,newer));assertFalse(failed.getBoolean("ok"));assertTrue(failed.has("error"));assertEquals(newer,api.loadData());}finally{blocker.delete();}
     }
+    @Test public void missingDatabaseCannotMasqueradeAsEmptyCASAndCanRecover()throws Exception {
+        media();persist(fixture());MainActivity.JsApi api=activity.new JsApi();
+        String confirmed=api.loadData(),photo=digest(new File(dir,"original-photo"));
+        File primary=new File(context.getFilesDir(),"projects.json"),backup=new File(context.getFilesDir(),"projects.bak");
+        byte[] original=Files.readAllBytes(primary.toPath());
+        byte[] recovery=backup.isFile()?Files.readAllBytes(backup.toPath()):null;
+        try {
+            assertTrue(primary.delete());Files.deleteIfExists(backup.toPath());
+            JSONObject refused=new JSONObject(api.saveDataChecked(fixture().put("sequence",42).toString(),confirmed));
+            assertFalse(refused.getBoolean("ok"));assertFalse("Missing database cannot be a valid empty conflict",refused.has("current"));
+            assertTrue(refused.has("error"));assertFalse(primary.exists());assertFalse(backup.exists());
+            assertEquals(photo,digest(new File(dir,"original-photo")));
+        } finally {
+            Files.write(primary.toPath(),original);
+            if(recovery!=null)Files.write(backup.toPath(),recovery);
+        }
+        assertEquals(confirmed,api.loadData());
+        String edited=fixture().put("sequence",43).toString();
+        assertTrue(new JSONObject(api.saveDataChecked(edited,confirmed)).getBoolean("ok"));
+        assertEquals(edited,api.loadData());assertEquals(photo,digest(new File(dir,"original-photo")));
+        JSONObject purged=new JSONObject().put("schema",1).put("records",new JSONArray())
+            .put("trashPurgedIds",new JSONArray().put("project").put("photo-record").put("video-record"))
+            .put("syncTombstones",new JSONObject().put("project",new JSONObject())
+                .put("photo-record",new JSONObject()).put("video-record",new JSONObject()));
+        LocalDatabase.write(context.getFilesDir(),purged.toString());
+        JSONObject realConflict=new JSONObject(api.saveDataChecked(edited,edited));
+        assertFalse(realConflict.getBoolean("ok"));
+        assertEquals(purged.toString(),realConflict.getString("current"));
+        assertEquals(purged.toString(),api.loadData());assertEquals(photo,digest(new File(dir,"original-photo")));
+    }
     @Test public void failedAudioStopReleasesRecorderAndDoesNotAttachAnEmptyFile()throws Exception {
         AudioCapture.Recorder recorder=org.mockito.Mockito.mock(AudioCapture.Recorder.class);
         org.mockito.Mockito.doAnswer(call->{Files.write(((File)call.getArgument(0)).toPath(),new byte[]{1});return null;}).when(recorder).start(org.mockito.ArgumentMatchers.any());

@@ -111,19 +111,30 @@ function reportSaveResult(ok){
 function save(){
  if(dataLoadFailed){notify('Zakázky nelze načíst. Zápis je zablokovaný, původní data zůstávají chráněná.');return reportSaveResult(false)}
  try{
+  // Stage conflicting merges; only publish them after the native writer confirms.
+  let candidate=state,expected=persistedSnapshot;
   for(let attempt=0;attempt<3;attempt++){
-   state.syncProtocol=2;const text=JSON.stringify(state);
-   if(!native){localStorage.setItem('zamerovac-data',text);persistedSnapshot=text;return reportSaveResult(true)}
-   const result=JSON.parse(Native.saveDataChecked(text,persistedSnapshot));
-   if(result?.ok===true){persistedSnapshot=text;return reportSaveResult(true)}
+   const text=JSON.stringify({...candidate,syncProtocol:2});
+   if(!native){localStorage.setItem('zamerovac-data',text);state.syncProtocol=2;persistedSnapshot=text;return reportSaveResult(true)}
+   const result=JSON.parse(Native.saveDataChecked(text,expected));
+   if(result?.ok===true){if(candidate!==state)applySavedState(candidate);state.syncProtocol=2;persistedSnapshot=text;return reportSaveResult(true)}
    if(result?.ok!==false)throw new Error('Neplatné potvrzení zápisu');
    if(typeof result.current!=='string')throw new Error(result.error||'Zápis nebyl potvrzen');
-   const disk=JSON.parse(result.current),base=persistedSnapshot?JSON.parse(persistedSnapshot):initial;
+   const disk=JSON.parse(result.current),base=expected?JSON.parse(expected):initial;
    if(!disk||disk.schema!==1||!Array.isArray(disk.records)||
       disk.records.some(r=>!r||typeof r!=='object'||Array.isArray(r)||typeof r.id!=='string'||!r.id)||
       new Set(disk.records.map(r=>r.id)).size!==disk.records.length)
      throw new Error('Neplatná databáze při souběžném zápisu');
-   applySavedState(reconcileSavedState(base,state,disk));persistedSnapshot=result.current;
+   // Only the durable trash-purge receipts can justify a remote zero-record
+   // database when we have previously confirmed records.
+   if(!disk.records.length&&base.records?.length){
+    const purged=new Set(Array.isArray(disk.trashPurgedIds)?disk.trashPurgedIds:[]);
+    const tombstones=disk.syncTombstones;
+    if(!tombstones||typeof tombstones!=='object'||Array.isArray(tombstones)||
+       !base.records.every(r=>purged.has(r.id)&&Object.hasOwn(tombstones,r.id)))
+     throw new Error('Neověřené vyprázdnění databáze při souběžném zápisu');
+   }
+   candidate=reconcileSavedState(base,candidate,disk);expected=result.current;
   }
   throw new Error('Zakázky se právě mění. Zkus uložení znovu.');
  }catch(e){notify('Neuloženo: '+e.message);return reportSaveResult(false)}

@@ -744,7 +744,11 @@ public class MainActivity extends Activity {
             synchronized(TrashPurger.LOCK){
                 try{
                     String current=readDb();
-                    if(!current.equals(expected))return new JSONObject().put("ok",false).put("current",current.isEmpty()?"{\"schema\":1,\"records\":[]}":current).toString();
+                    if(!current.equals(expected)){
+                        // Missing files are an I/O failure, never a valid empty CAS snapshot.
+                        if(current.isEmpty())throw new IOException("Databáze není dostupná pro porovnání");
+                        return new JSONObject().put("ok",false).put("current",current).toString();
+                    }
                     writeDb(text);lastUiGeneration=LocalDatabase.generation(getFilesDir());return "{\"ok\":true}";
                 }catch(Exception e){try{return new JSONObject().put("ok",false).put("error","Uložení se nezdařilo; poslední potvrzená data zůstávají chráněná.").toString();}catch(Exception ignored){return "{}";}}
             }

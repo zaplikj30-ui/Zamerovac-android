@@ -58,7 +58,7 @@ const remote=structuredClone(baseline);remote.records[0].items[0].laserMeasuredM
 remote.records[0].items[0].measure='2100,000000000000009';
 disk=JSON.stringify(remote);calls=0;merges=0;notifications=[];
 env.Native.saveDataChecked=(payload,expected)=>{
- calls++;assert.equal(expected,env.persistedSnapshot);
+ calls++;assert.equal(expected,calls===1?persisted:JSON.stringify(remote));
  if(expected!==disk)return JSON.stringify({ok:false,current:disk});
  disk=payload;return JSON.stringify({ok:true});
 };
