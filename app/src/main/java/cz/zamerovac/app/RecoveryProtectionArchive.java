@@ -4,6 +4,7 @@ import android.content.Context;
 import org.json.*;
 import java.io.*;
 import java.nio.channels.FileChannel;
+import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -86,8 +87,8 @@ final class RecoveryProtectionArchive {
                 File source=source(home,noBackup,path);
                 File destination=new File(payload,path);
                 File parent=destination.getParentFile();
-                Files.createDirectories(parent.toPath());
-                copyExact(source,destination,entry,checkpoint);
+                createDirectoriesChecked(stage,parent);
+                copyExact(stage,source,destination,entry,checkpoint);
             }
             byte[] after=canonical(manifest(home,noBackup));
             if(!Arrays.equals(encoded,after))
@@ -97,7 +98,9 @@ final class RecoveryProtectionArchive {
             syncTreeDirectories(stage);
             if(!payloadVerified(stage,id))
                 throw new IOException("Ochrannou kopii nelze ověřit");
+            DirectoryChain stageChain=new DirectoryChain(noBackup,stage);
             checkpoint.check();
+            stageChain.check();
             if(exists(finalDir)) // must not replace even an incomplete prior copy
                 throw new IOException("Cílová kopie již existuje, nic nebylo přepsáno");
             try{
@@ -268,10 +271,75 @@ final class RecoveryProtectionArchive {
         if(attrs==null){if(required)throw new IOException("Adresář ochranné kopie chybí");return false;}
         if(!attrs.isDirectory()||attrs.isSymbolicLink())
             throw new IOException("Nebezpečný adresář ochranné kopie");
+        new DirectoryChain(file).check();
         return true;
     }
 
+    /**
+     * Path-based Android NIO cannot make a whole traversal atomic. Reject links
+     * in every ancestor from the checked application/archive anchor and detect observed directory replacement across I/O.
+     * A swap-and-restore entirely between checks still needs descriptor-relative
+     * openat traversal; these checks do not claim that stronger guarantee.
+     */
+    private static final class DirectoryChain {
+        final LinkedHashMap<Path,BasicFileAttributes> directories=new LinkedHashMap<>();
+        DirectoryChain(File directory)throws IOException{this(directory,directory);}
+        DirectoryChain(File anchor,File directory)throws IOException{
+            Path base=anchor.toPath().toAbsolutePath().normalize();
+            Path path=directory.toPath().toAbsolutePath().normalize();
+            if(!path.startsWith(base))throw new IOException("Cesta opustila kořen ochranné kopie");
+            Path current=base;
+            remember(current);
+            if(!base.equals(path))for(Path component:base.relativize(path)){
+                current=current.resolve(component);remember(current);
+            }
+            check();
+        }
+        private void remember(Path path)throws IOException{
+            BasicFileAttributes a=attributes(path.toFile());
+            if(a==null||!a.isDirectory()||a.isSymbolicLink()||a.fileKey()==null)
+                throw new IOException("Neověřitelný adresář ochranné kopie: "+path);
+            directories.put(path,a);
+        }
+        void check()throws IOException{
+            for(Map.Entry<Path,BasicFileAttributes> entry:directories.entrySet()){
+                BasicFileAttributes a=attributes(entry.getKey().toFile()),before=entry.getValue();
+                if(a==null||!a.isDirectory()||a.isSymbolicLink()||
+                   !Objects.equals(before.fileKey(),a.fileKey())||
+                   !before.creationTime().equals(a.creationTime()))
+                    throw new IOException("Adresář se během archivace změnil");
+            }
+        }
+    }
+    private static void createDirectoriesChecked(File anchor,File directory)throws IOException{
+        File absolute=directory.getAbsoluteFile();
+        if(!exists(absolute)){
+            File parent=absolute.getParentFile();
+            if(parent==null)throw new IOException("Chybí kořen adresáře");
+            createDirectoriesChecked(anchor,parent);
+            DirectoryChain chain=new DirectoryChain(anchor,parent);
+            Files.createDirectory(absolute.toPath());
+            chain.check();
+        }
+        new DirectoryChain(anchor,absolute).check();
+    }
+    private static DirectoryChain parents(File file)throws IOException{
+        return new DirectoryChain(file.getAbsoluteFile().getParentFile());
+    }
+    private static byte[] readChecked(File file)throws IOException{
+        DirectoryChain chain=parents(file);
+        byte[] bytes;
+        try(InputStream in=Files.newInputStream(file.toPath(),LinkOption.NOFOLLOW_LINKS);
+            ByteArrayOutputStream out=new ByteArrayOutputStream()){
+            byte[] block=new byte[8192];int n;
+            while((n=in.read(block))!=-1)out.write(block,0,n);
+            bytes=out.toByteArray();
+        }
+        chain.check();return bytes;
+    }
+
     private static String hashStable(File file,long max)throws Exception{
+        DirectoryChain chain=parents(file);
         BasicFileAttributes before=attributes(file);
         if(before==null||!before.isRegularFile()||before.isSymbolicLink()||
            before.size()>max)throw new IOException("Soubor nelze bezpečně přečíst");
@@ -285,6 +353,7 @@ final class RecoveryProtectionArchive {
                 sha.update(block,0,n);
             }
         }
+        chain.check();
         BasicFileAttributes after=attributes(file);
         if(after==null||!after.isRegularFile()||after.isSymbolicLink()||
            count!=before.size()||after.size()!=before.size()||
@@ -293,16 +362,19 @@ final class RecoveryProtectionArchive {
             throw new IOException("Zdroj se během kontroly změnil");
         return ArchiveIntegrity.hex(sha.digest());
     }
-    private static void copyExact(File source,File destination,JSONObject expected,
+    private static void copyExact(File stage,File source,File destination,JSONObject expected,
                                   Checkpoint checkpoint)throws Exception{
         long size=expected.getLong("size"),max=limit(expected.getString("path"));
         String hash=expected.getString("sha256");
+        DirectoryChain sourceChain=parents(source),
+            destinationChain=new DirectoryChain(stage,destination.getParentFile());
         BasicFileAttributes before=attributes(source);
         if(before==null||!before.isRegularFile()||before.isSymbolicLink()||before.size()!=size)
             throw new IOException("Zdroj kopie zmizel nebo změnil velikost");
         MessageDigest digest=ArchiveIntegrity.digest();long copied=0;
         try(InputStream in=Files.newInputStream(source.toPath(),LinkOption.NOFOLLOW_LINKS);
-            FileOutputStream out=new FileOutputStream(destination)){
+            FileChannel out=FileChannel.open(destination.toPath(),StandardOpenOption.WRITE,
+                StandardOpenOption.CREATE_NEW,LinkOption.NOFOLLOW_LINKS)){
             byte[] block=new byte[65536];int n;
             while((n=in.read(block))!=-1){
                 checkpoint.check();
@@ -310,10 +382,14 @@ final class RecoveryProtectionArchive {
                 if(n==0)throw new IOException("Zdroj nepostupuje");
                 copied+=n;
                 if(copied>size||copied>max)throw new IOException("Zdroj změnil délku");
-                out.write(block,0,n);digest.update(block,0,n);
+                sourceChain.check();destinationChain.check();
+                ByteBuffer buffer=ByteBuffer.wrap(block,0,n);
+                while(buffer.hasRemaining())out.write(buffer);
+                digest.update(block,0,n);
             }
-            checkpoint.check();out.getFD().sync();
+            checkpoint.check();sourceChain.check();destinationChain.check();out.force(true);
         }
+        sourceChain.check();destinationChain.check();
         BasicFileAttributes after=attributes(source);
         if(after==null||!after.isRegularFile()||after.isSymbolicLink()||
            copied!=size||after.size()!=size||
@@ -327,9 +403,14 @@ final class RecoveryProtectionArchive {
         return CausalClock.canonical(object).getBytes(StandardCharsets.UTF_8);
     }
     private static void writeSynced(File file,byte[] bytes)throws IOException{
-        try(FileOutputStream out=new FileOutputStream(file)){
-            out.write(bytes);out.getFD().sync();
+        DirectoryChain chain=parents(file);
+        try(FileChannel out=FileChannel.open(file.toPath(),StandardOpenOption.WRITE,
+                StandardOpenOption.CREATE_NEW,LinkOption.NOFOLLOW_LINKS)){
+            ByteBuffer buffer=ByteBuffer.wrap(bytes);
+            while(buffer.hasRemaining())out.write(buffer);
+            out.force(true);
         }
+        chain.check();
     }
     private static void syncDirectory(File dir)throws IOException{
         safeDirectory(dir,true);
@@ -348,12 +429,16 @@ final class RecoveryProtectionArchive {
         }
     }
     private static boolean payloadVerified(File archive,String id)throws Exception{
-        safeDirectory(archive,true);
+        return payloadVerified(archive,id,new ArrayList<>());
+    }
+    private static boolean payloadVerified(File archive,String id,List<DirectoryChain> checkedPaths)throws Exception{
+        DirectoryChain archiveChain=new DirectoryChain(archive.getParentFile().getParentFile(),archive);
+        checkedPaths.add(archiveChain);
         File manifestFile=new File(archive,"manifest.json");
         if(!exists(manifestFile))return false;
         BasicFileAttributes a=attributes(manifestFile);
         if(!a.isRegularFile()||a.isSymbolicLink()||a.size()>MAX_META)return false;
-        byte[] bytes=Files.readAllBytes(manifestFile.toPath());
+        byte[] bytes=readChecked(manifestFile);
         if(!id.equals(PeerWire.hash(bytes)))return false;
         JSONObject manifest=JsonInput.object(bytes);
         if(!FORMAT.equals(manifest.optString("format"))||manifest.optInt("version")!=1||
@@ -370,30 +455,38 @@ final class RecoveryProtectionArchive {
             validatePath(path);
             if(!seen.add(path))return false;
             File candidate=new File(payload,path);
+            DirectoryChain chain=new DirectoryChain(archive,candidate.getParentFile());
+            checkedPaths.add(chain);
             long size=entry.getLong("size");
             if(size<0||size>limit(path)||!entry.getString("sha256").equals(hashStable(candidate,limit(path))))
                 return false;
             if(attributes(candidate).size()!=size)return false;
         }
+        for(DirectoryChain chain:checkedPaths)chain.check();
+        archiveChain.check();
         return true;
     }
     private static JSONObject verifyInternal(File dir,String id,boolean requireMarker)throws Exception{
+        DirectoryChain chain=new DirectoryChain(dir.getParentFile().getParentFile(),dir);
         if(!exists(dir)||!safeDirectory(dir,true))
             throw new IOException("Ochranná kopie není dostupná");
-        boolean content=payloadVerified(dir,id);
+        List<DirectoryChain> checkedPaths=new ArrayList<>();
+        boolean content=payloadVerified(dir,id,checkedPaths);
         if(!content)throw new IOException("Obsah ochranné kopie je poškozený");
         File manifestFile=new File(dir,"manifest.json");
-        JSONObject manifest=JsonInput.object(Files.readAllBytes(manifestFile.toPath()));
+        JSONObject manifest=JsonInput.object(readChecked(manifestFile));
         File complete=new File(dir,"COMPLETE");
         boolean marked=false;
         if(exists(complete)){
             if(!attributes(complete).isRegularFile()||attributes(complete).isSymbolicLink())
                 throw new IOException("Neplatné potvrzení ochranné kopie");
-            byte[] stamp=Files.readAllBytes(complete.toPath());
+            byte[] stamp=readChecked(complete);
             marked=Arrays.equals(stamp,(id+"\n").getBytes(StandardCharsets.US_ASCII));
             if(!marked)throw new IOException("Potvrzení ochranné kopie nesouhlasí");
         }
         if(requireMarker&&!marked)throw new IOException("Ochranná kopie nebyla potvrzena");
+        for(DirectoryChain checked:checkedPaths)checked.check();
+        chain.check();
         return new JSONObject().put("id",id).put("complete",marked)
             .put("payloadVerified",content)
             .put("sourceComplete",manifest.optBoolean("sourceComplete"))

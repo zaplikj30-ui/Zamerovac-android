@@ -309,6 +309,42 @@ public class RecoveryProtectionArchiveTest {
             .getJSONObject(0).getString("measure"));
     }
 
+    @Test public void mediaDirectorySwappedToSymlinkDuringCopyIsNeverConfirmed()throws Exception{
+        LocalDatabase.write(home,noBackup,db("1585,800001234567890").toString());
+        byte[] photo=new byte[]{3,1,4,1,5,9};
+        media("original-photo",photo);
+        // Probe symlink support before beginning fault injection.
+        Path probe=new File(root,"link-probe").toPath();
+        try{Files.createSymbolicLink(probe,new File(home,"media").toPath());}
+        catch(IOException|UnsupportedOperationException|SecurityException unsupported){
+            Assume.assumeNoException(unsupported);return;
+        }
+        Files.delete(probe);
+        boolean[] swapped={false};
+        try{
+            RecoveryProtectionArchive.create(home,noBackup,dir->Long.MAX_VALUE,()->{
+                File archiveRoot=new File(noBackup,"recovery-protection-v1");
+                File[] stages=archiveRoot.listFiles((d,n)->n.startsWith(".staging-"));
+                if(swapped[0]||stages==null)return;
+                for(File stage:stages){
+                    File media=new File(stage,"payload/files/media");
+                    if(!new File(media,"original-photo").exists())continue;
+                    Files.move(media.toPath(),new File(root,"interrupted-media").toPath());
+                    Files.createSymbolicLink(media.toPath(),new File(home,"media").toPath());
+                    swapped[0]=true;return;
+                }
+            });
+            fail("Directory swap during copying was accepted");
+        }catch(IOException expected){}
+        assertTrue("Fault injection must run",swapped[0]);
+        assertEquals(0,completedCount());
+        assertArrayEquals(photo,read(new File(home,"media/original-photo")));
+        File[] stages=new File(noBackup,"recovery-protection-v1")
+            .listFiles((d,n)->n.startsWith(".staging-"));
+        assertNotNull(stages);
+        for(File stage:stages)assertFalse(new File(stage,"COMPLETE").exists());
+    }
+
     @Test public void crashAfterAtomicArchiveRenameBeforeMarkerCanBeSafelyFinalized()throws Exception{
         LocalDatabase.write(home,noBackup,db("1585,800001234567890").toString());
         JSONObject completed=RecoveryProtectionArchive.create(home,noBackup);
