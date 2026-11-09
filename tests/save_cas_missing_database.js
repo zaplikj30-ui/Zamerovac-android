@@ -56,13 +56,24 @@ assert.equal(legacyPurge.persistedSnapshot,legacyDisk);scenarios++;
 let remote=structuredClone(base);remote.records[0].rev='remote';
 remote.records[0].items[0].measure='0,000000000000987654321';
 let onDisk=JSON.stringify(remote);
-let retryFails=create((text,expected)=>expected!==onDisk
- ?JSON.stringify({ok:false,current:onDisk}):JSON.stringify({ok:false,error:'disk full'}));
+let rejectWrite=true;
+let retryFails=create((text,expected)=>{
+ if(expected!==onDisk)return JSON.stringify({ok:false,current:onDisk});
+ if(rejectWrite)return JSON.stringify({ok:false,error:'disk full'});
+ onDisk=text;return JSON.stringify({ok:true});
+});
 retryFails.state.records[0].rev='local';
 retryFails.state.records[0].items[0].measure='999999999,123456789';
 const draft=JSON.stringify(retryFails.state);
 rejected(retryFails,draft);assert.equal(retryFails.calls.length,2);
-// After native storage is restored, retry succeeds without dropping originals.
+// Repeat on the SAME live draft after the I/O fault is cleared.
+rejectWrite=false;
+assert.equal(retryFails.save(),true);assert.equal(retryFails.state.records.length,2);
+assert.equal(retryFails.persistedSnapshot,onDisk);
+assert.deepEqual(JSON.parse(onDisk).records.map(r=>r.media),[['original-image-id'],['original-image-id']]);
+assert.equal(retryFails.save(),true);assert.equal(JSON.parse(onDisk).records.length,2);
+scenarios++;
+// After the original native snapshot is restored, its exact media survives.
 let disk=snapshot;
 let restored=create((text,expected)=>{if(expected!==disk)return JSON.stringify({ok:false,current:disk});disk=text;return JSON.stringify({ok:true})});
 assert.equal(restored.save(),true);assert.equal(restored.persistedSnapshot,disk);
