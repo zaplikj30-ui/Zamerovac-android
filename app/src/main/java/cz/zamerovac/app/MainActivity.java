@@ -723,7 +723,20 @@ public class MainActivity extends Activity {
         @JavascriptInterface public String getSyncDeviceId(){try{return DeviceIdentity.get(getNoBackupFilesDir());}catch(Exception error){return "";}}
         @JavascriptInterface public String loadSyncQueue(){try{return new SyncQueueStore(getNoBackupFilesDir()).read();}catch(Exception failure){error("Frontu přenosů nelze načíst; původní stav zůstává chráněný");return "{\"error\":true}";}}
         @JavascriptInterface public boolean saveSyncQueue(long expected,String text){try{return new SyncQueueStore(getNoBackupFilesDir()).save(expected,text);}catch(Exception failure){error("Fronta přenosů nebyla uložena");return false;}}
-        @JavascriptInterface public String loadData(){synchronized(TrashPurger.LOCK){try{String text=readDbForCas();lastUiGeneration=LocalDatabase.generation(getFilesDir());return text;}catch(Exception e){return "{\"_loadError\":true}";}}}
+        @JavascriptInterface public String loadData(){synchronized(TrashPurger.LOCK){
+            try{
+                String text=readDbForCas();
+                if(text.isEmpty()){
+                    // First launch only: durable empty base before photos can be staged.
+                    // Strict read already ruled out an older DB, recovery marker and media.
+                    String fresh="{\"schema\":1,\"records\":[]}";
+                    writeDb(fresh);
+                    text=readDbForCas();
+                }
+                lastUiGeneration=LocalDatabase.generation(getFilesDir());
+                return text;
+            }catch(Exception e){return "{\"_loadError\":true}";}
+        }}
         @JavascriptInterface public int trashCleanupCount(){
             synchronized(TrashPurger.LOCK){try{return new TrashPurger(MainActivity.this,settings).pendingCount();}catch(Exception e){return -1;}}
         }

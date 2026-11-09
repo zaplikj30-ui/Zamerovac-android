@@ -238,6 +238,45 @@ public class StorageLifecycleTest {
         assertTrue(new JSONObject(api.saveDataChecked(amended.toString(),confirmed)).getBoolean("ok"));
         assertEquals(amended.toString(),api.loadData());
     }
+    @Test public void firstLaunchInitializesDatabaseBeforeFirstPhotoAndExactMeasurement()throws Exception {
+        MainActivity.JsApi api=activity.new JsApi();
+        File primary=new File(context.getFilesDir(),"projects.json");
+        assertFalse("This test requires an untouched first-install storage",primary.exists());
+        String first=api.loadData();
+        JSONObject empty=new JSONObject(first);
+        assertEquals(1,empty.getInt("schema"));
+        assertEquals(0,empty.getJSONArray("records").length());
+        assertTrue("First load must establish a durable baseline",primary.isFile());
+        assertTrue(DatabaseRecovery.exists(context.getFilesDir()));
+        assertEquals(first,LocalDatabase.readForCas(context.getFilesDir()));
+        String id="first-original-photo";
+        assertTrue(api.beginMediaChecked(id,"image/jpeg","First photo",4));
+        assertTrue(api.appendMedia(id,"AQIDBA=="));
+        assertTrue(api.finishMedia(id));
+        File original=new File(dir,id);
+        String digest=digest(original);
+        JSONObject photo=new JSONObject().put("id","first-record")
+            .put("kind","photo").put("media",new JSONArray().put(id))
+            .put("items",new JSONArray().put(new JSONObject()
+                .put("id","first-dimension")
+                .put("measure","1585,800001234567890")
+                .put("laserMeasuredMm","1585.800001234567890")));
+        empty.getJSONArray("records").put(photo);
+        String next=empty.toString();
+        JSONObject saved=new JSONObject(api.saveDataChecked(next,first));
+        assertTrue("First photo must be saveable without phantom database loss",saved.getBoolean("ok"));
+        String actual=api.loadData();
+        assertEquals(next,actual);
+        JSONObject stored=new JSONObject(actual).getJSONArray("records").getJSONObject(0);
+        assertEquals(id,stored.getJSONArray("media").getString(0));
+        assertEquals("1585,800001234567890",stored.getJSONArray("items").getJSONObject(0).getString("measure"));
+        assertEquals("1585.800001234567890",stored.getJSONArray("items").getJSONObject(0).getString("laserMeasuredMm"));
+        assertEquals(digest,digest(original));
+        JSONObject denied=new JSONObject(api.saveDataChecked(first,first));
+        assertFalse("Old first-load snapshot cannot overwrite later exact dimensions",denied.getBoolean("ok"));
+        assertEquals(actual,denied.getString("current"));
+        assertEquals(digest,digest(original));
+    }
     @Test public void cleanFirstInstallAndLegacyMediaAreDistinctWithoutChangingSchema()throws Exception {
         File clean=Files.createTempDirectory(context.getCacheDir().toPath(),"clean-cas-").toFile();
         assertEquals("",LocalDatabase.readForCas(clean));
