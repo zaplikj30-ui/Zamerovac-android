@@ -52,14 +52,21 @@ final class RecoveryProtectionArchive {
             if(exists(finalDir)){
                 JSONObject checked=verifyInternal(finalDir,id,false);
                 // Interrupted after atomic publication but before COMPLETE:
-                // finish only if every archived byte is independently valid.
+                // Never publish the marker if the LIVE evidence changed since
+                // the first manifest, even when archived bytes remain valid.
                 if(!checked.getBoolean("complete")){
                     if(!checked.getBoolean("payloadVerified"))
                         throw new IOException("Dřívější ochranná kopie je neúplná; nepřepisovat");
                     checkpoint.check();
+                    requireUnchangedSources(home,noBackup,encoded);
                     finish(finalDir,id);
                     checked=verifyInternal(finalDir,id,true);
                 }
+                // The archive verifier checks archived bytes only. A peer/queue
+                // writer or media import may alter originals outside TrashPurger.LOCK.
+                // Re-enumerate and hash sources before reporting a current reuse.
+                checkpoint.check();
+                requireUnchangedSources(home,noBackup,encoded);
                 return checked.put("reused",true);
             }
             long required=RESERVE+3L*encoded.length;
@@ -126,6 +133,12 @@ final class RecoveryProtectionArchive {
         if(!result.getBoolean("complete"))
             throw new IOException("Kopie nemá potvrzenou úplnost");
         return result;
+    }
+
+    /** Strict source fingerprint; hash media too, never trust mtime/size alone. */
+    private static void requireUnchangedSources(File home,File noBackup,byte[] expected)throws Exception{
+        if(!Arrays.equals(expected,canonical(manifest(home,noBackup))))
+            throw new IOException("Původní podklady se během opakovaného použití změnily");
     }
 
     private static JSONObject manifest(File home,File noBackup)throws Exception{
