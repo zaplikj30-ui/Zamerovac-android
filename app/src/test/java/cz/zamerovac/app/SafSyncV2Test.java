@@ -54,6 +54,41 @@ public class SafSyncV2Test {
    };
   }
  }
+ /** Provider-boundary diagnostic: Drive stages until publish; SAF writes directly. */
+ static final class LateAckProviderStore extends Store {
+  final PeerTransferTest.Device receiver;final boolean staged;boolean injected;
+  LateAckProviderStore(File root,PeerTransferTest.Device receiver,boolean staged){super(root);this.receiver=receiver;this.staged=staged;}
+  private void loseAuthority()throws IOException{
+   injected=true;
+   Files.write(new File(receiver.home,"projects.json").toPath(),new byte[]{0});
+  }
+  @Override public OutputStream create(String path)throws Exception{
+   if(!path.startsWith("sync/v2/acks/"))return super.create(path);
+   if(staged){
+    class StagedAck extends OutputStream implements ImmutableStore.PendingOutput {
+     final ByteArrayOutputStream buffer=new ByteArrayOutputStream();
+     public void write(int value){buffer.write(value);}
+     public void write(byte[] bytes,int offset,int length){buffer.write(bytes,offset,length);}
+     public void publish()throws IOException{
+      // Local CAS was last checked by GuardedOutput.publish immediately before this callback.
+      loseAuthority();
+      try(OutputStream destination=LateAckProviderStore.super.create(path)){buffer.writeTo(destination);}
+      catch(IOException failure){throw failure;}
+      catch(Exception failure){throw new IOException(failure);}
+     }
+    }
+    return new StagedAck();
+   }
+   // SAF-style direct output is already visible; provider writes AFTER the caller's guard.
+   OutputStream direct=super.create(path);
+   return new FilterOutputStream(direct){
+    boolean began;
+    private void firstWrite()throws IOException{if(!began){began=true;loseAuthority();}}
+    @Override public void write(int value)throws IOException{firstWrite();out.write(value);}
+    @Override public void write(byte[] bytes,int offset,int length)throws IOException{firstWrite();out.write(bytes,offset,length);}
+   };
+  }
+ }
  PeerTransferTest.Device a,b;SyncTls ai,bi,rogue;SyncPeerRegistry ar,br;Store store;String aid,bid;JSONObject original;
  @Before public void setup()throws Exception{
   File root=Files.createTempDirectory(RuntimeEnvironment.getApplication().getCacheDir().toPath(),"cloud-sync-").toFile();a=new PeerTransferTest.Device(root,"a");b=new PeerTransferTest.Device(root,"b");ai=PeerTlsTest.material("a");bi=PeerTlsTest.material("b");rogue=PeerTlsTest.material("rogue");aid=DeviceIdentity.get(a.noBackup);bid=DeviceIdentity.get(b.noBackup);ar=new SyncPeerRegistry(a.noBackup);br=new SyncPeerRegistry(b.noBackup);ar.approve(bid,bi.fingerprint(),"B");br.approve(aid,ai.fingerprint(),"A");ar.rememberCertificate(bid,bi.certificate());br.rememberCertificate(aid,ai.certificate());store=new Store(new File(root,"provider"));original=new JSONObject().put("schema",1).put("records",new JSONArray().put(new JSONObject().put("id","photo-a").put("title","Syntetické foto").put("syncClock",new JSONObject().put(aid,1)).put("items",new JSONArray().put(new JSONObject().put("measure","1585,800001").put("unit","mm")))));
@@ -269,6 +304,43 @@ public class SafSyncV2Test {
   assertEquals(before.hash,PeerSnapshot.capture(a,a.prefs).hash);
   assertEquals("1585,800001",new JSONObject(LocalDatabase.readForCas(a)).getJSONArray("records")
       .getJSONObject(0).getJSONArray("items").getJSONObject(0).getString("measure"));
+ }
+ void ackProviderBoundary(boolean staged)throws Exception{
+  canonicalFiles(1,4000);
+  byte[] sourceMedia=Files.readAllBytes(new File(a.home,"media/original-0").toPath());
+  String sourceDb=LocalDatabase.readForCas(a);
+  PeerSnapshot outgoing=PeerSnapshot.capture(a,a.prefs);
+  sync(a,ai,false).sync();
+  assertTrue("Source must keep unconfirmed transfer",new PeerOutbox(a,a.prefs,ar).pending(bid)>0);
+  String ackDir="sync/v2/acks/"+aid+"/"+bid;
+  assertTrue(store.list(ackDir).isEmpty());
+  LateAckProviderStore provider=new LateAckProviderStore(store.root,b,staged);
+  try{engine(b,bi,provider,false).sync();}catch(IOException expected){}
+  assertTrue("Inject at actual provider "+(staged?"publish":"write"),provider.injected);
+  assertTrue("Recovery must remain pending",DatabaseRecovery.pending(b.home));
+  assertArrayEquals("Damaged DB bytes must not be silently repaired",new byte[]{0},
+      Files.readAllBytes(new File(b.home,"projects.json").toPath()));
+  assertArrayEquals("Already accepted synthetic media bytes must remain exact",sourceMedia,
+      Files.readAllBytes(new File(b.home,"media/original-0").toPath()));
+  assertEquals("Source DB must remain unchanged",sourceDb,LocalDatabase.readForCas(a));
+  assertArrayEquals("Original sender photo unchanged",sourceMedia,
+      Files.readAllBytes(new File(a.home,"media/original-0").toPath()));
+  int accepted=0;
+  for(ImmutableStore.Entry entry:provider.list(ackDir)){
+   try{
+    JSONObject proof=CloudProof.verify(CloudProof.read(provider.open(ackDir+"/"+entry.name),PeerWire.MAX_HELLO),
+        bi.certificate(),CloudProof.ACK,bid,aid);
+    if(outgoing.hash.equals(proof.getString("hash")))accepted++;
+   }catch(IOException incompleteOrMissing){}
+  }
+  assertEquals("Provider completed signed ACK after recovery epoch loss: "+(staged?"Drive staged":"SAF direct"),0,accepted);
+  assertTrue("Sender must not retire unacknowledged data",new PeerOutbox(a,a.prefs,ar).pending(bid)>0);
+ }
+ @Test public void driveStagedAckMustNotPublishAfterLocalAuthorityLostInsideProviderCommit()throws Exception{
+  ackProviderBoundary(true);
+ }
+ @Test public void safDirectAckMustNotPublishAfterLocalAuthorityLostInsideProviderWrite()throws Exception{
+  ackProviderBoundary(false);
  }
  @Test public void corruptionAfterAckOutputCreateCannotPublishValidCloudAck()throws Exception{
   canonicalFiles(1,4000);
