@@ -55,8 +55,11 @@ public class RecoveryProtectionArchiveTest {
     /** A valid marker is 64 lowercase SHA-256 hex bytes plus LF; protect live sources. */
     JSONObject completeMarkerFixture(String exact,byte[] photo)throws Exception{
         JSONObject project=db(exact);
-        project.getJSONArray("records").getJSONObject(0)
-            .put("media",new JSONArray().put("marker-photo"));
+        JSONObject record=project.getJSONArray("records").getJSONObject(0);
+        record.put("media",new JSONArray().put("marker-photo"));
+        record.put("history",new JSONObject().put("revisions",new JSONArray()
+            .put(new JSONObject().put("note","history-exact")
+                .put("media",new JSONArray().put("marker-photo")))));
         LocalDatabase.write(home,noBackup,project.toString());
         media("marker-photo",photo);
         JSONObject created=RecoveryProtectionArchive.create(home,noBackup);
