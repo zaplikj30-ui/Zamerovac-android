@@ -53,6 +53,11 @@ public class RecoveryCandidateReviewTest {
             for(Path path:(Iterable<Path>)paths::iterator)
                 if(Files.isRegularFile(path,LinkOption.NOFOLLOW_LINKS))
                     seen.put(root.toPath().relativize(path).toString(),Files.readAllBytes(path));
+                else if(Files.isDirectory(path,LinkOption.NOFOLLOW_LINKS))
+                    seen.put(root.toPath().relativize(path).toString(),new byte[]{68});
+                else if(Files.isSymbolicLink(path))
+                    seen.put(root.toPath().relativize(path).toString(),
+                        ("LINK:"+Files.readSymbolicLink(path)).getBytes(StandardCharsets.UTF_8));
         }
         return seen;
     }
@@ -226,4 +231,111 @@ public class RecoveryCandidateReviewTest {
         assertEquals("BLOCKED",row(review,"files/projects.json").getString("decision"));
         assertArrayEquals(changed,bytes(original));
     }
+    private JSONObject recoveryJournal(String epoch,boolean pending)throws Exception{
+        return new JSONObject().put("version",1).put("epoch",epoch).put("recovering",pending);
+    }
+    private void writeJournal(String filename,JSONObject contents)throws Exception{
+        Files.write(new File(home,filename).toPath(),
+            contents.toString().getBytes(StandardCharsets.UTF_8));
+    }
+
+    @Test public void legacyJournalBakAloneMustRemainByteExactAndUnknown()throws Exception{
+        saved(db(exact,false));
+        writeJournal("projects.recovery-v1.json.bak",
+            recoveryJournal(UUID.randomUUID().toString(),true));
+        SortedMap<String,byte[]> before=preserved();
+        JSONObject review=RecoveryCandidateReview.inspect(home,noBackup,null);
+        noPromotion(review);
+        assertEquals("UNKNOWN",review.getString("recoveryJournalStatus"));
+        assertFalse(review.getBoolean("installationEvidenceVerified"));
+        assertEquals("BLOCKED",row(review,"files/projects.json").getString("decision"));
+        identical(before);
+        assertFalse(new File(home,"projects.recovery-v1.json").exists());
+    }
+
+    @Test public void journalBaseAndNewMustNotDiscardUnfinishedBytes()throws Exception{
+        saved(db(exact,false));
+        writeJournal("projects.recovery-v1.json",recoveryJournal("",false));
+        writeJournal("projects.recovery-v1.json.new",
+            recoveryJournal(UUID.randomUUID().toString(),true));
+        SortedMap<String,byte[]> before=preserved();
+        JSONObject review=RecoveryCandidateReview.inspect(home,noBackup,null);
+        noPromotion(review);
+        assertEquals("UNKNOWN",review.getString("recoveryJournalStatus"));
+        assertFalse(review.getBoolean("installationEvidenceVerified"));
+        assertEquals("BLOCKED",row(review,"files/projects.json").getString("decision"));
+        identical(before);
+        assertTrue(new File(home,"projects.recovery-v1.json.new").isFile());
+    }
+
+    @Test public void invalidJournalWithoutSideEffectsMustBeBlocked()throws Exception{
+        saved(db(exact,false));
+        Files.write(new File(home,"projects.recovery-v1.json").toPath(),new byte[]{1,2,3});
+        SortedMap<String,byte[]> before=preserved();
+        JSONObject review=RecoveryCandidateReview.inspect(home,noBackup,null);
+        noPromotion(review);
+        assertEquals("UNKNOWN",review.getString("recoveryJournalStatus"));
+        assertEquals("BLOCKED",row(review,"files/projects.json").getString("decision"));
+        identical(before);
+    }
+
+    @Test public void validJournalReadsEpochWithoutMutatingAnyEvidence()throws Exception{
+        saved(db(exact,false));
+        String epoch=UUID.randomUUID().toString();
+        writeJournal("projects.recovery-v1.json",recoveryJournal(epoch,true));
+        SortedMap<String,byte[]> before=preserved();
+        JSONObject review=RecoveryCandidateReview.inspect(home,noBackup,null);
+        noPromotion(review);
+        assertEquals("VERIFIED_READ_ONLY",review.getString("recoveryJournalStatus"));
+        assertEquals(epoch,review.getString("recoveryEpoch"));
+        assertTrue(review.getBoolean("recoveryPending"));
+        identical(before);
+    }
+
+    @Test public void byteIdenticalUnconfirmedTmpNeverReceivesCheckedReadOnly()throws Exception{
+        saved(db(exact,false));
+        for(String name:new String[]{"projects.tmp","projects.backup.tmp"})
+            Files.copy(new File(home,"projects.json").toPath(),new File(home,name).toPath());
+        SortedMap<String,byte[]> before=preserved();
+        JSONObject review=RecoveryCandidateReview.inspect(home,noBackup,null);
+        noPromotion(review);
+        assertEquals("CHECKED_READ_ONLY",row(review,"files/projects.json").getString("decision"));
+        for(String name:new String[]{"projects.tmp","projects.backup.tmp"}){
+            JSONObject tmp=row(review,"files/"+name);
+            assertEquals("BLOCKED",tmp.getString("decision"));
+            assertTrue(tmp.optBoolean("unconfirmed"));
+        }
+        identical(before);
+    }
+
+    @Test public void olderHigherTombstoneClockBlocksLowerNewerValue()throws Exception{
+        String device=UUID.randomUUID().toString();
+        JSONObject old=db(older,false).put("syncTombstones",new JSONObject()
+            .put("deleted-1",new JSONObject().put(device,42)));
+        JSONObject current=db(exact,false).put("syncTombstones",new JSONObject()
+            .put("deleted-1",new JSONObject().put(device,41)));
+        saved(old);saved(current);
+        SortedMap<String,byte[]> before=preserved();
+        JSONObject review=RecoveryCandidateReview.inspect(home,noBackup,null);
+        noPromotion(review);
+        assertEquals("BLOCKED",row(review,"files/projects.json").getString("decision"));
+        identical(before);
+        assertEquals(exact,new JSONObject(new String(bytes(new File(home,"projects.json")),
+            StandardCharsets.UTF_8)).getJSONArray("records").getJSONObject(0)
+            .getJSONArray("items").getJSONObject(0).getString("measure"));
+    }
+
+    @Test public void newerDominatingTombstoneClockStillAllowsReadOnlyCheck()throws Exception{
+        String device=UUID.randomUUID().toString();
+        saved(db(older,false).put("syncTombstones",new JSONObject()
+            .put("deleted-1",new JSONObject().put(device,41))));
+        saved(db(exact,false).put("syncTombstones",new JSONObject()
+            .put("deleted-1",new JSONObject().put(device,42))));
+        SortedMap<String,byte[]> before=preserved();
+        JSONObject review=RecoveryCandidateReview.inspect(home,noBackup,null);
+        noPromotion(review);
+        assertEquals("CHECKED_READ_ONLY",row(review,"files/projects.json").getString("decision"));
+        identical(before);
+    }
+
 }
