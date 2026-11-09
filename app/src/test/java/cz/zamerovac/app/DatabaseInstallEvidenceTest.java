@@ -433,4 +433,126 @@ public class DatabaseInstallEvidenceTest {
         catch(IOException expected){}
         assertFalse(new File(home,"projects.json").exists());
     }
+
+    /**
+     * R9 regression: a surviving no_backup/localRecovery receipt MUST NOT
+     * permit reuse of a pre-recovery signed ACK when only the recovery journal
+     * disappears. This test intentionally goes RED on the original code.
+     */
+    @Test public void r9MissingRecoveryJournalCannotReacceptPreRecoveryAckOrOverwritePhoto()throws Exception{
+        android.content.Context ctx=syntheticContext();
+        android.content.SharedPreferences prefs=ctx.getSharedPreferences(
+            "r9-journal-loss-"+home.getName(),android.content.Context.MODE_PRIVATE);
+        String peer=java.util.UUID.randomUUID().toString();
+        SyncPeerRegistry registry=new SyncPeerRegistry(noBackup);
+        registry.approve(peer,"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","Peer R9");
+        // Seed a real empty primary BEFORE original media arrives: orphaned
+        // files with no primary are correctly treated as ambiguous data loss.
+        LocalDatabase.write(ctx,"{\"schema\":1,\"records\":[]}");
+        File mediaDir=new File(home,"media");
+        assertTrue(mediaDir.mkdirs());
+        byte[] photo=new byte[]{8,13,21,34,55,89,7,1};
+        File photoFile=new File(mediaDir,"photo-r9");
+        Files.write(photoFile.toPath(),photo);
+        String measure="1585,800001234567890";
+        String original=new JSONObject().put("schema",1)
+            .put("records",new org.json.JSONArray().put(
+                new JSONObject().put("id","exact-r9")
+                    .put("media",new org.json.JSONArray().put("photo-r9"))
+                    .put("items",new org.json.JSONArray().put(
+                        new JSONObject().put("measure",measure)))))
+            .toString();
+        LocalDatabase.write(ctx,original);
+        PeerSnapshot before=PeerSnapshot.capture(ctx,prefs);
+        registry.acknowledged(peer,before.hash);
+        assertEquals(before.hash,registry.lastAck(peer));
+
+        File primary=new File(home,"projects.json");
+        byte[] exact=Files.readAllBytes(primary.toPath());
+        assertTrue(primary.delete());
+        try{LocalDatabase.readForCas(ctx);fail("Missing primary was allowed");}
+        catch(IOException expected){}
+        String recoveryEpoch=DatabaseRecovery.id(home);
+        assertTrue(DeviceIdentity.valid(recoveryEpoch));
+        assertEquals("",registry.lastAck(peer));
+        assertEquals(recoveryEpoch,new JSONObject(new String(Files.readAllBytes(
+            new File(noBackup,"sync-peers-v2.json").toPath()),StandardCharsets.UTF_8))
+            .getString("localRecovery"));
+
+        // Simulate the future EXPLICIT verified promotion. Do not implement it
+        // or bypass the real missing-journal guard in production.
+        Files.write(primary.toPath(),exact);
+        DatabaseRecovery.healthy(home,false);
+        PeerSnapshot recovered=PeerSnapshot.capture(ctx,prefs);
+        assertNotEquals(before.hash,recovered.hash);
+        assertEquals(recoveryEpoch,recovered.wire.getString("recoveryEpoch"));
+        JSONObject oldWire=new JSONObject(recovered.wire.toString());
+        oldWire.remove("recoveryEpoch");
+        assertEquals("Without the epoch, the same snapshot would match the OLD ACK",
+            before.hash,PeerWire.hash(CausalClock.canonical(oldWire).getBytes(StandardCharsets.UTF_8)));
+
+        File journal=new File(home,"projects.recovery-v1.json");
+        assertTrue(journal.isFile());
+        assertTrue(journal.delete());
+        File journalBak=new File(home,"projects.recovery-v1.json.bak");
+        if(journalBak.exists())assertTrue(journalBak.delete());
+        assertFalse(DatabaseRecovery.exists(home));
+        // Fresh object approximates a process restart. Only no_backup remembers
+        // the epoch, so no implicit new empty-epoch snapshot is legal.
+        android.content.Context restarted=syntheticContext();
+        try{LocalDatabase.readForCas(restarted);fail("R9: CAS accepted missing recovery epoch");}
+        catch(IOException expected){}
+        try{LocalDatabase.read(restarted);fail("R9: read accepted missing recovery epoch");}
+        catch(IOException expected){}
+        try{PeerSnapshot.capture(restarted,prefs);fail("R9: replayable old cloud hash emitted");}
+        catch(IOException expected){}
+        try{LocalDatabase.write(restarted,text("999,999999999"));
+            fail("R9: missing recovery epoch permitted an overwrite");}
+        catch(IOException expected){}
+        try{new PeerOutbox(restarted,prefs,new SyncPeerRegistry(noBackup)).prepare(peer);
+            fail("R9: old ACK may be re-acknowledged by new outbox");}
+        catch(IOException expected){}
+        assertArrayEquals(exact,Files.readAllBytes(primary.toPath()));
+        assertArrayEquals(photo,Files.readAllBytes(photoFile.toPath()));
+        assertEquals("",new SyncPeerRegistry(noBackup).lastAck(peer));
+        assertEquals(recoveryEpoch,new JSONObject(new String(Files.readAllBytes(
+            new File(noBackup,"sync-peers-v2.json").toPath()),StandardCharsets.UTF_8))
+            .getString("localRecovery"));
+        assertFalse("Recovery journal must not be silently regenerated",
+            DatabaseRecovery.exists(home));
+    }
+
+    @Test public void r9MismatchedRecoveryJournalIsRejectedWithoutMutatingOriginal()throws Exception{
+        android.content.Context ctx=syntheticContext();
+        String original=text("0,0000000000000007");
+        LocalDatabase.write(ctx,original);
+        File primary=new File(home,"projects.json");
+        assertTrue(primary.delete());
+        try{LocalDatabase.readForCas(ctx);fail("Missing primary allowed");}
+        catch(IOException expected){}
+        String epoch=DatabaseRecovery.id(home);
+        assertTrue(DeviceIdentity.valid(epoch));
+        Files.write(primary.toPath(),original.getBytes(StandardCharsets.UTF_8));
+        DatabaseRecovery.healthy(home,false);
+        assertEquals(original,LocalDatabase.readForCas(ctx));
+        // A different but syntactically valid epoch cannot silently supersede
+        // the durable independent recovery witness in no_backup.
+        String forged=java.util.UUID.randomUUID().toString();
+        assertNotEquals(epoch,forged);
+        File journal=new File(home,"projects.recovery-v1.json");
+        Files.write(journal.toPath(),new JSONObject()
+            .put("version",1).put("epoch",forged).put("recovering",false)
+            .toString().getBytes(StandardCharsets.UTF_8));
+        byte[] journalBytes=Files.readAllBytes(journal.toPath());
+        byte[] sourceBytes=Files.readAllBytes(primary.toPath());
+        try{LocalDatabase.readForCas(ctx);fail("R9: mismatched journal epoch accepted");}
+        catch(IOException expected){}
+        try{LocalDatabase.read(ctx);fail("R9: mismatched journal allowed diagnostics as trusted");}
+        catch(IOException expected){}
+        assertArrayEquals(sourceBytes,Files.readAllBytes(primary.toPath()));
+        assertArrayEquals(journalBytes,Files.readAllBytes(journal.toPath()));
+        assertEquals(epoch,new JSONObject(new String(Files.readAllBytes(
+            new File(noBackup,"sync-peers-v2.json").toPath()),StandardCharsets.UTF_8))
+            .getString("localRecovery"));
+    }
 }
