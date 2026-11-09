@@ -39,7 +39,26 @@ final class SyncPeerRegistry {
         if(target.length()>1024*1024||new File(target+".bak").length()>1024*1024)throw new IOException("Seznam zařízení je příliš velký");JSONObject data=JsonInput.object(file.readFully());
         if(data.optInt("version")!=2||data.optJSONObject("peers")==null||data.getJSONObject("peers").length()>1024)throw new IOException("Neplatný seznam spárovaných zařízení");
         JSONObject peers=data.getJSONObject("peers");Set<String> fingerprints=new HashSet<>();for(Iterator<String> it=peers.keys();it.hasNext();){String id=it.next();JSONObject peer=peers.getJSONObject(id);if(!DeviceIdentity.valid(id)||!peer.getString("fingerprint").matches("[0-9a-f]{64}")||!fingerprints.add(peer.getString("fingerprint")))throw new IOException("Neplatná identita spárovaného zařízení");}
+        // A forgotten pairing must never erase the knowledge that this peer
+        // underwent recovery. The history is local-only, never sent over TLS.
+        JSONObject holds=data.optJSONObject("remoteRecoveryHolds");
+        if(data.has("remoteRecoveryHolds")&&holds==null)
+            throw new IOException("Neplatná evidence obnovy protistrany");
+        if(holds!=null){
+            if(holds.length()>1024)throw new IOException("Evidence obnovy protistrany je příliš velká");
+            for(Iterator<String> it=holds.keys();it.hasNext();){
+                String id=it.next();Object epoch=holds.get(id);
+                if(!DeviceIdentity.valid(id)||!(epoch instanceof String)||
+                    !DeviceIdentity.valid((String)epoch))
+                    throw new IOException("Neplatná epocha obnoveného zařízení");
+            }
+        }
         return data;
+    }
+    private static JSONObject recoveryHolds(JSONObject data)throws JSONException{
+        JSONObject holds=data.optJSONObject("remoteRecoveryHolds");
+        if(holds==null){holds=new JSONObject();data.put("remoteRecoveryHolds",holds);}
+        return holds;
     }
     private void write(JSONObject data)throws Exception{
         if(!target.getParentFile().isDirectory()&&!target.getParentFile().mkdirs())throw new IOException("Nelze uložit párování");
@@ -67,7 +86,7 @@ final class SyncPeerRegistry {
             if(data.optInt("version")!=2||data.optJSONObject("peers")==null)
                 throw new IOException("Neplatná evidence spárování");
             if(!Boolean.FALSE.equals(data.opt("databaseEverInitialized"))||
-                data.has("localRecovery"))return false;
+                data.has("localRecovery")||data.has("remoteRecoveryHolds"))return false;
             JSONObject peers=data.getJSONObject("peers");
             if(peers.length()>1024)throw new IOException("Příliš mnoho párovacích dokladů");
             Set<String> fingerprints=new HashSet<>();
@@ -109,8 +128,15 @@ final class SyncPeerRegistry {
     }
     boolean hasFingerprint(String fingerprint)throws Exception{synchronized(LOCK){JSONObject peers=load().getJSONObject("peers");for(Iterator<String> it=peers.keys();it.hasNext();)if(fingerprint.equals(peers.getJSONObject(it.next()).getString("fingerprint")))return true;return false;}}
     boolean isTrusted(String id,String fingerprint)throws Exception{synchronized(LOCK){if(!DeviceIdentity.valid(id)||!fingerprint.matches("[0-9a-f]{64}"))throw new IOException("Neplatná identita zařízení");JSONObject peers=load().getJSONObject("peers");JSONObject known=peers.optJSONObject(id);if(known!=null&&!fingerprint.equals(known.getString("fingerprint")))throw new IOException("Identita zařízení se změnila. Nejdříve odeber staré párování.");for(Iterator<String> it=peers.keys();it.hasNext();){String other=it.next();if(!other.equals(id)&&fingerprint.equals(peers.getJSONObject(other).getString("fingerprint")))throw new IOException("Certifikát patří jinému zařízení");}return known!=null;}}
-    void approve(String id,String fingerprint,String name)throws Exception{synchronized(LOCK){if(isTrusted(id,fingerprint))return;JSONObject data=load(),peers=data.getJSONObject("peers");if(peers.length()>=1024)throw new IOException("Seznam zařízení je plný");if(name==null||name.length()>80||name.matches(".*[\\p{Cntrl}].*"))throw new IOException("Neplatný název zařízení");peers.put(id,new JSONObject().put("fingerprint",fingerprint).put("name",name).put("pairedAt",java.time.Instant.now().toString()));write(data);}}
-    void forget(String id)throws Exception{synchronized(LOCK){if(!DeviceIdentity.valid(id))throw new IOException("Neplatná identita zařízení");REVISIONS.put(target.getAbsolutePath(),revision()+1);JSONObject data=load();data.getJSONObject("peers").remove(id);write(data);}}
+    void approve(String id,String fingerprint,String name)throws Exception{synchronized(LOCK){if(isTrusted(id,fingerprint))return;JSONObject data=load(),peers=data.getJSONObject("peers");if(peers.length()>=1024)throw new IOException("Seznam zařízení je plný");if(name==null||name.length()>80||name.matches(".*[\\p{Cntrl}].*"))throw new IOException("Neplatný název zařízení");JSONObject fresh=new JSONObject().put("fingerprint",fingerprint).put("name",name).put("pairedAt",java.time.Instant.now().toString());
+        JSONObject holds=data.optJSONObject("remoteRecoveryHolds");
+        if(holds!=null&&holds.has(id))fresh.put("recovery",holds.getString(id));
+        peers.put(id,fresh);write(data);}}
+    void forget(String id)throws Exception{synchronized(LOCK){if(!DeviceIdentity.valid(id))throw new IOException("Neplatná identita zařízení");REVISIONS.put(target.getAbsolutePath(),revision()+1);JSONObject data=load(),peers=data.getJSONObject("peers");
+        JSONObject old=peers.optJSONObject(id);
+        if(old!=null&&!old.optString("recovery","").isEmpty())
+            recoveryHolds(data).put(id,old.getString("recovery"));
+        peers.remove(id);write(data);}}
     /** An address is only a private routing hint. It can never approve a certificate. */
     void rememberNearby(String id,String fingerprint,String address)throws Exception{synchronized(LOCK){if(!PeerWifiDirect.validAddress(address))return;if(!isTrusted(id,fingerprint))throw new IOException("Zařízení už není spárované");String normalized=address.toLowerCase(Locale.ROOT);JSONObject data=load(),peers=data.getJSONObject("peers"),peer=peers.getJSONObject(id);if(normalized.equals(peer.optString("nearbyAddress")))return;for(Iterator<String> it=peers.keys();it.hasNext();){String other=it.next();if(!other.equals(id)&&normalized.equalsIgnoreCase(peers.getJSONObject(other).optString("nearbyAddress")))peers.getJSONObject(other).remove("nearbyAddress");}peer.put("nearbyAddress",normalized);write(data);}}
     Map<String,String> nearbyRoutes()throws Exception{synchronized(LOCK){Map<String,String> result=new HashMap<>();JSONObject peers=load().getJSONObject("peers");for(Iterator<String> it=peers.keys();it.hasNext();){String id=it.next(),address=peers.getJSONObject(id).optString("nearbyAddress");if(PeerWifiDirect.validAddress(address))result.put(address.toLowerCase(Locale.ROOT),id);}return result;}}
@@ -167,12 +193,16 @@ final class SyncPeerRegistry {
      */
     boolean cloudAckAllowed(String id)throws Exception{synchronized(LOCK){
         if(!DeviceIdentity.valid(id))throw new IOException("Neplatný partner cloudového potvrzení");
-        JSONObject peer=load().getJSONObject("peers").optJSONObject(id);
+        JSONObject registry=load(),peer=registry.getJSONObject("peers").optJSONObject(id);
         if(peer==null)throw new IOException("Cloudové potvrzení patří neznámému zařízení");
-        return peer.optString("recovery","").isEmpty();
+        JSONObject holds=registry.optJSONObject("remoteRecoveryHolds");
+        return peer.optString("recovery","").isEmpty()&&
+            (holds==null||!holds.has(id));
     }}
     String lastAck(String id)throws Exception{synchronized(LOCK){JSONObject peer=load().getJSONObject("peers").optJSONObject(id);return peer==null?"":peer.optString("lastAck","");}}
-    void recovered(String id,String epoch)throws Exception{synchronized(LOCK){if(!DeviceIdentity.valid(epoch))throw new IOException("Neplatná obnova zařízení");JSONObject data=load(),peer=data.getJSONObject("peers").optJSONObject(id);if(peer==null)throw new IOException("Zařízení už není spárované");if(epoch.equals(peer.optString("recovery")))return;peer.put("recovery",epoch);peer.remove("lastAck");peer.remove("lastSuccess");write(data);}}
+    void recovered(String id,String epoch)throws Exception{synchronized(LOCK){if(!DeviceIdentity.valid(epoch))throw new IOException("Neplatná obnova zařízení");JSONObject data=load(),peer=data.getJSONObject("peers").optJSONObject(id);if(peer==null)throw new IOException("Zařízení už není spárované");JSONObject holds=recoveryHolds(data);if(epoch.equals(peer.optString("recovery"))&&
+            epoch.equals(holds.optString(id)))return;
+        holds.put(id,epoch);peer.put("recovery",epoch);peer.remove("lastAck");peer.remove("lastSuccess");write(data);}}
     void acknowledged(String id,String hash)throws Exception{synchronized(LOCK){if(!hash.matches("[0-9a-f]{64}"))throw new IOException("Neplatné potvrzení");JSONObject data=load(),peer=data.getJSONObject("peers").optJSONObject(id);if(peer==null)throw new IOException("Zařízení už není spárované");peer.put("lastAck",hash).put("lastSuccess",java.time.Instant.now().toString());write(data);}}
     JSONObject snapshot()throws Exception{synchronized(LOCK){return new JSONObject(load().getJSONObject("peers").toString());}}
 }
