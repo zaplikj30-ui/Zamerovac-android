@@ -52,39 +52,239 @@ final class PeerOutbox {
     PeerSnapshot prepare(String peer)throws Exception{return prepare(peer,false);}
     PeerSnapshot prepare(String peer,boolean forcePublication)throws Exception{return prepare(peer,forcePublication,()->{});}
     PeerSnapshot prepare(String peer,boolean forcePublication,ImmutableStore.Checkpoint checkpoint)throws Exception{synchronized(lock){checkpoint.check();return prepareLocked(peer,forcePublication,checkpoint);}}
+    /** Read an immutable queued snapshot; never infer its epoch from current DB. */
+    private PeerSnapshot queuedSnapshot(String source)throws Exception{
+        File target=file(source);
+        if(!target.isFile()||java.nio.file.Files.isSymbolicLink(target.toPath())||
+            target.length()<1||target.length()>PeerWire.MAX_JSON)
+            throw new IOException("Původní revizi fronty nelze ověřit");
+        byte[] bytes=new AtomicFile(target).readFully();
+        if(!source.equals(PeerWire.hash(bytes)))
+            throw new IOException("Původní revize fronty má jiný kontrolní součet");
+        return PeerSnapshot.parse(bytes,DeviceIdentity.get(context.getNoBackupFilesDir()));
+    }
+    /**
+     * After recovery, every pre-recovery job (metadata AND media jobs)
+     * moves to a separate durable evidence array, without unlinking its
+     * immutable source. Unverifiable jobs are quarantined too, not dropped.
+     */
+    private boolean stale(JSONObject job,String epoch,Map<String,Boolean> cache)throws Exception{
+        if(epoch.isEmpty())return false;
+        String source=job.optString("sourceRef","");
+        if(source.isEmpty())return true;
+        Boolean prior=cache.get(source);
+        if(prior!=null)return prior;
+        boolean result;
+        try{
+            PeerSnapshot stored=queuedSnapshot(source);
+            result=!epoch.equals(stored.wire.optString("recoveryEpoch",""));
+        }catch(Exception unknown){
+            result=true; // uncertain data can never re-enter active transport
+        }
+        cache.put(source,result);
+        return result;
+    }
     private PeerSnapshot prepareLocked(String peer,boolean forcePublication,ImmutableStore.Checkpoint checkpoint)throws Exception{
-        if(!DeviceIdentity.valid(peer)||!peers.snapshot().has(peer))throw new IOException("Zařízení není spárované");PeerSnapshot snapshot=current(checkpoint);checkpoint.check();if(!forcePublication&&snapshot.hash.equals(peers.lastAck(peer)))return snapshot;persist(snapshot);
-        mutate(state->{JSONArray jobs=state.getJSONArray("jobs"),next=new JSONArray();Set<String> obsolete=new HashSet<>(),ids=new HashSet<>();
-            for(int i=0;i<jobs.length();i++){JSONObject job=jobs.getJSONObject(i);if(peer.equals(job.getString("peer"))&&"metadata".equals(job.getString("kind"))&&!snapshot.hash.equals(job.getString("hash")))try{if(dominates(snapshot.data,load(job).data))obsolete.add(job.getString("hash"));}catch(IOException ignored){/* Never drop an unreadable older message without proof. */}}
-            for(int i=0;i<jobs.length();i++){JSONObject job=jobs.getJSONObject(i);if(peer.equals(job.getString("peer"))&&obsolete.contains(job.optString("sourceRef","")))continue;next.put(job);ids.add(job.getString("id"));}
-            JSONObject metadata=job(peer,"metadata",snapshot.hash,snapshot.bytes.length,snapshot.hash,null);if(ids.add(metadata.getString("id")))next.put(metadata);
-            for(JSONObject media:snapshot.media.values()){String id=media.getString("id");JSONObject blob=job(peer,"blob",media.getString("hash"),media.getLong("size"),snapshot.hash,id);if(ids.add(blob.getString("id")))next.put(blob);}
-            state.put("jobs",next);return true;
-        });cleanup();return snapshot;
+        if(!DeviceIdentity.valid(peer)||!peers.snapshot().has(peer))
+            throw new IOException("Zařízení není spárované");
+        PeerSnapshot snapshot=current(checkpoint);checkpoint.check();
+        synchronized(TrashPurger.LOCK){
+            LocalDatabase.readForCas(context);
+            String epoch=DatabaseRecovery.id(context.getFilesDir());
+            if(!epoch.equals(snapshot.wire.optString("recoveryEpoch","")))
+                throw new IOException("Období databáze se během přípravy přenosu změnilo");
+            boolean alreadyAcked=!forcePublication&&snapshot.hash.equals(peers.lastAck(peer));
+            if(!alreadyAcked)persist(snapshot);
+            mutate(state->{
+                JSONArray jobs=state.getJSONArray("jobs"),active=new JSONArray();
+                JSONArray quarantine=state.optJSONArray("recoveryQuarantine");
+                if(quarantine==null)quarantine=new JSONArray();
+                Map<String,Boolean> cache=new HashMap<>();
+                Set<String> obsolete=new HashSet<>(),ids=new HashSet<>();
+                boolean changed=false;
+                for(int i=0;i<jobs.length();i++){
+                    JSONObject job=jobs.getJSONObject(i);
+                    if(stale(job,epoch,cache)){
+                        quarantine.put(new JSONObject(job.toString()).put("quarantinedAtEpoch",epoch));
+                        changed=true;
+                    }else active.put(job);
+                }
+                // Normal supersession remains restricted to current-epoch active jobs.
+                if(!alreadyAcked)for(int i=0;i<active.length();i++){
+                    JSONObject job=active.getJSONObject(i);
+                    if(peer.equals(job.getString("peer"))&&"metadata".equals(job.getString("kind"))&&
+                        !snapshot.hash.equals(job.getString("hash"))){
+                        try{if(dominates(snapshot.data,load(job).data))
+                            obsolete.add(job.getString("hash"));}
+                        catch(IOException unreadable){/* keep questionable evidence, never delete */}
+                    }
+                }
+                JSONArray next=new JSONArray();
+                for(int i=0;i<active.length();i++){
+                    JSONObject job=active.getJSONObject(i);
+                    if(obsolete.contains(job.optString("sourceRef",""))){
+                        changed=true;
+                        continue;
+                    }
+                    next.put(job);ids.add(job.getString("id"));
+                }
+                if(!alreadyAcked){
+                    JSONObject metadata=job(peer,"metadata",snapshot.hash,snapshot.bytes.length,snapshot.hash,null);
+                    if(ids.add(metadata.getString("id"))){next.put(metadata);changed=true;}
+                    for(JSONObject media:snapshot.media.values()){
+                        String id=media.getString("id");
+                        JSONObject blob=job(peer,"blob",media.getString("hash"),media.getLong("size"),snapshot.hash,id);
+                        if(ids.add(blob.getString("id"))){next.put(blob);changed=true;}
+                    }
+                }
+                if(!changed)return false;
+                state.put("jobs",next).put("recoveryQuarantine",quarantine);
+                return true;
+            });
+            cleanup(); // retains every quarantined source
+        }
+        return snapshot;
     }
     private static JSONObject job(String peer,String kind,String hash,long size,String source,String media)throws Exception{
         return new JSONObject().put("id",jobId(peer,kind,hash,source,media)).put("peer",peer).put("kind",kind).put("hash",hash).put("size",size).put("sourceRef",source).put("payload",media==null?JSONObject.NULL:new JSONObject().put("mediaId",media)).put("attempts",0).put("nextAttempt",0);
     }
     List<JSONObject> messages(String peer)throws Exception{
-        ArrayList<JSONObject> result=new ArrayList<>();JSONArray jobs=new JSONObject(queue.read()).getJSONArray("jobs");for(int i=0;i<jobs.length()&&result.size()<16;i++){JSONObject job=jobs.getJSONObject(i);if(peer.equals(job.getString("peer"))&&"metadata".equals(job.getString("kind")))result.add(job);}return result;
+        synchronized(lock){
+            // Both the direct/TLS sender and cloud sender consume only active jobs.
+            ArrayList<JSONObject> result=new ArrayList<>();
+            JSONArray jobs=new JSONObject(queue.read()).getJSONArray("jobs");
+            for(int i=0;i<jobs.length()&&result.size()<16;i++){
+                JSONObject job=jobs.getJSONObject(i);
+                if(peer.equals(job.getString("peer"))&&"metadata".equals(job.getString("kind")))
+                    result.add(new JSONObject(job.toString()));
+            }
+            return result;
+        }
     }
-    int pending(String peer)throws Exception{int count=0;JSONArray jobs=new JSONObject(queue.read()).getJSONArray("jobs");for(int i=0;i<jobs.length();i++)if(peer.equals(jobs.getJSONObject(i).getString("peer")))count++;return count;}
-    void acknowledge(String id,String hash,long size,boolean metadata)throws Exception{
-        mutate(state->{JSONArray jobs=state.getJSONArray("jobs"),next=new JSONArray();String peer=null,source=null;for(int i=0;i<jobs.length();i++){JSONObject job=jobs.getJSONObject(i);if(id.equals(job.getString("id"))){if(!hash.equals(job.getString("hash"))||size!=job.getLong("size"))throw new IOException("Nesprávné potvrzení přenosu");peer=job.getString("peer");source=job.optString("sourceRef","");}}
-            if(peer==null)return false;for(int i=0;i<jobs.length();i++){JSONObject job=jobs.getJSONObject(i);if(id.equals(job.getString("id"))||metadata&&peer.equals(job.getString("peer"))&&source.equals(job.optString("sourceRef","")))continue;next.put(job);}state.put("jobs",next);return true;});
+    int pending(String peer)throws Exception{
+        int count=0;
+        JSONArray jobs=new JSONObject(queue.read()).getJSONArray("jobs");
+        for(int i=0;i<jobs.length();i++)
+            if(peer.equals(jobs.getJSONObject(i).getString("peer")))count++;
+        return count;
     }
-    void discard(String peer)throws Exception{synchronized(lock){mutate(state->{JSONArray jobs=state.getJSONArray("jobs"),keep=new JSONArray();for(int i=0;i<jobs.length();i++)if(!peer.equals(jobs.getJSONObject(i).getString("peer")))keep.put(jobs.getJSONObject(i));state.put("jobs",keep);return true;});cleanup();}}
-    void completed(String peer,JSONObject metadata)throws Exception{synchronized(lock){
-        // A remote ACK is not proof that our local source DB still exists.
-        // Hold the writer lock through both the local queue and receipt commit.
-        synchronized(TrashPurger.LOCK){
+    int quarantinedCount(String peer)throws Exception{
+        JSONArray rows=new JSONObject(queue.read()).optJSONArray("recoveryQuarantine");
+        if(rows==null)return 0;
+        int count=0;
+        for(int i=0;i<rows.length();i++)
+            if(peer.equals(rows.getJSONObject(i).getString("peer")))count++;
+        return count;
+    }
+    private void verifyAckJob(JSONObject job,String epoch)throws Exception{
+        String source=job.optString("sourceRef","");
+        if(source.isEmpty())throw new IOException("Potvrzení nemá ověřitelný původní snímek");
+        PeerSnapshot snapshot=queuedSnapshot(source);
+        if(!epoch.equals(snapshot.wire.optString("recoveryEpoch","")))
+            throw new IOException("Opožděné potvrzení patří jiné epoše databáze");
+        if("metadata".equals(job.getString("kind"))){
+            if(!source.equals(job.getString("hash"))||snapshot.bytes.length!=job.getLong("size"))
+                throw new IOException("Potvrzení nesouhlasí s metadaty revize");
+        }else if("blob".equals(job.getString("kind"))){
+            JSONObject payload=job.getJSONObject("payload");
+            JSONObject media=snapshot.media.get(payload.getString("mediaId"));
+            if(media==null||!job.getString("hash").equals(media.getString("hash"))||
+                job.getLong("size")!=media.getLong("size"))
+                throw new IOException("Potvrzení přílohy neodpovídá původní revizi");
+        }else throw new IOException("Neznámý typ potvrzení");
+    }
+    /**
+     * Every peer ACK, including a per-blob ACK, must prove the concrete
+     * queued job belongs to the current durable recovery epoch.
+     * Returns false for an already absent job; never deletes quarantine.
+     */
+    boolean acknowledge(String id,String hash,long size,boolean metadata)throws Exception{
+        synchronized(lock){synchronized(TrashPurger.LOCK){
             LocalDatabase.readForCas(context);
-            acknowledge(metadata.getString("id"),metadata.getString("hash"),metadata.getLong("size"),true);
-            peers.acknowledged(peer,metadata.getString("hash"));
+            String epoch=DatabaseRecovery.id(context.getFilesDir());
+            final boolean[] accepted={false};
+            mutate(state->{
+                JSONArray jobs=state.getJSONArray("jobs"),next=new JSONArray();
+                JSONObject match=null;
+                for(int i=0;i<jobs.length();i++){
+                    JSONObject item=jobs.getJSONObject(i);
+                    if(id.equals(item.getString("id"))){match=item;break;}
+                }
+                if(match==null){accepted[0]=false;return false;}
+                if(!hash.equals(match.getString("hash"))||size!=match.getLong("size")||
+                    metadata!=("metadata".equals(match.getString("kind"))))
+                    throw new IOException("ACK neodpovídá položce fronty");
+                verifyAckJob(match,epoch); // no queue changes on stale/unknown ACK
+                accepted[0]=true;
+                String peer=match.getString("peer"),source=match.optString("sourceRef","");
+                for(int i=0;i<jobs.length();i++){
+                    JSONObject item=jobs.getJSONObject(i);
+                    if(id.equals(item.getString("id"))||
+                        metadata&&peer.equals(item.getString("peer"))&&
+                        source.equals(item.optString("sourceRef","")))
+                        continue;
+                    next.put(item);
+                }
+                state.put("jobs",next);
+                return true;
+            });
+            return accepted[0];
+        }}
+    }
+    void discard(String peer)throws Exception{
+        synchronized(lock){
+            mutate(state->{
+                JSONArray jobs=state.getJSONArray("jobs"),keep=new JSONArray();
+                for(int i=0;i<jobs.length();i++)
+                    if(!peer.equals(jobs.getJSONObject(i).getString("peer")))keep.put(jobs.getJSONObject(i));
+                state.put("jobs",keep);
+                return true;
+            });
             cleanup();
         }
-    }}
-    private void cleanup()throws Exception{Set<String> keep=new HashSet<>();JSONArray jobs=new JSONObject(queue.read()).getJSONArray("jobs");for(int i=0;i<jobs.length();i++){String ref=jobs.getJSONObject(i).optString("sourceRef","");if(!ref.isEmpty())keep.add(ref);}File[] files=directory.listFiles();if(files!=null)for(File file:files)if(file.isFile()&&file.getName().matches("[a-f0-9]{64}\\.json")&&!keep.contains(file.getName().substring(0,64)))file.delete();}
+    }
+    void completed(String peer,JSONObject metadata)throws Exception{
+        synchronized(lock){synchronized(TrashPurger.LOCK){
+            LocalDatabase.readForCas(context);
+            String id=metadata.getString("id"),hash=metadata.getString("hash");
+            long size=metadata.getLong("size");
+            JSONArray jobs=new JSONObject(queue.read()).getJSONArray("jobs");
+            JSONObject matched=null;
+            for(int i=0;i<jobs.length();i++){
+                JSONObject job=jobs.getJSONObject(i);
+                if(id.equals(job.getString("id"))){matched=job;break;}
+            }
+            if(matched==null||!"metadata".equals(matched.getString("kind"))||
+                !peer.equals(matched.getString("peer"))||
+                !hash.equals(matched.getString("hash"))||size!=matched.getLong("size"))
+                throw new IOException("Opožděné nebo cizí ACK nemá platnou položku fronty");
+            verifyAckJob(matched,DatabaseRecovery.id(context.getFilesDir()));
+            if(!acknowledge(id,hash,size,true))
+                throw new IOException("Potvrzovaná položka již není v aktivní frontě");
+            peers.acknowledged(peer,hash);
+            cleanup();
+        }}
+    }
+    private void cleanup()throws Exception{
+        Set<String> keep=new HashSet<>();
+        JSONObject state=new JSONObject(queue.read());
+        for(String section:new String[]{"jobs","recoveryQuarantine"}){
+            JSONArray rows=state.optJSONArray(section);
+            if(rows==null)continue;
+            for(int i=0;i<rows.length();i++){
+                String ref=rows.getJSONObject(i).optString("sourceRef","");
+                if(!ref.isEmpty())keep.add(ref);
+            }
+        }
+        File[] files=directory.listFiles();
+        if(files==null){
+            if(directory.exists())throw new IOException("Původní soubory fronty nelze prověřit");
+            return;
+        }
+        for(File file:files)
+            if(file.isFile()&&file.getName().matches("[a-f0-9]{64}\\.json")&&
+                !keep.contains(file.getName().substring(0,64)))file.delete();
+    }
     static boolean dominates(JSONObject newer,JSONObject older)throws Exception{
         Map<String,JSONObject> latest=new HashMap<>();JSONArray records=newer.getJSONArray("records");for(int i=0;i<records.length();i++){JSONObject record=records.getJSONObject(i);latest.put(record.getString("id"),record);}
         JSONObject tombs=newer.optJSONObject("syncTombstones");JSONArray before=older.getJSONArray("records");

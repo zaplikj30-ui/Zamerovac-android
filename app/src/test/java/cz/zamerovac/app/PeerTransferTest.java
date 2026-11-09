@@ -187,4 +187,56 @@ public class PeerTransferTest {
   JSONObject wire=new JSONObject(snapshot.wire.toString()).put("sourceId",aid);wire.getJSONObject("data").put("unsafeInteger",9007199254740992L);try{PeerSnapshot.parse(wire.toString().getBytes(StandardCharsets.UTF_8),aid);fail("Inexact number accepted");}catch(IOException expected){assertTrue(expected.getMessage().contains("Číselné pole"));}
   String duplicate="{\"format\":1,\"format\":2}";try{PeerSnapshot.parse(duplicate.getBytes(StandardCharsets.UTF_8),aid);fail("Duplicate JSON key accepted");}catch(IOException expected){}
  }
+
+ @Test public void recoveryQuarantineWithMoreThanSixteenOldJobsDoesNotBlockDirectTls()throws Exception{
+  String precise="1585,800001234567890";
+  JSONObject finalDb=null;
+  for(int i=0;i<20;i++){
+   JSONObject historical=db(record("historic-"+i,aid,precise));
+   LocalDatabase.write(a,historical.toString());
+   as.outbox.prepare(bid);
+   finalDb=historical;
+  }
+  assertNotNull(finalDb);
+  assertEquals(20,as.outbox.pending(bid));
+  assertEquals(16,as.outbox.messages(bid).size());
+  JSONObject old=as.outbox.messages(bid).get(0);
+  File evidence=new File(a.noBackup,"sync-v2-outbox/"+old.getString("hash")+".json");
+  byte[] original=Files.readAllBytes(evidence.toPath());
+  assertTrue(new File(a.home,"projects.json").delete());
+  try{LocalDatabase.readForCas(a);fail("Lost primary accepted");}
+  catch(IOException expected){}
+  String recovery=DatabaseRecovery.id(a.home);
+  assertTrue(DeviceIdentity.valid(recovery));
+  // Synthetic production-boundary fixture: manual recovery itself is NOT implemented.
+  Files.write(new File(a.home,"projects.json").toPath(),
+      finalDb.toString().getBytes(StandardCharsets.UTF_8));
+  DatabaseRecovery.healthy(a.home,false);
+  as=store(a,new SyncPeerRegistry(a.noBackup));
+  bs=store(b,new SyncPeerRegistry(b.noBackup));
+  PeerSnapshot current=as.outbox.prepare(bid);
+  assertEquals(recovery,current.wire.getString("recoveryEpoch"));
+  assertEquals(20,as.outbox.quarantinedCount(bid));
+  assertEquals(1,as.outbox.messages(bid).size());
+  try{as.outbox.completed(bid,old);fail("Old direct ACK retired evidence");}
+  catch(IOException expected){}
+  assertArrayEquals(original,Files.readAllBytes(evidence.toPath()));
+  // Exercise the real production TLS exchange, not a fabricated queue-only read.
+  exchange(null,null);
+  exchange(null,null);
+  JSONObject received=read(b);
+  assertEquals(1,received.getJSONArray("records").length());
+  assertEquals("historic-19",received.getJSONArray("records").getJSONObject(0).getString("id"));
+  assertEquals(precise,received.getJSONArray("records").getJSONObject(0)
+      .getJSONArray("items").getJSONObject(0).getString("measure"));
+  assertEquals(0,as.outbox.pending(bid));
+  assertEquals(20,as.outbox.quarantinedCount(bid));
+  assertArrayEquals(original,Files.readAllBytes(evidence.toPath()));
+  // Restart/retry uses the same production queue, not an in-memory mark.
+  as=store(a,new SyncPeerRegistry(a.noBackup));
+  exchange(null,null);
+  assertEquals(20,as.outbox.quarantinedCount(bid));
+  assertEquals(1,read(b).getJSONArray("records").length());
+  assertArrayEquals(original,Files.readAllBytes(evidence.toPath()));
+ }
 }

@@ -23,9 +23,58 @@ final class LocalDatabase {
             if(tombstones!=null)for(Iterator<String> it=tombstones.keys();it.hasNext();)try{CausalClock.validate(tombstones.getJSONObject(it.next()));}catch(Exception invalid){throw new IOException("Neplatná revize koše",invalid);}
         }catch(JSONException e){throw new IOException("Neplatná databáze",e);}
     }
+    /** Invalid verified bytes are different from an unreadable or changing file. */
+    private static final class InvalidBytes extends IOException {
+        final String fingerprint;
+        InvalidBytes(String fingerprint,IOException cause){super("Neplatný obsah databáze",cause);this.fingerprint=fingerprint;}
+    }
+    private static final class ConfirmedCorruption extends IOException {
+        ConfirmedCorruption(IOException cause){super("Opakovaně potvrzené poškození databáze",cause);}
+    }
+    private static java.nio.file.attribute.BasicFileAttributes attributes(File file)throws IOException{
+        return Files.readAttributes(file.toPath(),java.nio.file.attribute.BasicFileAttributes.class,LinkOption.NOFOLLOW_LINKS);
+    }
     static String readFile(File file)throws IOException {
-        if(!file.isFile()||file.length()>MAX_BYTES)throw new IOException("Databáze není dostupná");
-        String text=JsonInput.decode(Files.readAllBytes(file.toPath()));validate(text);return text;
+        java.nio.file.attribute.BasicFileAttributes before=attributes(file);
+        if(!before.isRegularFile()||before.isSymbolicLink())
+            throw new IOException("Databázový soubor není bezpečně čitelný");
+        if(before.size()>MAX_BYTES)
+            throw new InvalidBytes("oversize:"+before.size()+":"+before.lastModifiedTime().toMillis(),
+                new IOException("Databáze překračuje limit"));
+        byte[] bytes=Files.readAllBytes(file.toPath());
+        java.nio.file.attribute.BasicFileAttributes after=attributes(file);
+        if(!after.isRegularFile()||after.isSymbolicLink()||bytes.length>MAX_BYTES||
+            before.size()!=after.size()||bytes.length!=after.size()||
+            !before.lastModifiedTime().equals(after.lastModifiedTime()))
+            throw new IOException("Databáze se během čtení změnila; zkuste operaci zopakovat");
+        try{
+            String text=JsonInput.decode(bytes);
+            validate(text);
+            return text;
+        }catch(IOException invalid){
+            throw new InvalidBytes(PeerWire.hash(bytes),invalid);
+        }
+    }
+    /**
+     * Retry a transient read once, without modifying the recovery journal.
+     * A corrupt payload is confirmed only by two matching, independently read
+     * fingerprints. An intermittent failure can never rotate recovery epoch.
+     */
+    private static String readPrimary(File file)throws IOException{
+        try{return readFile(file);}
+        catch(InvalidBytes first){
+            try{readFile(file);}
+            catch(InvalidBytes repeated){
+                if(first.fingerprint.equals(repeated.fingerprint))
+                    throw new ConfirmedCorruption(repeated);
+                throw new IOException("Databáze se během ověřování změnila; nic nebylo přepsáno",repeated);
+            }
+            throw new IOException("Neplatný první pokus čtení se neopakoval; zkuste znovu");
+        }catch(IOException transientFailure){
+            try{return readFile(file);}
+            catch(IOException repeated){throw new IOException(
+                "Databázi nyní nelze bezpečně přečíst; původní stav nebyl změněn",repeated);}
+        }
     }
     /**
      * Strict UI/CAS read: a stale backup is NOT a current writable snapshot.
@@ -70,8 +119,8 @@ final class LocalDatabase {
             // A valid primary cannot dismiss a pending recovery without
             // an explicit future recovery promotion and new ACK epoch.
             String text;
-            try{text=readFile(primary);}
-            catch(IOException failure){lost(home,noBackup);throw failure;}
+            try{text=readPrimary(primary);}
+            catch(ConfirmedCorruption confirmed){lost(home,noBackup);throw confirmed;}
             if(DatabaseRecovery.pending(home))
                 throw new IOException("Databáze vyžaduje výslovné dokončení obnovy");
             DatabaseInstallEvidence.ensure(home,noBackup);
@@ -93,12 +142,24 @@ final class LocalDatabase {
                 return "";
             }
             String text;
-            try{text=readFile(primary);}
-            catch(IOException error){
-                try{text=readFile(backup);}
-                catch(IOException ignored){lost(home,noBackup);throw new IOException("Uložené zakázky nelze načíst; původní soubory zůstaly beze změny",error);}
+            if(!primaryExists){
+                // Proven absent primary, with a surviving read-only backup.
+                text=readFile(backup);
                 DatabaseInstallEvidence.ensure(home,noBackup);
-                lost(home,noBackup);return text;
+                lost(home,noBackup);
+                return text;
+            }
+            try{text=readPrimary(primary);}
+            catch(ConfirmedCorruption confirmed){
+                // Only verified, stable corruption triggers the durable recovery barrier.
+                try{text=readFile(backup);}
+                catch(IOException unavailable){
+                    lost(home,noBackup);
+                    throw new IOException("Ověřeně poškozená primární databáze; původní soubory zůstaly beze změny",confirmed);
+                }
+                DatabaseInstallEvidence.ensure(home,noBackup);
+                lost(home,noBackup);
+                return text;
             }
             if(DatabaseRecovery.pending(home))
                 throw new IOException("Obnova databáze musí být výslovně potvrzena");

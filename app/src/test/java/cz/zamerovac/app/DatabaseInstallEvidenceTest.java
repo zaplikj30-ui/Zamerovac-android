@@ -1,6 +1,7 @@
 package cz.zamerovac.app;
 
 import org.junit.*;
+import org.json.JSONObject;
 import org.junit.runner.RunWith;
 import org.robolectric.*;
 import org.robolectric.annotation.Config;
@@ -182,7 +183,10 @@ public class DatabaseInstallEvidenceTest {
         File target=new File(home,"missing-target");
         File marker=new File(home,"zamerovac-install-state-v1.marker");
         try{Files.createSymbolicLink(marker.toPath(),target.toPath());}
-        catch(UnsupportedOperationException|java.nio.file.FileSystemException unsupported){return;}
+        catch(UnsupportedOperationException|java.nio.file.FileSystemException unsupported){
+            org.junit.Assume.assumeTrue("Symlinky nejsou na této platformě podporovány",false);
+            return;
+        }
         refusesState("symlink");
         assertTrue(Files.isSymbolicLink(marker.toPath()));
     }
@@ -242,37 +246,83 @@ public class DatabaseInstallEvidenceTest {
         catch(IOException expected){}
     }
 
-    @Test public void staleOutboxIsRetainedButCannotBeReacknowledged()throws Exception{
-        String original=text("1250,000000000007");
-        LocalDatabase.write(home,noBackup,original);
-        android.content.Context ctx=new android.content.ContextWrapper(RuntimeEnvironment.getApplication()){
+    private android.content.Context syntheticContext(){
+        return new android.content.ContextWrapper(RuntimeEnvironment.getApplication()){
             @Override public File getFilesDir(){return home;}
             @Override public File getNoBackupFilesDir(){return noBackup;}
             @Override public android.content.Context getApplicationContext(){return this;}
         };
+    }
+    @Test public void temporaryUnreadablePrimaryRetriesWithoutRotatingEpoch()throws Exception{
+        String exact=text("1585,800001234567890");
+        LocalDatabase.write(home,noBackup,exact);
+        File primary=new File(home,"projects.json"),parked=new File(home,"protected-original");
+        byte[] bytes=Files.readAllBytes(primary.toPath());
+        String before=DatabaseRecovery.id(home);
+        assertTrue(primary.renameTo(parked));
+        assertTrue(primary.mkdir()); // deterministic non-regular inaccessible path
+        try{LocalDatabase.readForCas(home,noBackup);fail("Unreadable primary was accepted");}
+        catch(IOException expected){}
+        try{LocalDatabase.read(home,noBackup);fail("Fallback silently accepted inaccessible primary");}
+        catch(IOException expected){}
+        assertEquals(before,DatabaseRecovery.id(home));
+        assertFalse(DatabaseRecovery.pending(home));
+        assertTrue(primary.delete());
+        assertTrue(parked.renameTo(primary));
+        assertArrayEquals(bytes,Files.readAllBytes(primary.toPath()));
+        assertEquals(exact,LocalDatabase.readForCas(home,noBackup));
+        assertEquals(before,DatabaseRecovery.id(home));
+    }
+    @Test public void staleOutboxIsRetainedButCannotBeReacknowledged()throws Exception{
+        android.content.Context ctx=syntheticContext();
+        String peer=java.util.UUID.randomUUID().toString();
+        String exact=text("1250,000000000007");
+        LocalDatabase.write(ctx,exact);
         android.content.SharedPreferences prefs=ctx.getSharedPreferences(
             "stale-outbox-"+home.getName(),android.content.Context.MODE_PRIVATE);
-        PeerSnapshot before=PeerSnapshot.capture(ctx,prefs);
-        File outbox=new File(noBackup,"sync-v2-outbox");
-        assertTrue(outbox.mkdirs());
-        File saved=new File(outbox,before.hash+".json");
-        Files.write(saved.toPath(),before.bytes);
-        org.json.JSONObject job=new org.json.JSONObject().put("hash",before.hash)
-            .put("sourceRef",before.hash).put("size",before.bytes.length);
-        PeerOutbox local=new PeerOutbox(ctx,prefs,new SyncPeerRegistry(noBackup));
-        assertEquals(before.hash,local.load(job).hash);
+        SyncPeerRegistry registry=new SyncPeerRegistry(noBackup);
+        registry.approve(peer,"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","Peer");
+        PeerOutbox local=new PeerOutbox(ctx,prefs,registry);
+        PeerSnapshot before=local.prepare(peer);
+        JSONObject oldJob=local.messages(peer).get(0);
+        File original=new File(noBackup,"sync-v2-outbox/"+before.hash+".json");
+        byte[] bytes=Files.readAllBytes(original.toPath());
+        String id=oldJob.getString("id");
+        assertEquals(1,local.pending(peer));
         assertTrue(new File(home,"projects.json").delete());
         try{LocalDatabase.readForCas(ctx);fail("Missing primary accepted");}
         catch(IOException expected){}
         String epoch=DatabaseRecovery.id(home);
         assertTrue(DeviceIdentity.valid(epoch));
-        try{local.load(job);fail("Old queued snapshot is still ACK eligible");}
-        catch(IOException expected){}
-        // Test-only approximation of confirmed future restore; old queue stays blocked.
-        Files.write(new File(home,"projects.json").toPath(),original.getBytes(StandardCharsets.UTF_8));
+        // Synthetic stand-in for the FUTURE explicit verified recovery transaction.
+        Files.write(new File(home,"projects.json").toPath(),exact.getBytes(StandardCharsets.UTF_8));
         DatabaseRecovery.healthy(home,false);
-        try{local.load(job);fail("Old pending transfer was silently revalidated");}
+        try{local.completed(peer,oldJob);fail("Late ACK erased the original outbox");}
         catch(IOException expected){}
-        assertArrayEquals(before.bytes,Files.readAllBytes(saved.toPath()));
+        assertEquals("",registry.lastAck(peer));
+        assertArrayEquals(bytes,Files.readAllBytes(original.toPath()));
+        PeerSnapshot current=local.prepare(peer);
+        assertNotEquals(before.hash,current.hash);
+        assertEquals(1,local.quarantinedCount(peer));
+        assertEquals(1,local.messages(peer).size());
+        assertEquals(current.hash,local.messages(peer).get(0).getString("hash"));
+        JSONObject archived=new JSONObject(local.queue.read()).getJSONArray("recoveryQuarantine").getJSONObject(0);
+        assertEquals(id,archived.getString("id"));
+        PeerOutbox restarted=new PeerOutbox(ctx,prefs,new SyncPeerRegistry(noBackup));
+        assertEquals(1,restarted.quarantinedCount(peer));
+        try{restarted.completed(peer,oldJob);fail("Archived ACK accepted after restart");}
+        catch(IOException expected){}
+        assertArrayEquals(bytes,Files.readAllBytes(original.toPath()));
+        restarted.completed(peer,restarted.messages(peer).get(0));
+        assertEquals(current.hash,registry.lastAck(peer));
+        assertEquals(1,restarted.quarantinedCount(peer));
+        assertEquals(0,restarted.pending(peer));
+        assertArrayEquals(bytes,Files.readAllBytes(original.toPath()));
+        // Legacy writers must not accidentally omit the quarantined evidence.
+        JSONObject update=new JSONObject(restarted.queue.read());
+        long revision=update.getLong("revision");
+        update.remove("recoveryQuarantine");update.put("revision",revision+1);
+        assertTrue(restarted.queue.save(revision,update.toString()));
+        assertEquals(1,restarted.quarantinedCount(peer));
     }
 }

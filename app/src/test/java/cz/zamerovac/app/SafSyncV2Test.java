@@ -141,4 +141,61 @@ public class SafSyncV2Test {
   files(1,4000);sync(a,ai,false).sync();JSONObject job=new PeerOutbox(a,a.prefs,ar).messages(bid).get(0);String hash=job.getString("hash");for(ImmutableStore.Entry entry:store.list("sync/v2/blobs"))if(entry.name.startsWith(hash))Files.delete(store.file("sync/v2/blobs/"+entry.name).toPath());assertTrue(sync(b,bi,false).sync().pending);assertEquals(0,new JSONObject(LocalDatabase.read(b.home)).getJSONArray("records").length());List<ImmutableStore.Entry> requests=store.list("sync/v2/requests/"+aid+"/"+bid);assertFalse(requests.isEmpty());JSONObject request=CloudProof.verify(CloudProof.read(store.open("sync/v2/requests/"+aid+"/"+bid+"/"+requests.get(0).name),PeerWire.MAX_HELLO),bi.certificate(),CloudProof.NEED,bid,aid);assertEquals(hash,request.getString("blob"));assertEquals(job.getLong("size"),request.getLong("blobSize"));converge();assertEquals(0,new PeerOutbox(a,a.prefs,ar).pending(bid));assertEquals("1585,800001",new JSONObject(LocalDatabase.read(b.home)).getJSONArray("records").getJSONObject(0).getJSONArray("items").getJSONObject(0).getString("measure"));
  }
 
+
+ @Test public void quarantinedHistoricalOutboxDoesNotBlockFreshSignedCloudSync()throws Exception{
+  String precise="1585,800001234567890";
+  JSONObject finalDb=null;
+  PeerOutbox outbox=new PeerOutbox(a,a.prefs,ar);
+  for(int i=0;i<20;i++){
+   JSONObject rec=new JSONObject().put("id","historic-cloud-"+i)
+       .put("title","Old synthetic project")
+       .put("syncClock",new JSONObject().put(aid,1))
+       .put("items",new JSONArray().put(new JSONObject().put("measure",precise)));
+   finalDb=new JSONObject().put("schema",1).put("records",new JSONArray().put(rec));
+   LocalDatabase.write(a,finalDb.toString());
+   outbox.prepare(bid);
+  }
+  assertEquals(20,outbox.pending(bid));
+  JSONObject old=outbox.messages(bid).get(0);
+  File originalFile=new File(a.noBackup,"sync-v2-outbox/"+old.getString("hash")+".json");
+  byte[] originalBytes=Files.readAllBytes(originalFile.toPath());
+  assertTrue(new File(a.home,"projects.json").delete());
+  try{LocalDatabase.readForCas(a);fail("Missing primary was accepted");}
+  catch(IOException expected){}
+  String epoch=DatabaseRecovery.id(a.home);
+  assertTrue(DeviceIdentity.valid(epoch));
+  // Synthetically model the explicit future restore without changing production DB semantics.
+  Files.write(new File(a.home,"projects.json").toPath(),
+      finalDb.toString().getBytes(java.nio.charset.StandardCharsets.UTF_8));
+  DatabaseRecovery.healthy(a.home,false);
+  PeerSnapshot current=new PeerOutbox(a,a.prefs,new SyncPeerRegistry(a.noBackup)).prepare(bid);
+  assertEquals(epoch,current.wire.getString("recoveryEpoch"));
+  assertNotEquals(old.getString("hash"),current.hash);
+  assertEquals(20,new PeerOutbox(a,a.prefs,ar).quarantinedCount(bid));
+  // The actual signed-cloud send/receive/ACK path must process the fresh job.
+  sync(a,ai,false).sync();
+  converge();
+  JSONArray accepted=new JSONObject(LocalDatabase.read(b.home)).getJSONArray("records");
+  assertEquals(1,accepted.length());
+  assertEquals("historic-cloud-19",accepted.getJSONObject(0).getString("id"));
+  assertEquals(precise,accepted.getJSONObject(0)
+      .getJSONArray("items").getJSONObject(0).getString("measure"));
+  PeerOutbox restarted=new PeerOutbox(a,a.prefs,new SyncPeerRegistry(a.noBackup));
+  assertEquals(0,restarted.pending(bid));
+  assertEquals(20,restarted.quarantinedCount(bid));
+  assertArrayEquals(originalBytes,Files.readAllBytes(originalFile.toPath()));
+  assertTrue(new SyncPeerRegistry(a.noBackup).lastAck(bid).matches("[a-f0-9]{64}"));
+  assertNotEquals(old.getString("hash"),new SyncPeerRegistry(a.noBackup).lastAck(bid));
+  for(ImmutableStore.Entry entry:store.list("sync/v2/acks/"+aid+"/"+bid)){
+   JSONObject signed=CloudProof.verify(CloudProof.read(
+       store.open("sync/v2/acks/"+aid+"/"+bid+"/"+entry.name),PeerWire.MAX_HELLO),
+       bi.certificate(),CloudProof.ACK,bid,aid);
+   assertNotEquals(old.getString("hash"),signed.getString("hash"));
+  }
+  sync(a,ai,false).sync();
+  sync(b,bi,false).sync();
+  assertEquals(20,new PeerOutbox(a,a.prefs,ar).quarantinedCount(bid));
+  assertEquals(1,new JSONObject(LocalDatabase.read(b.home)).getJSONArray("records").length());
+  assertArrayEquals(originalBytes,Files.readAllBytes(originalFile.toPath()));
+ }
 }
