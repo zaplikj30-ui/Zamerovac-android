@@ -81,6 +81,29 @@ public class SafSyncV2Test {
   String hash="a".repeat(64);JSONObject envelope=CloudProof.sign(CloudProof.body(CloudProof.MESSAGE,aid,bid,hash,100),ai);CloudProof.verify(envelope,ai.certificate(),CloudProof.MESSAGE,aid,bid);
   try{CloudProof.verify(envelope,ai.certificate(),CloudProof.ACK,aid,bid);fail("Message used as ACK");}catch(IOException expected){}envelope.getJSONObject("body").put("hash","b".repeat(64));try{CloudProof.verify(envelope,ai.certificate(),CloudProof.MESSAGE,aid,bid);fail("Changed signed body accepted");}catch(IOException expected){assertTrue(expected.getMessage().contains("Podpis"));}
  }
+ @Test public void rejectedNetworkPolicyCannotExposeStaleFallbackAsConfirmed()throws Exception{
+  files(1,4000);
+  String older=LocalDatabase.readForCas(a.home);
+  JSONObject latest=new JSONObject(older);
+  JSONObject photo=latest.getJSONArray("records").getJSONObject(0);
+  photo.getJSONArray("items").getJSONObject(0).put("measure","1585,800001234567890")
+      .put("laserMeasuredMm","1585.800001234567890");
+  LocalDatabase.write(a.home,latest.toString());
+  File primary=new File(a.home,"projects.json"),backup=new File(a.home,"projects.bak");
+  assertEquals(older,LocalDatabase.readFile(backup));
+  byte[] originalBytes=Files.readAllBytes(new File(a.home,"media/original-0").toPath());
+  Files.write(primary.toPath(),"{broken-primary".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+  byte[] broken=Files.readAllBytes(primary.toPath());
+  try{
+   new SafSyncV2(a,a.prefs,store,ai,bytes->false).sync();
+   fail("An old valid backup must never be returned as current DB");
+  }catch(IOException expected){}
+  assertArrayEquals(broken,Files.readAllBytes(primary.toPath()));
+  assertEquals(older,LocalDatabase.readFile(backup));
+  assertArrayEquals(originalBytes,Files.readAllBytes(new File(a.home,"media/original-0").toPath()));
+  assertEquals(0,store.writes);
+  assertTrue(a.prefs.getBoolean("syncPending",false));
+ }
  @Test public void rejectedNetworkPolicyDoesNotEvenListOrReadProvider()throws Exception{
   files(1,4000);SyncStore denied=new SyncStore(){public String namespace(){return "denied-store";}public InputStream open(String path){throw new AssertionError("Denied provider read");}public OutputStream create(String path){throw new AssertionError("Denied provider write");}public List<ImmutableStore.Entry> list(String path){throw new AssertionError("Denied provider list");}};String before=LocalDatabase.read(a.home);SafSyncV2.Result result=new SafSyncV2(a,a.prefs,denied,ai,bytes->false).sync();assertTrue(result.pending);assertTrue(result.message.contains("povolené připojení"));assertEquals(before,LocalDatabase.read(a.home));
  }
