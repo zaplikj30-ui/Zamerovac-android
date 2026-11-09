@@ -53,6 +53,52 @@ public class StorageLifecycleTest {
         Map<String,byte[]> result=Map.of("media/original-photo",new byte[]{1,2,3,4},"media/original-video",new byte[]{0,0,0,24,102,116,121,112});
         for(Map.Entry<String,byte[]> e:result.entrySet())Files.write(new File(context.getFilesDir(),e.getKey()).toPath(),e.getValue());return result;
     }
+    @Test public void archiveRestoreOnCleanInstallationBootstrapsBeforeFirstOriginal()throws Exception {
+        File root=Files.createTempDirectory(context.getCacheDir().toPath(),"archive-first-").toFile();
+        PeerTransferTest.Device receiver=new PeerTransferTest.Device(root,"clean");
+        File archive=zip(fixture(),Map.of(
+            "media/original-photo",new byte[]{3,5,7,11},
+            "media/original-video",new byte[]{1,2,3,4,5}));
+        assertFalse(new File(receiver.home,"projects.json").exists());
+        BackupImporter.Result imported=BackupImporter.restoreZip(receiver,Uri.fromFile(archive),receiver.prefs);
+        JSONArray records=new JSONObject(LocalDatabase.readForCas(receiver.home)).getJSONArray("records");
+        assertEquals(4,records.length());assertEquals(3,imported.recordCount);
+        assertTrue(DatabaseRecovery.exists(receiver.home));
+        JSONObject photo=null;for(int i=0;i<records.length();i++){
+            JSONObject item=records.getJSONObject(i);
+            if("photo".equals(item.optString("kind")))photo=item;
+        }
+        assertNotNull(photo);
+        assertEquals("0,000000123456789",photo.getJSONArray("items").getJSONObject(0).getString("measure"));
+        String id=photo.getJSONArray("media").getString(0);
+        assertArrayEquals(new byte[]{3,5,7,11},Files.readAllBytes(new File(receiver.home,"media/"+id).toPath()));
+        assertEquals(id,photo.getJSONArray("items").getJSONObject(0).getJSONArray("media").getString(0));
+    }
+    @Test public void archiveRestoreCannotTouchCorruptPrimaryOrResurrectOldBackup()throws Exception {
+        File root=Files.createTempDirectory(context.getCacheDir().toPath(),"archive-corrupt-").toFile();
+        PeerTransferTest.Device receiver=new PeerTransferTest.Device(root,"corrupt");
+        String old="{\"schema\":1,\"records\":[{\"id\":\"existing\",\"measure\":\"1000,000000001\"}]}";
+        String newest="{\"schema\":1,\"records\":[{\"id\":\"existing\",\"measure\":\"1585,800001234567890\"}]}";
+        LocalDatabase.write(receiver.home,old);LocalDatabase.write(receiver.home,newest);
+        File mediaDir=new File(receiver.home,"media");assertTrue(mediaDir.mkdir());
+        byte[] original=new byte[]{9,7,5,3};File image=new File(mediaDir,"untouched-photo");
+        Files.write(image.toPath(),original);
+        File primary=new File(receiver.home,"projects.json"),backup=new File(receiver.home,"projects.bak");
+        Files.write(primary.toPath(),"{corrupt".getBytes(StandardCharsets.UTF_8));
+        byte[] broken=Files.readAllBytes(primary.toPath()),older=Files.readAllBytes(backup.toPath());
+        File archive=zip(fixture(),Map.of(
+            "media/original-photo",new byte[]{3,5,7,11},
+            "media/original-video",new byte[]{1,2,3,4,5}));
+        try{
+            BackupImporter.restoreZip(receiver,Uri.fromFile(archive),receiver.prefs);
+            fail("A stale backup must never authorize archive restore into a corrupt DB");
+        }catch(IOException expected){}
+        assertArrayEquals(broken,Files.readAllBytes(primary.toPath()));
+        assertArrayEquals(older,Files.readAllBytes(backup.toPath()));
+        assertArrayEquals(original,Files.readAllBytes(image.toPath()));
+        assertEquals(1,mediaDir.listFiles().length);
+        assertTrue(receiver.prefs.getAll().isEmpty());
+    }
     @Test public void repeatedRestoreCreatesIntentionalIsolatedCopiesAndPreservesAllLinks()throws Exception {
         JSONObject original=fixture();String before=original.toString();Map<String,byte[]> bytes=media();File archive=zip(original,bytes);JSONObject current=original;
         for(int repeat=0;repeat<3;repeat++){

@@ -30,6 +30,40 @@ public class BackupHistoryTest {
  void files(int count)throws Exception{for(PeerTransferTest.Device device:new PeerTransferTest.Device[]{a,b})if(!new File(device.home,"projects.json").exists())LocalDatabase.write(device.home,"{\"schema\":1,\"records\":[]}");JSONArray media=new JSONArray();new File(a.home,"media").mkdirs();new File(b.home,"media").mkdirs();for(int i=0;i<count;i++){String id="original-"+i;byte[] bytes=new byte[4000+i];Arrays.fill(bytes,(byte)(i+1));Files.write(new File(a.home,"media/"+id).toPath(),bytes);Files.write(new File(b.home,"media/"+id).toPath(),bytes);media.put(id);for(PeerTransferTest.Device device:new PeerTransferTest.Device[]{a,b})device.prefs.edit().putString("mime-"+id,"image/jpeg").putString("name-"+id,"Foto "+i).commit();}photo().put("media",media);LocalDatabase.write(a.home,original.toString());LocalDatabase.write(b.home,original.toString());}
  BackupHistory history(PeerTransferTest.Device device){return new BackupHistory(device,device.prefs,store,null);}
  String path(JSONObject manifest)throws Exception{return BackupHistory.path(manifest.getString("deviceId"),manifest.getString("backupId"));}
+ @Test public void historyRestoreIntoCleanReceiverKeepsExactDimensionAndOriginalBytes()throws Exception{
+  files(1);JSONObject manifest=history(a).create();
+  PeerTransferTest.Device clean=new PeerTransferTest.Device(root,"new-install");
+  assertFalse(new File(clean.home,"projects.json").exists());
+  BackupImporter.Result restored=history(clean).restore(path(manifest));
+  JSONArray records=new JSONObject(LocalDatabase.readForCas(clean.home)).getJSONArray("records");
+  assertEquals(2,records.length());assertEquals(1,restored.recordCount);
+  assertTrue(DatabaseRecovery.exists(clean.home));
+  JSONObject photo=records.getJSONObject(1);
+  assertEquals("0,000000000123456789",photo.getJSONArray("items").getJSONObject(0).getString("measure"));
+  String newId=photo.getJSONArray("media").getString(0);
+  assertNotEquals("original-0",newId);
+  assertArrayEquals(Files.readAllBytes(new File(a.home,"media/original-0").toPath()),
+       Files.readAllBytes(new File(clean.home,"media/"+newId).toPath()));
+ }
+ @Test public void historyRestoreRefusesStaleBackupAndKeepsAllExistingMedia()throws Exception{
+  files(1);JSONObject manifest=history(a).create();
+  JSONObject latest=new JSONObject(LocalDatabase.readForCas(b.home));
+  latest.getJSONArray("records").getJSONObject(0).getJSONArray("items").getJSONObject(0)
+      .put("measure","1585,800001234567890");
+  LocalDatabase.write(b.home,latest.toString());
+  File primary=new File(b.home,"projects.json"),backup=new File(b.home,"projects.bak");
+  Files.write(primary.toPath(),"{corrupt".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+  byte[] broken=Files.readAllBytes(primary.toPath()),beforeBackup=Files.readAllBytes(backup.toPath());
+  byte[] original=Files.readAllBytes(new File(b.home,"media/original-0").toPath());
+  Map<String,?> prefsBefore=new HashMap<>(b.prefs.getAll());
+  try{history(b).restore(path(manifest));fail("History restore used a stale recovery backup");}
+  catch(IOException expected){}
+  assertArrayEquals(broken,Files.readAllBytes(primary.toPath()));
+  assertArrayEquals(beforeBackup,Files.readAllBytes(backup.toPath()));
+  assertArrayEquals(original,Files.readAllBytes(new File(b.home,"media/original-0").toPath()));
+  assertEquals(1,new File(b.home,"media").listFiles().length);
+  assertEquals(prefsBefore,b.prefs.getAll());
+ }
  @Test public void interruptedCanonicalBlockCanRetryAfterRestartWithoutOverwritingPartialFile()throws Exception{
   files(2);class InterruptedStore extends FilesStore {boolean fail=true;InterruptedStore(File root){super(root);}@Override public OutputStream create(String path)throws Exception{OutputStream output=super.create(path);if(fail&&path.startsWith("backups/v2/blobs/")){fail=false;return new FilterOutputStream(output){@Override public void write(byte[] bytes,int offset,int length)throws IOException{out.write(bytes,offset,Math.min(length,11));throw new IOException("synthetic backup disconnected");}};}return output;}}
   store=new InterruptedStore(store.root);try{history(a).create();fail("Interrupted point published");}catch(IOException expected){}assertEquals(0,history(a).list().getJSONArray("histories").length());BackupStore.Entry partial=store.list("backups/v2/blobs").get(0);File partialFile=store.file("backups/v2/blobs/"+partial.name);byte[] bad=Files.readAllBytes(partialFile.toPath());assertEquals(11,bad.length);store=new FilesStore(store.root);JSONObject point=history(a).create();history(a).check(path(point));assertArrayEquals(bad,Files.readAllBytes(partialFile.toPath()));assertEquals(4,store.list("backups/v2/blobs").size());BackupImporter.Result restored=history(b).restore(path(point));JSONObject copy=restored.data.getJSONArray("records").getJSONObject(restored.data.getJSONArray("records").length()-1);assertEquals("0,000000000123456789",copy.getJSONArray("items").getJSONObject(0).getString("measure"));

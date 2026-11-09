@@ -126,6 +126,33 @@ public class PeerTransferTest {
   exchange(null,null);exchange(null,null);assertEquals(2,read(a).getJSONArray("records").length());assertEquals(CausalClock.canonical(read(a)),CausalClock.canonical(read(b)));assertEquals(CausalClock.canonical(photo),CausalClock.canonical(read(b).getJSONArray("records").getJSONObject(1)));
   for(int i=0;i<3;i++)assertArrayEquals(Files.readAllBytes(new File(a.home,"media/media-"+i).toPath()),Files.readAllBytes(new File(b.home,"media/media-"+i).toPath()));assertEquals("Zkušební foto 2",b.prefs.getString("name-media-2",null));assertEquals(0,as.outbox.pending(bid));assertEquals(0,bs.outbox.pending(aid));assertTrue(new File(a.noBackup,"sync-queue-v2.json").exists());assertFalse(new File(a.home,"sync-queue-v2.json").exists());
  }
+ @Test public void corruptReceiverCannotAcceptOldBackupOrAckPeerSnapshot()throws Exception{
+  JSONObject source=record("photo-from-peer",aid,"1585,800001234567890");
+  source.getJSONArray("items").getJSONObject(0).put("laserMeasuredMm","1585.800001234567890");
+  media(a,source,1);save(a,db(source));
+  JSONObject before=db(record("existing",bid,"1000,000001"));
+  JSONObject newer=db(record("existing",bid,"999,000000000123456789"));
+  save(b,before);save(b,newer);
+  File primary=new File(b.home,"projects.json"),backup=new File(b.home,"projects.bak");
+  File receiverMedia=new File(b.home,"media");assertTrue(receiverMedia.mkdir());
+  byte[] original=new byte[]{12,23,34,45};
+  File preserved=new File(receiverMedia,"existing-original");
+  Files.write(preserved.toPath(),original);
+  Files.write(primary.toPath(),"{damaged-current".getBytes(StandardCharsets.UTF_8));
+  byte[] damaged=Files.readAllBytes(primary.toPath()),oldBackup=Files.readAllBytes(backup.toPath());
+  PeerSnapshot snapshot=PeerSnapshot.capture(a,a.prefs);
+  byte[] incoming=Files.readAllBytes(new File(a.home,"media/media-0").toPath());
+  PeerMedia.receive(receiverMedia,"media-0",new ByteArrayInputStream(incoming),snapshot.media.get("media-0"));
+  PeerHandshake.Peer peer=new PeerHandshake.Peer(aid,"source",tls.a.fingerprint());
+  try{bs.apply(snapshot,peer);fail("Damaged receiver accepted fallback as live CAS");}
+  catch(IOException expected){}
+  assertArrayEquals(damaged,Files.readAllBytes(primary.toPath()));
+  assertArrayEquals(oldBackup,Files.readAllBytes(backup.toPath()));
+  assertArrayEquals(original,Files.readAllBytes(preserved.toPath()));
+  assertEquals(2,receiverMedia.listFiles().length);
+  assertArrayEquals(incoming,Files.readAllBytes(new File(receiverMedia,"media-0").toPath()));
+  assertFalse(b.prefs.contains("mime-media-0"));
+ }
  @Test public void fallbackOnResponderInvalidatesRemoteAckAndRestoresExactDataWithoutNewUserEdit()throws Exception{
   JSONObject photo=record("photo-a",aid,"123,000000123456789");media(a,photo,1);save(a,db(photo));save(b,db());exchange(null,null);exchange(null,null);assertEquals(0,as.outbox.pending(bid));assertEquals(0,bs.outbox.pending(aid));String before=CausalClock.canonical(read(a));Files.write(new File(b.home,"projects.bak").toPath(),db().toString().getBytes(StandardCharsets.UTF_8));Files.write(new File(b.home,"projects.json").toPath(),new byte[]{0});
   exchange(null,null);exchange(null,null);assertEquals(before,CausalClock.canonical(read(b)));assertTrue(DeviceIdentity.valid(LocalDatabase.recoveryId(b.home)));assertEquals(LocalDatabase.recoveryId(b.home),ar.snapshot().getJSONObject(bid).getString("recovery"));assertArrayEquals(Files.readAllBytes(new File(a.home,"media/media-0").toPath()),Files.readAllBytes(new File(b.home,"media/media-0").toPath()));exchange(null,null);assertEquals(0,as.outbox.pending(bid));assertEquals(0,bs.outbox.pending(aid));
