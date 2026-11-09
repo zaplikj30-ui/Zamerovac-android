@@ -43,10 +43,11 @@ public class DatabaseRecoveryTest {
         assertTrue(media.delete());
         // A truly clean first launch must still create an initialized database.
         File clean=Files.createTempDirectory(home.toPath(),"clean-install-").toFile();
+        // MainActivity creates an empty media directory before the first save.
+        File photoDir=new File(clean,"media");assertTrue(photoDir.mkdir());
         String initial=data("1585,800001234567890");
         LocalDatabase.write(clean,initial);assertEquals(initial,LocalDatabase.readForCas(clean));
         assertTrue(DatabaseRecovery.exists(clean));
-        File photoDir=new File(clean,"media");assertTrue(photoDir.mkdir());
         File photo=new File(photoDir,"original-photo");
         Files.write(photo.toPath(),untouched);
         assertTrue(new File(clean,"projects.json").delete());
