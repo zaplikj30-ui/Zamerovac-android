@@ -350,6 +350,35 @@ public class RecoveryProtectionArchiveTest {
         assertFalse("A stale archive was marked complete",complete.exists());
     }
 
+    @Test public void interruptedArchiveRejectsDriftAfterMarkerButKeepsArchivedEvidence()
+            throws Exception{
+        JSONObject old=reuseFixture();
+        File marker=new File(archive(old),"COMPLETE");
+        assertTrue(marker.delete());
+        File primary=new File(home,"projects.json");
+        byte[] original=read(primary);
+        File prefs=new File(root,"shared_prefs/zamerovac.xml");
+        byte[] changed="<map><string name=\"photo\">late-update</string></map>"
+            .getBytes(StandardCharsets.UTF_8);
+        AtomicInteger checkpoints=new AtomicInteger();
+        try{
+            RecoveryProtectionArchive.create(home,noBackup,dir->Long.MAX_VALUE,()->{
+                if(checkpoints.incrementAndGet()==3)Files.write(prefs.toPath(),changed);
+            });
+            fail("Late source mutation was reported as a current archive reuse");
+        }catch(IOException expected){}
+        assertEquals(3,checkpoints.get());
+        // The marker certifies the independent OLD archived bytes, never live freshness.
+        assertTrue(marker.exists());
+        assertTrue(RecoveryProtectionArchive.verify(noBackup,old.getString("id"))
+            .getBoolean("complete"));
+        assertArrayEquals(changed,read(prefs));
+        assertArrayEquals(original,read(primary));
+        assertArrayEquals(REUSE_PHOTO,read(new File(home,"media/reuse-photo")));
+        assertArrayEquals(REUSE_PHOTO,read(new File(archive(old),
+            "payload/files/media/reuse-photo")));
+    }
+
     @Test public void unmodifiedSourcesReuseConfirmedAndSafelyFinishUnconfirmed()
             throws Exception{
         JSONObject old=reuseFixture();
