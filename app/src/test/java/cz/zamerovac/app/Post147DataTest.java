@@ -90,11 +90,24 @@ public class Post147DataTest {
         catch(java.lang.reflect.InvocationTargetException expected){assertTrue(expected.getCause() instanceof IOException);}
         assertEquals("broken-primary",new String(java.nio.file.Files.readAllBytes(primary.toPath()),StandardCharsets.UTF_8));
         assertEquals("broken-backup",new String(java.nio.file.Files.readAllBytes(backup.toPath()),StandardCharsets.UTF_8));
-        String recovered=legacy().toString();java.nio.file.Files.write(backup.toPath(),recovered.getBytes(StandardCharsets.UTF_8));
-        assertEquals(recovered,activity.new JsApi().loadData());
-        write.invoke(activity,recovered);
-        assertEquals(recovered,new String(java.nio.file.Files.readAllBytes(primary.toPath()),StandardCharsets.UTF_8));
-        assertEquals(recovered,new String(java.nio.file.Files.readAllBytes(backup.toPath()),StandardCharsets.UTF_8));
+        // Once failed load has set a durable recovery epoch, a file restored
+        // outside the application does not authorize write/ACK. Stage3B manual
+        // promotion remains an explicit future feature; never auto-recover.
+        assertTrue(DatabaseRecovery.pending(activity.getFilesDir()));
+        String recovered=legacy().toString();
+        byte[] restoredBackup=recovered.getBytes(StandardCharsets.UTF_8);
+        java.nio.file.Files.write(backup.toPath(),restoredBackup);
+        assertTrue(new JSONObject(activity.new JsApi().loadData()).getBoolean("_loadError"));
+        JSONObject denied=new JSONObject(activity.new JsApi().saveDataChecked(recovered,recovered));
+        assertFalse(denied.getBoolean("ok"));assertFalse("Stale backup is not a mergeable current",denied.has("current"));
+        assertTrue(denied.has("error"));
+        try{write.invoke(activity,recovered);fail("Manual backup bytes bypassed pending recovery");}
+        catch(java.lang.reflect.InvocationTargetException expected){assertTrue(expected.getCause() instanceof IOException);}
+        assertEquals("broken-primary",new String(java.nio.file.Files.readAllBytes(primary.toPath()),StandardCharsets.UTF_8));
+        assertArrayEquals(restoredBackup,java.nio.file.Files.readAllBytes(backup.toPath()));
+        assertTrue(DatabaseRecovery.pending(activity.getFilesDir()));
+        assertEquals("1250,123456",new JSONObject(recovered).getJSONArray("records")
+            .getJSONObject(0).getJSONArray("items").getJSONObject(0).getString("measure"));
     }
     @Test @GraphicsMode(GraphicsMode.Mode.NATIVE)
     public void customerZipContainsOnlyRasterPdfForOneAndMultiplePhotos()throws Exception {
