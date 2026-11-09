@@ -67,11 +67,32 @@ final class RecoveryCandidateReview {
                 if("candidates".equals(section)&&dangerous)evidenceValid=false;
             }
         }
-        boolean recovering=false;String recoveryEpoch="";
-        try{
-            recovering=DatabaseRecovery.pending(home);
-            recoveryEpoch=DatabaseRecovery.id(home);
-        }catch(IOException untrusted){evidenceValid=false;}
+        // AtomicFile.readFully/openRead can rename .bak and delete .new.
+        // Never call DatabaseRecovery.pending()/id() from this read-only path.
+        boolean recovering=false;
+        String recoveryEpoch="",journalStatus="UNKNOWN";
+        JSONArray journalEvidence=second.getJSONArray("evidence");
+        JSONObject journal=find(journalEvidence,"files/projects.recovery-v1.json");
+        JSONObject legacy=find(journalEvidence,"files/projects.recovery-v1.json.bak");
+        JSONObject unfinished=find(journalEvidence,"files/projects.recovery-v1.json.new");
+        if(journal==null||legacy==null||unfinished==null||
+                !"MISSING".equals(legacy.optString("state"))||
+                !"MISSING".equals(unfinished.optString("state"))){
+            evidenceValid=false;
+        }else if("MISSING".equals(journal.optString("state"))){
+            journalStatus="ABSENT";
+        }else if("PRESENT".equals(journal.optString("state"))&&
+                journal.optBoolean("complete")){
+            try{
+                JSONObject state=readVerifiedJournal(new File(home,"projects.recovery-v1.json"),journal);
+                recovering=state.getBoolean("recovering");
+                recoveryEpoch=state.getString("epoch");
+                journalStatus="VERIFIED_READ_ONLY";
+            }catch(InterruptedIOException interrupted){throw interrupted;}
+            catch(Exception uncertain){evidenceValid=false;}
+        }else{
+            evidenceValid=false;
+        }
 
         JSONArray listed=second.getJSONArray("candidates");
         JSONObject live=find(listed,PRIMARY);
@@ -94,7 +115,7 @@ final class RecoveryCandidateReview {
                 .put("decision","BLOCKED").put("reason","NOT_VERIFIED");
             for(String field:new String[]{"size","sha256","records","deletedRecords",
                     "embeddedHistoryRecords","purgedRecordIds","syncTombstones",
-                    "missingMedia","unavailableMedia"})
+                    "missingMedia","unavailableMedia","unconfirmed"})
                 if(source.has(field))item.put(field,source.get(field));
             if("MISSING".equals(state)){
                 item.put("decision","ABSENT").put("reason","NO_SOURCE");
@@ -102,6 +123,8 @@ final class RecoveryCandidateReview {
                 item.put("reason","SOURCE_CHANGED_DURING_SCAN");
             }else if(!evidenceValid){
                 item.put("reason","INSTALL_OR_RECOVERY_EVIDENCE_UNVERIFIABLE");
+            }else if(source.optBoolean("unconfirmed")){
+                item.put("reason","UNCONFIRMED_TEMPORARY_SOURCE");
             }else if(!"VALID".equals(state)||!source.optBoolean("complete")||
                     source.optBoolean("referencesUnverifiable")){
                 item.put("reason","INVALID_OR_INCOMPLETE_SOURCE");
@@ -155,6 +178,7 @@ final class RecoveryCandidateReview {
             .put("sourceStableAcrossChecks",stable)
             .put("installationEvidenceVerified",evidenceValid)
             .put("recoveryPending",recovering).put("recoveryEpoch",recoveryEpoch)
+            .put("recoveryJournalStatus",journalStatus)
             .put("undoRedo","IN_MEMORY_NOT_RECOVERABLE_FROM_FILES")
             .put("archive",archive).put("candidates",out)
             .put("note","Kontrola není svolením k obnově, zapisování ani ACK");
@@ -226,18 +250,55 @@ final class RecoveryCandidateReview {
         LocalDatabase.validate(decoded);
         return new JSONObject(decoded);
     }
+    /** Read-only journal inspection: never use AtomicFile or repair the evidence. */
+    private static JSONObject readVerifiedJournal(File path,JSONObject evidence)throws Exception{
+        final long max=4096;
+        if(!matches(path,evidence,max))throw new IOException("Evidence obnovy se změnila");
+        byte[] bytes;
+        try(InputStream in=Files.newInputStream(path.toPath(),LinkOption.NOFOLLOW_LINKS);
+            ByteArrayOutputStream out=new ByteArrayOutputStream()){
+            byte[] buffer=new byte[1024];int n;long total=0;
+            while((n=in.read(buffer))!=-1){
+                if(Thread.currentThread().isInterrupted())
+                    throw new InterruptedIOException("Kontrola evidence obnovy přerušena");
+                if(n==0||total>max-n)
+                    throw new IOException("Evidence obnovy překročila limit");
+                out.write(buffer,0,n);total+=n;
+            }
+            bytes=out.toByteArray();
+        }
+        if(bytes.length!=evidence.getLong("size")||
+           !PeerWire.hash(bytes).equals(evidence.getString("sha256"))||
+           !matches(path,evidence,max))
+            throw new IOException("Evidence obnovy není stabilní");
+        JSONObject state=JsonInput.object(bytes);
+        Object epoch=state.get("epoch");
+        if(state.optInt("version")!=1||!(epoch instanceof String)||
+           (!((String)epoch).isEmpty()&&!DeviceIdentity.valid((String)epoch))||
+           !(state.get("recovering") instanceof Boolean)||
+           !epoch.equals(evidence.optString("epoch"))||
+           state.getBoolean("recovering")!=evidence.getBoolean("recovering"))
+            throw new IOException("Neověřená evidence obnovy");
+        return state;
+    }
     private static JSONObject liveBackup(File home,JSONArray listed)throws Exception{
         JSONObject backup=find(listed,"files/projects.bak");
         if(backup==null||!"VALID".equals(backup.optString("state")))return null;
         return readVerifiedDb(new File(home,"projects.bak"),backup);
     }
-    private static boolean tombstonesLost(JSONObject current,JSONObject older)throws JSONException{
+    private static boolean tombstonesLost(JSONObject current,JSONObject older)throws Exception{
         if(older==null)return false;
         JSONObject olderTombs=older.optJSONObject("syncTombstones");
         JSONObject currentTombs=current.optJSONObject("syncTombstones");
         if(olderTombs!=null)
             for(Iterator<String> it=olderTombs.keys();it.hasNext();){
-                String id=it.next();if(currentTombs==null||!currentTombs.has(id))return true;
+                String id=it.next();
+                if(currentTombs==null||!currentTombs.has(id))return true;
+                // Only equal or causally newer clocks demonstrate preserved
+                // deletion semantics. Concurrent/older values are unverified.
+                String order=CausalClock.compare(currentTombs.getJSONObject(id),
+                    olderTombs.getJSONObject(id));
+                if(!"equal".equals(order)&&!"after".equals(order))return true;
             }
         JSONArray purged=older.optJSONArray("trashPurgedIds"),now=current.optJSONArray("trashPurgedIds");
         if(purged!=null)for(int i=0;i<purged.length();i++){
