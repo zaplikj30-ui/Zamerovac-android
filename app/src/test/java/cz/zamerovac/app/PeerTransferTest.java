@@ -95,12 +95,13 @@ public class PeerTransferTest {
   byte[] original=Files.readAllBytes(new File(a.home,"media/media-0").toPath());
   PeerMedia.receive(directory,"media-0",new ByteArrayInputStream(original),snapshot.media.get("media-0"));
   File blocker=new File(b.home,"projects.tmp");assertTrue(blocker.mkdir());
+  File keep=new File(blocker,"force-write-failure");Files.write(keep.toPath(),new byte[]{1});
   PeerHandshake.Peer peer=new PeerHandshake.Peer(aid,"Synthetic source",tls.a.fingerprint());
   try{
    bs.apply(snapshot,peer);
    fail("Disk write fault was acknowledged as completed sync");
   }catch(IOException expected){}
-  finally{assertTrue(blocker.delete());}
+  finally{assertTrue(keep.delete());assertTrue(blocker.delete());}
   assertEquals(before,CausalClock.canonical(read(b)));
   assertEquals("Original local label",b.prefs.getString("name-media-0",null));
   assertArrayEquals(original,Files.readAllBytes(new File(b.home,"media/media-0").toPath()));
