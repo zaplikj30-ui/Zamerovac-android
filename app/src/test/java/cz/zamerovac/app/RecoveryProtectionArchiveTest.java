@@ -235,7 +235,9 @@ public class RecoveryProtectionArchiveTest {
             throws Exception{
         JSONObject old=reuseFixture();
         File primary=new File(home,"projects.json");
-        JSONObject modified=db("9999,000000000987654321");
+        JSONObject modified=new JSONObject(new String(read(primary),StandardCharsets.UTF_8));
+        modified.getJSONArray("records").getJSONObject(0).getJSONArray("items")
+            .getJSONObject(0).put("measure","9999,000000000987654321");
         byte[] newDb=modified.toString().getBytes(StandardCharsets.UTF_8);
         rejectReuseOnSourceDrift(old,()->Files.write(primary.toPath(),newDb),true);
         assertArrayEquals(newDb,read(primary));
@@ -244,6 +246,39 @@ public class RecoveryProtectionArchiveTest {
                 .getJSONArray("records").getJSONObject(0).getJSONArray("items")
                 .getJSONObject(0).getString("measure"));
         assertArrayEquals(REUSE_PHOTO,read(new File(home,"media/reuse-photo")));
+    }
+
+    @Test public void existingArchiveRejectsPhotoMutationInsideMarkerVerification()
+            throws Exception{
+        JSONObject old=reuseFixture();
+        Path marker=new File(archive(old),"COMPLETE").toPath();
+        File original=new File(home,"media/reuse-photo");
+        byte[] updated={12,10,8,6,4,2};
+        byte[] primary=read(new File(home,"projects.json"));
+        boolean[] injected={false};
+        try(MockedStatic<Files> mocked=mockStatic(Files.class,CALLS_REAL_METHODS)){
+            mocked.when(()->Files.newInputStream(any(Path.class),any(OpenOption[].class)))
+                .thenAnswer(call->{
+                    Path opened=call.getArgument(0);
+                    InputStream in=(InputStream)call.callRealMethod();
+                    if(marker.equals(opened)&&!injected[0]){
+                        Files.write(original.toPath(),updated);
+                        injected[0]=true; // after initial source scan, while verifying archive
+                    }
+                    return in;
+                });
+            try{
+                RecoveryProtectionArchive.create(home,noBackup);
+                fail("Live photo changed during verify but stale archive was reused");
+            }catch(IOException expected){}
+        }
+        assertTrue("Marker read must trigger a real-time source change",injected[0]);
+        assertArrayEquals(updated,read(original));
+        assertArrayEquals(primary,read(new File(home,"projects.json")));
+        assertArrayEquals(REUSE_PHOTO,read(new File(archive(old),
+            "payload/files/media/reuse-photo")));
+        assertTrue(RecoveryProtectionArchive.verify(noBackup,old.getString("id"))
+            .getBoolean("complete"));
     }
 
     @Test public void existingConfirmedArchiveRejectsSameLengthPhotoMutationDuringReuse()
