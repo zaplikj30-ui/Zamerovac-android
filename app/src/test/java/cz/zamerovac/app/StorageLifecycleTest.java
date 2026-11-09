@@ -49,6 +49,7 @@ public class StorageLifecycleTest {
         }return f;
     }
     Map<String,byte[]> media()throws Exception {
+        if(!new File(context.getFilesDir(),"projects.json").exists())LocalDatabase.write(context.getFilesDir(),"{\"schema\":1,\"records\":[]}");
         Map<String,byte[]> result=Map.of("media/original-photo",new byte[]{1,2,3,4},"media/original-video",new byte[]{0,0,0,24,102,116,121,112});
         for(Map.Entry<String,byte[]> e:result.entrySet())Files.write(new File(context.getFilesDir(),e.getKey()).toPath(),e.getValue());return result;
     }

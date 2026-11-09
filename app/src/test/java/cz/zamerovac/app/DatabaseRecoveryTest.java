@@ -21,6 +21,34 @@ public class DatabaseRecoveryTest {
         assertEquals(old,LocalDatabase.read(home));String epoch=LocalDatabase.recoveryId(home);assertTrue(DeviceIdentity.valid(epoch));assertEquals(before+1,LocalDatabase.generation(home));assertEquals(epoch,LocalDatabase.recoveryId(home));assertEquals(epoch,DatabaseRecovery.id(home));assertArrayEquals(damaged,Files.readAllBytes(new File(home,"projects.json").toPath()));assertEquals(old,LocalDatabase.readFile(new File(home,"projects.bak")));
         LocalDatabase.write(home,fresh);assertEquals(epoch,LocalDatabase.recoveryId(home));corrupt();assertEquals(old,LocalDatabase.read(home));assertNotEquals(epoch,LocalDatabase.recoveryId(home));
     }
+    @Test public void orphanOriginalNeverAuthorizesImplicitFreshDatabase()throws Exception{
+        File media=new File(home,"media");assertTrue(media.mkdir());
+        File original=new File(media,"original-photo");
+        byte[] untouched=new byte[]{17,23,42,99};Files.write(original.toPath(),untouched);
+        // Loss of projects.json AND its recovery journal is indistinguishable
+        // from a pre-database media stage; reject both rather than erase data.
+        assertFalse(new File(home,"projects.json").exists());
+        try{LocalDatabase.write(home,data("0,000000000001"));fail("Media-only state was reset as a new install");}
+        catch(IOException expected){}
+        assertFalse(new File(home,"projects.json").exists());
+        assertFalse(DatabaseRecovery.exists(home));
+        assertArrayEquals(untouched,Files.readAllBytes(original.toPath()));
+        // A truly clean first launch must still create an initialized database.
+        File clean=Files.createTempDirectory(home.toPath(),"clean-install-").toFile();
+        String initial=data("1585,800001234567890");
+        LocalDatabase.write(clean,initial);assertEquals(initial,LocalDatabase.readForCas(clean));
+        assertTrue(DatabaseRecovery.exists(clean));
+        File photoDir=new File(clean,"media");assertTrue(photoDir.mkdir());
+        File photo=new File(photoDir,"original-photo");
+        Files.write(photo.toPath(),untouched);
+        assertTrue(new File(clean,"projects.json").delete());
+        assertTrue(new File(clean,"projects.recovery-v1.json").delete());
+        assertFalse(new File(clean,"projects.bak").exists());
+        try{LocalDatabase.write(clean,data("999,000001"));fail("Lost initialized DB silently replaced");}
+        catch(IOException expected){}
+        assertFalse(new File(clean,"projects.json").exists());
+        assertArrayEquals(untouched,Files.readAllBytes(photo.toPath()));
+    }
     @Test public void failedRecoveryJournalCannotReturnOlderDataAsConfirmed()throws Exception{
         LocalDatabase.write(home,data("1,000001"));LocalDatabase.write(home,data("2,000002"));corrupt();File blocker=new File(home,"projects.recovery-v1.json.new");assertTrue(blocker.mkdir());Files.write(new File(blocker,"block").toPath(),new byte[]{1});
         try{LocalDatabase.read(home);fail("Fallback without durable invalidation accepted");}catch(IOException expected){}assertEquals("",DatabaseRecovery.id(home));assertEquals(data("1,000001"),LocalDatabase.readFile(new File(home,"projects.bak")));assertTrue(new File(blocker,"block").delete());assertTrue(blocker.delete());assertEquals(data("1,000001"),LocalDatabase.read(home));assertTrue(DeviceIdentity.valid(LocalDatabase.recoveryId(home)));

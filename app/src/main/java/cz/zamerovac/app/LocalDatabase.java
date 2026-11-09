@@ -69,11 +69,12 @@ final class LocalDatabase {
     static void write(File home,String text)throws IOException {
         synchronized(TrashPurger.LOCK){
             validate(text);File primary=new File(home,"projects.json"),backup=new File(home,"projects.bak"),next=new File(home,"projects.tmp"),backupNext=new File(home,"projects.backup.tmp");
-            // If an existing primary and its recovery copy are BOTH unreadable, do not overwrite either.
-            // An automatic writer must never promote a damaged primary's stale backup.
-            // Keep the legacy first-write path for media staged before any DB existed.
-            if(primary.exists()||backup.exists()||DatabaseRecovery.exists(home)||
-                next.exists()||backupNext.exists())readForCas(home);
+            // Every writer, including legacy direct callers, must use the SAME strict
+            // preflight as CAS. Media without a database is ambiguous: it may be
+            // an interrupted transfer or the last surviving customer original.
+            // Only a genuinely clean installation can create its first database.
+            // Real media import paths bootstrap that database BEFORE staging files.
+            readForCas(home);
             DatabaseRecovery.healthy(home,true);
             try{
                 writeSynced(next,text.getBytes(StandardCharsets.UTF_8));
