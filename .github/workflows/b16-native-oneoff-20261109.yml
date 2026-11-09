@@ -1,4 +1,4 @@
-name: Zaměřovač - TEMP B16 Drive/SAF ACK provider RED bez APK
+name: Zaměřovač - TEMP B16 souhrnná HOME regrese 134 testů bez APK
 # One-shot owner-controlled branch; fixed source SHA, no pull_request/fork or cloud runner.
 on:
   push:
@@ -13,12 +13,12 @@ concurrency:
 jobs:
   targeted-native:
     if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/qa/b16-native-0d01fdb-20261109' && github.event_name == 'push' }}
-    name: Windows QA WSL2 - two provider ACK boundary RED tests
+    name: Windows QA WSL2 - eight B16 full Robolectric classes
     runs-on: [self-hosted, Windows, X64, zamerovac-qa]
     timeout-minutes: 45
     env:
       CI: '1'
-      TESTED_SHA: '933a9b3a640b8d69cc4069cac18e356c53fef1ec'
+      TESTED_SHA: 'adbb0ad209c0322ccc8914c0a5c54582a86db57e'
     steps:
       - name: Verify owner-controlled branch and unprivileged Windows service
         shell: cmd
@@ -29,15 +29,15 @@ jobs:
           if not exist "C:\actions-runner\tools\Python313\python.exe" exit /b 1
           echo C:\actions-runner\tools\MinGit-2.56.0.4\cmd>>"%GITHUB_PATH%"
           echo PASS owner branch and local tooling
-      - name: Read-only source checkout pinned to immutable PR88 test SHA
+      - name: Read-only source checkout pinned to reviewed PR89 source SHA
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: 933a9b3a640b8d69cc4069cac18e356c53fef1ec
+          ref: adbb0ad209c0322ccc8914c0a5c54582a86db57e
           path: b16-source
           fetch-depth: 1
           persist-credentials: false
           submodules: false
-      - name: Compile Java and run two provider ACK boundary Robolectric tests in WSL2
+      - name: Compile Java and run eight complete B16 Robolectric classes in WSL2
         shell: 'C:\actions-runner\tools\Python313\python.exe {0}'
         run: |
           import os, subprocess
@@ -77,11 +77,17 @@ jobs:
           echo "PHASE_1_JAVAC compilePreviewJavaWithJavac"
           "$gradle" "${common[@]}" :app:verifyDriveRegistration :app:compilePreviewJavaWithJavac
           echo "PASS PHASE_1_JAVAC"
-          echo "PHASE_2_TESTS two Drive staged and SAF direct ACK provider races"
+          echo "PHASE_2_TESTS eight complete B16 archive/DB/peer/cloud suites"
           set +e
           "$gradle" "${common[@]}" :app:testPreviewUnitTest \
-            --tests cz.zamerovac.app.SafSyncV2Test.driveStagedAckMustNotPublishAfterLocalAuthorityLostInsideProviderCommit \
-            --tests cz.zamerovac.app.SafSyncV2Test.safDirectAckMustNotPublishAfterLocalAuthorityLostInsideProviderWrite
+            --tests cz.zamerovac.app.RecoveryProtectionArchiveTest \
+            --tests cz.zamerovac.app.RecoveryInventoryTest \
+            --tests cz.zamerovac.app.DatabaseInstallEvidenceTest \
+            --tests cz.zamerovac.app.DatabaseRecoveryTest \
+            --tests cz.zamerovac.app.PeerTransferTest \
+            --tests cz.zamerovac.app.SafSyncV2Test \
+            --tests cz.zamerovac.app.CloudInboxTest \
+            --tests cz.zamerovac.app.CloudPublicationsTest
           test_rc=$?
           set -e
           python3 - <<'PY_XML'
@@ -98,9 +104,16 @@ jobs:
           print("B16_JUNIT_XML_COUNTS:",stats,"XML_FILES:",len(files),flush=True)
           print("B16_JUNIT_SUITES:",suite_counts,flush=True)
           expected_suites={
-              "cz.zamerovac.app.SafSyncV2Test":2,
+              "cz.zamerovac.app.RecoveryProtectionArchiveTest":40,
+              "cz.zamerovac.app.RecoveryInventoryTest":7,
+              "cz.zamerovac.app.DatabaseInstallEvidenceTest":23,
+              "cz.zamerovac.app.DatabaseRecoveryTest":7,
+              "cz.zamerovac.app.PeerTransferTest":14,
+              "cz.zamerovac.app.SafSyncV2Test":34,
+              "cz.zamerovac.app.CloudInboxTest":5,
+              "cz.zamerovac.app.CloudPublicationsTest":4,
           }
-          if len(files)!=1 or suite_counts!=expected_suites or stats["tests"]!=2 or any(stats[k] for k in ("failures","errors","skipped")):
+          if len(files)!=8 or suite_counts!=expected_suites or stats["tests"]!=134 or any(stats[k] for k in ("failures","errors","skipped")):
               raise SystemExit("FAIL or SKIP: check exact JUnit XML and Gradle log")
           PY_XML
           test "$test_rc" -eq 0
@@ -116,7 +129,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: b16-pr88-provider-boundary-red-933a9b3
+          name: b16-pr89-full-stage2-134-adbb0ad
           path: b16-junit-reports/${{ github.run_id }}-${{ github.run_attempt }}/
           if-no-files-found: ignore
           retention-days: 7
