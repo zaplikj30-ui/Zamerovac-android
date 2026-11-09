@@ -132,17 +132,24 @@ function save(){
       disk.records.some(r=>!r||typeof r!=='object'||Array.isArray(r)||typeof r.id!=='string'||!r.id)||
       new Set(disk.records.map(r=>r.id)).size!==disk.records.length)
      throw new Error('Neplatná databáze při souběžném zápisu');
-   // A remote record may disappear only with durable native purge receipts.
-   // This also rejects a phantom empty DB without blocking confirmed trash purges.
+   // A tombstone is not a deletion receipt while that same ID still exists.
+   // Validate all conflicts, including those where no record ID went missing.
    const remoteIds=new Set(disk.records.map(r=>r.id));
+   if(Object.hasOwn(disk,'trashPurgedIds')&&!Array.isArray(disk.trashPurgedIds))
+    throw new Error('Neplatná evidence vysypaného koše');
+   const purged=new Set(disk.trashPurgedIds||[]);
+   if([...purged].some(id=>typeof id!=='string'||!id))
+    throw new Error('Neplatné ID v evidenci vysypaného koše');
+   const tombstones=disk.syncTombstones===undefined?{}:disk.syncTombstones;
+   if(!tombstones||typeof tombstones!=='object'||Array.isArray(tombstones))
+    throw new Error('Neplatná evidence synchronizačního koše');
+   if(disk.records.some(r=>purged.has(r.id)||Object.hasOwn(tombstones,r.id)))
+    throw new Error('Rozporný záznam a potvrzení jeho smazání');
    const missing=(base.records||[]).filter(r=>!remoteIds.has(r.id));
-   if(missing.length){
-    const purged=new Set(Array.isArray(disk.trashPurgedIds)?disk.trashPurgedIds:[]);
-    const tombstones=disk.syncTombstones;
-    if(!tombstones||typeof tombstones!=='object'||Array.isArray(tombstones)||
-       missing.some(r=>!purged.has(r.id)||!Object.hasOwn(tombstones,r.id)))
-     throw new Error('Neověřené odstranění záznamů při souběžném zápisu');
-   }
+   const watched=new Set([...(base.records||[]).map(r=>r.id),...candidate.records.map(r=>r.id)]);
+   if(missing.some(r=>!purged.has(r.id)||!Object.hasOwn(tombstones,r.id))||
+      [...watched].some(id=>Object.hasOwn(tombstones,id)&&!purged.has(id)))
+    throw new Error('Neověřené odstranění záznamů při souběžném zápisu');
    candidate=reconcileSavedState(base,candidate,disk);expected=result.current;
   }
   throw new Error('Zakázky se právě mění. Zkus uložení znovu.');

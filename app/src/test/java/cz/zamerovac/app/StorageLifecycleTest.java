@@ -171,6 +171,86 @@ public class StorageLifecycleTest {
         assertEquals(purged.toString(),realConflict.getString("current"));
         assertEquals(purged.toString(),api.loadData());assertEquals(photo,digest(new File(dir,"original-photo")));
     }
+    @Test public void corruptedPrimaryWithOlderValidBackupNeverAcknowledgesCAS()throws Exception {
+        media();JSONObject older=fixture();persist(older);MainActivity.JsApi api=activity.new JsApi();
+        String oldText=api.loadData();
+        JSONObject latest=fixture();
+        JSONObject photoRecord=latest.getJSONArray("records").getJSONObject(1);
+        photoRecord.getJSONArray("items").getJSONObject(0).put("measure","1585,800001234567890");
+        photoRecord.getJSONArray("items").getJSONObject(0).put("laserMeasuredMm","1585.800001234567890");
+        photoRecord.getJSONArray("media").put(0,"new-photo-id");
+        photoRecord.getJSONArray("items").getJSONObject(0).getJSONArray("media").put(0,"new-photo-id");
+        Files.write(new File(dir,"new-photo-id").toPath(),new byte[]{7,1,9,3,5});
+        String newMediaDigest=digest(new File(dir,"new-photo-id"));
+        String newest=latest.toString();
+        assertTrue(new JSONObject(api.saveDataChecked(newest,oldText)).getBoolean("ok"));
+        File primary=new File(context.getFilesDir(),"projects.json"),backup=new File(context.getFilesDir(),"projects.bak");
+        assertEquals(oldText,LocalDatabase.readFile(backup));
+        byte[] latestBytes=Files.readAllBytes(primary.toPath());
+        String photoDigest=digest(new File(dir,"original-photo"));
+        try {
+            Files.write(primary.toPath(),"{broken".getBytes(StandardCharsets.UTF_8));
+            byte[] corrupt=Files.readAllBytes(primary.toPath());
+            assertTrue(new JSONObject(api.loadData()).getBoolean("_loadError"));
+            JSONObject denied=new JSONObject(api.saveDataChecked(oldText,newest));
+            assertFalse(denied.getBoolean("ok"));assertTrue(denied.has("error"));
+            assertFalse("Old backup must not be a mergeable current",denied.has("current"));
+            assertArrayEquals(corrupt,Files.readAllBytes(primary.toPath()));
+            assertEquals(oldText,LocalDatabase.readFile(backup));
+            assertEquals(newMediaDigest,digest(new File(dir,"new-photo-id")));
+            assertEquals(photoDigest,digest(new File(dir,"original-photo")));
+        } finally {Files.write(primary.toPath(),latestBytes);}
+        assertEquals(newest,api.loadData());
+        JSONObject repeat=new JSONObject(newest).put("sequence",9);
+        assertTrue(new JSONObject(api.saveDataChecked(repeat.toString(),newest)).getBoolean("ok"));
+        JSONObject saved=new JSONObject(api.loadData()).getJSONArray("records").getJSONObject(1);
+        assertEquals("1585,800001234567890",saved.getJSONArray("items").getJSONObject(0).getString("measure"));
+        assertEquals("1585.800001234567890",saved.getJSONArray("items").getJSONObject(0).getString("laserMeasuredMm"));
+        assertEquals("new-photo-id",saved.getJSONArray("media").getString(0));
+        assertEquals(newMediaDigest,digest(new File(dir,"new-photo-id")));
+    }
+    @Test public void lostDatabaseAfterReopenCannotLookLikeFreshInstallation()throws Exception {
+        media();persist(fixture());MainActivity.JsApi api=activity.new JsApi();
+        String confirmed=api.loadData(),photo=digest(new File(dir,"original-photo"));
+        File primary=new File(context.getFilesDir(),"projects.json"),backup=new File(context.getFilesDir(),"projects.bak");
+        byte[] primaryBytes=Files.readAllBytes(primary.toPath());
+        byte[] backupBytes=backup.isFile()?Files.readAllBytes(backup.toPath()):null;
+        try {
+            Files.delete(primary.toPath());Files.deleteIfExists(backup.toPath());
+            try(org.robolectric.android.controller.ActivityController<MainActivity> reopened=Robolectric.buildActivity(MainActivity.class).setup()){
+                MainActivity.JsApi restarted=reopened.get().new JsApi();
+                assertTrue(new JSONObject(restarted.loadData()).getBoolean("_loadError"));
+                JSONObject denied=new JSONObject(restarted.saveDataChecked("{\"schema\":1,\"records\":[]}",""));
+                assertFalse(denied.getBoolean("ok"));assertTrue(denied.has("error"));
+                assertFalse(denied.has("current"));
+                assertFalse(primary.exists());assertFalse(backup.exists());
+            }
+            assertEquals(photo,digest(new File(dir,"original-photo")));
+        } finally {
+            Files.write(primary.toPath(),primaryBytes);
+            if(backupBytes!=null)Files.write(backup.toPath(),backupBytes);
+        }
+        assertEquals(confirmed,api.loadData());
+        JSONObject amended=new JSONObject(confirmed).put("sequence",87);
+        assertTrue(new JSONObject(api.saveDataChecked(amended.toString(),confirmed)).getBoolean("ok"));
+        assertEquals(amended.toString(),api.loadData());
+    }
+    @Test public void cleanFirstInstallAndLegacyMediaAreDistinctWithoutChangingSchema()throws Exception {
+        File clean=Files.createTempDirectory(context.getCacheDir().toPath(),"clean-cas-").toFile();
+        assertEquals("",LocalDatabase.readForCas(clean));
+        String initial=fixture().toString();
+        LocalDatabase.write(clean,initial);
+        assertEquals(initial,LocalDatabase.readForCas(clean));
+        assertTrue(DatabaseRecovery.exists(clean));
+        Files.delete(new File(clean,"projects.json").toPath());
+        Files.deleteIfExists(new File(clean,"projects.bak").toPath());
+        try{LocalDatabase.readForCas(clean);fail("Previously initialized DB vanished");}catch(IOException expected){}
+        File legacy=Files.createTempDirectory(context.getCacheDir().toPath(),"legacy-cas-").toFile();
+        File mediaDir=new File(legacy,"media");assertTrue(mediaDir.mkdirs());
+        Files.write(new File(mediaDir,"original-photo").toPath(),new byte[]{1,2,3});
+        assertFalse(DatabaseRecovery.exists(legacy));
+        try{LocalDatabase.readForCas(legacy);fail("Legacy media without DB was treated as a new install");}catch(IOException expected){}
+    }
     @Test public void failedAudioStopReleasesRecorderAndDoesNotAttachAnEmptyFile()throws Exception {
         AudioCapture.Recorder recorder=org.mockito.Mockito.mock(AudioCapture.Recorder.class);
         org.mockito.Mockito.doAnswer(call->{Files.write(((File)call.getArgument(0)).toPath(),new byte[]{1});return null;}).when(recorder).start(org.mockito.ArgumentMatchers.any());

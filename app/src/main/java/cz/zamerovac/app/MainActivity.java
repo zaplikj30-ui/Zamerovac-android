@@ -723,7 +723,7 @@ public class MainActivity extends Activity {
         @JavascriptInterface public String getSyncDeviceId(){try{return DeviceIdentity.get(getNoBackupFilesDir());}catch(Exception error){return "";}}
         @JavascriptInterface public String loadSyncQueue(){try{return new SyncQueueStore(getNoBackupFilesDir()).read();}catch(Exception failure){error("Frontu přenosů nelze načíst; původní stav zůstává chráněný");return "{\"error\":true}";}}
         @JavascriptInterface public boolean saveSyncQueue(long expected,String text){try{return new SyncQueueStore(getNoBackupFilesDir()).save(expected,text);}catch(Exception failure){error("Fronta přenosů nebyla uložena");return false;}}
-        @JavascriptInterface public String loadData(){synchronized(TrashPurger.LOCK){try{String text=readDb();lastUiGeneration=LocalDatabase.generation(getFilesDir());return text;}catch(Exception e){return "{\"_loadError\":true}";}}}
+        @JavascriptInterface public String loadData(){synchronized(TrashPurger.LOCK){try{String text=readDbForCas();lastUiGeneration=LocalDatabase.generation(getFilesDir());return text;}catch(Exception e){return "{\"_loadError\":true}";}}}
         @JavascriptInterface public int trashCleanupCount(){
             synchronized(TrashPurger.LOCK){try{return new TrashPurger(MainActivity.this,settings).pendingCount();}catch(Exception e){return -1;}}
         }
@@ -743,7 +743,8 @@ public class MainActivity extends Activity {
         @JavascriptInterface public String saveDataChecked(String text,String expected){
             synchronized(TrashPurger.LOCK){
                 try{
-                    String current=readDb();
+                    // Fail closed for stale backup, corrupt primary and lost initialized DB.
+                    String current=readDbForCas();
                     if(!current.equals(expected)){
                         // Missing files are an I/O failure, never a valid empty CAS snapshot.
                         if(current.isEmpty())throw new IOException("Databáze není dostupná pro porovnání");
@@ -978,6 +979,14 @@ public class MainActivity extends Activity {
     private synchronized AudioCapture audioCapture(){if(audioCapture==null)audioCapture=new AudioCapture(new File(getFilesDir(),"media"),settings);return audioCapture;}
     private void releaseRecorder(){AudioCapture capture=audioCapture;if(capture!=null)capture.close();}
     private void closeUpload(){synchronized(TrashPurger.LOCK){try{if(activeUpload!=null)activeUpload.close();}catch(Exception ignored){}activeUpload=null;activeUploadId=null;activeUploadExpected=-1;activeUploadBytes=0;if(activeUploadTemporary!=null)activeUploadTemporary.delete();activeUploadTemporary=null;}}
+    private String readDbForCas() throws IOException {
+        try {
+            String text=LocalDatabase.readForCas(getFilesDir());
+            if(text.isEmpty()&&databaseReadFailed)throw new IOException("Původní databáze nebyla bezpečně načtena");
+            databaseReadFailed=false;
+            return text;
+        } catch(IOException error){databaseReadFailed=true;throw error;}
+    }
     private String readDb() throws IOException {
         try{String text=LocalDatabase.read(getFilesDir());if(text.isEmpty()&&databaseReadFailed)throw new IOException("Původní databáze nebyla bezpečně načtena");databaseReadFailed=false;return text;}
         catch(IOException error){databaseReadFailed=true;throw error;}

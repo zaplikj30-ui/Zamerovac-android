@@ -26,6 +26,29 @@ final class LocalDatabase {
         if(!file.isFile()||file.length()>MAX_BYTES)throw new IOException("Databáze není dostupná");
         String text=JsonInput.decode(Files.readAllBytes(file.toPath()));validate(text);return text;
     }
+    /**
+     * Strict UI/CAS read: a stale backup is NOT a current writable snapshot.
+     * Recovery must be explicit. A vanished initialized DB is not a fresh install.
+     */
+    static String readForCas(File home)throws IOException {
+        synchronized(TrashPurger.LOCK){
+            File primary=new File(home,"projects.json"),backup=new File(home,"projects.bak");
+            if(!primary.exists()){
+                File media=new File(home,"media");
+                File[] artifacts=media.listFiles();
+                if(backup.exists()||DatabaseRecovery.exists(home)||
+                    new File(home,"projects.tmp").exists()||
+                    new File(home,"projects.backup.tmp").exists()||
+                    artifacts!=null&&artifacts.length>0)
+                    throw new IOException("Dříve uložená databáze chybí; obnovu je nutné potvrdit");
+                return "";
+            }
+            // Deliberately never fall back to projects.bak for a writable CAS.
+            String text=readFile(primary);
+            DatabaseRecovery.healthy(home,false);
+            return text;
+        }
+    }
     static String read(File home)throws IOException {
         synchronized(TrashPurger.LOCK){
             File primary=new File(home,"projects.json"),backup=new File(home,"projects.bak");

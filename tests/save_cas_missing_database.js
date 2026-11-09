@@ -67,7 +67,7 @@ for(const alreadyTouched of [false,true]){
  assert.equal(amended.state.records.length,1);
  assert.equal(amended.state.records[0].id,'purged-edit-copy');
  assert.equal(amended.state.records[0].items[0].measure,'4444,123456789123456789');
- assert.deepEqual(amended.state.records[0].media,['original-image-id']);
+ assert.deepEqual(Array.from(amended.state.records[0].media),['original-image-id']);
  scenarios++;
 }
 // Valid native same-record conflict, then disk-full on retry: absolutely no
