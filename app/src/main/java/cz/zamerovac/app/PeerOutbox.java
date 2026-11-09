@@ -64,22 +64,27 @@ final class PeerOutbox {
         return PeerSnapshot.parse(bytes,DeviceIdentity.get(context.getNoBackupFilesDir()));
     }
     /**
-     * After recovery, every pre-recovery job (metadata AND media jobs)
-     * moves to a separate durable evidence array, without unlinking its
-     * immutable source. Unverifiable jobs are quarantined too, not dropped.
+     * A proved different epoch is permanently archived, preserving source
+     * bytes. A temporarily unreadable source is NOT proof of an old epoch:
+     * retain its original active job for a later retry/restart. Transport
+     * selection and ACK independently require a verified immutable snapshot.
      */
-    private boolean stale(JSONObject job,String epoch,Map<String,Boolean> cache)throws Exception{
-        if(epoch.isEmpty())return false;
+    private enum EpochCheck { CURRENT, OLD, UNKNOWN }
+    private EpochCheck stale(JSONObject job,String epoch,Map<String,EpochCheck> cache)throws Exception{
+        if(epoch.isEmpty())return EpochCheck.CURRENT;
         String source=job.optString("sourceRef","");
-        if(source.isEmpty())return true;
-        Boolean prior=cache.get(source);
+        if(source.isEmpty())return EpochCheck.OLD;
+        EpochCheck prior=cache.get(source);
         if(prior!=null)return prior;
-        boolean result;
+        EpochCheck result;
         try{
             PeerSnapshot stored=queuedSnapshot(source);
-            result=!epoch.equals(stored.wire.optString("recoveryEpoch",""));
-        }catch(Exception unknown){
-            result=true; // uncertain data can never re-enter active transport
+            result=epoch.equals(stored.wire.optString("recoveryEpoch",""))
+                ?EpochCheck.CURRENT:EpochCheck.OLD;
+        }catch(Exception unavailable){
+            // No irreversible quarantine decision on an unproved epoch.
+            // messages()/load()/verifyAckJob() independently fail closed.
+            result=EpochCheck.UNKNOWN;
         }
         cache.put(source,result);
         return result;
@@ -99,12 +104,12 @@ final class PeerOutbox {
                 JSONArray jobs=state.getJSONArray("jobs"),active=new JSONArray();
                 JSONArray quarantine=state.optJSONArray("recoveryQuarantine");
                 if(quarantine==null)quarantine=new JSONArray();
-                Map<String,Boolean> cache=new HashMap<>();
+                Map<String,EpochCheck> cache=new HashMap<>();
                 Set<String> obsolete=new HashSet<>(),ids=new HashSet<>();
                 boolean changed=false;
                 for(int i=0;i<jobs.length();i++){
                     JSONObject job=jobs.getJSONObject(i);
-                    if(stale(job,epoch,cache)){
+                    if(stale(job,epoch,cache)==EpochCheck.OLD){
                         quarantine.put(new JSONObject(job.toString()).put("quarantinedAtEpoch",epoch));
                         changed=true;
                     }else active.put(job);
@@ -149,17 +154,28 @@ final class PeerOutbox {
         return new JSONObject().put("id",jobId(peer,kind,hash,source,media)).put("peer",peer).put("kind",kind).put("hash",hash).put("size",size).put("sourceRef",source).put("payload",media==null?JSONObject.NULL:new JSONObject().put("mediaId",media)).put("attempts",0).put("nextAttempt",0);
     }
     List<JSONObject> messages(String peer)throws Exception{
-        synchronized(lock){
-            // Both the direct/TLS sender and cloud sender consume only active jobs.
+        synchronized(lock){synchronized(TrashPurger.LOCK){
+            // An UNKNOWN job remains durable, but neither TLS nor cloud may
+            // send it until its immutable source AND recovery epoch verify.
+            // Recheck the DB witness before exposing even a cached job.
+            LocalDatabase.readForCas(context);
+            String epoch=DatabaseRecovery.id(context.getFilesDir());
             ArrayList<JSONObject> result=new ArrayList<>();
             JSONArray jobs=new JSONObject(queue.read()).getJSONArray("jobs");
             for(int i=0;i<jobs.length()&&result.size()<16;i++){
                 JSONObject job=jobs.getJSONObject(i);
-                if(peer.equals(job.getString("peer"))&&"metadata".equals(job.getString("kind")))
+                if(!peer.equals(job.getString("peer"))||
+                    !"metadata".equals(job.getString("kind")))continue;
+                try{
+                    verifyAckJob(job,epoch);
                     result.add(new JSONObject(job.toString()));
+                }catch(Exception unverifiable){
+                    // Still queued, never ACKed or deleted. Other valid jobs
+                    // remain eligible; a later call can retry this source.
+                }
             }
             return result;
-        }
+        }}
     }
     int pending(String peer)throws Exception{
         int count=0;
