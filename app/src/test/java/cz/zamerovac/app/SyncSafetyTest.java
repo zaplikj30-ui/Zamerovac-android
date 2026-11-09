@@ -83,6 +83,8 @@ public class SyncSafetyTest {
    @Override public File getFilesDir(){return receiverHome;}
   };
   SharedPreferences receiverPrefs=context.getSharedPreferences("corrupt-saf-"+UUID.randomUUID(),0);
+  // Prove clean first-install DB before creating received media: no synthetic lost-DB state.
+  LocalDatabase.write(receiverHome,"{\"schema\":1,\"records\":[]}");
   File mediaDir=new File(receiverHome,"media");assertTrue(mediaDir.mkdirs());
   File originalPhoto=new File(mediaDir,"original-photo");
   byte[] originalBytes=new byte[]{17,18,19,21,23};
