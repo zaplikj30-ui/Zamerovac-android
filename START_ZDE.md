@@ -1,5 +1,9 @@
 # Zaměřovač – START ZDE (aktuální stav, rozhodnutí a další práce)
 
+**9. 11. 2026 — S2-R2-F1 / Android archivace, [draft PR #80](https://github.com/zaplikj30-ui/Zamerovac-android/pull/80):**
+Cílená oprava identity adresářů při Android fallback `creationTime → mtime`; symlink/NOFOLLOW_LINKS/fileKey kontroly zachovány. Lokální Linux/JDK17/Robolectric: **28 PASS / 0 FAIL / 0 SKIP**, skutečný RED fallbacku potvrzen. [Rozsah, příkazy a limity](docs/qa-s2-r2-f1-20261109.md); přesný výsledný HEAD v PR a issue #42. Fyzický Android/emulátor **NOT RUN**. Další krok: nezávislá revize CHAT 28 a koordinátorovo HOME QA na novém SHA; Stage 2 HOLD, merge/Stage 3/APK STOP. R1/R3/R4 se nemění.
+
+
 **Kontrolní bod 8. 11. 2026, B14 – přestavba historie editoru, před případným merge PR #71:**
 
 - **Skutečný `main` před B14:** `a309a060dad7075b16cd9d23fd2a3f4c6e12972f`. Integrace B1–B13 + domácí QA byla [PR #69](https://github.com/zaplikj30-ui/Zamerovac-android/pull/69) **sloučena**, a **přímo na main** potvrdil [domácí běh #42497594300](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42497594300) **4/4 PASS**. Starší body níže o nesloučené #69 a main bez domácí QA jsou historické, již neplatí.

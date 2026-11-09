@@ -302,11 +302,13 @@ final class RecoveryProtectionArchive {
             directories.put(path,a);
         }
         void check()throws IOException{
+            // Android may return mtime as creationTime when birthtime is unavailable.
+            // Adding children changes that time, not directory identity. Require the
+            // same non-null fileKey and a real directory, read with NOFOLLOW_LINKS.
             for(Map.Entry<Path,BasicFileAttributes> entry:directories.entrySet()){
                 BasicFileAttributes a=attributes(entry.getKey().toFile()),before=entry.getValue();
                 if(a==null||!a.isDirectory()||a.isSymbolicLink()||
-                   !Objects.equals(before.fileKey(),a.fileKey())||
-                   !before.creationTime().equals(a.creationTime()))
+                   !Objects.equals(before.fileKey(),a.fileKey()))
                     throw new IOException("Adresář se během archivace změnil");
             }
         }
