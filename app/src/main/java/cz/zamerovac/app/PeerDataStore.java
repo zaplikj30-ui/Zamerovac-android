@@ -23,11 +23,11 @@ final class PeerDataStore {
     boolean superseded(PeerSnapshot incoming,PeerHandshake.Peer peer,JSONArray needed,LocalReceipt receipt,ImmutableStore.Checkpoint checkpoint)throws Exception{
         checkpoint.check();
         if(needed.length()==0)return false;trusted(peer);long generation;
-        synchronized(TrashPurger.LOCK){String text=LocalDatabase.read(context.getFilesDir());JSONObject current=text.isEmpty()?new JSONObject().put("schema",1).put("records",new JSONArray()):new JSONObject(text);if(!PeerOutbox.dominates(current,incoming.data))return false;Set<String> refs=PeerSnapshot.references(current.getJSONArray("records"));for(int i=0;i<needed.length();i++)if(refs.contains(needed.getString(i)))return false;generation=LocalDatabase.generation(context.getFilesDir());}
+        synchronized(TrashPurger.LOCK){String text=LocalDatabase.readForCas(context.getFilesDir());JSONObject current=text.isEmpty()?new JSONObject().put("schema",1).put("records",new JSONArray()):new JSONObject(text);if(!PeerOutbox.dominates(current,incoming.data))return false;Set<String> refs=PeerSnapshot.references(current.getJSONArray("records"));for(int i=0;i<needed.length();i++)if(refs.contains(needed.getString(i)))return false;generation=LocalDatabase.generation(context.getFilesDir());}
         // Hash current originals only after the cheap causal/reference checks prove retirement is possible.
         PeerSnapshot local=PeerSnapshot.capture(context,prefs,checkpoint);if(!PeerOutbox.dominates(local.data,incoming.data))return false;
         for(int i=0;i<needed.length();i++)if(local.media.containsKey(needed.getString(i)))return false;
-        synchronized(TrashPurger.LOCK){trusted(peer);LocalDatabase.read(context.getFilesDir());if(generation!=LocalDatabase.generation(context.getFilesDir()))return false;
+        synchronized(TrashPurger.LOCK){trusted(peer);LocalDatabase.readForCas(context.getFilesDir());if(generation!=LocalDatabase.generation(context.getFilesDir()))return false;
             for(Map.Entry<String,long[]> entry:local.localStats.entrySet()){File file=new File(outbox.mediaDirectory,entry.getKey());if(!file.isFile()||java.nio.file.Files.isSymbolicLink(file.toPath())||file.length()!=entry.getValue()[0]||file.lastModified()!=entry.getValue()[1])return false;}
             receipt.save();return true;
         }
