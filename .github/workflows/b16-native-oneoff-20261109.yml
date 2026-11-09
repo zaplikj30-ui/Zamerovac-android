@@ -18,7 +18,7 @@ jobs:
     timeout-minutes: 45
     env:
       CI: '1'
-      TESTED_SHA: '4f364537fb77ebeba04ba152d07297c56e1289c8'
+      TESTED_SHA: '6d6721aae77cad8457e0e72ed0d25ad53d35478d'
     steps:
       - name: Verify owner-controlled branch and unprivileged Windows service
         shell: cmd
@@ -32,7 +32,7 @@ jobs:
       - name: Read-only source checkout pinned to reviewed immutable PR79 SHA
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: 4f364537fb77ebeba04ba152d07297c56e1289c8
+          ref: 6d6721aae77cad8457e0e72ed0d25ad53d35478d
           path: b16-source
           fetch-depth: 1
           persist-credentials: false
@@ -77,13 +77,14 @@ jobs:
           echo "PHASE_1_JAVAC compilePreviewJavaWithJavac"
           "$gradle" "${common[@]}" :app:verifyDriveRegistration :app:compilePreviewJavaWithJavac
           echo "PASS PHASE_1_JAVAC"
-          echo "PHASE_2_TESTS DatabaseInstallEvidenceTest PeerTransferTest SafSyncV2Test DatabaseRecoveryTest"
+          echo "PHASE_2_TESTS two original RED TLS and three new first-sync/registry regressions"
           set +e
           "$gradle" "${common[@]}" :app:testPreviewUnitTest \
-            --tests cz.zamerovac.app.DatabaseInstallEvidenceTest \
-            --tests cz.zamerovac.app.PeerTransferTest \
-            --tests cz.zamerovac.app.SafSyncV2Test \
-            --tests cz.zamerovac.app.DatabaseRecoveryTest
+            --tests cz.zamerovac.app.PeerTransferTest.firstSyncIntoCleanReceiverKeepsExactPhotoAndNoDuplicateOnRetry \
+            --tests cz.zamerovac.app.PeerTransferTest.interruptedFirstPhotoTransferKeepsCleanBaselineAndResumesSafely \
+            --tests cz.zamerovac.app.PeerTransferTest.receiverFailureBeforeFirstPhotoBaselineIsNotDatabaseLoss \
+            --tests cz.zamerovac.app.DatabaseInstallEvidenceTest.approvedPairingWithoutAnyProjectCanInitializeButNeverResetAfterFirstSave \
+            --tests cz.zamerovac.app.DatabaseInstallEvidenceTest.unmarkedLegacyPairingRemainsFailClosedWithoutPrimary
           test_rc=$?
           set -e
           python3 - <<'PY_XML'
@@ -112,7 +113,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: b16-native-junit-4f36453
+          name: b16-native-junit-6d6721a
           path: b16-junit-reports/
           if-no-files-found: ignore
           retention-days: 7
