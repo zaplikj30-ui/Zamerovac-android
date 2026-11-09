@@ -193,6 +193,30 @@ public class SafSyncV2Test {
   assertEquals("1585,800001",new JSONObject(LocalDatabase.readForCas(a)).getJSONArray("records")
       .getJSONObject(0).getJSONArray("items").getJSONObject(0).getString("measure"));
  }
+
+ @Test public void recoveredPeerCannotClearCloudAckBarrierByUnpairAndRepair()throws Exception{
+  canonicalFiles(1,4000);converge();
+  PeerSnapshot source=PeerSnapshot.capture(a,a.prefs);
+  byte[] sourceDb=Files.readAllBytes(new File(a.home,"projects.json").toPath());
+  byte[] sourcePhoto=Files.readAllBytes(new File(a.home,"media/original-0").toPath());
+  assertEquals(source.hash,ar.lastAck(bid));
+  String epoch=java.util.UUID.randomUUID().toString();
+  ar.recovered(bid,epoch);
+  assertFalse(ar.cloudAckAllowed(bid));
+  ar.forget(bid); // An ordinary user may re-pair a damaged tablet later.
+  assertFalse(ar.isTrusted(bid,bi.fingerprint()));
+  ar.approve(bid,bi.fingerprint(),"Synthetic tablet re-paired");
+  ar.rememberCertificate(bid,bi.certificate());
+  assertFalse("Re-pair must not erase durable remote recovery witness",ar.cloudAckAllowed(bid));
+  assertEquals(epoch,ar.snapshot().getJSONObject(bid).getString("recovery"));
+  SafSyncV2.Result retry=sync(a,ai,false).sync();
+  assertTrue("Old cloud ACK cannot complete post-repair queue",retry.pending);
+  assertEquals("",new SyncPeerRegistry(a.noBackup).lastAck(bid));
+  assertTrue(new PeerOutbox(a,a.prefs,new SyncPeerRegistry(a.noBackup)).pending(bid)>0);
+  assertArrayEquals(sourceDb,Files.readAllBytes(new File(a.home,"projects.json").toPath()));
+  assertArrayEquals(sourcePhoto,Files.readAllBytes(new File(a.home,"media/original-0").toPath()));
+  assertEquals(source.hash,PeerSnapshot.capture(a,a.prefs).hash);
+ }
  @Test public void corruptionAfterAckOutputCreateCannotPublishValidCloudAck()throws Exception{
   canonicalFiles(1,4000);
   sync(a,ai,false).sync(); // signed message exists; receiver has not committed it
