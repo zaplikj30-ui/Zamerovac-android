@@ -29,7 +29,15 @@ final class PeerOutbox {
             File target=file(source);if(!target.isFile()||target.length()>PeerWire.MAX_JSON)throw new IOException("Čekající revize není dostupná");bytes=new AtomicFile(target).readFully();
         }else if(job.optJSONObject("payload")!=null)bytes=CausalClock.canonical(job.getJSONObject("payload")).getBytes(StandardCharsets.UTF_8);
         else throw new IOException("Čekající revize je neúplná");
-        if(bytes.length!=job.getLong("size")||!hash.equals(PeerWire.hash(bytes)))throw new IOException("Kontrola čekající revize selhala");return PeerSnapshot.parse(bytes,DeviceIdentity.get(context.getNoBackupFilesDir()));
+        if(bytes.length!=job.getLong("size")||!hash.equals(PeerWire.hash(bytes)))throw new IOException("Kontrola čekající revize selhala");
+        PeerSnapshot snapshot=PeerSnapshot.parse(bytes,DeviceIdentity.get(context.getNoBackupFilesDir()));
+        // An immutable pre-recovery outbox is evidence, not permission to
+        // resend/acknowledge it after a local recovery. Keep the bytes intact
+        // until a future explicit reconciliation has decided what to do.
+        String epoch=DatabaseRecovery.id(context.getFilesDir());
+        if(!epoch.equals(snapshot.wire.optString("recoveryEpoch","")))
+            throw new IOException("Čekající přenos patří staré databázové epoše; vyžaduje ruční prověření");
+        return snapshot;
     }
     private interface Mutation {boolean apply(JSONObject queue)throws Exception;}
     private void mutate(Mutation mutation)throws Exception{for(int attempt=0;attempt<8;attempt++){JSONObject current=new JSONObject(queue.read());long revision=current.getLong("revision");if(!mutation.apply(current))return;current.put("revision",revision+1);if(queue.save(revision,current.toString()))return;}throw new IOException("Fronta se souběžně změnila, přenos zůstává čekající");}

@@ -241,4 +241,38 @@ public class DatabaseInstallEvidenceTest {
             fail("Invalid recovery period accepted");}
         catch(IOException expected){}
     }
+
+    @Test public void staleOutboxIsRetainedButCannotBeReacknowledged()throws Exception{
+        String original=text("1250,000000000007");
+        LocalDatabase.write(home,noBackup,original);
+        android.content.Context ctx=new android.content.ContextWrapper(RuntimeEnvironment.getApplication()){
+            @Override public File getFilesDir(){return home;}
+            @Override public File getNoBackupFilesDir(){return noBackup;}
+            @Override public android.content.Context getApplicationContext(){return this;}
+        };
+        android.content.SharedPreferences prefs=ctx.getSharedPreferences(
+            "stale-outbox-"+home.getName(),android.content.Context.MODE_PRIVATE);
+        PeerSnapshot before=PeerSnapshot.capture(ctx,prefs);
+        File outbox=new File(noBackup,"sync-v2-outbox");
+        assertTrue(outbox.mkdirs());
+        File saved=new File(outbox,before.hash+".json");
+        Files.write(saved.toPath(),before.bytes);
+        org.json.JSONObject job=new org.json.JSONObject().put("hash",before.hash)
+            .put("sourceRef",before.hash).put("size",before.bytes.length);
+        PeerOutbox local=new PeerOutbox(ctx,prefs,new SyncPeerRegistry(noBackup));
+        assertEquals(before.hash,local.load(job).hash);
+        assertTrue(new File(home,"projects.json").delete());
+        try{LocalDatabase.readForCas(ctx);fail("Missing primary accepted");}
+        catch(IOException expected){}
+        String epoch=DatabaseRecovery.id(home);
+        assertTrue(DeviceIdentity.valid(epoch));
+        try{local.load(job);fail("Old queued snapshot is still ACK eligible");}
+        catch(IOException expected){}
+        // Test-only approximation of confirmed future restore; old queue stays blocked.
+        Files.write(new File(home,"projects.json").toPath(),original.getBytes(StandardCharsets.UTF_8));
+        DatabaseRecovery.healthy(home,false);
+        try{local.load(job);fail("Old pending transfer was silently revalidated");}
+        catch(IOException expected){}
+        assertArrayEquals(before.bytes,Files.readAllBytes(saved.toPath()));
+    }
 }
