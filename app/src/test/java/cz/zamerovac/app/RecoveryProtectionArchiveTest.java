@@ -215,11 +215,20 @@ public class RecoveryProtectionArchiveTest {
                 mocked.when(()->Files.newInputStream(any(Path.class),any(OpenOption[].class)))
                     .thenAnswer(call->{
                         Path opened=call.getArgument(0);
-                        if(manifestPath.equals(opened)&&opens.incrementAndGet()==2){
-                            // This must occur only after payloadVerified authenticated
-                            // the FIRST manifest and verified all archived payloads.
-                            Files.write(manifestPath,forgedManifest);
-                            actuallyTampered[0]=true;
+                        if(manifestPath.equals(opened)){
+                            int number=opens.incrementAndGet();
+                            if(number==2){
+                                // After the first authenticated manifest, the
+                                // second read sees valid JSON with forged metadata.
+                                Files.write(manifestPath,forgedManifest);
+                                actuallyTampered[0]=true;
+                            }else if(interrupted&&number==3){
+                                // An attacker can swap it back before finish()
+                                // verifies archived bytes again. The old code
+                                // would then finish an archive based on a forged
+                                // intermediate manifest without rejecting.
+                                Files.write(manifestPath,originalManifest);
+                            }
                         }
                         return call.callRealMethod();
                     });
