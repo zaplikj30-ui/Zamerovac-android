@@ -18,7 +18,7 @@ jobs:
     timeout-minutes: 80
     env:
       CI: '1'
-      TESTED_SHA: '194df716c378bf5bf64efd59fcd5b7b3e69570dd'
+      TESTED_SHA: '475bd4dd5fe773a97d991b5f3497ee6cb99e85fa'
     steps:
       - name: Verify owner-controlled branch and unprivileged Windows service
         shell: cmd
@@ -32,7 +32,7 @@ jobs:
       - name: Read-only checkout pinned to Chat31 B16 preintegration SOURCE SHA
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: 194df716c378bf5bf64efd59fcd5b7b3e69570dd
+          ref: 475bd4dd5fe773a97d991b5f3497ee6cb99e85fa
           path: b16-source
           fetch-depth: 1
           persist-credentials: false
@@ -167,7 +167,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: chat31-b16-preintegration-154-194df71
+          name: chat31-b16-preintegration-154-475bd4d
           path: |
             b16-junit-reports/${{ github.run_id }}-${{ github.run_attempt }}/
             local-evidence/Zamerovac-QA/results/
