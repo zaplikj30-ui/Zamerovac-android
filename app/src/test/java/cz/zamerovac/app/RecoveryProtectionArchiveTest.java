@@ -8,6 +8,10 @@ import org.robolectric.annotation.Config;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.nio.file.attribute.FileTime;
+import org.mockito.MockedStatic;
+import static org.mockito.Mockito.*;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.Assert.*;
@@ -343,6 +347,139 @@ public class RecoveryProtectionArchiveTest {
             .listFiles((d,n)->n.startsWith(".staging-"));
         assertNotNull(stages);
         for(File stage:stages)assertFalse(new File(stage,"COMPLETE").exists());
+    }
+
+    /** Simulate Android's Unix provider without changing production code or source bytes. */
+    MockedStatic<Files> androidAttributes(boolean missingKey,AtomicInteger reads){
+        MockedStatic<Files> files=mockStatic(Files.class,CALLS_REAL_METHODS);
+        files.when(()->Files.readAttributes(any(Path.class),eq(BasicFileAttributes.class),
+            any(LinkOption[].class))).thenAnswer(call->{
+                BasicFileAttributes actual=(BasicFileAttributes)call.callRealMethod();
+                if(!actual.isDirectory())return actual;
+                reads.incrementAndGet();
+                return new BasicFileAttributes(){
+                    public FileTime lastModifiedTime(){return actual.lastModifiedTime();}
+                    public FileTime lastAccessTime(){return actual.lastAccessTime();}
+                    public FileTime creationTime(){return actual.lastModifiedTime();}
+                    public boolean isRegularFile(){return actual.isRegularFile();}
+                    public boolean isDirectory(){return actual.isDirectory();}
+                    public boolean isSymbolicLink(){return actual.isSymbolicLink();}
+                    public boolean isOther(){return actual.isOther();}
+                    public long size(){return actual.size();}
+                    public Object fileKey(){return missingKey?null:actual.fileKey();}
+                };
+            });
+        return files;
+    }
+
+    @Test public void androidCreationTimeFallbackAllowsExactArchiveVerifyAndReuse()throws Exception{
+        String exact="1585,800001234567890";
+        LocalDatabase.write(home,noBackup,db(exact).toString());
+        byte[] primary=read(new File(home,"projects.json")),photo={0,1,2,3,5,8,13};
+        media("original-photo",photo);
+        AtomicInteger reads=new AtomicInteger();
+        boolean[] changed={false};
+        try(MockedStatic<Files> ignored=androidAttributes(false,reads)){
+            JSONObject copy=RecoveryProtectionArchive.create(home,noBackup,dir->Long.MAX_VALUE,()->{
+                File[] stages=new File(noBackup,"recovery-protection-v1")
+                    .listFiles((d,n)->n.startsWith(".staging-"));
+                if(changed[0]||stages==null)return;
+                for(File stage:stages){
+                    if(!new File(stage,"manifest.json").isFile())continue;
+                    // This checkpoint runs after stageChain captured no_backup's identity.
+                    BasicFileAttributes before=Files.readAttributes(noBackup.toPath(),
+                        BasicFileAttributes.class,LinkOption.NOFOLLOW_LINKS);
+                    Files.createDirectory(new File(noBackup,"unrelated-child").toPath());
+                    // Force a distinct mtime even on filesystems with coarse timestamp resolution.
+                    Files.setLastModifiedTime(noBackup.toPath(),
+                        FileTime.fromMillis(before.lastModifiedTime().toMillis()+2000));
+                    BasicFileAttributes after=Files.readAttributes(noBackup.toPath(),
+                        BasicFileAttributes.class,LinkOption.NOFOLLOW_LINKS);
+                    assertEquals(before.fileKey(),after.fileKey());
+                    assertEquals(after.lastModifiedTime(),after.creationTime());
+                    assertNotEquals(before.creationTime(),after.creationTime());
+                    changed[0]=true;
+                }
+            });
+            assertTrue(changed[0]);assertTrue(reads.get()>0);
+            assertTrue(copy.getBoolean("complete"));assertFalse(copy.getBoolean("reused"));
+            assertTrue(RecoveryProtectionArchive.verify(noBackup,copy.getString("id"))
+                .getBoolean("complete"));
+            assertTrue(RecoveryProtectionArchive.create(home,noBackup).getBoolean("reused"));
+            assertEquals(1,completedCount());
+            assertArrayEquals(primary,read(new File(archive(copy),"payload/files/projects.json")));
+            assertArrayEquals(photo,read(new File(archive(copy),"payload/files/media/original-photo")));
+        }
+        assertArrayEquals(primary,read(new File(home,"projects.json")));
+        assertArrayEquals(photo,read(new File(home,"media/original-photo")));
+        assertEquals(exact,new JSONObject(LocalDatabase.readForCas(home,noBackup))
+            .getJSONArray("records").getJSONObject(0).getJSONArray("items")
+            .getJSONObject(0).getString("measure"));
+    }
+
+    @Test public void androidFallbackStillRejectsRealDirectoryReplacementDuringCopy()throws Exception{
+        LocalDatabase.write(home,noBackup,db("1585,800001234567890").toString());
+        byte[] primary=read(new File(home,"projects.json")),photo={3,1,4,1,5,9};
+        media("original-photo",photo);
+        boolean[] swapped={false};
+        try(MockedStatic<Files> ignored=androidAttributes(false,new AtomicInteger())){
+            try{
+                RecoveryProtectionArchive.create(home,noBackup,dir->Long.MAX_VALUE,()->{
+                    File[] stages=new File(noBackup,"recovery-protection-v1")
+                        .listFiles((d,n)->n.startsWith(".staging-"));
+                    if(swapped[0]||stages==null)return;
+                    for(File stage:stages){
+                        Path media=new File(stage,"payload/files/media").toPath();
+                        Path archivedPhoto=media.resolve("original-photo");
+                        if(!Files.exists(archivedPhoto)||Files.size(archivedPhoto)!=photo.length)continue;
+                        BasicFileAttributes before=Files.readAttributes(media,
+                            BasicFileAttributes.class,LinkOption.NOFOLLOW_LINKS);
+                        Files.move(media,new File(root,"replaced-media").toPath());
+                        Files.createDirectory(media);
+                        Files.write(media.resolve("original-photo"),photo);
+                        Files.setLastModifiedTime(media,before.lastModifiedTime());
+                        BasicFileAttributes after=Files.readAttributes(media,
+                            BasicFileAttributes.class,LinkOption.NOFOLLOW_LINKS);
+                        assertNotEquals(before.fileKey(),after.fileKey());
+                        assertEquals(before.creationTime(),after.creationTime());
+                        swapped[0]=true;return;
+                    }
+                });
+                fail("A different inode with identical bytes and timestamps was accepted");
+            }catch(IOException expected){}
+        }
+        assertTrue("Fault injection must run",swapped[0]);
+        assertEquals(0,completedCount());
+        for(File stage:new File(noBackup,"recovery-protection-v1").listFiles())
+            assertFalse(new File(stage,"COMPLETE").exists());
+        assertArrayEquals(primary,read(new File(home,"projects.json")));
+        assertArrayEquals(photo,read(new File(home,"media/original-photo")));
+        assertArrayEquals(photo,read(new File(root,"replaced-media/original-photo")));
+    }
+
+    @Test public void androidFallbackWithoutFileKeyRemainsFailClosed()throws Exception{
+        LocalDatabase.write(home,noBackup,db("1585,800001234567890").toString());
+        byte[] primary=read(new File(home,"projects.json"));
+        AtomicInteger reads=new AtomicInteger();
+        try(MockedStatic<Files> ignored=androidAttributes(true,reads)){
+            try{RecoveryProtectionArchive.create(home,noBackup);
+                fail("Unverifiable directory identity was accepted");}
+            catch(IOException expected){}
+        }
+        assertTrue(reads.get()>0);assertEquals(0,completedCount());
+        assertArrayEquals(primary,read(new File(home,"projects.json")));
+    }
+
+    @Test public void androidFallbackStillRejectsSymlinkAncestorOnVerifyAndReuse()throws Exception{
+        try(MockedStatic<Files> ignored=androidAttributes(false,new AtomicInteger())){
+            archivedMediaDirectorySymlinkToIdenticalLiveOriginalIsRejected();
+        }
+    }
+
+    @Test public void androidFallbackStillRejectsSymlinkSwapDuringCopy()throws Exception{
+        try(MockedStatic<Files> ignored=androidAttributes(false,new AtomicInteger())){
+            mediaDirectorySwappedToSymlinkDuringCopyIsNeverConfirmed();
+        }
     }
 
     @Test public void crashAfterAtomicArchiveRenameBeforeMarkerCanBeSafelyFinalized()throws Exception{
