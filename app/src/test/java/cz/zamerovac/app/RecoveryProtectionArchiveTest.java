@@ -171,6 +171,171 @@ public class RecoveryProtectionArchiveTest {
         assertMarkerRejectionKeepsOriginals(copy,primary,photo,exact);
     }
 
+    private static final String REUSE_EXACT="1585,800001234567890";
+    private static final byte[] REUSE_PHOTO={1,3,5,7,9,11};
+
+    /** Only synthetic source files; no restoration or sync acknowledgement. */
+    JSONObject reuseFixture()throws Exception{
+        JSONObject project=db(REUSE_EXACT);
+        JSONObject record=project.getJSONArray("records").getJSONObject(0);
+        record.put("media",new JSONArray().put("reuse-photo"));
+        record.put("history",new JSONObject().put("revisions",new JSONArray()
+            .put(new JSONObject().put("note","durable-undo")
+                .put("media",new JSONArray().put("reuse-photo")))));
+        LocalDatabase.write(home,noBackup,project.toString());
+        media("reuse-photo",REUSE_PHOTO);
+        File prefs=new File(root,"shared_prefs");
+        assertTrue(prefs.mkdir());
+        Files.write(new File(prefs,"zamerovac.xml").toPath(),
+            "<map><string name=\"photo\">initial</string></map>"
+                .getBytes(StandardCharsets.UTF_8));
+        JSONObject archived=RecoveryProtectionArchive.create(home,noBackup);
+        assertTrue(archived.getBoolean("complete"));
+        assertFalse(archived.getBoolean("canPromote"));
+        return archived;
+    }
+
+    interface ReuseEdit{void apply()throws IOException;}
+    /** Inject after the initial source fingerprint and the existing archive verification. */
+    void rejectReuseOnSourceDrift(JSONObject old,ReuseEdit edit,boolean markerExpected)
+            throws Exception{
+        AtomicInteger checkpoints=new AtomicInteger();
+        try{
+            RecoveryProtectionArchive.create(home,noBackup,dir->Long.MAX_VALUE,()->{
+                if(checkpoints.incrementAndGet()==2)edit.apply();
+            });
+            fail("Existing snapshot was reused after sources changed");
+        }catch(IOException expected){}
+        assertEquals("Source mutation must happen inside reuse, after archive verification",
+            2,checkpoints.get());
+        assertEquals(markerExpected,new File(archive(old),"COMPLETE").exists());
+        assertEquals(1,completedCount());
+        if(markerExpected){
+            JSONObject independent=RecoveryProtectionArchive.verify(noBackup,old.getString("id"));
+            assertTrue(independent.getBoolean("complete"));
+            assertFalse(independent.getBoolean("canPromote"));
+        }else{
+            try{
+                RecoveryProtectionArchive.verify(noBackup,old.getString("id"));
+                fail("Unconfirmed copy was accidentally promoted");
+            }catch(IOException expected){}
+        }
+        assertArrayEquals(REUSE_PHOTO,
+            read(new File(archive(old),"payload/files/media/reuse-photo")));
+        JSONObject oldDb=new JSONObject(new String(
+            read(new File(archive(old),"payload/files/projects.json")),StandardCharsets.UTF_8));
+        assertEquals(REUSE_EXACT,oldDb.getJSONArray("records").getJSONObject(0)
+            .getJSONArray("items").getJSONObject(0).getString("measure"));
+        assertEquals("durable-undo",oldDb.getJSONArray("records").getJSONObject(0)
+            .getJSONObject("history").getJSONArray("revisions")
+            .getJSONObject(0).getString("note"));
+    }
+
+    @Test public void existingConfirmedArchiveRejectsPreciseDimensionChangedDuringReuse()
+            throws Exception{
+        JSONObject old=reuseFixture();
+        File primary=new File(home,"projects.json");
+        JSONObject modified=db("9999,000000000987654321");
+        byte[] newDb=modified.toString().getBytes(StandardCharsets.UTF_8);
+        rejectReuseOnSourceDrift(old,()->Files.write(primary.toPath(),newDb),true);
+        assertArrayEquals(newDb,read(primary));
+        assertEquals("9999,000000000987654321",
+            new JSONObject(new String(read(primary),StandardCharsets.UTF_8))
+                .getJSONArray("records").getJSONObject(0).getJSONArray("items")
+                .getJSONObject(0).getString("measure"));
+        assertArrayEquals(REUSE_PHOTO,read(new File(home,"media/reuse-photo")));
+    }
+
+    @Test public void existingConfirmedArchiveRejectsSameLengthPhotoMutationDuringReuse()
+            throws Exception{
+        JSONObject old=reuseFixture();
+        byte[] primary=read(new File(home,"projects.json"));
+        byte[] newPhoto={11,9,7,5,3,1};
+        assertEquals(REUSE_PHOTO.length,newPhoto.length);
+        File live=new File(home,"media/reuse-photo");
+        rejectReuseOnSourceDrift(old,()->Files.write(live.toPath(),newPhoto),true);
+        assertArrayEquals(newPhoto,read(live));
+        assertArrayEquals(primary,read(new File(home,"projects.json")));
+    }
+
+    @Test public void existingConfirmedArchiveRejectsChangedPrefsAndNewAtomicEvidence()
+            throws Exception{
+        JSONObject old=reuseFixture();
+        byte[] primary=read(new File(home,"projects.json"));
+        File prefs=new File(root,"shared_prefs/zamerovac.xml");
+        File pending=new File(noBackup,"sync-queue-v2.json.bak");
+        byte[] changed="<map><string name=\"photo\">updated</string></map>"
+            .getBytes(StandardCharsets.UTF_8);
+        byte[] queued="{\"version\":2,\"revision\":7,\"jobs\":[],\"recoveryQuarantine\":[]}"
+            .getBytes(StandardCharsets.UTF_8);
+        rejectReuseOnSourceDrift(old,()->{
+            Files.write(prefs.toPath(),changed);
+            Files.write(pending.toPath(),queued);
+        },true);
+        assertArrayEquals(changed,read(prefs));
+        assertArrayEquals(queued,read(pending));
+        assertArrayEquals(primary,read(new File(home,"projects.json")));
+    }
+
+    @Test public void existingConfirmedArchiveRejectsDisappearingOriginalPhoto()
+            throws Exception{
+        JSONObject old=reuseFixture();
+        byte[] primary=read(new File(home,"projects.json"));
+        File original=new File(home,"media/reuse-photo");
+        File moved=new File(root,"moved-original-photo");
+        rejectReuseOnSourceDrift(old,()->Files.move(original.toPath(),moved.toPath()),true);
+        assertFalse(original.exists());
+        assertArrayEquals(REUSE_PHOTO,read(moved));
+        assertArrayEquals(primary,read(new File(home,"projects.json")));
+    }
+
+    @Test public void existingConfirmedArchiveRejectsUnsafeNewSidecarSymlink()
+            throws Exception{
+        JSONObject old=reuseFixture();
+        byte[] primary=read(new File(home,"projects.json"));
+        Path sidecar=new File(noBackup,"sync-queue-v2.json.bak").toPath();
+        Path target=new File(home,"projects.json").toPath();
+        rejectReuseOnSourceDrift(old,()->Files.createSymbolicLink(sidecar,target),true);
+        assertTrue(Files.isSymbolicLink(sidecar));
+        assertArrayEquals(primary,read(new File(home,"projects.json")));
+        assertArrayEquals(REUSE_PHOTO,read(new File(home,"media/reuse-photo")));
+    }
+
+    @Test public void interruptedBeforeCompleteRejectsSourceChangeWithoutPublishingMarker()
+            throws Exception{
+        JSONObject old=reuseFixture();
+        File complete=new File(archive(old),"COMPLETE");
+        assertTrue(complete.delete()); // simulates crash after directory rename
+        byte[] primary=read(new File(home,"projects.json"));
+        File original=new File(home,"media/reuse-photo");
+        byte[] changed={2,4,6,8,10,12};
+        rejectReuseOnSourceDrift(old,()->Files.write(original.toPath(),changed),false);
+        assertArrayEquals(primary,read(new File(home,"projects.json")));
+        assertArrayEquals(changed,read(original));
+        assertFalse("A stale archive was marked complete",complete.exists());
+    }
+
+    @Test public void unmodifiedSourcesReuseConfirmedAndSafelyFinishUnconfirmed()
+            throws Exception{
+        JSONObject old=reuseFixture();
+        byte[] primary=read(new File(home,"projects.json"));
+        JSONObject again=RecoveryProtectionArchive.create(home,noBackup);
+        assertTrue(again.getBoolean("reused"));
+        assertTrue(again.getBoolean("complete"));
+        assertFalse(again.getBoolean("canPromote"));
+        assertEquals(old.getString("id"),again.getString("id"));
+        File marker=new File(archive(old),"COMPLETE");
+        assertTrue(marker.delete());
+        JSONObject resumed=RecoveryProtectionArchive.create(home,noBackup);
+        assertTrue(resumed.getBoolean("reused"));
+        assertTrue(resumed.getBoolean("complete"));
+        assertFalse(resumed.getBoolean("canPromote"));
+        assertEquals(old.getString("id"),resumed.getString("id"));
+        assertEquals(1,completedCount());
+        assertArrayEquals(primary,read(new File(home,"projects.json")));
+        assertArrayEquals(REUSE_PHOTO,read(new File(home,"media/reuse-photo")));
+    }
+
     @Test public void snapshotKeepsExactDimensionsOldBackupTrashJournalMediaPrefsAndOutbox()throws Exception{
         String first="1250,000000001",exact="1585,800001234567890";
         LocalDatabase.write(home,noBackup,db(first).toString());
