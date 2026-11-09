@@ -143,22 +143,23 @@ final class LocalDatabase {
             }
             String text;
             if(!primaryExists){
-                // Proven absent primary, with a surviving read-only backup.
+                // Proven missing primary is itself recovery evidence: record the
+                // durable barrier BEFORE attempting possibly unavailable backup I/O.
+                lost(home,noBackup);
                 text=readFile(backup);
                 DatabaseInstallEvidence.ensure(home,noBackup);
-                lost(home,noBackup);
                 return text;
             }
             try{text=readPrimary(primary);}
             catch(ConfirmedCorruption confirmed){
-                // Only verified, stable corruption triggers the durable recovery barrier.
+                // Stable, repeated corruption (never a transient read failure).
+                // Retire stale ACKs even when the backup cannot be read.
+                lost(home,noBackup);
                 try{text=readFile(backup);}
                 catch(IOException unavailable){
-                    lost(home,noBackup);
                     throw new IOException("Ověřeně poškozená primární databáze; původní soubory zůstaly beze změny",confirmed);
                 }
                 DatabaseInstallEvidence.ensure(home,noBackup);
-                lost(home,noBackup);
                 return text;
             }
             if(DatabaseRecovery.pending(home))

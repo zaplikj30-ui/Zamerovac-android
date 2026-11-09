@@ -256,6 +256,8 @@ public class DatabaseInstallEvidenceTest {
     @Test public void temporaryUnreadablePrimaryRetriesWithoutRotatingEpoch()throws Exception{
         String exact=text("1585,800001234567890");
         LocalDatabase.write(home,noBackup,exact);
+        LocalDatabase.write(home,noBackup,exact); // create a valid older backup too
+        assertTrue(new File(home,"projects.bak").isFile());
         File primary=new File(home,"projects.json"),parked=new File(home,"protected-original");
         byte[] bytes=Files.readAllBytes(primary.toPath());
         String before=DatabaseRecovery.id(home);
