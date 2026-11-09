@@ -1,0 +1,143 @@
+name: Zaměřovač - TEMP B16 souhrnná HOME regrese 8 original JVM failures targeted correction bez APK
+# One-shot owner-controlled branch; fixed source SHA, no pull_request/fork or cloud runner.
+on:
+  push:
+    branches: [qa/chat31-b16-eight-targeted-20261109]
+    paths:
+      - '.github/workflows/b16-chat31-eight-targeted-20261109.yml'
+permissions:
+  contents: read
+concurrency:
+  group: zamerovac-chat31-b16-eight-targeted-oneoff
+  cancel-in-progress: false
+jobs:
+  targeted-native:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/qa/chat31-b16-eight-targeted-20261109' && github.event_name == 'push' }}
+    name: Windows QA WSL2 ALL B16 + full JVM, Chromium, Python, PDF without APK
+    runs-on: [self-hosted, Windows, X64, zamerovac-qa]
+    timeout-minutes: 55
+    env:
+      CI: '1'
+      TESTED_SHA: '06559f457cafd7bdbe092eb8dd15a7dfed9b7b4e'
+    steps:
+      - name: Verify owner-controlled branch and unprivileged Windows service
+        shell: cmd
+        run: |
+          if /I not "%USERNAME%"=="ZamerovacQA" exit /b 1
+          if not "%GITHUB_REF%"=="refs/heads/qa/chat31-b16-eight-targeted-20261109" exit /b 1
+          if not exist "C:\actions-runner\tools\MinGit-2.56.0.4\cmd\git.exe" exit /b 1
+          if not exist "C:\actions-runner\tools\Python313\python.exe" exit /b 1
+          echo C:\actions-runner\tools\MinGit-2.56.0.4\cmd>>"%GITHUB_PATH%"
+          echo PASS owner branch and local tooling
+      - name: Read-only checkout pinned to Chat31 B16 preintegration SOURCE SHA
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: 06559f457cafd7bdbe092eb8dd15a7dfed9b7b4e
+          path: b16-source
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+      - name: Compile Java and run nine complete B16 Robolectric classes in WSL2
+        shell: 'C:\actions-runner\tools\Python313\python.exe {0}'
+        run: |
+          import os, subprocess
+          from pathlib import Path
+          expected = os.environ["TESTED_SHA"]
+          repo = os.environ["GITHUB_REPOSITORY"]
+          if repo != "zaplikj30-ui/Zamerovac-android" or os.environ.get("USERNAME", "").lower() != "zamerovacqa":
+              raise SystemExit("STOP untrusted account/repository")
+          source = str(Path(os.environ["GITHUB_WORKSPACE"]) / "b16-source")
+          reports = str(Path(os.environ["GITHUB_WORKSPACE"]) / "b16-junit-reports" / (os.environ["GITHUB_RUN_ID"] + "-" + os.environ["GITHUB_RUN_ATTEMPT"]))
+          actual = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=source, text=True).strip()
+          if actual != expected:
+              raise SystemExit("STOP checkout SHA mismatch "+actual)
+          print("TESTED_SOURCE_SHA="+actual,flush=True)
+          linux = r"""
+          set -Eeuo pipefail
+          export CI=1 LC_ALL=C.UTF-8 ANDROID_HOME=/opt/android-sdk ANDROID_SDK_ROOT=/opt/android-sdk
+          export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64 GRADLE_USER_HOME=/root/.gradle
+          source_dir="$(wslpath -u "$1")"
+          reports="$(wslpath -u "$2")"
+          expected="$3"
+          test -f "$source_dir/app/build.gradle"
+          test -f "$ANDROID_HOME/platforms/android-35/android.jar"
+          test -x /opt/gradle-8.10.2/bin/gradle
+          test -x "$JAVA_HOME/bin/java"
+          base=/root/zamerovac-qa-commits
+          mkdir -p "$base" "$reports"
+          destination="$(mktemp -d "$base/b16-targeted-XXXXXXXX")"
+          trap 'rc=$?; if [ -d "$destination/app/build/test-results/testPreviewUnitTest" ]; then cp -a "$destination/app/build/test-results/testPreviewUnitTest" "$reports/"; fi; rm -rf "$destination"; exit "$rc"' EXIT
+          cp -a "$source_dir/." "$destination/"
+          cd "$destination"
+          actual="$(git rev-parse HEAD)"
+          echo "WSL_TESTED_SOURCE_SHA=$actual"
+          test "$actual" = "$expected"
+          gradle=/opt/gradle-8.10.2/bin/gradle
+          common=(--offline --no-daemon --max-workers=1 "-Dorg.gradle.jvmargs=-Xmx1536m -XX:MaxMetaspaceSize=384m" -PdriveRequireConfigured=true --console=plain)
+          echo "PHASE_1_JAVAC compilePreviewJavaWithJavac"
+          "$gradle" "${common[@]}" :app:verifyDriveRegistration :app:compilePreviewJavaWithJavac
+          echo "PASS PHASE_1_JAVAC"
+          echo "PHASE_2_TESTS all complete JVM/Robolectric, not just B16"
+          set +e
+          "$gradle" "${common[@]}" :app:testPreviewUnitTest \
+            --tests cz.zamerovac.app.Audit39FindingsTest.successfulZipExportMustFitImporterEntryLimit \
+            --tests cz.zamerovac.app.Audit39FindingsTest.purgeMustRemoveExclusiveVoiceAndHistoricalMedia \
+            --tests cz.zamerovac.app.SyncSafetyTest.corruptFirstCloudPrimaryNeverPublishesOlderRecoveryCopy \
+            --tests cz.zamerovac.app.Post147DataTest.unreadableDatabaseNeverBecomesWritableEmptyState \
+            --tests cz.zamerovac.app.StorageLifecycleTest.corruptedPrimaryWithOlderValidBackupNeverAcknowledgesCAS \
+            --tests cz.zamerovac.app.StorageLifecycleTest.lostDatabaseAfterReopenCannotLookLikeFreshInstallation \
+            --tests cz.zamerovac.app.StorageLifecycleTest.missingDatabaseCannotMasqueradeAsEmptyCASAndCanRecover \
+            --tests cz.zamerovac.app.MediaIngestTest.actualActivityResultUsesWorkerLeavesUiAndConfirmedSavingAvailable
+          test_rc=$?
+          set -e
+          python3 - <<'PY_XML'
+          from pathlib import Path
+          import xml.etree.ElementTree as ET
+          directory=Path("app/build/test-results/testPreviewUnitTest")
+          files=sorted(directory.glob("TEST-*.xml"))
+          stats={k:0 for k in ("tests","failures","errors","skipped")}
+          suite_counts={}
+          for p in files:
+              root=ET.parse(p).getroot()
+              suite_counts[root.attrib["name"]]=int(root.attrib["tests"])
+              for k in stats: stats[k]+=int(root.attrib.get(k,"0"))
+          print("B16_JUNIT_XML_COUNTS:",stats,"XML_FILES:",len(files),flush=True)
+          print("B16_JUNIT_SUITES:",suite_counts,flush=True)
+          expected_suites={
+              "cz.zamerovac.app.Audit39FindingsTest":2,
+              "cz.zamerovac.app.SyncSafetyTest":1,
+              "cz.zamerovac.app.Post147DataTest":1,
+              "cz.zamerovac.app.StorageLifecycleTest":3,
+              "cz.zamerovac.app.MediaIngestTest":1
+          }
+          if any(suite_counts.get(name,0)!=count for name,count in expected_suites.items()) or len(files)!=5 or stats["tests"]!=8 or any(stats[k] for k in ("failures","errors","skipped")):
+              raise SystemExit("FAIL or SKIP: check exact JUnit XML and Gradle log")
+          PY_XML
+          test "$test_rc" -eq 0
+          echo "PASS ALL JVM/ROBOLECTRIC - exact SHA, no APK"
+          echo "PHASE_WSL_PYTHON - Java available under Linux JDK17"
+          export PATH="$JAVA_HOME/bin:$PATH"
+          python3 -m unittest discover -s tests -p 'test_*.py' -v 2>&1 | tee "$reports/python-wsl.log"
+          for pdf_fixture in customer-pdf-1.zip customer-pdf-3.zip customer-pdf-multipage.zip; do
+            test -s "app/build/$pdf_fixture"
+            cp "app/build/$pdf_fixture" "$reports/$pdf_fixture"
+          done
+          echo "PASS WSL Python + complete original PDF fixtures, no APK"
+          """
+          cmd = ["wsl.exe", "--distribution", "Zamerovac-Ubuntu-QA", "--user", "root",
+                 "--exec", "/bin/bash", "-lc", linux, "_", source, reports, expected]
+          print("Home WSL2 capped 4 GB RAM / 2 CPU, one Gradle worker, offline dependencies; no APK",flush=True)
+          result = subprocess.run(cmd, stdin=subprocess.DEVNULL, check=False)
+          if result.returncode:
+              raise SystemExit("NATIVE_TEST_EXIT="+str(result.returncode))
+      - name: Preserve only native JUnit evidence, never APK
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: chat31-eight-targeted-06559f4
+          path: |
+            b16-junit-reports/${{ github.run_id }}-${{ github.run_attempt }}/
+            local-evidence/Zamerovac-QA/results/
+            local-evidence/Zamerovac-QA/browser/
+          if-no-files-found: ignore
+          retention-days: 7
