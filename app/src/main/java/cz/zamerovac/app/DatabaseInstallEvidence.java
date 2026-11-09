@@ -17,7 +17,7 @@ import java.util.*;
 final class DatabaseInstallEvidence {
     private static final byte[] MAGIC =
         "zamerovac-database-initialized-v1\n".getBytes(StandardCharsets.US_ASCII);
-    private static File path(File home) { return new File(home, "projects.initialized-v1"); }
+    private static File path(File home) { return new File(home, "zamerovac-install-state-v1.marker"); }
     private static AtomicFile atomic(File home) { return new AtomicFile(path(home)); }
     private static boolean present(File file) {
         return Files.exists(file.toPath(), LinkOption.NOFOLLOW_LINKS);

@@ -57,21 +57,21 @@ public class DatabaseInstallEvidenceTest {
         rejectsReset();
     }
     @Test public void interruptedOrCorruptEvidenceMustNotAuthorizeReset() throws Exception {
-        Files.write(new File(home,"projects.initialized-v1.new").toPath(),new byte[]{11,12,13});
+        Files.write(new File(home,"zamerovac-install-state-v1.marker.new").toPath(),new byte[]{11,12,13});
         rejectsReset();
         assertArrayEquals(new byte[]{11,12,13},
-            Files.readAllBytes(new File(home,"projects.initialized-v1.new").toPath()));
-        assertTrue(new File(home,"projects.initialized-v1.new").delete());
-        Files.write(new File(home,"projects.initialized-v1").toPath(),new byte[]{99});
+            Files.readAllBytes(new File(home,"zamerovac-install-state-v1.marker.new").toPath()));
+        assertTrue(new File(home,"zamerovac-install-state-v1.marker.new").delete());
+        Files.write(new File(home,"zamerovac-install-state-v1.marker").toPath(),new byte[]{99});
         rejectsReset();
         try { DatabaseInstallEvidence.verify(home);fail("Corrupt marker verified"); }
         catch(IOException expected) {}
     }
     @Test public void unreadableMarkerNeverGetsSilentlyReplaced() throws Exception {
-        assertTrue(new File(home,"projects.initialized-v1").mkdir());
+        assertTrue(new File(home,"zamerovac-install-state-v1.marker").mkdir());
         rejectsReset();
         try { DatabaseInstallEvidence.ensure(home);fail("Non-file marker replaced"); }
         catch(IOException expected) {}
-        assertTrue(new File(home,"projects.initialized-v1").isDirectory());
+        assertTrue(new File(home,"zamerovac-install-state-v1.marker").isDirectory());
     }
 }
