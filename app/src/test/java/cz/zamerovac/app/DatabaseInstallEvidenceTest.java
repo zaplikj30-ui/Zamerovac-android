@@ -203,4 +203,42 @@ public class DatabaseInstallEvidenceTest {
         assertArrayEquals(corrupt,Files.readAllBytes(new File(home,"projects.json").toPath()));
         assertArrayEquals(previous,Files.readAllBytes(new File(home,"projects.bak").toPath()));
     }
+
+    @Test public void recoveredSnapshotUsesNewHashAndRejectsOldCloudAckIdentity()throws Exception{
+        String original=text("1585,800001234567890");
+        LocalDatabase.write(home,noBackup,original);
+        android.content.Context ctx=new android.content.ContextWrapper(RuntimeEnvironment.getApplication()){
+            @Override public File getFilesDir(){return home;}
+            @Override public File getNoBackupFilesDir(){return noBackup;}
+            @Override public android.content.Context getApplicationContext(){return this;}
+        };
+        android.content.SharedPreferences prefs=ctx.getSharedPreferences(
+            "recovery-hash-"+home.getName(),android.content.Context.MODE_PRIVATE);
+        PeerSnapshot before=PeerSnapshot.capture(ctx,prefs);
+        assertFalse(before.wire.has("recoveryEpoch"));
+        assertTrue(new File(home,"projects.json").delete());
+        try{LocalDatabase.readForCas(ctx);fail("Missing DB was accepted");}
+        catch(IOException expected){}
+        String epoch=DatabaseRecovery.id(home);
+        assertTrue(DeviceIdentity.valid(epoch));
+        assertTrue(DatabaseRecovery.pending(home));
+        // TEST-ONLY stand-in for a future explicit, verified manual promotion:
+        // real recovery UI/transaction is intentionally NOT implemented here.
+        Files.write(new File(home,"projects.json").toPath(),original.getBytes(StandardCharsets.UTF_8));
+        DatabaseRecovery.healthy(home,false);
+        PeerSnapshot after=PeerSnapshot.capture(ctx,prefs);
+        assertEquals(epoch,after.wire.getString("recoveryEpoch"));
+        assertNotEquals(before.hash,after.hash);
+        assertEquals(CausalClock.canonical(before.data),CausalClock.canonical(after.data));
+        assertEquals("1585,800001234567890",after.data.getJSONArray("records").getJSONObject(0)
+            .getJSONArray("items").getJSONObject(0).getString("measure"));
+        assertEquals(after.hash,PeerSnapshot.capture(ctx,prefs).hash);
+        String own=DeviceIdentity.get(noBackup);
+        assertEquals(after.hash,PeerSnapshot.parse(after.bytes,own).hash);
+        org.json.JSONObject invalid=new org.json.JSONObject(after.wire.toString())
+            .put("recoveryEpoch","untrusted-epoch");
+        try{PeerSnapshot.parse(CausalClock.canonical(invalid).getBytes(StandardCharsets.UTF_8),own);
+            fail("Invalid recovery period accepted");}
+        catch(IOException expected){}
+    }
 }
