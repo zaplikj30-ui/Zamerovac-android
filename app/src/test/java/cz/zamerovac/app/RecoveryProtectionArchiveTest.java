@@ -117,6 +117,8 @@ public class RecoveryProtectionArchiveTest {
         assertEquals(65,damaged.length);
         Files.write(complete,damaged);
         assertMarkerRejectionKeepsOriginals(copy,primary,photo,exact);
+        Files.write(complete,Arrays.copyOf(damaged,64)); // Truncated marker is invalid too.
+        assertMarkerRejectionKeepsOriginals(copy,primary,photo,exact);
         byte[] different=(copy.getString("id").replace('a','b')+"\n")
             .getBytes(StandardCharsets.US_ASCII);
         if(Arrays.equals(different,(copy.getString("id")+"\n")
