@@ -18,7 +18,7 @@ jobs:
     timeout-minutes: 45
     env:
       CI: '1'
-      TESTED_SHA: '6abaf264ec3a33e53206cc42f48acd83f6fe2f77'
+      TESTED_SHA: 'df229d8cf442b6991ee46e025e87928b91f62621'
     steps:
       - name: Verify owner-controlled branch and unprivileged Windows service
         shell: cmd
@@ -32,7 +32,7 @@ jobs:
       - name: Read-only source checkout pinned to Stage3A test-first SHA
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: 6abaf264ec3a33e53206cc42f48acd83f6fe2f77
+          ref: df229d8cf442b6991ee46e025e87928b91f62621
           path: b16-source
           fetch-depth: 1
           persist-credentials: false
@@ -127,7 +127,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: chat31-stage3a-regression-76-6abaf26
+          name: chat31-stage3a-regression-76-df229d8
           path: b16-junit-reports/${{ github.run_id }}-${{ github.run_attempt }}/
           if-no-files-found: ignore
           retention-days: 7
