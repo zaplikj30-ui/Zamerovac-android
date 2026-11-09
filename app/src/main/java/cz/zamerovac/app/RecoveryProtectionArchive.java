@@ -154,8 +154,10 @@ final class RecoveryProtectionArchive {
                     throw new IOException("Nebezpečný nebo nedostupný podklad: "+path);
                 if(!entry.has("sha256")||!entry.has("size"))
                     throw new IOException("Podklad bez úplné kontroly: "+path);
+                if("PRESENT".equals(status)&&"evidence".equals(section)&&entry.optBoolean("unconfirmed"))
+                    status="UNCONFIRMED";
                 if(!"VALID".equals(status)&&!"PRESENT".equals(status))
-                    sourceComplete=false; // CORRUPT and INCOMPLETE are preserved, not promoted
+                    sourceComplete=false; // Preserve incomplete or unconfirmed evidence without promoting it.
                 putSource(sources,path,entry.getLong("size"),entry.getString("sha256"),status);
             }
         }
@@ -234,7 +236,7 @@ final class RecoveryProtectionArchive {
     private static void validatePath(String path)throws IOException{
         boolean prefs="shared_prefs/zamerovac.xml".equals(path);
         boolean db=path.matches("files/(projects\\.json(\\.bak)?|projects\\.bak|projects\\.tmp|projects\\.backup\\.tmp)");
-        boolean journal=path.matches("files/(projects\\.recovery-v1\\.json(\\.bak|\\.new)?|trash-cleanup\\.json(\\.bak)?|zamerovac-install-state-v1\\.marker(\\.bak|\\.new)?)");
+        boolean journal=path.matches("files/(projects\\.recovery-v1\\.json(\\.bak|\\.new)?|trash-cleanup\\.json(\\.bak|\\.new)?|projects\\.bak(\\.bak|\\.new)|zamerovac-install-state-v1\\.marker(\\.bak|\\.new)?)");
         boolean media=path.startsWith("files/media/")&&
             PeerSnapshot.validMediaId(path.substring("files/media/".length()));
         boolean nativeEvidence=path.matches("no_backup/(zamerovac-install-state-v1\\.marker(\\.bak|\\.new)?|sync-peers-v2\\.json(\\.bak|\\.new)?|sync-queue-v2\\.json(\\.bak|\\.new)?)");

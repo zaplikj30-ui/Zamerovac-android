@@ -91,10 +91,12 @@ final class RecoveryInventory {
         }
         for(String name:new String[]{"projects.recovery-v1.json",
                 "projects.recovery-v1.json.bak","projects.recovery-v1.json.new",
-                "trash-cleanup.json","trash-cleanup.json.bak",
+                "trash-cleanup.json","trash-cleanup.json.bak","trash-cleanup.json.new",
+                "projects.bak.bak","projects.bak.new",
                 MARKER,MARKER+".bak",MARKER+".new"}) {
             String type=name.startsWith("projects.recovery-")?"journal":
-                name.startsWith("trash-cleanup")?"trashEvidence":"installationEvidence";
+                name.startsWith("trash-cleanup")?"trashEvidence":
+                name.startsWith("projects.bak.")?"databaseBackupEvidence":"installationEvidence";
             JSONObject entry=inspectFile(new File(home,name),"files/"+name,type,
                 type.equals("journal")?MAX_JOURNAL:MAX_META,false);
             entry.put("unconfirmed",name.endsWith(".new"));
@@ -102,10 +104,12 @@ final class RecoveryInventory {
         }
         if(noBackup!=null){
             for(String name:new String[]{MARKER,MARKER+".bak",MARKER+".new",
-                    "sync-peers-v2.json","sync-peers-v2.json.bak","sync-queue-v2.json"}) {
-                evidence.put(inspectFile(new File(noBackup,name),"no_backup/"+name,
-                    "sync-peers-v2.json".equals(name)||name.startsWith("sync-queue")
-                        ?"syncEvidence":"installationEvidence",MAX_META,false));
+                    "sync-peers-v2.json","sync-peers-v2.json.bak","sync-peers-v2.json.new",
+                    "sync-queue-v2.json","sync-queue-v2.json.bak","sync-queue-v2.json.new"}) {
+                JSONObject entry=inspectFile(new File(noBackup,name),"no_backup/"+name,
+                    name.startsWith("sync-")?"syncEvidence":"installationEvidence",MAX_META,false);
+                entry.put("unconfirmed",name.endsWith(".new"));
+                evidence.put(entry);
             }
         }
         File mediaDirectory=new File(home,"media");
