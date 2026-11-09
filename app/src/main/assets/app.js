@@ -64,8 +64,10 @@ function reconcileSavedState(base,local,remote){
   if(Object.hasOwn(tombstones,id)){
    for(let record of [l,d])if(record&&!record.deleted){
     const editedLocal=record===l&&!sameSavedValue(record,o);
-    // A confirmed unchanged local record must not resurrect a genuine remote purge.
-    if(record===l&&!editedLocal)continue;
+    // A confirmed unchanged clocked record must not revive a remote purge.
+    // Legacy records WITHOUT causal clocks have unknown ordering: retain them
+    // as marked conflict copies rather than silently discarding exact measurements.
+    if(record===l&&!editedLocal&&Object.keys(record.syncClock||{}).length)continue;
     if(editedLocal&&sameSavedValue(record.syncClock,o?.syncClock))record={...record,syncClock:advanceSyncClock(record.syncClock||{})};
     const order=compareSyncClocks(record.syncClock||{},tombstones[id]);
     // A local edit and remote purge can have identical clock counters when
