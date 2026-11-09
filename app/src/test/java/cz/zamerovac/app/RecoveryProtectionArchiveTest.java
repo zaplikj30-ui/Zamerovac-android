@@ -293,23 +293,46 @@ public class RecoveryProtectionArchiveTest {
         assertArrayEquals(primary,read(new File(home,"projects.json")));
     }
 
-    @Test public void existingConfirmedArchiveRejectsChangedPrefsAndNewAtomicEvidence()
+    @Test public void existingConfirmedArchiveRejectsChangedPrefsOnly()
             throws Exception{
         JSONObject old=reuseFixture();
         byte[] primary=read(new File(home,"projects.json"));
         File prefs=new File(root,"shared_prefs/zamerovac.xml");
         File pending=new File(noBackup,"sync-queue-v2.json.bak");
+        assertFalse("Test must not include queue sidecar changes",pending.exists());
         byte[] changed="<map><string name=\"photo\">updated</string></map>"
             .getBytes(StandardCharsets.UTF_8);
+        rejectReuseOnSourceDrift(old,()->Files.write(prefs.toPath(),changed),true);
+        assertArrayEquals(changed,read(prefs));
+        assertFalse(pending.exists());
+        assertArrayEquals(primary,read(new File(home,"projects.json")));
+        assertArrayEquals(REUSE_PHOTO,read(new File(home,"media/reuse-photo")));
+        assertArrayEquals(primary,read(new File(archive(old),"payload/files/projects.json")));
+        assertFalse(RecoveryProtectionArchive.verify(noBackup,old.getString("id"))
+            .getBoolean("canPromote"));
+    }
+
+    @Test public void existingConfirmedArchiveRejectsNewAtomicSidecarOnly()
+            throws Exception{
+        JSONObject old=reuseFixture();
+        byte[] primary=read(new File(home,"projects.json"));
+        File prefs=new File(root,"shared_prefs/zamerovac.xml");
+        byte[] prefsBefore=read(prefs);
+        File pending=new File(noBackup,"sync-queue-v2.json.bak");
+        assertFalse("Sidecar must be initially absent",pending.exists());
         byte[] queued="{\"version\":2,\"revision\":7,\"jobs\":[],\"recoveryQuarantine\":[]}"
             .getBytes(StandardCharsets.UTF_8);
-        rejectReuseOnSourceDrift(old,()->{
-            Files.write(prefs.toPath(),changed);
-            Files.write(pending.toPath(),queued);
-        },true);
-        assertArrayEquals(changed,read(prefs));
+        rejectReuseOnSourceDrift(old,()->Files.write(pending.toPath(),queued),true);
         assertArrayEquals(queued,read(pending));
+        assertArrayEquals(prefsBefore,read(prefs));
+        assertArrayEquals(prefsBefore,
+            read(new File(archive(old),"payload/shared_prefs/zamerovac.xml")));
         assertArrayEquals(primary,read(new File(home,"projects.json")));
+        assertArrayEquals(REUSE_PHOTO,read(new File(home,"media/reuse-photo")));
+        assertArrayEquals(primary,read(new File(archive(old),"payload/files/projects.json")));
+        assertFalse(new File(archive(old),"payload/no_backup/sync-queue-v2.json.bak").exists());
+        assertFalse(RecoveryProtectionArchive.verify(noBackup,old.getString("id"))
+            .getBoolean("canPromote"));
     }
 
     @Test public void existingConfirmedArchiveRejectsDisappearingOriginalPhoto()
@@ -377,6 +400,70 @@ public class RecoveryProtectionArchiveTest {
         assertArrayEquals(REUSE_PHOTO,read(new File(home,"media/reuse-photo")));
         assertArrayEquals(REUSE_PHOTO,read(new File(archive(old),
             "payload/files/media/reuse-photo")));
+    }
+
+    @Test public void unreadableLivePhotoDuringSecondInventoryFailsClosedWithoutSourceMutation()
+            throws Exception{
+        JSONObject old=reuseFixture();
+        Path live=new File(home,"media/reuse-photo").toPath();
+        byte[] primaryBefore=read(new File(home,"projects.json"));
+        byte[] prefsBefore=read(new File(root,"shared_prefs/zamerovac.xml"));
+        byte[] photoBefore=read(live.toFile());
+        byte[] archivedDb=read(new File(archive(old),"payload/files/projects.json"));
+        byte[] archivedPhoto=read(new File(archive(old),"payload/files/media/reuse-photo"));
+        byte[] archivedPrefs=read(new File(archive(old),"payload/shared_prefs/zamerovac.xml"));
+        assertArrayEquals(REUSE_PHOTO,photoBefore);
+
+        AtomicInteger checkpoints=new AtomicInteger();
+        AtomicInteger firstScanReads=new AtomicInteger();
+        AtomicInteger injectedFailures=new AtomicInteger();
+        try(MockedStatic<Files> mocked=mockStatic(Files.class,CALLS_REAL_METHODS)){
+            mocked.when(()->Files.newInputStream(any(Path.class),any(OpenOption[].class)))
+                .thenAnswer(call->{
+                    Path opened=call.getArgument(0);
+                    if(live.equals(opened)){
+                        if(checkpoints.get()==2){
+                            injectedFailures.incrementAndGet();
+                            throw new IOException("Synthetic read failure in second live inventory");
+                        }
+                        firstScanReads.incrementAndGet();
+                    }
+                    return call.callRealMethod();
+                });
+            try{
+                RecoveryProtectionArchive.create(home,noBackup,dir->Long.MAX_VALUE,
+                    ()->{checkpoints.incrementAndGet();});
+                fail("Unreadable live photo in the second scan was reused");
+            }catch(IOException expected){
+                assertTrue("Must reject this live photo, not an unrelated error",
+                    expected.getMessage().contains("files/media/reuse-photo"));
+            }
+        }
+        assertEquals("Injection must happen after verification and before reused=true",
+            2,checkpoints.get());
+        assertTrue("The first inventory must have read the same live photo",
+            firstScanReads.get()>0);
+        assertEquals("Only the second inventory must receive the synthetic I/O error",
+            1,injectedFailures.get());
+
+        assertEquals(1,completedCount());
+        assertArrayEquals(primaryBefore,read(new File(home,"projects.json")));
+        assertArrayEquals(photoBefore,read(live.toFile()));
+        assertArrayEquals(prefsBefore,read(new File(root,"shared_prefs/zamerovac.xml")));
+        assertArrayEquals(archivedDb,read(new File(archive(old),"payload/files/projects.json")));
+        assertArrayEquals(archivedPhoto,
+            read(new File(archive(old),"payload/files/media/reuse-photo")));
+        assertArrayEquals(archivedPrefs,
+            read(new File(archive(old),"payload/shared_prefs/zamerovac.xml")));
+        JSONObject stored=new JSONObject(new String(primaryBefore,StandardCharsets.UTF_8));
+        assertEquals(REUSE_EXACT,stored.getJSONArray("records").getJSONObject(0)
+            .getJSONArray("items").getJSONObject(0).getString("measure"));
+        assertEquals("durable-undo",stored.getJSONArray("records").getJSONObject(0)
+            .getJSONObject("history").getJSONArray("revisions")
+            .getJSONObject(0).getString("note"));
+        JSONObject verified=RecoveryProtectionArchive.verify(noBackup,old.getString("id"));
+        assertTrue(verified.getBoolean("complete"));
+        assertFalse(verified.getBoolean("canPromote"));
     }
 
     @Test public void unmodifiedSourcesReuseConfirmedAndSafelyFinishUnconfirmed()
