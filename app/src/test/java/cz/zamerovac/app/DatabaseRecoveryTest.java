@@ -17,11 +17,33 @@ public class DatabaseRecoveryTest {
     String data(String value)throws Exception{return new JSONObject().put("schema",1).put("records",new JSONArray().put(new JSONObject().put("id","synthetic").put("measure",value))).toString();}
     void corrupt()throws Exception{Files.write(new File(home,"projects.json").toPath(),"synthetic corrupt primary".getBytes(StandardCharsets.UTF_8));}
     @Test public void fallbackRotatesDurablyOnceAndNeverOverwritesEitherOriginal()throws Exception{
-        String old=data("123,000000123456"),fresh=data("999,0000001");LocalDatabase.write(home,old);LocalDatabase.write(home,fresh);assertEquals("",LocalDatabase.recoveryId(home));long before=LocalDatabase.generation(home);corrupt();byte[] damaged=Files.readAllBytes(new File(home,"projects.json").toPath());
-        assertEquals(old,LocalDatabase.read(home));String epoch=LocalDatabase.recoveryId(home);assertTrue(DeviceIdentity.valid(epoch));assertEquals(before+1,LocalDatabase.generation(home));assertEquals(epoch,LocalDatabase.recoveryId(home));assertEquals(epoch,DatabaseRecovery.id(home));assertArrayEquals(damaged,Files.readAllBytes(new File(home,"projects.json").toPath()));assertEquals(old,LocalDatabase.readFile(new File(home,"projects.bak")));
-        LocalDatabase.write(home,fresh);assertEquals(epoch,LocalDatabase.recoveryId(home));corrupt();assertEquals(old,LocalDatabase.read(home));assertNotEquals(epoch,LocalDatabase.recoveryId(home));
+        // Legacy name retained for traceability. A fallback is diagnostic, NEVER writable.
+        String old=data("123,000000123456"),fresh=data("999,0000001");
+        LocalDatabase.write(home,old);LocalDatabase.write(home,fresh);
+        assertEquals("",LocalDatabase.recoveryId(home));
+        long before=LocalDatabase.generation(home);
+        corrupt();
+        File primary=new File(home,"projects.json"),backup=new File(home,"projects.bak");
+        byte[] damaged=Files.readAllBytes(primary.toPath()),older=Files.readAllBytes(backup.toPath());
+        assertEquals(old,LocalDatabase.read(home)); // read-only forensic fallback
+        String epoch=DatabaseRecovery.id(home);
+        assertTrue(DeviceIdentity.valid(epoch));
+        assertTrue(DatabaseRecovery.pending(home));
+        assertEquals(before+1,LocalDatabase.generation(home));
+        for(int retry=0;retry<2;retry++){
+            assertEquals(old,LocalDatabase.read(home));
+            assertEquals(epoch,DatabaseRecovery.id(home)); // no repeated epoch rotation
+            assertEquals(before+1,LocalDatabase.generation(home));
+            try{LocalDatabase.readForCas(home);fail("Fallback authorized CAS");}catch(IOException expected){}
+            try{LocalDatabase.write(home,fresh);fail("Fallback overwrote damaged primary");}catch(IOException expected){}
+            assertArrayEquals(damaged,Files.readAllBytes(primary.toPath()));
+            assertArrayEquals(older,Files.readAllBytes(backup.toPath()));
+        }
+        assertEquals(old,LocalDatabase.readFile(backup));
+        assertEquals(epoch,DatabaseRecovery.id(home));
     }
-    @Test public void orphanOriginalNeverAuthorizesImplicitFreshDatabase()throws Exception{
+
+@Test public void orphanOriginalNeverAuthorizesImplicitFreshDatabase()throws Exception{
         File media=new File(home,"media");assertTrue(media.mkdir());
         File original=new File(media,"original-photo");
         byte[] untouched=new byte[]{17,23,42,99};Files.write(original.toPath(),untouched);
@@ -63,10 +85,37 @@ public class DatabaseRecoveryTest {
         try{LocalDatabase.read(home);fail("Fallback without durable invalidation accepted");}catch(IOException expected){}assertEquals("",DatabaseRecovery.id(home));assertEquals(data("1,000001"),LocalDatabase.readFile(new File(home,"projects.bak")));assertTrue(new File(blocker,"block").delete());assertTrue(blocker.delete());assertEquals(data("1,000001"),LocalDatabase.read(home));assertTrue(DeviceIdentity.valid(LocalDatabase.recoveryId(home)));
     }
     @Test public void deletedDatabaseInvalidatesReceiptsAndMalformedJournalFailsClosed()throws Exception{
-        LocalDatabase.write(home,data("1585,800001"));assertTrue(new File(home,"projects.json").delete());assertEquals("",LocalDatabase.read(home));String epoch=LocalDatabase.recoveryId(home);assertTrue(DeviceIdentity.valid(epoch));assertEquals(epoch,LocalDatabase.recoveryId(home));
-        LocalDatabase.write(home,data("0,000000001"));Files.write(new File(home,"projects.recovery-v1.json").toPath(),"{}".getBytes(StandardCharsets.UTF_8));try{LocalDatabase.read(home);fail("Malformed recovery state ignored");}catch(IOException expected){}assertEquals(data("0,000000001"),LocalDatabase.readFile(new File(home,"projects.json")));
+        String exact=data("1585,800001234567890");
+        LocalDatabase.write(home,exact);
+        File primary=new File(home,"projects.json");
+        assertTrue(primary.delete());
+        try{LocalDatabase.read(home);fail("Initialized database loss treated as first install");}
+        catch(IOException expected){assertTrue(expected.getMessage().contains("ruční obnova"));}
+        String epoch=DatabaseRecovery.id(home);
+        assertTrue(DeviceIdentity.valid(epoch));
+        assertTrue(DatabaseRecovery.pending(home));
+        long generation=LocalDatabase.generation(home);
+        try{LocalDatabase.readForCas(home);fail("Lost database authorized CAS");}catch(IOException expected){}
+        try{LocalDatabase.write(home,data("0,000000001"));fail("Lost database silently recreated");}catch(IOException expected){}
+        assertFalse(primary.exists());
+        assertEquals(epoch,DatabaseRecovery.id(home));
+        assertEquals(generation,LocalDatabase.generation(home));
+        // A malformed journal must fail closed even with an otherwise valid primary.
+        File isolated=Files.createTempDirectory(home.toPath(),"malformed-journal-").toFile();
+        String confirmed=data("123,000000123456789");
+        LocalDatabase.write(isolated,confirmed);
+        File isolatedPrimary=new File(isolated,"projects.json"),journal=new File(isolated,"projects.recovery-v1.json");
+        byte[] original=Files.readAllBytes(isolatedPrimary.toPath());
+        byte[] invalid="{}".getBytes(StandardCharsets.UTF_8);
+        Files.write(journal.toPath(),invalid);
+        try{LocalDatabase.read(isolated);fail("Malformed recovery journal ignored");}catch(IOException expected){}
+        try{LocalDatabase.readForCas(isolated);fail("Malformed recovery journal authorized CAS");}catch(IOException expected){}
+        try{LocalDatabase.write(isolated,data("0,000000001"));fail("Malformed journal authorized write");}catch(IOException expected){}
+        assertArrayEquals(original,Files.readAllBytes(isolatedPrimary.toPath()));
+        assertArrayEquals(invalid,Files.readAllBytes(journal.toPath()));
     }
-    @Test public void partialAndCompleteUnconfirmedTemporaryFilesNeverReplaceConfirmedDatabaseOnRead()throws Exception{
+
+@Test public void partialAndCompleteUnconfirmedTemporaryFilesNeverReplaceConfirmedDatabaseOnRead()throws Exception{
         String older=data("123,000000001"),confirmed=data("1585,800000123456789"),unconfirmed=data("999,999999999999999");LocalDatabase.write(home,older);LocalDatabase.write(home,confirmed);
         for(String temporary:new String[]{"{partial",unconfirmed}){Files.write(new File(home,"projects.tmp").toPath(),temporary.getBytes(StandardCharsets.UTF_8));Files.write(new File(home,"projects.backup.tmp").toPath(),"{partial-backup".getBytes(StandardCharsets.UTF_8));assertEquals(confirmed,LocalDatabase.read(home));assertEquals(older,LocalDatabase.readFile(new File(home,"projects.bak")));assertEquals(temporary,new String(Files.readAllBytes(new File(home,"projects.tmp").toPath()),StandardCharsets.UTF_8));}
         LocalDatabase.write(home,unconfirmed);assertEquals(unconfirmed,LocalDatabase.read(home));assertEquals(confirmed,LocalDatabase.readFile(new File(home,"projects.bak")));assertFalse(new File(home,"projects.tmp").exists());assertFalse(new File(home,"projects.backup.tmp").exists());

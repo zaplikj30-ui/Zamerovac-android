@@ -46,9 +46,45 @@ public class SafSyncV2Test {
   canonicalFiles(1,1500000);converge();PeerSnapshot current=PeerSnapshot.capture(a,a.prefs);Store selected=new Store(new File(store.root.getParentFile(),"new-metered-provider"));selected.largeHash=current.media.get("original-0").getString("hash");CloudFiles.publish(selected,"sync/v2/acks/"+aid+"/"+bid,current.hash,CloudProof.sign(CloudProof.body(CloudProof.ACK,bid,aid,current.hash,current.bytes.length),bi));SafSyncV2 first=engine(a,ai,selected,true);assertTrue(first.sync().pending);assertFalse(first.publications.snapshotPublished(bid,current.hash));assertEquals(0,selected.readsOfLarge);assertTrue(new PeerOutbox(a,a.prefs,ar).pending(bid)>0);engine(a,ai,selected,false).sync();CloudFiles.find(selected,selected.largeHash,1500000);assertTrue(new CloudPublications(a.noBackup,aid,selected.namespace()).snapshotPublished(bid,current.hash));assertEquals(0,new PeerOutbox(a,a.prefs,ar).pending(bid));
  }
  @Test public void repairAfterFinalAckRestoresFallbackReceiverAndNeverOverwritesCorruptRemoteCopy()throws Exception{
-  canonicalFiles(1,4000);converge();assertEquals(0,new PeerOutbox(a,a.prefs,ar).pending(bid));String hash=PeerMedia.inspect(new File(a.home,"media/original-0")).getString("hash");File bad=null;for(ImmutableStore.Entry entry:store.list("sync/v2/blobs"))if(entry.name.startsWith(hash)){bad=store.file("sync/v2/blobs/"+entry.name);Files.write(bad.toPath(),new byte[4000]);}assertNotNull(bad);Files.write(new File(b.home,"projects.bak").toPath(),"{\"schema\":1,\"records\":[]}".getBytes(java.nio.charset.StandardCharsets.UTF_8));Files.write(new File(b.home,"projects.json").toPath(),new byte[]{0});assertTrue(new File(b.home,"media/original-0").delete());assertTrue(sync(b,bi,false).sync().pending);assertFalse(store.list("sync/v2/requests/"+aid+"/"+bid).isEmpty());sync(a,ai,false).sync();assertArrayEquals(new byte[4000],Files.readAllBytes(bad.toPath()));converge();assertArrayEquals(Files.readAllBytes(new File(a.home,"media/original-0").toPath()),Files.readAllBytes(new File(b.home,"media/original-0").toPath()));assertEquals("1585,800001",new JSONObject(LocalDatabase.read(b.home)).getJSONArray("records").getJSONObject(0).getJSONArray("items").getJSONObject(0).getString("measure"));
+  // Legacy name: cloud repair must wait for a separately authorized Stage 3 recovery.
+  canonicalFiles(1,4000);converge();
+  assertEquals(0,new PeerOutbox(a,a.prefs,ar).pending(bid));
+  byte[] source=Files.readAllBytes(new File(a.home,"media/original-0").toPath());
+  String hash=PeerMedia.inspect(new File(a.home,"media/original-0")).getString("hash");
+  File bad=null;
+  for(ImmutableStore.Entry entry:store.list("sync/v2/blobs"))if(entry.name.startsWith(hash)){
+   bad=store.file("sync/v2/blobs/"+entry.name);Files.write(bad.toPath(),new byte[4000]);
+  }
+  assertNotNull(bad);
+  byte[] corruptCloud=Files.readAllBytes(bad.toPath());
+  File primary=new File(b.home,"projects.json"),backup=new File(b.home,"projects.bak");
+  byte[] fallback="{\"schema\":1,\"records\":[]}".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+  Files.write(backup.toPath(),fallback);Files.write(primary.toPath(),new byte[]{0});
+  byte[] damaged=Files.readAllBytes(primary.toPath());
+  assertTrue(new File(b.home,"media/original-0").delete());
+  int requestsBefore=store.list("sync/v2/requests/"+aid+"/"+bid).size();
+  int acksBefore=store.list("sync/v2/acks/"+aid+"/"+bid).size();
+  try{sync(b,bi,false).sync();fail("Cloud repair ran before database recovery authorization");}
+  catch(IOException expected){}
+  String epoch=DatabaseRecovery.id(b.home);
+  assertTrue(DeviceIdentity.valid(epoch));assertTrue(DatabaseRecovery.pending(b.home));
+  try{LocalDatabase.readForCas(b);fail("Damaged cloud receiver writable");}catch(IOException expected){}
+  assertEquals(0,new JSONObject(LocalDatabase.read(b.home)).getJSONArray("records").length());
+  assertEquals(requestsBefore,store.list("sync/v2/requests/"+aid+"/"+bid).size());
+  assertEquals(acksBefore,store.list("sync/v2/acks/"+aid+"/"+bid).size());
+  assertArrayEquals(damaged,Files.readAllBytes(primary.toPath()));
+  assertArrayEquals(fallback,Files.readAllBytes(backup.toPath()));
+  assertFalse(new File(b.home,"media/original-0").exists());
+  assertArrayEquals(corruptCloud,Files.readAllBytes(bad.toPath()));
+  assertArrayEquals(source,Files.readAllBytes(new File(a.home,"media/original-0").toPath()));
+  assertEquals("1585,800001",new JSONObject(LocalDatabase.readForCas(a)).getJSONArray("records").getJSONObject(0).getJSONArray("items").getJSONObject(0).getString("measure"));
+  try{sync(b,bi,false).sync();fail("Second cloud pass bypassed recovery barrier");}catch(IOException expected){}
+  assertEquals(epoch,DatabaseRecovery.id(b.home));
+  assertEquals(requestsBefore,store.list("sync/v2/requests/"+aid+"/"+bid).size());
+  assertArrayEquals(corruptCloud,Files.readAllBytes(bad.toPath()));
  }
- @Test public void purgedPendingPhotoDoesNotBlockNewerTombstoneOrFalselyAckMissingOldMedia()throws Exception{
+
+@Test public void purgedPendingPhotoDoesNotBlockNewerTombstoneOrFalselyAckMissingOldMedia()throws Exception{
   canonicalFiles(1,1500000);PeerSnapshot old=PeerSnapshot.capture(a,a.prefs);sync(a,ai,true).sync();String oldName=store.list("sync/v2/messages/"+bid+"/"+aid).get(0).name;assertTrue(sync(b,bi,false).sync().pending);JSONObject deleted=new JSONObject(LocalDatabase.read(a.home));deleted.getJSONArray("records").getJSONObject(0).put("deleted",true).put("syncClock",new JSONObject().put(aid,2));LocalDatabase.write(a.home,deleted.toString());String saved=LocalDatabase.read(a.home);synchronized(TrashPurger.LOCK){new TrashPurger(a,a.prefs).purge(saved,saved,new JSONArray().put("photo-a"),text->LocalDatabase.write(a.home,text));}assertFalse(new File(a.home,"media/original-0").exists());SafSyncV2.Result last=null;for(int i=0;i<7;i++){sync(a,ai,false).sync();last=sync(b,bi,false).sync();}assertNotNull(last);assertFalse(last.pending);assertEquals(0,new JSONObject(LocalDatabase.read(b.home)).getJSONArray("records").length());assertTrue(new JSONObject(LocalDatabase.read(b.home)).getJSONObject("syncTombstones").has("photo-a"));JSONObject receipt=new CloudInbox(b.noBackup,bid,store.namespace(),b.home).get(aid,oldName);assertTrue(receipt.getBoolean("obsolete"));assertFalse(receipt.getBoolean("acked"));for(ImmutableStore.Entry entry:store.list("sync/v2/acks/"+aid+"/"+bid)){JSONObject proof=CloudProof.verify(CloudProof.read(store.open("sync/v2/acks/"+aid+"/"+bid+"/"+entry.name),PeerWire.MAX_HELLO),bi.certificate(),CloudProof.ACK,bid,aid);assertNotEquals(old.hash,proof.getString("hash"));}
  }
  @Test public void concurrentLocalVersionCannotRetireAnUnfinishedRemoteSnapshot()throws Exception{
@@ -58,10 +94,43 @@ public class SafSyncV2Test {
   canonicalFiles(1,1500000);sync(a,ai,true).sync();String name=store.list("sync/v2/messages/"+bid+"/"+aid).get(0).name;JSONObject newer=new JSONObject(original.toString());newer.getJSONArray("records").getJSONObject(0).put("syncClock",new JSONObject().put(aid,2));LocalDatabase.write(b.home,newer.toString());String before=LocalDatabase.read(b.home);assertTrue(sync(b,bi,false).sync().pending);assertEquals(before,LocalDatabase.read(b.home));assertNull(new CloudInbox(b.noBackup,bid,store.namespace(),b.home).get(aid,name));
  }
  @Test public void fallbackAfterFinalCloudAckReappliesHistoricalMessageDespiteCachedInbox()throws Exception{
-  canonicalFiles(1,4000);converge();assertEquals(0,new PeerOutbox(a,a.prefs,ar).pending(bid));SafSyncV2 cached=sync(b,bi,false);String directory="sync/v2/messages/"+bid+"/"+aid;List<ImmutableStore.Entry> messages=store.list(directory);assertFalse(messages.isEmpty());assertTrue(cached.inbox.get(aid,messages.get(0).name).getBoolean("acked"));String empty="{\"schema\":1,\"records\":[]}";Files.write(new File(b.home,"projects.bak").toPath(),empty.getBytes(java.nio.charset.StandardCharsets.UTF_8));Files.write(new File(b.home,"projects.json").toPath(),new byte[]{0});store.watchedMessages=directory+"/";store.messageReads=0;
-  cached.sync();assertTrue(store.messageReads>0);assertEquals(1,new JSONObject(LocalDatabase.read(b.home)).getJSONArray("records").length());assertEquals("1585,800001",new JSONObject(LocalDatabase.read(b.home)).getJSONArray("records").getJSONObject(0).getJSONArray("items").getJSONObject(0).getString("measure"));assertTrue(DeviceIdentity.valid(LocalDatabase.recoveryId(b.home)));assertArrayEquals(Files.readAllBytes(new File(a.home,"media/original-0").toPath()),Files.readAllBytes(new File(b.home,"media/original-0").toPath()));converge();assertEquals(0,new PeerOutbox(a,a.prefs,ar).pending(bid));
+  // Legacy name: an old signed ACK/inbox entry cannot authorize replay after loss.
+  canonicalFiles(1,4000);converge();
+  assertEquals(0,new PeerOutbox(a,a.prefs,ar).pending(bid));
+  SafSyncV2 cached=sync(b,bi,false);
+  String directory="sync/v2/messages/"+bid+"/"+aid;
+  List<ImmutableStore.Entry> messages=store.list(directory);
+  assertFalse(messages.isEmpty());
+  String entry=messages.get(0).name;
+  assertTrue(cached.inbox.get(aid,entry).getBoolean("acked"));
+  byte[] original=Files.readAllBytes(new File(b.home,"media/original-0").toPath());
+  File primary=new File(b.home,"projects.json"),backup=new File(b.home,"projects.bak");
+  byte[] fallback="{\"schema\":1,\"records\":[]}".getBytes(java.nio.charset.StandardCharsets.UTF_8);
+  Files.write(backup.toPath(),fallback);Files.write(primary.toPath(),new byte[]{0});
+  byte[] damaged=Files.readAllBytes(primary.toPath());
+  int ackCount=store.list("sync/v2/acks/"+aid+"/"+bid).size();
+  store.watchedMessages=directory+"/";store.messageReads=0;
+  try{cached.sync();fail("Cached inbox silently re-applied old cloud message");}
+  catch(IOException expected){}
+  String epoch=DatabaseRecovery.id(b.home);
+  assertTrue(DeviceIdentity.valid(epoch));assertTrue(DatabaseRecovery.pending(b.home));
+  assertNull("Pre-recovery cached ACK reused across epochs",cached.inbox.get(aid,entry));
+  assertEquals(0,store.messageReads); // no network read before database authority check
+  assertEquals(ackCount,store.list("sync/v2/acks/"+aid+"/"+bid).size());
+  assertTrue(b.prefs.getBoolean("syncPending",false));
+  assertEquals(0,new JSONObject(LocalDatabase.read(b.home)).getJSONArray("records").length()); // read-only fallback
+  try{LocalDatabase.readForCas(b);fail("Historical inbox authorized stale CAS");}catch(IOException expected){}
+  assertArrayEquals(damaged,Files.readAllBytes(primary.toPath()));
+  assertArrayEquals(fallback,Files.readAllBytes(backup.toPath()));
+  assertArrayEquals(original,Files.readAllBytes(new File(b.home,"media/original-0").toPath()));
+  assertEquals("1585,800001",new JSONObject(LocalDatabase.readForCas(a)).getJSONArray("records").getJSONObject(0).getJSONArray("items").getJSONObject(0).getString("measure"));
+  store.messageReads=0;
+  try{cached.sync();fail("Second cached pass bypassed recovery barrier");}catch(IOException expected){}
+  assertEquals(0,store.messageReads);
+  assertEquals(epoch,DatabaseRecovery.id(b.home));
  }
- @Test public void signedImmutableMessagesConvergeAndNoMutableProjectsFileExists()throws Exception{
+
+@Test public void signedImmutableMessagesConvergeAndNoMutableProjectsFileExists()throws Exception{
   files(3,8000);converge();assertEquals(0,new PeerOutbox(a,a.prefs,ar).pending(bid));assertEquals(0,new PeerOutbox(b,b.prefs,br).pending(aid));JSONObject received=new JSONObject(LocalDatabase.read(b.home));assertEquals("1585,800001",received.getJSONArray("records").getJSONObject(0).getJSONArray("items").getJSONObject(0).getString("measure"));for(int i=0;i<3;i++)assertArrayEquals(Files.readAllBytes(new File(a.home,"media/original-"+i).toPath()),Files.readAllBytes(new File(b.home,"media/original-"+i).toPath()));assertFalse(new File(store.root,"projects.json").exists());assertFalse(new File(store.root,"backups").exists());
  }
  @Test public void interruptedBlobAndRestartResumeWithoutPublishingPartialDatabase()throws Exception{

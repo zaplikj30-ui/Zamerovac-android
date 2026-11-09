@@ -154,13 +154,68 @@ public class PeerTransferTest {
   assertFalse(b.prefs.contains("mime-media-0"));
  }
  @Test public void fallbackOnResponderInvalidatesRemoteAckAndRestoresExactDataWithoutNewUserEdit()throws Exception{
-  JSONObject photo=record("photo-a",aid,"123,000000123456789");media(a,photo,1);save(a,db(photo));save(b,db());exchange(null,null);exchange(null,null);assertEquals(0,as.outbox.pending(bid));assertEquals(0,bs.outbox.pending(aid));String before=CausalClock.canonical(read(a));Files.write(new File(b.home,"projects.bak").toPath(),db().toString().getBytes(StandardCharsets.UTF_8));Files.write(new File(b.home,"projects.json").toPath(),new byte[]{0});
-  exchange(null,null);exchange(null,null);assertEquals(before,CausalClock.canonical(read(b)));assertTrue(DeviceIdentity.valid(LocalDatabase.recoveryId(b.home)));assertEquals(LocalDatabase.recoveryId(b.home),ar.snapshot().getJSONObject(bid).getString("recovery"));assertArrayEquals(Files.readAllBytes(new File(a.home,"media/media-0").toPath()),Files.readAllBytes(new File(b.home,"media/media-0").toPath()));exchange(null,null);assertEquals(0,as.outbox.pending(bid));assertEquals(0,bs.outbox.pending(aid));
+  // Legacy name: recovery of a peer is NOT an implicit authorization to restore.
+  JSONObject photo=record("photo-a",aid,"123,000000123456789");media(a,photo,1);
+  save(a,db(photo));save(b,db());exchange(null,null);exchange(null,null);
+  assertEquals(0,as.outbox.pending(bid));assertEquals(0,bs.outbox.pending(aid));
+  String source=CausalClock.canonical(read(a));
+  File primary=new File(b.home,"projects.json"),backup=new File(b.home,"projects.bak");
+  byte[] originalMedia=Files.readAllBytes(new File(b.home,"media/media-0").toPath());
+  byte[] oldBackup=db().toString().getBytes(StandardCharsets.UTF_8);
+  Files.write(backup.toPath(),oldBackup);Files.write(primary.toPath(),new byte[]{0});
+  byte[] corrupt=Files.readAllBytes(primary.toPath());
+  String remoteBefore=ar.snapshot().getJSONObject(bid).optString("recovery","");
+  AtomicBoolean responderStarted=new AtomicBoolean();
+  try{exchange(null,(peer,phase,done,total)->responderStarted.set(true));fail("Damaged receiver synced without authorization");}
+  catch(Exception expected){}
+  assertFalse("Receiver began application transfer before checking write authority",responderStarted.get());
+  String epoch=DatabaseRecovery.id(b.home);
+  assertTrue(DeviceIdentity.valid(epoch));assertTrue(DatabaseRecovery.pending(b.home));
+  assertEquals(epoch,new JSONObject(new String(Files.readAllBytes(new File(b.noBackup,"sync-peers-v2.json").toPath()),StandardCharsets.UTF_8)).getString("localRecovery"));
+  assertEquals("",br.lastAck(aid));
+  assertEquals(remoteBefore,ar.snapshot().getJSONObject(bid).optString("recovery","")); // no false remote recovery/ACK
+  assertEquals(0,new JSONObject(LocalDatabase.read(b.home)).getJSONArray("records").length()); // diagnostic only
+  try{LocalDatabase.readForCas(b);fail("Fallback receiver writable");}catch(IOException expected){}
+  try{LocalDatabase.write(b,db(photo).toString());fail("Unapproved restore through writer");}catch(IOException expected){}
+  assertArrayEquals(corrupt,Files.readAllBytes(primary.toPath()));
+  assertArrayEquals(oldBackup,Files.readAllBytes(backup.toPath()));
+  assertArrayEquals(originalMedia,Files.readAllBytes(new File(b.home,"media/media-0").toPath()));
+  assertEquals(source,CausalClock.canonical(read(a)));
+  try{exchange(null,null);fail("Second session bypassed recovery barrier");}catch(Exception expected){}
+  assertEquals(epoch,DatabaseRecovery.id(b.home));
+  assertArrayEquals(corrupt,Files.readAllBytes(primary.toPath()));
+  assertArrayEquals(originalMedia,Files.readAllBytes(new File(b.home,"media/media-0").toPath()));
  }
- @Test public void recoveryOnInitiatorInvalidatesRemoteAckBeforeResponderPreparesSnapshot()throws Exception{
-  save(a,db());save(b,db(record("photo-b",bid,"999,000000000001")));exchange(null,null);exchange(null,null);String before=CausalClock.canonical(read(b));Files.write(new File(a.home,"projects.bak").toPath(),db().toString().getBytes(StandardCharsets.UTF_8));Files.write(new File(a.home,"projects.json").toPath(),new byte[]{0});exchange(null,null);assertEquals(before,CausalClock.canonical(read(a)));assertEquals(LocalDatabase.recoveryId(a.home),br.snapshot().getJSONObject(aid).getString("recovery"));
+
+@Test public void recoveryOnInitiatorInvalidatesRemoteAckBeforeResponderPreparesSnapshot()throws Exception{
+  save(a,db());save(b,db(record("photo-b",bid,"999,000000000001")));
+  exchange(null,null);exchange(null,null);
+  String before=CausalClock.canonical(read(b));
+  File primary=new File(a.home,"projects.json"),backup=new File(a.home,"projects.bak");
+  byte[] older=db().toString().getBytes(StandardCharsets.UTF_8);
+  Files.write(backup.toPath(),older);Files.write(primary.toPath(),new byte[]{0});
+  byte[] corrupt=Files.readAllBytes(primary.toPath());
+  String remoteBefore=br.snapshot().getJSONObject(aid).optString("recovery","");
+  AtomicBoolean initiatorStarted=new AtomicBoolean();
+  try{exchange((peer,phase,done,total)->initiatorStarted.set(true),null);fail("Corrupt initiator sent pre-recovery snapshot");}
+  catch(Exception expected){}
+  assertFalse("Initiator began preparing a transfer without write authority",initiatorStarted.get());
+  String epoch=DatabaseRecovery.id(a.home);
+  assertTrue(DeviceIdentity.valid(epoch));assertTrue(DatabaseRecovery.pending(a.home));
+  assertEquals("",ar.lastAck(bid)); // local stale success retired durably
+  assertEquals(remoteBefore,br.snapshot().getJSONObject(aid).optString("recovery",""));
+  assertEquals(0,new JSONObject(LocalDatabase.read(a.home)).getJSONArray("records").length()); // diagnostic backup
+  try{LocalDatabase.readForCas(a);fail("Damaged initiator authorized for CAS");}catch(IOException expected){}
+  try{PeerSnapshot.capture(a,a.prefs);fail("Damaged initiator published snapshot");}catch(Exception expected){}
+  assertArrayEquals(corrupt,Files.readAllBytes(primary.toPath()));
+  assertArrayEquals(older,Files.readAllBytes(backup.toPath()));
+  assertEquals(before,CausalClock.canonical(read(b)));
+  try{exchange(null,null);fail("Restarted exchange bypassed recovery barrier");}catch(Exception expected){}
+  assertEquals(epoch,DatabaseRecovery.id(a.home));
+  assertEquals(before,CausalClock.canonical(read(b)));
  }
- @Test public void disconnectNineteenthOfThirtyKeepsDatabaseAndResumesAfterReopen()throws Exception{
+
+@Test public void disconnectNineteenthOfThirtyKeepsDatabaseAndResumesAfterReopen()throws Exception{
   JSONObject photo=record("photo-a",aid,"1234,500000001"),original=db(record("local-b",bid,"55,123456"));media(a,photo,30);save(a,db(photo));save(b,original);AtomicBoolean dropped=new AtomicBoolean();
   try{exchange(null,(peer,phase,done,total)->{if("receiving".equals(phase)&&done==19&&dropped.compareAndSet(false,true))throw new IOException("synthetic disconnect at nineteen");});fail("Interrupted transfer completed");}catch(Exception expected){assertTrue(PeerTlsTest.contains(expected,"synthetic disconnect at nineteen"));}
   assertEquals(CausalClock.canonical(original),CausalClock.canonical(read(b)));assertTrue(as.outbox.pending(bid)>0);assertEquals(19,new File(b.home,"media").listFiles().length);
