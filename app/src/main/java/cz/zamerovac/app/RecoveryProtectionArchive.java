@@ -523,7 +523,13 @@ final class RecoveryProtectionArchive {
         boolean content=payloadVerified(dir,id,checkedPaths);
         if(!content)throw new IOException("Obsah ochranné kopie je poškozený");
         File manifestFile=new File(dir,"manifest.json");
-        JSONObject manifest=JsonInput.object(readChecked(manifestFile));
+        // The metadata returned to callers must be authenticated just like the
+        // manifest used to verify payloads. A concurrent swap can replace it
+        // between the two reads; never expose unchecked sourceComplete/files/missing.
+        byte[] metadata=readChecked(manifestFile);
+        if(!id.equals(PeerWire.hash(metadata)))
+            throw new IOException("Manifest se mezi ověřeními změnil");
+        JSONObject manifest=JsonInput.object(metadata);
         File complete=new File(dir,"COMPLETE");
         boolean marked=false;
         if(exists(complete)){
