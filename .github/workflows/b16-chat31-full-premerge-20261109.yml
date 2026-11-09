@@ -1,4 +1,4 @@
-name: Zaměřovač - TEMP B16 souhrnná HOME FOLLOW-ON PDF + Chromium + Python (JVM 382 had 8 FAIL) bez APK
+name: Zaměřovač - TEMP B16 souhrnná HOME FOLLOW-ON PDF + Chromium + Windows Node/Python (382 JVM 8 FAIL) bez APK
 # One-shot owner-controlled branch; fixed source SHA, no pull_request/fork or cloud runner.
 on:
   push:
@@ -106,14 +106,12 @@ jobs:
           PY_XML
           test "$test_rc" -eq 0
           echo "PASS TWO PDF FIXTURE TESTS ONLY - full 382 JVM still FAIL 8; no APK"
-          echo "PHASE_WSL_PYTHON - Java available under Linux JDK17"
-          export PATH="$JAVA_HOME/bin:$PATH"
-          python3 -m unittest discover -s tests -p 'test_*.py' -v 2>&1 | tee "$reports/python-wsl.log"
+          echo "NOTE: Linux has no Node executable; Python/Node source suite runs later in trusted Windows quick step."
           for pdf_fixture in customer-pdf-1.zip customer-pdf-3.zip customer-pdf-multipage.zip; do
             test -s "app/build/$pdf_fixture"
             cp "app/build/$pdf_fixture" "$reports/$pdf_fixture"
           done
-          echo "PASS WSL Python + complete original PDF fixtures, no APK"
+          echo "PASS 2 PDF fixture tests and complete original PDF fixtures, no APK"
           """
           cmd = ["wsl.exe", "--distribution", "Zamerovac-Ubuntu-QA", "--user", "root",
                  "--exec", "/bin/bash", "-lc", linux, "_", source, reports, expected]
