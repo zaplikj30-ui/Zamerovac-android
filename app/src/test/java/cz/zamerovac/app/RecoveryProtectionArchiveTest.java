@@ -87,6 +87,215 @@ public class RecoveryProtectionArchiveTest {
         assertFalse(new File(noBackup,"recovery-protection-v1").isFile());
     }
 
+    /**
+     * The actual, already-open manifest grows as the verifier is reading it.
+     * A sparse extension avoids constructing a giant test byte[] in RAM.
+     * target=1 exercises payloadVerified; target=2 exercises verifyInternal.
+     */
+    void assertGrowingManifestCannotBeReadPastLimit(int target,boolean interrupted)
+            throws Exception{
+        String exact="1585,800001234567890";
+        byte[] photo={1,3,5,7,9,11};
+        JSONObject copy=completeMarkerFixture(exact,photo);
+        File directory=archive(copy);
+        File manifest=new File(directory,"manifest.json");
+        Path manifestPath=manifest.toPath();
+        byte[] savedManifest=read(manifest);
+        byte[] liveDb=read(new File(home,"projects.json"));
+        byte[] archivedDb=read(new File(directory,"payload/files/projects.json"));
+        byte[] archivedPhoto=read(new File(directory,"payload/files/media/marker-photo"));
+        assertTrue(savedManifest.length<LocalDatabase.MAX_BYTES);
+        assertEquals(copy.getString("id"),PeerWire.hash(savedManifest));
+        assertArrayEquals(liveDb,archivedDb);
+        assertArrayEquals(photo,archivedPhoto);
+        File marker=new File(directory,"COMPLETE");
+        if(interrupted)assertTrue(marker.delete());
+        else assertTrue(marker.isFile());
+
+        AtomicInteger opens=new AtomicInteger();
+        AtomicInteger consumed=new AtomicInteger();
+        boolean[] grew={false};
+        try{
+            try(MockedStatic<Files> mocked=mockStatic(Files.class,CALLS_REAL_METHODS)){
+                mocked.when(()->Files.newInputStream(any(Path.class),any(OpenOption[].class)))
+                    .thenAnswer(call->{
+                        Path opened=call.getArgument(0);
+                        InputStream original=(InputStream)call.callRealMethod();
+                        if(!manifestPath.equals(opened)||opens.incrementAndGet()!=target)
+                            return original;
+                        return new FilterInputStream(original){
+                            private void afterRead(int amount)throws IOException{
+                                if(amount<=0)return;
+                                consumed.addAndGet(amount);
+                                if(!grew[0]){
+                                    grew[0]=true;
+                                    // Real growth after the initial size check
+                                    // and after the first successful stream read.
+                                    try(RandomAccessFile writer=new RandomAccessFile(manifest,"rw")){
+                                        writer.setLength((long)LocalDatabase.MAX_BYTES+8193L);
+                                    }
+                                }
+                            }
+                            @Override public int read(byte[] data,int off,int len)throws IOException{
+                                int n=in.read(data,off,len);afterRead(n);return n;
+                            }
+                            @Override public int read()throws IOException{
+                                int n=in.read();if(n!=-1)afterRead(1);return n;
+                            }
+                        };
+                    });
+                try{
+                    if(interrupted)RecoveryProtectionArchive.create(home,noBackup);
+                    else RecoveryProtectionArchive.verify(noBackup,copy.getString("id"));
+                    fail("Manifest that expanded during reading was accepted");
+                }catch(IOException expected){
+                    assertTrue("Must fail specifically on the bounded manifest read",
+                        expected.getMessage()!=null&&
+                        expected.getMessage().contains("překročil limit"));
+                }
+            }
+            assertTrue("An open manifest must actually grow",grew[0]);
+            assertEquals("Only the targeted manifest read must occur",target,opens.get());
+            assertEquals((long)LocalDatabase.MAX_BYTES+8193L,Files.size(manifestPath));
+            assertTrue("The reader may consume MAX_META plus only one overflow byte",
+                consumed.get()>0&&consumed.get()<=(long)LocalDatabase.MAX_BYTES+1L);
+        }finally{
+            // Destructive race exists only in this isolated test fixture.
+            Files.write(manifestPath,savedManifest);
+        }
+
+        assertArrayEquals(savedManifest,read(manifest));
+        assertArrayEquals(liveDb,read(new File(home,"projects.json")));
+        assertArrayEquals(archivedDb,read(new File(directory,"payload/files/projects.json")));
+        assertArrayEquals(photo,read(new File(home,"media/marker-photo")));
+        assertArrayEquals(archivedPhoto,read(new File(directory,"payload/files/media/marker-photo")));
+        JSONObject actual=new JSONObject(new String(liveDb,StandardCharsets.UTF_8));
+        assertEquals(exact,actual.getJSONArray("records").getJSONObject(0)
+            .getJSONArray("items").getJSONObject(0).getString("measure"));
+        assertEquals("history-exact",actual.getJSONArray("records").getJSONObject(0)
+            .getJSONObject("history").getJSONArray("revisions")
+            .getJSONObject(0).getString("note"));
+        assertEquals(1,completedCount());
+        assertEquals("Failure must not add a COMPLETE marker",!interrupted,marker.exists());
+        if(interrupted){
+            try{
+                RecoveryProtectionArchive.verify(noBackup,copy.getString("id"));
+                fail("Interrupted archive was unexpectedly completed");
+            }catch(IOException expected){}
+        }else{
+            JSONObject verified=RecoveryProtectionArchive.verify(noBackup,copy.getString("id"));
+            assertTrue(verified.getBoolean("complete"));
+            assertFalse(verified.getBoolean("canPromote"));
+        }
+    }
+
+    @Test public void expandingManifestDuringFirstReadIsBoundedAndRejected()
+            throws Exception{
+        assertGrowingManifestCannotBeReadPastLimit(1,false);
+    }
+
+    @Test public void expandingManifestDuringSecondReadCannotFinalizeInterruptedCopy()
+            throws Exception{
+        assertGrowingManifestCannotBeReadPastLimit(2,true);
+    }
+
+    @Test public void sameSizeManifestRewrittenDuringReadFailsIdentityCheck()
+            throws Exception{
+        String exact="1585,800001234567890";
+        byte[] photo={1,3,5,7,9,11};
+        JSONObject copy=completeMarkerFixture(exact,photo);
+        File directory=archive(copy),manifest=new File(directory,"manifest.json");
+        Path manifestPath=manifest.toPath();
+        byte[] signed=read(manifest);
+        byte[] modified=Arrays.copyOf(signed,signed.length);
+        modified[modified.length-1]=(byte)(modified[modified.length-1]==' '?'\n':' ');
+        assertFalse(Arrays.equals(signed,modified));
+        assertEquals(signed.length,modified.length);
+        byte[] originalDb=read(new File(home,"projects.json"));
+        AtomicInteger opens=new AtomicInteger();
+        boolean[] changed={false};
+        try{
+            try(MockedStatic<Files> mocked=mockStatic(Files.class,CALLS_REAL_METHODS)){
+                mocked.when(()->Files.newInputStream(any(Path.class),any(OpenOption[].class)))
+                    .thenAnswer(call->{
+                        Path opened=call.getArgument(0);
+                        InputStream original=(InputStream)call.callRealMethod();
+                        if(!manifestPath.equals(opened))return original;
+                        opens.incrementAndGet();
+                        return new FilterInputStream(original){
+                            @Override public int read(byte[] data,int off,int len)throws IOException{
+                                int n=in.read(data,off,len);
+                                if(n>0&&!changed[0]){
+                                    changed[0]=true;
+                                    Files.write(manifestPath,modified);
+                                    Files.setLastModifiedTime(manifestPath,
+                                        FileTime.fromMillis(System.currentTimeMillis()+5000));
+                                }
+                                return n;
+                            }
+                        };
+                    });
+                try{
+                    RecoveryProtectionArchive.verify(noBackup,copy.getString("id"));
+                    fail("Unstable manifest was certified");
+                }catch(IOException expected){
+                    assertTrue("Must reject the read-time identity change",
+                        expected.getMessage()!=null&&
+                        expected.getMessage().contains("Manifest se mezi ověřeními změnil"));
+                }
+            }
+            assertTrue("Race injection must actually rewrite the open file",changed[0]);
+            assertEquals("Must reject during the first read, before any second read",
+                1,opens.get());
+        }finally{
+            Files.write(manifestPath,signed);
+        }
+        assertArrayEquals(signed,read(manifest));
+        assertArrayEquals(originalDb,read(new File(home,"projects.json")));
+        assertArrayEquals(photo,read(new File(home,"media/marker-photo")));
+        assertArrayEquals(photo,read(new File(directory,"payload/files/media/marker-photo")));
+        assertTrue(RecoveryProtectionArchive.verify(noBackup,copy.getString("id"))
+            .getBoolean("complete"));
+        assertFalse(RecoveryProtectionArchive.verify(noBackup,copy.getString("id"))
+            .getBoolean("canPromote"));
+    }
+
+    @Test public void boundedManifestAcceptsValidVerifyReuseAndInterruptedFinish()
+            throws Exception{
+        String exact="1585,800001234567890";
+        byte[] photo={1,3,5,7,9,11};
+        JSONObject copy=completeMarkerFixture(exact,photo);
+        File directory=archive(copy);
+        byte[] manifest=read(new File(directory,"manifest.json"));
+        byte[] primary=read(new File(home,"projects.json"));
+        JSONObject readBack=RecoveryProtectionArchive.verify(noBackup,copy.getString("id"));
+        assertTrue(readBack.getBoolean("complete"));
+        assertFalse(readBack.getBoolean("canPromote"));
+        assertEquals(copy.getJSONArray("files").length(),readBack.getJSONArray("files").length());
+        JSONObject reused=RecoveryProtectionArchive.create(home,noBackup);
+        assertTrue(reused.getBoolean("reused"));
+        assertTrue(reused.getBoolean("complete"));
+        assertFalse(reused.getBoolean("canPromote"));
+        File marker=new File(directory,"COMPLETE");
+        assertTrue(marker.delete());
+        JSONObject resumed=RecoveryProtectionArchive.create(home,noBackup);
+        assertTrue(resumed.getBoolean("complete"));
+        assertTrue(resumed.getBoolean("reused"));
+        assertFalse(resumed.getBoolean("canPromote"));
+        assertEquals(1,completedCount());
+        assertArrayEquals(manifest,read(new File(directory,"manifest.json")));
+        assertArrayEquals(primary,read(new File(home,"projects.json")));
+        assertArrayEquals(primary,read(new File(directory,"payload/files/projects.json")));
+        assertArrayEquals(photo,read(new File(home,"media/marker-photo")));
+        assertArrayEquals(photo,read(new File(directory,"payload/files/media/marker-photo")));
+        JSONObject actual=new JSONObject(new String(primary,StandardCharsets.UTF_8));
+        assertEquals(exact,actual.getJSONArray("records").getJSONObject(0)
+            .getJSONArray("items").getJSONObject(0).getString("measure"));
+        assertEquals("history-exact",actual.getJSONArray("records").getJSONObject(0)
+            .getJSONObject("history").getJSONArray("revisions")
+            .getJSONObject(0).getString("note"));
+    }
+
     @Test public void oversizedCompleteMarkerIsRejectedBeforeOpenAndPreservesSources()throws Exception{
         String exact="1585,800001234567890";
         byte[] photo={0,2,4,8,16,32};
