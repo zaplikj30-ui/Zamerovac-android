@@ -145,6 +145,11 @@ public class SafSyncV2Test {
  @Test public void quarantinedHistoricalOutboxDoesNotBlockFreshSignedCloudSync()throws Exception{
   String precise="1585,800001234567890";
   JSONObject finalDb=null;
+  // The transport fixture pairs identities before it seeds project storage.
+  // Supply a validated legacy baseline before exercising Context-based writers;
+  // the test concerns recovered outbox liveness, not first-install pairing.
+  LocalDatabase.write(a.home,"{\"schema\":1,\"records\":[]}");
+  LocalDatabase.write(b.home,"{\"schema\":1,\"records\":[]}");
   PeerOutbox outbox=new PeerOutbox(a,a.prefs,ar);
   for(int i=0;i<20;i++){
    JSONObject rec=new JSONObject().put("id","historic-cloud-"+i)

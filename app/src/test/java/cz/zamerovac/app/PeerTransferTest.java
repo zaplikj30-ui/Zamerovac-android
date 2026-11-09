@@ -191,6 +191,11 @@ public class PeerTransferTest {
  @Test public void recoveryQuarantineWithMoreThanSixteenOldJobsDoesNotBlockDirectTls()throws Exception{
   String precise="1585,800001234567890";
   JSONObject finalDb=null;
+  // The transport fixture pairs identities before it seeds project storage.
+  // Supply a validated legacy baseline before exercising Context-based writers;
+  // the test concerns recovered outbox liveness, not first-install pairing.
+  LocalDatabase.write(a.home,"{\"schema\":1,\"records\":[]}");
+  LocalDatabase.write(b.home,"{\"schema\":1,\"records\":[]}");
   for(int i=0;i<20;i++){
    JSONObject historical=db(record("historic-"+i,aid,precise));
    LocalDatabase.write(a,historical.toString());

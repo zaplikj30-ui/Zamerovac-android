@@ -66,9 +66,14 @@ final class SyncQueueStore {
             if(current.getLong("revision")!=expected)return false;
             if(next.getLong("revision")!=expected+1)
                 throw new IOException("Neplatný krok fronty");
+            boolean attachedEvidence=!next.has("recoveryQuarantine")&&
+                current.optJSONArray("recoveryQuarantine")!=null&&
+                current.getJSONArray("recoveryQuarantine").length()>0;
             preserveQuarantine(current,next);
             validate(next);
-            String committed=next.toString();
+            // Preserve the caller's original CAS bytes when no archival
+            // field needed injecting (legacy callers assert exact roundtrip).
+            String committed=attachedEvidence?next.toString():text;
             byte[] bytes=committed.getBytes(StandardCharsets.UTF_8);
             if(bytes.length>20L*1024*1024)throw new IOException("Fronta je příliš velká");
             AtomicFile file=new AtomicFile(target);

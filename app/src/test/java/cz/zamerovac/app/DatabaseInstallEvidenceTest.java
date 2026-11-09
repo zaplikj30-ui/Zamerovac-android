@@ -325,4 +325,58 @@ public class DatabaseInstallEvidenceTest {
         assertTrue(restarted.queue.save(revision,update.toString()));
         assertEquals(1,restarted.quarantinedCount(peer));
     }
+
+    @Test public void delayedBlobAckKeepsExactOriginalAndArchivedSnapshot()throws Exception{
+        android.content.Context ctx=syntheticContext();
+        String peer=java.util.UUID.randomUUID().toString();
+        android.content.SharedPreferences prefs=ctx.getSharedPreferences(
+            "recovery-media-"+home.getName(),android.content.Context.MODE_PRIVATE);
+        String empty="{\"schema\":1,\"records\":[]}";
+        LocalDatabase.write(ctx,empty);
+        File mediaDir=new File(home,"media");assertTrue(mediaDir.mkdirs());
+        File original=new File(mediaDir,"original-photo");
+        byte[] photo=new byte[]{1,5,8,13,21,34,55,89};
+        Files.write(original.toPath(),photo);
+        String exact="1585,800001234567890";
+        JSONObject record=new JSONObject().put("id","photo-project")
+            .put("items",new org.json.JSONArray().put(
+                new JSONObject().put("measure",exact)))
+            .put("media",new org.json.JSONArray().put("original-photo"));
+        String db=new JSONObject().put("schema",1).put("records",
+            new org.json.JSONArray().put(record)).toString();
+        LocalDatabase.write(ctx,db);
+        SyncPeerRegistry registry=new SyncPeerRegistry(noBackup);
+        registry.approve(peer,"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","Test peer");
+        PeerOutbox outbox=new PeerOutbox(ctx,prefs,registry);
+        PeerSnapshot old=outbox.prepare(peer);
+        JSONObject blobJob=null;
+        org.json.JSONArray jobs=new JSONObject(outbox.queue.read()).getJSONArray("jobs");
+        for(int i=0;i<jobs.length();i++){
+            JSONObject candidate=jobs.getJSONObject(i);
+            if("blob".equals(candidate.getString("kind")))blobJob=candidate;
+        }
+        assertNotNull(blobJob);
+        File source=new File(noBackup,"sync-v2-outbox/"+old.hash+".json");
+        byte[] snapshotBytes=Files.readAllBytes(source.toPath());
+        assertTrue(new File(home,"projects.json").delete());
+        try{LocalDatabase.readForCas(ctx);fail("Missing DB was accepted");}
+        catch(IOException expected){}
+        Files.write(new File(home,"projects.json").toPath(),db.getBytes(StandardCharsets.UTF_8));
+        DatabaseRecovery.healthy(home,false);
+        JSONObject attempted=blobJob;
+        try{outbox.acknowledge(attempted.getString("id"),
+            attempted.getString("hash"),attempted.getLong("size"),false);
+            fail("Late blob ACK deleted original transfer evidence");}
+        catch(IOException expected){}
+        assertEquals(2,outbox.pending(peer));
+        assertArrayEquals(snapshotBytes,Files.readAllBytes(source.toPath()));
+        assertArrayEquals(photo,Files.readAllBytes(original.toPath()));
+        outbox.prepare(peer);
+        assertEquals(2,outbox.quarantinedCount(peer));
+        assertArrayEquals(snapshotBytes,Files.readAllBytes(source.toPath()));
+        assertArrayEquals(photo,Files.readAllBytes(original.toPath()));
+        assertEquals(exact,new JSONObject(LocalDatabase.readForCas(ctx))
+            .getJSONArray("records").getJSONObject(0).getJSONArray("items")
+            .getJSONObject(0).getString("measure"));
+    }
 }
