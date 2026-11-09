@@ -95,6 +95,15 @@ jobs:
           echo "WSL_TESTED_SOURCE_SHA=$(git rev-parse HEAD)"
           python3 tools/home_qa_gate.py wsl-native --expected-sha "$expected" --root . --gradle /opt/gradle-8.10.2/bin/gradle
           python3 tools/home_qa_gate.py wsl-jdk-probes --expected-sha "$expected" --root . --gradle /opt/gradle-8.10.2/bin/gradle
+          # NEGATIVE LIVE WSL: deliberately invalid Node-dependent Python route
+          # must fail fast with exit 2, before any Gradle/JUnit work.
+          set +e
+          python3 tools/home_qa_gate.py wsl-python-node > "$tmp/rejected.log" 2>&1
+          rejected=$?
+          set -e
+          test "$rejected" -eq 2
+          grep -q 'Node-dependent Python unittest is WINDOWS-only' "$tmp/rejected.log"
+          echo "PASS negative live WSL Python-Node route rejected before Gradle"
           echo "PASS WSL native preflight and five JDK Python probes - no Node dependency"
           """
           result = subprocess.run(["wsl.exe","--distribution","Zamerovac-Ubuntu-QA",
