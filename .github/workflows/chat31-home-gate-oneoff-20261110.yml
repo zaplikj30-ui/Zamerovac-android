@@ -95,7 +95,7 @@ jobs:
           echo "WSL_TESTED_SOURCE_SHA=$(git rev-parse HEAD)"
           python3 tools/home_qa_gate.py wsl-native --expected-sha "$expected" --root . --gradle /opt/gradle-8.10.2/bin/gradle
           python3 tools/home_qa_gate.py wsl-jdk-probes --expected-sha "$expected" --root . --gradle /opt/gradle-8.10.2/bin/gradle
-          echo PASS WSL native preflight and 5 JDK Python probes; Node not installed or required
+          echo "PASS WSL native preflight and five JDK Python probes - no Node dependency"
           """
           result = subprocess.run(["wsl.exe","--distribution","Zamerovac-Ubuntu-QA",
               "--user","root","--exec","/bin/bash","-lc",linux,"_",
