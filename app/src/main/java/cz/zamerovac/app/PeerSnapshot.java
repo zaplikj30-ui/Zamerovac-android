@@ -54,7 +54,7 @@ final class PeerSnapshot {
     static PeerSnapshot capture(Context context,SharedPreferences prefs)throws Exception{return capture(context,prefs,()->{});}
     static PeerSnapshot capture(Context context,SharedPreferences prefs,ImmutableStore.Checkpoint checkpoint)throws Exception{
         checkpoint.check();
-        String text=LocalDatabase.readForCas(context.getFilesDir());JSONObject data=text.isEmpty()?new JSONObject().put("schema",1).put("records",new JSONArray()):new JSONObject(text);
+        String text=LocalDatabase.readForCas(context);JSONObject data=text.isEmpty()?new JSONObject().put("schema",1).put("records",new JSONArray()):new JSONObject(text);
         data.remove("prefs");data.remove("created");data.put("syncProtocol",2);numbers(data,0);
         JSONArray manifest=new JSONArray();File directory=new File(context.getFilesDir(),"media");
         for(String id:references(data.getJSONArray("records"))){

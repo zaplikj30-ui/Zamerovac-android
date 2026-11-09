@@ -36,7 +36,7 @@ final class PeerOutbox {
     private PeerSnapshot current(ImmutableStore.Checkpoint checkpoint)throws Exception{
         checkpoint.check();
         // Detect a fallback even when this outbox still holds a cached newer snapshot.
-        LocalDatabase.read(context.getFilesDir());
+        LocalDatabase.read(context);
         long generation=LocalDatabase.generation(context.getFilesDir());boolean fresh=cached!=null&&cachedGeneration==generation;
         if(fresh)for(Map.Entry<String,long[]> item:cached.localStats.entrySet()){File file=new File(mediaDirectory,item.getKey());if(!file.isFile()||file.length()!=item.getValue()[0]||file.lastModified()!=item.getValue()[1]){fresh=false;break;}}
         if(fresh)return cached;PeerSnapshot snapshot=PeerSnapshot.capture(context,prefs,checkpoint);cached=snapshot;cachedGeneration=generation;return snapshot;
@@ -66,7 +66,16 @@ final class PeerOutbox {
             if(peer==null)return false;for(int i=0;i<jobs.length();i++){JSONObject job=jobs.getJSONObject(i);if(id.equals(job.getString("id"))||metadata&&peer.equals(job.getString("peer"))&&source.equals(job.optString("sourceRef","")))continue;next.put(job);}state.put("jobs",next);return true;});
     }
     void discard(String peer)throws Exception{synchronized(lock){mutate(state->{JSONArray jobs=state.getJSONArray("jobs"),keep=new JSONArray();for(int i=0;i<jobs.length();i++)if(!peer.equals(jobs.getJSONObject(i).getString("peer")))keep.put(jobs.getJSONObject(i));state.put("jobs",keep);return true;});cleanup();}}
-    void completed(String peer,JSONObject metadata)throws Exception{synchronized(lock){acknowledge(metadata.getString("id"),metadata.getString("hash"),metadata.getLong("size"),true);peers.acknowledged(peer,metadata.getString("hash"));cleanup();}}
+    void completed(String peer,JSONObject metadata)throws Exception{synchronized(lock){
+        // A remote ACK is not proof that our local source DB still exists.
+        // Hold the writer lock through both the local queue and receipt commit.
+        synchronized(TrashPurger.LOCK){
+            LocalDatabase.readForCas(context);
+            acknowledge(metadata.getString("id"),metadata.getString("hash"),metadata.getLong("size"),true);
+            peers.acknowledged(peer,metadata.getString("hash"));
+            cleanup();
+        }
+    }}
     private void cleanup()throws Exception{Set<String> keep=new HashSet<>();JSONArray jobs=new JSONObject(queue.read()).getJSONArray("jobs");for(int i=0;i<jobs.length();i++){String ref=jobs.getJSONObject(i).optString("sourceRef","");if(!ref.isEmpty())keep.add(ref);}File[] files=directory.listFiles();if(files!=null)for(File file:files)if(file.isFile()&&file.getName().matches("[a-f0-9]{64}\\.json")&&!keep.contains(file.getName().substring(0,64)))file.delete();}
     static boolean dominates(JSONObject newer,JSONObject older)throws Exception{
         Map<String,JSONObject> latest=new HashMap<>();JSONArray records=newer.getJSONArray("records");for(int i=0;i<records.length();i++){JSONObject record=records.getJSONObject(i);latest.put(record.getString("id"),record);}

@@ -32,7 +32,7 @@ final class PeerTransfer {
     }
     private void send(DataInputStream in,DataOutputStream out,PeerHandshake.Peer peer)throws Exception{
         working(out,()->{update(peer,"preparing",0,0);store.outbox.prepare(peer.id);return null;});List<JSONObject> messages=store.outbox.messages(peer.id);
-        PeerWire.write(out,new JSONObject().put("type","batch").put("count",messages.size()).put("recovery",LocalDatabase.recoveryId(store.context.getFilesDir())),PeerWire.MAX_HELLO);
+        PeerWire.write(out,new JSONObject().put("type","batch").put("count",messages.size()).put("recovery",LocalDatabase.recoveryId(store.context)),PeerWire.MAX_HELLO);
         for(JSONObject job:messages){
             store.trusted(peer);PeerSnapshot snapshot=store.outbox.load(job);
             PeerWire.write(out,new JSONObject().put("type","snapshot").put("id",job.getString("id")).put("hash",snapshot.hash).put("size",snapshot.bytes.length),PeerWire.MAX_HELLO);PeerWire.writeBytes(out,snapshot.bytes,PeerWire.MAX_JSON);

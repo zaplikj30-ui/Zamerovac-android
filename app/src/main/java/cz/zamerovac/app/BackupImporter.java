@@ -26,18 +26,18 @@ final class BackupImporter {
         // Verify writable local state BEFORE restoring any original media or
         // metadata. A corrupt primary must not be mistaken for its old backup.
         synchronized(TrashPurger.LOCK){
-            String current=LocalDatabase.readForCas(ctx.getFilesDir());
-            if(current.isEmpty())LocalDatabase.write(ctx.getFilesDir(),"{\"schema\":1,\"records\":[]}");
+            String current=LocalDatabase.readForCas(ctx);
+            if(current.isEmpty())LocalDatabase.write(ctx,"{\"schema\":1,\"records\":[]}");
         }
         Result staged=importZip(ctx,uri,new JSONObject().put("schema",1).put("records",new JSONArray()),prefs,io);
         try{
             if(Thread.currentThread().isInterrupted())throw new InterruptedIOException("Obnova byla zrušena");
             synchronized(TrashPurger.LOCK){
                 if(Thread.currentThread().isInterrupted())throw new InterruptedIOException("Obnova byla zrušena");
-                String text=LocalDatabase.readForCas(ctx.getFilesDir());
+                String text=LocalDatabase.readForCas(ctx);
                 JSONObject latest=text.isEmpty()?new JSONObject().put("schema",1).put("records",new JSONArray()):new JSONObject(text);
                 Result result=staged.appendTo(latest);
-                LocalDatabase.write(ctx.getFilesDir(),result.data.toString());return result;
+                LocalDatabase.write(ctx,result.data.toString());return result;
             }
         }catch(Exception failure){staged.rollback(ctx,prefs);throw failure;}
     }

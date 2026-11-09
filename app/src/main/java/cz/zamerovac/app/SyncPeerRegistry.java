@@ -43,6 +43,19 @@ final class SyncPeerRegistry {
     Map<String,String> nearbyRoutes()throws Exception{synchronized(LOCK){Map<String,String> result=new HashMap<>();JSONObject peers=load().getJSONObject("peers");for(Iterator<String> it=peers.keys();it.hasNext();){String id=it.next(),address=peers.getJSONObject(id).optString("nearbyAddress");if(PeerWifiDirect.validAddress(address))result.put(address.toLowerCase(Locale.ROOT),id);}return result;}}
     void rememberCertificate(String id,java.security.cert.X509Certificate certificate)throws Exception{synchronized(LOCK){String fingerprint=SyncTls.fingerprint(certificate);if(!isTrusted(id,fingerprint))throw new IOException("Certifikát zařízení není schválený");String encoded=java.util.Base64.getEncoder().encodeToString(certificate.getEncoded());JSONObject data=load(),peer=data.getJSONObject("peers").getJSONObject(id);if(encoded.equals(peer.optString("certificate")))return;peer.put("certificate",encoded);write(data);}}
     java.security.cert.X509Certificate certificate(String id)throws Exception{synchronized(LOCK){JSONObject peer=load().getJSONObject("peers").optJSONObject(id);if(peer==null||!peer.has("certificate"))throw new IOException("Nejdříve znovu spoj spárovaná zařízení místní cestou, aby se uložil ověřený veřejný certifikát.");String encoded=peer.getString("certificate");if(encoded.length()>24000)throw new IOException("Certifikát je příliš velký");java.security.cert.X509Certificate certificate=(java.security.cert.X509Certificate)java.security.cert.CertificateFactory.getInstance("X.509").generateCertificate(new ByteArrayInputStream(java.util.Base64.getDecoder().decode(encoded)));if(!isTrusted(id,SyncTls.fingerprint(certificate)))throw new IOException("Certifikát není schválený");return certificate;}}
+    /** Durable local loss barrier: remove ALL cached success receipts once per recovery epoch. */
+    void localRecovery(String epoch)throws Exception{synchronized(LOCK){
+        if(!DeviceIdentity.valid(epoch))throw new IOException("Neplatná místní recovery epoch");
+        JSONObject data=load();
+        if(epoch.equals(data.optString("localRecovery")))return;
+        JSONObject peers=data.getJSONObject("peers");
+        for(Iterator<String> it=peers.keys();it.hasNext();){
+            JSONObject peer=peers.getJSONObject(it.next());
+            peer.remove("lastAck");peer.remove("lastSuccess");
+        }
+        data.put("localRecovery",epoch);
+        write(data);
+    }}
     String lastAck(String id)throws Exception{synchronized(LOCK){JSONObject peer=load().getJSONObject("peers").optJSONObject(id);return peer==null?"":peer.optString("lastAck","");}}
     void recovered(String id,String epoch)throws Exception{synchronized(LOCK){if(!DeviceIdentity.valid(epoch))throw new IOException("Neplatná obnova zařízení");JSONObject data=load(),peer=data.getJSONObject("peers").optJSONObject(id);if(peer==null)throw new IOException("Zařízení už není spárované");if(epoch.equals(peer.optString("recovery")))return;peer.put("recovery",epoch);peer.remove("lastAck");write(data);}}
     void acknowledged(String id,String hash)throws Exception{synchronized(LOCK){if(!hash.matches("[0-9a-f]{64}"))throw new IOException("Neplatné potvrzení");JSONObject data=load(),peer=data.getJSONObject("peers").optJSONObject(id);if(peer==null)throw new IOException("Zařízení už není spárované");peer.put("lastAck",hash).put("lastSuccess",java.time.Instant.now().toString());write(data);}}

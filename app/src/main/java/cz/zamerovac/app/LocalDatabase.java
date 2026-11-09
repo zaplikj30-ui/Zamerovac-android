@@ -1,5 +1,6 @@
 package cz.zamerovac.app;
 
+import android.content.Context;
 import org.json.*;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
@@ -30,47 +31,90 @@ final class LocalDatabase {
      * Strict UI/CAS read: a stale backup is NOT a current writable snapshot.
      * Recovery must be explicit. A vanished initialized DB is not a fresh install.
      */
-    static String readForCas(File home)throws IOException {
+    /** Unknown file accessibility is never evidence of a clean first install. */
+    private static boolean present(File path)throws IOException{
+        try{return Files.readAttributes(path.toPath(),java.nio.file.attribute.BasicFileAttributes.class,
+                LinkOption.NOFOLLOW_LINKS)!=null;}
+        catch(NoSuchFileException missing){return false;}
+    }
+    /** Rotate recovery epoch once and durably retire previous local peer ACKs. */
+    private static void lost(File home,File noBackup)throws IOException{
+        if(DatabaseRecovery.recovered(home))changed(home);
+        if(noBackup!=null)try{
+            new SyncPeerRegistry(noBackup).localRecovery(DatabaseRecovery.id(home));
+        }catch(Exception failure){throw new IOException("Synchronizační doklady obnovy nelze zneplatnit",failure);}
+    }
+    static String readForCas(Context context)throws IOException{
+        return readForCas(context.getFilesDir(),context.getNoBackupFilesDir());
+    }
+    static String readForCas(File home)throws IOException{return readForCas(home,null);}
+    static String readForCas(File home,File noBackup)throws IOException{
         synchronized(TrashPurger.LOCK){
             File primary=new File(home,"projects.json"),backup=new File(home,"projects.bak");
-            if(!primary.exists()){
+            if(!present(primary)){
                 File media=new File(home,"media");
-                File[] artifacts=media.listFiles();
-                // A blocked/unreadable media directory and a symlink are NOT
-                // proof of an empty installation. Never overwrite such state.
-                boolean mediaUnsafe=media.exists()&&(
+                boolean mediaPresent=present(media);
+                File[] artifacts=mediaPresent?media.listFiles():null;
+                boolean mediaUnsafe=mediaPresent&&(
                     Files.isSymbolicLink(media.toPath())||!media.isDirectory()||
                     artifacts==null||artifacts.length>0);
-                if(backup.exists()||DatabaseRecovery.exists(home)||DatabaseInstallEvidence.exists(home)||
-                    new File(home,"projects.tmp").exists()||
-                    new File(home,"projects.backup.tmp").exists()||
-                    mediaUnsafe)
-                    throw new IOException("Dříve uložená databáze chybí; obnovu je nutné potvrdit");
+                boolean evidence=DatabaseInstallEvidence.exists(home,noBackup);
+                boolean traces=DatabaseInstallEvidence.legacySyncTraces(noBackup);
+                boolean prior=evidence||traces||present(backup)||DatabaseRecovery.exists(home);
+                if(prior)lost(home,noBackup);
+                if(prior||present(new File(home,"projects.tmp"))||
+                    present(new File(home,"projects.backup.tmp"))||mediaUnsafe)
+                    throw new IOException("Dříve uložená databáze chybí; ruční obnova je nutná");
                 return "";
             }
-            // Deliberately never fall back to projects.bak for a writable CAS.
-            String text=readFile(primary);
-            // Migrate legacy installations while the actual primary is still verifiably intact.
-            // A vanished text-only database is no longer indistinguishable from first launch.
-            DatabaseInstallEvidence.ensure(home);
-            DatabaseRecovery.healthy(home,false);
+            // A valid primary cannot dismiss a pending recovery without
+            // an explicit future recovery promotion and new ACK epoch.
+            String text;
+            try{text=readFile(primary);}
+            catch(IOException failure){lost(home,noBackup);throw failure;}
+            if(DatabaseRecovery.pending(home))
+                throw new IOException("Databáze vyžaduje výslovné dokončení obnovy");
+            DatabaseInstallEvidence.ensure(home,noBackup);
             return text;
         }
     }
-    static String read(File home)throws IOException {
+    static String read(Context context)throws IOException{
+        return read(context.getFilesDir(),context.getNoBackupFilesDir());
+    }
+    static String read(File home)throws IOException{return read(home,null);}
+    static String read(File home,File noBackup)throws IOException{
         synchronized(TrashPurger.LOCK){
             File primary=new File(home,"projects.json"),backup=new File(home,"projects.bak");
-            if(!primary.exists()&&!backup.exists()){
-                if(DatabaseInstallEvidence.exists(home))throw new IOException("Dříve inicializovaná databáze chybí; ruční obnova je nutná");
-                if(DatabaseRecovery.exists(home)&&DatabaseRecovery.recovered(home))changed(home);
+            boolean primaryExists=present(primary),backupExists=present(backup);
+            if(!primaryExists&&!backupExists){
+                boolean previous=DatabaseInstallEvidence.exists(home,noBackup)||
+                    DatabaseInstallEvidence.legacySyncTraces(noBackup)||DatabaseRecovery.exists(home);
+                if(previous){lost(home,noBackup);throw new IOException("Dříve uložená databáze chybí; ruční obnova je nutná");}
                 return "";
             }
             String text;
-            try{text=readFile(primary);}catch(IOException error){try{text=readFile(backup);}catch(IOException ignored){throw new IOException("Uložené zakázky nelze načíst; původní soubory zůstaly beze změny",error);}DatabaseInstallEvidence.ensure(home);if(DatabaseRecovery.recovered(home))changed(home);return text;}
-            DatabaseInstallEvidence.ensure(home);DatabaseRecovery.healthy(home,false);return text;
+            try{text=readFile(primary);}
+            catch(IOException error){
+                try{text=readFile(backup);}
+                catch(IOException ignored){lost(home,noBackup);throw new IOException("Uložené zakázky nelze načíst; původní soubory zůstaly beze změny",error);}
+                DatabaseInstallEvidence.ensure(home,noBackup);
+                lost(home,noBackup);return text;
+            }
+            if(DatabaseRecovery.pending(home))
+                throw new IOException("Obnova databáze musí být výslovně potvrzena");
+            DatabaseInstallEvidence.ensure(home,noBackup);
+            return text;
         }
     }
-    static String recoveryId(File home)throws IOException{synchronized(TrashPurger.LOCK){read(home);return DatabaseRecovery.id(home);}}
+    static String recoveryId(Context context)throws IOException{
+        synchronized(TrashPurger.LOCK){
+            read(context);
+            return DatabaseRecovery.id(context.getFilesDir());
+        }
+    }
+    static String recoveryId(File home)throws IOException{
+        synchronized(TrashPurger.LOCK){read(home);return DatabaseRecovery.id(home);}
+    }
     private static void replace(File from,File to)throws IOException {
         try{Files.move(from.toPath(),to.toPath(),StandardCopyOption.ATOMIC_MOVE,StandardCopyOption.REPLACE_EXISTING);}
         catch(AtomicMoveNotSupportedException error){Files.move(from.toPath(),to.toPath(),StandardCopyOption.REPLACE_EXISTING);}
@@ -78,19 +122,18 @@ final class LocalDatabase {
     private static void writeSynced(File file,byte[] bytes)throws IOException {
         try(FileOutputStream out=new FileOutputStream(file)){out.write(bytes);out.getFD().sync();}
     }
-    static void write(File home,String text)throws IOException {
+    static void write(Context context,String text)throws IOException{
+        write(context.getFilesDir(),context.getNoBackupFilesDir(),text);
+    }
+    static void write(File home,String text)throws IOException{write(home,null,text);}
+    static void write(File home,File noBackup,String text)throws IOException{
         synchronized(TrashPurger.LOCK){
-            validate(text);File primary=new File(home,"projects.json"),backup=new File(home,"projects.bak"),next=new File(home,"projects.tmp"),backupNext=new File(home,"projects.backup.tmp");
-            // Every writer, including legacy direct callers, must use the SAME strict
-            // preflight as CAS. Media without a database is ambiguous: it may be
-            // an interrupted transfer or the last surviving customer original.
-            // Only a genuinely clean installation can create its first database.
-            // Real media import paths bootstrap that database BEFORE staging files.
-            readForCas(home);
-            // Persist independent installation evidence BEFORE the first database commit.
-            // If the process is killed here, the next launch fails closed instead of
-            // treating a previously used, text-only database as a clean installation.
-            DatabaseInstallEvidence.ensure(home);
+            validate(text);File primary=new File(home,"projects.json"),backup=new File(home,"projects.bak"),
+                next=new File(home,"projects.tmp"),backupNext=new File(home,"projects.backup.tmp");
+            readForCas(home,noBackup);
+            // Persist BOTH proofs before the first DB commit; any failed write
+            // remains visible to the next process and never authorizes a reset.
+            DatabaseInstallEvidence.ensure(home,noBackup);
             DatabaseRecovery.healthy(home,true);
             try{
                 writeSynced(next,text.getBytes(StandardCharsets.UTF_8));

@@ -994,7 +994,7 @@ public class MainActivity extends Activity {
     private void closeUpload(){synchronized(TrashPurger.LOCK){try{if(activeUpload!=null)activeUpload.close();}catch(Exception ignored){}activeUpload=null;activeUploadId=null;activeUploadExpected=-1;activeUploadBytes=0;if(activeUploadTemporary!=null)activeUploadTemporary.delete();activeUploadTemporary=null;}}
     private String readDbForCas() throws IOException {
         try {
-            String text=LocalDatabase.readForCas(getFilesDir());
+            String text=LocalDatabase.readForCas(MainActivity.this);
             if(text.isEmpty()&&databaseReadFailed)throw new IOException("Původní databáze nebyla bezpečně načtena");
             databaseReadFailed=false;
             return text;
@@ -1006,7 +1006,7 @@ public class MainActivity extends Activity {
     }
     private void writeDb(String data) throws IOException {
         if(databaseReadFailed)throw new IOException("Zápis zablokován: uložené zakázky nebyly bezpečně načteny");
-        LocalDatabase.write(getFilesDir(),data);
+        LocalDatabase.write(MainActivity.this,data);
     }
     @Override protected void onSaveInstanceState(Bundle out){out.putLong("cloud-tree-revision",cloudTreeRevision);out.putLong("backup-tree-revision",backupTreeRevision);if(driveAccountFlow!=null)driveAccountFlow.save(out);super.onSaveInstanceState(out);}
     private boolean storageConfigured(String kind){try{return new CloudStorage(this,settings).configured(kind);}catch(Exception invalid){return false;}}
