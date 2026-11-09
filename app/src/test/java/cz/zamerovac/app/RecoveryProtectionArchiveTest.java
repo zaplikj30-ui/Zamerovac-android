@@ -52,6 +52,120 @@ public class RecoveryProtectionArchiveTest {
         Files.write(new File(dir,id).toPath(),bytes);
     }
 
+    /** A valid marker is 64 lowercase SHA-256 hex bytes plus LF; protect live sources. */
+    JSONObject completeMarkerFixture(String exact,byte[] photo)throws Exception{
+        JSONObject project=db(exact);
+        project.getJSONArray("records").getJSONObject(0)
+            .put("media",new JSONArray().put("marker-photo"));
+        LocalDatabase.write(home,noBackup,project.toString());
+        media("marker-photo",photo);
+        JSONObject created=RecoveryProtectionArchive.create(home,noBackup);
+        assertTrue(RecoveryProtectionArchive.verify(noBackup,created.getString("id"))
+            .getBoolean("complete"));
+        assertFalse(created.getBoolean("canPromote"));
+        return created;
+    }
+
+    void assertMarkerRejectionKeepsOriginals(JSONObject copy,byte[] primary,byte[] photo,
+                                              String exact)throws Exception{
+        try{RecoveryProtectionArchive.verify(noBackup,copy.getString("id"));
+            fail("Bad COMPLETE certified archive");}
+        catch(IOException expected){}
+        try{RecoveryProtectionArchive.create(home,noBackup);
+            fail("Bad COMPLETE was reused or silently repaired");}
+        catch(IOException expected){}
+        assertArrayEquals(primary,read(new File(home,"projects.json")));
+        assertArrayEquals(photo,read(new File(home,"media/marker-photo")));
+        assertEquals(exact,new JSONObject(new String(read(new File(home,"projects.json")),
+            StandardCharsets.UTF_8)).getJSONArray("records").getJSONObject(0)
+            .getJSONArray("items").getJSONObject(0).getString("measure"));
+        assertArrayEquals(primary,read(new File(archive(copy),"payload/files/projects.json")));
+        assertArrayEquals(photo,read(new File(archive(copy),"payload/files/media/marker-photo")));
+        assertFalse(new File(noBackup,"recovery-protection-v1").isFile());
+    }
+
+    @Test public void oversizedCompleteMarkerIsRejectedBeforeOpenAndPreservesSources()throws Exception{
+        String exact="1585,800001234567890";
+        byte[] photo={0,2,4,8,16,32};
+        JSONObject copy=completeMarkerFixture(exact,photo);
+        byte[] primary=read(new File(home,"projects.json"));
+        Path complete=new File(archive(copy),"COMPLETE").toPath();
+        byte[] oversized=new byte[4096];Arrays.fill(oversized,(byte)'x');
+        byte[] valid=(copy.getString("id")+"\n").getBytes(StandardCharsets.US_ASCII);
+        System.arraycopy(valid,0,oversized,0,valid.length);
+        Files.write(complete,oversized);
+        // Rejection must happen on file size, not after allocating/reading all bytes.
+        try(MockedStatic<Files> watched=mockStatic(Files.class,CALLS_REAL_METHODS)){
+            try{RecoveryProtectionArchive.verify(noBackup,copy.getString("id"));
+                fail("Oversized COMPLETE was certified");}
+            catch(IOException expected){}
+            watched.verify(()->Files.newInputStream(complete,LinkOption.NOFOLLOW_LINKS),never());
+        }
+        assertMarkerRejectionKeepsOriginals(copy,primary,photo,exact);
+    }
+
+    @Test public void corruptedCompleteMarkerWithCorrectLengthIsRejected()throws Exception{
+        String exact="0,0000000000000007";
+        byte[] photo={1,3,5,7,9};
+        JSONObject copy=completeMarkerFixture(exact,photo);
+        byte[] primary=read(new File(home,"projects.json"));
+        Path complete=new File(archive(copy),"COMPLETE").toPath();
+        byte[] damaged=(copy.getString("id")+"!").getBytes(StandardCharsets.US_ASCII);
+        assertEquals(65,damaged.length);
+        Files.write(complete,damaged);
+        assertMarkerRejectionKeepsOriginals(copy,primary,photo,exact);
+        byte[] different=(copy.getString("id").replace('a','b')+"\n")
+            .getBytes(StandardCharsets.US_ASCII);
+        if(Arrays.equals(different,(copy.getString("id")+"\n")
+            .getBytes(StandardCharsets.US_ASCII)))different[0]=(byte)(different[0]=='0'?'1':'0');
+        Files.write(complete,different);
+        assertMarkerRejectionKeepsOriginals(copy,primary,photo,exact);
+    }
+
+    @Test public void completeGrowingAfterFirstReadIsBoundedToOneExtraByte()throws Exception{
+        String exact="999,00000000000000001";
+        byte[] photo={21,34,55,89};
+        JSONObject copy=completeMarkerFixture(exact,photo);
+        byte[] primary=read(new File(home,"projects.json"));
+        Path complete=new File(archive(copy),"COMPLETE").toPath();
+        AtomicInteger readBytes=new AtomicInteger();
+        boolean[] grew={false};
+        byte[] appended=new byte[2048];Arrays.fill(appended,(byte)'X');
+        try(MockedStatic<Files> watched=mockStatic(Files.class,CALLS_REAL_METHODS)){
+            watched.when(()->Files.newInputStream(any(Path.class),any(OpenOption[].class)))
+                .thenAnswer(call->{
+                    Path opened=call.getArgument(0);
+                    InputStream original=(InputStream)call.callRealMethod();
+                    if(!complete.equals(opened))return original;
+                    return new FilterInputStream(original){
+                        private void track(int amount)throws IOException{
+                            if(amount<=0)return;
+                            readBytes.addAndGet(amount);
+                            if(!grew[0]){
+                                grew[0]=true;
+                                // Deterministic growth while the real stream is open.
+                                Files.write(complete,appended,StandardOpenOption.APPEND);
+                            }
+                        }
+                        @Override public int read(byte[] b,int off,int len)throws IOException{
+                            int n=in.read(b,off,len);track(n);return n;
+                        }
+                        @Override public int read()throws IOException{
+                            int n=in.read();if(n!=-1)track(1);return n;
+                        }
+                    };
+                });
+            try{RecoveryProtectionArchive.verify(noBackup,copy.getString("id"));
+                fail("Marker that grew during reading was accepted");}
+            catch(IOException expected){}
+        }
+        assertTrue("Growth hook must run during marker reading",grew[0]);
+        assertTrue("Reader allocated or consumed more than 66 marker bytes",
+            readBytes.get()>0&&readBytes.get()<=66);
+        assertEquals(65+appended.length,Files.size(complete));
+        assertMarkerRejectionKeepsOriginals(copy,primary,photo,exact);
+    }
+
     @Test public void snapshotKeepsExactDimensionsOldBackupTrashJournalMediaPrefsAndOutbox()throws Exception{
         String first="1250,000000001",exact="1585,800001234567890";
         LocalDatabase.write(home,noBackup,db(first).toString());
