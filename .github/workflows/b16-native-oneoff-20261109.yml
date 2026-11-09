@@ -18,7 +18,7 @@ jobs:
     timeout-minutes: 45
     env:
       CI: '1'
-      TESTED_SHA: 'db606e8ee4f7239dbb7a8aab91b9ac9848741dd6'
+      TESTED_SHA: '807820f8ed3a47dcabd1f8e1ff9fda83e361f4e4'
     steps:
       - name: Verify owner-controlled branch and unprivileged Windows service
         shell: cmd
@@ -32,7 +32,7 @@ jobs:
       - name: Read-only source checkout pinned to reviewed immutable PR79 SHA
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: db606e8ee4f7239dbb7a8aab91b9ac9848741dd6
+          ref: 807820f8ed3a47dcabd1f8e1ff9fda83e361f4e4
           path: b16-source
           fetch-depth: 1
           persist-credentials: false
@@ -113,7 +113,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: b16-archive-db606e8
+          name: b16-r2-807820f
           path: b16-junit-reports/
           if-no-files-found: ignore
           retention-days: 7
