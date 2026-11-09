@@ -77,21 +77,13 @@ jobs:
           echo "PHASE_1_JAVAC compilePreviewJavaWithJavac"
           "$gradle" "${common[@]}" :app:verifyDriveRegistration :app:compilePreviewJavaWithJavac
           echo "PASS PHASE_1_JAVAC"
-          echo "PHASE_2_TESTS R10 + R9 + TLS/photo + cloud quarantine (12)"
+          echo "PHASE_2_TESTS full four related Robolectric classes after R10 batch"
           set +e
           "$gradle" "${common[@]}" :app:testPreviewUnitTest \
-            --tests cz.zamerovac.app.DatabaseInstallEvidenceTest.r10TemporaryQueuedSnapshotReadErrorRecoversAfterRestartWithoutFalseAck \
-            --tests cz.zamerovac.app.DatabaseInstallEvidenceTest.r9MissingRecoveryJournalCannotReacceptPreRecoveryAckOrOverwritePhoto \
-            --tests cz.zamerovac.app.DatabaseInstallEvidenceTest.r9MismatchedRecoveryJournalIsRejectedWithoutMutatingOriginal \
-            --tests cz.zamerovac.app.DatabaseInstallEvidenceTest.recoveredSnapshotUsesNewHashAndRejectsOldCloudAckIdentity \
-            --tests cz.zamerovac.app.DatabaseInstallEvidenceTest.staleOutboxIsRetainedButCannotBeReacknowledged \
-            --tests cz.zamerovac.app.DatabaseInstallEvidenceTest.delayedBlobAckKeepsExactOriginalAndArchivedSnapshot \
-            --tests cz.zamerovac.app.PeerTransferTest.firstSyncIntoCleanReceiverKeepsExactPhotoAndNoDuplicateOnRetry \
-            --tests cz.zamerovac.app.PeerTransferTest.interruptedFirstPhotoTransferKeepsCleanBaselineAndResumesSafely \
-            --tests cz.zamerovac.app.PeerTransferTest.receiverFailureBeforeFirstPhotoBaselineIsNotDatabaseLoss \
-            --tests cz.zamerovac.app.DatabaseInstallEvidenceTest.approvedPairingWithoutAnyProjectCanInitializeButNeverResetAfterFirstSave \
-            --tests cz.zamerovac.app.DatabaseInstallEvidenceTest.unmarkedLegacyPairingRemainsFailClosedWithoutPrimary \
-            --tests cz.zamerovac.app.SafSyncV2Test.quarantinedHistoricalOutboxDoesNotBlockFreshSignedCloudSync
+            --tests cz.zamerovac.app.DatabaseInstallEvidenceTest \
+            --tests cz.zamerovac.app.PeerTransferTest \
+            --tests cz.zamerovac.app.SafSyncV2Test \
+            --tests cz.zamerovac.app.DatabaseRecoveryTest
           test_rc=$?
           set -e
           python3 - <<'PY_XML'
@@ -120,7 +112,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: b16-native-junit-9e5741b
+          name: b16-native-regression-9e5741b
           path: b16-junit-reports/
           if-no-files-found: ignore
           retention-days: 7
