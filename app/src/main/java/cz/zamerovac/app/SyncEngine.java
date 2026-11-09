@@ -203,7 +203,19 @@ public class SyncEngine {
     public Result sync() throws Exception{
         if(!SESSION.tryLock())throw new java.io.IOException("Jiná synchronizace již probíhá");
         try{
-            String snapshot=loadLocal();JSONObject local=parse(snapshot),remote=fetchRemote();
+            // Establish a durable empty baseline BEFORE downloading the first photo.
+            // If a new installation loses connectivity after a media transfer,
+            // strict CAS must see this confirmed DB instead of orphaned media.
+            // Never bootstrap a lost/corrupt initialized DB: loadLocal throws.
+            String snapshot;
+            synchronized(TrashPurger.LOCK){
+                snapshot=loadLocal();
+                if(snapshot.isEmpty()){
+                    saveLocal("{\"schema\":1,\"records\":[]}");
+                    snapshot=loadLocal();
+                }
+            }
+            JSONObject local=parse(snapshot),remote=fetchRemote();
             JSONObject merged=merge(local,remote);String publishedBase=nextBaseline;
             transferMedia(merged);publishRemote(merged);
             boolean pending;
