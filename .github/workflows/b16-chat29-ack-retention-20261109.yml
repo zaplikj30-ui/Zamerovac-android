@@ -1,4 +1,4 @@
-name: Zaměřovač - TEMP B16 Chat29 GREEN ACK/re-pair 61
+name: Zaměřovač - TEMP B16 Chat29 clean integration 61
 # One-shot owner-controlled branch; fixed source SHA, no pull_request/fork or cloud runner.
 on:
   push:
@@ -18,7 +18,7 @@ jobs:
     timeout-minutes: 45
     env:
       CI: '1'
-      TESTED_SHA: 'e5aa14285ce62fe66b4face699ec675a845a84d8'
+      TESTED_SHA: 'fa11cfd5ab2acc995c071160fb9d84708dd4db0b'
     steps:
       - name: Verify owner-controlled branch and unprivileged Windows service
         shell: cmd
@@ -32,7 +32,7 @@ jobs:
       - name: Read-only source checkout pinned to exact Chat29 test-first SHA
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: e5aa14285ce62fe66b4face699ec675a845a84d8
+          ref: fa11cfd5ab2acc995c071160fb9d84708dd4db0b
           path: b16-source
           fetch-depth: 1
           persist-credentials: false
@@ -179,7 +179,7 @@ jobs:
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: chat29-b16-ack-repair-e5aa142-regression61
+          name: chat29-b16-ack-integration-fa11cfd-61
           path: b16-junit-reports/${{ github.run_id }}-${{ github.run_attempt }}/
           if-no-files-found: ignore
           retention-days: 7
