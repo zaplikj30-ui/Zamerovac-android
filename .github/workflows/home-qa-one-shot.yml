@@ -16,7 +16,7 @@ jobs:
     env:
       CI: '1'
       PYTHONUTF8: '1'
-      TESTED_SHA: '808f5c55e1bac8ad7ea450af1424a2c6de18adf4'
+      TESTED_SHA: 'f922a71cdcf491ff59f8f660c549fadcb31c21f4'
     steps:
       - name: Verify owner service and installed tools
         shell: cmd
@@ -29,7 +29,7 @@ jobs:
       - name: Read-only tested source at literal SHA
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: 808f5c55e1bac8ad7ea450af1424a2c6de18adf4
+          ref: f922a71cdcf491ff59f8f660c549fadcb31c21f4
           path: source
           fetch-depth: 1
           persist-credentials: false
@@ -49,26 +49,26 @@ jobs:
           if errorlevel 1 exit /b 1
           python -m unittest discover -s tests -p test_home_qa_gate.py -v
           if errorlevel 1 exit /b 1
-          python tools\home_qa_gate.py windows-quick --expected-sha 808f5c55e1bac8ad7ea450af1424a2c6de18adf4 --root . --check-only
+          python tools\home_qa_gate.py windows-quick --expected-sha f922a71cdcf491ff59f8f660c549fadcb31c21f4 --root . --check-only
           if errorlevel 1 exit /b 1
       - name: All quick Windows Node and Python tests
         shell: cmd
         run: |
           cd /d "%GITHUB_WORKSPACE%\source"
           set "LOCALAPPDATA=%GITHUB_WORKSPACE%\qa-evidence"
-          python tools\home_qa_gate.py windows-quick --expected-sha 808f5c55e1bac8ad7ea450af1424a2c6de18adf4 --root .
+          python tools\home_qa_gate.py windows-quick --expected-sha f922a71cdcf491ff59f8f660c549fadcb31c21f4 --root .
           if errorlevel 1 exit /b 1
       - name: Controlled WSL native JDK Gradle and approved Python probes
         shell: cmd
         run: |
           cd /d "%GITHUB_WORKSPACE%\source"
-          python tools\home_qa_gate.py wsl-check-from-windows --expected-sha 808f5c55e1bac8ad7ea450af1424a2c6de18adf4 --root .
+          python tools\home_qa_gate.py wsl-check-from-windows --expected-sha f922a71cdcf491ff59f8f660c549fadcb31c21f4 --root .
           if errorlevel 1 exit /b 1
       - name: Upload synthetic quick results, never APK
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: canonical-home-qa-808f5c55e1bac8ad7ea450af1424a2c6de18adf4
+          name: canonical-home-qa-f922a71cdcf491ff59f8f660c549fadcb31c21f4
           path: qa-evidence/Zamerovac-QA/results/
           retention-days: 7
           if-no-files-found: ignore
