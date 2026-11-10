@@ -576,7 +576,7 @@ class TargetedNativeGateTest(unittest.TestCase):
                     "wsl-targeted", "--expected-sha", NATIVE_SHA, "--root", temp,
                     "--gradle", "/opt/gradle-8.10.2/bin/gradle", "--report", report,
                 ]))
-                wsl.assert_called_once()
+                wsl.assert_not_called()  # No Gradle --version before SDK verification.
                 sdk.assert_called_once_with()
                 git.assert_not_called()
                 gradle.assert_not_called()
