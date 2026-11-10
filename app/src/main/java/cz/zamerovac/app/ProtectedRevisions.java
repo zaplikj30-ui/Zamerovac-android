@@ -230,6 +230,19 @@ final class ProtectedRevisions {
         File home=original.getParentFile().getParentFile();
         if(new ProtectedRevisions(home,null,null).pinned(original.getName()))throw new IOException("Příloha je chráněná. Původní identifikátor se nesmí přepsat ani znovu použít.");
     }
+    /** A verified incoming stream may repair a missing original only when every
+     * durable pin proves exactly those bytes. This grants no database authority.
+     */
+    static void verifyRestoration(File original,JSONObject expected)throws IOException{synchronized(TrashPurger.LOCK){
+        ProtectedRevisions protection=new ProtectedRevisions(original.getParentFile().getParentFile(),null,null);
+        try{
+            for(JSONObject hold:protection.inventory(true).values()){
+                JSONObject pin=hold.getJSONObject("_ids").optJSONObject(original.getName());if(pin==null)continue;
+                if(pin.getString("hash").isEmpty()||!pin.getString("hash").equals(expected.getString("hash"))||pin.getLong("size")!=expected.getLong("size"))
+                    throw new IOException("Přijímaná příloha neodpovídá chráněnému originálu; obnova byla zastavena.");
+            }
+        }catch(Exception e){throw protection.blocked(e);}
+    }}
     /** Rollback is best effort: uncertainty leaves the original and its metadata intact. */
     static boolean rollback(File original){synchronized(TrashPurger.LOCK){try{
         requireUnpinned(original);File home=original.getParentFile().getParentFile();

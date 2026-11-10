@@ -94,13 +94,16 @@ public class ProtectedRevisionsTest {
         protection.preserveDatabase(exact);assertFalse(ProtectedRevisions.rollback(new File(device.home,"media/original-photo")));
         File unowned=new File(device.home,"media/unowned-new");Files.write(unowned.toPath(),new byte[]{9});assertTrue(ProtectedRevisions.rollback(unowned));assertFalse(unowned.exists());exactBytes();
     }
-    @Test public void missingPinnedIdCannotBeReusedByIngestOrPeerReceive()throws Exception{
+    @Test public void missingPinnedIdRejectsReuseAndAcceptsOnlyByteExactPeerRestoration()throws Exception{
         protection.preserveDatabase(exact);File original=new File(device.home,"media/original-photo");assertTrue(original.delete());
         File staged=MediaStaging.temporary(original.getParentFile(),original.getName());Files.write(staged.toPath(),new byte[]{8});
         try{MediaStaging.commit(staged,original.getName(),device.prefs,"image/jpeg","Other");fail("Pinned ID reused");}catch(IOException expected){}finally{staged.delete();}
+        byte[] wrong={8,8,8,8};JSONObject wrongDescriptor=new JSONObject().put("size",wrong.length).put("hash",PeerWire.hash(wrong));
+        try{PeerMedia.receive(original.getParentFile(),original.getName(),new ByteArrayInputStream(wrong),wrongDescriptor);fail("Missing protected original replaced by different bytes");}catch(IOException expected){}
+        assertFalse(original.exists());
         JSONObject descriptor=new JSONObject().put("size",photo.length).put("hash",PeerWire.hash(photo));
-        try{PeerMedia.receive(original.getParentFile(),original.getName(),new ByteArrayInputStream(photo),descriptor);fail("Missing protected original silently replaced");}catch(IOException expected){}
-        assertFalse(original.exists());assertEquals(2,protection.pins().size());
+        PeerMedia.receive(original.getParentFile(),original.getName(),new ByteArrayInputStream(photo),descriptor);
+        exactBytes();assertEquals(exact,LocalDatabase.readForCas(device));assertEquals(2,protection.pins().size());
     }
     private void lateAck(boolean staged)throws Exception{
         SafSyncV2Test cloud=new SafSyncV2Test();cloud.setup();cloud.canonicalFiles(1,4000);
