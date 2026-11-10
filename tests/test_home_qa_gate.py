@@ -9,6 +9,7 @@ import io
 import os
 import subprocess
 import sys
+import zipfile
 from unittest import mock
 
 
@@ -379,7 +380,7 @@ class TargetedNativeGateTest(unittest.TestCase):
 
     def test_native_canonical_accepts_only_exact_recipe(self):
         text = native_workflow()
-        GATE.check_native_workflow(text, strict=True)
+        GATE.check_native_workflow(text, strict=True, reviewed_gate_sha=NATIVE_GATE_SHA)
         self.assertIn("ref: " + NATIVE_SHA, text)
         self.assertIn("ref: " + NATIVE_GATE_SHA, text)
         self.assertIn("ref: " + "$" + "{{ github.sha }}", text)
@@ -437,7 +438,7 @@ class TargetedNativeGateTest(unittest.TestCase):
         with self.assertRaises(GATE.GateError):
             GATE.check_native_workflow(
                 good.replace("python recipe\\tools", "python workflow\\tools"),
-                strict=True)
+                strict=True, reviewed_gate_sha=NATIVE_GATE_SHA)
 
     def test_reviewed_gate_refusal_of_wrong_checked_out_commit(self):
         with tempfile.TemporaryDirectory() as temp:
@@ -484,16 +485,16 @@ class TargetedNativeGateTest(unittest.TestCase):
                 changed = good.replace(old, new)
                 self.assertNotEqual(good, changed)
                 with self.assertRaises(GATE.GateError):
-                    GATE.check_native_workflow(changed, strict=True)
+                    GATE.check_native_workflow(changed, strict=True, reviewed_gate_sha=NATIVE_GATE_SHA)
         for addition in (
             "\n  cloud:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo paid\n",
             "\n      - run: gradle :app:assemblePreview\n",
             "\n# fake skipped preflight\n",
         ):
             with self.subTest(added=addition), self.assertRaises(GATE.GateError):
-                GATE.check_native_workflow(good + addition, strict=True)
+                GATE.check_native_workflow(good + addition, strict=True, reviewed_gate_sha=NATIVE_GATE_SHA)
         with self.assertRaises(GATE.GateError):
-            GATE.check_native_workflow(good, strict=False)
+            GATE.check_native_workflow(good, strict=False, reviewed_gate_sha=NATIVE_GATE_SHA)
 
     def test_native_utf8_output_is_safe_and_refuses_overwrite(self):
         with tempfile.TemporaryDirectory() as temporary:
@@ -507,7 +508,7 @@ class TargetedNativeGateTest(unittest.TestCase):
                 "--reviewed-gate-sha", NATIVE_GATE_SHA, "--output", str(target),
             ]))
             self.assertEqual(native_workflow().encode("utf-8"), target.read_bytes())
-            GATE.check_native_workflow(target.read_text(encoding="utf-8"), strict=True)
+            GATE.check_native_workflow(target.read_text(encoding="utf-8"), strict=True, reviewed_gate_sha=NATIVE_GATE_SHA)
             with mock.patch.object(GATE.sys, "stderr", io.StringIO()):
                 self.assertEqual(2, GATE.main([
                     "render-native-workflow", "--branch", NATIVE_QA_BRANCH,
@@ -516,9 +517,77 @@ class TargetedNativeGateTest(unittest.TestCase):
                 "--reviewed-gate-sha", NATIVE_GATE_SHA, "--output", str(target),
                 ]))
             self.assertEqual(native_workflow().encode("utf-8"), target.read_bytes())
-            self.assertEqual(0, GATE.main([
-                "lint-native-workflow", str(target), "--strict",
-            ]))
+            with mock.patch.object(GATE, "git_source", return_value=NATIVE_GATE_SHA) as pinned:
+                self.assertEqual(0, GATE.main([
+                    "lint-native-workflow", str(target), "--strict",
+                ]))
+                pinned.assert_called_once_with(GATE.ROOT, NATIVE_GATE_SHA)
+            with mock.patch.object(GATE, "git_source",
+                                   side_effect=GATE.GateError("wrong checkout")):
+                with mock.patch.object(GATE.sys, "stderr", io.StringIO()):
+                    self.assertEqual(2, GATE.main([
+                        "lint-native-workflow", str(target), "--strict",
+                    ]))
+
+    def test_wsl_sdk35_present_positive_and_missing_wrong_invalid_negative(self):
+        with tempfile.TemporaryDirectory() as temp:
+            sdk = Path(temp) / "opt" / "android-sdk"
+            api = sdk / "platforms" / "android-35"
+            api.mkdir(parents=True)
+            props = api / "source.properties"
+            props.write_text("Pkg.Revision=2\nAndroidVersion.ApiLevel=35\n", encoding="utf-8")
+            jar = api / "android.jar"
+            with zipfile.ZipFile(jar, "w") as archive:
+                archive.writestr("android/app/Activity.class", b"synthetic fixture")
+            env = {"ANDROID_HOME": str(sdk), "ANDROID_SDK_ROOT": str(sdk)}
+            GATE.check_targeted_sdk(env, sdk)
+            for bad in ({}, {"ANDROID_HOME": str(sdk)},
+                        {"ANDROID_SDK_ROOT": str(sdk)},
+                        {**env, "ANDROID_HOME": "/different/sdk"},
+                        {**env, "ANDROID_SDK_ROOT": "/different/sdk"}):
+                with self.subTest(env=bad), self.assertRaises(GATE.GateError):
+                    GATE.check_targeted_sdk(bad, sdk)
+            props.write_text("AndroidVersion.ApiLevel=34\n", encoding="utf-8")
+            with self.assertRaisesRegex(GATE.GateError, "not API 35"):
+                GATE.check_targeted_sdk(env, sdk)
+            props.write_text("AndroidVersion.ApiLevel=35\n", encoding="utf-8")
+            jar.write_bytes(b"fake SDK archive")
+            with self.assertRaisesRegex(GATE.GateError, "invalid"):
+                GATE.check_targeted_sdk(env, sdk)
+            jar.unlink()
+            with self.assertRaisesRegex(GATE.GateError, "missing or unsafe"):
+                GATE.check_targeted_sdk(env, sdk)
+            with zipfile.ZipFile(jar, "w") as archive:
+                archive.writestr("android/app/Activity.class", b"valid")
+            props.unlink()
+            with self.assertRaises(GATE.GateError):
+                GATE.check_targeted_sdk(env, sdk)
+
+    def test_missing_sdk_aborts_before_checkout_tests_or_gradle(self):
+        with tempfile.TemporaryDirectory() as temp:
+            report = str(Path(temp) / "report.txt")
+            with mock.patch.object(GATE, "check_wsl") as wsl, \
+                 mock.patch.object(GATE, "check_targeted_sdk",
+                                   side_effect=GATE.GateError("SDK35 unavailable")) as sdk, \
+                 mock.patch.object(GATE, "git_source") as git, \
+                 mock.patch.object(GATE, "run_targeted_native") as gradle, \
+                 mock.patch.object(GATE.sys, "stderr", io.StringIO()):
+                self.assertEqual(2, GATE.main([
+                    "wsl-targeted", "--expected-sha", NATIVE_SHA, "--root", temp,
+                    "--gradle", "/opt/gradle-8.10.2/bin/gradle", "--report", report,
+                ]))
+                wsl.assert_called_once()
+                sdk.assert_called_once_with()
+                git.assert_not_called()
+                gradle.assert_not_called()
+            self.assertFalse(Path(report).exists())
+
+    def test_windows_launch_sets_pinned_sdk_environment_inside_wsl(self):
+        import inspect
+        script = inspect.getsource(GATE.run_wsl_targeted)
+        self.assertIn("export ANDROID_HOME=/opt/android-sdk", script)
+        self.assertIn("export ANDROID_SDK_ROOT=/opt/android-sdk", script)
+        self.assertIn("wsl-targeted --root . --expected-sha", script)
 
     @staticmethod
     def _owner_env():
