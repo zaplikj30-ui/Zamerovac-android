@@ -232,6 +232,35 @@ def render_workflow(branch: str, source_sha: str) -> str:
             .replace("__SOURCE_SHA__", source_sha).lstrip("\n"))
 
 
+def output_canonical_utf8(payload: bytes, output: Path | None) -> None:
+    """Write UTF-8 bytes, independent of Windows console codepage/CP1250.
+
+    Never silently overwrite an existing trusted workflow. The canonical
+    filename restriction is part of the one-shot security contract.
+    """
+    if output is None:
+        stream = getattr(sys.stdout, "buffer", None)
+        demand(stream is not None,
+               "no binary stdout available; use --output for safe UTF-8 workflow creation")
+        stream.write(payload)
+        stream.flush()
+        return
+
+    demand(output.name == "home-qa-one-shot.yml" and
+           output.parent.name == "workflows" and
+           output.parent.parent.name == ".github",
+           "--output must be .github/workflows/home-qa-one-shot.yml")
+    demand(output.parent.is_dir() and
+           not output.parent.is_symlink() and not output.parent.parent.is_symlink(),
+           "workflow directory must already exist and must not be a symlink")
+    try:
+        with output.open("xb") as handle:
+            handle.write(payload)
+    except FileExistsError as failure:
+        raise GateError("HOME QA STOP: output already exists, refusing to overwrite: " +
+                        str(output)) from failure
+
+
 def check_workflow(content: str, strict: bool = True) -> None:
     """Refuse all YAML outside known-good single-job one-shot template."""
     demand(strict, "permissive legacy YAML scan is no longer allowed")
@@ -314,6 +343,7 @@ def main(argv: list[str] | None = None) -> int:
     render = modes.add_parser("render-workflow")
     render.add_argument("--branch", required=True)
     render.add_argument("--expected-sha", required=True)
+    render.add_argument("--output", type=Path)
     wsl = modes.add_parser("wsl-check-from-windows")
     wsl.add_argument("--expected-sha", required=True)
     wsl.add_argument("--root", default=str(ROOT))
@@ -324,7 +354,8 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     try:
         if args.mode == "render-workflow":
-            sys.stdout.write(render_workflow(args.branch, args.expected_sha))
+            payload = render_workflow(args.branch, args.expected_sha).encode("utf-8")
+            output_canonical_utf8(payload, args.output)
             return 0
         if args.mode == "wsl-check-from-windows":
             trusted_owner(os.environ)
