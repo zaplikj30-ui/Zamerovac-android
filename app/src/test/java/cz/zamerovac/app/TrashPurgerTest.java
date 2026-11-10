@@ -51,6 +51,61 @@ public class TrashPurgerTest {
         purger.purge(reloaded.toString(),reloaded.toString(),new JSONArray(),this::persist);
         assertTrue(new File(home,"media/unrelated").isFile());
     }
+    @Test public void legacyPendingWithoutPinFailsClosedBeforeAnyCommitAfterRestart() throws Exception {
+        // Pre-P1 interrupted cleanup: the deleted record is already gone, so
+        // preserving today's DB cannot discover/pin this last physical photo.
+        String saved=new JSONObject().put("schema",1).put("records",new JSONArray())
+            .put("trashPurgedIds",new JSONArray().put("old-deleted-record")).toString();
+        persist(saved);file("legacy-photo");
+        File original=new File(home,"media/legacy-photo");
+        byte[] bytes=Files.readAllBytes(original.toPath());
+        File pending=new File(home,"trash-cleanup.json");
+        String oldIntent=new JSONArray().put("legacy-photo").toString();
+        Files.write(pending.toPath(),oldIntent.getBytes(StandardCharsets.UTF_8));
+        assertFalse("This fixture predates the P1 hold registry",new File(home,"protected-revisions").exists());
+        int[] databaseWrites={0};
+        for(int restart=0;restart<2;restart++){
+            try{
+                new TrashPurger(home,cache,prefs).purge(saved,saved,new JSONArray(),next->{
+                    databaseWrites[0]++;persist(next);
+                });
+                fail("Legacy pending cleanup deleted an unpinned last original");
+            }catch(IOException expected){
+                assertTrue("Unexpected failure: "+expected.getMessage(),
+                    expected.getMessage().contains("Neověřený seznam úklidu"));
+            }
+            assertArrayEquals("Exact original bytes must survive restart/retry",
+                bytes,Files.readAllBytes(original.toPath()));
+            assertEquals("No premature DB save",0,databaseWrites[0]);
+            assertEquals("Original DB unchanged",saved,read(new File(home,"projects.json")));
+            assertEquals("Keep the uncertain intent as evidence",oldIntent,read(pending));
+            assertEquals(1,new TrashPurger(home,cache,prefs).pendingCount());
+            assertEquals("image/png",prefs.getString("mime-legacy-photo",null));
+        }
+    }
+    @Test public void knownP1PinnedPendingCanFinishCleanupWithoutDeletingOriginal() throws Exception {
+        // A valid previously protected preimage is not an untrusted legacy intent.
+        JSONObject old=new JSONObject().put("schema",1).put("records",new JSONArray().put(
+            new JSONObject().put("id","old-deleted-record").put("deleted",true)
+                .put("media",new JSONArray().put("pinned-photo"))));
+        String previous=old.toString();
+        persist(previous);file("pinned-photo");
+        byte[] original=Files.readAllBytes(new File(home,"media/pinned-photo").toPath());
+        new ProtectedRevisions(home,new File(home.getParentFile(),"no_backup"),prefs)
+            .preserveDatabase(previous);
+        String current=new JSONObject().put("schema",1).put("records",new JSONArray()).toString();
+        persist(current);
+        Files.write(new File(home,"trash-cleanup.json").toPath(),
+            new JSONArray().put("pinned-photo").toString().getBytes(StandardCharsets.UTF_8));
+        for(int attempt=0;attempt<2;attempt++){
+            JSONObject result=new TrashPurger(home,cache,prefs).purge(current,current,
+                new JSONArray(),this::persist);
+            assertEquals(0,result.getInt("pending"));
+            assertArrayEquals(original,Files.readAllBytes(new File(home,"media/pinned-photo").toPath()));
+            assertEquals("image/png",prefs.getString("mime-pinned-photo",null));
+            assertEquals(0,new TrashPurger(home,cache,prefs).pendingCount());
+        }
+    }
     @Test public void staleSnapshotOrRestoredRecordCannotDeleteAnything() throws Exception {
         String db=fixture().toString();file("trash-media");persist(db);
         try{purger.purge(db,db+" ",targets(),this::persist);fail();}catch(IOException expected){}
