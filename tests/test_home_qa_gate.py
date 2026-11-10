@@ -415,14 +415,11 @@ class TargetedNativeGateTest(unittest.TestCase):
             ("--expected-sha " + NATIVE_SHA, "--expected-sha " + "f" * 40),
             ("ref: " + NATIVE_SHA, "ref: main"),
             ("--source-branch " + NATIVE_SOURCE_BRANCH, "--source-branch fix/other"),
-            ("--max-workers=1", "--max-workers=8"), # absent => no-op caught below
             ("wsl-targeted-from-windows", "windows-quick"),
             ("lint-native-workflow", "lint-workflow"),
         )
         for old, new in edits:
-            if old not in good:
-                self.assertEqual(old, "--max-workers=1", "test fixture must stay meaningful")
-                continue
+            self.assertIn(old, good, "security test must change existing YAML")
             with self.subTest(bypass=new):
                 changed = good.replace(old, new)
                 self.assertNotEqual(good, changed)
