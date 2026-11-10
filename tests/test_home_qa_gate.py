@@ -402,6 +402,12 @@ class TargetedNativeGateTest(unittest.TestCase):
                 GATE.render_native_workflow(bad, NATIVE_SHA, NATIVE_SOURCE_BRANCH)
         with self.assertRaises(GATE.GateError):
             GATE.render_native_workflow(NATIVE_QA_BRANCH, "main", NATIVE_SOURCE_BRANCH)
+        with self.assertRaisesRegex(GATE.GateError, "not a reviewed"):
+            GATE.render_native_workflow(NATIVE_QA_BRANCH, "f" * 40,
+                                        NATIVE_SOURCE_BRANCH)
+        with self.assertRaises(GATE.GateError):
+            GATE.render_native_workflow(NATIVE_QA_BRANCH, NATIVE_SHA,
+                                        "fix/valid-owner-branch-but-not-reviewed")
 
     def test_native_strict_yaml_rejects_every_security_bypass(self):
         good = native_workflow()
@@ -509,6 +515,9 @@ class TargetedNativeGateTest(unittest.TestCase):
                 GATE.verify_trusted_source(NATIVE_SOURCE_BRANCH, NATIVE_SHA,
                                            {**env, **change},
                                            lambda request, timeout: self._branch_response())
+        with self.assertRaisesRegex(GATE.GateError, "not independently approved"):
+            GATE.verify_trusted_source(NATIVE_SOURCE_BRANCH, "f" * 40, env,
+                                       lambda request, timeout: self._branch_response("f" * 40))
         for response in (
             self._branch_response("f" * 40),
             self._branch_response(ref="refs/heads/fix/other"),
