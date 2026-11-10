@@ -411,7 +411,7 @@ class TargetedNativeGateTest(unittest.TestCase):
             ("actions/checkout@" + CHECKOUT, "actions/checkout@v4"),
             ("github.actor == 'zaplikj30-ui'", "github.actor == 'someone'"),
             ("github.event_name == 'push'", "github.event_name == 'pull_request'"),
-            ("if: always()", "if: success()"),
+            ("if: success()", "if: always()"),
             ("--expected-sha " + NATIVE_SHA, "--expected-sha " + "f" * 40),
             ("ref: " + NATIVE_SHA, "ref: main"),
             ("--source-branch " + NATIVE_SOURCE_BRANCH, "--source-branch fix/other"),
