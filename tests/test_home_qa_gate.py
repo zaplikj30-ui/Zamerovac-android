@@ -237,7 +237,7 @@ class GateUnitTest(unittest.TestCase):
         # The old CLI wrote Unicode through sys.stdout, which Windows may
         # encode as CP1250 when PYTHONUTF8 is disabled. Model that real stream.
         raw = io.BytesIO()
-        localized_stdout = io.TextIOWrapper(raw, encoding="cp1250", newline="\\n")
+        localized_stdout = io.TextIOWrapper(raw, encoding="cp1250", newline="\n")
         with mock.patch.object(GATE.sys, "stdout", localized_stdout):
             with mock.patch.dict(os.environ, {"PYTHONUTF8": "0"}):
                 self.assertEqual(0, GATE.main([
@@ -266,7 +266,7 @@ class GateUnitTest(unittest.TestCase):
             self.assertEqual(0, result)
             raw = target.read_bytes()
             self.assertEqual(valid_workflow().encode("utf-8"), raw)
-            self.assertNotIn(b"\\xef\\xbb\\xbf", raw[:3], "No UTF-8 BOM")
+            self.assertNotIn(b"\xef\xbb\xbf", raw[:3], "No UTF-8 BOM")
             GATE.check_workflow(raw.decode("utf-8"), strict=True)
 
     def test_render_rejects_unsafe_branch_or_sha(self):
