@@ -178,6 +178,9 @@ final class RecoveryProtectionArchive {
         // Omitting their catalogs could falsely certify an old snapshot as complete.
         JSONObject protectedState=protectedEvidence(home,noBackup,sources);
         if(!protectedState.getBoolean("sourceComplete"))sourceComplete=false;
+        JSONArray absentProtected=protectedState.getJSONArray("missingMedia");
+        for(int i=0;i<absentProtected.length();i++)missing.put(new JSONObject()
+            .put("path",absentProtected.getString(i)).put("reason","MISSING_PROTECTED_ORIGINAL"));
         // Preserve pending immutable peer snapshots and namespace-specific
         // cloud receipts; never include this archive's own root recursively.
         File outbox=new File(noBackup,"sync-v2-outbox");
