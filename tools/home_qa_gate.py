@@ -259,6 +259,47 @@ def jdk_probes() -> None:
            "WSL JDK probe incomplete (do not call SKIP a PASS)")
 
 
+def run_wsl_checked(source: Path, expected_sha: str) -> None:
+    """Only this fixed WSL script can be invoked by the canonical QA workflow.
+
+    Generic Python discovery (which calls Node) has no WSL entrypoint here.
+    Preflight runs before any Gradle/JUnit, no installation or APK tasks.
+    """
+    demand(platform.system() == "Windows", "WSL launcher must run on trusted Windows")
+    linux = r"""
+set -Eeuo pipefail
+source_dir="$(wslpath -u "$1")"
+expected="$2"
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+export PATH="$JAVA_HOME/bin:$PATH" CI=1
+mkdir -p /root/zamerovac-qa-commits
+temp="$(mktemp -d /root/zamerovac-qa-commits/homeguard-XXXXXXXX)"
+trap 'rc=$?; rm -rf "$temp"; exit "$rc"' EXIT
+cp -a "$source_dir/." "$temp/"
+cd "$temp"
+echo "WSL_TESTED_SOURCE_SHA=$(git rev-parse HEAD)"
+python3 tools/home_qa_gate.py wsl-native --expected-sha "$expected" --root . --gradle /opt/gradle-8.10.2/bin/gradle
+python3 tools/home_qa_gate.py wsl-jdk-probes --expected-sha "$expected" --root . --gradle /opt/gradle-8.10.2/bin/gradle
+set +e
+python3 tools/home_qa_gate.py wsl-python-node > "$temp/denied.log" 2>&1
+rejected=$?
+set -e
+test "$rejected" -eq 2
+grep -q 'Node-dependent Python unittest is WINDOWS-only' "$temp/denied.log"
+echo "PASS live WSL rejected unsupported Node dependent Python before Gradle"
+"""
+    try:
+        result = subprocess.run(
+            ["wsl.exe", "--distribution", "Zamerovac-Ubuntu-QA", "--user", "root",
+             "--exec", "/bin/bash", "-lc", linux, "_", str(source), expected_sha],
+            stdin=subprocess.DEVNULL, check=False, timeout=240,
+        )
+    except (OSError, subprocess.TimeoutExpired) as failure:
+        raise GateError("HOME QA STOP: trusted WSL launcher could not start: " + str(failure)) from failure
+    demand(result.returncode == 0, "native WSL preflight/JDK probes FAILED, exit=" + str(result.returncode))
+
+
+
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(description="Trusted HOME QA fail-fast Windows/WSL gate")
     modes = ap.add_subparsers(dest="mode", required=True)
