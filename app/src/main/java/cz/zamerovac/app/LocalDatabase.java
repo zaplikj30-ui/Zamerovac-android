@@ -115,7 +115,7 @@ final class LocalDatabase {
                     artifacts==null||artifacts.length>0);
                 boolean evidence=DatabaseInstallEvidence.exists(home,noBackup);
                 boolean traces=DatabaseInstallEvidence.legacySyncTraces(noBackup);
-                boolean prior=evidence||traces||present(backup)||DatabaseRecovery.exists(home);
+                boolean prior=evidence||traces||present(backup)||DatabaseRecovery.exists(home)||ProtectedRevisions.evidence(home);
                 if(prior)lost(home,noBackup);
                 if(prior||present(new File(home,"projects.tmp"))||
                     present(new File(home,"projects.backup.tmp"))||mediaUnsafe)
@@ -145,7 +145,7 @@ final class LocalDatabase {
             boolean primaryExists=present(primary),backupExists=present(backup);
             if(!primaryExists&&!backupExists){
                 boolean previous=DatabaseInstallEvidence.exists(home,noBackup)||
-                    DatabaseInstallEvidence.legacySyncTraces(noBackup)||DatabaseRecovery.exists(home);
+                    DatabaseInstallEvidence.legacySyncTraces(noBackup)||DatabaseRecovery.exists(home)||ProtectedRevisions.evidence(home);
                 if(previous){lost(home,noBackup);throw new IOException("Dříve uložená databáze chybí; ruční obnova je nutná");}
                 return "";
             }

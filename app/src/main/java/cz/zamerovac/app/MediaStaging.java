@@ -15,7 +15,17 @@ final class MediaStaging {
         synchronized(TrashPurger.LOCK){if(new File(directory,id).exists())throw new IOException("Existující originál se nesmí přepsat");File temporary=new File(directory,".capture-"+id+"-"+UUID.randomUUID()+".tmp");if(!temporary.createNewFile())throw new IOException("Nelze připravit přílohu");return temporary;}
     }
     static void commit(File temporary,String id,SharedPreferences prefs,String mime,String name)throws Exception{
-        if(id==null||!id.matches("[a-zA-Z0-9_-]{3,120}")||temporary==null||!temporary.isFile()||temporary.length()<1||temporary.length()>LIMIT||!metadata(mime,name))throw new IOException("Příloha není úplná nebo má neplatná metadata");
+        if(!metadata(mime,name))throw new IOException("Příloha má neplatná metadata");
+        synchronized(TrashPurger.LOCK){
+            publish(temporary,id);
+            File target=new File(temporary.getParentFile(),id);
+            boolean committed=false;try{committed=prefs.edit().putString("mime-"+id,mime).putString("name-"+id,name).commit();if(!committed)throw new IOException("Metadata přílohy nebyla potvrzena");}finally{if(!committed&&!ProtectedRevisions.rollback(target))android.util.Log.w("Zamerovac","Unreferenced failed media remains private");}
+        }
+    }
+    /** Batch import publishes originals here, then confirms metadata once for
+     * the whole batch before exposing any new records in the database. */
+    static void publish(File temporary,String id)throws Exception{
+        if(!PeerSnapshot.validMediaId(id)||temporary==null||!temporary.isFile()||Files.isSymbolicLink(temporary.toPath())||temporary.length()<1||temporary.length()>LIMIT)throw new IOException("Příloha není úplná");
         try(RandomAccessFile file=new RandomAccessFile(temporary,"rw")){file.getFD().sync();}
         File target=new File(temporary.getParentFile(),id);
         synchronized(TrashPurger.LOCK){
@@ -23,7 +33,6 @@ final class MediaStaging {
             ProtectedRevisions.requireUnpinned(target);
             // Same-directory move; all app publishers check and commit under the shared local lock.
             Files.move(temporary.toPath(),target.toPath());
-            boolean committed=false;try{committed=prefs.edit().putString("mime-"+id,mime).putString("name-"+id,name).commit();if(!committed)throw new IOException("Metadata přílohy nebyla potvrzena");}finally{if(!committed&&!ProtectedRevisions.rollback(target))android.util.Log.w("Zamerovac","Unreferenced failed media remains private");}
         }
     }
 }

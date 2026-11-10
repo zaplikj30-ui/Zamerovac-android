@@ -71,8 +71,16 @@ final class ProtectedRevisions {
         }return ids;
     }
     private File file(String hash){return new File(directory,hash+".json");}
+    static boolean evidence(File home)throws IOException{
+        File witness=new File(new File(home.getParentFile(),"no_backup"),"protected-revisions.json");
+        for(File path:new File[]{new File(home,"protected-revisions"),witness,new File(witness+".bak"),new File(witness+".new")}){
+            try{Files.readAttributes(path.toPath(),java.nio.file.attribute.BasicFileAttributes.class,LinkOption.NOFOLLOW_LINKS);return true;}
+            catch(NoSuchFileException absent){}
+        }return false;
+    }
     private JSONObject hold(String hash)throws Exception{
         File path=file(hash);safe(path);
+        safe(new File(path+".bak"));safe(new File(path+".new"));
         java.nio.file.attribute.BasicFileAttributes attrs=null;
         try{attrs=Files.readAttributes(path.toPath(),java.nio.file.attribute.BasicFileAttributes.class,LinkOption.NOFOLLOW_LINKS);}catch(NoSuchFileException absent){}
         CachedHold known=VERIFIED.get(path.getAbsolutePath());
@@ -96,7 +104,7 @@ final class ProtectedRevisions {
         }
         if(!ids.containsAll(PeerSnapshot.references(data.getJSONArray("records"))))throw new IOException("Neúplná ochrana příloh");
         if(staged)write(path,bytes); // finish a fully verified interrupted local hold, never a DB promotion
-        hold.remove("metadata");JSONObject lookup=new JSONObject();for(String id:ids)lookup.put(id,true);hold.put("_ids",lookup);
+        hold.remove("metadata");JSONObject lookup=new JSONObject();for(int i=0;i<media.length();i++){JSONObject entry=media.getJSONObject(i);lookup.put(entry.getString("id"),entry);}hold.put("_ids",lookup);
         attrs=Files.readAttributes(path.toPath(),java.nio.file.attribute.BasicFileAttributes.class,LinkOption.NOFOLLOW_LINKS);
         VERIFIED.put(path.getAbsolutePath(),new CachedHold(attrs,hold));
         while(VERIFIED.size()>8)VERIFIED.remove(VERIFIED.keySet().iterator().next());
@@ -107,10 +115,11 @@ final class ProtectedRevisions {
      * No historical manifest is ever pruned, even after epoch/namespace changes.
      */
     private Map<String,JSONObject> inventory(boolean repair)throws Exception{
-        if(Files.isSymbolicLink(directory.toPath())||directory.exists()&&!directory.isDirectory()||Files.isSymbolicLink(witness.getParentFile().toPath()))throw new IOException("Neplatné úložiště ochrany");
+        if(Files.isSymbolicLink(home.toPath())||Files.isSymbolicLink(new File(home,"media").toPath())||Files.isSymbolicLink(directory.toPath())||directory.exists()&&!directory.isDirectory()||Files.isSymbolicLink(witness.getParentFile().toPath()))throw new IOException("Neplatné úložiště ochrany");
         File index=new File(directory,"catalog.json");Set<String> local=catalog(index),other=catalog(witness),ids=new TreeSet<>(local);ids.addAll(other);
         File[] files=directory.listFiles();if(files==null&&directory.exists())throw new IOException("Registr ochrany nelze načíst");
         if(files!=null)for(File f:files){
+            safe(f);
             String name=f.getName();
             if(name.matches("[a-f0-9]{64}\\.json(\\.bak|\\.new)?"))ids.add(name.substring(0,64));
             else if(!name.matches("catalog\\.json(\\.bak|\\.new)?"))throw new IOException("Neznámý soubor ochrany");
@@ -181,6 +190,11 @@ final class ProtectedRevisions {
         historicalReferences(data.getJSONArray("records"),ids,0);
         JSONArray media=new JSONArray();for(String id:ids){
             File original=new File(home,"media/"+id);JSONObject entry=PeerMedia.inspect(original);
+            for(JSONObject old:prior.values()){
+                JSONObject pinned=old.getJSONObject("_ids").optJSONObject(id);
+                if(pinned!=null&&(pinned.getLong("size")!=entry.getLong("size")||!pinned.getString("hash").equals(entry.getString("hash"))))
+                    throw new IOException("Chráněný originál má jiný obsah. Původní revize zůstává chráněná; operace byla zastavena.");
+            }
             JSONObject expected=snapshot==null?null:snapshot.media.get(id);
             if(expected!=null&&(entry.getLong("size")!=expected.getLong("size")||!entry.getString("hash").equals(expected.getString("hash"))))throw new IOException("Originál se před založením ochrany změnil");
             String mime=prefs==null?"application/octet-stream":prefs.getString("mime-"+id,"application/octet-stream");
@@ -188,6 +202,7 @@ final class ProtectedRevisions {
             if(!MediaStaging.metadata(mime,name))throw new IOException("Neplatná metadata originálu");
             media.put(entry.put("id",id).put("mime",expected==null?mime:expected.getString("mime")).put("name",expected==null?name:expected.getString("name")));
         }
+        if(!ids.isEmpty())syncDirectory(new File(home,"media"));
         JSONObject revision=new JSONObject().put("format","cz.zamerovac.protected.revision").put("version",1).put("kind",kind).put("sourceHash",source).put("epoch",DatabaseRecovery.id(home)).put("metadata",metadata).put("media",media);
         byte[] bytes=revision.toString().getBytes(StandardCharsets.UTF_8);String hash=PeerWire.hash(bytes);
         // Reserve is a preflight only; every failed/short write is still verified.

@@ -154,7 +154,7 @@ final class BackupImporter {
         }
         File mediaDir=new File(context.getFilesDir(),"media");
         if(!mediaDir.exists()&&!mediaDir.mkdirs())throw new IOException("Nelze vytvořit složku médií");
-        Set<String> created=new HashSet<>();
+        Set<String> created=new HashSet<>();SharedPreferences.Editor settings=prefs.edit();
         try{for(Map.Entry<String,String> pair:mediaIds.entrySet()){
             String id=pair.getValue();
             File staged=MediaStaging.temporary(mediaDir,id);
@@ -166,9 +166,13 @@ final class BackupImporter {
                 JSONObject info=meta.optJSONObject(pair.getKey());
                 String mime=info!=null?info.optString("mime","application/octet-stream"):"application/octet-stream";
                 String name=info!=null?info.optString("name","Příloha"):"Příloha";
-                MediaStaging.commit(staged,id,prefs,mime,name);created.add(id);
+                if(!MediaStaging.metadata(mime,name))throw new IOException("Neplatná metadata obnovy");
+                MediaStaging.publish(staged,id);created.add(id);
+                settings.putString("mime-"+id,mime).putString("name-"+id,name);
             }finally{staged.delete();}
-        }}catch(Exception failure){new Result(result,0,created).rollback(context,prefs);throw failure;}
+        }
+        if(!settings.commit())throw new IOException("Metadata obnovy nebyla potvrzena");
+        }catch(Exception failure){new Result(result,0,created).rollback(context,prefs);throw failure;}
         root.put("syncClock",CausalClock.advance(new JSONObject(),DeviceIdentity.get(context.getNoBackupFilesDir())));
         target.put(root);
         for(JSONObject rec:newRecords)target.put(rec);

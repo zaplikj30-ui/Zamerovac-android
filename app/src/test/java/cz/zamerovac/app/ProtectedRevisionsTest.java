@@ -163,4 +163,28 @@ public class ProtectedRevisionsTest {
         File pending=new File(chosen+".new");Files.move(chosen.toPath(),pending.toPath());
         assertEquals(2,new ProtectedRevisions(device,device.prefs).pins().size());assertTrue(chosen.isFile());assertFalse(pending.exists());hasExactDatabase();exactBytes();
     }
+    @Test public void retentionAloneCannotMasqueradeAsFreshDatabaseAuthority()throws Exception{
+        File home=new File(device.home.getParentFile(),"lost/files");File archive=new File(home,"protected-revisions");assertTrue(archive.mkdirs());
+        for(File file:Objects.requireNonNull(new File(device.home,"protected-revisions").listFiles()))Files.copy(file.toPath(),new File(archive,file.getName()).toPath());
+        try{LocalDatabase.readForCas(home);fail("Retained history treated as a fresh install");}catch(IOException expected){}
+        assertTrue(DatabaseRecovery.pending(home));assertFalse(new File(home,"projects.json").exists());
+        try{LocalDatabase.write(home,"{\"schema\":1,\"records\":[]}");fail("Retained history granted empty write authority");}catch(IOException expected){}
+        exactBytes();
+    }
+    @Test public void severalExactMetadataRevisionsShareOneSetOfOriginalBytes()throws Exception{
+        JSONObject before=protection.status();long initial=before.getLong("metadataBytes");
+        for(int i=0;i<5;i++){
+            JSONObject data=new JSONObject(exact);data.getJSONArray("records").getJSONObject(0).getJSONArray("items").getJSONObject(0).put("measure","1585,800001234567890"+i);
+            LocalDatabase.write(device,data.toString());
+        }
+        JSONObject after=protection.status();assertEquals(photo.length+video.length,after.getLong("mediaBytes"));assertEquals(2,after.getInt("media"));
+        assertEquals(2,Objects.requireNonNull(new File(device.home,"media").list()).length);assertEquals(before.getInt("revisions")+5,after.getInt("revisions"));assertTrue(after.getLong("metadataBytes")>initial);hasExactDatabase();exactBytes();
+        System.out.println("HYBRID_DISK_GROWTH "+new JSONObject().put("revisionsAdded",5).put("originalBytes",photo.length+video.length).put("originalFileCount",2).put("metadataBytesBefore",initial).put("metadataBytesAfter",after.getLong("metadataBytes")));
+    }
+    @Test public void changedOriginalCannotBeBlessedAsANewProtectedVersion()throws Exception{
+        Files.write(new File(device.home,"media/original-photo").toPath(),new byte[]{9,9,9,9});
+        String proposal=new JSONObject(exact).put("other","revision").toString();
+        try{LocalDatabase.write(device,proposal);fail("Changed protected original blessed as a new revision");}catch(IOException expected){}
+        assertEquals(exact,LocalDatabase.readForCas(device));hasExactDatabase();assertEquals(2,protection.pins().size());
+    }
 }
