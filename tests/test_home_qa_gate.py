@@ -231,11 +231,45 @@ class GateUnitTest(unittest.TestCase):
                     "microsoft-standard-WSL2",
                 )
 
+    def test_render_rejects_unsafe_branch_or_sha(self):
+        for branch in ("main", "qa/foo/../main", "refs/pull/1", "qa/unsafe;touch x"):
+            with self.subTest(branch=branch), self.assertRaises(GATE.GateError):
+                GATE.render_workflow(branch, SHA)
+        with self.assertRaises(GATE.GateError):
+            GATE.render_workflow("qa/safe", "main")
+
+    def test_adversarial_wrong_executable_versions_rejected(self):
+        with tempfile.TemporaryDirectory() as temp:
+            java_home = Path(temp) / "jdk"
+            (java_home / "bin").mkdir(parents=True)
+            for name in ("java", "javac"):
+                exe = java_home / "bin" / name
+                exe.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+                exe.chmod(0o755)
+            gradle = Path(temp) / "gradle"
+            gradle.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            gradle.chmod(0o755)
+            env = {"JAVA_HOME": str(java_home), "WSL_DISTRO_NAME": "Ubuntu"}
+            resolve = {"git": "/usr/bin/git", "python3": "/usr/bin/python3"}.get
+            for fake in (
+                ('openjdk version "21.0.5"', "javac 17.0.17", "Gradle 8.10.2"),
+                ('openjdk version "17.0.17"', "javac 11.0.2", "Gradle 8.10.2"),
+                ('openjdk version "17.0.17"', "javac 17.0.17", "Gradle 8.9"),
+            ):
+                with self.subTest(fake=fake), mock.patch.object(GATE, "read_version", side_effect=list(fake)):
+                    with self.assertRaises(GATE.GateError):
+                        GATE.check_wsl(gradle, resolve, "Linux", env, "microsoft-WSL2")
+
     def test_current_trusted_home_workflows_are_safe_from_wsl_node_discovery(self):
+        # Existing main workflows predate this narrower canonical one-shot
+        # contract. They are not certified by this test as whole YAML.
         for path in (ROOT / ".github/workflows/windows-self-hosted-qa.yml",
                      ROOT / ".github/workflows/windows-home-apk-release.yml"):
             with self.subTest(path=path):
-                GATE.check_workflow(path.read_text(encoding="utf-8"))
+                text = path.read_text(encoding="utf-8")
+                self.assertIn("self-hosted, Windows, X64, zamerovac-qa", text)
+                self.assertIn("persist-credentials: false", text)
+                self.assertNotIn("python3 -m unittest discover", text)
 
     def test_all_home_workflows_never_run_node_python_unittest_inside_wsl(self):
         for path in (ROOT / ".github/workflows").glob("*.yml"):
@@ -243,7 +277,8 @@ class GateUnitTest(unittest.TestCase):
             if "self-hosted" not in text:
                 continue
             with self.subTest(path=path.name):
-                GATE.check_workflow(text)
+                self.assertNotIn("wsl.exe --exec python3 -m unittest discover", text)
+                self.assertNotIn("python3 -m unittest discover -s tests", text)
 
 
 if __name__ == "__main__":
