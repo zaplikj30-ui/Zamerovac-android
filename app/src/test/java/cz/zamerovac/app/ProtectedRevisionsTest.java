@@ -205,4 +205,16 @@ public class ProtectedRevisionsTest {
         assertEquals(0,new PeerOutbox(device,device.prefs,peers).pending(peer));
         assertArrayEquals(photo,Files.readAllBytes(new File(device.home,"media/original-photo").toPath()));
     }
+    @Test public void preUpgradeBackupRevisionSurvivesRotationByteExactly()throws Exception{
+        JSONObject old=new JSONObject(exact);old.getJSONArray("records").getJSONObject(0).getJSONArray("items").getJSONObject(0).put("measure","9,000000000123456789");String backup=old.toString();
+        Files.write(new File(device.home,"projects.bak").toPath(),backup.getBytes(StandardCharsets.UTF_8));
+        LocalDatabase.write(device,new JSONObject(exact).put("extra","next").toString());
+        boolean found=false;for(JSONObject hold:holds())if(backup.equals(hold.getString("metadata")))found=true;
+        assertTrue("Rotated backup lost its only exact revision",found);hasExactDatabase();exactBytes();
+    }
+    @Test public void unreadableBackupCannotBeSilentlyOverwrittenByRotation()throws Exception{
+        byte[] damaged={0,1,2};File backup=new File(device.home,"projects.bak");Files.write(backup.toPath(),damaged);
+        try{LocalDatabase.write(device,new JSONObject(exact).put("extra","next").toString());fail("Unverifiable old backup destroyed");}catch(IOException expected){}
+        assertArrayEquals(damaged,Files.readAllBytes(backup.toPath()));assertEquals(exact,LocalDatabase.readForCas(device));hasExactDatabase();exactBytes();
+    }
 }

@@ -210,6 +210,9 @@ final class LocalDatabase {
             String confirmed=readForCas(home,noBackup);
             if(!confirmed.isEmpty()&&!confirmed.equals(text))
                 new ProtectedRevisions(home,noBackup,prefs).preserveDatabase(confirmed);
+            // The pre-upgrade backup may be the only remaining copy of a
+            // different precise revision. Adopt it before rotation can replace it.
+            if(present(backup))new ProtectedRevisions(home,noBackup,prefs).preserveDatabase(readFile(backup));
             // Protect the proposed exact state before publishing it as current.
             // If the later DB commit fails, this remains recovery evidence only.
             new ProtectedRevisions(home,noBackup,prefs).preserveDatabase(text);
