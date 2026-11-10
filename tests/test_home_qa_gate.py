@@ -413,6 +413,11 @@ class TargetedNativeGateTest(unittest.TestCase):
         good = native_workflow()
         edits = (
             ("runs-on: [self-hosted, Windows, X64, zamerovac-qa]", "runs-on: ubuntu-latest"),
+            ('contents: read', 'contents: write'),
+            ('"ZamerovacQA"', '"an-unapproved-user"'),
+            ("path: qa-evidence/native-targeted-summary.txt", "path: source/"),
+            ("GH_TOKEN: " + "$" + "{{ github.token }}", "GH_TOKEN: exposed-token"),
+            ("if-no-files-found: error", "if-no-files-found: ignore"),
             ("persist-credentials: false", "persist-credentials: true"),
             ("actions/checkout@" + CHECKOUT, "actions/checkout@v4"),
             ("github.actor == 'zaplikj30-ui'", "github.actor == 'someone'"),
