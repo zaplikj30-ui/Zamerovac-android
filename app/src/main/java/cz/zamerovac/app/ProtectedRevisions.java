@@ -39,7 +39,10 @@ final class ProtectedRevisions {
     }
     private static void write(File target,byte[] bytes)throws IOException{
         safe(target);safe(new File(target+".bak"));
-        if(!target.getParentFile().isDirectory()&&!target.getParentFile().mkdirs())throw new IOException("Nelze připravit ochranu dat");
+        if(!target.getParentFile().isDirectory()){
+            if(!target.getParentFile().mkdirs())throw new IOException("Nelze připravit ochranu dat");
+            syncDirectory(target.getParentFile().getParentFile());
+        }
         AtomicFile atomic=new AtomicFile(target);FileOutputStream out=null;
         try{out=atomic.startWrite();out.write(bytes);out.getFD().sync();atomic.finishWrite(out);out=null;
             if(!Arrays.equals(bytes,read(target)))throw new IOException("Ochrana dat nebyla potvrzena");
@@ -47,10 +50,8 @@ final class ProtectedRevisions {
         }catch(IOException failure){if(out!=null)atomic.failWrite(out);throw failure;}
     }
     private static void syncDirectory(File dir)throws IOException{
-        java.io.FileDescriptor fd=null;
-        try{fd=android.system.Os.open(dir.getAbsolutePath(),android.system.OsConstants.O_RDONLY|android.system.OsConstants.O_DIRECTORY,0);android.system.Os.fsync(fd);}
-        catch(android.system.ErrnoException e){throw new IOException("Adresář ochrany nebyl potvrzen",e);}
-        finally{if(fd!=null)try{android.system.Os.close(fd);}catch(android.system.ErrnoException e){/* already synced */}}
+        if(!dir.isDirectory()||Files.isSymbolicLink(dir.toPath()))throw new IOException("Neplatný adresář ochrany");
+        try(java.nio.channels.FileChannel channel=java.nio.channels.FileChannel.open(dir.toPath(),StandardOpenOption.READ)){channel.force(true);}
     }
     private Set<String> catalog(File file)throws Exception{
         Set<String> ids=new TreeSet<>();if(!exists(file))return ids;
@@ -63,7 +64,7 @@ final class ProtectedRevisions {
     private File file(String hash){return new File(directory,hash+".json");}
     private JSONObject hold(String hash)throws Exception{
         byte[] bytes=read(file(hash));if(!hash.equals(PeerWire.hash(bytes)))throw new IOException("Poškozená chráněná revize");
-        String text=JsonInput.decode(bytes);JsonInput.check(text);JSONObject hold=new JSONObject(text);
+        String text=JsonInput.decode(bytes,3*LocalDatabase.MAX_BYTES);JsonInput.check(text,3*LocalDatabase.MAX_BYTES);JSONObject hold=new JSONObject(text);
         if(!"cz.zamerovac.protected.revision".equals(hold.getString("format"))||hold.getInt("version")!=1)throw new IOException("Neplatná chráněná revize");
         byte[] metadata=hold.getString("metadata").getBytes(StandardCharsets.UTF_8);
         if(!hold.getString("sourceHash").equals(PeerWire.hash(metadata)))throw new IOException("Poškozená přesná metadata");
@@ -104,6 +105,10 @@ final class ProtectedRevisions {
         Set<String> ids=new TreeSet<>();for(JSONObject hold:inventory(true).values()){
             JSONArray list=hold.getJSONArray("media");for(int i=0;i<list.length();i++)ids.add(list.getJSONObject(i).getString("id"));
         }return ids;
+    }catch(Exception e){throw blocked(e);}}}
+    boolean hasSnapshot(String source)throws IOException{synchronized(TrashPurger.LOCK){try{
+        for(JSONObject hold:inventory(true).values())if("snapshot".equals(hold.getString("kind"))&&source.equals(hold.getString("sourceHash")))return true;
+        return false;
     }catch(Exception e){throw blocked(e);}}}
     JSONObject status()throws IOException{synchronized(TrashPurger.LOCK){try{
         Map<String,JSONObject> holds=inventory(false);Map<String,Long> sizes=new HashMap<>();long metadata=0;

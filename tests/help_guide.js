@@ -4,6 +4,8 @@ const fs=require('node:fs');
 const path=require('node:path');
 const root=path.resolve(__dirname,'..');
 const help=require('../app/src/main/assets/help.js');
+assert(help.chapters.find(c=>c.id==='trash')?.notes.some(s=>s.includes('Potvrzení synchronizace tuto ochranu neruší')),'ACK must not release protection');
+assert(help.chapters.find(c=>c.id==='trash')?.notes.some(s=>s.includes('nedostatku místa')&&s.includes('Uvolni jiné soubory')),'Low-space retry and retained originals must be documented');
 assert.equal(help.chapters.length,25,'Every approved guide area needs a chapter');
 assert(help.chapters.find(c=>c.id==='trash')?.notes.some(s=>s.includes('starších vložených záznamů')),'Trash help must describe retained legacy references');
 assert(help.chapters.find(c=>c.id==='trash')?.notes.some(s=>s.includes('nepřiměřeně zanořená')),'Trash help must explain fail-closed history check');

@@ -210,6 +210,9 @@ final class LocalDatabase {
             String confirmed=readForCas(home,noBackup);
             if(!confirmed.isEmpty()&&!confirmed.equals(text))
                 new ProtectedRevisions(home,noBackup,prefs).preserveDatabase(confirmed);
+            // Protect the proposed exact state before publishing it as current.
+            // If the later DB commit fails, this remains recovery evidence only.
+            new ProtectedRevisions(home,noBackup,prefs).preserveDatabase(text);
             // Persist BOTH proofs before the first DB commit; any failed write
             // remains visible to the next process and never authorizes a reset.
             DatabaseInstallEvidence.ensure(home,noBackup);

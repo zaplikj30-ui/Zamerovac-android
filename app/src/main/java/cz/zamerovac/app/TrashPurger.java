@@ -85,6 +85,9 @@ final class TrashPurger {
     }
     int pendingCount() throws Exception {return pending().size();}
     JSONObject purge(String saved,String expected,JSONArray requested,Writer writer) throws Exception {
+        synchronized(LOCK){return purgeLocked(saved,expected,requested,writer);}
+    }
+    private JSONObject purgeLocked(String saved,String expected,JSONArray requested,Writer writer) throws Exception {
         if(!saved.equals(expected))throw new IOException("Zakázky se mezitím změnily. Otevři koš znovu a potvrď aktuální obsah.");
         JSONObject db=new JSONObject(saved);
         ProtectedRevisions protection=new ProtectedRevisions(home,identityDirectory,prefs);

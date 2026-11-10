@@ -63,6 +63,27 @@ final class PeerOutbox {
             throw new IOException("Původní revize fronty má jiný kontrolní součet");
         return PeerSnapshot.parse(bytes,DeviceIdentity.get(context.getNoBackupFilesDir()));
     }
+    /** Upgrade existing durable intents BEFORE ACK, supersession or forget can
+     * drop them. A stale epoch is evidence worth retaining, never new authority.
+     */
+    private void protectSources(boolean dropping)throws Exception{
+        ProtectedRevisions protection=new ProtectedRevisions(context,prefs);
+        JSONObject state=new JSONObject(queue.read());Set<String> sources=new TreeSet<>();
+        for(String section:new String[]{"jobs","recoveryQuarantine"}){
+            JSONArray rows=state.optJSONArray(section);if(rows==null)continue;
+            for(int i=0;i<rows.length();i++){
+                String source=rows.getJSONObject(i).optString("sourceRef","");
+                if(!source.isEmpty())sources.add(source);
+            }
+        }
+        for(String source:sources){
+            if(protection.hasSnapshot(source))continue;
+            try{protection.preserveSnapshot(queuedSnapshot(source));}
+            catch(Exception unavailable){if(dropping)throw unavailable;}
+            // prepare keeps UNKNOWN jobs and their source refs. Only a verified
+            // protected source may be discarded by ACK or explicit forget.
+        }
+    }
     /**
      * A proved different epoch is permanently archived, preserving source
      * bytes. A temporarily unreadable source is NOT proof of an old epoch:
@@ -95,6 +116,7 @@ final class PeerOutbox {
         PeerSnapshot snapshot=current(checkpoint);checkpoint.check();
         synchronized(TrashPurger.LOCK){
             LocalDatabase.readForCas(context);
+            protectSources(false);
             String epoch=DatabaseRecovery.id(context.getFilesDir());
             if(!epoch.equals(snapshot.wire.optString("recoveryEpoch","")))
                 throw new IOException("Období databáze se během přípravy přenosu změnilo");
@@ -233,6 +255,7 @@ final class PeerOutbox {
                     metadata!=("metadata".equals(match.getString("kind"))))
                     throw new IOException("ACK neodpovídá položce fronty");
                 verifyAckJob(match,epoch); // no queue changes on stale/unknown ACK
+                protectSources(true);
                 accepted[0]=true;
                 String peer=match.getString("peer"),source=match.optString("sourceRef","");
                 for(int i=0;i<jobs.length();i++){
@@ -250,7 +273,8 @@ final class PeerOutbox {
         }}
     }
     void discard(String peer)throws Exception{
-        synchronized(lock){
+        synchronized(lock){synchronized(TrashPurger.LOCK){
+            protectSources(true);
             mutate(state->{
                 JSONArray jobs=state.getJSONArray("jobs"),keep=new JSONArray();
                 for(int i=0;i<jobs.length();i++)
@@ -259,7 +283,7 @@ final class PeerOutbox {
                 return true;
             });
             cleanup();
-        }
+        }}
     }
     void completed(String peer,JSONObject metadata)throws Exception{
         synchronized(lock){synchronized(TrashPurger.LOCK){

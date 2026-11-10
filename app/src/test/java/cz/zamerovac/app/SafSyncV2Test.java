@@ -54,41 +54,6 @@ public class SafSyncV2Test {
    };
   }
  }
- /** Provider-boundary diagnostic: Drive stages until publish; SAF writes directly. */
- static final class LateAckProviderStore extends Store {
-  final PeerTransferTest.Device receiver;final boolean staged;boolean injected;
-  LateAckProviderStore(File root,PeerTransferTest.Device receiver,boolean staged){super(root);this.receiver=receiver;this.staged=staged;}
-  private void loseAuthority()throws IOException{
-   injected=true;
-   Files.write(new File(receiver.home,"projects.json").toPath(),new byte[]{0});
-  }
-  @Override public OutputStream create(String path)throws Exception{
-   if(!path.startsWith("sync/v2/acks/"))return super.create(path);
-   if(staged){
-    class StagedAck extends OutputStream implements ImmutableStore.PendingOutput {
-     final ByteArrayOutputStream buffer=new ByteArrayOutputStream();
-     public void write(int value){buffer.write(value);}
-     public void write(byte[] bytes,int offset,int length){buffer.write(bytes,offset,length);}
-     public void publish()throws IOException{
-      // Local CAS was last checked by GuardedOutput.publish immediately before this callback.
-      loseAuthority();
-      try(OutputStream destination=LateAckProviderStore.super.create(path)){buffer.writeTo(destination);}
-      catch(IOException failure){throw failure;}
-      catch(Exception failure){throw new IOException(failure);}
-     }
-    }
-    return new StagedAck();
-   }
-   // SAF-style direct output is already visible; provider writes AFTER the caller's guard.
-   OutputStream direct=super.create(path);
-   return new FilterOutputStream(direct){
-    boolean began;
-    private void firstWrite()throws IOException{if(!began){began=true;loseAuthority();}}
-    @Override public void write(int value)throws IOException{firstWrite();out.write(value);}
-    @Override public void write(byte[] bytes,int offset,int length)throws IOException{firstWrite();out.write(bytes,offset,length);}
-   };
-  }
- }
  PeerTransferTest.Device a,b;SyncTls ai,bi,rogue;SyncPeerRegistry ar,br;Store store;String aid,bid;JSONObject original;
  @Before public void setup()throws Exception{
   File root=Files.createTempDirectory(RuntimeEnvironment.getApplication().getCacheDir().toPath(),"cloud-sync-").toFile();a=new PeerTransferTest.Device(root,"a");b=new PeerTransferTest.Device(root,"b");ai=PeerTlsTest.material("a");bi=PeerTlsTest.material("b");rogue=PeerTlsTest.material("rogue");aid=DeviceIdentity.get(a.noBackup);bid=DeviceIdentity.get(b.noBackup);ar=new SyncPeerRegistry(a.noBackup);br=new SyncPeerRegistry(b.noBackup);ar.approve(bid,bi.fingerprint(),"B");br.approve(aid,ai.fingerprint(),"A");ar.rememberCertificate(bid,bi.certificate());br.rememberCertificate(aid,ai.certificate());store=new Store(new File(root,"provider"));original=new JSONObject().put("schema",1).put("records",new JSONArray().put(new JSONObject().put("id","photo-a").put("title","Syntetické foto").put("syncClock",new JSONObject().put(aid,1)).put("items",new JSONArray().put(new JSONObject().put("measure","1585,800001").put("unit","mm")))));

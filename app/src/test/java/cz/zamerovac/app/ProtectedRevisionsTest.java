@@ -20,7 +20,7 @@ public class ProtectedRevisionsTest {
     @Before public void setup()throws Exception{
         File root=Files.createTempDirectory(RuntimeEnvironment.getApplication().getCacheDir().toPath(),"protected-").toFile();
         device=new PeerTransferTest.Device(root,"phone");protection=new ProtectedRevisions(device,device.prefs);
-        peers=new SyncPeerRegistry(device.noBackup);peer=UUID.randomUUID().toString();peers.approve(peer,PeerTlsTest.C,"Tablet");
+        peers=new SyncPeerRegistry(device.noBackup);peer=UUID.randomUUID().toString();peers.approve(peer,"a".repeat(64),"Tablet");
         LocalDatabase.write(device,"{\"schema\":1,\"records\":[]}");
         File media=new File(device.home,"media");media.mkdirs();Files.write(new File(media,"original-photo").toPath(),photo);Files.write(new File(media,"original-video").toPath(),video);
         device.prefs.edit().putString("mime-original-photo","image/jpeg").putString("name-original-photo","Původní foto.jpg").commit();
@@ -68,8 +68,10 @@ public class ProtectedRevisionsTest {
         assertFalse(ProtectedRevisions.rollback(new File(device.home,"media/original-photo")));exactBytes();
     }
     @Test public void lowSpaceRejectsReplacementWithoutTouchingConfirmedBytes()throws Exception{
+        // A new, exact revision cannot reuse the already durable hold of `exact`.
+        String proposal=new JSONObject(exact).put("extra","new exact revision").toString();
         File full=new File(device.home.getAbsolutePath()){@Override public long getUsableSpace(){return 0;}};
-        String changed=new JSONObject(exact).put("records",new JSONArray()).toString();
+        String changed=proposal;
         try{LocalDatabase.write(full,device.noBackup,changed);fail("Disk-full save accepted");}catch(IOException expected){assertTrue(expected.getMessage().contains("nedostatku místa"));}
         assertEquals(exact,LocalDatabase.readForCas(device));exactBytes();
         // A successful retry preserves the old precise state and publishes the new DB.
@@ -96,8 +98,48 @@ public class ProtectedRevisionsTest {
         protection.preserveDatabase(exact);File original=new File(device.home,"media/original-photo");assertTrue(original.delete());
         File staged=MediaStaging.temporary(original.getParentFile(),original.getName());Files.write(staged.toPath(),new byte[]{8});
         try{MediaStaging.commit(staged,original.getName(),device.prefs,"image/jpeg","Other");fail("Pinned ID reused");}catch(IOException expected){}finally{staged.delete();}
-        JSONObject expected=new JSONObject().put("size",photo.length).put("hash",PeerWire.hash(photo));
-        try{PeerMedia.receive(original.getParentFile(),original.getName(),new ByteArrayInputStream(photo),expected);fail("Missing protected original silently replaced");}catch(IOException expected){}
+        JSONObject descriptor=new JSONObject().put("size",photo.length).put("hash",PeerWire.hash(photo));
+        try{PeerMedia.receive(original.getParentFile(),original.getName(),new ByteArrayInputStream(photo),descriptor);fail("Missing protected original silently replaced");}catch(IOException expected){}
         assertFalse(original.exists());assertEquals(2,protection.pins().size());
+    }
+    private void lateAck(boolean staged)throws Exception{
+        SafSyncV2Test cloud=new SafSyncV2Test();cloud.setup();cloud.canonicalFiles(1,4000);
+        String old=LocalDatabase.readForCas(cloud.a);PeerSnapshot sent=PeerSnapshot.capture(cloud.a,cloud.a.prefs);
+        byte[] original=Files.readAllBytes(new File(cloud.a.home,"media/original-0").toPath());
+        cloud.sync(cloud.a,cloud.ai,false).sync();
+        SafSyncV2Test.LateAckProviderStore provider=new SafSyncV2Test.LateAckProviderStore(cloud.store.root,cloud.b,staged);
+        try{cloud.engine(cloud.b,cloud.bi,provider,false).sync();}catch(IOException expected){}
+        assertTrue(provider.injected);assertTrue(DatabaseRecovery.pending(cloud.b.home));
+        cloud.sync(cloud.a,cloud.ai,false).sync(); // May consume the late signed transport receipt.
+        String saved=LocalDatabase.readForCas(cloud.a);new TrashPurger(cloud.a,cloud.a.prefs).purge(saved,saved,new JSONArray(),text->LocalDatabase.write(cloud.a,text));
+        new PeerOutbox(cloud.a,cloud.a.prefs,cloud.ar).discard(cloud.bid);cloud.ar.forget(cloud.bid);
+        assertTrue(new ProtectedRevisions(cloud.a,cloud.a.prefs).pins().contains("original-0"));
+        boolean found=false;for(File f:Objects.requireNonNull(new File(cloud.a.home,"protected-revisions").listFiles()))if(f.getName().matches("[a-f0-9]{64}\\.json")){
+            JSONObject hold=new JSONObject(new String(Files.readAllBytes(f.toPath()),StandardCharsets.UTF_8));
+            if(sent.hash.equals(hold.getString("sourceHash"))){found=true;assertArrayEquals(sent.bytes,hold.getString("metadata").getBytes(StandardCharsets.UTF_8));}
+        }
+        assertTrue("Late ACK removed exact outgoing state",found);assertEquals(old,LocalDatabase.readForCas(cloud.a));
+        assertArrayEquals(original,Files.readAllBytes(new File(cloud.a.home,"media/original-0").toPath()));
+        assertTrue(new ProtectedRevisions(cloud.b,cloud.b.prefs).pins().contains("original-0"));
+    }
+    @Test public void driveLateAckCannotReleaseRecoverableSnapshot()throws Exception{lateAck(true);}
+    @Test public void safLateAckCannotReleaseRecoverableSnapshot()throws Exception{lateAck(false);}
+    @Test public void retainedExactStateRestoresAsSeparateCopyThroughExistingImporter()throws Exception{
+        protection.preserveDatabase(exact);String retained=null;
+        for(JSONObject hold:holds())if(exact.equals(hold.getString("metadata")))retained=hold.getString("metadata");assertNotNull(retained);
+        File archive=new File(device.getCacheDir(),"retained.zip");
+        try(java.util.zip.ZipOutputStream out=new java.util.zip.ZipOutputStream(new FileOutputStream(archive))){
+            for(Map.Entry<String,byte[]> entry:Map.of("projects.json",retained.getBytes(StandardCharsets.UTF_8),"media/original-photo",photo,"media/original-video",video).entrySet()){
+                out.putNextEntry(new java.util.zip.ZipEntry(entry.getKey()));out.write(entry.getValue());out.closeEntry();
+            }
+        }
+        PeerTransferTest.Device receiver=new PeerTransferTest.Device(device.home.getParentFile(),"restore");
+        BackupImporter.Result restored=BackupImporter.restoreZip(receiver,android.net.Uri.fromFile(archive),receiver.prefs);
+        assertTrue(restored.recordCount>0);JSONObject db=new JSONObject(LocalDatabase.readForCas(receiver));JSONObject record=null;
+        for(int i=0;i<db.getJSONArray("records").length();i++){JSONObject r=db.getJSONArray("records").getJSONObject(i);if("photo".equals(r.optString("kind")))record=r;}
+        assertNotNull(record);JSONObject item=record.getJSONArray("items").getJSONObject(0);
+        assertEquals("1585.800001234567890",item.getString("laserMeasuredMm"));assertEquals("0,000000123456789",item.getString("measure"));assertEquals(0.125,item.getJSONObject("a").getDouble("x"),0);
+        assertArrayEquals(photo,Files.readAllBytes(new File(receiver.home,"media/"+record.getJSONArray("media").getString(0)).toPath()));
+        assertEquals(exact,LocalDatabase.readForCas(device));exactBytes();
     }
 }
