@@ -362,13 +362,16 @@ class GateUnitTest(unittest.TestCase):
 
 
 NATIVE_SHA = "144bb5573932be032411c11451aa560a10f623ee"
+# Synthetic SHA only for generator unit tests; a real reviewed gate SHA must be
+# supplied when the owner creates the workflow after independent approval.
+NATIVE_GATE_SHA = "b" * 40
 NATIVE_SOURCE_BRANCH = "fix/p1-34-b-protected-archive-chat33-20261110"
 NATIVE_QA_BRANCH = "qa/pr102-native-controlled"
 
 
 def native_workflow():
     return GATE.render_native_workflow(NATIVE_QA_BRANCH, NATIVE_SHA,
-                                       NATIVE_SOURCE_BRANCH)
+                                       NATIVE_SOURCE_BRANCH, NATIVE_GATE_SHA)
 
 
 class TargetedNativeGateTest(unittest.TestCase):
@@ -378,6 +381,15 @@ class TargetedNativeGateTest(unittest.TestCase):
         text = native_workflow()
         GATE.check_native_workflow(text, strict=True)
         self.assertIn("ref: " + NATIVE_SHA, text)
+        self.assertIn("ref: " + NATIVE_GATE_SHA, text)
+        self.assertIn("ref: " + "$" + "{{ github.sha }}", text)
+        self.assertIn("path: workflow", text)
+        self.assertIn("python recipe\\tools\\home_qa_gate.py", text)
+        self.assertNotIn("python workflow\\tools\\home_qa_gate.py", text)
+        self.assertLess(text.index("ref: " + NATIVE_GATE_SHA),
+                        text.index("REVIEWED_QA_GATE_SHA="))
+        self.assertLess(text.index("REVIEWED_QA_GATE_SHA="),
+                        text.index("python recipe\\tools\\home_qa_gate.py"))
         self.assertIn("refs/heads/" + NATIVE_QA_BRANCH, text)
         self.assertIn("ZamerovacQA", text)
         self.assertIn("refs/heads/" + NATIVE_QA_BRANCH, text)
@@ -396,18 +408,50 @@ class TargetedNativeGateTest(unittest.TestCase):
                        "fix/../../main", "qa/foo//bad", "fix/fork.lock",
                        "fix/x;rm -rf", "fix/FORK", "fix/foo/"):
             with self.subTest(branch=branch), self.assertRaises(GATE.GateError):
-                GATE.render_native_workflow(NATIVE_QA_BRANCH, NATIVE_SHA, branch)
+                GATE.render_native_workflow(NATIVE_QA_BRANCH, NATIVE_SHA, branch, NATIVE_GATE_SHA)
         for bad in ("refs/heads/main", "qa/foo/../bar", "qa/pr102;echo", "main"):
             with self.subTest(branch=bad), self.assertRaises(GATE.GateError):
-                GATE.render_native_workflow(bad, NATIVE_SHA, NATIVE_SOURCE_BRANCH)
+                GATE.render_native_workflow(bad, NATIVE_SHA, NATIVE_SOURCE_BRANCH, NATIVE_GATE_SHA)
         with self.assertRaises(GATE.GateError):
-            GATE.render_native_workflow(NATIVE_QA_BRANCH, "main", NATIVE_SOURCE_BRANCH)
+            GATE.render_native_workflow(NATIVE_QA_BRANCH, "main", NATIVE_SOURCE_BRANCH, NATIVE_GATE_SHA)
         with self.assertRaisesRegex(GATE.GateError, "not a reviewed"):
             GATE.render_native_workflow(NATIVE_QA_BRANCH, "f" * 40,
-                                        NATIVE_SOURCE_BRANCH)
+                                        NATIVE_SOURCE_BRANCH, NATIVE_GATE_SHA)
         with self.assertRaises(GATE.GateError):
             GATE.render_native_workflow(NATIVE_QA_BRANCH, NATIVE_SHA,
-                                        "fix/valid-owner-branch-but-not-reviewed")
+                                        "fix/valid-owner-branch-but-not-reviewed", NATIVE_GATE_SHA)
+
+    def test_reviewed_gate_must_be_distinct_pinned_commit_not_mutable_ref(self):
+        for invalid in ("main", "refs/heads/qa/other", "", "Z" * 40,
+                        NATIVE_SHA):
+            with self.subTest(gate=invalid), self.assertRaises(GATE.GateError):
+                GATE.render_native_workflow(NATIVE_QA_BRANCH, NATIVE_SHA,
+                                            NATIVE_SOURCE_BRANCH, invalid)
+        good = native_workflow()
+        self.assertEqual(3, good.count("uses: actions/checkout@" + CHECKOUT))
+        self.assertEqual(1, good.count("ref: " + NATIVE_GATE_SHA))
+        self.assertEqual(1, good.count("ref: " + NATIVE_SHA))
+        self.assertEqual(1, good.count("ref: " + "$" + "{{ github.sha }}"))
+        self.assertIn("workflow\\.github\\workflows\\home-qa-targeted-native.yml", good)
+        self.assertIn("python -m unittest discover -s recipe\\tests", good)
+        with self.assertRaises(GATE.GateError):
+            GATE.check_native_workflow(
+                good.replace("python recipe\\tools", "python workflow\\tools"),
+                strict=True)
+
+    def test_reviewed_gate_refusal_of_wrong_checked_out_commit(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            (root / ".git").mkdir()
+            for actual, should_pass in ((NATIVE_GATE_SHA, True), ("f" * 40, False)):
+                with mock.patch.object(GATE.subprocess, "run",
+                                       return_value=mock.Mock(stdout=actual + "\n")):
+                    if should_pass:
+                        self.assertEqual(NATIVE_GATE_SHA,
+                                         GATE.git_source(root, NATIVE_GATE_SHA))
+                    else:
+                        with self.assertRaisesRegex(GATE.GateError, "wrong checkout"):
+                            GATE.git_source(root, NATIVE_GATE_SHA)
 
     def test_native_strict_yaml_rejects_every_security_bypass(self):
         good = native_workflow()
@@ -418,6 +462,11 @@ class TargetedNativeGateTest(unittest.TestCase):
             ("path: qa-evidence/native-targeted-summary.txt", "path: source/"),
             ("GH_TOKEN: " + "$" + "{{ github.token }}", "GH_TOKEN: exposed-token"),
             ("if-no-files-found: error", "if-no-files-found: ignore"),
+            ("python recipe\\tools\\home_qa_gate.py", "python workflow\\tools\\home_qa_gate.py"),
+            ("path: recipe", "path: source"),
+            ("path: workflow", "path: recipe"),
+            ("ref: " + NATIVE_GATE_SHA, "ref: " + "f" * 40),
+            ("REVIEWED_QA_GATE_SHA=", "REVIEWED_UNCHECKED_SHA="),
             ("persist-credentials: false", "persist-credentials: true"),
             ("actions/checkout@" + CHECKOUT, "actions/checkout@v4"),
             ("github.actor == 'zaplikj30-ui'", "github.actor == 'someone'"),
@@ -454,7 +503,8 @@ class TargetedNativeGateTest(unittest.TestCase):
             self.assertEqual(0, GATE.main([
                 "render-native-workflow", "--branch", NATIVE_QA_BRANCH,
                 "--source-branch", NATIVE_SOURCE_BRANCH,
-                "--expected-sha", NATIVE_SHA, "--output", str(target),
+                "--expected-sha", NATIVE_SHA,
+                "--reviewed-gate-sha", NATIVE_GATE_SHA, "--output", str(target),
             ]))
             self.assertEqual(native_workflow().encode("utf-8"), target.read_bytes())
             GATE.check_native_workflow(target.read_text(encoding="utf-8"), strict=True)
@@ -462,7 +512,8 @@ class TargetedNativeGateTest(unittest.TestCase):
                 self.assertEqual(2, GATE.main([
                     "render-native-workflow", "--branch", NATIVE_QA_BRANCH,
                     "--source-branch", NATIVE_SOURCE_BRANCH,
-                    "--expected-sha", NATIVE_SHA, "--output", str(target),
+                    "--expected-sha", NATIVE_SHA,
+                "--reviewed-gate-sha", NATIVE_GATE_SHA, "--output", str(target),
                 ]))
             self.assertEqual(native_workflow().encode("utf-8"), target.read_bytes())
             self.assertEqual(0, GATE.main([
