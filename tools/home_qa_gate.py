@@ -307,18 +307,34 @@ jobs:
           if not exist "C:\actions-runner\tools\Python313\python.exe" exit /b 1
           echo C:\actions-runner\tools\MinGit-2.56.0.4\cmd>>"%GITHUB_PATH%"
           echo C:\actions-runner\tools\Python313>>"%GITHUB_PATH%"
-      - name: Checkout trusted reviewed QA recipe, not target generator
+      - name: Checkout independently reviewed immutable QA gate
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: GHA_SHA
+          ref: __GATE_SHA__
           path: recipe
           fetch-depth: 1
           persist-credentials: false
           submodules: false
+      - name: Checkout triggering workflow YAML as inert data only
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: GHA_SHA
+          path: workflow
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+      - name: Prove reviewed QA gate SHA before executing any checked out code
+        shell: cmd
+        run: |
+          cd /d "%GITHUB_WORKSPACE%\recipe"
+          for /f %%H in ('git rev-parse HEAD') do set "ACTUAL_GATE_SHA=%%H"
+          if not defined ACTUAL_GATE_SHA exit /b 1
+          if /I not "%ACTUAL_GATE_SHA%"=="__GATE_SHA__" exit /b 1
+          echo REVIEWED_QA_GATE_SHA=%ACTUAL_GATE_SHA%
       - name: Strict workflow lint and generator negative regressions
         shell: cmd
         run: |
-          python recipe\tools\home_qa_gate.py lint-native-workflow recipe\.github\workflows\home-qa-targeted-native.yml --strict
+          python recipe\tools\home_qa_gate.py lint-native-workflow workflow\.github\workflows\home-qa-targeted-native.yml --strict
           if errorlevel 1 exit /b 1
           python -m unittest discover -s recipe\tests -p test_home_qa_gate.py -v
           if errorlevel 1 exit /b 1
@@ -359,15 +375,19 @@ def valid_source_branch(branch: str) -> None:
            "source must be a literal owner-repository branch, not a PR/fork/ref expression")
 
 
-def render_native_workflow(branch: str, source_sha: str, source_branch: str) -> str:
+def render_native_workflow(branch: str, source_sha: str, source_branch: str,
+                           reviewed_gate_sha: str) -> str:
     demand(bool(re.fullmatch(r"qa/[a-z][a-z0-9._-]{3,65}", branch)),
            "only the literal owner-controlled qa/* trigger is allowed")
     demand(bool(SHA.fullmatch(source_sha)), "literal source SHA required")
+    demand(bool(SHA.fullmatch(reviewed_gate_sha)) and reviewed_gate_sha != source_sha,
+           "independently reviewed gate must be pinned to a distinct 40-hex commit")
     valid_source_branch(source_branch)
     demand(APPROVED_NATIVE_TARGETS.get(source_branch) == source_sha,
            "source SHA is not a reviewed native QA target")
     return (TARGETED_NATIVE_RECIPE.replace("__QA_BRANCH__", branch)
             .replace("__SOURCE_SHA__", source_sha)
+            .replace("__GATE_SHA__", reviewed_gate_sha)
             .replace("__SOURCE_BRANCH__", source_branch)
             .replace("GHA_IF", "$" + "{{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/" + branch + "' && github.event_name == 'push' }}")
             .replace("GHA_SHA", "$" + "{{ github.sha }}")
@@ -378,12 +398,14 @@ def check_native_workflow(content: str, strict: bool = True) -> None:
     demand(strict, "native HOME YAML cannot use a permissive linter")
     normalized = content.replace("\r\n", "\n")
     branch = re.search(r"(?m)^    branches: \[(qa/[a-z][a-z0-9._-]{3,65})\]$", normalized)
-    source = re.search(r"(?m)^          ref: ([0-9a-f]{40})$", normalized)
+    pinned_refs = re.findall(r"(?m)^          ref: ([0-9a-f]{40})$", normalized)
     source_branch = re.search(r"(?m)^          python recipe\\tools\\home_qa_gate\.py verify-trusted-source --source-branch ([a-z0-9._/-]+) --expected-sha ([0-9a-f]{40})$", normalized)
-    demand(bool(branch and source and source_branch), "unrecognized native workflow: STOP")
-    demand(source.group(1) == source_branch.group(2), "trusted head SHA mismatch: STOP")
-    demand(normalized == render_native_workflow(branch.group(1), source.group(1),
-                                               source_branch.group(1)),
+    demand(bool(branch and len(pinned_refs) == 2 and source_branch),
+           "unrecognized or unpinned native QA workflow: STOP")
+    gate_sha, source_sha = pinned_refs
+    demand(source_sha == source_branch.group(2), "trusted source SHA mismatch: STOP")
+    demand(normalized == render_native_workflow(branch.group(1), source_sha,
+                                               source_branch.group(1), gate_sha),
            "modified native workflow trigger, job, checkout, guard, tests or shell: STOP")
 
 
@@ -665,6 +687,7 @@ def main(argv: list[str] | None = None) -> int:
     native.add_argument("--branch", required=True)
     native.add_argument("--expected-sha", required=True)
     native.add_argument("--source-branch", required=True)
+    native.add_argument("--reviewed-gate-sha", required=True)
     native.add_argument("--output", type=Path)
     native_lint = modes.add_parser("lint-native-workflow")
     native_lint.add_argument("path", type=Path)
@@ -695,7 +718,8 @@ def main(argv: list[str] | None = None) -> int:
     try:
         if args.mode == "render-native-workflow":
             payload = render_native_workflow(args.branch, args.expected_sha,
-                                             args.source_branch).encode("utf-8")
+                                             args.source_branch,
+                                             args.reviewed_gate_sha).encode("utf-8")
             output_canonical_utf8(payload, args.output, "home-qa-targeted-native.yml")
             return 0
         if args.mode == "lint-native-workflow":
