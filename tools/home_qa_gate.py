@@ -103,6 +103,16 @@ def check_windows(resolve=shutil.which, system: str | None = None) -> None:
         command_ok(["node", "--version"])
 
 
+def read_version(argv: list[str]) -> str:
+    """Check executable output, not existence of a fake java/gradle file."""
+    try:
+        result = subprocess.run(argv, capture_output=True, text=True, check=True, timeout=25)
+    except (OSError, subprocess.CalledProcessError, subprocess.TimeoutExpired) as exc:
+        raise GateError("HOME QA STOP: unusable JDK or Gradle executable " +
+                        argv[0] + ": " + str(exc)) from exc
+    return result.stdout + "\n" + result.stderr
+
+
 def check_wsl(gradle: Path, resolve=shutil.which, system: str | None = None,
               environ: dict[str, str] | None = None, release: str | None = None) -> None:
     environ = environ if environ is not None else os.environ
@@ -118,9 +128,20 @@ def check_wsl(gradle: Path, resolve=shutil.which, system: str | None = None,
     javac = Path(java_home) / "bin" / "javac" if java_home else None
     demand(bool(java and java.is_file() and javac and javac.is_file()),
            "JAVA_HOME must point to installed JDK17 with java and javac; no auto-install")
-    demand(gradle.is_file(), "pinned local Gradle unavailable: " + str(gradle))
-    # Intentionally NO Node dependency here. Never use 'unittest discover' in WSL:
-    # those Python tests spawn Node and must use windows-quick instead.
+    demand(gradle.is_file() and os.access(gradle, os.X_OK),
+           "pinned local Gradle missing or not executable: " + str(gradle))
+    demand(os.access(java, os.X_OK) and os.access(javac, os.X_OK),
+           "JAVA_HOME must contain executable JDK java and javac")
+    java_version = read_version([str(java), "-version"])
+    javac_version = read_version([str(javac), "-version"])
+    gradle_version = read_version([str(gradle), "--version"])
+    demand(bool(re.search(r'(?i)\b(?:openjdk|java) version "17\.', java_version)),
+           "JDK 17 runtime required, not a fake or incompatible Java")
+    demand(bool(re.search(r'(?m)^javac 17\.', javac_version)),
+           "JDK 17 compiler required")
+    demand(bool(re.search(r'(?m)^Gradle 8\.10\.2\b', gradle_version)),
+           "Gradle 8.10.2 required, not just an existing file")
+    # No WSL Node dependency. Generic unittest discovery is Windows-only.
 
 
 def check_workflow(content: str, strict: bool = False) -> None:
