@@ -7,6 +7,8 @@ import tempfile
 import unittest
 import io
 import os
+import subprocess
+import sys
 from unittest import mock
 
 
@@ -268,6 +270,45 @@ class GateUnitTest(unittest.TestCase):
             self.assertEqual(valid_workflow().encode("utf-8"), raw)
             self.assertNotIn(b"\xef\xbb\xbf", raw[:3], "No UTF-8 BOM")
             GATE.check_workflow(raw.decode("utf-8"), strict=True)
+
+    def test_render_output_file_refuses_overwriting_existing_yaml(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp) / ".github" / "workflows"
+            folder.mkdir(parents=True)
+            target = folder / "home-qa-one-shot.yml"
+            target.write_bytes(b"original source, must not be overwritten")
+            with mock.patch.object(GATE.sys, "stderr", io.StringIO()):
+                self.assertEqual(2, GATE.main([
+                    "render-workflow", "--branch", "qa/example",
+                    "--expected-sha", SHA, "--output", str(target),
+                ]))
+            self.assertEqual(b"original source, must not be overwritten",
+                             target.read_bytes())
+
+    def test_render_rejects_noncanonical_output_location(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            wrong = Path(tmp) / "unsafe.yml"
+            with mock.patch.object(GATE.sys, "stderr", io.StringIO()):
+                self.assertEqual(2, GATE.main([
+                    "render-workflow", "--branch", "qa/example",
+                    "--expected-sha", SHA, "--output", str(wrong),
+                ]))
+            self.assertFalse(wrong.exists())
+
+    def test_python_x_utf8_explicit_subprocess_remains_supported(self):
+        # This is the published fallback for a terminal that only supports
+        # -X utf8; assertions inspect raw output bytes rather than display.
+        env = dict(os.environ)
+        env["PYTHONUTF8"] = "0"
+        result = subprocess.run([
+            sys.executable, "-X", "utf8",
+            str(ROOT / "tools" / "home_qa_gate.py"),
+            "render-workflow", "--branch", "qa/example",
+            "--expected-sha", SHA,
+        ], capture_output=True, env=env, check=False, timeout=15)
+        self.assertEqual(0, result.returncode, result.stderr.decode("utf-8", errors="replace"))
+        self.assertEqual(valid_workflow().encode("utf-8"), result.stdout)
+        GATE.check_workflow(result.stdout.decode("utf-8"), strict=True)
 
     def test_render_rejects_unsafe_branch_or_sha(self):
         for branch in ("main", "qa/foo/../main", "refs/pull/1", "qa/unsafe;touch x"):
