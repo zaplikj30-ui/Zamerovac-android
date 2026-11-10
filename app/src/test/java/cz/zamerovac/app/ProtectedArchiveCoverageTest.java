@@ -94,7 +94,7 @@ public class ProtectedArchiveCoverageTest {
         JSONObject preserved=new JSONObject(new String(bytes(
             new File(archive(copy),"payload/"+relative)),StandardCharsets.UTF_8));
         File separatelyRestored=new File(root,"review-old-revision.json");
-        Files.write(separatelyRestored,preserved.getString("metadata")
+        Files.write(separatelyRestored.toPath(),preserved.getString("metadata")
             .getBytes(StandardCharsets.UTF_8));
         assertArrayEquals(OLD_EXACT.getBytes(StandardCharsets.UTF_8),
             bytes(separatelyRestored));
