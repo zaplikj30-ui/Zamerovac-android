@@ -160,6 +160,89 @@ class GateUnitTest(unittest.TestCase):
         with self.assertRaisesRegex(GATE.GateError, "must match a pinned checkout"):
             GATE.check_workflow(bad, strict=True)
 
+    # Chat32 adversarial RED reproductions: these are VALID YAML changes and
+    # must be REJECTED by strict, not merely discovered in comments.
+    def test_adversarial_extra_cloud_job_must_fail_closed(self):
+        bad = valid_workflow() + """
+  unguarded_cloud:
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: true
+      - run: echo paid cloud started
+"""
+        with self.assertRaises(GATE.GateError):
+            GATE.check_workflow(bad, strict=True)
+
+    def test_adversarial_inline_pr_trigger_and_unguarded_job_rejected(self):
+        bad = valid_workflow().replace(
+            "on:\n  push:\n    branches: [qa/example]",
+            "on: [push, pull_request]",
+        ) + """
+  unguarded:
+    runs-on: [self-hosted, Windows, X64, zamerovac-qa]
+    steps:
+      - run: echo PR untrusted
+"""
+        with self.assertRaises(GATE.GateError):
+            GATE.check_workflow(bad, strict=True)
+
+    def test_adversarial_powershell_wsl_python_alias_rejected(self):
+        bad = valid_workflow() + '''
+      - name: hidden WSL through pwsh variable
+        shell: pwsh
+        run: |
+          $cmd = "python3 -m unittest discover -s tests"
+          wsl.exe --exec bash -lc $cmd
+'''
+        with self.assertRaises(GATE.GateError):
+            GATE.check_workflow(bad, strict=True)
+
+    def test_adversarial_python_script_triplequote_wsl_discovery_rejected(self):
+        bad = valid_workflow() + '''
+      - name: Python WSL shell proxy
+        shell: python
+        run: |
+          script = r"""python3 -m unittest discover -s tests"""
+          subprocess.run(["wsl.exe", "--exec", "bash", "-lc", script])
+'''
+        with self.assertRaises(GATE.GateError):
+            GATE.check_workflow(bad, strict=True)
+
+    def test_adversarial_comment_only_preflight_before_gradle_rejected(self):
+        original = valid_workflow()
+        original = original.replace(
+            "          python tools/home_qa_gate.py lint-workflow .github/workflows/qa.yml --strict\n",
+            "          # lint-workflow wsl-native -- text only, not executed\n",
+        ).replace(
+            "          python3 tools/home_qa_gate.py wsl-native --expected-sha " + SHA + "\n"
+            "          /opt/gradle-8.10.2/bin/gradle :app:testPreviewUnitTest",
+            "          # wsl-native (fake preflight only)\n"
+            "          /opt/gradle-8.10.2/bin/gradle :app:testPreviewUnitTest\n"
+            "          python3 tools/home_qa_gate.py wsl-native --expected-sha " + SHA + "\n"
+            "          python tools/home_qa_gate.py lint-workflow .github/workflows/qa.yml --strict",
+        )
+        with self.assertRaises(GATE.GateError):
+            GATE.check_workflow(original, strict=True)
+
+    def test_adversarial_fake_jdk_and_gradle_files_are_not_valid_versions(self):
+        with tempfile.TemporaryDirectory() as temp:
+            home = Path(temp) / "fake-jdk"
+            (home / "bin").mkdir(parents=True)
+            for tool in ("java", "javac"):
+                (home / "bin" / tool).write_text("not an executable JDK", encoding="utf-8")
+            gradle = Path(temp) / "gradle"
+            gradle.write_text("fake gradle", encoding="utf-8")
+            with self.assertRaises(GATE.GateError):
+                GATE.check_wsl(
+                    gradle,
+                    {"git": "/usr/bin/git", "python3": "/usr/bin/python3"}.get,
+                    "Linux",
+                    {"JAVA_HOME": str(home), "WSL_DISTRO_NAME": "Ubuntu"},
+                    "microsoft-standard-WSL2",
+                )
+
     def test_current_trusted_home_workflows_are_safe_from_wsl_node_discovery(self):
         for path in (ROOT / ".github/workflows/windows-self-hosted-qa.yml",
                      ROOT / ".github/workflows/windows-home-apk-release.yml"):
