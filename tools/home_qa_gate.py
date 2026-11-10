@@ -144,56 +144,104 @@ def check_wsl(gradle: Path, resolve=shutil.which, system: str | None = None,
     # No WSL Node dependency. Generic unittest discovery is Windows-only.
 
 
-def check_workflow(content: str, strict: bool = False) -> None:
-    """Conservative YAML source gate before executing ANY expensive test.
+# No generic YAML parsing by global substring: exact canonical allowlist only.
+# Any comments, anchors, additional jobs, altered triggers or shell commands STOP.
+ONE_SHOT_RECIPE = r'''
+name: Zaměřovač - canonical owner-only HOME QA, no APK
+on:
+  push:
+    branches: [__QA_BRANCH__]
+    paths: ['.github/workflows/home-qa-one-shot.yml']
+permissions:
+  contents: read
+concurrency:
+  group: canonical-home-qa-__QA_BRANCH__
+  cancel-in-progress: false
+jobs:
+  trusted-qa:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/__QA_BRANCH__' && github.event_name == 'push' }}
+    runs-on: [self-hosted, Windows, X64, zamerovac-qa]
+    timeout-minutes: 50
+    env:
+      CI: '1'
+      PYTHONUTF8: '1'
+      TESTED_SHA: '__SOURCE_SHA__'
+    steps:
+      - name: Verify owner service and installed tools
+        shell: cmd
+        run: |
+          if /I not "%USERNAME%"=="ZamerovacQA" exit /b 1
+          if not exist "C:\actions-runner\tools\MinGit-2.56.0.4\cmd\git.exe" exit /b 1
+          if not exist "C:\actions-runner\tools\Python313\python.exe" exit /b 1
+          echo C:\actions-runner\tools\MinGit-2.56.0.4\cmd>>"%GITHUB_PATH%"
+          echo C:\actions-runner\tools\Python313>>"%GITHUB_PATH%"
+      - name: Read-only tested source at literal SHA
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: __SOURCE_SHA__
+          path: source
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+      - name: Read-only triggering workflow for self lint
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          path: recipe
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+      - name: Exact YAML preflight and adversarial negative tests before QA
+        shell: cmd
+        run: |
+          cd /d "%GITHUB_WORKSPACE%\source"
+          python tools\home_qa_gate.py lint-workflow "..\recipe\.github\workflows\home-qa-one-shot.yml" --strict
+          if errorlevel 1 exit /b 1
+          python -m unittest discover -s tests -p test_home_qa_gate.py -v
+          if errorlevel 1 exit /b 1
+          python tools\home_qa_gate.py windows-quick --expected-sha __SOURCE_SHA__ --root . --check-only
+          if errorlevel 1 exit /b 1
+      - name: All quick Windows Node and Python tests
+        shell: cmd
+        run: |
+          cd /d "%GITHUB_WORKSPACE%\source"
+          set "LOCALAPPDATA=%GITHUB_WORKSPACE%\qa-evidence"
+          python tools\home_qa_gate.py windows-quick --expected-sha __SOURCE_SHA__ --root .
+          if errorlevel 1 exit /b 1
+      - name: Controlled WSL native JDK Gradle and approved Python probes
+        shell: cmd
+        run: |
+          cd /d "%GITHUB_WORKSPACE%\source"
+          python tools\home_qa_gate.py wsl-check-from-windows --expected-sha __SOURCE_SHA__ --root .
+          if errorlevel 1 exit /b 1
+      - name: Upload synthetic quick results, never APK
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: canonical-home-qa-__SOURCE_SHA__
+          path: qa-evidence/Zamerovac-QA/results/
+          retention-days: 7
+          if-no-files-found: ignore
+'''
 
-    Ad hoc WSL scripts previously ran 'python3 -m unittest discover' without
-    Node. Reject that class of mistake even when a later Java test would pass.
-    """
-    demand("self-hosted" in content and "Windows" in content,
-           "workflow must use self-hosted Windows; no paid cloud")
-    demand(not re.search(r"(?m)^\s*pull_request(?:_target)?:", content),
-           "pull_request or pull_request_target must never run HOME")
-    demand(not re.search(r"\bruns-on:\s*(?:ubuntu|windows|macos)-latest\b", content),
-           "cloud-hosted runner forbidden")
-    demand(bool(CHECKOUT.search(content)), "actions/checkout must be pinned to complete SHA")
-    demand("persist-credentials: false" in content,
-           "checkout must not retain repository credentials")
-    demand("github.repository == 'zaplikj30-ui/Zamerovac-android'" in content
-           and "github.actor == 'zaplikj30-ui'" in content,
-           "owner-only repository and actor gates are required")
-    demand("refs/heads/main" in content or "refs/heads/qa/" in content,
-           "explicit trusted branch restriction missing")
 
-    # Inspect embedded WSL bash scripts, not Windows Python jobs in same YAML.
-    linux_scripts = re.findall(r"(?is)\blinux\s*=\s*r?(?:\"\"\"([\s\S]*?)\"\"\"|'''([\s\S]*?)''')",
-                               content)
-    for parts in linux_scripts:
-        bash = next((part for part in parts if part), "")
-        demand(not TEST_COMMAND.search(bash),
-               "WSL Python unittest may spawn Node; route full Python tests to Windows quick")
-        demand(not re.search(r"(?m)^\s*(?:node|npm|npx)\b", bash),
-               "WSL must not execute Node directly; use Windows quick")
-    for line in content.splitlines():
-        if re.search(r"\bwsl(?:\.exe)?\b.*\bpython(?:3)?\s+-m\s+unittest\b", line, re.I):
-            raise GateError("HOME QA STOP: WSL unittest on direct command line; use Windows quick")
+def render_workflow(branch: str, source_sha: str) -> str:
+    demand(bool(re.fullmatch(r"qa/[a-z][a-z0-9._-]{3,65}", branch)),
+           "only a literal trusted qa/* branch is allowed")
+    demand(bool(SHA.fullmatch(source_sha)), "exact 40-character source SHA required")
+    return (ONE_SHOT_RECIPE.replace("__QA_BRANCH__", branch)
+            .replace("__SOURCE_SHA__", source_sha).lstrip("\n"))
 
-    if strict:
-        demand("tools/home_qa_gate.py" in content and "windows-quick" in content
-               and "wsl-native" in content,
-               "new HOME workflow must invoke BOTH reusable Windows and WSL preflight")
-        demand("lint-workflow" in content, "workflow self-lint missing")
-        ref_lines = re.findall(r"(?m)^\s*ref:\s*([^\s#]+)", content)
-        demand(bool(ref_lines) and all(SHA.fullmatch(value) for value in ref_lines),
-               "each trusted one-shot checkout ref must be a literal exact SOURCE/workflow SHA")
-        target_sha = re.findall(r"--expected-sha\s+([0-9a-f]{40})(?![0-9a-f])", content)
-        demand(bool(target_sha) and len(set(target_sha)) == 1 and target_sha[0] in ref_lines,
-               "one exact expected application SOURCE SHA must match a pinned checkout")
-        native = content.find("wsl-native")
-        gate = content.find("lint-workflow")
-        expensive = content.find(":app:testPreviewUnitTest")
-        demand(native >= 0 and (expensive < 0 or gate < expensive and native < expensive),
-               "lint and WSL preflight must precede long Gradle/JUnit tests")
+
+def check_workflow(content: str, strict: bool = True) -> None:
+    """Refuse all YAML outside known-good single-job one-shot template."""
+    demand(strict, "permissive legacy YAML scan is no longer allowed")
+    normalized = content.replace("\r\n", "\n")
+    branch = re.search(r"(?m)^    branches: \[(qa/[a-z][a-z0-9._-]{3,65})\]$", normalized)
+    source = re.search(r"(?m)^          ref: ([0-9a-f]{40})$", normalized)
+    demand(bool(branch and source), "unknown workflow: render approved HOME recipe")
+    demand(normalized == render_workflow(branch.group(1), source.group(1)),
+           "unknown YAML, job, trigger, checkout, step order or WSL command: STOP")
+
 
 
 def jdk_probes() -> None:
@@ -222,12 +270,29 @@ def main(argv: list[str] | None = None) -> int:
             parser.add_argument("--gradle", default="/opt/gradle-8.10.2/bin/gradle")
         if mode == "windows-quick":
             parser.add_argument("--check-only", action="store_true")
+    render = modes.add_parser("render-workflow")
+    render.add_argument("--branch", required=True)
+    render.add_argument("--expected-sha", required=True)
+    wsl = modes.add_parser("wsl-check-from-windows")
+    wsl.add_argument("--expected-sha", required=True)
+    wsl.add_argument("--root", default=str(ROOT))
     lint = modes.add_parser("lint-workflow")
     lint.add_argument("path", type=Path)
     lint.add_argument("--strict", action="store_true")
     modes.add_parser("wsl-python-node")
     args = ap.parse_args(argv)
     try:
+        if args.mode == "render-workflow":
+            sys.stdout.write(render_workflow(args.branch, args.expected_sha))
+            return 0
+        if args.mode == "wsl-check-from-windows":
+            trusted_owner(os.environ)
+            check_windows()
+            root = Path(args.root).resolve()
+            actual = git_source(root, args.expected_sha)
+            print("TESTED_WINDOWS_SOURCE_SHA=" + actual, flush=True)
+            run_wsl_checked(root, actual)
+            return 0
         if args.mode == "lint-workflow":
             demand(args.path.is_file(), "workflow YAML does not exist: " + str(args.path))
             check_workflow(args.path.read_text(encoding="utf-8"), strict=args.strict)
