@@ -9,6 +9,11 @@ Only Python standard-library dependencies are used.
 from __future__ import annotations
 
 import argparse
+import json
+import urllib.error
+import urllib.parse
+import urllib.request
+import xml.etree.ElementTree as ET
 import os
 from pathlib import Path
 import platform
@@ -23,6 +28,15 @@ REPO = "zaplikj30-ui/Zamerovac-android"
 OWNER = "zaplikj30-ui"
 SHA = re.compile(r"[0-9a-f]{40}\Z")
 CHECKOUT = re.compile(r"actions/checkout@[0-9a-f]{40}(?![0-9a-f])")
+SOURCE_BRANCH = re.compile(r"(?:fix|refactor|feature|qa|test)/[a-z][a-z0-9._/-]{2,89}\Z")
+TARGETED_NATIVE = {
+    "ProtectedArchiveCoverageTest": 9,
+    "RecoveryProtectionArchiveTest": 40,
+    "RecoveryInventoryTest": 7,
+    "ProtectedRevisionsTest": 21,
+    "TrashPurgerTest": 17,
+}
+TARGETED_TOTAL = sum(TARGETED_NATIVE.values())  # Exact SHA #102: 94 @Test methods.
 TEST_COMMAND = re.compile(r"\bpython(?:3(?:\.\d+)?)?\s+-m\s+unittest\b")
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -232,7 +246,8 @@ def render_workflow(branch: str, source_sha: str) -> str:
             .replace("__SOURCE_SHA__", source_sha).lstrip("\n"))
 
 
-def output_canonical_utf8(payload: bytes, output: Path | None) -> None:
+def output_canonical_utf8(payload: bytes, output: Path | None,
+                          filename: str = "home-qa-one-shot.yml") -> None:
     """Write UTF-8 bytes, independent of Windows console codepage/CP1250.
 
     Never silently overwrite an existing trusted workflow. The canonical
@@ -246,10 +261,10 @@ def output_canonical_utf8(payload: bytes, output: Path | None) -> None:
         stream.flush()
         return
 
-    demand(output.name == "home-qa-one-shot.yml" and
+    demand(output.name == filename and
            output.parent.name == "workflows" and
            output.parent.parent.name == ".github",
-           "--output must be .github/workflows/home-qa-one-shot.yml")
+           "--output must be .github/workflows/" + filename)
     demand(output.parent.is_dir() and
            not output.parent.is_symlink() and not output.parent.parent.is_symlink(),
            "workflow directory must already exist and must not be a symlink")
