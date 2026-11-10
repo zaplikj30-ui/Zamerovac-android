@@ -102,6 +102,25 @@ public class ProtectedArchiveCoverageTest {
         assertArrayEquals(exactHold,bytes(hold));
     }
 
+    @Test public void missingEntireP1RegistryNeverClaimsHistoricalSourceCompleteness()
+            throws Exception{
+        // A pre-P1 installation and a deleted entire P1 registry look the same
+        // on disk. Available DB bytes can be archived, historical completeness
+        // cannot be demonstrated from that absence.
+        String present=dimension("legacy-precise");
+        Files.write(new File(home,"projects.json").toPath(),
+            present.getBytes(StandardCharsets.UTF_8));
+        assertFalse(new File(home,"protected-revisions").exists());
+        assertFalse(new File(noBackup,"protected-revisions.json").exists());
+        JSONObject copy=RecoveryProtectionArchive.create(home,noBackup);
+        assertTrue(copy.getBoolean("complete")); // only the available bytes are intact
+        assertFalse(copy.getBoolean("sourceComplete")); // NOT a proof of lost P1 history
+        assertFalse(RecoveryProtectionArchive.verify(noBackup,copy.getString("id"))
+            .getBoolean("sourceComplete"));
+        assertArrayEquals(present.getBytes(StandardCharsets.UTF_8),
+            bytes(new File(archive(copy),"payload/files/projects.json")));
+    }
+
     @Test public void missingWitnessOrCorruptCatalogCannotClaimCompleteP1Archive()throws Exception{
         rotatedHistory();
         File witness=new File(noBackup,"protected-revisions.json");
