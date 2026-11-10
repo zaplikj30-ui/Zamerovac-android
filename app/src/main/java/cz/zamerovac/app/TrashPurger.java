@@ -115,6 +115,15 @@ final class TrashPurger {
         protection.preserveDatabase(saved); // before records, backup or pending intent can change
         Set<String> pinned=protection.pins();
         Set<String> retained=new HashSet<>(candidates);retained.retainAll(pinned);
+        // A pre-P1 trash-cleanup.json may outlive its deleted DB record. No
+        // current preimage can pin that last original after the record is gone.
+        // Never unlink an orphan pending ID without durable P1 protection.
+        // Refuse the entire cleanup BEFORE writing DB, intent, backup or media.
+        Set<String> unverifiedPending=new TreeSet<>(candidates);
+        unverifiedPending.removeAll(pinned);
+        if(!unverifiedPending.isEmpty())throw new IOException(
+            "Neověřený seznam úklidu obsahuje přílohy bez trvalé ochrany. "
+            +"Úklid byl zastaven; původní soubory a databáze zůstaly beze změny.");
         // Save the cleanup intent first. A failure here cannot change records or media.
         atomic(pendingFile(),new JSONArray(candidates).toString());
         String next=db.toString();
