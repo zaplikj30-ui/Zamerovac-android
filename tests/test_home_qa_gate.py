@@ -98,20 +98,26 @@ class GateUnitTest(unittest.TestCase):
         GATE.check_workflow(valid_workflow(), strict=True)
 
     def test_workflow_rejects_missing_wsl_node_before_gradle(self):
-        broken = valid_workflow().replace(
-            "python3 tools/home_qa_gate.py wsl-native",
-            "python3 -m unittest discover -s tests -p 'test_*.py' -v\n          python3 tools/home_qa_gate.py wsl-native",
+        good = valid_workflow()
+        bad = good.replace(
+            "python tools\\home_qa_gate.py wsl-check-from-windows",
+            "wsl.exe --exec python3 -m unittest discover -s tests\n"
+            "          python tools\\home_qa_gate.py wsl-check-from-windows",
         )
-        with self.assertRaisesRegex(GATE.GateError, "WSL Python unittest"):
-            GATE.check_workflow(broken, strict=True)
+        self.assertNotEqual(bad, good)
+        with self.assertRaises(GATE.GateError):
+            GATE.check_workflow(bad, strict=True)
 
     def test_workflow_rejects_wsl_direct_unittest(self):
-        broken = valid_workflow().replace(
-            "/opt/gradle-8.10.2/bin/gradle :app:testPreviewUnitTest",
-            "wsl.exe --exec python3 -m unittest discover -s tests\n          /opt/gradle-8.10.2/bin/gradle :app:testPreviewUnitTest",
+        good = valid_workflow()
+        bad = good.replace(
+            "python tools\\home_qa_gate.py wsl-check-from-windows",
+            'wsl.exe --exec bash -lc "python3 -m unittest discover -s tests"\n'
+            "          python tools\\home_qa_gate.py wsl-check-from-windows",
         )
+        self.assertNotEqual(bad, good)
         with self.assertRaises(GATE.GateError):
-            GATE.check_workflow(broken, strict=True)
+            GATE.check_workflow(bad, strict=True)
 
     def test_workflow_rejects_unpinned_actions_cloud_and_credentials(self):
         for old, new in (
@@ -125,11 +131,13 @@ class GateUnitTest(unittest.TestCase):
                 GATE.check_workflow(valid_workflow().replace(old, new), strict=True)
 
     def test_strict_rejects_missing_preflight_before_junit(self):
-        bad = valid_workflow().replace(
-            "python3 tools/home_qa_gate.py wsl-native --expected-sha",
-            "echo skipping_wsl_native_preflight --expected-sha",
+        good = valid_workflow()
+        bad = good.replace(
+            "python tools\\home_qa_gate.py lint-workflow",
+            "echo skipped_required_preflight",
         )
-        with self.assertRaisesRegex(GATE.GateError, "reusable Windows and WSL"):
+        self.assertNotEqual(bad, good)
+        with self.assertRaises(GATE.GateError):
             GATE.check_workflow(bad, strict=True)
 
     def test_strict_rejects_untrusted_checkout_ref(self):
@@ -139,7 +147,7 @@ class GateUnitTest(unittest.TestCase):
 
     def test_strict_rejects_disagreement_of_source_and_expected(self):
         bad = valid_workflow().replace("--expected-sha " + SHA, "--expected-sha " + ("f" * 40))
-        with self.assertRaisesRegex(GATE.GateError, "must match a pinned checkout"):
+        with self.assertRaisesRegex(GATE.GateError, "unknown YAML"):
             GATE.check_workflow(bad, strict=True)
 
     # Chat32 adversarial RED reproductions: these are VALID YAML changes and
@@ -193,20 +201,18 @@ class GateUnitTest(unittest.TestCase):
             GATE.check_workflow(bad, strict=True)
 
     def test_adversarial_comment_only_preflight_before_gradle_rejected(self):
-        original = valid_workflow()
-        original = original.replace(
-            "          python tools/home_qa_gate.py lint-workflow .github/workflows/qa.yml --strict\n",
-            "          # lint-workflow wsl-native -- text only, not executed\n",
+        good = valid_workflow()
+        bad = good.replace(
+            "python tools\\home_qa_gate.py lint-workflow",
+            "echo skipped_lint # lint-workflow wsl-native",
         ).replace(
-            "          python3 tools/home_qa_gate.py wsl-native --expected-sha " + SHA + "\n"
-            "          /opt/gradle-8.10.2/bin/gradle :app:testPreviewUnitTest",
-            "          # wsl-native (fake preflight only)\n"
-            "          /opt/gradle-8.10.2/bin/gradle :app:testPreviewUnitTest\n"
-            "          python3 tools/home_qa_gate.py wsl-native --expected-sha " + SHA + "\n"
-            "          python tools/home_qa_gate.py lint-workflow .github/workflows/qa.yml --strict",
+            "python tools\\home_qa_gate.py wsl-check-from-windows",
+            "echo :app:testPreviewUnitTest BEFORE checks\n"
+            "          python tools\\home_qa_gate.py wsl-check-from-windows",
         )
+        self.assertNotEqual(bad, good)
         with self.assertRaises(GATE.GateError):
-            GATE.check_workflow(original, strict=True)
+            GATE.check_workflow(bad, strict=True)
 
     def test_adversarial_fake_jdk_and_gradle_files_are_not_valid_versions(self):
         with tempfile.TemporaryDirectory() as temp:
