@@ -394,7 +394,9 @@ def render_native_workflow(branch: str, source_sha: str, source_branch: str,
             .replace("GHA_TOKEN", "$" + "{{ github.token }}").lstrip("\n"))
 
 
-def check_native_workflow(content: str, strict: bool = True) -> None:
+def check_native_workflow(content: str, strict: bool = True,
+                          reviewed_gate_sha: str | None = None,
+                          verify_checkout: bool = False) -> None:
     demand(strict, "native HOME YAML cannot use a permissive linter")
     normalized = content.replace("\r\n", "\n")
     branch = re.search(r"(?m)^    branches: \[(qa/[a-z][a-z0-9._-]{3,65})\]$", normalized)
@@ -404,6 +406,10 @@ def check_native_workflow(content: str, strict: bool = True) -> None:
            "unrecognized or unpinned native QA workflow: STOP")
     gate_sha, source_sha = pinned_refs
     demand(source_sha == source_branch.group(2), "trusted source SHA mismatch: STOP")
+    if reviewed_gate_sha is not None:
+        confirm_sha(gate_sha, reviewed_gate_sha)
+    if verify_checkout:
+        git_source(ROOT, gate_sha)  # Pin is independently enforced by git HEAD, not YAML alone.
     demand(normalized == render_native_workflow(branch.group(1), source_sha,
                                                source_branch.group(1), gate_sha),
            "modified native workflow trigger, job, checkout, guard, tests or shell: STOP")
@@ -724,7 +730,8 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.mode == "lint-native-workflow":
             demand(args.path.is_file(), "native workflow YAML unavailable")
-            check_native_workflow(args.path.read_text(encoding="utf-8"), strict=args.strict)
+            check_native_workflow(args.path.read_text(encoding="utf-8"),
+                                  strict=args.strict, verify_checkout=True)
             print("PASS HOME NATIVE WORKFLOW LINT " + str(args.path), flush=True)
             return 0
         if args.mode == "verify-trusted-source":
