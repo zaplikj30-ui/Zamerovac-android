@@ -4,6 +4,12 @@
 Tento repozitář je SAMOSTATNÝ projekt `Zamerovac-android`. Neměň repozitář `Prevadec-spojitosti`.
 Uživatel vyrábí zakázkový nábytek. Vyvíjíme vlastní Android aplikaci na zaměřování zakázek, inspirovanou pracovním postupem ImageMeteru. Nejde o kopii původního kódu, designových prostředků ani o obcházení jeho licence. Komunikuj česky a používej jednoduché vysvětlení, nevyžaduj znovu už schválené volby.
 
+## Závazný standard jednorázové domácí QA (po schváleném začlenění)
+
+Pro každý nový důvěryhodný owner-only test na větvi `qa/*` používej **jen generátor** `tools/home_qa_gate.py render-workflow --branch qa/... --expected-sha <PLNÉ_SHA> --output .github/workflows/home-qa-one-shot.yml` a před spuštěním `lint-workflow --strict`. Generátor zapisuje přímo bajty **UTF-8**, nepřepisuje již existující workflow; nepoužívej ručně upravované ad hoc YAML ani WSL `unittest discover`. Node/Python testy patří na Windows, Linux JDK kontroly spouští pouze schválený `wsl-check-from-windows`. Jiný typ workflow musí před spuštěním projít zvláštní kontrolou; samotný skript globálně neblokuje jiné GitHub Actions.
+
+**Nenahrazovat** fungující čtyřjobové domácí QA a release guardy na aktuálním `main`; starý draft [PR #61](https://github.com/zaplikj30-ui/Zamerovac-android/pull/61) nesmí přepsat novější workflow. Rozpočet Actions 12 USD/měsíc, žádný automaticky spuštěný placený cloud. Postup, bezpečnostní omezení a integrační kontrolní body: [docs/HOME_QA_PREFLIGHT.md](docs/HOME_QA_PREFLIGHT.md). Nové pravidlo je zatím v návrhu, dokud jeho začlenění neschválí vlastník.
+
 ## Úsporné rozdělení práce a ochrana limitů Codexu (rozhodnutí 7. 11. 2026)
 
 **Závazné pravidlo:** Koordinující ChatGPT šetří omezený týdenní limit Codexu a placené kredity. Nemá však šetřit na úkor správnosti, bezpečného ukládání, přesnosti, regresních testů ani dlouhodobé udržovatelnosti. Výběr nástroje odvozuje z aktuálního úkolu, ne z automatického předpokladu, že „všechnu technickou práci musí udělat Codex“.
