@@ -305,14 +305,14 @@ jobs:
         run: |
           python recipe\tools\home_qa_gate.py wsl-targeted-from-windows --expected-sha __SOURCE_SHA__ --root source
           if errorlevel 1 exit /b 1
-      - name: Archive only numeric JUnit summary, never APK or source
-        if: always()
+      - name: Archive only successful numeric JUnit summary, never APK or source
+        if: success()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: native-targeted-__SOURCE_SHA__
           path: qa-evidence/native-targeted-summary.txt
           retention-days: 7
-          if-no-files-found: ignore
+          if-no-files-found: error
 '''
 
 
@@ -483,6 +483,9 @@ echo "WSL_TESTED_SOURCE_SHA=$(git rev-parse HEAD)"
 python3 "$recipe_dir/tools/home_qa_gate.py" wsl-targeted --root . --expected-sha "$expected" --gradle /opt/gradle-8.10.2/bin/gradle --report "$report"
 """
     report = ROOT.parent / "qa-evidence" / "native-targeted-summary.txt"
+    demand(not report.is_symlink(), "unsafe JUnit report path")
+    if report.exists():
+        report.unlink()  # no stale success evidence from an earlier runner job
     try:
         result = subprocess.run(
             ["wsl.exe", "--distribution", "Zamerovac-Ubuntu-QA", "--user", "root",
