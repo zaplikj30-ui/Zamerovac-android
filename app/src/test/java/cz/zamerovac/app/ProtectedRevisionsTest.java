@@ -194,4 +194,15 @@ public class ProtectedRevisionsTest {
         assertFalse(ProtectedRevisions.rollback(new File(device.home,"media/original-photo")));exactBytes();
         assertEquals(exact,LocalDatabase.readForCas(device));
     }
+    @Test public void alreadyLostOriginalIsTruthfulEvidenceAndCannotPublishACompleteSnapshot()throws Exception{
+        assertTrue(new File(device.home,"media/original-video").delete()); // external loss, not app purge
+        String changed=new JSONObject(exact).put("note","metadata after external loss").toString();
+        LocalDatabase.write(device,changed);JSONObject status=protection.status();
+        assertEquals(1,status.getInt("missingMedia"));assertTrue(status.getInt("incomplete")>0);assertTrue(status.getString("message").contains("nikoli úplnou zálohou"));
+        boolean found=false;for(JSONObject hold:holds())if(changed.equals(hold.getString("metadata"))){found=true;assertFalse(hold.getBoolean("sourceComplete"));}
+        assertTrue(found);assertEquals(changed,LocalDatabase.readForCas(device));hasExactDatabase();
+        try{new PeerOutbox(device,device.prefs,peers).prepare(peer);fail("Incomplete originals published as a complete snapshot");}catch(IOException expected){}
+        assertEquals(0,new PeerOutbox(device,device.prefs,peers).pending(peer));
+        assertArrayEquals(photo,Files.readAllBytes(new File(device.home,"media/original-photo").toPath()));
+    }
 }

@@ -159,8 +159,8 @@ final class ProtectedRevisions {
             metadata+=file(item.getKey()).length();JSONArray list=item.getValue().getJSONArray("media");
             for(int i=0;i<list.length();i++){JSONObject entry=list.getJSONObject(i);File original=new File(home,"media/"+entry.getString("id"));sizes.put(entry.getString("id"),original.isFile()?original.length():0);}
         }
-        long total=0;for(long size:sizes.values())total+=size;
-        return new JSONObject().put("revisions",holds.size()).put("incomplete",incomplete).put("media",sizes.size()).put("mediaBytes",total).put("metadataBytes",metadata).put("message",WARNING+(incomplete>0?" Některé starší podklady již neměly všechny přílohy; jejich přesná metadata zůstávají důkazem, nikoli úplnou zálohou.":""));
+        long total=0;int missing=0;for(long size:sizes.values()){total+=size;if(size==0)missing++;}
+        return new JSONObject().put("revisions",holds.size()).put("incomplete",incomplete).put("missingMedia",missing).put("media",sizes.size()).put("mediaBytes",total).put("metadataBytes",metadata).put("message",WARNING+(incomplete>0||missing>0?" Některé podklady nemají všechny přílohy; jejich přesná metadata zůstávají důkazem, nikoli úplnou zálohou.":""));
     }catch(Exception e){throw blocked(e);}}}
     void preserveDatabase(String metadata)throws IOException{
         if(metadata==null||metadata.isEmpty())return;
