@@ -129,6 +129,51 @@ public class ProtectedArchiveCoverageTest {
         noCompleteArchive();
     }
 
+
+    @Test public void pinnedPhotoAndVideoMatchHashesAndCannotBeReplacedBySameLengthContent()
+            throws Exception{
+        LocalDatabase.write(home,noBackup,dimension("initial"));
+        File media=new File(home,"media");
+        assertTrue(media.mkdir());
+        byte[] photo={1,3,5,7},video={0,0,0,24,102,116,121,112};
+        Files.write(new File(media,"p1-photo").toPath(),photo);
+        Files.write(new File(media,"p1-video").toPath(),video);
+        JSONObject exact=new JSONObject().put("schema",1).put("records",
+            new JSONArray().put(new JSONObject().put("id","historic")
+                .put("media",new JSONArray().put("p1-photo").put("p1-video"))
+                .put("items",new JSONArray().put(new JSONObject().put("measure",
+                    "1250,123456789")))));
+        LocalDatabase.write(home,noBackup,exact.toString());
+        LocalDatabase.write(home,noBackup,dimension("newer-1"));
+        LocalDatabase.write(home,noBackup,dimension("newer-2"));
+        JSONObject created=RecoveryProtectionArchive.create(home,noBackup);
+        assertTrue(created.getBoolean("sourceComplete"));
+        JSONObject verified=RecoveryProtectionArchive.verify(noBackup,created.getString("id"));
+        assertEquals(PeerWire.hash(photo),entry(verified,"files/media/p1-photo").getString("sha256"));
+        assertArrayEquals(photo,bytes(new File(archive(created),"payload/files/media/p1-photo")));
+        assertArrayEquals(video,bytes(new File(archive(created),"payload/files/media/p1-video")));
+        byte[] latest=bytes(new File(home,"projects.json"));
+        Files.write(new File(media,"p1-photo").toPath(),new byte[]{7,5,3,1});
+        try{RecoveryProtectionArchive.create(home,noBackup);
+            fail("Same-size damaged pinned original was certified");}
+        catch(IOException expected){}
+        assertArrayEquals(latest,bytes(new File(home,"projects.json")));
+        assertArrayEquals(photo,bytes(new File(archive(created),"payload/files/media/p1-photo")));
+    }
+
+    @Test public void tamperedArchivedHistoricalHoldCannotPassVerification()throws Exception{
+        rotatedHistory();JSONObject copy=RecoveryProtectionArchive.create(home,noBackup);
+        File original=originalHold();
+        byte[] live=bytes(original);
+        File copyFile=new File(archive(copy),
+            "payload/files/protected-revisions/"+original.getName());
+        Files.write(copyFile.toPath(),"{tampered archive}".getBytes(StandardCharsets.UTF_8));
+        try{RecoveryProtectionArchive.verify(noBackup,copy.getString("id"));
+            fail("Damaged archived precise dimension was verified");}
+        catch(IOException expected){}
+        assertArrayEquals(live,bytes(original));
+    }
+
     @Test public void unconfirmedAtomicSidecarsAreCopiedByteExactlyButNotSourceComplete()
             throws Exception{
         rotatedHistory();
