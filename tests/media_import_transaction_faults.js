@@ -16,8 +16,10 @@ function transactionalIndexedDB() {
   let heldError = null;
   function startNext() {
     if (active || !waiting.length) return;
-    active = waiting.shift();
-    queueMicrotask(() => active.start());
+    const next = waiting.shift();
+    active = next;
+    // The selected slot may be cancelled before this microtask runs.
+    queueMicrotask(() => { if (active === next) next.start(); });
   }
   const database = {
     objectStoreNames: {contains: name => name === 'imports'},
@@ -31,7 +33,12 @@ function transactionalIndexedDB() {
       let staged, started = false, finished = false, scheduled = false;
       let operation = 'inspect';
       const requests = [];
-      const slot = {start() { started = true; staged = new Map(committed); pump(); }};
+      const slot = {start() {
+        if (finished) return; // Cancelled after selection, before activation.
+        started = true;
+        staged = new Map(committed);
+        pump();
+      }};
       function release() {
         assert.equal(active, slot, 'A transaction released someone else\'s lock');
         active = null;
@@ -42,7 +49,18 @@ function transactionalIndexedDB() {
         abort() {
           if (finished) return;
           finished = true;
-          queueMicrotask(() => { try { tx.onabort?.(); } finally { release(); } });
+          const ownsLock = active === slot;
+          if (!ownsLock) {
+            // A queued transaction has no lock to release. Remove only its
+            // own entry so it cannot later overwrite a committed receipt.
+            const index = waiting.indexOf(slot);
+            assert.ok(index >= 0, 'Cancelled transaction is neither active nor queued');
+            waiting.splice(index, 1);
+          }
+          queueMicrotask(() => {
+            try { tx.onabort?.(); }
+            finally { if (ownsLock) release(); }
+          });
         },
         objectStore(key) {
           assert.equal(key, 'imports');
@@ -134,6 +152,8 @@ function transactionalIndexedDB() {
       return {whenError, resumeAbort};
     },
     get openCount() { return opened; },
+    get pendingCount() { return waiting.length; },
+    get hasActiveTransaction() { return active !== null; },
     open(name, version) {
       assert.equal(name, 'zamerovac-import-ownership');
       assert.equal(version, 1);
@@ -146,6 +166,14 @@ function transactionalIndexedDB() {
       return req;
     }
   };
+}
+
+function withDeadline(promise, label) {
+  let timer;
+  const deadline = new Promise((_, reject) => {
+    timer = setTimeout(() => reject(Error(label)), 1500);
+  });
+  return Promise.race([promise, deadline]).finally(() => clearTimeout(timer));
 }
 
 function browserSession(indexedDB) {
@@ -235,6 +263,75 @@ function browserSession(indexedDB) {
   gate.resumeAbort();
   await assert.rejects(rejectedByError, /ConstraintError/);
   assert.equal((await importer.inspect('contested_photo_01')).owner, 'competing_owner_01');
+
+  // QA-105-01: aborting the SECOND (queued) write must not release the
+  // FIRST writer's lock, and a THIRD queued write must still commit.
+  // The cancelled request is intentionally queued before tx.abort().
+  const abortFake = transactionalIndexedDB();
+  const openReq = abortFake.open('zamerovac-import-ownership', 1);
+  const rawDb = await new Promise(resolve => { openReq.onsuccess = () => resolve(openReq.result); });
+  const events = [];
+  const first = rawDb.transaction('imports', 'readwrite');
+  first.objectStore('imports').add({owner: 'first_owner', phase: 'reserved'}, 'first_receipt');
+  const firstDone = new Promise((resolve, reject) => {
+    first.oncomplete = () => { events.push('first COMMIT'); resolve(); };
+    first.onerror = () => reject(first.error || Error('First writer failed'));
+    first.onabort = () => reject(Error('First writer aborted'));
+  });
+  const cancelled = rawDb.transaction('imports', 'readwrite');
+  cancelled.objectStore('imports').add({owner: 'cancelled_owner', phase: 'reserved'}, 'cancelled_receipt');
+  const cancelledDone = new Promise((resolve, reject) => {
+    cancelled.onabort = () => { events.push('second ABORT'); resolve(); };
+    cancelled.oncomplete = () => reject(Error('Queued cancelled writer committed'));
+  });
+  const third = rawDb.transaction('imports', 'readwrite');
+  third.objectStore('imports').add({owner: 'third_owner', phase: 'reserved'}, 'third_receipt');
+  const thirdDone = new Promise((resolve, reject) => {
+    third.oncomplete = () => { events.push('third COMMIT'); resolve(); };
+    third.onerror = () => reject(third.error || Error('Third writer failed'));
+    third.onabort = () => reject(Error('Third writer aborted'));
+  });
+  assert.equal(abortFake.pendingCount, 2);
+  cancelled.abort(); // Still in waiting, with the first writer holding active.
+  assert.equal(abortFake.pendingCount, 1);
+  await withDeadline(Promise.all([firstDone, cancelledDone, thirdDone]),
+    'Queued-abort test hung');
+  assert.ok(events.indexOf('first COMMIT') < events.indexOf('third COMMIT'),
+    'Third writer committed before the first owner released the lock');
+  assert.equal(abortFake.committed.get('first_receipt').owner, 'first_owner');
+  assert.equal(abortFake.committed.has('cancelled_receipt'), false);
+  assert.equal(abortFake.committed.get('third_receipt').owner, 'third_owner');
+  assert.equal(abortFake.committed.size, 2);
+  assert.equal(abortFake.pendingCount, 0, 'Cancelled slot remained queued');
+  assert.equal(abortFake.hasActiveTransaction, false, 'Queue retained an active lock');
+
+  // Also abort after startNext() selected the active slot but before its
+  // queued slot.start(): it must skip that start and release exactly once.
+  const selectedFake = transactionalIndexedDB();
+  const selectedOpen = selectedFake.open('zamerovac-import-ownership', 1);
+  const selectedDb = await new Promise(resolve => {
+    selectedOpen.onsuccess = () => resolve(selectedOpen.result);
+  });
+  const selected = selectedDb.transaction('imports', 'readwrite');
+  selected.objectStore('imports').add({owner: 'aborted_owner', phase: 'reserved'}, 'before_start');
+  const selectedAbort = new Promise((resolve, reject) => {
+    selected.onabort = resolve;
+    selected.oncomplete = () => reject(Error('Selected aborted writer committed'));
+  });
+  const afterSelected = selectedDb.transaction('imports', 'readwrite');
+  afterSelected.objectStore('imports').add({owner: 'following_owner', phase: 'reserved'}, 'after_start');
+  const followingCommit = new Promise((resolve, reject) => {
+    afterSelected.oncomplete = resolve;
+    afterSelected.onabort = () => reject(Error('Following writer aborted'));
+    afterSelected.onerror = () => reject(afterSelected.error || Error('Following writer failed'));
+  });
+  selected.abort(); // Active lock is assigned, but selected.start() has not run.
+  await withDeadline(Promise.all([selectedAbort, followingCommit]),
+    'Selected-slot abort hung');
+  assert.equal(selectedFake.committed.has('before_start'), false);
+  assert.equal(selectedFake.committed.get('after_start').owner, 'following_owner');
+  assert.equal(selectedFake.pendingCount, 0);
+  assert.equal(selectedFake.hasActiveTransaction, false);
 
   // A new JS VM shares the fake in-memory Map. This is NOT disk-persistent
   // IndexedDB after a WebView/Android restart or device power loss.
