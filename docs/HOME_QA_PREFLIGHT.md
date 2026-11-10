@@ -1,43 +1,37 @@
-# HOME QA – bezpečné jednotné spuštění Windows/WSL (bez APK)
+# HOME QA – schválená Windows/WSL pojistka
 
-Vlastník: koordinace issue [#42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42), zadání [#6754426160](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42#issuecomment-6754426160). Samostatná malá infrastruktura; produkční Android, PR #61 a B16 PR #92/#93 zůstávají nedotčené.
+Řízeno v [issue #42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42), nezávislý REQUEST FIX [#6754944468](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42#issuecomment-6754944468), opravné zadání [#6755055908](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42#issuecomment-6755055908). Samostatný infrastrukturní kód; Android produkt, PR #61/#92/#93/#94 a main zůstávají nedotčené.
 
-## Proč a kterou variantu používáme
+## Problém a zvolená oprava
 
-**Varianta A (zvolena):** jeden sdílený standard-library spouštěč `tools/home_qa_gate.py`, při nových jednorázových workflow jeho přísná kontrola před dlouhými testy. `windows-quick` spouští **Node i všechny Python unittest** na Windows, `wsl-native` kontroluje **JDK17, Python3 a připnutý Gradle** ve WSL, aniž tam vyžaduje Node. `wsl-jdk-probes` ve WSL spustí jen dvě přesně povolené skupiny testů adres a Bosch, které **Node nepotřebují**. Vše na stejném a předem ověřeném skutečném git SOURCE SHA.
+Ad hoc HOME YAML spouštěl obecné Python unittest ve WSL, kde není Node. Původní `lint-workflow --strict` chybně schvaloval i další nechráněné cloudové joby, PR triggery a skryté Python→WSL příkazy, protože jen hledal správné řetězce v libovolné části souboru. Test-first RED nezávisle ověřil šest těchto příkladů.
 
-**Varianta B (nezvolena):** instalovat druhý Node do WSL. Sama nebrání tomu, aby někdo zase sestavil špatné jednorázové QA workflow; přidává druhou závislost a její aktualizace. Node již běží na domácím Windows 11, takže B nepřináší měřitelnou výhodu.
+**Varianta A (vybrána):** pouze jediná bezpečná, přesně generovaná YAML šablona, nikoli regexy vydávající se za plný YAML parser. `render-workflow` vloží doslovnou důvěryhodnou větev `qa/*` a úplné 40znakové SOURCE SHA. `lint-workflow --strict` porovná celý výsledný YAML s jedinou povolenou šablonou. Cokoli navíc nebo jinak, například `ubuntu-24.04`, `on: [push,pull_request]`, další job/step, nepinovaný checkout, jiná oprávnění, maskovaný komentář, PowerShell proměnná `$cmd`, `bash -lc` nebo Python `script=r"""..."""`, skončí **STOP**.
 
-Dřívější selhání [#42713844748](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42713844748) a [#42718615743](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42718615743): Java cíleně PASS, **celý běh FAIL** – `python3 -m unittest discover` ve WSL zavolal chybějící `node`. Nejde o ztrátu dat aplikace, ale o závažný problém pravdivosti a ceny testovací evidence.
+Varianta B (instalace dalšího Node do WSL) nebyla zvolena: nepomohla by proti falešnému schvalování neznámých workflow a zdvojila by údržbu runtime.
 
-## Vyžadovaný postup pro nové jednorázové HOME QA
+## Výroba jednoho schváleného HOME workflow
 
-1. Pouze důvěryhodná **owner-controlled** větev `qa/*`, pouze `push` od `zaplikj30-ui`, nikdy `pull_request`, fork ani cloud. Použij `runs-on: [self-hosted, Windows, X64, zamerovac-qa]`, `permissions: contents: read`, `persist-credentials: false` a `actions/checkout@11d5960a326750d5838078e36cf38b85af677262`. Sestavení a vydání APK nepatří do této práce.
-2. Checkout aplikace musí mít **doslovný úplný 40znakový SOURCE SHA**; source refs nejsou libovolné vstupy workflow. Druhý read-only checkout konkrétního vlastního QA workflow může vynechat `ref`, čímž GitHub použije přesný trusted `github.sha` aktuálního push, pouze pro přečtení vlastního YAML.
-3. Ještě před jakýmkoli Gradle testem na Windows spusť:
-   ```bat
-   python tools\home_qa_gate.py lint-workflow ..\runner-recipe\.github\workflows\nazev-jednorazoveho.yml --strict
-   python tools\home_qa_gate.py windows-quick --expected-sha PLNE_SOURCE_SHA --root . --check-only
-   ```
-   Je-li splněno, rychlou kompletní Node/Python část spustíš **jediným standardním příkazem**:
-   ```bat
-   python tools\home_qa_gate.py windows-quick --expected-sha PLNE_SOURCE_SHA --root .
-   ```
-   Nevyvolávej potom stejný `local-qa.cjs --quick` podruhé.
-4. Před každým delším WSL JDK/Gradle během ze skutečného checkoutu:
-   ```bash
-   export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
-   export PATH="$JAVA_HOME/bin:$PATH"
-   python3 tools/home_qa_gate.py wsl-native --expected-sha PLNE_SOURCE_SHA --root . --gradle /opt/gradle-8.10.2/bin/gradle
-   # teprve pak GRADLE --offline --no-daemon --max-workers=1 ...
-   ```
-   WSL Python testy, které volají `node`, **nikdy** nesmějí běžet pomocí `python3 -m unittest discover`. Pokud je potřeba potvrdit dříve Windows-service SKIP kvůli JDK PATH:
-   ```bash
-   python3 tools/home_qa_gate.py wsl-jdk-probes --expected-sha PLNE_SOURCE_SHA --root . --gradle /opt/gradle-8.10.2/bin/gradle
-   ```
-5. Linter odmítá chybějící předběžné kontroly, špatně umístěný WSL unittest, chybné/nekonzistentní source SHA, nezabezpečený checkout, placený cloud a PR události **před** 382 případy Robolectric. Negativní i pozitivní mikrotesty jsou v `tests/test_home_qa_gate.py` a jsou zahrnuty do obvyklého Python quick.
-6. Před commitem/testovací akcí znovu ověř skutečný HEAD, triggery, trust gate a dostupný měsíční limit. Domácí PC má **pevně 16 GB RAM**; testuj postupně s 1 Gradle workerem. Důkaz vždy uvádí reálný `TESTED_SOURCE_SHA`, Windows/WSL prostředí, PASS/FAIL/SKIP/NOT RUN. Nezacházej s `SKIP` jako `PASS`.
+Pouze nad důvěryhodným vlastním checkoutem po předběžné kontrole HEAD a GitHub triggerů:
 
-## Rozsah ochrany
+```bat
+python tools\home_qa_gate.py render-workflow --branch qa/schvaleny-test --expected-sha PLNY_SOURCE_SHA > .github\workflows\home-qa-one-shot.yml
+python tools\home_qa_gate.py lint-workflow .github\workflows\home-qa-one-shot.yml --strict
+```
 
-Pojistka je vykonatelná, ale **není univerzální bezpečnostní bránou GitHubu**: zcela nové workflow, které úmyslně nepoužije sdílený entrypoint ani quick testy, nelze zakázat jen Python skriptem v repozitáři. Nezávislá kontrola PR a pravidla schvalování workflow jsou stále nutná. Původní `.github/workflows/windows-self-hosted-qa.yml` už umí správné oddělení a nebyl kvůli této opravě přepsán; PR #61 si drží svou infrastrukturu a testovací/sestavovací rozsah.
+`PLNY_SOURCE_SHA` musí být doslovných 40 hex znaků skutečně vybraného a schváleného commitu. Recept vynucuje jediný owner-only Windows `self-hosted` job, pouze vlastní `push` do přesné `qa/*` větve, `contents: read`, připnutý checkout bez přetrvávajících přihlašovacích údajů, původní SOURCE SHA a pořadí **lint + testy → Windows quick → řízený WSL launcher**. Soubor se jmenuje přesně `.github/workflows/home-qa-one-shot.yml`. Není přípustné jej ručně rozšiřovat o neověřené kroky.
+
+## Skutečný fail-fast preflight
+
+- Windows `windows-quick`: ověří Windows, Node, Python3, důvěryhodnou událost, přesný checkout SHA; pak provede všechny Node/Python quick testy.
+- WSL `wsl-native`: ověří WSL2, Java17 **skutečným spuštěním** `java -version` a `javac -version`, spustitelný Gradle s výstupem **8.10.2**, Python3, Git a přesný SHA. Node v Linuxu nepotřebuje.
+- WSL `wsl-jdk-probes`: pouze pět Node-independent JDK/Python kontrol (adresy a Bosch), které pokrývají dva dřívější Windows-service SKIP.
+- `wsl-python-node`: zakázané spuštění skončí očekávaným návratovým kódem 2 ještě před dlouhými testy.
+
+Ověření verze není totéž co ověření SHA256 instalovaného Gradle/JDK; původ binárek zůstává odpovědností důvěryhodné domácí infrastruktury.
+
+## Hranice
+
+**Nejde o univerzální GitHub bezpečnostní pravidlo.** Zcela novému workflow, které schválenou šablonu nepoužije, tento skript sám nezabrání ve spuštění. Musí ho zastavit review změn workflows a koordinátor/branch policy. Ani stávající main workflow ani PR #61 nejsou tímto jednoúčelovým linterem automaticky certifikované či upravované.
+
+Domácí PC Windows11 má pevně 16 GB RAM; WSL2 4GB/2CPU a Gradle nejvýše jeden worker. Žádná placená cloudová VM, APK, emulátor ani vydání. Tato krátká QA testuje preflight, quick a pět WSL JDK scénářů. Kompletní 382 JVM, Chromium/pixely, PDF i fyzický Samsung/Bosch zůstávají pro pozdější společnou regresi **NOT RUN** na aktuálním integrovaném SHA.
