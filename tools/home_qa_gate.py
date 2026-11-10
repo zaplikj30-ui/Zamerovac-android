@@ -37,6 +37,13 @@ TARGETED_NATIVE = {
     "TrashPurgerTest": 17,
 }
 TARGETED_TOTAL = sum(TARGETED_NATIVE.values())  # Exact SHA #102: 94 @Test methods.
+# This trust lease must be extended only by a separately reviewed code change.
+# GitHub proof also requires this commit to still be the head of its owner branch.
+APPROVED_NATIVE_TARGETS = {
+    "fix/p1-34-b-protected-archive-chat33-20261110":
+        "144bb5573932be032411c11451aa560a10f623ee",
+}
+
 TEST_COMMAND = re.compile(r"\bpython(?:3(?:\.\d+)?)?\s+-m\s+unittest\b")
 ROOT = Path(__file__).resolve().parent.parent
 
@@ -327,6 +334,8 @@ def render_native_workflow(branch: str, source_sha: str, source_branch: str) -> 
            "only the literal owner-controlled qa/* trigger is allowed")
     demand(bool(SHA.fullmatch(source_sha)), "literal source SHA required")
     valid_source_branch(source_branch)
+    demand(APPROVED_NATIVE_TARGETS.get(source_branch) == source_sha,
+           "source SHA is not a reviewed native QA target")
     return (TARGETED_NATIVE_RECIPE.replace("__QA_BRANCH__", branch)
             .replace("__SOURCE_SHA__", source_sha)
             .replace("__SOURCE_BRANCH__", source_branch)
@@ -363,7 +372,9 @@ def verify_trusted_source(source_branch: str, expected_sha: str,
            environ.get("GITHUB_REF", "").startswith("refs/heads/qa/"),
            "source attestation requires an owner qa/* push on the HOME runner")
     valid_source_branch(source_branch)
-    demand(bool(SHA.fullmatch(expected_sha)), "source SHA must be exact 40 lowercase hex")
+    demand(bool(SHA.fullmatch(expected_sha)) and
+           APPROVED_NATIVE_TARGETS.get(source_branch) == expected_sha,
+           "source SHA/branch is not independently approved for HOME testing")
     token = environ.get("GH_TOKEN", "")
     demand(bool(token) and "\r" not in token and "\n" not in token,
            "read-only GitHub token unavailable")
