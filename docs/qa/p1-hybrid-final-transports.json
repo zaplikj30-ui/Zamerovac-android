@@ -1,0 +1,325 @@
+{
+  "sourceSha": "a3c3a5801bd009f0d78b26d452d2074bbd18e4ec",
+  "counts": {
+    "tests": 71,
+    "failures": 2,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suites": [
+    {
+      "name": "cz.zamerovac.app.PeerTransferTest",
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        {
+          "name": "fallbackOnResponderInvalidatesRemoteAckAndRestoresExactDataWithoutNewUserEdit",
+          "status": "PASS"
+        },
+        {
+          "name": "recoveryOnInitiatorInvalidatesRemoteAckBeforeResponderPreparesSnapshot",
+          "status": "PASS"
+        },
+        {
+          "name": "diskFailureBeforePeerDatabaseCommitLeavesMetadataAndExactDataUntouched",
+          "status": "PASS"
+        },
+        {
+          "name": "corruptAndPartialStreamsDoNotPublishMedia",
+          "status": "PASS"
+        },
+        {
+          "name": "disconnectNineteenthOfThirtyKeepsDatabaseAndResumesAfterReopen",
+          "status": "PASS"
+        },
+        {
+          "name": "firstSyncIntoCleanReceiverKeepsExactPhotoAndNoDuplicateOnRetry",
+          "status": "PASS"
+        },
+        {
+          "name": "receiverFailureBeforeFirstPhotoBaselineIsNotDatabaseLoss",
+          "status": "PASS"
+        },
+        {
+          "name": "editDuringMediaTransferIsMergedFromLatestDatabase",
+          "status": "PASS"
+        },
+        {
+          "name": "coalescesOnlyObservedRevisionsAndRejectsUnsafeMetadata",
+          "status": "PASS"
+        },
+        {
+          "name": "corruptReceiverCannotAcceptOldBackupOrAckPeerSnapshot",
+          "status": "PASS"
+        },
+        {
+          "name": "completeBidirectionalMediaAndExactAnnotationsRemainIdempotent",
+          "status": "PASS"
+        },
+        {
+          "name": "recoveryQuarantineWithMoreThanSixteenOldJobsDoesNotBlockDirectTls",
+          "status": "PASS"
+        },
+        {
+          "name": "sameMediaIdDifferentBytesRefusesWithoutOverwritingOrFalseAck",
+          "status": "PASS"
+        },
+        {
+          "name": "interruptedFirstPhotoTransferKeepsCleanBaselineAndResumesSafely",
+          "status": "PASS"
+        }
+      ]
+    },
+    {
+      "name": "cz.zamerovac.app.ProtectedRevisionsTest",
+      "tests": 21,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        {
+          "name": "purgeAndPendingCleanupRetainPhotoVideoAndExactPreimage",
+          "status": "PASS"
+        },
+        {
+          "name": "rollbackKeepsPinnedAndLiveButRemovesUnreferencedNewFile",
+          "status": "PASS"
+        },
+        {
+          "name": "jsonLookingNoteTextAndEmbeddedLegacyHistoryRemainExact",
+          "status": "PASS"
+        },
+        {
+          "name": "retainedExactStateRestoresAsSeparateCopyThroughExistingImporter",
+          "status": "PASS"
+        },
+        {
+          "name": "atomicBackupAndCompleteUnpublishedHoldRepairAfterRestart",
+          "status": "PASS"
+        },
+        {
+          "name": "severalExactMetadataRevisionsShareOneSetOfOriginalBytes",
+          "status": "PASS"
+        },
+        {
+          "name": "ackSupersessionForgetAndRestartNeverReleaseOriginals",
+          "status": "PASS"
+        },
+        {
+          "name": "alreadyLostOriginalIsTruthfulEvidenceAndCannotPublishACompleteSnapshot",
+          "status": "PASS"
+        },
+        {
+          "name": "validOrphanRepairsCatalogUnionAfterRestart",
+          "status": "PASS"
+        },
+        {
+          "name": "losingBothCatalogsCannotAuthorizeCleanupFromAnAssumedEmptyRegistry",
+          "status": "PASS"
+        },
+        {
+          "name": "unreadableBackupCannotBeSilentlyOverwrittenByRotation",
+          "status": "PASS"
+        },
+        {
+          "name": "catalogWriteFailureBlocksPublicationAndRepairsOnRetry",
+          "status": "PASS"
+        },
+        {
+          "name": "safLateAckCannotReleaseRecoverableSnapshot",
+          "status": "PASS"
+        },
+        {
+          "name": "missingRegistryAndCorruptManifestFailClosed",
+          "status": "PASS"
+        },
+        {
+          "name": "preUpgradeBackupRevisionSurvivesRotationByteExactly",
+          "status": "PASS"
+        },
+        {
+          "name": "missingPinnedIdRejectsReuseAndAcceptsOnlyByteExactPeerRestoration",
+          "status": "PASS"
+        },
+        {
+          "name": "driveLateAckCannotReleaseRecoverableSnapshot",
+          "status": "PASS"
+        },
+        {
+          "name": "recoveryAuthorityLossCannotReleasePinsOrAuthorizeRestore",
+          "status": "PASS"
+        },
+        {
+          "name": "changedOriginalCannotBeBlessedAsANewProtectedVersion",
+          "status": "PASS"
+        },
+        {
+          "name": "retentionAloneCannotMasqueradeAsFreshDatabaseAuthority",
+          "status": "PASS"
+        },
+        {
+          "name": "lowSpaceRejectsReplacementWithoutTouchingConfirmedBytes",
+          "status": "PASS"
+        }
+      ],
+      "diskGrowth": "HYBRID_DISK_GROWTH {\"revisionsAdded\":5,\"originalBytes\":12,\"originalFileCount\":2,\"metadataBytesBefore\":1193,\"metadataBytesAfter\":5963}"
+    },
+    {
+      "name": "cz.zamerovac.app.SafSyncV2Test",
+      "tests": 36,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        {
+          "name": "quarantinedHistoricalOutboxDoesNotBlockFreshSignedCloudSync",
+          "status": "PASS"
+        },
+        {
+          "name": "signedRepairFixesSameSizeCorruptBlobAndReplayedRequestDoesNotRedownloadIt",
+          "status": "PASS"
+        },
+        {
+          "name": "repairAfterFinalAckRestoresFallbackReceiverAndNeverOverwritesCorruptRemoteCopy",
+          "status": "PASS"
+        },
+        {
+          "name": "authenticatedDirectArrivalDuringLocalHashReleasesCloudGateBeforePublication",
+          "status": "PASS"
+        },
+        {
+          "name": "interruptedBlobAndRestartResumeWithoutPublishingPartialDatabase",
+          "status": "PASS"
+        },
+        {
+          "name": "meteredMetadataUsesExistingOriginalButMissingLargePhotoWaits",
+          "status": "PASS"
+        },
+        {
+          "name": "committedInboxSurvivesLostAckAndAvoidsReadingOldMessagesAfterRestart",
+          "status": "PASS"
+        },
+        {
+          "name": "largeRepairWaitsForUnmeteredPolicy",
+          "status": "PASS"
+        },
+        {
+          "name": "missingFileStillRequiredByNewerLocalVersionCannotBeRetired",
+          "status": "PASS"
+        },
+        {
+          "name": "fallbackAfterFinalCloudAckReappliesHistoricalMessageDespiteCachedInbox",
+          "status": "PASS"
+        },
+        {
+          "name": "deletedCloudCopyIsRepublishedWithoutOverwritingLocalOriginal",
+          "status": "PASS"
+        },
+        {
+          "name": "driveLateAckKeepsOriginalsAndRejectsUnapprovedRecoveryOnRestart",
+          "status": "PASS"
+        },
+        {
+          "name": "newCloudNamespacePublishesCompleteCopyDespitePriorConfirmedPeerAck",
+          "status": "PASS"
+        },
+        {
+          "name": "concurrentLocalVersionCannotRetireAnUnfinishedRemoteSnapshot",
+          "status": "PASS"
+        },
+        {
+          "name": "forgedAcknowledgementCannotClearQueueAndRevokedAuthorCannotWrite",
+          "status": "PASS"
+        },
+        {
+          "name": "observedReceiverRecoveryCannotReuseHistoricalSignedCloudAck",
+          "status": "PASS"
+        },
+        {
+          "name": "signedImmutableMessagesConvergeAndNoMutableProjectsFileExists",
+          "status": "PASS"
+        },
+        {
+          "name": "newlyAvailableDirectRouteYieldsCloudBetweenChunksWithoutClearingQueue",
+          "status": "PASS"
+        },
+        {
+          "name": "rejectedNetworkPolicyDoesNotEvenListOrReadProvider",
+          "status": "PASS"
+        },
+        {
+          "name": "pendingSourceReopenDoesNotReadAlreadyVerifiedLargeOriginalAgain",
+          "status": "PASS"
+        },
+        {
+          "name": "recoveredPeerCannotClearCloudAckBarrierByUnpairAndRepair",
+          "status": "PASS"
+        },
+        {
+          "name": "coordinatorRevocationDuringCloudAckProofCannotCompleteStaleOutbox",
+          "status": "PASS"
+        },
+        {
+          "name": "signedBodyCannotBeChangedReaddressedOrUsedAsAnotherProofKind",
+          "status": "PASS"
+        },
+        {
+          "name": "corruptionAfterAckOutputCreateCannotPublishValidCloudAck",
+          "status": "PASS"
+        },
+        {
+          "name": "purgedPendingPhotoDoesNotBlockNewerTombstoneOrFalselyAckMissingOldMedia",
+          "status": "PASS"
+        },
+        {
+          "name": "missingSnapshotRequestsVerifiedMetadataAndLegacyStateStillConverges",
+          "status": "PASS"
+        },
+        {
+          "name": "manyInvalidMessagesUseBoundedBatchesResumeAfterRestartAndCannotClearOutbox",
+          "status": "PASS"
+        },
+        {
+          "name": "legacyRemoteRecoveryHoldSurvivesCoordinatorForgetNewCertificateAndRestart",
+          "status": "PASS"
+        },
+        {
+          "name": "driveStagedAckMustNotPublishAfterLocalAuthorityLostInsideProviderCommit",
+          "status": "FAIL",
+          "message": "java.lang.AssertionError: Provider completed signed ACK after recovery epoch loss: Drive staged expected:<0> but was:<1>"
+        },
+        {
+          "name": "networkPolicyChangeDuringLargeUploadStopsAtNextChunkAndRecovers",
+          "status": "PASS"
+        },
+        {
+          "name": "unavailableOldMetadataDoesNotBlockNewerIncomingOrOwnOutgoingAndNeverGetsAcked",
+          "status": "PASS"
+        },
+        {
+          "name": "safDirectAckMustNotPublishAfterLocalAuthorityLostInsideProviderWrite",
+          "status": "FAIL",
+          "message": "java.lang.AssertionError: Provider completed signed ACK after recovery epoch loss: SAF direct expected:<0> but was:<1>"
+        },
+        {
+          "name": "forgedOrUnreferencedRepairCannotTriggerLargeReadsOrClearOutbox",
+          "status": "PASS"
+        },
+        {
+          "name": "historicalSignedAckCannotHideIncompleteNewNamespaceOnMeteredNetwork",
+          "status": "PASS"
+        },
+        {
+          "name": "rejectedNetworkPolicyCannotExposeStaleFallbackAsConfirmed",
+          "status": "PASS"
+        },
+        {
+          "name": "safLateAckKeepsOriginalsAndRejectsUnapprovedRecoveryOnRestart",
+          "status": "PASS"
+        }
+      ]
+    }
+  ]
+}

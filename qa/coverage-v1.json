@@ -1389,6 +1389,10 @@
         {
           "path": "app/src/test/java/cz/zamerovac/app/PeerTransferTest.java",
           "layer": "native-jvm"
+        },
+        {
+          "path": "tools/e2e/protected-data.cjs",
+          "layer": "chromium"
         }
       ],
       "coverage": "runtime-partial",

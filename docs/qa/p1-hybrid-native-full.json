@@ -1,0 +1,437 @@
+{
+  "sourceSha": "62bd440f0bcfee8712e2cd76e64f9fa21cd5b2cf",
+  "counts": {
+    "tests": 405,
+    "failures": 2,
+    "errors": 0,
+    "skipped": 0
+  },
+  "suites": [
+    {
+      "name": "cz.zamerovac.app.AudioCaptureTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.Audit39FindingsTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.Audit39HandshakeTest",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.Audit39SafetyTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.BackupHistoryTest",
+      "tests": 11,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.CloudFilesReadTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.CloudInboxTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.CloudPublicationsTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.CloudScanTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.CloudStorageTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.DatabaseInstallEvidenceTest",
+      "tests": 23,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.DatabaseRecoveryTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.DirectSyncServiceTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.DocumentBackupStoreTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.DriveAccountFlowTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.DriveAccountsTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.DriveApiTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.DriveAuthorizationTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.DriveHttpTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.DriveRegistrationTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.DriveStoresTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.GuardedSyncStoreTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.MainCloudSelectionTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.MediaImportOwnershipTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.MediaIngestTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.PeerDiscoveryTest",
+      "tests": 2,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.PeerMediaCheckpointTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.PeerSessionsTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.PeerTlsTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.PeerTransferTest",
+      "tests": 14,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.PeerWifiDirectTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.PhotoThumbnailsTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.Post147DataTest",
+      "tests": 6,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.Post149NativeTest",
+      "tests": 9,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.ProtectedRevisionsTest",
+      "tests": 21,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": [],
+      "cases": [
+        "purgeAndPendingCleanupRetainPhotoVideoAndExactPreimage",
+        "rollbackKeepsPinnedAndLiveButRemovesUnreferencedNewFile",
+        "jsonLookingNoteTextAndEmbeddedLegacyHistoryRemainExact",
+        "retainedExactStateRestoresAsSeparateCopyThroughExistingImporter",
+        "atomicBackupAndCompleteUnpublishedHoldRepairAfterRestart",
+        "severalExactMetadataRevisionsShareOneSetOfOriginalBytes",
+        "missingPinnedIdCannotBeReusedByIngestOrPeerReceive",
+        "ackSupersessionForgetAndRestartNeverReleaseOriginals",
+        "alreadyLostOriginalIsTruthfulEvidenceAndCannotPublishACompleteSnapshot",
+        "validOrphanRepairsCatalogUnionAfterRestart",
+        "losingBothCatalogsCannotAuthorizeCleanupFromAnAssumedEmptyRegistry",
+        "unreadableBackupCannotBeSilentlyOverwrittenByRotation",
+        "catalogWriteFailureBlocksPublicationAndRepairsOnRetry",
+        "safLateAckCannotReleaseRecoverableSnapshot",
+        "missingRegistryAndCorruptManifestFailClosed",
+        "preUpgradeBackupRevisionSurvivesRotationByteExactly",
+        "driveLateAckCannotReleaseRecoverableSnapshot",
+        "recoveryAuthorityLossCannotReleasePinsOrAuthorizeRestore",
+        "changedOriginalCannotBeBlessedAsANewProtectedVersion",
+        "retentionAloneCannotMasqueradeAsFreshDatabaseAuthority",
+        "lowSpaceRejectsReplacementWithoutTouchingConfirmedBytes"
+      ],
+      "diskGrowth": "HYBRID_DISK_GROWTH {\"revisionsAdded\":5,\"originalBytes\":12,\"originalFileCount\":2,\"metadataBytesBefore\":1193,\"metadataBytesAfter\":5963}"
+    },
+    {
+      "name": "cz.zamerovac.app.ProviderIoTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.RecoveryCandidateReviewTest",
+      "tests": 20,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.RecoveryInventoryTest",
+      "tests": 7,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "tests": 40,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.SafSyncV2Test",
+      "tests": 36,
+      "failures": 2,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": [
+        {
+          "test": "driveStagedAckMustNotPublishAfterLocalAuthorityLostInsideProviderCommit",
+          "message": "java.lang.AssertionError: Provider completed signed ACK after recovery epoch loss: Drive staged expected:<0> but was:<1>"
+        },
+        {
+          "test": "safDirectAckMustNotPublishAfterLocalAuthorityLostInsideProviderWrite",
+          "message": "java.lang.AssertionError: Provider completed signed ACK after recovery epoch loss: SAF direct expected:<0> but was:<1>"
+        }
+      ]
+    },
+    {
+      "name": "cz.zamerovac.app.StorageLifecycleTest",
+      "tests": 23,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.SyncCadenceTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.SyncCanonicalTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.SyncJobTest",
+      "tests": 4,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.SyncSafetyTest",
+      "tests": 13,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.SyncTlsIdentityTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.TrashPurgerTest",
+      "tests": 15,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.VideoReviewTest",
+      "tests": 8,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    },
+    {
+      "name": "cz.zamerovac.app.WebContentPolicyTest",
+      "tests": 3,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "failuresDetail": []
+    }
+  ],
+  "environment": "Debian13.6 Linux6.18.57 x86_64, Temurin17.0.21+9, Gradle8.10.2, AndroidSDK35/build-tools34, Robolectric4.16.1 SDK35, 2 workers, synthetic fixtures/local files/loopback TLS; no physical device or live Google account"
+}

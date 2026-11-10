@@ -1,0 +1,481 @@
+{
+  "environment": "Debian13/Chromium156/Playwright; synthetic browser fixtures, no Android bridge",
+  "note": "Suite process captures HEAD at start; Java-only commits occurred during the run. Web assets and E2E test bytes are identical to final functional SOURCE a3c3a5801bd009f0d78b26d452d2074bbd18e4ec. Every actual captured SHA is listed.",
+  "counts": {
+    "PASS": 22,
+    "FAIL": 0,
+    "SKIP": 0,
+    "NOT RUN": 0
+  },
+  "suites": [
+    {
+      "suite": "backup-history",
+      "sourceSha": "49365ee3e7eea9d029384b662ca53ba0e6c04433",
+      "cases": [
+        {
+          "name": "offline-ui-two-histories-confirmation-and-network-exception",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "suite": "drawing",
+      "sourceSha": "49365ee3e7eea9d029384b662ca53ba0e6c04433",
+      "cases": [
+        {
+          "name": "dimension",
+          "status": "passed"
+        },
+        {
+          "name": "line",
+          "status": "passed"
+        },
+        {
+          "name": "arrow",
+          "status": "passed"
+        },
+        {
+          "name": "circle",
+          "status": "passed"
+        },
+        {
+          "name": "ellipse",
+          "status": "passed"
+        },
+        {
+          "name": "rect",
+          "status": "passed"
+        },
+        {
+          "name": "area",
+          "status": "passed"
+        },
+        {
+          "name": "polyline",
+          "status": "passed"
+        },
+        {
+          "name": "chain",
+          "status": "passed"
+        },
+        {
+          "name": "cumulative",
+          "status": "passed"
+        },
+        {
+          "name": "angle",
+          "status": "passed"
+        },
+        {
+          "name": "freehand",
+          "status": "passed"
+        },
+        {
+          "name": "target",
+          "status": "passed"
+        },
+        {
+          "name": "note",
+          "status": "passed"
+        },
+        {
+          "name": "symbol",
+          "status": "passed"
+        },
+        {
+          "name": "two_finger_pinch_keeps_undo_redo_and_exact_measure",
+          "status": "passed"
+        },
+        {
+          "name": "pan_then_pinch_does_not_resume_stale_drag",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "suite": "drive-accounts",
+      "sourceSha": "49365ee3e7eea9d029384b662ca53ba0e6c04433",
+      "cases": [
+        {
+          "name": "independent-explicit-account-controls-and-cancelled-disconnect",
+          "status": "passed"
+        },
+        {
+          "name": "unconfigured-or-invalid-state-never-pretends-account-is-ready-and-text-is-escaped",
+          "status": "passed"
+        },
+        {
+          "name": "backup-account-switch-clears-old-history-and-stale-verification",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "suite": "gallery-readability",
+      "sourceSha": "5b759728a2e4a46b08b464ce5008c7f11a99363f",
+      "cases": [
+        {
+          "name": "pixels_1200x800_412",
+          "status": "passed"
+        },
+        {
+          "name": "pixels_6000x4000_412",
+          "status": "passed"
+        },
+        {
+          "name": "pixels_1600x4800_1100",
+          "status": "passed"
+        },
+        {
+          "name": "pixels_6000x4000_412_dpr2",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "suite": "gallery-state",
+      "sourceSha": "49365ee3e7eea9d029384b662ca53ba0e6c04433",
+      "cases": [
+        {
+          "name": "render_is_read_only_even_during_nested_drawing_and_failure",
+          "status": "passed"
+        },
+        {
+          "name": "gestures_navigation_stale_load_and_exact_anchor_pixels",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "suite": "gallery-visual",
+      "sourceSha": "49365ee3e7eea9d029384b662ca53ba0e6c04433",
+      "cases": [
+        {
+          "name": "gallery_text_and_lines_remain_sharp_at_real_screen_scale",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "suite": "help",
+      "sourceSha": "49365ee3e7eea9d029384b662ca53ba0e6c04433",
+      "cases": [
+        {
+          "name": "main_menu_search_offline_and_android_back",
+          "status": "passed"
+        },
+        {
+          "name": "overflow_menu_and_small_large_screens",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "suite": "interactions",
+      "sourceSha": "49365ee3e7eea9d029384b662ca53ba0e6c04433",
+      "cases": [
+        {
+          "name": "rapid_grips_jitter_cancel",
+          "status": "passed"
+        },
+        {
+          "name": "pan_zoom_fit_and_repeated_reopen",
+          "status": "passed"
+        },
+        {
+          "name": "chain_finish_insert_remove_history",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "suite": "latency",
+      "sourceSha": "49365ee3e7eea9d029384b662ca53ba0e6c04433",
+      "cases": [
+        {
+          "name": "project_1_10_50_editable_documents",
+          "status": "passed"
+        },
+        {
+          "name": "photo_and_gallery_1200x800",
+          "status": "passed"
+        },
+        {
+          "name": "photo_and_gallery_6000x4000",
+          "status": "passed"
+        },
+        {
+          "name": "existing_feedback_320x240",
+          "status": "passed"
+        },
+        {
+          "name": "existing_feedback_1440x2800",
+          "status": "passed"
+        },
+        {
+          "name": "feedback_slow_save_blocks_close_list_and_android_back",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "suite": "legacy-conflict-persistence",
+      "sourceSha": "49365ee3e7eea9d029384b662ca53ba0e6c04433",
+      "cases": [
+        {
+          "name": "clockless-legacy-copy-persists-reopen-media-editor-and-repeat-callback",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "suite": "media-import",
+      "sourceSha": "49365ee3e7eea9d029384b662ca53ba0e6c04433",
+      "cases": [
+        {
+          "name": "delayed-native-results-stay-in-original-folder-and-stale-token-cannot-complete-new-picker",
+          "status": "passed"
+        },
+        {
+          "name": "deleted-or-locked-destination-and-closed-owner-dialog-do-not-redirect-file",
+          "status": "passed"
+        },
+        {
+          "name": "picker-cancel-and-rejected-write-keep-data-without-ghost-record",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "suite": "note-sync",
+      "sourceSha": "49365ee3e7eea9d029384b662ca53ba0e6c04433",
+      "cases": [
+        {
+          "name": "read-only-note-and-checklist-attachment-causal-autosave",
+          "status": "passed"
+        },
+        {
+          "name": "incoming-note-data-waits-and-read-only-close-does-not-create-conflict",
+          "status": "passed"
+        },
+        {
+          "name": "sketch-stroke-keeps-live-points-through-debounced-note-cas",
+          "status": "passed"
+        },
+        {
+          "name": "failed-note-write-keeps-form-and-retry-and-lock-protects-checks",
+          "status": "passed"
+        },
+        {
+          "name": "voice-keeps-owner-finishes-on-save-and-failed-stop-keeps-form",
+          "status": "passed"
+        },
+        {
+          "name": "rich-voice-failed-stop-and-disk-keep-modal-back-retry-and-cancel",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "suite": "peer-sync",
+      "sourceSha": "49365ee3e7eea9d029384b662ca53ba0e6c04433",
+      "cases": [
+        {
+          "name": "offline-folder-cycle-repair-is-visible-reachable-and-exact",
+          "status": "passed"
+        },
+        {
+          "name": "menu-settings-offline-and-data-preserved",
+          "status": "passed"
+        },
+        {
+          "name": "explicit-approval-full-code-reject-back-and-stale-session",
+          "status": "passed"
+        },
+        {
+          "name": "untrusted-names-pending-errors-and-cloud-isolation",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "suite": "quality-regressions",
+      "sourceSha": "5b759728a2e4a46b08b464ce5008c7f11a99363f",
+      "cases": [
+        {
+          "name": "existing_note_undo_redo_save",
+          "status": "passed"
+        },
+        {
+          "name": "existing_note_undo_redo_back",
+          "status": "passed"
+        },
+        {
+          "name": "audio_play_pause_must_not_focus_text",
+          "status": "passed"
+        },
+        {
+          "name": "two_notes_explicit_picker_double_click_cancel_back_and_late_result",
+          "status": "passed"
+        },
+        {
+          "name": "cancelled_attachment_has_no_unprotected_orphan",
+          "status": "passed"
+        },
+        {
+          "name": "note_controls_reachable_412",
+          "status": "passed"
+        },
+        {
+          "name": "note_controls_reachable_1100",
+          "status": "passed"
+        },
+        {
+          "name": "project_photo_dimension_note_reopen_and_export",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "suite": "read-only-sync",
+      "sourceSha": "49365ee3e7eea9d029384b662ca53ba0e6c04433",
+      "cases": [
+        {
+          "name": "view-photo-and-detail-without-revision-then-edit-with-history",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "suite": "release-history",
+      "sourceSha": "49365ee3e7eea9d029384b662ca53ba0e6c04433",
+      "cases": [
+        {
+          "name": "versioned_history_main_menu_offline_and_help_navigation",
+          "status": "passed"
+        },
+        {
+          "name": "settings_history_and_responsive_layout",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "suite": "sync-cadence",
+      "sourceSha": "49365ee3e7eea9d029384b662ca53ba0e6c04433",
+      "cases": [
+        {
+          "name": "frequency-selection-persists-without-changing-records-and-old-switch-can-reenable",
+          "status": "passed"
+        },
+        {
+          "name": "failed-persistence-does-not-activate-new-frequency",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "suite": "sync-edit-guard",
+      "sourceSha": "49365ee3e7eea9d029384b662ca53ba0e6c04433",
+      "cases": [
+        {
+          "name": "native-callback-during-grip-and-measure-form-preserves-both-edits",
+          "status": "passed"
+        },
+        {
+          "name": "status-message-cannot-drop-deferred-data-when-form-is-cancelled",
+          "status": "passed"
+        },
+        {
+          "name": "detail-parent-cas-keeps-live-item-references-after-conflict",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "suite": "update39",
+      "sourceSha": "49365ee3e7eea9d029384b662ca53ba0e6c04433",
+      "cases": [
+        {
+          "name": "gallery_bounded_pan_and_caption_pixels",
+          "status": "passed"
+        },
+        {
+          "name": "default_selection_corner_loupe_and_landscape_tools",
+          "status": "passed"
+        },
+        {
+          "name": "real_save_failure_and_photo_loading_errors",
+          "status": "passed"
+        },
+        {
+          "name": "help_occurrences_and_neutral_bluetooth",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "suite": "web-content-policy",
+      "sourceSha": "49365ee3e7eea9d029384b662ca53ba0e6c04433",
+      "cases": [
+        {
+          "name": "native-csp-blocks-injected-scripts-media-and-frames-keeps-real-drawing",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "suite": "workflows",
+      "sourceSha": "49365ee3e7eea9d029384b662ca53ba0e6c04433",
+      "cases": [
+        {
+          "name": "folders_move_rename_trash_restore",
+          "status": "passed"
+        },
+        {
+          "name": "bulk_copy_move_lock",
+          "status": "passed"
+        },
+        {
+          "name": "note_checklist_sketch_attachment",
+          "status": "passed"
+        },
+        {
+          "name": "photo_details_nested_gallery_png_hashes",
+          "status": "passed"
+        },
+        {
+          "name": "trash_restore_purge_and_live_media",
+          "status": "passed"
+        },
+        {
+          "name": "focus_cancel_layers_history_search",
+          "status": "passed"
+        }
+      ]
+    },
+    {
+      "suite": "zoom-grid",
+      "sourceSha": "49365ee3e7eea9d029384b662ca53ba0e6c04433",
+      "cases": [
+        {
+          "name": "buttons_grid_pixels_and_snap_independence",
+          "status": "passed"
+        },
+        {
+          "name": "trusted_two_finger_pinch_and_limits",
+          "status": "passed"
+        }
+      ]
+    }
+  ],
+  "additionalProtectedData": {
+    "sourceSha": "bf4445d759ccc369388becb117b0ffc64a362560",
+    "cases": [
+      {
+        "name": "trash_retention_status_and_registry_failure",
+        "status": "passed"
+      }
+    ]
+  }
+}

@@ -1,5 +1,22 @@
 # Zaměřovač – START ZDE (aktuální stav, rozhodnutí a další práce)
 
+
+**10. 11. 2026 – P1 hybridní ochrana, [draft PR #100](https://github.com/zaplikj30-ui/Zamerovac-android/pull/100), INTEGRATION HOLD.**
+Vlastní větev `fix/b16-p1-hybrid-retention-codex-20261110` navazuje na přesný #99
+`662aa1bd1dffd51d9f259fb3bfb4aa57e57d6c99` (včetně #98/#93). Funkční SOURCE
+`a3c3a5801bd009f0d78b26d452d2074bbd18e4ec`: immutable přesné JSON preimages,
+navržené revize a předchozí backup + trvalé piny originálů. ACK žádný hold neruší;
+koš ukazuje zadržená data. Obnova chybějících bajtů vyžaduje shodu všech pinů,
+nikoli novou autoritu DB. Wire protokol a release se nemění.
+[Kontrakt, výsledky, návrh bezpečné správy a limity](docs/p1-hybrid-retention.md).
+Plná JVM na `62bd440...`: **403 PASS / 2 zachované FAIL #88 / 0 SKIP**;
+finální cílená sada: **69 PASS / stejné 2 FAIL**, z toho ochrana **21/21 PASS**.
+Chromium **22/22 sad / 82 scénářů PASS** (skutečné SHA v browser manifestu), nový přehled **1 PASS**, rychlá sada **85 PASS**
+(včetně Python78/78 bez SKIP), nezávislý PDF parser/render **PASS**.
+Reálný Android/Drive/SAF, fyzický disk-full/restart a Windows HOME **NOT RUN**.
+Další krok: nezávislá revize PR #100, poté HOME QA přesného SHA a fyzické/performance
+brány. Bez merge, APK, Actions triggeru a release. Starší body níže jsou historie.
+
 **9. 11. 2026 — S2-R2-F1 / Android archivace, [draft PR #80](https://github.com/zaplikj30-ui/Zamerovac-android/pull/80):**
 Cílená oprava identity adresářů při Android fallback `creationTime → mtime`; symlink/NOFOLLOW_LINKS/fileKey kontroly zachovány. Lokální Linux/JDK17/Robolectric: **28 PASS / 0 FAIL / 0 SKIP**, skutečný RED fallbacku potvrzen. [Rozsah, příkazy a limity](docs/qa-s2-r2-f1-20261109.md); přesný výsledný HEAD v PR a issue #42. Fyzický Android/emulátor **NOT RUN**. Další krok: nezávislá revize CHAT 28 a koordinátorovo HOME QA na novém SHA; Stage 2 HOLD, merge/Stage 3/APK STOP. R1/R3/R4 se nemění.
 
