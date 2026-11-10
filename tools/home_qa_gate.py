@@ -238,6 +238,116 @@ jobs:
 '''
 
 
+# Do not commit the generated workflow to the draft implementation PR.
+# Only after independent review does an owner-controlled qa/* branch receive
+# the one-shot YAML, causing an explicitly authorized push on the HOME runner.
+TARGETED_NATIVE_RECIPE = r'''
+name: Zamerovac - owner-only targeted HOME native QA, no APK
+on:
+  push:
+    branches: [__QA_BRANCH__]
+    paths: ['.github/workflows/home-qa-targeted-native.yml']
+permissions:
+  contents: read
+concurrency:
+  group: zamerovac-targeted-native-__QA_BRANCH__
+  cancel-in-progress: false
+jobs:
+  targeted-native:
+    if: GHA_IF
+    runs-on: [self-hosted, Windows, X64, zamerovac-qa]
+    timeout-minutes: 80
+    env:
+      CI: '1'
+      PYTHONUTF8: '1'
+      TESTED_SHA: '__SOURCE_SHA__'
+    steps:
+      - name: Require owner service and locally installed trusted tools
+        shell: cmd
+        run: |
+          if /I not "%USERNAME%"=="ZamerovacQA" exit /b 1
+          if not exist "C:\actions-runner\tools\MinGit-2.56.0.4\cmd\git.exe" exit /b 1
+          if not exist "C:\actions-runner\tools\Python313\python.exe" exit /b 1
+          echo C:\actions-runner\tools\MinGit-2.56.0.4\cmd>>"%GITHUB_PATH%"
+          echo C:\actions-runner\tools\Python313>>"%GITHUB_PATH%"
+      - name: Checkout trusted reviewed QA recipe, not target generator
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: GHA_SHA
+          path: recipe
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+      - name: Strict workflow lint and generator negative regressions
+        shell: cmd
+        run: |
+          python recipe\tools\home_qa_gate.py lint-native-workflow recipe\.github\workflows\home-qa-targeted-native.yml --strict
+          if errorlevel 1 exit /b 1
+          python -m unittest discover -s recipe\tests -p test_home_qa_gate.py -v
+          if errorlevel 1 exit /b 1
+      - name: Verify owner-repository source branch HEAD before checkout
+        shell: cmd
+        env:
+          GH_TOKEN: GHA_TOKEN
+        run: |
+          python recipe\tools\home_qa_gate.py verify-trusted-source --source-branch __SOURCE_BRANCH__ --expected-sha __SOURCE_SHA__
+          if errorlevel 1 exit /b 1
+      - name: Read-only exact source SHA, no fork, credentials or submodules
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: __SOURCE_SHA__
+          path: source
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+      - name: Verify checked out source SHA and run serial targeted WSL2 tests
+        shell: cmd
+        run: |
+          python recipe\tools\home_qa_gate.py wsl-targeted-from-windows --expected-sha __SOURCE_SHA__ --root source
+          if errorlevel 1 exit /b 1
+      - name: Archive only numeric JUnit summary, never APK or source
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: native-targeted-__SOURCE_SHA__
+          path: qa-evidence/native-targeted-summary.txt
+          retention-days: 7
+          if-no-files-found: ignore
+'''
+
+
+def valid_source_branch(branch: str) -> None:
+    demand(bool(SOURCE_BRANCH.fullmatch(branch)) and ".." not in branch and
+           "//" not in branch and not branch.endswith(("/", ".", ".lock")),
+           "source must be a literal owner-repository branch, not a PR/fork/ref expression")
+
+
+def render_native_workflow(branch: str, source_sha: str, source_branch: str) -> str:
+    demand(bool(re.fullmatch(r"qa/[a-z][a-z0-9._-]{3,65}", branch)),
+           "only the literal owner-controlled qa/* trigger is allowed")
+    demand(bool(SHA.fullmatch(source_sha)), "literal source SHA required")
+    valid_source_branch(source_branch)
+    return (TARGETED_NATIVE_RECIPE.replace("__QA_BRANCH__", branch)
+            .replace("__SOURCE_SHA__", source_sha)
+            .replace("__SOURCE_BRANCH__", source_branch)
+            .replace("GHA_IF", "$" + "{{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/" + branch + "' && github.event_name == 'push' }}")
+            .replace("GHA_SHA", "$" + "{{ github.sha }}")
+            .replace("GHA_TOKEN", "$" + "{{ github.token }}").lstrip("\n"))
+
+
+def check_native_workflow(content: str, strict: bool = True) -> None:
+    demand(strict, "native HOME YAML cannot use a permissive linter")
+    normalized = content.replace("\r\n", "\n")
+    branch = re.search(r"(?m)^    branches: \[(qa/[a-z][a-z0-9._-]{3,65})\]$", normalized)
+    source = re.search(r"(?m)^          ref: ([0-9a-f]{40})$", normalized)
+    source_branch = re.search(r"(?m)^          python recipe\\tools\\home_qa_gate\.py verify-trusted-source --source-branch ([a-z0-9._/-]+) --expected-sha ([0-9a-f]{40})$", normalized)
+    demand(bool(branch and source and source_branch), "unrecognized native workflow: STOP")
+    demand(source.group(1) == source_branch.group(2), "trusted head SHA mismatch: STOP")
+    demand(normalized == render_native_workflow(branch.group(1), source.group(1),
+                                               source_branch.group(1)),
+           "modified native workflow trigger, job, checkout, guard, tests or shell: STOP")
+
+
 def render_workflow(branch: str, source_sha: str) -> str:
     demand(bool(re.fullmatch(r"qa/[a-z][a-z0-9._-]{3,65}", branch)),
            "only a literal trusted qa/* branch is allowed")
