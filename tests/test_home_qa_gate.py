@@ -514,7 +514,7 @@ class TargetedNativeGateTest(unittest.TestCase):
                     "render-native-workflow", "--branch", NATIVE_QA_BRANCH,
                     "--source-branch", NATIVE_SOURCE_BRANCH,
                     "--expected-sha", NATIVE_SHA,
-                "--reviewed-gate-sha", NATIVE_GATE_SHA, "--output", str(target),
+                    "--reviewed-gate-sha", NATIVE_GATE_SHA, "--output", str(target),
                 ]))
             self.assertEqual(native_workflow().encode("utf-8"), target.read_bytes())
             with mock.patch.object(GATE, "git_source", return_value=NATIVE_GATE_SHA) as pinned:
