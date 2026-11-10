@@ -5,6 +5,7 @@ import importlib.util
 from pathlib import Path
 import tempfile
 import unittest
+from unittest import mock
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -16,31 +17,7 @@ CHECKOUT = "11d5960a326750d5838078e36cf38b85af677262"
 
 
 def valid_workflow():
-    return """
-name: HOME QA pinned self-hosted only
-on:
-  push:
-    branches: [qa/example]
-jobs:
-  windows-and-wsl:
-    if: github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/qa/example' && github.event_name == 'push'
-    runs-on: [self-hosted, Windows, X64, zamerovac-qa]
-    steps:
-      - uses: actions/checkout@%s
-        with:
-          ref: %s
-          persist-credentials: false
-      - name: Gate before expensive work
-        run: |
-          python tools/home_qa_gate.py lint-workflow .github/workflows/qa.yml --strict
-          python tools/home_qa_gate.py windows-quick --expected-sha %s
-      - name: WSL native
-        run: |
-          linux = r\"\"\"
-          python3 tools/home_qa_gate.py wsl-native --expected-sha %s
-          /opt/gradle-8.10.2/bin/gradle :app:testPreviewUnitTest
-          \"\"\"
-""" % (CHECKOUT, SHA, SHA, SHA)
+    return GATE.render_workflow("qa/example", SHA)
 
 
 class GateUnitTest(unittest.TestCase):
@@ -74,13 +51,18 @@ class GateUnitTest(unittest.TestCase):
             home = Path(t) / "jdk"
             (home / "bin").mkdir(parents=True)
             for name in ("java", "javac"):
-                (home / "bin" / name).write_text("fixture", encoding="utf-8")
+                exe = home / "bin" / name
+                exe.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+                exe.chmod(0o755)
             gradle = Path(t) / "gradle"
-            gradle.write_text("fixture", encoding="utf-8")
+            gradle.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
+            gradle.chmod(0o755)
             env = {"JAVA_HOME": str(home), "WSL_DISTRO_NAME": "Zamerovac-Ubuntu-QA"}
             tools = {"git": "/usr/bin/git", "python3": "/usr/bin/python3"}
-            # No node executable exists in the fake WSL: native preflight passes.
-            GATE.check_wsl(gradle, tools.get, "Linux", env, "microsoft-standard-WSL2")
+            with mock.patch.object(GATE, "read_version", side_effect=[
+                'openjdk version "17.0.17"', 'javac 17.0.17', 'Gradle 8.10.2',
+            ]):
+                GATE.check_wsl(gradle, tools.get, "Linux", env, "microsoft-standard-WSL2")
 
     def test_wsl_native_missing_java_rejected_before_junit(self):
         with tempfile.TemporaryDirectory() as t:
