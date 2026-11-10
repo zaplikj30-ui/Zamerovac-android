@@ -17,6 +17,8 @@
 - **Poslední publikovaná testovací APK podle ověřené historie:** [1.3.0](https://github.com/zaplikj30-ui/Zamerovac-android/releases/tag/test-v1.3.0), package cz.zamerovac.app.preview, Android versionCode 1154. Před dalším vydáním ověř živě skutečně poslední release a kompatibilitu; APK nevydávat kvůli dokumentaci.
 - **QA:** dřívější HOME 4/4 PASS na main nebo jiných přesných SHA je historický důkaz, **nikoli test nových draftů**. Samsung/S Pen/Bosch/reálný Drive vždy uvádět podle skutečně provedeného testu.
 
+- **Kontrola úplnosti pravidel:** [Matice platnosti všech původních oddílů](docs/PLATNOST_A_PUVOD_PRAVIDEL.md). Původní detailní **platná** pravidla zůstávají závazná, i když jsou v krátkém rozcestníku jen shrnuta. Historická SHA, role a zastaralé workflow naopak nejsou dnešní příkazy.
+
 ## Nejbližší směr
 - **HNED:** dokončit již rozpracovanou nezávislou kontrolu PR #105 a držet oddělené bezpečnostní brány; pro **nové běžné opravy** používat jeden balík místo deseti předávek. Nejprve zkontrolovat konflikty s existujícími PR.
 - **KODEX, až bude dostupný:** nejprve **audit celé aplikace** bez změn, s prioritním hlubokým sync rozborem proti principům Joplin / WorkManager / oficiálnímu Google Drive API. Poté vlastník schválí architektonickou variantu a bezpečné etapy synchronizace; dále import a ostatní oblasti podle závažnosti.

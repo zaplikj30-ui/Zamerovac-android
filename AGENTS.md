@@ -37,4 +37,15 @@
 - Veškerý **text určený ke kopírování** (zadání, zpráva, příkaz, postup) dej v odpovědi celý do Markdown bloku typu text, aby měl tlačítko Kopírovat.
 - Souhrn kvality po významné etapě obsahuje zlepšení/zhoršení, rizika, důkazy, skóre 1–10 a priority **hned / později / neměnit**. Při zásahu na domácím PC dej uživateli jediný přesný postup.
 
+## 7. Referenční ovládání a rozsah funkcí
+- **ImageMeter je hlavní vzor chování**, nikoli zdroj jeho licencovaného kódu. Primární reference: **ImageMeter 26.6.1 (XAPK)**, doplňkově **Pro 26.5.0 (APK)**; starší 3.9.15 pouze pomocná. Při změně editoru nejprve porovnej skutečné dotyky, lupu, úchopy, čáry a kóty podle dostupných snímků/videí, pak oprav příčinu. Žádný alternativní pracovní postup bez schválení.
+- **Editor musí plnohodnotně fungovat prstem** (výběr, kóty, úchopy, kreslení, zoom i přesun), nezávisle na S Pen a jedné značce zařízení. Stylus/tlak/palm rejection jsou volitelné možnosti. Testuj prst, více dotyků, přerušení, otočení, stylus tam, kde fyzicky existuje.
+- Výslovně **vyřazené funkce**: referenční měřítko, perspektivní reference, perspektivní délka, počítadlo objektů, výsledková listina. Ostatní dříve schválené požadavky mají stále platit jako cílové chování, ale nejsou automatickým povolením programovat nové funkce. Podrobnosti v původním [AGENTS](docs/historie/AGENTS-2026-11-10.md), [projektovém plánu](PROJEKTOVY_PLAN_ZAMEROVACE.md) a konkrétních issues.
+
+## 8. Technická brána a zachování původních povinností
+- Před **zásadní přestavbou** výslovně porovnej tři cesty: cílenou opravu, částečnou přestavbu, čistší základ s využitím ověřených částí. Posuď technické závislosti, výkon slabších zařízení, Windows/iOS, přesné hodnoty, datové migrace, obnova/Undo, původní média, souběh a bezpečný návrat; závěr s důvody zapiš v #42, rozhodnutí vyžaduje vlastníka.
+- Při každé významné změně hlídej **kolize napříč funkcemi**: editor/galerie, ukládání/Undo/Redo, média/koš/archiv, offline/sync, kóty/Bosch, dotyky/lupa/zoom. Ke konkrétnímu požadavku navazuj na existující testy a [registr #28](https://github.com/zaplikj30-ui/Zamerovac-android/issues/28).
+- Koordinátor sám navrhuje lepší postupy a vhodná **nastavení ChatGPT / Codexu** (včetně dostupného modelu/úsilí a bezplatnější varianty). **Zápis AGENTS.md na GitHubu sám nezmění Pokyny projektu v ChatGPT**; potřebnou změnu uživateli jasně vysvětli a dej připravený text v kopírovacím bloku.
+- **Zkrácení nesmí rušit původní stále platné požadavky.** Pro všechny původní kapitoly je [matice platnosti](docs/PLATNOST_A_PUVOD_PRAVIDEL.md). Podrobné původní znění oddílu označeného **PLATÍ** zůstává závazné, není-li konkrétně překonáno novějším výslovným rozhodnutím. Položky **HISTORIE** a **NÁPAD** nejsou dnešní příkazy. Nejasnost vyřeš v #42 před zásadní změnou.
+
 **Historické podrobnosti:** [původní AGENTS.md](docs/historie/AGENTS-2026-11-10.md), [původní START_ZDE.md](docs/historie/START_ZDE-2026-11-10.md), [projektový plán](PROJEKTOVY_PLAN_ZAMEROVACE.md), [issue #42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42) a [testovací registr #28](https://github.com/zaplikj30-ui/Zamerovac-android/issues/28).
