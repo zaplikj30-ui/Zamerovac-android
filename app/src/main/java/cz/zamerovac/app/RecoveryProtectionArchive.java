@@ -174,6 +174,10 @@ final class RecoveryProtectionArchive {
                 putSource(sources,path,entry.getLong("size"),entry.getString("sha256"),status);
             }
         }
+        // P1 immutable exact revisions are a separate source of truth from today's DB.
+        // Omitting their catalogs could falsely certify an old snapshot as complete.
+        JSONObject protectedState=protectedEvidence(home,noBackup,sources);
+        if(!protectedState.getBoolean("sourceComplete"))sourceComplete=false;
         // Preserve pending immutable peer snapshots and namespace-specific
         // cloud receipts; never include this archive's own root recursively.
         File outbox=new File(noBackup,"sync-v2-outbox");
@@ -223,12 +227,143 @@ final class RecoveryProtectionArchive {
             // never claims completion: only a verified durable COMPLETE marker
             // permits verify() to report a finished archive.
             .put("copyComplete",false).put("canPromote",false)
-            .put("sourceComplete",sourceComplete).put("files",listed)
+            .put("sourceComplete",sourceComplete).put("protectedEvidence",protectedState)
+            .put("files",listed)
             .put("missing",missing)
             .put("undoRedo","ONLY_DURABLY_STORED_HISTORY")
             .put("externalProviderHistory","NOT_INCLUDED")
             .put("purpose","BYTE_EXACT_PROTECTION_ONLY");
     }
+
+    /** Read-only P1 evidence scan. Never repair catalogs or promote protected JSON. */
+    private static JSONObject protectedEvidence(File home,File noBackup,
+            TreeMap<String,JSONObject> files)throws Exception{
+        File directory=new File(home,"protected-revisions");
+        boolean hasDirectory=safeDirectory(directory,false);
+        File witness=new File(noBackup,"protected-revisions.json");
+        boolean hasWitness=exists(witness)||exists(new File(witness+".bak"))||
+            exists(new File(witness+".new"));
+        if(!hasDirectory&&!hasWitness)
+            return new JSONObject().put("state","SCANNED_EMPTY").put("holds",0)
+                .put("files",0).put("sourceComplete",true).put("missingMedia",new JSONArray());
+        File catalog=new File(directory,"catalog.json");
+        if(!hasDirectory||!exists(catalog)||!exists(witness))
+            throw new IOException("Chybí katalog nebo nezávislý svědek ochrany P1");
+        // Every P1 file, including AtomicFile sidecars, is part of recovery evidence.
+        File[] entries=directory.listFiles();
+        if(entries==null||entries.length>MAX_FILES)
+            throw new IOException("Chráněné revize nelze bezpečně vypsat");
+        Set<String> manifestIds=new TreeSet<>();
+        boolean complete=true;
+        int count=0;
+        for(File file:entries){
+            String name=file.getName();
+            if(!name.matches("([a-f0-9]{64}|catalog)\\.json(\\.bak|\\.new)?"))
+                throw new IOException("Neznámý soubor v ochraně P1");
+            if(name.matches("[a-f0-9]{64}\\.json"))manifestIds.add(name.substring(0,64));
+            String path="files/protected-revisions/"+name;
+            JSONObject inspected=inspectExtra(file,path);
+            putSource(files,path,inspected.getLong("size"),inspected.getString("sha256"),
+                name.endsWith(".new")?"UNCONFIRMED":"PRESENT");
+            if(name.endsWith(".new")||name.endsWith(".bak"))complete=false;
+            count++;
+        }
+        for(String suffix:new String[]{"",".bak",".new"}){
+            File file=new File(noBackup,"protected-revisions.json"+suffix);
+            if(!exists(file))continue;
+            String path="no_backup/protected-revisions.json"+suffix;
+            JSONObject inspected=inspectExtra(file,path);
+            putSource(files,path,inspected.getLong("size"),inspected.getString("sha256"),
+                suffix.isEmpty()?"PRESENT":"UNCONFIRMED");
+            if(!suffix.isEmpty())complete=false;
+            count++;
+        }
+        Set<String> left=catalogIds(catalog),right=catalogIds(witness);
+        if(!left.equals(right)||!left.equals(manifestIds))
+            throw new IOException("Katalogy a historické revize P1 nejsou úplné");
+        Map<String,JSONObject> mediaPins=new TreeMap<>();
+        for(String id:left){
+            File file=new File(directory,id+".json");
+            byte[] raw=readChecked(file,3L*MAX_META);
+            if(!id.equals(PeerWire.hash(raw)))
+                throw new IOException("Historická revize P1 má nesprávný hash");
+            JSONObject hold=JsonInput.object(raw);
+            if(!"cz.zamerovac.protected.revision".equals(hold.getString("format"))||
+               hold.getInt("version")!=1)
+                throw new IOException("Neznámý formát ochrany P1");
+            String exact=hold.getString("metadata");
+            if(!hold.getString("sourceHash").equals(
+                PeerWire.hash(exact.getBytes(StandardCharsets.UTF_8))))
+                throw new IOException("Poškozená přesná historie P1");
+            JSONObject database=new JSONObject(exact);
+            String kind=hold.getString("kind");
+            if("snapshot".equals(kind))database=database.getJSONObject("data");
+            else if(!"database".equals(kind))
+                throw new IOException("Neznámá historická revize P1");
+            LocalDatabase.validate(database.toString());
+            JSONArray items=hold.getJSONArray("media");
+            Set<String> names=new HashSet<>();
+            for(int i=0;i<items.length();i++){
+                JSONObject item=items.getJSONObject(i);
+                String mediaId=item.getString("id");
+                if(!PeerSnapshot.validMediaId(mediaId)||!names.add(mediaId))
+                    throw new IOException("Neplatný pin historie P1");
+                String sha=item.getString("hash");
+                long size=PeerSnapshot.integer(item,"size",MAX_MEDIA);
+                boolean missing="MISSING".equals(item.optString("state"));
+                if(missing){
+                    complete=false;
+                    if("snapshot".equals(kind))throw new IOException("Neúplný sync snapshot P1");
+                }else if(!"VERIFIED".equals(item.getString("state"))||
+                        size<=0||!sha.matches("[0-9a-f]{64}"))
+                    throw new IOException("Neověřitelný originál historie P1");
+                if(!PeerSnapshot.validMime(item.getString("mime"))||
+                   item.getString("name").length()>256)
+                    throw new IOException("Neplatná metadata originálu P1");
+                JSONObject prior=mediaPins.putIfAbsent(mediaId,item);
+                if(prior!=null&&(!prior.getString("hash").equals(sha)||
+                    prior.getLong("size")!=size))
+                    throw new IOException("Rozporné historické piny originálu");
+            }
+            Set<String> required="snapshot".equals(kind)
+                ?PeerSnapshot.references(database.getJSONArray("records"))
+                :PeerSnapshot.cleanupReferences(database.getJSONArray("records"));
+            if(!names.containsAll(required))throw new IOException("Neúplné reference P1");
+            if(!hold.optBoolean("sourceComplete",false))complete=false;
+        }
+        JSONArray missing=new JSONArray();
+        File mediaDir=new File(home,"media");
+        for(Map.Entry<String,JSONObject> pin:mediaPins.entrySet()){
+            String mediaId=pin.getKey();
+            JSONObject info=pin.getValue();
+            File source=new File(mediaDir,mediaId);
+            boolean absent=!exists(source);
+            if(absent){
+                complete=false;missing.put("files/media/"+mediaId);
+            }else if(!"MISSING".equals(info.optString("state"))&&
+                     (attributes(source).size()!=info.getLong("size")||
+                      !hashStable(source,MAX_MEDIA).equals(info.getString("hash"))))
+                throw new IOException("Originál neodpovídá historickému pinu P1");
+        }
+        return new JSONObject().put("state","VERIFIED").put("holds",left.size())
+            .put("files",count).put("sourceComplete",complete).put("missingMedia",missing);
+    }
+    private static Set<String> catalogIds(File file)throws Exception{
+        JSONObject catalog=JsonInput.object(readChecked(file));
+        if(!"cz.zamerovac.protection.catalog".equals(catalog.getString("format"))||
+            catalog.getInt("version")!=1)
+            throw new IOException("Neplatný katalog historie P1");
+        JSONArray ids=catalog.getJSONArray("holds");
+        if(ids.length()>MAX_FILES)throw new IOException("Příliš mnoho revizí P1");
+        Set<String> result=new TreeSet<>();
+        for(int i=0;i<ids.length();i++){
+            String id=ids.getString(i);
+            if(!id.matches("[0-9a-f]{64}")||!result.add(id))
+                throw new IOException("Duplicitní nebo neplatný historický pin P1");
+        }
+        return result;
+    }
+
     private static void putSource(TreeMap<String,JSONObject> sources,String path,
                                   long size,String hash,String status)throws Exception{
         validatePath(path);
@@ -255,12 +390,15 @@ final class RecoveryProtectionArchive {
         boolean nativeEvidence=path.matches("no_backup/(zamerovac-install-state-v1\\.marker(\\.bak|\\.new)?|sync-peers-v2\\.json(\\.bak|\\.new)?|sync-queue-v2\\.json(\\.bak|\\.new)?)");
         boolean other=path.matches("no_backup/sync-(inbox|scan|publications)-v2-[a-f0-9-]{36}-[a-f0-9]{64}\\.json(\\.bak|\\.new)?");
         boolean queued=path.matches("no_backup/sync-v2-outbox/[a-f0-9]{64}\\.json(\\.bak|\\.new)?");
-        if(!db&&!journal&&!media&&!nativeEvidence&&!other&&!queued&&!prefs)
+        boolean protectedFile=path.matches("files/protected-revisions/([a-f0-9]{64}\\.json|catalog\\.json)(\\.bak|\\.new)?");
+        boolean protectedWitness=path.matches("no_backup/protected-revisions\\.json(\\.bak|\\.new)?");
+        if(!db&&!journal&&!media&&!nativeEvidence&&!other&&!queued&&!prefs&&!protectedFile&&!protectedWitness)
             throw new IOException("Nepovolená cesta ochranné kopie");
     }
     private static long limit(String path)throws IOException{
         validatePath(path);
         if(path.startsWith("files/media/"))return MAX_MEDIA;
+        if(path.startsWith("files/protected-revisions/")&&!path.contains("catalog."))return 3L*MAX_META;
         if(path.startsWith("files/projects.recovery-v1"))return 4096;
         return MAX_META;
     }
@@ -349,20 +487,23 @@ final class RecoveryProtectionArchive {
      * then require the same regular file, size, mtime and identity.
      */
     private static byte[] readChecked(File file)throws IOException{
+        return readChecked(file,MAX_META);
+    }
+    private static byte[] readChecked(File file,long max)throws IOException{
         DirectoryChain chain=parents(file);
         BasicFileAttributes before=attributes(file);
         if(before==null||!before.isRegularFile()||before.isSymbolicLink()||
-           before.size()<0||before.size()>MAX_META)
+           before.size()<0||before.size()>max)
             throw new IOException("Manifest překročil limit nebo není bezpečně čitelný");
         byte[] bytes;
         long total=0;
         try(InputStream in=Files.newInputStream(file.toPath(),LinkOption.NOFOLLOW_LINKS);
             ByteArrayOutputStream out=new ByteArrayOutputStream()){
             byte[] block=new byte[8192];int n;
-            while((n=in.read(block,0,(int)Math.min(block.length,MAX_META+1L-total)))!=-1){
+            while((n=in.read(block,0,(int)Math.min(block.length,max+1L-total)))!=-1){
                 if(n==0)throw new IOException("Čtení manifestu nepostupuje");
                 total+=n;
-                if(total>MAX_META)throw new IOException("Manifest překročil limit");
+                if(total>max)throw new IOException("Manifest překročil limit");
                 out.write(block,0,n);
             }
             bytes=out.toByteArray();
@@ -492,6 +633,7 @@ final class RecoveryProtectionArchive {
         // Durability is checked from leaves towards the staging root.
         File payload=new File(stage,"payload");
         for(File area:new File[]{new File(payload,"files/media"),
+                new File(payload,"files/protected-revisions"),
                 new File(payload,"no_backup/sync-v2-outbox"),new File(payload,"files"),
                 new File(payload,"no_backup"),new File(payload,"shared_prefs"),
                 payload,stage}){
@@ -551,6 +693,31 @@ final class RecoveryProtectionArchive {
         if(!id.equals(PeerWire.hash(metadata)))
             throw new IOException("Manifest se mezi ověřeními změnil");
         JSONObject manifest=JsonInput.object(metadata);
+        // Also check the cross-file P1 contract. Hashing listed files alone
+        // cannot detect a manifest that omitted a catalog or historical hold.
+        File payload=new File(dir,"payload");
+        TreeMap<String,JSONObject> protectedFiles=new TreeMap<>();
+        JSONObject coverage=protectedEvidence(new File(payload,"files"),
+            new File(payload,"no_backup"),protectedFiles);
+        JSONObject declared=manifest.optJSONObject("protectedEvidence");
+        boolean coverageDeclared=declared!=null;
+        if(coverageDeclared&&!Arrays.equals(canonical(coverage),canonical(declared)))
+            throw new IOException("Archiv nemá shodné doklady ochrany P1");
+        Set<String> included=new HashSet<>();
+        JSONArray listed=manifest.getJSONArray("files");
+        for(int i=0;i<listed.length();i++){
+            JSONObject item=listed.getJSONObject(i);
+            String path=item.getString("path");
+            if(protectedFiles.containsKey(path)){
+                JSONObject actual=protectedFiles.get(path);
+                if(!actual.getString("sha256").equals(item.getString("sha256"))||
+                   actual.getLong("size")!=item.getLong("size"))
+                    throw new IOException("Archivovaný doklad P1 neodpovídá manifestu");
+                included.add(path);
+            }
+        }
+        if(!included.equals(protectedFiles.keySet()))
+            throw new IOException("V archivu chybí chráněný historický podklad");
         File complete=new File(dir,"COMPLETE");
         boolean marked=false;
         if(exists(complete)){
@@ -565,7 +732,7 @@ final class RecoveryProtectionArchive {
         chain.check();
         return new JSONObject().put("id",id).put("complete",marked)
             .put("payloadVerified",content)
-            .put("sourceComplete",manifest.optBoolean("sourceComplete"))
+            .put("sourceComplete",coverageDeclared&&coverage.getBoolean("sourceComplete")&&manifest.optBoolean("sourceComplete"))
             .put("canPromote",false).put("files",manifest.getJSONArray("files"))
             .put("missing",manifest.getJSONArray("missing"));
     }
