@@ -197,13 +197,25 @@ function folderContains(folderId,otherId){
  return false;
 }
 function newRecord(kind,title,parentId=currentFolder){return {id:uid(),syncClock:advanceSyncClock({}),kind,title,parentId,createdAt:stamp(),updatedAt:stamp(),rev:uid(),media:[],items:[],text:'',checks:[],width:1400,height:900,deleted:false}}
-function addRecord(r){if(!canWriteToFolder(r.parentId)){notify('Nejdříve odemkněte složku.');return null}state.records.push(r);save();showFolder();return r}
+// New records must never become visible as saved after a rejected durable write.
+function persistNewRecord(r){
+ state.records.push(r);
+ if(save()===true)return true;
+ const at=state.records.indexOf(r);
+ if(at>=0)state.records.splice(at,1);
+ return false;
+}
+function addRecord(r){
+ if(!canWriteToFolder(r.parentId)){notify('Nejdříve odemkněte složku.');return false}
+ if(!persistNewRecord(r))return false;
+ showFolder();return r;
+}
 function closeMenus(){for(let id of ['toolMenu','newMenu','navMenu','overflowMenu','editorOverflow'])$(id).hidden=true;if($('editorExtraToolbar')?.hidden===false)window.setEditorExtraToolbarExpanded?.(false)}
 let modalFocusTimer=null;
 function modal(title,markup,cb,okText='Uložit'){closeMenus();delete $('modal').dataset.actionMenu;$('okModal').classList.remove('danger');$('modalTitle').textContent=title;$('modalBody').innerHTML=markup;$('modal').hidden=false;$('okModal').textContent=okText;$('cancelModal').hidden=okText==='Zavřít';window.modalOK=cb;window.modalBackHandler=null;document.getElementById('editorUnsavedConfirm')?.remove();clearTimeout(modalFocusTimer);modalFocusTimer=setTimeout(()=>{const body=$('modalBody');if(!$('modal').hidden&&!body.contains(document.activeElement))body.querySelector('input,textarea')?.focus()},90)}
 $('okModal').onclick=()=>{try{if(window.modalOK?.()!==false){$('modal').hidden=true;window.modalOK=null;window.modalBackHandler=null}}catch(e){notify('Chyba: '+e.message)}};
 $('cancelModal').onclick=()=>{$('modal').hidden=true;window.modalOK=null;window.modalBackHandler=null;document.getElementById('editorUnsavedConfirm')?.remove()};
-function promptText(title,label,initial,done){modal(title,`<label>${escapeHtml(label)}</label><input id="promptValue" value="${escapeHtml(initial)}">`,()=>{let v=$('promptValue').value.trim();if(!v){notify('Vyplň hodnotu');return false}done(v)})}
+function promptText(title,label,initial,done){modal(title,`<label>${escapeHtml(label)}</label><input id="promptValue" value="${escapeHtml(initial)}">`,()=>{let v=$('promptValue').value.trim();if(!v){notify('Vyplň hodnotu');return false}return done(v)})}
 // ImageMeter-style browser previews. Android loads only cached small JPEG
 // thumbnails from /thumb/<id>, never the original full-size camera image.
 // A compact, high-contrast badge for any photo containing saved annotations.
@@ -364,7 +376,7 @@ function showNewMenu(){if(!$('newMenu').hidden){closeMenus();return}if(!canWrite
 ['📷','Pořídit fotografii',()=>pickMedia('camera')],
 ['🖼️','Importovat obrázek / PDF / video',()=>pickMedia('media')],
 ['<svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h9l5 5v12H5z" fill="#f3f0e7" stroke="#a8a0ba" stroke-width="1.5"/><path d="M14 3v5h5" stroke="#a8a0ba" stroke-width="1.5"/><path d="m9 16 7.6-7.6 2.4 2.4-7.6 7.6-3.4 1z" fill="#d7c2ff" stroke="#9263d5" stroke-width="1.6"/><path d="m15.2 9.8 2.4 2.4" stroke="#9263d5" stroke-width="1.6"/></svg>','Nový náčrt',()=>promptText('Nový náčrt','Název','Nový náčrt',name=>addRecord(newRecord('canvas',name)))],
-['📝','Nová textová poznámka',()=>{let r=newRecord('note','Nová poznámka');if(!canWriteToFolder(r.parentId)){notify('Nejdříve odemkněte složku.');return}state.records.push(r);save();openNote(r)}],
+['📝','Nová textová poznámka',()=>{let r=newRecord('note','Nová poznámka');if(!canWriteToFolder(r.parentId)){notify('Nejdříve odemkněte složku.');return}if(!persistNewRecord(r))return;openNote(r)}],
 ['📁','Nová složka',()=>promptText('Nová složka','Jméno zákazníka nebo místnosti','',name=>addRecord(newRecord('folder',name)))],
 ['🎤','Hlasová poznámka',()=>recordVoice()],
 ['📎','Přidat další soubor',()=>pickMedia('file')],
@@ -385,7 +397,7 @@ async function acceptPickedMedia(request,id,mime,name,takenAt=null){
 }
 $('filePick').addEventListener('change',async(e)=>{const request=stagedMediaRequest;if(!request)return;try{for(let file of e.target.files){let mediaId=await storeMedia(file,request.id);await acceptPickedMedia(request,mediaId,file.type||'application/octet-stream',file.name)}}catch(error){notify('Příloha nebyla přidána: '+error.message)}finally{if(stagedMediaRequest===request)stagedMediaRequest=null}});
 $('filePick').addEventListener('cancel',()=>{stagedMediaRequest=null});
-async function addMediaRecord(id,name,mime,takenAt=null,folder=currentFolder){if(!canWriteToFolder(folder)){notify('Původní složka není dostupná nebo je uzamčená; příloha nebyla připojena jinam.');return null}const kind=mime.startsWith('image/')?'photo':mime.startsWith('video/')?'video':mime.startsWith('audio/')?'audio':'file',r=newRecord(kind,name,folder);r.media=[id];if(kind==='photo'&&takenAt)r.photoTakenAt=takenAt;state.records.push(r);if(!save())return null;if(screen==='browser'&&currentFolder===folder){showFolder();if(kind==='photo')openEditor(r)}return r}
+async function addMediaRecord(id,name,mime,takenAt=null,folder=currentFolder){if(!canWriteToFolder(folder)){notify('Původní složka není dostupná nebo je uzamčená; příloha nebyla připojena jinam.');return null}const kind=mime.startsWith('image/')?'photo':mime.startsWith('video/')?'video':mime.startsWith('audio/')?'audio':'file',r=newRecord(kind,name,folder);r.media=[id];if(kind==='photo'&&takenAt)r.photoTakenAt=takenAt;if(!persistNewRecord(r))return null;if(screen==='browser'&&currentFolder===folder){showFolder();if(kind==='photo')openEditor(r)}return r}
 async function storeMedia(file,importToken=null){const id=uid(),mime=file.type||'application/octet-stream';if(importToken)await MediaImportOwnership.reserve(id,importToken);if(native){let bytes=new Uint8Array(await file.arrayBuffer());const chunkSize=48*1024;if(!Native.beginMediaChecked(id,mime,file.name||'soubor',bytes.length))throw new Error('Přílohu nelze připravit k uložení');for(let off=0;off<bytes.length;off+=chunkSize){let sub=bytes.subarray(off,off+chunkSize);let s='';for(let b of sub)s+=String.fromCharCode(b);if(!Native.appendMedia(id,btoa(s)))throw new Error('Příloha nebyla zapsána');}if(!Native.finishMedia(id))throw new Error('Příloha není uložená úplně');}
 else{const db=await mediaDb();await new Promise((resolve,reject)=>{let tx=db.transaction('files','readwrite');tx.objectStore('files').put(file,id);tx.oncomplete=resolve;tx.onerror=reject})}if(importToken)await MediaImportOwnership.published(id,importToken);return id}
 let idb=null;function mediaDb(){if(!idb)idb=new Promise((res,rej)=>{let req=indexedDB.open('zamerovac-media',1);req.onupgradeneeded=()=>req.result.createObjectStore('files');req.onsuccess=()=>res(req.result);req.onerror=rej});return idb}
