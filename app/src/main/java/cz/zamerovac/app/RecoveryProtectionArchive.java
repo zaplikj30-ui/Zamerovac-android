@@ -253,8 +253,11 @@ final class RecoveryProtectionArchive {
         boolean hasWitness=exists(witness)||exists(new File(witness+".bak"))||
             exists(new File(witness+".new"));
         if(!hasDirectory&&!hasWitness)
-            return new JSONObject().put("state","SCANNED_EMPTY").put("holds",0)
-                .put("files",0).put("sourceComplete",true).put("missingMedia",new JSONArray());
+            // No local proof distinguishes a genuinely pre-P1 installation
+            // from deletion of BOTH catalogs and the entire P1 directory.
+            // Copy available bytes but never certify lost historical coverage.
+            return new JSONObject().put("state","UNPROVEN_ABSENCE").put("holds",0)
+                .put("files",0).put("sourceComplete",false).put("missingMedia",new JSONArray());
         File catalog=new File(directory,"catalog.json");
         if(!hasDirectory||!exists(catalog)||!exists(witness))
             throw new IOException("Chybí katalog nebo nezávislý svědek ochrany P1");
