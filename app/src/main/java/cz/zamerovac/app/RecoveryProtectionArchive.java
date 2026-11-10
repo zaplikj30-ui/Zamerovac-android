@@ -237,6 +237,12 @@ final class RecoveryProtectionArchive {
 
     /** Read-only P1 evidence scan. Never repair catalogs or promote protected JSON. */
     private static JSONObject protectedEvidence(File home,File noBackup,
+            TreeMap<String,JSONObject> files)throws IOException{
+        try{return scanProtectedEvidence(home,noBackup,files);}
+        catch(IOException failure){throw failure;}
+        catch(Exception failure){throw new IOException("Historickou ochranu P1 nelze ověřit",failure);}
+    }
+    private static JSONObject scanProtectedEvidence(File home,File noBackup,
             TreeMap<String,JSONObject> files)throws Exception{
         File directory=new File(home,"protected-revisions");
         boolean hasDirectory=safeDirectory(directory,false);
