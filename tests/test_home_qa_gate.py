@@ -360,5 +360,252 @@ class GateUnitTest(unittest.TestCase):
                 self.assertNotIn("python3 -m unittest discover -s tests", text)
 
 
+
+NATIVE_SHA = "144bb5573932be032411c11451aa560a10f623ee"
+NATIVE_SOURCE_BRANCH = "fix/p1-34-b-protected-archive-chat33-20261110"
+NATIVE_QA_BRANCH = "qa/pr102-native-controlled"
+
+
+def native_workflow():
+    return GATE.render_native_workflow(NATIVE_QA_BRANCH, NATIVE_SHA,
+                                       NATIVE_SOURCE_BRANCH)
+
+
+class TargetedNativeGateTest(unittest.TestCase):
+    """No HOME workflow is emitted by these tests; all provider/JUnit data synthetic."""
+
+    def test_native_canonical_accepts_only_exact_recipe(self):
+        text = native_workflow()
+        GATE.check_native_workflow(text, strict=True)
+        self.assertIn("ref: " + NATIVE_SHA, text)
+        self.assertIn("refs/heads/" + NATIVE_QA_BRANCH, text)
+        self.assertIn("ZamerovacQA", text)
+        self.assertIn("refs/heads/" + NATIVE_QA_BRANCH, text)
+        self.assertIn("verify-trusted-source --source-branch " + NATIVE_SOURCE_BRANCH,
+                      text)
+        self.assertIn("GH_TOKEN: " + "$" + "{{ github.token }}", text)
+        self.assertIn("persist-credentials: false", text)
+        self.assertIn("submodules: false", text)
+        self.assertNotIn("pull_request:", text)
+        self.assertNotIn("ubuntu-latest", text)
+        self.assertNotIn("assemblePreview", text)
+        self.assertNotIn("upload-artifact@v4", text)
+
+    def test_native_refuses_untrusted_source_branches_and_refs(self):
+        for branch in ("main", "refs/pull/102/merge", "fork/other",
+                       "fix/../../main", "qa/foo//bad", "fix/fork.lock",
+                       "fix/x;rm -rf", "fix/FORK", "fix/foo/"):
+            with self.subTest(branch=branch), self.assertRaises(GATE.GateError):
+                GATE.render_native_workflow(NATIVE_QA_BRANCH, NATIVE_SHA, branch)
+        for bad in ("refs/heads/main", "qa/foo/../bar", "qa/pr102;echo", "main"):
+            with self.subTest(branch=bad), self.assertRaises(GATE.GateError):
+                GATE.render_native_workflow(bad, NATIVE_SHA, NATIVE_SOURCE_BRANCH)
+        with self.assertRaises(GATE.GateError):
+            GATE.render_native_workflow(NATIVE_QA_BRANCH, "main", NATIVE_SOURCE_BRANCH)
+
+    def test_native_strict_yaml_rejects_every_security_bypass(self):
+        good = native_workflow()
+        edits = (
+            ("runs-on: [self-hosted, Windows, X64, zamerovac-qa]", "runs-on: ubuntu-latest"),
+            ("persist-credentials: false", "persist-credentials: true"),
+            ("actions/checkout@" + CHECKOUT, "actions/checkout@v4"),
+            ("github.actor == 'zaplikj30-ui'", "github.actor == 'someone'"),
+            ("github.event_name == 'push'", "github.event_name == 'pull_request'"),
+            ("if: always()", "if: success()"),
+            ("--expected-sha " + NATIVE_SHA, "--expected-sha " + "f" * 40),
+            ("ref: " + NATIVE_SHA, "ref: main"),
+            ("--source-branch " + NATIVE_SOURCE_BRANCH, "--source-branch fix/other"),
+            ("--max-workers=1", "--max-workers=8"), # absent => no-op caught below
+            ("wsl-targeted-from-windows", "windows-quick"),
+            ("lint-native-workflow", "lint-workflow"),
+        )
+        for old, new in edits:
+            if old not in good:
+                self.assertEqual(old, "--max-workers=1", "test fixture must stay meaningful")
+                continue
+            with self.subTest(bypass=new):
+                changed = good.replace(old, new)
+                self.assertNotEqual(good, changed)
+                with self.assertRaises(GATE.GateError):
+                    GATE.check_native_workflow(changed, strict=True)
+        for addition in (
+            "\n  cloud:\n    runs-on: ubuntu-latest\n    steps:\n      - run: echo paid\n",
+            "\n      - run: gradle :app:assemblePreview\n",
+            "\n# fake skipped preflight\n",
+        ):
+            with self.subTest(added=addition), self.assertRaises(GATE.GateError):
+                GATE.check_native_workflow(good + addition, strict=True)
+        with self.assertRaises(GATE.GateError):
+            GATE.check_native_workflow(good, strict=False)
+
+    def test_native_utf8_output_is_safe_and_refuses_overwrite(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            directory = Path(temporary) / ".github" / "workflows"
+            directory.mkdir(parents=True)
+            target = directory / "home-qa-targeted-native.yml"
+            self.assertEqual(0, GATE.main([
+                "render-native-workflow", "--branch", NATIVE_QA_BRANCH,
+                "--source-branch", NATIVE_SOURCE_BRANCH,
+                "--expected-sha", NATIVE_SHA, "--output", str(target),
+            ]))
+            self.assertEqual(native_workflow().encode("utf-8"), target.read_bytes())
+            GATE.check_native_workflow(target.read_text(encoding="utf-8"), strict=True)
+            with mock.patch.object(GATE.sys, "stderr", io.StringIO()):
+                self.assertEqual(2, GATE.main([
+                    "render-native-workflow", "--branch", NATIVE_QA_BRANCH,
+                    "--source-branch", NATIVE_SOURCE_BRANCH,
+                    "--expected-sha", NATIVE_SHA, "--output", str(target),
+                ]))
+            self.assertEqual(native_workflow().encode("utf-8"), target.read_bytes())
+            self.assertEqual(0, GATE.main([
+                "lint-native-workflow", str(target), "--strict",
+            ]))
+
+    @staticmethod
+    def _owner_env():
+        return {
+            "GITHUB_ACTIONS": "true", "GITHUB_REPOSITORY": GATE.REPO,
+            "GITHUB_ACTOR": GATE.OWNER, "GITHUB_EVENT_NAME": "push",
+            "GITHUB_REF": "refs/heads/" + NATIVE_QA_BRANCH,
+            "RUNNER_ENVIRONMENT": "self-hosted", "GH_TOKEN": "test-read-only-token",
+        }
+
+    @staticmethod
+    def _branch_response(sha=NATIVE_SHA, ref=None, kind="commit"):
+        body = {
+            "ref": ref or "refs/heads/" + NATIVE_SOURCE_BRANCH,
+            "object": {"sha": sha, "type": kind},
+        }
+        class Response:
+            status = 200
+            def __enter__(self): return self
+            def __exit__(self, *args): return False
+            def read(self, limit): return __import__("json").dumps(body).encode("utf-8")
+        return Response()
+
+    def test_owner_source_attestation_real_branch_shape_positive(self):
+        env = self._owner_env()
+        def verified_open(request, timeout):
+            self.assertEqual(20, timeout)
+            self.assertEqual(
+                "https://api.github.com/repos/" + GATE.REPO +
+                "/git/ref/heads/" + NATIVE_SOURCE_BRANCH,
+                request.full_url,
+            )
+            self.assertEqual("Bearer test-read-only-token",
+                             request.get_header("Authorization"))
+            return self._branch_response()
+        self.assertEqual(NATIVE_SHA, GATE.verify_trusted_source(
+            NATIVE_SOURCE_BRANCH, NATIVE_SHA, env, verified_open))
+
+    def test_owner_source_attestation_never_trusts_fork_or_stale_commit(self):
+        env = self._owner_env()
+        for change in (
+            {"GITHUB_ACTOR": "attacker"},
+            {"GITHUB_REPOSITORY": "fork/Zamerovac-android"},
+            {"GITHUB_REF": "refs/pull/102/merge"},
+            {"GITHUB_EVENT_NAME": "pull_request"},
+            {"RUNNER_ENVIRONMENT": "github-hosted"},
+            {"GH_TOKEN": ""},
+        ):
+            with self.subTest(change=change), self.assertRaises(GATE.GateError):
+                GATE.verify_trusted_source(NATIVE_SOURCE_BRANCH, NATIVE_SHA,
+                                           {**env, **change},
+                                           lambda request, timeout: self._branch_response())
+        for response in (
+            self._branch_response("f" * 40),
+            self._branch_response(ref="refs/heads/fix/other"),
+            self._branch_response(kind="tag"),
+        ):
+            with self.assertRaises(GATE.GateError):
+                GATE.verify_trusted_source(NATIVE_SOURCE_BRANCH, NATIVE_SHA,
+                                           env, lambda request, timeout: response)
+
+    def test_source_attestation_remote_failure_does_not_fall_through(self):
+        def unreachable(request, timeout):
+            raise OSError("network unavailable")
+        with self.assertRaises(GATE.GateError):
+            GATE.verify_trusted_source(NATIVE_SOURCE_BRANCH, NATIVE_SHA,
+                                       self._owner_env(), unreachable)
+        with self.assertRaises(GATE.GateError):
+            GATE._RejectRedirect().redirect_request(None, None, 302, "redirect", {}, "https://fork.invalid")
+
+    @staticmethod
+    def _junit_fixture(root):
+        directory = root / "app" / "build" / "test-results" / "testPreviewUnitTest"
+        directory.mkdir(parents=True)
+        for name, required in GATE.TARGETED_NATIVE.items():
+            cases = "".join('<testcase name="positive-and-negative" classname="cz.zamerovac.app.' +
+                            name + '"/>' for _ in range(required))
+            (directory / ("TEST-cz.zamerovac.app." + name + ".xml")).write_text(
+                '<testsuite tests="' + str(required) +
+                '" failures="0" errors="0" skipped="0">' + cases + '</testsuite>',
+                encoding="utf-8")
+        return directory
+
+    def test_exact_94_junit_methods_and_evidence_required(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            directory = self._junit_fixture(root)
+            report = root / "evidence" / "summary.txt"
+            with mock.patch.object(GATE, "git_source", return_value=NATIVE_SHA):
+                self.assertEqual(94, GATE.verify_targeted_xml(root, report, NATIVE_SHA))
+                self.assertIn("TESTED_SOURCE_SHA=" + NATIVE_SHA, report.read_text())
+                self.assertIn("SKIPPED=0", report.read_text())
+                self.assertNotIn("app/src", report.read_text())
+                target = directory / "TEST-cz.zamerovac.app.TrashPurgerTest.xml"
+                original = target.read_text()
+                for mutated in (
+                    original.replace('skipped="0"', 'skipped="1"'),
+                    original.replace('failures="0"', 'failures="1"'),
+                    original.replace('errors="0"', 'errors="1"'),
+                    original.replace('tests="17"', 'tests="16"'),
+                    "<testsuite incomplete",
+                ):
+                    with self.subTest(changed=mutated[:50]):
+                        target.write_text(mutated)
+                        with self.assertRaises(GATE.GateError):
+                            GATE.verify_targeted_xml(root, report, NATIVE_SHA)
+                target.write_text(original)
+                target.unlink()
+                with self.assertRaises(GATE.GateError):
+                    GATE.verify_targeted_xml(root, report, NATIVE_SHA)
+
+    def test_native_gradle_is_serial_offline_whitelisted_and_never_builds_apk(self):
+        with tempfile.TemporaryDirectory() as tmp:
+            root = Path(tmp)
+            testdir = root / "app" / "src" / "test" / "java" / "cz" / "zamerovac" / "app"
+            testdir.mkdir(parents=True)
+            for name, count in GATE.TARGETED_NATIVE.items():
+                (testdir / (name + ".java")).write_text("@Test void probe(){}\n" * count)
+            commands = []
+            def capture(argv, **kwargs):
+                commands.append(argv)
+                self.assertEqual(root, kwargs["cwd"])
+                self.assertTrue(kwargs["check"])
+            with mock.patch.object(GATE, "git_source", return_value=NATIVE_SHA), \
+                 mock.patch.object(GATE.subprocess, "run", side_effect=capture), \
+                 mock.patch.object(GATE, "verify_targeted_xml", return_value=94):
+                GATE.run_targeted_native(root, NATIVE_SHA, Path("/opt/gradle-8.10.2/bin/gradle"),
+                                         root / "summary.txt")
+            self.assertEqual(2, len(commands))
+            self.assertIn(":app:compilePreviewUnitTestJavaWithJavac", commands[0])
+            self.assertIn(":app:testPreviewUnitTest", commands[1])
+            self.assertEqual(5, commands[1].count("--tests"))
+            for argv in commands:
+                self.assertIn("--offline", argv)
+                self.assertIn("--no-daemon", argv)
+                self.assertIn("--max-workers=1", argv)
+                self.assertIn("--no-parallel", argv)
+                self.assertFalse(any("assemble" in item or "release" in item for item in argv))
+            (testdir / "TrashPurgerTest.java").write_text("pass\n")
+            with mock.patch.object(GATE, "git_source", return_value=NATIVE_SHA), \
+                 mock.patch.object(GATE.subprocess, "run") as forbidden:
+                with self.assertRaises(GATE.GateError):
+                    GATE.run_targeted_native(root, NATIVE_SHA, Path("/opt/gradle-8.10.2/bin/gradle"),
+                                             root / "summary.txt")
+                forbidden.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()
