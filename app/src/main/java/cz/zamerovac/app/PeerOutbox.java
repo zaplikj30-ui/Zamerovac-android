@@ -99,6 +99,8 @@ final class PeerOutbox {
             if(!epoch.equals(snapshot.wire.optString("recoveryEpoch","")))
                 throw new IOException("Období databáze se během přípravy přenosu změnilo");
             boolean alreadyAcked=!forcePublication&&snapshot.hash.equals(peers.lastAck(peer));
+            // Independent of jobs, peer identity, ACKs and recovery authority.
+            new ProtectedRevisions(context,prefs).preserveSnapshot(snapshot);
             if(!alreadyAcked)persist(snapshot);
             mutate(state->{
                 JSONArray jobs=state.getJSONArray("jobs"),active=new JSONArray();

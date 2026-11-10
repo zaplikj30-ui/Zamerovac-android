@@ -32,6 +32,9 @@ final class TrashPurger {
     // A separate JSON string may be valid at depth 100 while its enclosing record
     // is also at depth 100. Count the combined walk, not just each parsed fragment.
     private static final int MAX_REFERENCE_DEPTH=100;
+    static Set<String> referenceStrings(Object value)throws Exception{
+        Set<String> result=new TreeSet<>();strings(value,result);return result;
+    }
     private static void strings(Object value, Set<String> found) throws JSONException,IOException {
         strings(value,found,0);
     }
@@ -84,6 +87,9 @@ final class TrashPurger {
     JSONObject purge(String saved,String expected,JSONArray requested,Writer writer) throws Exception {
         if(!saved.equals(expected))throw new IOException("Zakázky se mezitím změnily. Otevři koš znovu a potvrď aktuální obsah.");
         JSONObject db=new JSONObject(saved);
+        ProtectedRevisions protection=new ProtectedRevisions(home,identityDirectory,prefs);
+        protection.preserveDatabase(saved); // before records, backup or pending intent can change
+        Set<String> pinned=protection.pins();
         if(db.optInt("schema")!=1)throw new IOException("Nepodporovaná databáze");
         JSONArray records=db.getJSONArray("records"),kept=new JSONArray();
         Set<String> ids=new HashSet<>(),candidates=pending();
@@ -105,6 +111,8 @@ final class TrashPurger {
         Set<String> protectedIds=new HashSet<>();
         JSONObject live=new JSONObject(db.toString());live.remove("trashPurgedIds");
         strings(live,protectedIds);candidates.removeAll(protectedIds);
+        Set<String> retained=new HashSet<>(candidates);retained.retainAll(pinned);
+        candidates.removeAll(pinned);
         // Save the cleanup intent first. A failure here cannot change records or media.
         atomic(pendingFile(),new JSONArray(candidates).toString());
         String next=db.toString();
@@ -124,7 +132,8 @@ final class TrashPurger {
             candidates=failed;
         }catch(Exception e){warning="Některé soubory se nepodařilo odstranit. Zopakuj úklid v koši.";}
         if(!candidates.isEmpty())warning="Některé soubory se nepodařilo odstranit. Zopakuj úklid v koši.";
-        return new JSONObject().put("data",db).put("snapshot",next).put("pending",candidates.size()).put("warning",warning);
+        if(!retained.isEmpty())warning=(warning.isEmpty()?"":warning+" ")+ProtectedRevisions.WARNING;
+        return new JSONObject().put("data",db).put("snapshot",next).put("pending",candidates.size()).put("protected",retained.size()).put("warning",warning);
     }
     static Set<String> purgedIds(JSONObject db) {
         Set<String> ids=new TreeSet<>();JSONArray a=db.optJSONArray("trashPurgedIds");

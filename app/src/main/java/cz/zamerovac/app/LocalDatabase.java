@@ -197,14 +197,19 @@ final class LocalDatabase {
         try(FileOutputStream out=new FileOutputStream(file)){out.write(bytes);out.getFD().sync();}
     }
     static void write(Context context,String text)throws IOException{
-        write(context.getFilesDir(),context.getNoBackupFilesDir(),text);
+        write(context.getFilesDir(),context.getNoBackupFilesDir(),text,context.getSharedPreferences("zamerovac",Context.MODE_PRIVATE));
     }
     static void write(File home,String text)throws IOException{write(home,null,text);}
     static void write(File home,File noBackup,String text)throws IOException{
+        write(home,noBackup,text,null);
+    }
+    private static void write(File home,File noBackup,String text,android.content.SharedPreferences prefs)throws IOException{
         synchronized(TrashPurger.LOCK){
             validate(text);File primary=new File(home,"projects.json"),backup=new File(home,"projects.bak"),
                 next=new File(home,"projects.tmp"),backupNext=new File(home,"projects.backup.tmp");
-            readForCas(home,noBackup);
+            String confirmed=readForCas(home,noBackup);
+            if(!confirmed.isEmpty()&&!confirmed.equals(text))
+                new ProtectedRevisions(home,noBackup,prefs).preserveDatabase(confirmed);
             // Persist BOTH proofs before the first DB commit; any failed write
             // remains visible to the next process and never authorizes a reset.
             DatabaseInstallEvidence.ensure(home,noBackup);

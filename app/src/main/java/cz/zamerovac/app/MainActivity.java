@@ -740,6 +740,10 @@ public class MainActivity extends Activity {
         @JavascriptInterface public int trashCleanupCount(){
             synchronized(TrashPurger.LOCK){try{return new TrashPurger(MainActivity.this,settings).pendingCount();}catch(Exception e){return -1;}}
         }
+        @JavascriptInterface public String protectedDataStatus(){
+            try{return new ProtectedRevisions(MainActivity.this,settings).status().toString();}
+            catch(Exception e){try{return new JSONObject().put("error",e.getMessage()).toString();}catch(Exception ignored){return "{}";}}
+        }
         @JavascriptInterface public String purgeTrash(String expected,String desired,String ids){
             synchronized(TrashPurger.LOCK){
                 try{
@@ -764,7 +768,7 @@ public class MainActivity extends Activity {
                         return new JSONObject().put("ok",false).put("current",current).toString();
                     }
                     writeDb(text);lastUiGeneration=LocalDatabase.generation(getFilesDir());return "{\"ok\":true}";
-                }catch(Exception e){try{return new JSONObject().put("ok",false).put("error","Uložení se nezdařilo; poslední potvrzená data zůstávají chráněná.").toString();}catch(Exception ignored){return "{}";}}
+                }catch(Exception e){try{return new JSONObject().put("ok",false).put("error","Uložení se nezdařilo; poslední potvrzená data zůstávají chráněná. "+e.getMessage()).toString();}catch(Exception ignored){return "{}";}}
             }
         }
         @JavascriptInterface public boolean beginMedia(String id,String mime,String name){return beginMediaChecked(id,mime,name,-1);}
@@ -899,12 +903,14 @@ public class MainActivity extends Activity {
                             if(result!=android.view.PixelCopy.SUCCESS)
                                 throw new IOException("Nepodařilo se zachytit obraz ("+result+")");
                             String id=UUID.randomUUID().toString();
-                            try(FileOutputStream out=new FileOutputStream(mediaFile(id))){
+                            File captured=MediaStaging.temporary(mediaFile(id).getParentFile(),id);
+                            try{try(FileOutputStream out=new FileOutputStream(captured)){
                                 if(!bitmap.compress(Bitmap.CompressFormat.PNG,100,out))
                                     throw new IOException("Snímek se nepodařilo uložit");
+                                out.getFD().sync();
                             }
-                            settings.edit().putString("mime-"+id,"image/png")
-                                .putString("name-"+id,"obrazovka-zamerovac.png").apply();
+                            MediaStaging.commit(captured,id,settings,"image/png","obrazovka-zamerovac.png");
+                            }finally{captured.delete();}
                             js("window.onReportScreenshot("+JSONObject.quote(id)+")");
                         }catch(Exception ex){
                             error("Snímek obrazovky: "+ex.getMessage());

@@ -476,9 +476,9 @@ const chapters=[
       "Zámky složek slouží k ochraně před nechtěnou změnou. Před editací nebo mazáním složku podle potřeby odemkni."
     ],
     "notes": [
-      "Vysypání koše uchovává pouze identifikátory a revizi smazání. Nezávislá novější změna z jiného zařízení se může zachovat jako označená konfliktní kopie; původní vysypané ID se neobnovuje.",
-      "Trvalý úklid zahrnuje také výhradní hlasové poznámky a přílohy historie anotací. Soubor používaný jiným záznamem nebo jeho historií, včetně starších vložených záznamů, zůstane zachovaný; oddělené neměnné zálohy se tím nemažou. Pokud je historie příloh poškozená nebo nepřiměřeně zanořená, bezpečnostní kontrola vysypání odmítne místo rizikového smazání.",
-      "Obnovení z koše nenahrazuje samostatnou zálohu ZIP.",
+      "Vysypání koše odebere položky z běžného seznamu. Samostatná místní ochrana uchovává přesná metadata předchozích uložených stavů a originální přílohy bez jejich zdvojování. Přehled počtu chráněných revizí a velikosti příloh najdeš v koši. Potvrzení synchronizace tuto ochranu neruší. Nezávislá novější změna z jiného zařízení se může zachovat jako označená konfliktní kopie; původní vysypané ID se neobnovuje.",
+      "Chráněné fotografie, videa, hlasové poznámky i přílohy historie zůstávají v telefonu také po vysypání koše; místo se nemusí uvolnit. Aplikace jejich poslední kopii automaticky nemaže. Soubor používaný jiným záznamem nebo jeho historií, včetně starších vložených záznamů, zůstane zachovaný; oddělené neměnné zálohy se tím nemažou. Pokud je historie příloh poškozená nebo nepřiměřeně zanořená, bezpečnostní kontrola vysypání odmítne místo rizikového smazání.",
+      "Při nedostatku místa se operace vyžadující novou ochranu zastaví s chybou. Uvolni jiné soubory a opakuj ji. Chráněné soubory nemaž ručně. Místní ochrana není samostatná záloha proti ztrátě telefonu, poškození média ani odinstalaci; obnovu historických chráněných revizí tato verze automaticky neprovádí.",
       "Trvalé odstranění a synchronizace s dalšími zařízeními mohou mít nevratné následky."
     ],
     "keywords": [

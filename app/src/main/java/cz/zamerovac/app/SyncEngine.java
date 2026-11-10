@@ -179,7 +179,7 @@ public class SyncEngine {
                         // A concurrent trash purge must not bring back an orphaned media file.
                         JSONObject latest=parse(loadLocal());Set<String> purged=TrashPurger.purgedIds(latest);boolean allowed=false;
                         JSONArray records=data.optJSONArray("records");if(records!=null)for(int i=0;i<records.length();i++){JSONObject rec=records.optJSONObject(i);if(rec!=null&&!purged.contains(rec.optString("id"))){Set<String> used=new HashSet<>();references(rec,used);if(used.contains(id)){allowed=true;break;}}}
-                        if(allowed&&!file.exists())java.nio.file.Files.move(temporary.toPath(),file.toPath());
+                        if(allowed&&!file.exists()){ProtectedRevisions.requireUnpinned(file);java.nio.file.Files.move(temporary.toPath(),file.toPath());}
                     }
                 }finally{temporary.delete();}
                 prefs.edit().putString("mime-"+id,entry.mime).apply();

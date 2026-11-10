@@ -58,7 +58,7 @@ final class BackupImporter {
             for(int i=0;i<added.length();i++)records.put(added.getJSONObject(i));
             LocalDatabase.validate(merged.toString());return new Result(merged,recordCount,createdMedia);
         }
-        void rollback(Context context,SharedPreferences prefs){SharedPreferences.Editor settings=prefs.edit();for(String id:createdMedia){new File(context.getFilesDir(),"media/"+id).delete();settings.remove("mime-"+id).remove("name-"+id);}settings.apply();}
+        void rollback(Context context,SharedPreferences prefs){synchronized(TrashPurger.LOCK){SharedPreferences.Editor settings=prefs.edit();for(String id:createdMedia){if(ProtectedRevisions.rollback(new File(context.getFilesDir(),"media/"+id)))settings.remove("mime-"+id).remove("name-"+id);}settings.commit();}}
     }
     private static Result read(Context context,Uri uri,JSONObject existing,SharedPreferences prefs,File tempDir,ProviderIo io)throws Exception{
         JSONObject meta=new JSONObject(),manifest=null,checksums=new JSONObject();Set<String> names=new HashSet<>();
@@ -154,22 +154,21 @@ final class BackupImporter {
         }
         File mediaDir=new File(context.getFilesDir(),"media");
         if(!mediaDir.exists()&&!mediaDir.mkdirs())throw new IOException("Nelze vytvořit složku médií");
-        SharedPreferences.Editor settings=prefs.edit();
         Set<String> created=new HashSet<>();
         try{for(Map.Entry<String,String> pair:mediaIds.entrySet()){
-            File targetMedia=new File(mediaDir,pair.getValue());
-            if(targetMedia.exists())throw new IOException("Kolize identifikátoru obnovené přílohy");created.add(pair.getValue());
-            try(InputStream in=new FileInputStream(incomingMedia.get(pair.getKey()));
-                FileOutputStream out=new FileOutputStream(targetMedia)){
-                byte[] buf=new byte[64*1024];int n;
-                while((n=in.read(buf))!=-1){if(Thread.currentThread().isInterrupted())throw new InterruptedIOException("Obnova byla zrušena");out.write(buf,0,n);}out.getFD().sync();
-            }
-            JSONObject info=meta.optJSONObject(pair.getKey());
-            settings.putString("mime-"+pair.getValue(),info!=null?info.optString("mime","application/octet-stream"):"application/octet-stream");
-            settings.putString("name-"+pair.getValue(),info!=null?info.optString("name","Příloha"):"Příloha");
-        }
-        }catch(Exception failure){for(String id:created)new File(mediaDir,id).delete();throw failure;}
-        if(!settings.commit()){for(String id:created)new File(mediaDir,id).delete();throw new IOException("Metadata obnovy nebyla potvrzena");}
+            String id=pair.getValue();
+            File staged=MediaStaging.temporary(mediaDir,id);
+            try{
+                try(InputStream in=new FileInputStream(incomingMedia.get(pair.getKey()));FileOutputStream out=new FileOutputStream(staged)){
+                    byte[] buf=new byte[64*1024];int n;
+                    while((n=in.read(buf))!=-1){if(Thread.currentThread().isInterrupted())throw new InterruptedIOException("Obnova byla zrušena");out.write(buf,0,n);}out.getFD().sync();
+                }
+                JSONObject info=meta.optJSONObject(pair.getKey());
+                String mime=info!=null?info.optString("mime","application/octet-stream"):"application/octet-stream";
+                String name=info!=null?info.optString("name","Příloha"):"Příloha";
+                MediaStaging.commit(staged,id,prefs,mime,name);created.add(id);
+            }finally{staged.delete();}
+        }}catch(Exception failure){new Result(result,0,created).rollback(context,prefs);throw failure;}
         root.put("syncClock",CausalClock.advance(new JSONObject(),DeviceIdentity.get(context.getNoBackupFilesDir())));
         target.put(root);
         for(JSONObject rec:newRecords)target.put(rec);

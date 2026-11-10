@@ -309,8 +309,8 @@ function purgeTrashRecords(ids){
 function confirmTrashPurge(ids,all){
  if(trashBusy)return;
  modal(!ids.length?'Dokončit úklid koše?':all?'Vysypat koš?':'Trvale odstranit?',
-  !ids.length?'<p>Zopakovat trvalé odstranění souborů dříve vysypaného koše? Aktivně používané a sdílené soubory zůstanou zachované.</p>':all?'<p>Opravdu vysypat koš? Všechny položky v koši budou trvale odstraněny a nebude možné je obnovit.</p>':
-  '<p>Vybraná položka v koši a její smazané podsložky budou trvale odstraněny a nebude možné je obnovit.</p>',
+  !ids.length?'<p>Zopakovat trvalé odstranění souborů dříve vysypaného koše? Aktivně používané a sdílené soubory zůstanou zachované.</p>':all?'<p>Opravdu vysypat koš? Položky zmizí z běžného koše. Chráněné revize a původní přílohy zůstávají uložené; místo se proto nemusí uvolnit.</p>':
+  '<p>Vybraná položka a její smazané podsložky zmizí z běžného koše. Chráněné revize a přílohy zůstávají uložené.</p>',
   ()=>purgeTrashRecords(ids),'Trvale odstranit');
  $('okModal').classList.add('danger');
 }
@@ -320,7 +320,14 @@ function showTrash(){
  // Cyclic/malformed deleted parent links must not hide all trash entries.
  const roots=deleted.filter(r=>!deleted.some(p=>p.id===r.parentId));
  const root=roots.length?roots:deleted;
- const body=(root.length?root.map(r=>
+ let protectionInfo='';
+ if(native&&typeof Native.protectedDataStatus==='function'){
+  try{const status=JSON.parse(Native.protectedDataStatus());
+   protectionInfo=status.error?'<p role="alert">'+escapeHtml(status.error)+'</p>':
+    '<p class="muted">Chráněné revize: '+escapeHtml(String(status.revisions))+' · původní přílohy: '+escapeHtml(String(status.media))+' · '+escapeHtml((Number(status.mediaBytes)/1048576).toFixed(1))+' MiB. '+escapeHtml(status.message)+'</p>';
+  }catch(e){protectionInfo='<p role="alert">Přehled ochrany není dostupný. Chráněné soubory nemaž ručně.</p>'}
+ }
+ const body=protectionInfo+(root.length?root.map(r=>
   '<div class="trash-entry">'+browserEntryIcon(r)+'<div><strong>'+escapeHtml(r.title)+'</strong><small>'+escapeHtml(r.kind)+'</small></div>'+
   '<button class="outline" data-restore="'+escapeHtml(r.id)+'">Obnovit</button>'+
   '<button class="outline" data-purge="'+escapeHtml(r.id)+'">Odstranit</button></div>'

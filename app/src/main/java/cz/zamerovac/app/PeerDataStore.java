@@ -40,6 +40,7 @@ final class PeerDataStore {
         for(int i=0;i<needed.length();i++)if(local.media.containsKey(needed.getString(i)))return false;
         synchronized(TrashPurger.LOCK){trusted(peer);LocalDatabase.readForCas(context);if(generation!=LocalDatabase.generation(context.getFilesDir()))return false;
             for(Map.Entry<String,long[]> entry:local.localStats.entrySet()){File file=new File(outbox.mediaDirectory,entry.getKey());if(!file.isFile()||java.nio.file.Files.isSymbolicLink(file.toPath())||file.length()!=entry.getValue()[0]||file.lastModified()!=entry.getValue()[1])return false;}
+            new ProtectedRevisions(context,prefs).preserveSnapshot(local);
             receipt.save();return true;
         }
     }
@@ -58,6 +59,7 @@ final class PeerDataStore {
             // new labels for media that are not yet referenced in the DB.
             // A metadata failure after DB commit remains unacknowledged, and
             // a deterministic retry can finish it without duplicating records.
+            new ProtectedRevisions(context,prefs).preserveSnapshot(snapshot);
             if(changed)LocalDatabase.write(context,saved.toString());
             if(!metadata.commit())throw new IOException("Metadata příloh nebyla potvrzena");
         }

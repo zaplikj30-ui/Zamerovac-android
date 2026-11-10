@@ -20,9 +20,10 @@ final class MediaStaging {
         File target=new File(temporary.getParentFile(),id);
         synchronized(TrashPurger.LOCK){
             if(target.exists())throw new IOException("Existující originál se nesmí přepsat");
+            ProtectedRevisions.requireUnpinned(target);
             // Same-directory move; all app publishers check and commit under the shared local lock.
             Files.move(temporary.toPath(),target.toPath());
-            boolean committed=false;try{committed=prefs.edit().putString("mime-"+id,mime).putString("name-"+id,name).commit();if(!committed)throw new IOException("Metadata přílohy nebyla potvrzena");}finally{if(!committed&&!target.delete())android.util.Log.w("Zamerovac","Unreferenced failed media remains private");}
+            boolean committed=false;try{committed=prefs.edit().putString("mime-"+id,mime).putString("name-"+id,name).commit();if(!committed)throw new IOException("Metadata přílohy nebyla potvrzena");}finally{if(!committed&&!ProtectedRevisions.rollback(target))android.util.Log.w("Zamerovac","Unreferenced failed media remains private");}
         }
     }
 }
