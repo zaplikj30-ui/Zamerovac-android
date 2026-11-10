@@ -30,6 +30,7 @@ public class AudioCaptureTest {
   assertTrue(capture.start("voice-late"));File late=new File(media,"voice-late");Files.write(late.toPath(),new byte[]{7,6});prefs.edit().putString("mime-voice-late","video/mp4").commit();try{capture.stop();fail("Concurrent original overwritten");}catch(IOException expected){}assertArrayEquals(new byte[]{7,6},Files.readAllBytes(late.toPath()));assertEquals("video/mp4",prefs.getString("mime-voice-late",""));assertEquals("image/jpeg",prefs.getString("mime-voice-one",""));assertEquals(0,temporaries());
  }
  @Test public void unconfirmedMetadataRollsBackOnlyNewFile()throws Exception{
+  LocalDatabase.write(root,"{\"schema\":1,\"records\":[]}"); // Real first-launch order before recording.
   SharedPreferences failed=mock(SharedPreferences.class);SharedPreferences.Editor edit=mock(SharedPreferences.Editor.class);when(failed.edit()).thenReturn(edit);when(edit.putString(anyString(),anyString())).thenReturn(edit);when(edit.commit()).thenReturn(false);Recorder recorder=new Recorder();AudioCapture capture=new AudioCapture(media,failed,()->recorder);assertTrue(capture.start("voice-failed"));try{capture.stop();fail("Unconfirmed metadata acknowledged");}catch(IOException expected){}assertFalse(new File(media,"voice-failed").exists());assertEquals(1,recorder.released);assertEquals(0,temporaries());
  }
  @Test public void slowRecorderStartNeverOwnsGlobalDatabaseLock()throws Exception{

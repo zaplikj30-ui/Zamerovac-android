@@ -14,6 +14,15 @@ import java.util.*;
  * The two catalogs are monotonic witnesses, not database/ACK authority.
  */
 final class ProtectedRevisions {
+    // App-owned hold files are immutable. Cache only verified summaries, never
+    // full historical JSON; any inode/size/mtime or AtomicFile residue change
+    // forces a fresh bounded read and hash verification. Restart rebuilds it.
+    private static final LinkedHashMap<String,CachedHold> VERIFIED=new LinkedHashMap<>(16,0.75f,true);
+    private static final class CachedHold {
+        final java.nio.file.attribute.BasicFileAttributes attributes;final JSONObject summary;
+        CachedHold(java.nio.file.attribute.BasicFileAttributes attributes,JSONObject summary){this.attributes=attributes;this.summary=summary;}
+        boolean matches(java.nio.file.attribute.BasicFileAttributes next){return attributes.size()==next.size()&&attributes.lastModifiedTime().equals(next.lastModifiedTime())&&Objects.equals(attributes.fileKey(),next.fileKey());}
+    }
     static final String WARNING="Chráněné původní přílohy zůstávají uložené i po vysypání koše. Ochranu nelze zrušit potvrzením synchronizace.";
     private final File home, directory, witness;
     private final SharedPreferences prefs;
@@ -63,7 +72,15 @@ final class ProtectedRevisions {
     }
     private File file(String hash){return new File(directory,hash+".json");}
     private JSONObject hold(String hash)throws Exception{
-        byte[] bytes=read(file(hash));if(!hash.equals(PeerWire.hash(bytes)))throw new IOException("Poškozená chráněná revize");
+        File path=file(hash);safe(path);
+        java.nio.file.attribute.BasicFileAttributes attrs=null;
+        try{attrs=Files.readAttributes(path.toPath(),java.nio.file.attribute.BasicFileAttributes.class,LinkOption.NOFOLLOW_LINKS);}catch(NoSuchFileException absent){}
+        CachedHold known=VERIFIED.get(path.getAbsolutePath());
+        if(attrs!=null&&known!=null&&known.matches(attrs)&&!new File(path+".bak").exists()&&!new File(path+".new").exists())return known.summary;
+        File pending=new File(path+".new");boolean staged=!exists(path)&&pending.exists();byte[] bytes;
+        if(staged){safe(pending);if(pending.length()>3L*LocalDatabase.MAX_BYTES)throw new IOException("Příliš velký nedokončený hold");bytes=Files.readAllBytes(pending.toPath());}
+        else bytes=read(path);
+        if(!hash.equals(PeerWire.hash(bytes)))throw new IOException("Poškozená chráněná revize");
         String text=JsonInput.decode(bytes,3*LocalDatabase.MAX_BYTES);JsonInput.check(text,3*LocalDatabase.MAX_BYTES);JSONObject hold=new JSONObject(text);
         if(!"cz.zamerovac.protected.revision".equals(hold.getString("format"))||hold.getInt("version")!=1)throw new IOException("Neplatná chráněná revize");
         byte[] metadata=hold.getString("metadata").getBytes(StandardCharsets.UTF_8);
@@ -78,6 +95,11 @@ final class ProtectedRevisions {
             if(!PeerSnapshot.validMediaId(id)||!ids.add(id)||!entry.getString("hash").matches("[a-f0-9]{64}")||PeerSnapshot.integer(entry,"size",PeerSnapshot.MAX_MEDIA)<1||!PeerSnapshot.validMime(entry.getString("mime"))||entry.getString("name").length()>256)throw new IOException("Poškozený pin originálu");
         }
         if(!ids.containsAll(PeerSnapshot.references(data.getJSONArray("records"))))throw new IOException("Neúplná ochrana příloh");
+        if(staged)write(path,bytes); // finish a fully verified interrupted local hold, never a DB promotion
+        hold.remove("metadata");JSONObject lookup=new JSONObject();for(String id:ids)lookup.put(id,true);hold.put("_ids",lookup);
+        attrs=Files.readAttributes(path.toPath(),java.nio.file.attribute.BasicFileAttributes.class,LinkOption.NOFOLLOW_LINKS);
+        VERIFIED.put(path.getAbsolutePath(),new CachedHold(attrs,hold));
+        while(VERIFIED.size()>8)VERIFIED.remove(VERIFIED.keySet().iterator().next());
         return hold;
     }
     /** Repair the union after a crash between the two catalog commits.
@@ -110,6 +132,10 @@ final class ProtectedRevisions {
         for(JSONObject hold:inventory(true).values())if("snapshot".equals(hold.getString("kind"))&&source.equals(hold.getString("sourceHash")))return true;
         return false;
     }catch(Exception e){throw blocked(e);}}}
+    private boolean pinned(String id)throws IOException{synchronized(TrashPurger.LOCK){try{
+        for(JSONObject hold:inventory(true).values())if(hold.getJSONObject("_ids").has(id))return true;
+        return false;
+    }catch(Exception e){throw blocked(e);}}}
     JSONObject status()throws IOException{synchronized(TrashPurger.LOCK){try{
         Map<String,JSONObject> holds=inventory(false);Map<String,Long> sizes=new HashMap<>();long metadata=0;
         for(Map.Entry<String,JSONObject> item:holds.entrySet()){
@@ -124,14 +150,35 @@ final class ProtectedRevisions {
         preserve("database",metadata,null);
     }
     void preserveSnapshot(PeerSnapshot snapshot)throws IOException{preserve("snapshot",new String(snapshot.bytes,StandardCharsets.UTF_8),snapshot);}
+    private void historicalReferences(Object value,Set<String> ids,int depth)throws Exception{
+        if(depth>100)throw new IOException("Příliš zanořená historie ochrany");
+        if(value instanceof JSONObject){JSONObject object=(JSONObject)value;for(Iterator<String> it=object.keys();it.hasNext();)historicalReferences(object.get(it.next()),ids,depth+1);}
+        else if(value instanceof JSONArray){JSONArray list=(JSONArray)value;for(int i=0;i<list.length();i++)historicalReferences(list.get(i),ids,depth+1);}
+        else if(value instanceof String){
+            String text=(String)value;
+            if(PeerSnapshot.validMediaId(text)&&new File(home,"media/"+text).exists())ids.add(text);
+            String trimmed=text.trim();if(!trimmed.startsWith("[")&&!trimmed.startsWith("{"))return;
+            Object parsed;
+            try{JsonInput.check(text);parsed=trimmed.startsWith("[")?new JSONArray(text):new JSONObject(text);}
+            catch(JSONException|IOException freeText){
+                // A normal note may start with an unfinished brace. Keep all
+                // existing originals in this uncertain case; never reject or
+                // silently reinterpret the user's exact text as a broken note.
+                File media=new File(home,"media");File[] files=media.listFiles();
+                if(files==null&&media.exists())throw new IOException("Přílohy nelze prověřit");
+                if(files!=null)for(File f:files)if(PeerSnapshot.validMediaId(f.getName()))ids.add(f.getName());
+                return;
+            }
+            ids.addAll(PeerSnapshot.references(parsed));historicalReferences(parsed,ids,depth+1);
+        }
+    }
     private void preserve(String kind,String metadata,PeerSnapshot snapshot)throws IOException{synchronized(TrashPurger.LOCK){try{
         Map<String,JSONObject> prior=inventory(true);String source=PeerWire.hash(metadata.getBytes(StandardCharsets.UTF_8));
         for(JSONObject old:prior.values())if(kind.equals(old.getString("kind"))&&source.equals(old.getString("sourceHash")))return;
         JSONObject data=new JSONObject(metadata);if(snapshot!=null)data=data.getJSONObject("data");LocalDatabase.validate(data.toString());
         Set<String> ids=PeerSnapshot.references(data.getJSONArray("records"));
         // Also include older embedded JSON objects and unknown history fields.
-        Set<String> strings=TrashPurger.referenceStrings(data.getJSONArray("records"));
-        for(String id:strings)if(PeerSnapshot.validMediaId(id)&&new File(home,"media/"+id).exists())ids.add(id);
+        historicalReferences(data.getJSONArray("records"),ids,0);
         JSONArray media=new JSONArray();for(String id:ids){
             File original=new File(home,"media/"+id);JSONObject entry=PeerMedia.inspect(original);
             JSONObject expected=snapshot==null?null:snapshot.media.get(id);
@@ -150,7 +197,7 @@ final class ProtectedRevisions {
     /** A missing pinned original must never be silently re-created under the same ID. */
     static void requireUnpinned(File original)throws IOException{
         File home=original.getParentFile().getParentFile();
-        if(new ProtectedRevisions(home,null,null).pins().contains(original.getName()))throw new IOException("Příloha je chráněná. Původní identifikátor se nesmí přepsat ani znovu použít.");
+        if(new ProtectedRevisions(home,null,null).pinned(original.getName()))throw new IOException("Příloha je chráněná. Původní identifikátor se nesmí přepsat ani znovu použít.");
     }
     /** Rollback is best effort: uncertainty leaves the original and its metadata intact. */
     static boolean rollback(File original){synchronized(TrashPurger.LOCK){try{

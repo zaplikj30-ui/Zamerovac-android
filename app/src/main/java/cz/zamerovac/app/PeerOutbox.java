@@ -66,13 +66,15 @@ final class PeerOutbox {
     /** Upgrade existing durable intents BEFORE ACK, supersession or forget can
      * drop them. A stale epoch is evidence worth retaining, never new authority.
      */
-    private void protectSources(boolean dropping)throws Exception{
+    private void protectSources(String peer,boolean dropping)throws Exception{
         ProtectedRevisions protection=new ProtectedRevisions(context,prefs);
         JSONObject state=new JSONObject(queue.read());Set<String> sources=new TreeSet<>();
         for(String section:new String[]{"jobs","recoveryQuarantine"}){
             JSONArray rows=state.optJSONArray(section);if(rows==null)continue;
             for(int i=0;i<rows.length();i++){
-                String source=rows.getJSONObject(i).optString("sourceRef","");
+                JSONObject job=rows.getJSONObject(i);
+                if(peer!=null&&!peer.equals(job.optString("peer")))continue;
+                String source=job.optString("sourceRef","");
                 if(!source.isEmpty())sources.add(source);
             }
         }
@@ -116,7 +118,7 @@ final class PeerOutbox {
         PeerSnapshot snapshot=current(checkpoint);checkpoint.check();
         synchronized(TrashPurger.LOCK){
             LocalDatabase.readForCas(context);
-            protectSources(false);
+            protectSources(null,false);
             String epoch=DatabaseRecovery.id(context.getFilesDir());
             if(!epoch.equals(snapshot.wire.optString("recoveryEpoch","")))
                 throw new IOException("Období databáze se během přípravy přenosu změnilo");
@@ -143,7 +145,8 @@ final class PeerOutbox {
                     JSONObject job=active.getJSONObject(i);
                     if(peer.equals(job.getString("peer"))&&"metadata".equals(job.getString("kind"))&&
                         !snapshot.hash.equals(job.getString("hash"))){
-                        try{if(dominates(snapshot.data,load(job).data))
+                        try{if(dominates(snapshot.data,load(job).data)&&
+                            new ProtectedRevisions(context,prefs).hasSnapshot(job.getString("sourceRef")))
                             obsolete.add(job.getString("hash"));}
                         catch(IOException unreadable){/* keep questionable evidence, never delete */}
                     }
@@ -255,7 +258,7 @@ final class PeerOutbox {
                     metadata!=("metadata".equals(match.getString("kind"))))
                     throw new IOException("ACK neodpovídá položce fronty");
                 verifyAckJob(match,epoch); // no queue changes on stale/unknown ACK
-                protectSources(true);
+                protectSources(match.getString("peer"),true);
                 accepted[0]=true;
                 String peer=match.getString("peer"),source=match.optString("sourceRef","");
                 for(int i=0;i<jobs.length();i++){
@@ -274,7 +277,7 @@ final class PeerOutbox {
     }
     void discard(String peer)throws Exception{
         synchronized(lock){synchronized(TrashPurger.LOCK){
-            protectSources(true);
+            protectSources(peer,true);
             mutate(state->{
                 JSONArray jobs=state.getJSONArray("jobs"),keep=new JSONArray();
                 for(int i=0;i<jobs.length();i++)
@@ -325,7 +328,14 @@ final class PeerOutbox {
         }
         for(File file:files)
             if(file.isFile()&&file.getName().matches("[a-f0-9]{64}\\.json")&&
-                !keep.contains(file.getName().substring(0,64)))file.delete();
+                !keep.contains(file.getName().substring(0,64))){
+                String source=file.getName().substring(0,64);
+                try{
+                    ProtectedRevisions protection=new ProtectedRevisions(context,prefs);
+                    if(!protection.hasSnapshot(source))protection.preserveSnapshot(queuedSnapshot(source));
+                    file.delete(); // Only the redundant transport copy; hold and original pins remain.
+                }catch(Exception uncertain){/* retain unverified/orphan evidence across restart */}
+            }
     }
     static boolean dominates(JSONObject newer,JSONObject older)throws Exception{
         Map<String,JSONObject> latest=new HashMap<>();JSONArray records=newer.getJSONArray("records");for(int i=0;i<records.length();i++){JSONObject record=records.getJSONObject(i);latest.put(record.getString("id"),record);}

@@ -92,6 +92,12 @@ public class Audit39FindingsTest {
   JSONObject result=new TrashPurger(context,prefs).purge(saved,saved,new JSONArray().put("deleted-record"),text->LocalDatabase.write(context.getFilesDir(),text));
   assertArrayEquals("Shared original must remain byte-exact",new byte[]{1,2,3},Files.readAllBytes(new File(media,"shared-safe").toPath()));assertEquals(0,result.getInt("pending"));
   boolean voice=new File(media,"voice-only").exists(),history=new File(media,"history-only").exists();
-  assertTrue("Reported complete purge retained exclusive files: voice="+voice+", history="+history,!voice&&!history);
+  // Approved P1 hybrid replaces physical purge of the last recoverable originals.
+  assertTrue("Hybrid must retain exclusive voice/history originals",voice&&history);
+  assertTrue(new ProtectedRevisions(context,prefs).pins().containsAll(Set.of("voice-only","history-only","shared-safe")));
+  assertArrayEquals(new byte[]{1,2,3},Files.readAllBytes(new File(media,"voice-only").toPath()));
+  assertArrayEquals(new byte[]{1,2,3},Files.readAllBytes(new File(media,"history-only").toPath()));
+  assertEquals(1,result.getJSONObject("data").getJSONArray("records").length());
+  assertTrue(result.getString("warning").contains("Chráněné"));
  }
 }

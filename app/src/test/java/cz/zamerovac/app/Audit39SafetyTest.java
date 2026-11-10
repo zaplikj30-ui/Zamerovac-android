@@ -107,7 +107,9 @@ public class Audit39SafetyTest {
         JSONObject deleted=new JSONObject().put("id","deleted").put("deleted",true).put("audioMedia",new JSONArray().put("shared-audio").put("exclusive")).put("versionHistory",new JSONArray().put(new JSONObject().put("items","[{\"media\":[\"shared-history\"]}]")));
         JSONObject live=new JSONObject().put("id","live").put("audioMedia",new JSONArray().put("shared-audio")).put("versionHistory",new JSONArray().put(new JSONObject().put("items","[{\"audioMedia\":[\"shared-history\"]}]")));
         String before=db(deleted,live).toString();LocalDatabase.write(context.getFilesDir(),before);new TrashPurger(context,prefs).purge(before,before,new JSONArray().put("deleted"),text->LocalDatabase.write(context.getFilesDir(),text));
-        assertFalse(new File(media,"exclusive").exists());assertTrue(new File(media,"shared-audio").isFile());assertTrue(new File(media,"shared-history").isFile());assertArrayEquals(new byte[]{9},Files.readAllBytes(immutable.toPath()));
+        assertArrayEquals("P1 hold must retain even exclusive original bytes",new byte[]{7},Files.readAllBytes(new File(media,"exclusive").toPath()));
+        assertTrue(new ProtectedRevisions(context,prefs).pins().containsAll(Set.of("exclusive","shared-audio","shared-history")));
+        assertTrue(new File(media,"shared-audio").isFile());assertTrue(new File(media,"shared-history").isFile());assertArrayEquals(new byte[]{9},Files.readAllBytes(immutable.toPath()));
     }
     @Test public void maximumEntryArchiveRoundTripsWithAllThreeMetadataEntries()throws Exception{
          // Production initializes the DB before media recording/import.

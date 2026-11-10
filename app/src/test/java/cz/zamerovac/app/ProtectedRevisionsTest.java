@@ -111,14 +111,17 @@ public class ProtectedRevisionsTest {
         try{cloud.engine(cloud.b,cloud.bi,provider,false).sync();}catch(IOException expected){}
         assertTrue(provider.injected);assertTrue(DatabaseRecovery.pending(cloud.b.home));
         cloud.sync(cloud.a,cloud.ai,false).sync(); // May consume the late signed transport receipt.
-        String saved=LocalDatabase.readForCas(cloud.a);new TrashPurger(cloud.a,cloud.a.prefs).purge(saved,saved,new JSONArray(),text->LocalDatabase.write(cloud.a,text));
+        JSONObject deleted=new JSONObject(LocalDatabase.readForCas(cloud.a));
+        deleted.getJSONArray("records").getJSONObject(0).put("deleted",true).put("syncClock",new JSONObject().put(cloud.aid,2));
+        LocalDatabase.write(cloud.a,deleted.toString());
+        String saved=LocalDatabase.readForCas(cloud.a);new TrashPurger(cloud.a,cloud.a.prefs).purge(saved,saved,new JSONArray().put("photo-a"),text->LocalDatabase.write(cloud.a,text));
         new PeerOutbox(cloud.a,cloud.a.prefs,cloud.ar).discard(cloud.bid);cloud.ar.forget(cloud.bid);
         assertTrue(new ProtectedRevisions(cloud.a,cloud.a.prefs).pins().contains("original-0"));
         boolean found=false;for(File f:Objects.requireNonNull(new File(cloud.a.home,"protected-revisions").listFiles()))if(f.getName().matches("[a-f0-9]{64}\\.json")){
             JSONObject hold=new JSONObject(new String(Files.readAllBytes(f.toPath()),StandardCharsets.UTF_8));
             if(sent.hash.equals(hold.getString("sourceHash"))){found=true;assertArrayEquals(sent.bytes,hold.getString("metadata").getBytes(StandardCharsets.UTF_8));}
         }
-        assertTrue("Late ACK removed exact outgoing state",found);assertEquals(old,LocalDatabase.readForCas(cloud.a));
+        assertTrue("Late ACK removed exact outgoing state",found);assertEquals(0,new JSONObject(LocalDatabase.readForCas(cloud.a)).getJSONArray("records").length());
         assertArrayEquals(original,Files.readAllBytes(new File(cloud.a.home,"media/original-0").toPath()));
         assertTrue(new ProtectedRevisions(cloud.b,cloud.b.prefs).pins().contains("original-0"));
     }
@@ -127,9 +130,12 @@ public class ProtectedRevisionsTest {
     @Test public void retainedExactStateRestoresAsSeparateCopyThroughExistingImporter()throws Exception{
         protection.preserveDatabase(exact);String retained=null;
         for(JSONObject hold:holds())if(exact.equals(hold.getString("metadata")))retained=hold.getString("metadata");assertNotNull(retained);
+        // Explicitly restore the retained deleted record as a NEW copy. Normal ZIP
+        // imports intentionally skip deleted records; this is not DB promotion.
+        JSONObject copy=new JSONObject(retained);copy.getJSONArray("records").getJSONObject(0).put("deleted",false);
         File archive=new File(device.getCacheDir(),"retained.zip");
         try(java.util.zip.ZipOutputStream out=new java.util.zip.ZipOutputStream(new FileOutputStream(archive))){
-            for(Map.Entry<String,byte[]> entry:Map.of("projects.json",retained.getBytes(StandardCharsets.UTF_8),"media/original-photo",photo,"media/original-video",video).entrySet()){
+            for(Map.Entry<String,byte[]> entry:Map.of("projects.json",copy.toString().getBytes(StandardCharsets.UTF_8),"media/original-photo",photo,"media/original-video",video).entrySet()){
                 out.putNextEntry(new java.util.zip.ZipEntry(entry.getKey()));out.write(entry.getValue());out.closeEntry();
             }
         }
@@ -141,5 +147,20 @@ public class ProtectedRevisionsTest {
         assertEquals("1585.800001234567890",item.getString("laserMeasuredMm"));assertEquals("0,000000123456789",item.getString("measure"));assertEquals(0.125,item.getJSONObject("a").getDouble("x"),0);
         assertArrayEquals(photo,Files.readAllBytes(new File(receiver.home,"media/"+record.getJSONArray("media").getString(0)).toPath()));
         assertEquals(exact,LocalDatabase.readForCas(device));exactBytes();
+    }
+    @Test public void jsonLookingNoteTextAndEmbeddedLegacyHistoryRemainExact()throws Exception{
+        JSONObject data=new JSONObject(exact);JSONObject record=data.getJSONArray("records").getJSONObject(0);
+        record.put("text","{rozpracovaná poznámka bez uzavření");
+        record.put("legacyHistory","{\"items\":[{\"media\":[\"original-video\"],\"measure\":\"0,000000000001\"}]}");
+        String text=data.toString();LocalDatabase.write(device,text);
+        assertEquals(text,LocalDatabase.readForCas(device));assertEquals(2,protection.pins().size());exactBytes();
+    }
+    @Test public void atomicBackupAndCompleteUnpublishedHoldRepairAfterRestart()throws Exception{
+        File folder=new File(device.home,"protected-revisions");File chosen=null;
+        for(File f:Objects.requireNonNull(folder.listFiles()))if(f.getName().matches("[a-f0-9]{64}\\.json")&&new String(Files.readAllBytes(f.toPath()),StandardCharsets.UTF_8).contains("original-photo"))chosen=f;
+        assertNotNull(chosen);File backup=new File(chosen+".bak");Files.move(chosen.toPath(),backup.toPath());
+        assertEquals(2,new ProtectedRevisions(device,device.prefs).pins().size());assertTrue(chosen.isFile());
+        File pending=new File(chosen+".new");Files.move(chosen.toPath(),pending.toPath());
+        assertEquals(2,new ProtectedRevisions(device,device.prefs).pins().size());assertTrue(chosen.isFile());assertFalse(pending.exists());hasExactDatabase();exactBytes();
     }
 }
