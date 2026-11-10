@@ -615,6 +615,25 @@ def main(argv: list[str] | None = None) -> int:
             parser.add_argument("--gradle", default="/opt/gradle-8.10.2/bin/gradle")
         if mode == "windows-quick":
             parser.add_argument("--check-only", action="store_true")
+    native = modes.add_parser("render-native-workflow")
+    native.add_argument("--branch", required=True)
+    native.add_argument("--expected-sha", required=True)
+    native.add_argument("--source-branch", required=True)
+    native.add_argument("--output", type=Path)
+    native_lint = modes.add_parser("lint-native-workflow")
+    native_lint.add_argument("path", type=Path)
+    native_lint.add_argument("--strict", action="store_true")
+    attest = modes.add_parser("verify-trusted-source")
+    attest.add_argument("--expected-sha", required=True)
+    attest.add_argument("--source-branch", required=True)
+    native_win = modes.add_parser("wsl-targeted-from-windows")
+    native_win.add_argument("--expected-sha", required=True)
+    native_win.add_argument("--root", default=str(ROOT))
+    native_linux = modes.add_parser("wsl-targeted")
+    native_linux.add_argument("--expected-sha", required=True)
+    native_linux.add_argument("--root", default=str(ROOT))
+    native_linux.add_argument("--gradle", default="/opt/gradle-8.10.2/bin/gradle")
+    native_linux.add_argument("--report", type=Path, required=True)
     render = modes.add_parser("render-workflow")
     render.add_argument("--branch", required=True)
     render.add_argument("--expected-sha", required=True)
@@ -628,6 +647,34 @@ def main(argv: list[str] | None = None) -> int:
     modes.add_parser("wsl-python-node")
     args = ap.parse_args(argv)
     try:
+        if args.mode == "render-native-workflow":
+            payload = render_native_workflow(args.branch, args.expected_sha,
+                                             args.source_branch).encode("utf-8")
+            output_canonical_utf8(payload, args.output, "home-qa-targeted-native.yml")
+            return 0
+        if args.mode == "lint-native-workflow":
+            demand(args.path.is_file(), "native workflow YAML unavailable")
+            check_native_workflow(args.path.read_text(encoding="utf-8"), strict=args.strict)
+            print("PASS HOME NATIVE WORKFLOW LINT " + str(args.path), flush=True)
+            return 0
+        if args.mode == "verify-trusted-source":
+            verify_trusted_source(args.source_branch, args.expected_sha)
+            return 0
+        if args.mode == "wsl-targeted-from-windows":
+            trusted_owner(os.environ)
+            demand(platform.system() == "Windows", "targeted runner must be Windows")
+            root = Path(args.root).resolve()
+            actual = git_source(root, args.expected_sha)
+            print("TESTED_WINDOWS_SOURCE_SHA=" + actual, flush=True)
+            run_wsl_targeted(root, actual)
+            return 0
+        if args.mode == "wsl-targeted":
+            check_wsl(Path(args.gradle))
+            root = Path(args.root).resolve()
+            actual = git_source(root, args.expected_sha)
+            print("WSL_TESTED_SOURCE_SHA=" + actual, flush=True)
+            run_targeted_native(root, actual, Path(args.gradle), args.report)
+            return 0
         if args.mode == "render-workflow":
             payload = render_workflow(args.branch, args.expected_sha).encode("utf-8")
             output_canonical_utf8(payload, args.output)
