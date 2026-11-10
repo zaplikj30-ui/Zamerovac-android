@@ -22,6 +22,7 @@ import shutil
 import subprocess
 import sys
 import unittest
+import zipfile
 
 
 REPO = "zaplikj30-ui/Zamerovac-android"
@@ -37,6 +38,7 @@ TARGETED_NATIVE = {
     "TrashPurgerTest": 17,
 }
 TARGETED_TOTAL = sum(TARGETED_NATIVE.values())  # Exact SHA #102: 94 @Test methods.
+TARGETED_ANDROID_SDK = Path("/opt/android-sdk")
 # This trust lease must be extended only by a separately reviewed code change.
 # GitHub proof also requires this commit to still be the head of its owner branch.
 APPROVED_NATIVE_TARGETS = {
@@ -163,6 +165,34 @@ def check_wsl(gradle: Path, resolve=shutil.which, system: str | None = None,
     demand(bool(re.search(r'(?m)^Gradle 8\.10\.2\b', gradle_version)),
            "Gradle 8.10.2 required, not just an existing file")
     # No WSL Node dependency. Generic unittest discovery is Windows-only.
+
+
+
+def check_targeted_sdk(environ: dict[str, str] | None = None,
+                       sdk: Path = TARGETED_ANDROID_SDK) -> None:
+    """Verify the existing WSL SDK 35; never install or download anything."""
+    environ = os.environ if environ is None else environ
+    expected = str(sdk)
+    demand(environ.get("ANDROID_HOME") == expected and
+           environ.get("ANDROID_SDK_ROOT") == expected,
+           "WSL Android SDK environment must match the pinned trusted SDK directory")
+    platform_dir = sdk / "platforms" / "android-35"
+    jar = platform_dir / "android.jar"
+    properties = platform_dir / "source.properties"
+    demand(sdk.is_dir() and platform_dir.is_dir() and
+           not sdk.is_symlink() and not platform_dir.is_symlink() and
+           jar.is_file() and not jar.is_symlink() and
+           properties.is_file() and not properties.is_symlink(),
+           "installed WSL Android SDK platform 35 missing or unsafe")
+    try:
+        version = properties.read_text(encoding="utf-8")
+        demand(bool(re.search(r"(?m)^AndroidVersion\.ApiLevel\s*=\s*35\s*$", version)),
+               "installed Android platform SDK is not API 35")
+        demand(jar.stat().st_size > 0 and zipfile.is_zipfile(jar),
+               "Android API 35 android.jar is missing or invalid")
+    except (OSError, UnicodeError) as failure:
+        raise GateError("HOME QA STOP: Android SDK 35 cannot be verified") from failure
+    print("HOME ANDROID_SDK_PLATFORM=35 SDK_ROOT=" + expected, flush=True)
 
 
 # No generic YAML parsing by global substring: exact canonical allowlist only.
@@ -483,6 +513,8 @@ recipe_dir="$(wslpath -u "$2")"
 report="$(wslpath -u "$3")"
 expected="$4"
 export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+export ANDROID_HOME=/opt/android-sdk
+export ANDROID_SDK_ROOT=/opt/android-sdk
 export PATH="$JAVA_HOME/bin:$PATH" CI=1
 mkdir -p /root/zamerovac-qa-commits
 temp="$(mktemp -d /root/zamerovac-qa-commits/native-XXXXXXXX)"
@@ -684,6 +716,7 @@ def main(argv: list[str] | None = None) -> int:
             return 0
         if args.mode == "wsl-targeted":
             check_wsl(Path(args.gradle))
+            check_targeted_sdk()  # Before source test discovery or ANY Gradle invocation.
             root = Path(args.root).resolve()
             actual = git_source(root, args.expected_sha)
             print("WSL_TESTED_SOURCE_SHA=" + actual, flush=True)
