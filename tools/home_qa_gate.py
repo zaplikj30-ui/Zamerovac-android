@@ -348,6 +348,156 @@ def check_native_workflow(content: str, strict: bool = True) -> None:
            "modified native workflow trigger, job, checkout, guard, tests or shell: STOP")
 
 
+class _RejectRedirect(urllib.request.HTTPRedirectHandler):
+    def redirect_request(self, request, fp, code, message, headers, newurl):
+        raise GateError("HOME QA STOP: GitHub API redirect rejected")
+
+
+def verify_trusted_source(source_branch: str, expected_sha: str,
+                          environ: dict[str, str] | None = None,
+                          opener=None) -> str:
+    environ = os.environ if environ is None else environ
+    trusted_owner(environ)
+    demand(environ.get("GITHUB_ACTIONS") == "true" and
+           environ.get("GITHUB_EVENT_NAME") == "push" and
+           environ.get("GITHUB_REF", "").startswith("refs/heads/qa/"),
+           "source attestation requires an owner qa/* push on the HOME runner")
+    valid_source_branch(source_branch)
+    demand(bool(SHA.fullmatch(expected_sha)), "source SHA must be exact 40 lowercase hex")
+    token = environ.get("GH_TOKEN", "")
+    demand(bool(token) and "\r" not in token and "\n" not in token,
+           "read-only GitHub token unavailable")
+    path = urllib.parse.quote(source_branch, safe="/")
+    url = "https://api.github.com/repos/" + REPO + "/git/ref/heads/" + path
+    request = urllib.request.Request(url, headers={
+        "Authorization": "Bearer " + token,
+        "Accept": "application/vnd.github+json",
+        "X-GitHub-Api-Version": "2022-11-28",
+    })
+    try:
+        if opener is None:
+            opener = urllib.request.build_opener(_RejectRedirect()).open
+        with opener(request, timeout=20) as response:
+            demand(getattr(response, "status", 200) == 200,
+                   "GitHub source branch verification failed")
+            raw = response.read(16385)
+    except (OSError, urllib.error.URLError) as failure:
+        raise GateError("HOME QA STOP: owner branch cannot be verified: " +
+                        type(failure).__name__) from failure
+    demand(len(raw) <= 16384, "unreasonably large GitHub branch response")
+    try:
+        data = json.loads(raw.decode("utf-8"))
+        actual = data["object"]["sha"]
+        kind = data["object"]["type"]
+        reported_ref = data["ref"]
+    except (ValueError, UnicodeError, KeyError, TypeError) as failure:
+        raise GateError("HOME QA STOP: invalid GitHub branch evidence") from failure
+    demand(kind == "commit" and reported_ref == "refs/heads/" + source_branch,
+           "GitHub returned wrong owner branch reference")
+    confirm_sha(actual, expected_sha)
+    print("OWNER_BRANCH_VERIFIED_SHA=" + actual, flush=True)
+    return actual
+
+
+def verify_targeted_xml(source: Path, report: Path, expected: str) -> int:
+    """No PASS for missing, skipped, empty or failing native JUnit suites."""
+    git_source(source, expected)
+    folder = source / "app" / "build" / "test-results" / "testPreviewUnitTest"
+    total = 0
+    lines = ["TESTED_SOURCE_SHA=" + expected, "ENVIRONMENT=Zamerovac-Win11-QA/WSL2",
+             "JVM_COMPILE=PASS", "ROBOLECTRIC=PASS"]
+    for name, required in TARGETED_NATIVE.items():
+        xml = folder / ("TEST-cz.zamerovac.app." + name + ".xml")
+        demand(xml.is_file() and not xml.is_symlink(), "missing JUnit evidence: " + name)
+        try:
+            suite = ET.parse(xml).getroot()
+            count = int(suite.attrib["tests"])
+            failed = int(suite.attrib.get("failures", 0))
+            errors = int(suite.attrib.get("errors", 0))
+            skipped = int(suite.attrib.get("skipped", 0))
+        except (ET.ParseError, ValueError, KeyError, OSError) as failure:
+            raise GateError("HOME QA STOP: invalid JUnit XML " + name) from failure
+        cases = suite.findall("testcase")
+        demand(suite.tag == "testsuite" and count == required and
+               len(cases) == required and
+               not failed and not errors and not skipped and
+               all(not any(child.tag in ("failure", "error", "skipped")
+                           for child in case) for case in cases),
+               "incomplete, skipped or failed targeted JUnit suite: " + name)
+        total += count
+        lines.append(name + "=PASS/" + str(count))
+    demand(total == TARGETED_TOTAL, "wrong total targeted tests")
+    lines.extend(["TESTS=" + str(total), "FAILURES=0", "ERRORS=0", "SKIPPED=0"])
+    report.parent.mkdir(parents=True, exist_ok=True)
+    report.write_text("\n".join(lines) + "\n", encoding="ascii")
+    print("PASS TARGETED ROBOLECTRIC TESTS=" + str(total) +
+          " SOURCE_SHA=" + expected, flush=True)
+    return total
+
+
+def run_targeted_native(source: Path, expected: str, gradle: Path, report: Path) -> None:
+    """Fixed serial Gradle tasks only: no APK, assemble, exclusions, or downloaded tools."""
+    git_source(source, expected)
+    for name, count in TARGETED_NATIVE.items():
+        file = source / "app" / "src" / "test" / "java" / "cz" / "zamerovac" / "app" / (name + ".java")
+        demand(file.is_file() and not file.is_symlink(), "missing test class " + name)
+        count_found = len(re.findall(r"(?m)^\s*@Test\b", file.read_text(encoding="utf-8")))
+        demand(count_found == count, "test class changed or disabled: " + name)
+    flags = [str(gradle), "--offline", "--no-daemon", "--no-parallel", "--max-workers=1",
+             "--console=plain", "-Dorg.gradle.jvmargs=-Xmx1536m"]
+    commands = [
+        [":app:compilePreviewUnitTestJavaWithJavac"],
+        [":app:testPreviewUnitTest"] +
+        [item for name in TARGETED_NATIVE
+         for item in ("--tests", "cz.zamerovac.app." + name)],
+    ]
+    for tasks in commands:
+        print("RUN TARGETED GRADLE " + " ".join(tasks), flush=True)
+        try:
+            subprocess.run(flags + tasks, cwd=source, check=True,
+                           stdin=subprocess.DEVNULL, timeout=3000)
+        except (OSError, subprocess.CalledProcessError,
+                subprocess.TimeoutExpired) as failure:
+            raise GateError("HOME QA STOP: targeted Gradle compile/test FAILED") from failure
+        git_source(source, expected)
+    verify_targeted_xml(source, report, expected)
+
+
+def run_wsl_targeted(source: Path, expected: str) -> None:
+    demand(platform.system() == "Windows", "WSL launcher requires Windows service")
+    linux = r"""
+set -Eeuo pipefail
+source_dir="$(wslpath -u "$1")"
+recipe_dir="$(wslpath -u "$2")"
+report="$(wslpath -u "$3")"
+expected="$4"
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+export PATH="$JAVA_HOME/bin:$PATH" CI=1
+mkdir -p /root/zamerovac-qa-commits
+temp="$(mktemp -d /root/zamerovac-qa-commits/native-XXXXXXXX)"
+trap 'rc=$?; rm -rf "$temp"; exit "$rc"' EXIT
+mkdir "$temp/source"
+cp -a "$source_dir/." "$temp/source/"
+cd "$temp/source"
+echo "WSL_TESTED_SOURCE_SHA=$(git rev-parse HEAD)"
+python3 "$recipe_dir/tools/home_qa_gate.py" wsl-targeted --root . --expected-sha "$expected" --gradle /opt/gradle-8.10.2/bin/gradle --report "$report"
+"""
+    report = ROOT.parent / "qa-evidence" / "native-targeted-summary.txt"
+    try:
+        result = subprocess.run(
+            ["wsl.exe", "--distribution", "Zamerovac-Ubuntu-QA", "--user", "root",
+             "--exec", "/bin/bash", "-lc", linux, "_", str(source), str(ROOT),
+             str(report), expected],
+            stdin=subprocess.DEVNULL, check=False, timeout=4200,
+        )
+    except (OSError, subprocess.TimeoutExpired) as failure:
+        raise GateError("HOME QA STOP: trusted targeted WSL runner unavailable") from failure
+    demand(result.returncode == 0,
+           "targeted WSL native QA FAILED; exit=" + str(result.returncode))
+    demand(report.is_file() and "TESTED_SOURCE_SHA=" + expected in
+           report.read_text(encoding="ascii"), "targeted JUnit summary missing")
+
+
 def render_workflow(branch: str, source_sha: str) -> str:
     demand(bool(re.fullmatch(r"qa/[a-z][a-z0-9._-]{3,65}", branch)),
            "only a literal trusted qa/* branch is allowed")
