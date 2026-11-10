@@ -251,11 +251,14 @@ function promptRenameRecord(r){
  });
  setTimeout(()=>{const input=$('renameBase');if(input){input.focus();input.setSelectionRange(input.value.length,input.value.length)}},120);
 }
-function restoreDeleted(id,seen=new Set()){
+function restoreDeleted(id,seen=new Set(),rollback=null){
  const r=recById(id,true);
  if(!r||!r.deleted||seen.has(id))return false;
+ // Keep original object references, media, dimensions, and revision metadata.
+ // No success state can be exposed if the durable CAS save is rejected.
+ if(rollback)rollback.push([r,{...r}]);
  seen.add(id);r.deleted=false;touch(r);
- for(const child of state.records.filter(x=>x.parentId===id&&x.deleted))restoreDeleted(child.id,seen);
+ for(const child of state.records.filter(x=>x.parentId===id&&x.deleted))restoreDeleted(child.id,seen,rollback);
  return true;
 }
 let trashBusy=false;
@@ -316,9 +319,19 @@ function showTrash(){
  $('emptyTrash').onclick=()=>{if(deleted.length&&!dataLoadFailed)confirmTrashPurge(deleted.map(r=>r.id),true)};
  if($('retryTrashCleanup'))$('retryTrashCleanup').onclick=()=>confirmTrashPurge([],false);
  $('modalBody').querySelectorAll('[data-restore]').forEach(b=>b.onclick=()=>{
-  if(!restoreDeleted(b.dataset.restore)){notify('Položku se nepodařilo obnovit');return}
+  const rollback=[];
+  if(!restoreDeleted(b.dataset.restore,new Set(),rollback)){notify('Položku se nepodařilo obnovit');return}
   const r=recById(b.dataset.restore);if(r&&r.parentId&&!recById(r.parentId))r.parentId=null;
-  save();if(screen==='browser')showFolder();showTrash();notify('Položka obnovena');
+  if(save()!==true){
+   // Undo only this unsaved restore, in place; never replace active record objects.
+   for(const [record,before] of rollback.reverse()){
+    for(const key of Object.keys(record))if(!Object.hasOwn(before,key))delete record[key];
+    Object.assign(record,before);
+   }
+   showTrash();notify('Obnovu se nepodařilo uložit. Položka zůstává v koši.');
+   return;
+  }
+  if(screen==='browser')showFolder();showTrash();notify('Položka obnovena');
  });
  $('modalBody').querySelectorAll('[data-purge]').forEach(b=>b.onclick=()=>{
   const targets=new Set([b.dataset.purge]);
