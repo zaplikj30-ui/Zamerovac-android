@@ -189,7 +189,7 @@ public class Post149NativeTest {
             String data="{\"schema\":1,\"records\":[{\"id\":\"saved-photo\",\"kind\":\"photo\",\"media\":[\"original-image\"],\"items\":[{\"measure\":\"1585,800001\",\"unit\":\"mm\"}]}]}";
             activity.new JsApi().loadData(); // confirmed first-launch DB before media
             File original=new File(activity.getFilesDir(),"media/original-image");original.getParentFile().mkdirs();
-            Files.write(original.toPath(),new byte[]{1,3,5,7});
+            java.nio.file.Files.write(original.toPath(),new byte[]{1,3,5,7});
             assertTrue(activity.new JsApi().saveData(data));
             for(int orientation:new int[]{android.content.res.Configuration.ORIENTATION_LANDSCAPE,android.content.res.Configuration.ORIENTATION_PORTRAIT}){
                 android.content.res.Configuration configuration=new android.content.res.Configuration(activity.getResources().getConfiguration());
