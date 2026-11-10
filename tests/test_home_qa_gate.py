@@ -5,6 +5,8 @@ import importlib.util
 from pathlib import Path
 import tempfile
 import unittest
+import io
+import os
 from unittest import mock
 
 
@@ -230,6 +232,42 @@ class GateUnitTest(unittest.TestCase):
                     {"JAVA_HOME": str(home), "WSL_DISTRO_NAME": "Ubuntu"},
                     "microsoft-standard-WSL2",
                 )
+
+    def test_render_stdout_redirect_cp1250_must_be_utf8_bytes(self):
+        # The old CLI wrote Unicode through sys.stdout, which Windows may
+        # encode as CP1250 when PYTHONUTF8 is disabled. Model that real stream.
+        raw = io.BytesIO()
+        localized_stdout = io.TextIOWrapper(raw, encoding="cp1250", newline="\\n")
+        with mock.patch.object(GATE.sys, "stdout", localized_stdout):
+            with mock.patch.dict(os.environ, {"PYTHONUTF8": "0"}):
+                self.assertEqual(0, GATE.main([
+                    "render-workflow", "--branch", "qa/example",
+                    "--expected-sha", SHA,
+                ]))
+            localized_stdout.flush()
+        expected = valid_workflow().encode("utf-8")
+        self.assertIn("Zaměřovač".encode("utf-8"), expected)
+        self.assertEqual(expected, raw.getvalue(),
+                         "redirected stdout must be raw UTF-8, never Windows CP1250")
+        GATE.check_workflow(raw.getvalue().decode("utf-8"), strict=True)
+
+    def test_render_explicit_output_file_utf8_without_pythonutf8(self):
+        # Safe default: create the one-shot YAML file directly, without shell
+        # redirection; prove exact UTF-8 bytes plus a successful strict lint.
+        with tempfile.TemporaryDirectory() as tmp:
+            folder = Path(tmp) / ".github" / "workflows"
+            folder.mkdir(parents=True)
+            target = folder / "home-qa-one-shot.yml"
+            with mock.patch.dict(os.environ, {"PYTHONUTF8": "0"}):
+                result = GATE.main([
+                    "render-workflow", "--branch", "qa/example",
+                    "--expected-sha", SHA, "--output", str(target),
+                ])
+            self.assertEqual(0, result)
+            raw = target.read_bytes()
+            self.assertEqual(valid_workflow().encode("utf-8"), raw)
+            self.assertNotIn(b"\\xef\\xbb\\xbf", raw[:3], "No UTF-8 BOM")
+            GATE.check_workflow(raw.decode("utf-8"), strict=True)
 
     def test_render_rejects_unsafe_branch_or_sha(self):
         for branch in ("main", "qa/foo/../main", "refs/pull/1", "qa/unsafe;touch x"):
