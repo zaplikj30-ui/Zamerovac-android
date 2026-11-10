@@ -60,8 +60,9 @@ public class RecoveryProtectionArchiveTest {
         record.put("history",new JSONObject().put("revisions",new JSONArray()
             .put(new JSONObject().put("note","history-exact")
                 .put("media",new JSONArray().put("marker-photo")))));
-        LocalDatabase.write(home,noBackup,project.toString());
+        LocalDatabase.write(home,noBackup,db("baseline").toString());
         media("marker-photo",photo);
+        LocalDatabase.write(home,noBackup,project.toString());
         JSONObject created=RecoveryProtectionArchive.create(home,noBackup);
         assertTrue(RecoveryProtectionArchive.verify(noBackup,created.getString("id"))
             .getBoolean("complete"));
@@ -552,8 +553,9 @@ public class RecoveryProtectionArchiveTest {
         record.put("history",new JSONObject().put("revisions",new JSONArray()
             .put(new JSONObject().put("note","durable-undo")
                 .put("media",new JSONArray().put("reuse-photo")))));
-        LocalDatabase.write(home,noBackup,project.toString());
+        LocalDatabase.write(home,noBackup,db("baseline").toString());
         media("reuse-photo",REUSE_PHOTO);
+        LocalDatabase.write(home,noBackup,project.toString());
         File prefs=new File(root,"shared_prefs");
         assertTrue(prefs.mkdir());
         Files.write(new File(prefs,"zamerovac.xml").toPath(),
@@ -1009,7 +1011,9 @@ public class RecoveryProtectionArchiveTest {
         JSONObject data=db("1585,800001234567890");
         data.getJSONArray("records").getJSONObject(0)
             .put("media",new JSONArray().put("missing-photo"));
-        LocalDatabase.write(home,noBackup,data.toString());
+        LocalDatabase.write(home,noBackup,db("baseline").toString());
+        // Simulate a structurally valid database whose original was lost externally.
+        Files.write(new File(home,"projects.json").toPath(),data.toString().getBytes(StandardCharsets.UTF_8));
         JSONObject partial=RecoveryProtectionArchive.create(home,noBackup);
         assertTrue(partial.getBoolean("complete")); // copy of AVAILABLE originals is complete
         assertFalse(partial.getBoolean("sourceComplete"));

@@ -99,7 +99,9 @@ public class RecoveryCandidateReviewTest {
     }
 
     @Test public void missingOriginalMediaIsBlockedNotInvented()throws Exception{
-        saved(db(exact,true));
+        saved(db(exact,false));
+        // External loss/incomplete legacy state, not a newly accepted broken save.
+        Files.write(new File(home,"projects.json").toPath(),db(exact,true).toString().getBytes(StandardCharsets.UTF_8));
         SortedMap<String,byte[]> before=preserved();
         JSONObject review=RecoveryCandidateReview.inspect(home,noBackup,null);
         noPromotion(review);

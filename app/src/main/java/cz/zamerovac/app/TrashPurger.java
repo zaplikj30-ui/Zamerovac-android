@@ -91,8 +91,6 @@ final class TrashPurger {
         if(!saved.equals(expected))throw new IOException("Zakázky se mezitím změnily. Otevři koš znovu a potvrď aktuální obsah.");
         JSONObject db=new JSONObject(saved);
         ProtectedRevisions protection=new ProtectedRevisions(home,identityDirectory,prefs);
-        protection.preserveDatabase(saved); // before records, backup or pending intent can change
-        Set<String> pinned=protection.pins();
         if(db.optInt("schema")!=1)throw new IOException("Nepodporovaná databáze");
         JSONArray records=db.getJSONArray("records"),kept=new JSONArray();
         Set<String> ids=new HashSet<>(),candidates=pending();
@@ -114,8 +112,9 @@ final class TrashPurger {
         Set<String> protectedIds=new HashSet<>();
         JSONObject live=new JSONObject(db.toString());live.remove("trashPurgedIds");
         strings(live,protectedIds);candidates.removeAll(protectedIds);
+        protection.preserveDatabase(saved); // before records, backup or pending intent can change
+        Set<String> pinned=protection.pins();
         Set<String> retained=new HashSet<>(candidates);retained.retainAll(pinned);
-        candidates.removeAll(pinned);
         // Save the cleanup intent first. A failure here cannot change records or media.
         atomic(pendingFile(),new JSONArray(candidates).toString());
         String next=db.toString();
@@ -127,8 +126,9 @@ final class TrashPurger {
             Set<String> failed=new TreeSet<>();
             for(String id:candidates){
                 File source=new File(home,"media/"+id),thumb=new File(cache,"photo-thumbs/"+id+".jpg");
-                boolean ok=removeFile(source)&&removeFile(thumb)&&removeFile(new File(cache,"photo-thumbs/"+id+".tmp"))&&removeFile(new File(cache,"photo-thumbs/"+id+".failed"));
-                if(ok){if(!prefs.edit().remove("mime-"+id).remove("name-"+id).commit())ok=false;}
+                boolean held=retained.contains(id);
+                boolean ok=(held||removeFile(source))&&removeFile(thumb)&&removeFile(new File(cache,"photo-thumbs/"+id+".tmp"))&&removeFile(new File(cache,"photo-thumbs/"+id+".failed"));
+                if(ok&&!held){if(!prefs.edit().remove("mime-"+id).remove("name-"+id).commit())ok=false;}
                 if(!ok)failed.add(id);
             }
             atomic(pendingFile(),new JSONArray(failed).toString());

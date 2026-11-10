@@ -100,9 +100,13 @@ final class ProtectedRevisions {
         Set<String> ids=new TreeSet<>();JSONArray media=hold.getJSONArray("media");
         for(int i=0;i<media.length();i++){
             JSONObject entry=media.getJSONObject(i);String id=entry.getString("id");
-            if(!PeerSnapshot.validMediaId(id)||!ids.add(id)||!entry.getString("hash").matches("[a-f0-9]{64}")||PeerSnapshot.integer(entry,"size",PeerSnapshot.MAX_MEDIA)<1||!PeerSnapshot.validMime(entry.getString("mime"))||entry.getString("name").length()>256)throw new IOException("Poškozený pin originálu");
+            long size=PeerSnapshot.integer(entry,"size",PeerSnapshot.MAX_MEDIA);boolean missing="MISSING".equals(entry.optString("state"));
+            if(missing&&"snapshot".equals(hold.getString("kind")))throw new IOException("Přenosová ochrana nesmí předstírat úplnost");
+            boolean digest=entry.getString("hash").matches("[a-f0-9]{64}");
+            if(!PeerSnapshot.validMediaId(id)||!ids.add(id)||!(digest&&size>0||missing&&size==0&&entry.getString("hash").isEmpty())||!PeerSnapshot.validMime(entry.getString("mime"))||entry.getString("name").length()>256)throw new IOException("Poškozený pin originálu");
         }
-        if(!ids.containsAll(PeerSnapshot.references(data.getJSONArray("records"))))throw new IOException("Neúplná ochrana příloh");
+        Set<String> required="snapshot".equals(hold.getString("kind"))?PeerSnapshot.references(data.getJSONArray("records")):PeerSnapshot.cleanupReferences(data.getJSONArray("records"));
+        if(!ids.containsAll(required))throw new IOException("Neúplná ochrana příloh");
         if(staged)write(path,bytes); // finish a fully verified interrupted local hold, never a DB promotion
         hold.remove("metadata");JSONObject lookup=new JSONObject();for(int i=0;i<media.length();i++){JSONObject entry=media.getJSONObject(i);lookup.put(entry.getString("id"),entry);}hold.put("_ids",lookup);
         attrs=Files.readAttributes(path.toPath(),java.nio.file.attribute.BasicFileAttributes.class,LinkOption.NOFOLLOW_LINKS);
@@ -118,6 +122,9 @@ final class ProtectedRevisions {
         if(Files.isSymbolicLink(home.toPath())||Files.isSymbolicLink(new File(home,"media").toPath())||Files.isSymbolicLink(directory.toPath())||directory.exists()&&!directory.isDirectory()||Files.isSymbolicLink(witness.getParentFile().toPath()))throw new IOException("Neplatné úložiště ochrany");
         File index=new File(directory,"catalog.json");Set<String> local=catalog(index),other=catalog(witness),ids=new TreeSet<>(local);ids.addAll(other);
         File[] files=directory.listFiles();if(files==null&&directory.exists())throw new IOException("Registr ochrany nelze načíst");
+        // Both missing catalogs cannot distinguish first-write interruption
+        // from selective loss of older holds. Do not invent an empty registry.
+        if(files!=null&&files.length>0&&!exists(index)&&!exists(witness))throw new IOException("Oba doklady ochrany chybí; původní data vyžadují ruční prověření");
         if(files!=null)for(File f:files){
             safe(f);
             String name=f.getName();
@@ -146,13 +153,14 @@ final class ProtectedRevisions {
         return false;
     }catch(Exception e){throw blocked(e);}}}
     JSONObject status()throws IOException{synchronized(TrashPurger.LOCK){try{
-        Map<String,JSONObject> holds=inventory(false);Map<String,Long> sizes=new HashMap<>();long metadata=0;
+        Map<String,JSONObject> holds=inventory(false);Map<String,Long> sizes=new HashMap<>();long metadata=0;int incomplete=0;
         for(Map.Entry<String,JSONObject> item:holds.entrySet()){
+            if(!item.getValue().optBoolean("sourceComplete",true))incomplete++;
             metadata+=file(item.getKey()).length();JSONArray list=item.getValue().getJSONArray("media");
-            for(int i=0;i<list.length();i++){JSONObject entry=list.getJSONObject(i);sizes.put(entry.getString("id"),entry.getLong("size"));}
+            for(int i=0;i<list.length();i++){JSONObject entry=list.getJSONObject(i);File original=new File(home,"media/"+entry.getString("id"));sizes.put(entry.getString("id"),original.isFile()?original.length():0);}
         }
         long total=0;for(long size:sizes.values())total+=size;
-        return new JSONObject().put("revisions",holds.size()).put("media",sizes.size()).put("mediaBytes",total).put("metadataBytes",metadata).put("message",WARNING);
+        return new JSONObject().put("revisions",holds.size()).put("incomplete",incomplete).put("media",sizes.size()).put("mediaBytes",total).put("metadataBytes",metadata).put("message",WARNING+(incomplete>0?" Některé starší podklady již neměly všechny přílohy; jejich přesná metadata zůstávají důkazem, nikoli úplnou zálohou.":""));
     }catch(Exception e){throw blocked(e);}}}
     void preserveDatabase(String metadata)throws IOException{
         if(metadata==null||metadata.isEmpty())return;
@@ -178,21 +186,29 @@ final class ProtectedRevisions {
                 if(files!=null)for(File f:files)if(PeerSnapshot.validMediaId(f.getName()))ids.add(f.getName());
                 return;
             }
-            ids.addAll(PeerSnapshot.references(parsed));historicalReferences(parsed,ids,depth+1);
+            ids.addAll(PeerSnapshot.cleanupReferences(parsed));historicalReferences(parsed,ids,depth+1);
         }
     }
     private void preserve(String kind,String metadata,PeerSnapshot snapshot)throws IOException{synchronized(TrashPurger.LOCK){try{
         Map<String,JSONObject> prior=inventory(true);String source=PeerWire.hash(metadata.getBytes(StandardCharsets.UTF_8));
         for(JSONObject old:prior.values())if(kind.equals(old.getString("kind"))&&source.equals(old.getString("sourceHash")))return;
         JSONObject data=new JSONObject(metadata);if(snapshot!=null)data=data.getJSONObject("data");LocalDatabase.validate(data.toString());
-        Set<String> ids=PeerSnapshot.references(data.getJSONArray("records"));
+        Set<String> ids=snapshot==null?PeerSnapshot.cleanupReferences(data.getJSONArray("records")):PeerSnapshot.references(data.getJSONArray("records"));
         // Also include older embedded JSON objects and unknown history fields.
         historicalReferences(data.getJSONArray("records"),ids,0);
-        JSONArray media=new JSONArray();for(String id:ids){
-            File original=new File(home,"media/"+id);JSONObject entry=PeerMedia.inspect(original);
+        boolean complete=true;JSONArray media=new JSONArray();for(String id:ids){
+            File original=new File(home,"media/"+id);boolean missing=snapshot==null&&Files.notExists(original.toPath(),LinkOption.NOFOLLOW_LINKS);
+            JSONObject entry;
+            if(missing){
+                complete=false;entry=new JSONObject().put("hash","").put("size",0).put("state","MISSING");
+                for(JSONObject old:prior.values()){
+                    JSONObject known=old.getJSONObject("_ids").optJSONObject(id);
+                    if(known!=null&&!known.getString("hash").isEmpty()){entry.put("hash",known.getString("hash")).put("size",known.getLong("size"));break;}
+                }
+            }else entry=PeerMedia.inspect(original).put("state","VERIFIED");
             for(JSONObject old:prior.values()){
                 JSONObject pinned=old.getJSONObject("_ids").optJSONObject(id);
-                if(pinned!=null&&(pinned.getLong("size")!=entry.getLong("size")||!pinned.getString("hash").equals(entry.getString("hash"))))
+                if(pinned!=null&&!pinned.getString("hash").isEmpty()&&!missing&&(pinned.getLong("size")!=entry.getLong("size")||!pinned.getString("hash").equals(entry.getString("hash"))))
                     throw new IOException("Chráněný originál má jiný obsah. Původní revize zůstává chráněná; operace byla zastavena.");
             }
             JSONObject expected=snapshot==null?null:snapshot.media.get(id);
@@ -202,8 +218,8 @@ final class ProtectedRevisions {
             if(!MediaStaging.metadata(mime,name))throw new IOException("Neplatná metadata originálu");
             media.put(entry.put("id",id).put("mime",expected==null?mime:expected.getString("mime")).put("name",expected==null?name:expected.getString("name")));
         }
-        if(!ids.isEmpty())syncDirectory(new File(home,"media"));
-        JSONObject revision=new JSONObject().put("format","cz.zamerovac.protected.revision").put("version",1).put("kind",kind).put("sourceHash",source).put("epoch",DatabaseRecovery.id(home)).put("metadata",metadata).put("media",media);
+        if(new File(home,"media").isDirectory())syncDirectory(new File(home,"media"));
+        JSONObject revision=new JSONObject().put("format","cz.zamerovac.protected.revision").put("version",1).put("kind",kind).put("sourceHash",source).put("epoch",DatabaseRecovery.id(home)).put("metadata",metadata).put("media",media).put("sourceComplete",complete);
         byte[] bytes=revision.toString().getBytes(StandardCharsets.UTF_8);String hash=PeerWire.hash(bytes);
         // Reserve is a preflight only; every failed/short write is still verified.
         if(home.getUsableSpace()<bytes.length*3L+1024*1024)throw new IOException("Nedostatek místa pro ochranu původních dat");

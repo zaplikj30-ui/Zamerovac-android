@@ -28,7 +28,7 @@ public class TrashPurgerTest {
             "{\"id\":\"deleted-photo\",\"deleted\":true,\"parentId\":\"deleted-folder\",\"media\":[\"trash-media\",\"shared-media\",\"history-photo\",\"../outside\"],\"items\":[{\"media\":[\"note-audio\"],\"detailItems\":[{\"media\":[\"detail-photo\"]}]}]},"+
             "{\"id\":\"active-child\",\"parentId\":\"deleted-folder\",\"media\":[\"child-media\"]}]}");
     }
-    void file(String id) throws Exception {Files.write(new File(home,"media/"+id).toPath(),new byte[]{1,2,3});prefs.edit().putString("mime-"+id,"image/png").putString("name-"+id,id).commit();}
+    void file(String id) throws Exception {Files.write(new File(cache,"photo-thumbs/"+id+".jpg").toPath(),new byte[]{5});Files.write(new File(home,"media/"+id).toPath(),new byte[]{1,2,3});prefs.edit().putString("mime-"+id,"image/png").putString("name-"+id,id).commit();}
     void persist(String text) throws Exception {Files.write(new File(home,"projects.json").toPath(),text.getBytes(StandardCharsets.UTF_8));}
     String read(File file) throws Exception{return new String(Files.readAllBytes(file.toPath()),StandardCharsets.UTF_8);}
     JSONArray targets() throws Exception{return new JSONArray("[\"deleted-folder\",\"deleted-photo\"]");}
@@ -38,14 +38,14 @@ public class TrashPurgerTest {
         File thumb=new File(cache,"photo-thumbs/trash-media.jpg");Files.write(thumb.toPath(),new byte[]{5});
         File temporaryThumb=new File(cache,"photo-thumbs/trash-media.tmp");Files.write(temporaryThumb.toPath(),new byte[]{6});
         persist(db.toString());JSONObject result=purger.purge(db.toString(),db.toString(),targets(),this::persist);
-        assertEquals(0,result.getInt("pending"));assertEquals("",result.getString("warning"));
+        assertEquals(0,result.getInt("pending"));assertTrue(result.getString("warning").contains("Chráněné"));
         JSONObject reloaded=new JSONObject(read(new File(home,"projects.json")));
         assertEquals(2,reloaded.getJSONArray("records").length());
         assertEquals(active,reloaded.getJSONArray("records").getJSONObject(0).toString());
         assertEquals("active-child",reloaded.getJSONArray("records").getJSONObject(1).getString("id"));
         assertEquals(reloaded.toString(),read(new File(home,"projects.bak")));
         for(String id:new String[]{"active-media","shared-media","history-photo","child-media","unrelated"})assertTrue(id,new File(home,"media/"+id).isFile());
-        for(String id:new String[]{"trash-media","note-audio","detail-photo","deleted-photo"}){assertFalse(new File(home,"media/"+id).exists());assertFalse(prefs.contains("mime-"+id));}
+        for(String id:new String[]{"trash-media","note-audio","detail-photo","deleted-photo"}){assertArrayEquals(new byte[]{1,2,3},Files.readAllBytes(new File(home,"media/"+id).toPath()));assertTrue(prefs.contains("mime-"+id));}
         assertFalse(thumb.exists());assertFalse(temporaryThumb.exists());assertEquals(0,new TrashPurger(home,cache,prefs).pendingCount());
         // Safe repeated empty purge; no broad media garbage collection.
         purger.purge(reloaded.toString(),reloaded.toString(),new JSONArray(),this::persist);
@@ -62,7 +62,7 @@ public class TrashPurgerTest {
         try{purger.purge(db,db,targets(),text->{throw new IOException("disk full");});fail();}catch(IOException expected){}
         assertEquals(db,read(new File(home,"projects.json")));assertTrue(new File(home,"media/trash-media").exists());
         assertTrue(new TrashPurger(home,cache,prefs).pendingCount()>0);
-        purger.purge(db,db,targets(),this::persist);assertFalse(new File(home,"media/trash-media").exists());
+        purger.purge(db,db,targets(),this::persist);assertTrue(new File(home,"media/trash-media").exists());
     }
     @Test public void failedUnlinkIsReportedAndRetryableAfterRestart() throws Exception {
         String db=fixture().toString();persist(db);file("trash-media");
@@ -72,7 +72,7 @@ public class TrashPurgerTest {
         assertTrue(new File(home,"media/trash-media").isFile());
         String saved=read(new File(home,"projects.json"));
         result=new TrashPurger(home,cache,prefs).purge(saved,saved,new JSONArray(),this::persist);
-        assertEquals(0,result.getInt("pending"));assertFalse(new File(home,"media/trash-media").exists());
+        assertEquals(0,result.getInt("pending"));assertArrayEquals(new byte[]{1,2,3},Files.readAllBytes(new File(home,"media/trash-media").toPath()));
     }
     @Test public void failedBackupWriteNeverUnlinksMedia() throws Exception {
         String db=fixture().toString();persist(db);file("trash-media");
@@ -128,7 +128,7 @@ public class TrashPurgerTest {
         assertArrayEquals(protectedAudio,Files.readAllBytes(new File(home,"media/note-audio").toPath()));
         assertTrue(prefs.contains("mime-trash-media"));
         assertTrue(prefs.contains("mime-note-audio"));
-        assertFalse("Exclusively deleted original must still be cleaned",new File(home,"media/detail-photo").exists());
+        assertArrayEquals("P1 retains the last exclusive original",new byte[]{1,2,3},Files.readAllBytes(new File(home,"media/detail-photo").toPath()));
         assertEquals(active.toString(),new JSONObject(read(new File(home,"projects.json")))
             .getJSONArray("records").getJSONObject(0).toString());
         // Repeated cleanup after restart must not delete these originals.

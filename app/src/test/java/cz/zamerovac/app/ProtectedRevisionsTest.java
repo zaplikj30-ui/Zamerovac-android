@@ -187,4 +187,11 @@ public class ProtectedRevisionsTest {
         try{LocalDatabase.write(device,proposal);fail("Changed protected original blessed as a new revision");}catch(IOException expected){}
         assertEquals(exact,LocalDatabase.readForCas(device));hasExactDatabase();assertEquals(2,protection.pins().size());
     }
+    @Test public void losingBothCatalogsCannotAuthorizeCleanupFromAnAssumedEmptyRegistry()throws Exception{
+        assertTrue(new File(device.home,"protected-revisions/catalog.json").delete());
+        assertTrue(new File(device.home.getParentFile(),"no_backup/protected-revisions.json").delete());
+        try{protection.pins();fail("Both missing catalogs accepted as an empty protection set");}catch(IOException expected){}
+        assertFalse(ProtectedRevisions.rollback(new File(device.home,"media/original-photo")));exactBytes();
+        assertEquals(exact,LocalDatabase.readForCas(device));
+    }
 }

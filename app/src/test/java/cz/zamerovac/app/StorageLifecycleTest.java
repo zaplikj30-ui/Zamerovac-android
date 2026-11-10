@@ -181,7 +181,7 @@ public class StorageLifecycleTest {
         assertEquals(before,digest(new File(context.getFilesDir(),"projects.json")));assertEquals(photo,digest(new File(dir,"original-photo")));
     }
     @Test public void compareAndSaveRejectsStaleSnapshotAndReportsDiskFailure()throws Exception {
-        persist(fixture());MainActivity.JsApi api=activity.new JsApi();String first=api.loadData();
+        media();persist(fixture());MainActivity.JsApi api=activity.new JsApi();String first=api.loadData();
         String newer=fixture().put("sequence",1).toString();assertTrue(new JSONObject(api.saveDataChecked(newer,first)).getBoolean("ok"));
         JSONObject stale=new JSONObject(api.saveDataChecked(fixture().put("sequence",2).toString(),first));
         assertFalse(stale.getBoolean("ok"));assertEquals(newer,stale.getString("current"));assertEquals(newer,api.loadData());
@@ -397,6 +397,7 @@ public class StorageLifecycleTest {
         assertFalse(api.beginMediaChecked(id,"application/octet-stream","overwrite",4));assertArrayEquals(new byte[]{1,2,3,4},Files.readAllBytes(new File(dir,id).toPath()));assertFalse(api.finishMedia("other-upload"));
     }
     @Test public void mediaUploadCannotAcknowledgeFailedMetadataOrUnsafeInputs()throws Exception {
+        LocalDatabase.write(context,"{\"schema\":1,\"records\":[]}");
         SharedPreferences failed=org.mockito.Mockito.mock(SharedPreferences.class);SharedPreferences.Editor editor=org.mockito.Mockito.mock(SharedPreferences.Editor.class);org.mockito.Mockito.when(failed.edit()).thenReturn(editor);org.mockito.Mockito.when(editor.putString(org.mockito.ArgumentMatchers.anyString(),org.mockito.ArgumentMatchers.anyString())).thenReturn(editor);org.mockito.Mockito.when(editor.commit()).thenReturn(false);ReflectionHelpers.setField(activity,"settings",failed);MainActivity.JsApi api=activity.new JsApi();
         assertFalse(api.beginMediaChecked("unsafe-input","image/png\r\nInjected: yes","file",1));assertFalse(api.beginMediaChecked("unsafe-input","image/png","line\n\nname",1));assertFalse(api.beginMediaChecked("unsafe-input","image/png","bad\ud800",1));assertTrue(api.beginMediaChecked("failed-metadata","image/png","Synthetic",4));assertTrue(api.appendMedia("failed-metadata","AQIDBA=="));assertFalse(api.finishMedia("failed-metadata"));assertFalse(new File(dir,"failed-metadata").exists());assertEquals(0,dir.listFiles(file->file.getName().contains(".upload-")).length);
     }
