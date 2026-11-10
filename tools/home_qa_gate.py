@@ -746,8 +746,8 @@ def main(argv: list[str] | None = None) -> int:
             run_wsl_targeted(root, actual)
             return 0
         if args.mode == "wsl-targeted":
+            check_targeted_sdk()  # Before Gradle --version, compilation or any test.
             check_wsl(Path(args.gradle))
-            check_targeted_sdk()  # Before source test discovery or ANY Gradle invocation.
             root = Path(args.root).resolve()
             actual = git_source(root, args.expected_sha)
             print("WSL_TESTED_SOURCE_SHA=" + actual, flush=True)
