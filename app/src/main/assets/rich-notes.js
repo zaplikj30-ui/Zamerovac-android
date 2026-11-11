@@ -68,6 +68,9 @@ function openRichNote(item,isNew){
   const editedKeys=['text','media','audioMedia','insetWidth','insetRotation',
                     'insetX','insetY','insetMoved','captionMoved'];
   const before=editedKeys.map(key=>({key,exists:Object.hasOwn(item,key),value:item[key]}));
+  const parentKeys=['rev','syncClock','updatedAt','hierarchyConflict','width','height'];
+  const parentBefore=parentKeys.map(key=>({key,exists:Object.hasOwn(parent,key),value:parent[key]}));
+  const savedBefore=typeof persistedSnapshot==='undefined'?null:persistedSnapshot;
   const wasNew=isNew;
   const oldHistory=editStack.slice(),oldRedo=redoStack.slice();
   checkpoint();
@@ -93,12 +96,16 @@ function openRichNote(item,isNew){
   let confirmed=false;
   try{confirmed=commitEditor()===true}catch(error){notify('Poznámku se nepodařilo uložit: '+error.message)}
   if(!confirmed){
-   if(current===parent&&parent.items.includes(item)&&
+   // A remote CAS reconciliation may have installed newer data; never roll it
+   // back just because our local save was rejected.
+   const unchangedBase=typeof persistedSnapshot==='undefined'||persistedSnapshot===savedBefore;
+   if(unchangedBase&&current===parent&&parent.items.includes(item)&&
       (typeof state==='undefined'||state.records.includes(parent))&&
       JSON.stringify(editedKeys.map(key=>item[key]))===applied){
-    for(const {key,exists,value} of before){
-     if(exists)item[key]=value;
-     else delete item[key];
+    for(const {key,exists,value} of [...before,...parentBefore]){
+     const target=parentKeys.includes(key)?parent:item;
+     if(exists)target[key]=value;
+     else delete target[key];
     }
     if(wasNew)parent.items=parent.items.filter(entry=>entry!==item);
     isNew=wasNew;
