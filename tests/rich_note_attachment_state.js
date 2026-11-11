@@ -16,20 +16,24 @@ function fixture(item,options={}){
  const dialog={classList:{add(){},remove(){}}};
  const modalEl={hidden:true,querySelector:()=>dialog};
  const attachmentContainer={
-  _html:'',
+  _html:'',_controls:{remove:[],preview:[]},
   get innerHTML(){return this._html},
   set innerHTML(value){
    this._html=value;
    for(const target of previews.values())target.isConnected=false;
    previews=new Map();
-   for(const [,id] of value.matchAll(/data-embed="(\\d+)"/g)){
-    previews.set(Number(id),{isConnected:true,textContent:'',children:[],append(node){this.children.push(node)}});
+   this._controls={remove:[],preview:[]};
+   for(const [,id] of value.matchAll(/data-embed="(\d+)"/g)){
+    const i=Number(id);
+    previews.set(i,{isConnected:true,textContent:'',children:[],append(node){this.children.push(node)}});
+    this._controls.remove.push({dataset:{remove:String(i)},onclick:null});
+    this._controls.preview.push({dataset:{preview:String(i)},onclick:null});
    }
   },
-  querySelector(selector){const match=selector.match(/data-embed="(\\d+)"/);return match?previews.get(Number(match[1]))||null:null},
+  querySelector(selector){const match=selector.match(/data-embed="(\d+)"/);return match?previews.get(Number(match[1]))||null:null},
   querySelectorAll(selector){
-   const match=selector.match(/^\\[data-(preview|remove)\\]$/);
-   return match?[...previews.keys()].map(i=>({dataset:{[match[1]]:String(i)},onclick:null})):[])
+   const match=selector.match(/^\[data-(preview|remove)\]$/);
+   return match?this._controls[match[1]]:[];
   }
  };
  const get=id=>{
@@ -54,7 +58,7 @@ function fixture(item,options={}){
   cancelAudio:()=>true
  };
  const sandbox={
-  $,window,document:{
+  window,document:{
    getElementById:id=>get(id),
    createElement:tag=>{
     const node={tag,controls:false,src:'',alt:'',remove(){this.removed=true}};
@@ -98,19 +102,19 @@ async function run(){
  assert.equal(x.created.filter(n=>n.tag==='img').length,0,'Audio must not try loading as an image');
  assert.deepEqual(x.focuses,['okModal'],'Opening audio notes may not focus the text keyboard');
  x.get('richVoice').onclick();x.get('richVoice').onclick();
- assert.deepEqual(note.media,['voice-old'],'Stopping audio must not mutate saved attachment list');
- assert.deepEqual(note.audioMedia,['voice-old'],'Stopping audio must not mutate saved audio ownership');
+ assert.deepEqual(Array.from(note.media),['voice-old'],'Stopping audio must not mutate saved attachment list');
+ assert.deepEqual(Array.from(note.audioMedia),['voice-old'],'Stopping audio must not mutate saved audio ownership');
  x.get('cancelModal').onclick();
- assert.deepEqual(note.audioMedia,['voice-old'],'Cancel must preserve original audio after recording');
- assert.deepEqual(note.media,['voice-old'],'Cancel must preserve original media after recording');
+ assert.deepEqual(Array.from(note.audioMedia),['voice-old'],'Cancel must preserve original audio after recording');
+ assert.deepEqual(Array.from(note.media),['voice-old'],'Cancel must preserve original media after recording');
 
  // Save explicitly publishes the newly recorded attachment exactly once.
  const y=fixture({id:'n2',type:'note',media:['voice-old'],audioMedia:['voice-old']});
  y.open();await y.flush();
  y.get('richVoice').onclick();y.get('richVoice').onclick();
  assert.equal(y.window.__activeRichNotePersist(),true);
- assert.deepEqual(y.item.audioMedia,['voice-old','record-1']);
- assert.deepEqual(y.item.media,['voice-old','record-1']);
+ assert.deepEqual(Array.from(y.item.audioMedia),['voice-old','record-1']);
+ assert.deepEqual(Array.from(y.item.media),['voice-old','record-1']);
  assert.equal(y.commits,1);
  assert.equal(y.checkpoints,1);
 
@@ -121,24 +125,24 @@ async function run(){
  assert.equal(z.pickerCalls[0].handler('photo-1'),true);
  assert.equal(z.pickerCalls[0].handler('photo-1'),false);
  assert.equal(z.window.__activeRichNotePersist(),true);
- assert.deepEqual(z.item.media,['photo-1']);
- assert.deepEqual(z.item.audioMedia,[]);
+ assert.deepEqual(Array.from(z.item.media),['photo-1']);
+ assert.deepEqual(Array.from(z.item.audioMedia),[]);
 
  // A callback arriving after the dialog is cancelled cannot attach to the note.
  const late=fixture({id:'n4',type:'note',media:[],audioMedia:[]});
  late.open();late.get('richPhotoPick').onclick();late.get('cancelModal').onclick();
  assert.equal(late.pickerCalls[0].handler('late-photo'),false);
- assert.deepEqual(late.item.media,[]);
+ assert.deepEqual(Array.from(late.item.media),[]);
 
  // Removing a draft audio attachment changes ownership only when saved.
  const removed=fixture({id:'n5',type:'note',media:['voice-old'],audioMedia:['voice-old']});
  removed.open();await removed.flush();
  removed.remove(0).onclick();
- assert.deepEqual(removed.item.media,['voice-old']);
- assert.deepEqual(removed.item.audioMedia,['voice-old']);
+ assert.deepEqual(Array.from(removed.item.media),['voice-old']);
+ assert.deepEqual(Array.from(removed.item.audioMedia),['voice-old']);
  assert.equal(removed.window.__activeRichNotePersist(),true);
- assert.deepEqual(removed.item.media,[]);
- assert.deepEqual(removed.item.audioMedia,[]);
+ assert.deepEqual(Array.from(removed.item.media),[]);
+ assert.deepEqual(Array.from(removed.item.audioMedia),[]);
 
  // Failed/missing preview returns a message rather than unhandled rejection.
  for(const options of [{rejectId:'lost'},{emptyId:'lost'}]){
