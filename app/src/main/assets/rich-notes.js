@@ -213,14 +213,30 @@ function openRichNote(item,isNew){
  };
  $('richDelete').onclick=()=>{
   if(window.__activeRichNoteCleanup!==cleanRecording||current!==parent||
-     window.isRecordLocked?.(parent))return;
+     window.isRecordLocked?.(parent)||!parent.items.includes(item))return;
   if(isNew){cleanRecording();release();$('modal').hidden=true;notify('Poznámka nebyla přidána');return}
   const before=parent.items,oldSelection=selected;
+  const metaKeys=['rev','syncClock','updatedAt','hierarchyConflict','width','height'];
+  const meta=metaKeys.map(key=>({key,exists:Object.hasOwn(parent,key),value:parent[key]}));
+  const savedBefore=typeof persistedSnapshot==='undefined'?null:persistedSnapshot;
+  const oldHistory=editStack.slice(),oldRedo=redoStack.slice();
   checkpoint();
   parent.items=parent.items.filter(x=>x!==item);selected=null;
-  if(!commitEditor()){
-   // A rejected save must not silently remove the note from the live editor.
-   if(current===parent){parent.items=before;selected=oldSelection}
+  const draftItems=parent.items;
+  let confirmed=false;
+  try{confirmed=commitEditor()===true}catch(error){notify('Smazání se nepodařilo uložit: '+error.message)}
+  if(!confirmed){
+   // The save may have rebased a newer remote record. Restore only this
+   // unchanged local draft, never a concurrent replacement.
+   if(current===parent&&parent.items===draftItems&&
+      (typeof state==='undefined'||state.records.includes(parent))&&
+      (typeof persistedSnapshot==='undefined'||persistedSnapshot===savedBefore)){
+    parent.items=before;selected=oldSelection;
+    for(const {key,exists,value} of meta){
+     if(exists)parent[key]=value;else delete parent[key];
+    }
+    editStack.splice(0,editStack.length,...oldHistory);redoStack=oldRedo;
+   }
    notify('Smazání nebylo potvrzeno, poznámka zůstává otevřená');
    return;
   }
