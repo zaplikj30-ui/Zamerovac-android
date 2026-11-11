@@ -51,7 +51,8 @@ function fixture(item,options={}){
  get('richAngle').value=String(item.insetRotation||0);
  const recordIds=[],opens=[],cancelCalls=[],editStack=Array.isArray(options.undoStart)?options.undoStart.slice():[],
        redoStack=['saved-redo'];
- const parent={id:'parent',items:options.newNote?[]:[item]};
+ const parent={id:'parent',rev:'rev-original',syncClock:{device:1},
+  updatedAt:'2026-11-11T00:00:00Z',items:options.newNote?[]:[item]};
  const window={isRecordLocked:()=>false};
  const stopOutcomes=Array.isArray(options.stopOutcomes)?options.stopOutcomes.slice():null;
  const Native={
@@ -67,12 +68,19 @@ function fixture(item,options={}){
     created.push(node);return node;
    }
   },
-  current:parent,selected:item.id,state:{records:[parent]},editStack,redoStack,
+  current:parent,selected:item.id,state:{records:[parent]},persistedSnapshot:'base',editStack,redoStack,
   photoSize:{w:800,h:600},native:true,Native,
   uid:()=> 'record-'+(++recordSerial),
   notify:text=>messages.push(text),
   checkpoint:()=>{checkpoints++;editStack.push(JSON.stringify(parent.items));if(editStack.length>50)editStack.shift();sandbox.redoStack.length=0},
-  commitEditor:()=>{commits++;return options.saveFails!==true},
+  commitEditor:()=>{
+   commits++;parent.rev='rev-after-edit';parent.syncClock={device:2};parent.updatedAt='newer';
+   if(options.rebaseOnSave){
+    sandbox.persistedSnapshot='server-newer';
+    parent.items=[{...item,text:'Newer remote data'}];
+   }
+   return options.saveFails!==true;
+  },
   finishDraw:()=>{},openAttachment:()=>{},openNestedPhoto:(...args)=>opens.push(args),
   pickMedia:(mode,handler)=>pickerCalls.push({mode,handler}),
   assetUrl:async id=>{
@@ -266,6 +274,9 @@ async function run(){
  assert.equal(writeFail.window.__activeRichNotePersist(),false,'Rejected note save must be reported');
  assert.equal(writeFail.item.text,'Původní','Rejected write cannot mutate saved text in memory');
  assert.equal(writeFail.item.insetWidth,200,'Rejected write cannot mutate original image geometry');
+ assert.equal(writeFail.parent.rev,'rev-original','Failed save must restore parent revision');
+ assert.deepEqual(writeFail.parent.syncClock,{device:1},'Failed save must restore sync clock');
+ assert.equal(writeFail.parent.updatedAt,'2026-11-11T00:00:00Z','Failed save must restore timestamp');
  assert.deepEqual(Array.from(writeFail.item.media),['voice'],'Rejected write cannot attach audio');
  assert.deepEqual(Array.from(writeFail.item.audioMedia),['voice']);
  assert.equal(writeFail.editStack.length,50,'History capacity must stay unchanged');
@@ -304,6 +315,15 @@ async function run(){
  assert.equal(orphan.recordIds.length,1,'New recording still stops after stale cleanup');
  orphan.get('cancelModal').onclick();
 
- console.log('PASS rich note: media drafts, async races, cleanup, retry, lock, delete and rollback of failed saves');
+ // A save that rebases a newer remote record must NEVER revert it to old text.
+ const remote=fixture({id:'n23',type:'note',media:[],audioMedia:[],text:'Old'},{
+  saveFails:true,rebaseOnSave:true});
+ remote.open();remote.get('richText').value='My local draft';
+ assert.equal(remote.window.__activeRichNotePersist(),false);
+ assert.equal(remote.parent.items[0].text,'Newer remote data','Rebase keeps newer remote item');
+ assert.equal(remote.parent.rev,'rev-after-edit','Rebase metadata may not be reverted');
+ assert.equal(remote.get('modal').hidden,false,'Conflicted edit remains visible to retry safely');
+
+ console.log('PASS rich note: media drafts, races, cleanup, retry, lock, failed-save metadata rollback and conflict preservation');
 }
 run().catch(err=>{console.error(err);process.exitCode=1});
