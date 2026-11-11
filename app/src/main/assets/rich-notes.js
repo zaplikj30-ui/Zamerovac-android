@@ -3,6 +3,11 @@
 let detailEditorParent=null,detailEditorNote=null,detailEditorStartItems=null;
 function openRichNote(item,isNew){
  if(!current||window.isRecordLocked?.(current)){notify('Záznam je uzamčen');return}
+ // Refuse a second dialog while the first still has an unsaved draft.
+ // Replacing it silently could discard attachments or leave an old picker callback.
+ if(window.__activeRichNoteCleanup&&$('modal')?.hidden===false){
+  notify('Nejdřív ulož nebo zruš otevřenou poznámku');return;
+ }
  const parent=current;
  const attachments=Array.isArray(item.media)?item.media.slice():[];
  // Audio membership is a local draft until Save. Cancel must not mutate the original note.
@@ -15,16 +20,31 @@ function openRichNote(item,isNew){
  const previousCancel=$('cancelModal').onclick;
  $('modal')?.querySelector('.dialog')?.classList.add('richNoteDialog');
  const cleanRecording=()=>{window.__audioPermissionRetry=null;if(recording){if(native){if(typeof Native.cancelAudio==='function')Native.cancelAudio();else Native.stopAudio();}recording=null}};
- const release=()=>{$('modal')?.querySelector('.dialog')?.classList.remove('richNoteDialog');if(window.__activeRichNoteCleanup===cleanRecording){window.__activeRichNoteCleanup=null;window.__activeRichNoteRelease=null;window.__activeRichNotePersist=null}$('cancelModal').onclick=previousCancel};
+ const release=()=>{
+  if(window.__activeRichNoteCleanup!==cleanRecording)return;
+  $('modal')?.querySelector('.dialog')?.classList.remove('richNoteDialog');
+  window.__activeRichNoteCleanup=null;
+  window.__activeRichNoteRelease=null;
+  window.__activeRichNotePersist=null;
+  $('cancelModal').onclick=previousCancel;
+ };
  window.__activeRichNoteCleanup=cleanRecording;
  window.__activeRichNoteRelease=release;
  $('cancelModal').onclick=()=>{cleanRecording();release();$('modal').hidden=true;window.modalOK=null};
  function persist(){
+  if(window.__activeRichNoteCleanup!==cleanRecording||$('modal').hidden||current!==parent||
+     window.isRecordLocked?.(parent)||(!isNew&&!parent.items.includes(item))){
+   notify('Poznámku už nelze bezpečně uložit v tomto dialogu');return false;
+  }
   // Capture the committed note before mutating it. A checkpoint after text/media
   // edits records the new value and makes Undo silently leave that value in place.
-  if(recording&&!Native.stopAudio()){recording=null;$('richVoice').textContent='🎙 Nahrát hlas';return false}
+  if(recording){
+   if(!Native.stopAudio()){notify('Záznam hlasu se nepodařilo bezpečně dokončit');return false}
+   if(!attachments.includes(recording))attachments.push(recording);
+   audioIds.add(recording);recording=null;
+   $('richVoice').textContent='🎙 Nahrát hlas';render();
+  }
   checkpoint();
-  if(recording){if(!attachments.includes(recording))attachments.push(recording);audioIds.add(recording);recording=null;}
   item.text=$('richText').value.trim();
   const hadAttachment=Array.isArray(item.media)&&item.media.length>0;
   item.media=attachments.slice();
@@ -84,7 +104,10 @@ function openRichNote(item,isNew){
      const audio=document.createElement('audio');audio.controls=true;audio.src=url;target.append(audio);return;
     }
     const img=document.createElement('img');img.alt='Přiložená detailní fotografie';
-    img.onerror=()=>{img.remove();const audio=document.createElement('audio');audio.src=url;audio.controls=true;target.append(audio)};
+    img.onerror=()=>{
+     if(!target.isConnected||$('modal').hidden||window.__activeRichNoteCleanup!==cleanRecording)return;
+     img.remove();const audio=document.createElement('audio');audio.src=url;audio.controls=true;target.append(audio);
+    };
     img.src=url;target.append(img);
    }catch(error){
     if(target.isConnected&&window.__activeRichNoteCleanup===cleanRecording)target.textContent='Náhled přílohy není dostupný';
@@ -92,7 +115,14 @@ function openRichNote(item,isNew){
   });
  };
  render();
- const photoHandler=(id)=>{if(window.__activeRichNoteCleanup!==cleanRecording||current!==parent||window.isRecordLocked?.(parent)){notify('Původní poznámka už není dostupná; příloha nebyla připojena jinam.');return false}if(attachments.includes(id))return false;attachments.push(id);render();return true};
+ const photoHandler=(id)=>{
+  if(window.__activeRichNoteCleanup!==cleanRecording||$('modal').hidden||current!==parent||
+     window.isRecordLocked?.(parent)||(!isNew&&!parent.items.includes(item))){
+   notify('Původní poznámka už není dostupná; příloha nebyla připojena jinam.');return false;
+  }
+  if(!id||attachments.includes(id))return false;
+  attachments.push(id);render();return true;
+ };
  $('richPhotoCamera').onclick=()=>pickMedia('camera',photoHandler);
  $('richPhotoPick').onclick=()=>pickMedia('media',photoHandler);
  $('richVoice').onclick=()=>{
@@ -115,13 +145,25 @@ function openRichNote(item,isNew){
   }
  };
  $('richEditDetail').onclick=()=>{
-  if(!attachments.length){notify('Nejdřív připoj detailní fotografii');return}
+  const photoId=attachments.find(id=>!audioIds.has(id));
+  if(!photoId){notify('Nejdřív připoj detailní fotografii');return}
   if(!persist())return;$('modal').hidden=true;
-  openNestedPhoto(parent,item,attachments[0]);
+  openNestedPhoto(parent,item,photoId);
  };
  $('richDelete').onclick=()=>{
+  if(window.__activeRichNoteCleanup!==cleanRecording||current!==parent||
+     window.isRecordLocked?.(parent))return;
   if(isNew){cleanRecording();release();$('modal').hidden=true;notify('Poznámka nebyla přidána');return}
-  cleanRecording();release();checkpoint();parent.items=parent.items.filter(x=>x.id!==item.id);selected=null;commitEditor();$('modal').hidden=true;
+  const before=parent.items,oldSelection=selected;
+  checkpoint();
+  parent.items=parent.items.filter(x=>x!==item);selected=null;
+  if(!commitEditor()){
+   // A rejected save must not silently remove the note from the live editor.
+   if(current===parent){parent.items=before;selected=oldSelection}
+   notify('Smazání nebylo potvrzeno, poznámka zůstává otevřená');
+   return;
+  }
+  cleanRecording();release();$('modal').hidden=true;
  };
 }
 function openNestedPhoto(parent,item,mediaId){
