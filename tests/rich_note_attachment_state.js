@@ -49,7 +49,7 @@ function fixture(item,options={}){
  get('richText').value=item.text||'';
  get('richSize').value=String(item.insetWidth||240);
  get('richAngle').value=String(item.insetRotation||0);
- const recordIds=[];
+ const recordIds=[],opens=[];
  const parent={id:'parent',items:[item]};
  const window={isRecordLocked:()=>false};
  const Native={
@@ -65,12 +65,12 @@ function fixture(item,options={}){
     created.push(node);return node;
    }
   },
-  current:parent,photoSize:{w:800,h:600},native:true,Native,
+  current:parent,selected:item.id,photoSize:{w:800,h:600},native:true,Native,
   uid:()=> 'record-'+(++recordSerial),
   notify:text=>messages.push(text),
   checkpoint:()=>{checkpoints++},
-  commitEditor:()=>{commits++;return true},
-  finishDraw:()=>{},openAttachment:()=>{},openNestedPhoto:()=>{},
+  commitEditor:()=>{commits++;return options.saveFails!==true},
+  finishDraw:()=>{},openAttachment:()=>{},openNestedPhoto:(...args)=>opens.push(args),
   pickMedia:(mode,handler)=>pickerCalls.push({mode,handler}),
   assetUrl:async id=>{
    if(options.rejectId===id)throw Error('missing asset');
@@ -86,7 +86,7 @@ function fixture(item,options={}){
  vm.runInContext(code,sandbox,{filename:'rich-notes.js'});
  const flush=()=>new Promise(resolve=>setImmediate(resolve));
  return {
-  get,window,item,parent,Native,created,recordIds,messages,focuses,pickerCalls,
+  get,window,item,parent,Native,created,recordIds,messages,focuses,pickerCalls,opens,
   open:()=>sandbox.openRichNote(item,false),flush,
   preview:i=>previews.get(i),
   remove:i=>attachmentContainer.querySelectorAll('[data-remove]')[i],
@@ -150,6 +150,76 @@ async function run(){
   lost.open();await lost.flush();
   assert.equal(lost.preview(0)?.textContent,'Náhled přílohy není dostupný');
  }
- console.log('PASS rich note: preview, cancel, save, duplicate callback, late callback, remove, missing media, keyboard focus');
+ // An audio-only note must not try to open its sound bytes as a nested photograph.
+ const audioOnly=fixture({id:'n7',type:'note',media:['voice'],audioMedia:['voice']});
+ audioOnly.open();await audioOnly.flush();
+ audioOnly.get('richEditDetail').onclick();
+ assert.equal(audioOnly.opens.length,0,'Audio-only notes cannot enter the photo editor');
+ assert.equal(audioOnly.commits,0,'Audio-only editor request must not save');
+ assert.ok(audioOnly.messages.some(v=>v.includes('fotografii')),'Explain missing detail photo');
+
+ // When audio is listed before the actual photo, select the photo by media ID.
+ const mixed=fixture({id:'n8',type:'note',media:['voice','image'],audioMedia:['voice']});
+ mixed.open();await mixed.flush();
+ mixed.get('richEditDetail').onclick();
+ assert.equal(mixed.opens.length,1);
+ assert.equal(mixed.opens[0][2],'image','Nested editor must receive the non-audio media');
+
+ // Stale picker callback must not reconnect media after its note has been deleted.
+ const detached=fixture({id:'n9',type:'note',media:[],audioMedia:[]});
+ detached.open();detached.get('richPhotoPick').onclick();
+ detached.parent.items.splice(0,1);
+ assert.equal(detached.pickerCalls[0].handler('photo-stale'),false);
+ assert.deepEqual(Array.from(detached.item.media),[]);
+
+ // Reject a second note dialog, rather than overwrite the first unsaved draft.
+ const nested=fixture({id:'n10',type:'note',media:[],audioMedia:[]});
+ nested.open();
+ const firstCleanup=nested.window.__activeRichNoteCleanup;
+ // A second note uses the same runtime and must not overwrite its active session.
+ // Keep a reference to the actual runtime method (fixture.open uses its initial note).
+ nested.open();
+ assert.equal(nested.window.__activeRichNoteCleanup,firstCleanup);
+ assert.ok(nested.messages.some(v=>v.includes('otevřenou poznámku')));
+
+ // Image fallback after Cancel must not append a player into a closed dialog.
+ const lateImage=fixture({id:'n11',type:'note',media:['image'],audioMedia:[]});
+ lateImage.open();await lateImage.flush();
+ const image=lateImage.preview(0)?.children[0];
+ assert.equal(image?.tag,'img','Photo uses an image element');
+ lateImage.get('cancelModal').onclick();
+ image.onerror();
+ assert.equal(lateImage.preview(0)?.children.length,1,'Late image error may not append player');
+
+ // A failed save of deletion keeps the existing note and the dialog open.
+ const failedDelete=fixture({id:'n12',type:'note',media:['image'],audioMedia:[]},{saveFails:true});
+ failedDelete.open();failedDelete.get('richDelete').onclick();
+ assert.equal(failedDelete.parent.items.length,1,'Failed delete retains original note');
+ assert.equal(failedDelete.parent.items[0],failedDelete.item);
+ assert.equal(failedDelete.get('modal').hidden,false,'Failed delete must leave dialog for retry');
+ assert.ok(failedDelete.messages.some(v=>v.includes('Smazání nebylo potvrzeno')));
+
+ const goodDelete=fixture({id:'n13',type:'note',media:['image'],audioMedia:[]});
+ goodDelete.open();goodDelete.get('richDelete').onclick();
+ assert.equal(goodDelete.parent.items.length,0,'Confirmed delete removes selected note');
+ assert.equal(goodDelete.get('modal').hidden,true,'Confirmed delete closes dialog');
+
+ // While recording, a failed audio stop blocks Save without altering note data.
+ const badAudio=fixture({id:'n14',type:'note',media:[],audioMedia:[]},{stopAudio:false});
+ badAudio.open();badAudio.get('richVoice').onclick();
+ assert.equal(badAudio.window.__activeRichNotePersist(),false,'Failed stop must block Save');
+ assert.deepEqual(Array.from(badAudio.item.media),[]);
+ assert.equal(badAudio.get('modal').hidden,false,'Failed stop keeps editor open');
+ assert.equal(badAudio.commits,0,'No save after failed audio stop');
+
+ // Lock acquired after opening: fail closed, including picker callbacks.
+ const locked=fixture({id:'n15',type:'note',media:[],audioMedia:[]});
+ locked.open();locked.get('richPhotoPick').onclick();
+ locked.window.isRecordLocked=()=>true;
+ assert.equal(locked.pickerCalls[0].handler('photo-locked'),false);
+ assert.equal(locked.window.__activeRichNotePersist(),false);
+ assert.deepEqual(Array.from(locked.item.media),[]);
+
+ console.log('PASS rich note: preview, cancel, save, duplicate callback, late callback, remove, failed media, keyboard, photo selection, session ownership, delete failure, audio stop and lock');
 }
 run().catch(err=>{console.error(err);process.exitCode=1});
