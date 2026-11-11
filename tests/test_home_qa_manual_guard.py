@@ -1,5 +1,6 @@
 """Fail-closed tests for owner-only permanent HOME QA. No runner/cloud needed."""
 import importlib.util
+import json
 from pathlib import Path
 import tempfile
 import unittest
@@ -90,6 +91,99 @@ class ManualGuardTest(unittest.TestCase):
         self.assertIn('cancel-in-progress: false', text)
         self.assertIn('ref: ${{ env.QA_ALLOWED_SHA }}', text)
         self.assertNotIn('publish_release', text)
+
+    def test_evidence_fresh_after_interrupted_attempt(self):
+        temp = self.root / "runner-temp"
+        temp.mkdir()
+        envfile = self.root / "github-env"
+        envfile.write_text("")
+        settings = dict(self.env, QA_ALLOWED_SHA=APPROVED, GITHUB_RUN_ID="12345",
+                        GITHUB_RUN_ATTEMPT="2", RUNNER_TEMP=str(temp),
+                        GITHUB_ENV=str(envfile))
+        with mock.patch.object(guard.subprocess, 'check_output', return_value=MAIN_SHA):
+            first = guard.prepare_evidence(settings, self.root)
+            first_result = first / "Zamerovac-QA/results"
+            self.assertEqual(json.loads((first_result / "run.json").read_text()),
+                             dict(kind="synthetic-home-qa", source_sha=APPROVED,
+                                  trusted_sha=MAIN_SHA, run_id="12345",
+                                  run_attempt="2"))
+            (first_result / "old-sensitive-synthetic-result.txt").write_text("OLD")
+            second = guard.prepare_evidence(settings, self.root)
+        self.assertNotEqual(first, second)
+        self.assertNotIn("old-sensitive", "\n".join(
+            p.name for p in (second / "Zamerovac-QA/results").iterdir()))
+        self.assertEqual([p.name for p in (second / "Zamerovac-QA/results").iterdir()],
+                         ["run.json"])
+        self.assertTrue((first_result / "old-sensitive-synthetic-result.txt").exists())
+        lines = envfile.read_text().splitlines()
+        self.assertEqual(lines[-2:], ["QA_EVIDENCE_DIR=" + str(second),
+                                       "LOCALAPPDATA=" + str(second)])
+
+    def test_unauthorized_sha_and_stale_evidence_never_upload(self):
+        temp = self.root / "runner-temp"
+        temp.mkdir()
+        stale = temp / "old-run" / "Zamerovac-QA" / "results"
+        stale.mkdir(parents=True)
+        (stale / "old.txt").write_text("stale")
+        envfile = self.root / "github-env"
+        envfile.write_text("")
+        settings = dict(self.env, QA_ALLOWED_SHA=APPROVED, GITHUB_RUN_ID="333",
+                        GITHUB_RUN_ATTEMPT="1", RUNNER_TEMP=str(temp),
+                        GITHUB_ENV=str(envfile),
+                        REQUESTED_SOURCE_SHA="f"*40)
+        with mock.patch.object(guard.subprocess, 'check_output', return_value=MAIN_SHA):
+            with self.assertRaisesRegex(ValueError, "not independently allowed"):
+                guard.prepare_evidence(settings, self.root)
+        self.assertEqual(envfile.read_text(), "")
+        self.assertEqual(list(temp.glob("zamerovac-home-*")), [])
+        self.assertEqual((stale / "old.txt").read_text(), "stale")
+
+    def test_evidence_identity_errors_fail_closed(self):
+        temp = self.root / "runner-temp"
+        temp.mkdir()
+        envfile = self.root / "github-env"
+        envfile.write_text("")
+        settings = dict(self.env, QA_ALLOWED_SHA=APPROVED, GITHUB_RUN_ID="1",
+                        GITHUB_RUN_ATTEMPT="1", RUNNER_TEMP=str(temp),
+                        GITHUB_ENV=str(envfile))
+        with mock.patch.object(guard.subprocess, 'check_output', return_value=MAIN_SHA):
+            for change in (dict(GITHUB_RUN_ID="1\nX=1"),
+                           dict(GITHUB_RUN_ATTEMPT="x"),
+                           dict(QA_ALLOWED_SHA="f"*40),
+                           dict(RUNNER_TEMP=str(temp / "missing"))):
+                with self.subTest(change=change), self.assertRaises(ValueError):
+                    guard.prepare_evidence(dict(settings, **change), self.root)
+        self.assertEqual(list(temp.glob("zamerovac-home-*")), [])
+        self.assertEqual(envfile.read_text(), "")
+
+    def test_workflow_guards_artifact_upload_and_orders_guard_tests(self):
+        text = (ROOT / '.github/workflows/home-qa-manual.yml').read_text()
+        tests_step = text.index("Trusted-main fail-closed guard regression tests")
+        auth_step = text.index("id: authorize")
+        source_checkout = text.index("Read-only checkout of explicitly approved source SHA")
+        source_check = text.index("id: source_verified")
+        evidence_step = text.index("id: evidence_ready")
+        quick_step = text.index("id: quick")
+        upload_step = text.index("Upload quick test evidence")
+        self.assertTrue(tests_step < auth_step < source_checkout <
+                        source_check < evidence_step < quick_step < upload_step)
+        tests_chunk = text[tests_step:auth_step]
+        self.assertIn("python -m unittest discover -s tests -p test_home_qa_manual_guard.py -v",
+                      tests_chunk)
+        self.assertIn("if errorlevel 1 exit /b 1", tests_chunk)
+        upload = text[upload_step:]
+        for gate in ("steps.authorize.outcome == 'success'",
+                     "steps.source_verified.outcome == 'success'",
+                     "steps.evidence_ready.outcome == 'success'",
+                     "env.QA_QUICK_STARTED == 'true'",
+                     "steps.quick.outcome == 'success'",
+                     "steps.quick.outcome == 'failure'"):
+            self.assertIn(gate, upload)
+        self.assertIn("path: ${{ env.QA_EVIDENCE_DIR }}", upload)
+        self.assertNotIn("path: qa-evidence/", upload)
+        self.assertIn("github.run_id", upload)
+        self.assertIn("github.run_attempt", upload)
+        self.assertIn("echo QA_QUICK_STARTED=true", text[quick_step:upload_step])
 
 
 if __name__ == '__main__':
