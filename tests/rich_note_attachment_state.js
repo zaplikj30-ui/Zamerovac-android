@@ -5,6 +5,11 @@ const vm=require('vm');
 const assert=require('node:assert/strict');
 
 const source=fs.readFileSync('app/src/main/assets/rich-notes.js','utf8');
+const upgrade=fs.readFileSync('app/src/main/assets/upgrade.js','utf8');
+const historyStart=upgrade.indexOf('const editorHistoryBaseline=new WeakMap();');
+const historyEnd=upgrade.indexOf('function restoreVersion(){',historyStart);
+assert.ok(historyStart>=0&&historyEnd>historyStart,'Missing production history wrapper');
+const realHistoryWrapper=upgrade.slice(historyStart,historyEnd);
 const a=source.indexOf('function openRichNote(item,isNew){');
 const b=source.indexOf('function openNestedPhoto(',a);
 assert.ok(a>=0&&b>a,'Missing real rich-note implementation');
@@ -53,12 +58,26 @@ function fixture(item,options={}){
        redoStack=['saved-redo'];
  const parent={id:'parent',rev:'rev-original',syncClock:{device:1},
   updatedAt:'2026-11-11T00:00:00Z',items:options.newNote?[]:[item]};
+ if(Object.hasOwn(options,'versionHistory'))parent.versionHistory=options.versionHistory;
  const window={isRecordLocked:()=>false};
  const stopOutcomes=Array.isArray(options.stopOutcomes)?options.stopOutcomes.slice():null;
+ const finishedAudio=new Map();
+ let recorderActive=false,recorderId=null,stopCalls=0;
  const Native={
-  startAudio:id=>{recordIds.push(id);return true},
-  stopAudio:()=>stopOutcomes?.length?stopOutcomes.shift():options.stopAudio!==false,
-  cancelAudio:()=>{cancelCalls.push('cancel');return true}
+  startAudio:id=>{
+   if(recorderActive)return false;
+   recorderActive=true;recorderId=id;recordIds.push(id);return true;
+  },
+  stopAudio:()=>{
+   ++stopCalls;
+   if(!recorderActive)return false;
+   // Real AudioCapture.stop() releases the recorder in finally, even on false.
+   recorderActive=false;
+   const ok=stopOutcomes?.length?stopOutcomes.shift():options.stopAudio!==false;
+   if(ok)finishedAudio.set(recorderId,new Uint8Array([1,9,4,42]));
+   recorderId=null;return ok;
+  },
+  cancelAudio:()=>{cancelCalls.push('cancel');recorderActive=false;recorderId=null;return true}
  };
  const sandbox={
   window,URL:{revokeObjectURL:id=>revokedUrls.push(id)},document:{
@@ -78,6 +97,7 @@ function fixture(item,options={}){
    if(options.rebaseOnSave){
     sandbox.persistedSnapshot='server-newer';
     parent.items=[{...item,text:'Newer remote data'}];
+    if(options.rebaseHistory)parent.versionHistory=[{time:'remote',items:JSON.stringify(parent.items)}];
    }
    return options.saveFails!==true;
   },
@@ -89,15 +109,18 @@ function fixture(item,options={}){
    return 'blob:'+id;
   },
   modal:(title,markup,cb)=>{modalEl.hidden=false;window.modalOK=cb},
+  logEvent:()=>{},
   escapeHtml:input=>String(input).replace(/&/g,'&amp;').replace(/</g,'&lt;'),
   modalFocusTimer:null,clearTimeout:()=>{},console
  };
  sandbox.$=get;
  vm.createContext(sandbox);
  vm.runInContext(code,sandbox,{filename:'rich-notes.js'});
+ if(options.useProductionHistory)vm.runInContext(realHistoryWrapper,sandbox,{filename:'upgrade.js'});
  const flush=()=>new Promise(resolve=>setImmediate(resolve));
  return {
-  get,window,item,parent,Native,created,recordIds,cancelCalls,messages,focuses,pickerCalls,opens,revokedUrls,
+  get,window,item,parent,Native,created,recordIds,cancelCalls,messages,focuses,pickerCalls,opens,revokedUrls,finishedAudio,
+  get stopCalls(){return stopCalls},get recorderActive(){return recorderActive},
   editStack,get redoStack(){return sandbox.redoStack},
   open:()=>sandbox.openRichNote(item,!!options.newNote),flush,
   preview:i=>previews.get(i),
@@ -260,17 +283,22 @@ async function run(){
  pending.open();pending.get('cancelModal').onclick();await pending.flush();
  assert.deepEqual(pending.revokedUrls,['blob:voice'],'Late preview URL must not leak');
 
- // Native stop may fail transiently. Keep state until a successful retry.
+ // Native stop failure closes the recorder; a new recording ID is mandatory.
  const retry=fixture({id:'n19',type:'note',media:[],audioMedia:[]},{stopOutcomes:[false,true]});
  retry.open();retry.get('richVoice').onclick();
  retry.get('richVoice').onclick();
- assert.equal(retry.get('richVoice').textContent,'■ Zastavit nahrávání','Failed Stop retains recording state');
- assert.deepEqual(Array.from(retry.item.media),[],'Failed Stop does not link invalid audio');
+ assert.equal(retry.get('richVoice').textContent,'🎙 Nahrát hlas','Failed Stop resets the recorder state');
+ assert.equal(retry.recorderActive,false,'Java closes recorder on false');
+ assert.deepEqual(Array.from(retry.item.media),[],'Failed Stop cannot link incomplete bytes');
+ assert.equal(retry.stopCalls,1);
+ retry.get('richVoice').onclick(); // New start, not another stop on old recorder.
+ assert.deepEqual(retry.recordIds,['record-1','record-2'],'New attempt needs a new ID');
  retry.get('richVoice').onclick();await retry.flush();
- assert.equal(retry.get('richVoice').textContent,'🎙 Nahrát hlas','Retry Stop succeeds');
+ assert.equal(retry.stopCalls,2);
+ assert.equal(retry.get('richVoice').textContent,'🎙 Nahrát hlas','New recording stopped successfully');
  assert.deepEqual(Array.from(retry.item.audioMedia),[],'Audio stays draft before Save');
  assert.equal(retry.window.__activeRichNotePersist(),true);
- assert.deepEqual(Array.from(retry.item.audioMedia),['record-1'],'Successful retry saved exactly once');
+ assert.deepEqual(Array.from(retry.item.audioMedia),['record-2'],'Only complete new recording is saved');
 
  // Rejected Save must not leave a mutated item that a later unrelated save publishes.
  const writeFailureOptions={saveFails:true,undoStart:Array.from({length:50},(_,i)=>'history-'+i)};
@@ -339,6 +367,85 @@ async function run(){
  remoteDelete.open();remoteDelete.get('richDelete').onclick();
  assert.equal(remoteDelete.parent.items[0].text,'Newer remote data','Failed delete preserves newer remote record');
  assert.equal(remoteDelete.parent.rev,'rev-after-edit','Remote revision must remain intact');
+
+
+ // QA-107-01: exercise the *real production* upgrade.js history wrapper.
+ // A failed commit must restore all 12 previous items, including the oldest.
+ const twelve=Array.from({length:12},(_,i)=>({
+  time:'2026-10-'+String(i+1).padStart(2,'0')+'T00:00:00Z',
+  items:JSON.stringify([{id:'historical',text:'t'+i,media:['original-'+i]}])
+ }));
+ const originalHistory=JSON.stringify(twelve);
+ const rejectHistoryOpts={versionHistory:twelve.slice(),useProductionHistory:true,saveFails:true,
+  undoStart:Array.from({length:50},(_,i)=>'undo-'+i)};
+ const historySave=fixture({id:'hist-save',type:'note',text:'Original',media:['original-photo'],audioMedia:[]},rejectHistoryOpts);
+ historySave.open();historySave.get('richText').value='NEW UNSAVED';
+ assert.equal(historySave.window.__activeRichNotePersist(),false);
+ assert.equal(JSON.stringify(historySave.parent.versionHistory),originalHistory,
+  'Failed save must preserve all 12 exact historical snapshots');
+ assert.equal(historySave.parent.versionHistory[0].items,twelve[0].items,'Oldest version cannot be evicted');
+ assert.equal(historySave.item.text,'Original','Rejected data must revert');
+ assert.equal(historySave.editStack.length,50,'Undo history must preserve capacity');
+ assert.equal(historySave.editStack[0],'undo-0');
+ assert.deepEqual(Array.from(historySave.redoStack),['saved-redo']);
+ rejectHistoryOpts.saveFails=false;
+ assert.equal(historySave.window.__activeRichNotePersist(),true,'Retry must succeed');
+ assert.equal(historySave.parent.versionHistory.length,12,'Wrapper history remains bounded to 12');
+ assert.equal(historySave.parent.versionHistory[0].items,twelve[1].items,
+  'Only successful retry can evict oldest history');
+ assert.ok(historySave.parent.versionHistory[11].items.includes('NEW UNSAVED'),
+  'Committed retry must contain the saved note content');
+
+ const deleteVersions=twelve.slice();
+ const deleteOpts={versionHistory:deleteVersions,useProductionHistory:true,saveFails:true};
+ const historyDelete=fixture({id:'hist-delete',type:'note',text:'Original'},deleteOpts);
+ historyDelete.open();historyDelete.get('richDelete').onclick();
+ assert.equal(JSON.stringify(historyDelete.parent.versionHistory),originalHistory,
+  'Failed Delete must not leave tombstone [] or drop old history');
+ assert.equal(historyDelete.parent.items[0],historyDelete.item);
+ deleteOpts.saveFails=false;
+ historyDelete.get('richDelete').onclick();
+ assert.equal(historyDelete.parent.items.length,0);
+ assert.equal(historyDelete.parent.versionHistory.length,12);
+ assert.equal(historyDelete.parent.versionHistory[0].items,twelve[1].items);
+ assert.equal(historyDelete.parent.versionHistory[11].items,'[]');
+
+ const noVersionOpts={useProductionHistory:true,saveFails:true};
+ const noVersion=fixture({id:'no-version',type:'note',text:'Old'},noVersionOpts);
+ noVersion.open();noVersion.get('richText').value='Unsaved';
+ assert.equal(noVersion.window.__activeRichNotePersist(),false);
+ assert.equal(Object.hasOwn(noVersion.parent,'versionHistory'),false,
+  'Failed save must preserve absence of versionHistory field');
+
+ // CAS rebase also changes history: never force an older local snapshot onto it.
+ const newerHistory=fixture({id:'newer-hist',type:'note',text:'Original'},
+  {useProductionHistory:true,versionHistory:twelve.slice(),
+   saveFails:true,rebaseOnSave:true,rebaseHistory:true});
+ newerHistory.open();newerHistory.get('richText').value='Old local draft';
+ assert.equal(newerHistory.window.__activeRichNotePersist(),false);
+ assert.equal(newerHistory.parent.versionHistory[0].time,'remote');
+ assert.equal(newerHistory.parent.items[0].text,'Newer remote data');
+
+ // QA-107-03 safety-only: a stopped audio file has complete committed bytes.
+ // Cancel and Save failure must not delete originals without a durable GC audit.
+ const retained=fixture({id:'kept-audio',type:'note',media:[],audioMedia:[]});
+ retained.open();retained.get('richVoice').onclick();retained.get('richVoice').onclick();
+ const bytesBefore=Array.from(retained.finishedAudio.get('record-1'));
+ retained.get('cancelModal').onclick();
+ assert.deepEqual(Array.from(retained.item.media),[],'Cancel cannot publish draft audio');
+ assert.deepEqual(Array.from(retained.finishedAudio.get('record-1')),bytesBefore,
+  'Cancel must retain byte-exact committed media');
+ assert.ok(retained.messages.some(m=>m.includes('Nepřipojená hlasová')),
+  'Cancel must warn that the retained recording is not attached');
+
+ const failureRetains=fixture({id:'failed-audio-save',type:'note',media:[],audioMedia:[]},{saveFails:true});
+ failureRetains.open();failureRetains.get('richVoice').onclick();failureRetains.get('richVoice').onclick();
+ const completedBefore=Array.from(failureRetains.finishedAudio.get('record-1'));
+ assert.equal(failureRetains.window.__activeRichNotePersist(),false);
+ failureRetains.get('cancelModal').onclick();
+ assert.deepEqual(Array.from(failureRetains.finishedAudio.get('record-1')),completedBefore);
+ assert.deepEqual(Array.from(failureRetains.item.media),[]);
+ assert.ok(failureRetains.messages.some(m=>m.includes('Nepřipojená hlasová')));
 
  console.log('PASS rich note: media drafts, races, cleanup, retry, lock, rejected delete/save rollback and newer-data protection');
 }

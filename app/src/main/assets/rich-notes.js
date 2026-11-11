@@ -21,6 +21,46 @@ function openRichNote(item,isNew){
  // Respect an already saved custom size (including deliberately tiny insets).
  const initialInsetWidth=Number(item.insetWidth)||Math.max(140,Math.min(1400,Math.round(photoSize.w*.42)));
  let recording=null;
+ // MediaStaging.commit already saved complete original bytes at Stop.
+ // Without audited GC, cancelling this draft must never delete that file.
+ const completedDraftAudio=new Set();
+ const warnRetainedAudio=()=>{
+  if([...completedDraftAudio].some(id=>!Array.isArray(item.media)||!item.media.includes(id)))
+   notify('Nepřipojená hlasová nahrávka zůstala uložená; bezpečné automatické čištění zatím není dostupné');
+ };
+ const failedStop=()=>{
+  recording=null; // AudioCapture.stop() closes the recorder on false.
+  if($('richVoice'))$('richVoice').textContent='🎙 Nahrát hlas';
+ };
+ const captureVersions=()=>({
+  exists:Object.hasOwn(parent,'versionHistory'),original:parent.versionHistory,
+  entries:Array.isArray(parent.versionHistory)?parent.versionHistory.slice():null
+ });
+ // Accept only the exact local append/trim from upgrade.js.
+ // A foreign or rebased history may never be overwritten.
+ const localVersions=(before,serialized)=>{
+  const now=parent.versionHistory,old=before.entries;
+  if(before.exists&&now===before.original&&!Array.isArray(now))return true;
+  if(!before.exists&&now===undefined)return true;
+  if(!Array.isArray(now))return false;
+  if(old&&now!==before.original)return false;
+  if(old&&now.length===old.length&&old.every((entry,i)=>now[i]===entry))return true;
+  if(old&&old.length){
+   if(old[old.length-1]?.items===serialized)return false;
+   const kept=old.length===12?old.slice(1):old;
+   return now.length===kept.length+1&&kept.every((entry,i)=>now[i]===entry)&&
+    now[now.length-1]?.items===serialized;
+  }
+  // Empty/missing history may receive an editor baseline and a new snapshot.
+  return now.length>=1&&now.length<=2&&now[now.length-1]?.items===serialized;
+ };
+ const restoreVersions=before=>{
+  if(!before.exists){delete parent.versionHistory;return}
+  if(before.entries){
+   before.original.splice(0,before.original.length,...before.entries);
+   parent.versionHistory=before.original;
+  }else parent.versionHistory=before.original;
+ };
  // In browser previews use temporary blob URLs. Revoke them when rerendering
  // or closing this dialog so repeated image/audio inspection cannot leak memory.
  const previewUrls=new Set();
@@ -44,6 +84,7 @@ function openRichNote(item,isNew){
   window.__activeRichNoteRelease=null;
   window.__activeRichNotePersist=null;
   clearPreviewUrls();
+  warnRetainedAudio();
   $('cancelModal').onclick=previousCancel;
  };
  window.__activeRichNoteCleanup=cleanRecording;
@@ -57,7 +98,10 @@ function openRichNote(item,isNew){
   // Capture the committed note before mutating it. A checkpoint after text/media
   // edits records the new value and makes Undo silently leave that value in place.
   if(recording){
-   if(!Native.stopAudio()){notify('Záznam hlasu se nepodařilo bezpečně dokončit');return false}
+   if(!Native.stopAudio()){
+    failedStop();notify('Nahrávka se nepodařila. Spusť nové nahrávání.');return false;
+   }
+   completedDraftAudio.add(recording);
    if(!attachments.includes(recording))attachments.push(recording);
    audioIds.add(recording);recording=null;
    $('richVoice').textContent='🎙 Nahrát hlas';render();
@@ -73,6 +117,7 @@ function openRichNote(item,isNew){
   const savedBefore=typeof persistedSnapshot==='undefined'?null:persistedSnapshot;
   const wasNew=isNew;
   const oldHistory=editStack.slice(),oldRedo=redoStack.slice();
+  const versionsBefore=captureVersions(),itemsBefore=parent.items;
   checkpoint();
   item.text=$('richText').value.trim();
   const hadAttachment=Array.isArray(item.media)&&item.media.length>0;
@@ -93,15 +138,16 @@ function openRichNote(item,isNew){
   // All changes to the note are in memory at this point; only a successful
   // save may make them a committed edit or expose them via a new detail editor.
   const applied=JSON.stringify(editedKeys.map(key=>item[key]));
+  const serializedItems=JSON.stringify(parent.items||[]);
   let confirmed=false;
   try{confirmed=commitEditor()===true}catch(error){notify('Poznámku se nepodařilo uložit: '+error.message)}
   if(!confirmed){
    // A remote CAS reconciliation may have installed newer data; never roll it
    // back just because our local save was rejected.
    const unchangedBase=typeof persistedSnapshot==='undefined'||persistedSnapshot===savedBefore;
-   if(unchangedBase&&current===parent&&parent.items.includes(item)&&
+   if(unchangedBase&&current===parent&&parent.items===itemsBefore&&parent.items.includes(item)&&
       (typeof state==='undefined'||state.records.includes(parent))&&
-      JSON.stringify(editedKeys.map(key=>item[key]))===applied){
+      JSON.stringify(editedKeys.map(key=>item[key]))===applied&&localVersions(versionsBefore,serializedItems)){
     for(const {key,exists,value} of [...before,...parentBefore]){
      const target=parentKeys.includes(key)?parent:item;
      if(exists)target[key]=value;
@@ -109,6 +155,7 @@ function openRichNote(item,isNew){
     }
     if(wasNew)parent.items=parent.items.filter(entry=>entry!==item);
     isNew=wasNew;
+    restoreVersions(versionsBefore);
     editStack.splice(0,editStack.length,...oldHistory);redoStack=oldRedo;
    }
    notify('Změny poznámky nejsou uložené. Zkus Uložit znovu.');
@@ -197,9 +244,9 @@ function openRichNote(item,isNew){
     window.__audioPermissionRetry=start;start();
   }else{
     if(!Native.stopAudio()){
-     // Keep recording state so the user can retry Stop or explicitly cancel.
-     notify('Hlasovou nahrávku se nepodařilo dokončit; zkus Zastavit znovu nebo Zrušit');return;
+     failedStop();notify('Nahrávka se nepodařila. Spusť nové nahrávání.');return;
     }
+    completedDraftAudio.add(recording);
     if(!attachments.includes(recording))attachments.push(recording);
     audioIds.add(recording);recording=null;
     btn.textContent='🎙 Nahrát hlas';render();notify('Hlas připojen k poznámce');
@@ -220,9 +267,11 @@ function openRichNote(item,isNew){
   const meta=metaKeys.map(key=>({key,exists:Object.hasOwn(parent,key),value:parent[key]}));
   const savedBefore=typeof persistedSnapshot==='undefined'?null:persistedSnapshot;
   const oldHistory=editStack.slice(),oldRedo=redoStack.slice();
+  const versionsBefore=captureVersions();
   checkpoint();
   parent.items=parent.items.filter(x=>x!==item);selected=null;
   const draftItems=parent.items;
+  const serializedItems=JSON.stringify(draftItems||[]);
   let confirmed=false;
   try{confirmed=commitEditor()===true}catch(error){notify('Smazání se nepodařilo uložit: '+error.message)}
   if(!confirmed){
@@ -230,11 +279,13 @@ function openRichNote(item,isNew){
    // unchanged local draft, never a concurrent replacement.
    if(current===parent&&parent.items===draftItems&&
       (typeof state==='undefined'||state.records.includes(parent))&&
-      (typeof persistedSnapshot==='undefined'||persistedSnapshot===savedBefore)){
+      (typeof persistedSnapshot==='undefined'||persistedSnapshot===savedBefore)&&
+      localVersions(versionsBefore,serializedItems)){
     parent.items=before;selected=oldSelection;
     for(const {key,exists,value} of meta){
      if(exists)parent[key]=value;else delete parent[key];
     }
+    restoreVersions(versionsBefore);
     editStack.splice(0,editStack.length,...oldHistory);redoStack=oldRedo;
    }
    notify('Smazání nebylo potvrzeno, poznámka zůstává otevřená');
