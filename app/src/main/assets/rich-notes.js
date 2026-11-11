@@ -17,6 +17,15 @@ function openRichNote(item,isNew){
  // Respect an already saved custom size (including deliberately tiny insets).
  const initialInsetWidth=Number(item.insetWidth)||Math.max(140,Math.min(1400,Math.round(photoSize.w*.42)));
  let recording=null;
+ // In browser previews use temporary blob URLs. Revoke them when rerendering
+ // or closing this dialog so repeated image/audio inspection cannot leak memory.
+ const previewUrls=new Set();
+ const revokePreviewUrl=url=>{
+  if(typeof url==='string'&&url.startsWith('blob:')&&typeof URL!=='undefined'&&
+     typeof URL.revokeObjectURL==='function')URL.revokeObjectURL(url);
+  previewUrls.delete(url);
+ };
+ const clearPreviewUrls=()=>{for(const url of previewUrls)revokePreviewUrl(url)};
  const previousCancel=$('cancelModal').onclick;
  $('modal')?.querySelector('.dialog')?.classList.add('richNoteDialog');
  const cleanRecording=()=>{window.__audioPermissionRetry=null;if(recording){if(native){if(typeof Native.cancelAudio==='function')Native.cancelAudio();else Native.stopAudio();}recording=null}};
@@ -26,6 +35,7 @@ function openRichNote(item,isNew){
   window.__activeRichNoteCleanup=null;
   window.__activeRichNoteRelease=null;
   window.__activeRichNotePersist=null;
+  clearPreviewUrls();
   $('cancelModal').onclick=previousCancel;
  };
  window.__activeRichNoteCleanup=cleanRecording;
@@ -86,6 +96,7 @@ function openRichNote(item,isNew){
  clearTimeout(modalFocusTimer);$('okModal').focus();
  const render=()=>{
   const container=$('richAttachments');if(!container)return;
+  clearPreviewUrls();
   container.innerHTML=attachments.length?attachments.map((id,i)=>'<div class="rich-attachment" data-attachment="'+i+'"><span>📎 Příloha '+(i+1)+'</span><button class="outline" data-preview="'+i+'">Otevřít</button><button data-remove="'+i+'">✕</button><div class="previewMedia" data-embed="'+i+'"></div></div>').join(''):'<p class="muted">Zatím bez příloh</p>';
   container.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{
    const removed=attachments.splice(Number(b.dataset.remove),1)[0];
@@ -97,8 +108,11 @@ function openRichNote(item,isNew){
    const target=container.querySelector('[data-embed="'+i+'"]');if(!target)return;
    try{
     const url=await assetUrl(id);
-    if(!target.isConnected||$('modal').hidden||window.__activeRichNoteCleanup!==cleanRecording)return;
+    if(!target.isConnected||$('modal').hidden||window.__activeRichNoteCleanup!==cleanRecording){
+     revokePreviewUrl(url);return;
+    }
     if(!url){target.textContent='Náhled přílohy není dostupný';return}
+    if(url.startsWith('blob:'))previewUrls.add(url);
     // Known audio must never depend on a failed image request to become playable.
     if(audioIds.has(id)){
      const audio=document.createElement('audio');audio.controls=true;audio.src=url;target.append(audio);return;
@@ -110,7 +124,8 @@ function openRichNote(item,isNew){
     };
     img.src=url;target.append(img);
    }catch(error){
-    if(target.isConnected&&window.__activeRichNoteCleanup===cleanRecording)target.textContent='Náhled přílohy není dostupný';
+    if(target.isConnected&&!$('modal').hidden&&window.__activeRichNoteCleanup===cleanRecording)
+     target.textContent='Náhled přílohy není dostupný';
    }
   });
  };
@@ -138,7 +153,10 @@ function openRichNote(item,isNew){
     };
     window.__audioPermissionRetry=start;start();
   }else{
-    if(!Native.stopAudio()){recording=null;btn.textContent='🎙 Nahrát hlas';notify('Hlasová příloha nebyla uložena');return}
+    if(!Native.stopAudio()){
+     // Keep recording state so the user can retry Stop or explicitly cancel.
+     notify('Hlasovou nahrávku se nepodařilo dokončit; zkus Zastavit znovu nebo Zrušit');return;
+    }
     if(!attachments.includes(recording))attachments.push(recording);
     audioIds.add(recording);recording=null;
     btn.textContent='🎙 Nahrát hlas';render();notify('Hlas připojen k poznámce');
