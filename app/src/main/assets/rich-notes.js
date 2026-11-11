@@ -61,7 +61,7 @@ function openRichNote(item,isNew){
                     'insetX','insetY','insetMoved','captionMoved'];
   const before=editedKeys.map(key=>({key,exists:Object.hasOwn(item,key),value:item[key]}));
   const wasNew=isNew;
-  const historySize=editStack.length,oldRedo=redoStack.slice();
+  const oldHistory=editStack.slice(),oldRedo=redoStack.slice();
   checkpoint();
   item.text=$('richText').value.trim();
   const hadAttachment=Array.isArray(item.media)&&item.media.length>0;
@@ -94,7 +94,7 @@ function openRichNote(item,isNew){
     }
     if(wasNew)parent.items=parent.items.filter(entry=>entry!==item);
     isNew=wasNew;
-    editStack.length=historySize;redoStack=oldRedo;
+    editStack.splice(0,editStack.length,...oldHistory);redoStack=oldRedo;
    }
    notify('Změny poznámky nejsou uložené. Zkus Uložit znovu.');
    return false;
