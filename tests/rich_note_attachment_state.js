@@ -49,7 +49,7 @@ function fixture(item,options={}){
  get('richText').value=item.text||'';
  get('richSize').value=String(item.insetWidth||240);
  get('richAngle').value=String(item.insetRotation||0);
- const recordIds=[],opens=[],editStack=Array.isArray(options.undoStart)?options.undoStart.slice():[],
+ const recordIds=[],opens=[],cancelCalls=[],editStack=Array.isArray(options.undoStart)?options.undoStart.slice():[],
        redoStack=['saved-redo'];
  const parent={id:'parent',items:options.newNote?[]:[item]};
  const window={isRecordLocked:()=>false};
@@ -57,7 +57,7 @@ function fixture(item,options={}){
  const Native={
   startAudio:id=>{recordIds.push(id);return true},
   stopAudio:()=>stopOutcomes?.length?stopOutcomes.shift():options.stopAudio!==false,
-  cancelAudio:()=>true
+  cancelAudio:()=>{cancelCalls.push('cancel');return true}
  };
  const sandbox={
   window,URL:{revokeObjectURL:id=>revokedUrls.push(id)},document:{
@@ -89,7 +89,7 @@ function fixture(item,options={}){
  vm.runInContext(code,sandbox,{filename:'rich-notes.js'});
  const flush=()=>new Promise(resolve=>setImmediate(resolve));
  return {
-  get,window,item,parent,Native,created,recordIds,messages,focuses,pickerCalls,opens,revokedUrls,
+  get,window,item,parent,Native,created,recordIds,cancelCalls,messages,focuses,pickerCalls,opens,revokedUrls,
   editStack,get redoStack(){return sandbox.redoStack},
   open:()=>sandbox.openRichNote(item,!!options.newNote),flush,
   preview:i=>previews.get(i),
@@ -288,6 +288,22 @@ async function run(){
  assert.equal(uncommitted.parent.items.length,1,'Successful retry creates the annotation');
  assert.equal(uncommitted.parent.items[0].text,'Nová poznámka');
 
- console.log('PASS rich note: media drafts, late callbacks, preview cleanup, stop retry, lock, delete and rollback after failed save');
+ // A stale session left behind by a generic hidden modal can be cleaned safely,
+ // while its delayed cleanup must not stop the replacement session's recorder.
+ const orphan=fixture({id:'n22',type:'note',media:['voice'],audioMedia:['voice']});
+ orphan.open();await orphan.flush();
+ const oldCleanup=orphan.window.__activeRichNoteCleanup;
+ orphan.get('modal').hidden=true; // legacy generic close without release
+ orphan.open();await orphan.flush();
+ assert.notEqual(orphan.window.__activeRichNoteCleanup,oldCleanup,'New session replaces orphaned dialog');
+ assert.deepEqual(orphan.revokedUrls,['blob:voice'],'Stale preview is released on replacement');
+ orphan.get('richVoice').onclick();
+ oldCleanup(); // stale callback from the previous session
+ assert.equal(orphan.cancelCalls.length,0,'Old cleanup may not cancel newer recording');
+ orphan.get('richVoice').onclick();
+ assert.equal(orphan.recordIds.length,1,'New recording still stops after stale cleanup');
+ orphan.get('cancelModal').onclick();
+
+ console.log('PASS rich note: media drafts, async races, cleanup, retry, lock, delete and rollback of failed saves');
 }
 run().catch(err=>{console.error(err);process.exitCode=1});
