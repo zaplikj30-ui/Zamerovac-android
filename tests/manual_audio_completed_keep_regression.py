@@ -124,7 +124,7 @@ def run() -> int:
         if compile.returncode:
             print('FAIL JAVAC',compile.stderr,file=sys.stderr);return 2
         print('PASS JAVAC actual AudioCapture + MediaStaging (minimal Android stubs)')
-        child=subprocess.run(['java','-cp',str(classes),'cz.zamerovac.app.AudioLossProbe'],
+        child=subprocess.run(['java','-Djava.io.tmpdir='+str(base),'-cp',str(classes),'cz.zamerovac.app.AudioLossProbe'],
                              capture_output=True,text=True,timeout=30)
         print(child.stdout.strip())
         if child.stderr:print(child.stderr,file=sys.stderr)
