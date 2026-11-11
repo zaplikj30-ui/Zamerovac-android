@@ -21,6 +21,6 @@
 
 ## Historie bez ztráty podkladů
 
-**[Úplný původní START_ZDE.md, archiv do 11. 11. 2026](docs/historie/START_ZDE_DO_2026-11-11.md)** zachovává **doslovně celý původní text** včetně historických checkpointů, testů 1–28, SHA, výsledků a odkazů. Výrazy „aktuálně“ a „další krok“ v archivu znamenají tehdejší stav, ne dnešní úkol.
+**[Úplný původní START_ZDE.md, archiv do 11. 11. 2026](START_ZDE_ARCHIV_DO_2026-11-11.md)** zachovává **doslovně celý původní text** včetně historických checkpointů, testů 1–28, SHA, výsledků a odkazů. Výrazy „aktuálně“ a „další krok“ v archivu znamenají tehdejší stav, ne dnešní úkol.
 
 **Archivace neruší platné požadavky ani rozhodnutí.** U relevantní funkce dohledat původní schválení a pozdější upřesnění v [#13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13), [#28](https://github.com/zaplikj30-ui/Zamerovac-android/issues/28), [#42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42) a navazujících issues/PR. Další trvalé zdroje: [vize](VIZE_A_PLAN.md), [plán](PROJEKTOVY_PLAN_ZAMEROVACE.md) a [lokalizace](LOKALIZACE_PLAN.md).
