@@ -8,7 +8,8 @@ assert.equal(help.chapters.length,25,'Every approved guide area needs a chapter'
 const notesGuide=help.chapters.find(c=>c.id==='notes');
 assert(notesGuide?.notes.some(t=>t.includes('Zrušit zachová původní text a přílohy')),'Rich note Cancel must preserve saved attachments');
 assert(notesGuide?.notes.some(t=>t.includes('jen přes obrazovou přílohu')&&t.includes('nikoli přes nahraný zvuk')),'Photo detail must not open from audio');
-assert(notesGuide?.notes.some(t=>t.includes('znovu nebo nahrávání zrušit')),'Failed microphone stop retry needs documentation');
+assert(notesGuide?.notes.some(t=>t.includes('původní pokus je ukončený')&&t.includes('nové nahrávání')),'Failed Stop requires a new recording attempt');
+assert(notesGuide?.notes.some(t=>t.includes('nepřipojený originál')&&t.includes('bezpečné automatické mazání')),'Retained orphan recording must be documented without unsafe delete');
 assert(help.chapters.find(c=>c.id==='trash')?.notes.some(s=>s.includes('starších vložených záznamů')),'Trash help must describe retained legacy references');
 assert(help.chapters.find(c=>c.id==='trash')?.notes.some(s=>s.includes('nepřiměřeně zanořená')),'Trash help must explain fail-closed history check');
 assert(help.chapters.find(x=>x.id==='undo')?.notes.some(x=>x.includes('nevytvoří krok historie')&&x.includes('Znovu')),'Undo/Redo gesture preservation must be explained');
