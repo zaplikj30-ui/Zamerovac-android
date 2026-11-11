@@ -43,7 +43,14 @@ jobs:
           fetch-depth: 1
           persist-credentials: false
           submodules: false
+      - name: Trusted-main fail-closed guard regression tests
+        shell: cmd
+        run: |
+          cd /d "%GITHUB_WORKSPACE%\trusted"
+          python -m unittest discover -s tests -p test_home_qa_manual_guard.py -v
+          if errorlevel 1 exit /b 1
       - name: Strict literal workflow lint and source authorization from main
+        id: authorize
         shell: cmd
         run: |
           cd /d "%GITHUB_WORKSPACE%\trusted"
@@ -58,6 +65,7 @@ jobs:
           persist-credentials: false
           submodules: false
       - name: Verify checked out source and run existing guarded preflight
+        id: source_verified
         shell: cmd
         run: |
           cd /d "%GITHUB_WORKSPACE%\trusted"
@@ -66,11 +74,19 @@ jobs:
           cd /d "%GITHUB_WORKSPACE%\source"
           python tools\home_qa_gate.py windows-quick --expected-sha %QA_ALLOWED_SHA% --root . --check-only
           if errorlevel 1 exit /b 1
+      - name: Prepare unique run evidence after source verification
+        id: evidence_ready
+        shell: cmd
+        run: |
+          cd /d "%GITHUB_WORKSPACE%\trusted"
+          python tools\home_qa_manual_guard.py prepare-evidence --root .
+          if errorlevel 1 exit /b 1
       - name: Windows quick tests of approved exact source SHA
+        id: quick
         shell: cmd
         run: |
           cd /d "%GITHUB_WORKSPACE%\source"
-          set "LOCALAPPDATA=%GITHUB_WORKSPACE%\qa-evidence"
+          echo QA_QUICK_STARTED=true>>"%GITHUB_ENV%"
           python tools\home_qa_gate.py windows-quick --expected-sha %QA_ALLOWED_SHA% --root .
           if errorlevel 1 exit /b 1
       - name: Controlled WSL JDK Gradle preflight and five independent probes
@@ -80,10 +96,10 @@ jobs:
           python tools\home_qa_gate.py wsl-check-from-windows --expected-sha %QA_ALLOWED_SHA% --root .
           if errorlevel 1 exit /b 1
       - name: Upload quick test evidence, never APK
-        if: always()
+        if: ${{ always() && !cancelled() && steps.authorize.outcome == 'success' && steps.source_verified.outcome == 'success' && steps.evidence_ready.outcome == 'success' && env.QA_QUICK_STARTED == 'true' && (steps.quick.outcome == 'success' || steps.quick.outcome == 'failure') }}
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
-          name: zamerovac-home-manual-quick
-          path: qa-evidence/Zamerovac-QA/results/
+          name: zamerovac-home-manual-${{ github.run_id }}-${{ github.run_attempt }}
+          path: ${{ env.QA_EVIDENCE_DIR }}\Zamerovac-QA\results\
           retention-days: 7
           if-no-files-found: ignore
