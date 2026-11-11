@@ -1,0 +1,89 @@
+name: Zaměřovač HOME QA – ruční bezpečné testy
+
+# A trusted main-only entry point. New source SHAs require reviewed allowlist update.
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: 'Povolený přesný SHA – PR #105 (další po revizi)'
+        required: true
+        type: string
+        default: '3f2779ec9b5c432296f9db2bad8502cc4ff63588'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zamerovac-home-manual
+  cancel-in-progress: false
+
+jobs:
+  trusted-manual-quick:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' }}
+    runs-on: [self-hosted, Windows, X64, zamerovac-qa]
+    timeout-minutes: 50
+    env:
+      CI: '1'
+      PYTHONUTF8: '1'
+      REQUESTED_SOURCE_SHA: ${{ inputs.source_sha }}
+    steps:
+      - name: Verify trusted service tools before checkout
+        shell: cmd
+        run: |
+          if /I not "%USERNAME%"=="ZamerovacQA" exit /b 1
+          if not exist "C:\actions-runner\tools\MinGit-2.56.0.4\cmd\git.exe" exit /b 1
+          if not exist "C:\actions-runner\tools\Python313\python.exe" exit /b 1
+          echo C:\actions-runner\tools\MinGit-2.56.0.4\cmd>>"%GITHUB_PATH%"
+          echo C:\actions-runner\tools\Python313>>"%GITHUB_PATH%"
+      - name: Trusted main checkout ONLY – no source code execution
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ github.sha }}
+          path: trusted
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+      - name: Strict literal workflow lint and source authorization from main
+        shell: cmd
+        run: |
+          cd /d "%GITHUB_WORKSPACE%\trusted"
+          python tools\home_qa_manual_guard.py authorize --root .
+          if errorlevel 1 exit /b 1
+      - name: Read-only checkout of explicitly approved source SHA
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ env.QA_ALLOWED_SHA }}
+          path: source
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+      - name: Verify checked out source and run existing guarded preflight
+        shell: cmd
+        run: |
+          cd /d "%GITHUB_WORKSPACE%\trusted"
+          python tools\home_qa_manual_guard.py verify-source --source "..\source"
+          if errorlevel 1 exit /b 1
+          cd /d "%GITHUB_WORKSPACE%\source"
+          python tools\home_qa_gate.py windows-quick --expected-sha %QA_ALLOWED_SHA% --root . --check-only
+          if errorlevel 1 exit /b 1
+      - name: Windows quick tests of approved exact source SHA
+        shell: cmd
+        run: |
+          cd /d "%GITHUB_WORKSPACE%\source"
+          set "LOCALAPPDATA=%GITHUB_WORKSPACE%\qa-evidence"
+          python tools\home_qa_gate.py windows-quick --expected-sha %QA_ALLOWED_SHA% --root .
+          if errorlevel 1 exit /b 1
+      - name: Controlled WSL JDK Gradle preflight and five independent probes
+        shell: cmd
+        run: |
+          cd /d "%GITHUB_WORKSPACE%\source"
+          python tools\home_qa_gate.py wsl-check-from-windows --expected-sha %QA_ALLOWED_SHA% --root .
+          if errorlevel 1 exit /b 1
+      - name: Upload quick test evidence, never APK
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: zamerovac-home-manual-quick
+          path: qa-evidence/Zamerovac-QA/results/
+          retention-days: 7
+          if-no-files-found: ignore
