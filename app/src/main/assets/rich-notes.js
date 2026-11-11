@@ -213,7 +213,7 @@ function openRichNote(item,isNew){
  };
  $('richDelete').onclick=()=>{
   if(window.__activeRichNoteCleanup!==cleanRecording||current!==parent||
-     window.isRecordLocked?.(parent)||!parent.items.includes(item))return;
+     window.isRecordLocked?.(parent)||(!isNew&&!parent.items.includes(item)))return;
   if(isNew){cleanRecording();release();$('modal').hidden=true;notify('Poznámka nebyla přidána');return}
   const before=parent.items,oldSelection=selected;
   const metaKeys=['rev','syncClock','updatedAt','hierarchyConflict','width','height'];
