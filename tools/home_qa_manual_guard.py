@@ -8,10 +8,12 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 import os
 from pathlib import Path
 import re
 import subprocess
+import tempfile
 import sys
 
 OWNER = "zaplikj30-ui"
@@ -21,7 +23,7 @@ SHA = re.compile(r"[a-f0-9]{40}\Z")
 ALLOWED_SOURCE_SHAS = frozenset({
     "3f2779ec9b5c432296f9db2bad8502cc4ff63588",  # PR #105 2026-11-11
 })
-WORKFLOW_SHA256 = "5f847ba6306ad274d9d0836d1c8a3a649eefc1425ed6f74c06c8dd79edc9149e"
+WORKFLOW_SHA256 = "72a28cd8ac97dbd1a563bb98a2f5cd6475208940d3f79854cf445b3284acd055"
 
 
 def require(check: bool, reason: str) -> None:
@@ -64,15 +66,55 @@ def verify_source(root: Path, sha: str) -> None:
     require(current == sha, "checked out source SHA mismatch")
 
 
+def prepare_evidence(env: dict[str, str], trusted_root: Path) -> Path:
+    """Create a new run/attempt-scoped *synthetic-only* evidence directory.
+
+    mkdtemp uses exclusive random creation: stale results cannot be reused even
+    after an abrupt runner stop; no existing media or result folder is deleted.
+    """
+    sha = authorize(env, trusted_root)
+    require(env.get("QA_ALLOWED_SHA") == sha, "source was not previously authorized")
+    run_id, attempt = env.get("GITHUB_RUN_ID", ""), env.get("GITHUB_RUN_ATTEMPT", "")
+    require(bool(re.fullmatch(r"[0-9]{1,20}", run_id)) and
+            bool(re.fullmatch(r"[0-9]{1,8}", attempt)), "invalid run identity")
+    raw = env.get("RUNNER_TEMP", "")
+    temp_root = Path(raw)
+    require(bool(raw) and temp_root.is_absolute() and
+            temp_root.is_dir() and not temp_root.is_symlink(),
+            "trusted runner temp directory required")
+    envfile = Path(env.get("GITHUB_ENV") or ".")
+    require(envfile.is_file() and not envfile.is_symlink(),
+            "trusted GitHub environment file missing")
+    root = Path(tempfile.mkdtemp(prefix=f"zamerovac-home-{run_id}-{attempt}-",
+                                 dir=str(temp_root)))
+    require("\r" not in str(root) and "\n" not in str(root),
+            "unsafe runner temp path")
+    results = root / "Zamerovac-QA" / "results"
+    results.mkdir(parents=True, exist_ok=False)
+    marker = {"source_sha": sha, "trusted_sha": env["GITHUB_SHA"],
+              "run_id": run_id, "run_attempt": attempt,
+              "kind": "synthetic-home-qa"}
+    (results / "run.json").write_text(
+        json.dumps(marker, sort_keys=True) + "\n", encoding="utf-8")
+    with envfile.open("a", encoding="utf-8", newline="\n") as stream:
+        stream.write("QA_EVIDENCE_DIR=" + str(root) + "\n")
+        stream.write("LOCALAPPDATA=" + str(root) + "\n")
+    print("PASS: fresh synthetic evidence " + str(root))
+    print("EVIDENCE_SOURCE_SHA=" + sha + " RUN=" + run_id + "/" + attempt)
+    return root
+
+
 def main() -> int:
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", choices=("authorize", "verify-source", "lint"))
+    parser.add_argument("mode", choices=("authorize", "verify-source", "lint", "prepare-evidence"))
     parser.add_argument("--root", type=Path, default=Path.cwd())
     parser.add_argument("--source", type=Path)
     args = parser.parse_args()
     try:
         if args.mode == "lint":
             verify_workflow(args.root / ".github" / "workflows" / "home-qa-manual.yml")
+        elif args.mode == "prepare-evidence":
+            prepare_evidence(os.environ, args.root)
         elif args.mode == "authorize":
             sha = authorize(os.environ, args.root)
             envfile = os.environ.get("GITHUB_ENV", "")
