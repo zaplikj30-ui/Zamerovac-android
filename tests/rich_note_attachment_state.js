@@ -11,7 +11,7 @@ assert.ok(a>=0&&b>a,'Missing real rich-note implementation');
 const code=source.slice(a,b);
 
 function fixture(item,options={}){
- const elements=new Map(),created=[],messages=[],focuses=[],pickerCalls=[];
+ const elements=new Map(),created=[],messages=[],focuses=[],pickerCalls=[],revokedUrls=[];
  let previews=new Map(),recordSerial=0,checkpoints=0,commits=0;
  const dialog={classList:{add(){},remove(){}}};
  const modalEl={hidden:true,querySelector:()=>dialog};
@@ -52,13 +52,14 @@ function fixture(item,options={}){
  const recordIds=[],opens=[];
  const parent={id:'parent',items:[item]};
  const window={isRecordLocked:()=>false};
+ const stopOutcomes=Array.isArray(options.stopOutcomes)?options.stopOutcomes.slice():null;
  const Native={
   startAudio:id=>{recordIds.push(id);return true},
-  stopAudio:()=>options.stopAudio!==false,
+  stopAudio:()=>stopOutcomes?.length?stopOutcomes.shift():options.stopAudio!==false,
   cancelAudio:()=>true
  };
  const sandbox={
-  window,document:{
+  window,URL:{revokeObjectURL:id=>revokedUrls.push(id)},document:{
    getElementById:id=>get(id),
    createElement:tag=>{
     const node={tag,controls:false,src:'',alt:'',remove(){this.removed=true}};
@@ -86,7 +87,7 @@ function fixture(item,options={}){
  vm.runInContext(code,sandbox,{filename:'rich-notes.js'});
  const flush=()=>new Promise(resolve=>setImmediate(resolve));
  return {
-  get,window,item,parent,Native,created,recordIds,messages,focuses,pickerCalls,opens,
+  get,window,item,parent,Native,created,recordIds,messages,focuses,pickerCalls,opens,revokedUrls,
   open:()=>sandbox.openRichNote(item,false),flush,
   preview:i=>previews.get(i),
   remove:i=>attachmentContainer.querySelectorAll('[data-remove]')[i],
@@ -220,6 +221,37 @@ async function run(){
  assert.equal(locked.window.__activeRichNotePersist(),false);
  assert.deepEqual(Array.from(locked.item.media),[]);
 
- console.log('PASS rich note: preview, cancel, save, duplicate callback, late callback, remove, failed media, keyboard, photo selection, session ownership, delete failure, audio stop and lock');
+ // Browser blob URLs must be revoked on dialog close and when removing media.
+ const reclaim=fixture({id:'n16',type:'note',media:['voice'],audioMedia:['voice']});
+ reclaim.open();await reclaim.flush();
+ assert.deepEqual(reclaim.revokedUrls,[],'Active audio preview must remain usable');
+ reclaim.get('cancelModal').onclick();
+ assert.deepEqual(reclaim.revokedUrls,['blob:voice'],'Cancel must release browser preview URL');
+
+ const rerender=fixture({id:'n17',type:'note',media:['photo'],audioMedia:[]});
+ rerender.open();await rerender.flush();
+ rerender.remove(0).onclick();
+ assert.deepEqual(rerender.revokedUrls,['blob:photo'],'Removing attachment revokes its preview');
+ rerender.get('cancelModal').onclick();
+ assert.equal(rerender.revokedUrls.length,1,'Blob URL revoked only once');
+
+ // A URL resolving after a cancelled dialog is discarded and revoked.
+ const pending=fixture({id:'n18',type:'note',media:['voice'],audioMedia:['voice']});
+ pending.open();pending.get('cancelModal').onclick();await pending.flush();
+ assert.deepEqual(pending.revokedUrls,['blob:voice'],'Late preview URL must not leak');
+
+ // Native stop may fail transiently. Keep state until a successful retry.
+ const retry=fixture({id:'n19',type:'note',media:[],audioMedia:[]},{stopOutcomes:[false,true]});
+ retry.open();retry.get('richVoice').onclick();
+ retry.get('richVoice').onclick();
+ assert.equal(retry.get('richVoice').textContent,'■ Zastavit nahrávání','Failed Stop retains recording state');
+ assert.deepEqual(Array.from(retry.item.media),[],'Failed Stop does not link invalid audio');
+ retry.get('richVoice').onclick();await retry.flush();
+ assert.equal(retry.get('richVoice').textContent,'🎙 Nahrát hlas','Retry Stop succeeds');
+ assert.deepEqual(Array.from(retry.item.audioMedia),[],'Audio stays draft before Save');
+ assert.equal(retry.window.__activeRichNotePersist(),true);
+ assert.deepEqual(Array.from(retry.item.audioMedia),['record-1'],'Successful retry saved exactly once');
+
+ console.log('PASS rich note: preview, cancel, save, duplicate and late callbacks, photo selection, lock, deletion failure, audio stop retry and blob URL cleanup');
 }
 run().catch(err=>{console.error(err);process.exitCode=1});
