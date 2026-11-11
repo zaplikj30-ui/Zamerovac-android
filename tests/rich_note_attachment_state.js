@@ -71,7 +71,7 @@ function fixture(item,options={}){
   photoSize:{w:800,h:600},native:true,Native,
   uid:()=> 'record-'+(++recordSerial),
   notify:text=>messages.push(text),
-  checkpoint:()=>{checkpoints++;editStack.push(JSON.stringify(parent.items));if(editStack.length>50)editStack.shift();redoStack.length=0},
+  checkpoint:()=>{checkpoints++;editStack.push(JSON.stringify(parent.items));if(editStack.length>50)editStack.shift();sandbox.redoStack.length=0},
   commitEditor:()=>{commits++;return options.saveFails!==true},
   finishDraw:()=>{},openAttachment:()=>{},openNestedPhoto:(...args)=>opens.push(args),
   pickMedia:(mode,handler)=>pickerCalls.push({mode,handler}),
@@ -90,7 +90,7 @@ function fixture(item,options={}){
  const flush=()=>new Promise(resolve=>setImmediate(resolve));
  return {
   get,window,item,parent,Native,created,recordIds,messages,focuses,pickerCalls,opens,revokedUrls,
-  editStack,redoStack,
+  editStack,get redoStack(){return sandbox.redoStack},
   open:()=>sandbox.openRichNote(item,!!options.newNote),flush,
   preview:i=>previews.get(i),
   remove:i=>attachmentContainer.querySelectorAll('[data-remove]')[i],
