@@ -5,6 +5,8 @@ function openRichNote(item,isNew){
  if(!current||window.isRecordLocked?.(current)){notify('Záznam je uzamčen');return}
  const parent=current;
  const attachments=Array.isArray(item.media)?item.media.slice():[];
+ // Audio membership is a local draft until Save. Cancel must not mutate the original note.
+ const audioIds=new Set(Array.isArray(item.audioMedia)?item.audioMedia:[]);
  // ImageMeter reference: default inset occupies about two fifths of the photo width,
  // rather than the much smaller 20% thumbnail used in older Zaměřovač builds.
  // Respect an already saved custom size (including deliberately tiny insets).
@@ -22,11 +24,11 @@ function openRichNote(item,isNew){
   // edits records the new value and makes Undo silently leave that value in place.
   if(recording&&!Native.stopAudio()){recording=null;$('richVoice').textContent='🎙 Nahrát hlas';return false}
   checkpoint();
-  if(recording){attachments.push(recording);item.audioMedia=[...(item.audioMedia||[]),recording];recording=null;}
+  if(recording){if(!attachments.includes(recording))attachments.push(recording);audioIds.add(recording);recording=null;}
   item.text=$('richText').value.trim();
   const hadAttachment=Array.isArray(item.media)&&item.media.length>0;
   item.media=attachments.slice();
-  item.audioMedia=(item.audioMedia||[]).filter(id=>attachments.includes(id));
+  item.audioMedia=attachments.filter(id=>audioIds.has(id));
   item.insetWidth=Math.max(70,Math.min(1500,Number($('richSize').value)||initialInsetWidth));
   item.insetRotation=Number($('richAngle').value)||0;
   // Když už uživatel odtáhl text a potom přidal detailní fotografii,
@@ -65,22 +67,32 @@ function openRichNote(item,isNew){
  const render=()=>{
   const container=$('richAttachments');if(!container)return;
   container.innerHTML=attachments.length?attachments.map((id,i)=>'<div class="rich-attachment" data-attachment="'+i+'"><span>📎 Příloha '+(i+1)+'</span><button class="outline" data-preview="'+i+'">Otevřít</button><button data-remove="'+i+'">✕</button><div class="previewMedia" data-embed="'+i+'"></div></div>').join(''):'<p class="muted">Zatím bez příloh</p>';
-  container.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{attachments.splice(Number(b.dataset.remove),1);render()});
+  container.querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{
+   const removed=attachments.splice(Number(b.dataset.remove),1)[0];
+   if(!attachments.includes(removed))audioIds.delete(removed);
+   render();
+  });
   container.querySelectorAll('[data-preview]').forEach(b=>b.onclick=()=>openAttachment(attachments[Number(b.dataset.preview)]));
   attachments.forEach(async(id,i)=>{
    const target=container.querySelector('[data-embed="'+i+'"]');if(!target)return;
-   const url=await assetUrl(id);
-   if(!target.isConnected)return;
-   // Browser preview without sending any file to a remote service.
-   const isAudio=(!native&&url.startsWith('blob:')&&false) || (id===recording);
-   if(isAudio){target.innerHTML='<audio controls src="'+url+'"></audio>';return}
-   const img=document.createElement('img');img.src=url;img.alt='Přiložená detailní fotografie';
-   img.onerror=()=>{img.remove();const a=document.createElement('audio');a.src=url;a.controls=true;target.append(a)};
-   target.append(img);
+   try{
+    const url=await assetUrl(id);
+    if(!target.isConnected||$('modal').hidden||window.__activeRichNoteCleanup!==cleanRecording)return;
+    if(!url){target.textContent='Náhled přílohy není dostupný';return}
+    // Known audio must never depend on a failed image request to become playable.
+    if(audioIds.has(id)){
+     const audio=document.createElement('audio');audio.controls=true;audio.src=url;target.append(audio);return;
+    }
+    const img=document.createElement('img');img.alt='Přiložená detailní fotografie';
+    img.onerror=()=>{img.remove();const audio=document.createElement('audio');audio.src=url;audio.controls=true;target.append(audio)};
+    img.src=url;target.append(img);
+   }catch(error){
+    if(target.isConnected&&window.__activeRichNoteCleanup===cleanRecording)target.textContent='Náhled přílohy není dostupný';
+   }
   });
  };
  render();
- const photoHandler=(id)=>{if(window.__activeRichNoteCleanup!==cleanRecording||current!==parent||window.isRecordLocked?.(parent)){notify('Původní poznámka už není dostupná; příloha nebyla připojena jinam.');return false}attachments.push(id);render()};
+ const photoHandler=(id)=>{if(window.__activeRichNoteCleanup!==cleanRecording||current!==parent||window.isRecordLocked?.(parent)){notify('Původní poznámka už není dostupná; příloha nebyla připojena jinam.');return false}if(attachments.includes(id))return false;attachments.push(id);render();return true};
  $('richPhotoCamera').onclick=()=>pickMedia('camera',photoHandler);
  $('richPhotoPick').onclick=()=>pickMedia('media',photoHandler);
  $('richVoice').onclick=()=>{
@@ -96,8 +108,9 @@ function openRichNote(item,isNew){
     };
     window.__audioPermissionRetry=start;start();
   }else{
-    if(!Native.stopAudio()){recording=null;btn.textContent='🎙 Nahrát hlas';return}attachments.push(recording);
-    item.audioMedia=[...(item.audioMedia||[]),recording];recording=null;
+    if(!Native.stopAudio()){recording=null;btn.textContent='🎙 Nahrát hlas';notify('Hlasová příloha nebyla uložena');return}
+    if(!attachments.includes(recording))attachments.push(recording);
+    audioIds.add(recording);recording=null;
     btn.textContent='🎙 Nahrát hlas';render();notify('Hlas připojen k poznámce');
   }
  };
