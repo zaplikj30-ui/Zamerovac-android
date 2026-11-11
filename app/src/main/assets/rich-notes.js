@@ -54,6 +54,14 @@ function openRichNote(item,isNew){
    audioIds.add(recording);recording=null;
    $('richVoice').textContent='🎙 Nahrát hlas';render();
   }
+  // Keep an undo-safe original until the synchronous persistence layer confirms
+  // the save. On failure, restore only if the same note still owns the edited data;
+  // never overwrite a record replaced by a concurrent reconciliation.
+  const editedKeys=['text','media','audioMedia','insetWidth','insetRotation',
+                    'insetX','insetY','insetMoved','captionMoved'];
+  const before=editedKeys.map(key=>({key,exists:Object.hasOwn(item,key),value:item[key]}));
+  const wasNew=isNew;
+  const historySize=editStack.length,oldRedo=redoStack.slice();
   checkpoint();
   item.text=$('richText').value.trim();
   const hadAttachment=Array.isArray(item.media)&&item.media.length>0;
@@ -70,8 +78,28 @@ function openRichNote(item,isNew){
    item.insetMoved=true;
    item.captionMoved=false;
   }
-  if(isNew){parent.items.push(item);finishDraw(item);isNew=false;}
-  if(!commitEditor())return false;
+  if(isNew){parent.items.push(item);isNew=false;}
+  // All changes to the note are in memory at this point; only a successful
+  // save may make them a committed edit or expose them via a new detail editor.
+  const applied=JSON.stringify(editedKeys.map(key=>item[key]));
+  let confirmed=false;
+  try{confirmed=commitEditor()===true}catch(error){notify('Poznámku se nepodařilo uložit: '+error.message)}
+  if(!confirmed){
+   if(current===parent&&parent.items.includes(item)&&
+      (typeof state==='undefined'||state.records.includes(parent))&&
+      JSON.stringify(editedKeys.map(key=>item[key]))===applied){
+    for(const {key,exists,value} of before){
+     if(exists)item[key]=value;
+     else delete item[key];
+    }
+    if(wasNew)parent.items=parent.items.filter(entry=>entry!==item);
+    isNew=wasNew;
+    editStack.length=historySize;redoStack=oldRedo;
+   }
+   notify('Změny poznámky nejsou uložené. Zkus Uložit znovu.');
+   return false;
+  }
+  if(wasNew)finishDraw(item);
   release();
   return true;
  }
