@@ -210,11 +210,20 @@ async function run(){
  assert.equal(failedDelete.parent.items[0],failedDelete.item);
  assert.equal(failedDelete.get('modal').hidden,false,'Failed delete must leave dialog for retry');
  assert.ok(failedDelete.messages.some(v=>v.includes('Smazání nebylo potvrzeno')));
+ assert.equal(failedDelete.parent.rev,'rev-original','Rejected delete restores parent revision');
+ assert.deepEqual(failedDelete.parent.syncClock,{device:1},'Rejected delete restores sync metadata');
+ assert.equal(failedDelete.editStack.length,0,'Rejected delete must not add a phantom Undo step');
+ assert.deepEqual(Array.from(failedDelete.redoStack),['saved-redo'],'Rejected delete retains Redo');
 
  const goodDelete=fixture({id:'n13',type:'note',media:['image'],audioMedia:[]});
  goodDelete.open();goodDelete.get('richDelete').onclick();
  assert.equal(goodDelete.parent.items.length,0,'Confirmed delete removes selected note');
  assert.equal(goodDelete.get('modal').hidden,true,'Confirmed delete closes dialog');
+
+ const brandNew=fixture({id:'n13-new',type:'note',media:[],audioMedia:[]},{newNote:true});
+ brandNew.open();brandNew.get('richDelete').onclick();
+ assert.equal(brandNew.get('modal').hidden,true,'Removing a never-saved note closes dialog');
+ assert.equal(brandNew.parent.items.length,0,'Removing a never-saved note creates no record');
 
  // While recording, a failed audio stop blocks Save without altering note data.
  const badAudio=fixture({id:'n14',type:'note',media:[],audioMedia:[]},{stopAudio:false});
@@ -324,6 +333,13 @@ async function run(){
  assert.equal(remote.parent.rev,'rev-after-edit','Rebase metadata may not be reverted');
  assert.equal(remote.get('modal').hidden,false,'Conflicted edit remains visible to retry safely');
 
- console.log('PASS rich note: media drafts, races, cleanup, retry, lock, failed-save metadata rollback and conflict preservation');
+ // Rejected Delete after a remote CAS rebase may not replace newer contents.
+ const remoteDelete=fixture({id:'n24',type:'note',media:[],audioMedia:[],text:'Old'},{
+  saveFails:true,rebaseOnSave:true});
+ remoteDelete.open();remoteDelete.get('richDelete').onclick();
+ assert.equal(remoteDelete.parent.items[0].text,'Newer remote data','Failed delete preserves newer remote record');
+ assert.equal(remoteDelete.parent.rev,'rev-after-edit','Remote revision must remain intact');
+
+ console.log('PASS rich note: media drafts, races, cleanup, retry, lock, rejected delete/save rollback and newer-data protection');
 }
 run().catch(err=>{console.error(err);process.exitCode=1});
