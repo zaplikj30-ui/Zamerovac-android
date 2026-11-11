@@ -132,7 +132,7 @@ class ManualGuardTest(unittest.TestCase):
                         GITHUB_ENV=str(envfile),
                         REQUESTED_SOURCE_SHA="f"*40)
         with mock.patch.object(guard.subprocess, 'check_output', return_value=MAIN_SHA):
-            with self.assertRaisesRegex(ValueError, "not independently allowed"):
+            with self.assertRaisesRegex(ValueError, "NOT independently allowed"):
                 guard.prepare_evidence(settings, self.root)
         self.assertEqual(envfile.read_text(), "")
         self.assertEqual(list(temp.glob("zamerovac-home-*")), [])
