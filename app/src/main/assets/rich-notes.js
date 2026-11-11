@@ -3,10 +3,14 @@
 let detailEditorParent=null,detailEditorNote=null,detailEditorStartItems=null;
 function openRichNote(item,isNew){
  if(!current||window.isRecordLocked?.(current)){notify('Záznam je uzamčen');return}
- // Refuse a second dialog while the first still has an unsaved draft.
- // Replacing it silently could discard attachments or leave an old picker callback.
- if(window.__activeRichNoteCleanup&&$('modal')?.hidden===false){
-  notify('Nejdřív ulož nebo zruš otevřenou poznámku');return;
+ // Never replace an open draft. If a generic close left behind an inactive
+ // session, dispose only that stale session before installing new callbacks.
+ if(window.__activeRichNoteCleanup){
+  if($('modal')?.hidden===false){
+   notify('Nejdřív ulož nebo zruš otevřenou poznámku');return;
+  }
+  window.__activeRichNoteCleanup();
+  window.__activeRichNoteRelease?.();
  }
  const parent=current;
  const attachments=Array.isArray(item.media)?item.media.slice():[];
@@ -28,7 +32,11 @@ function openRichNote(item,isNew){
  const clearPreviewUrls=()=>{for(const url of previewUrls)revokePreviewUrl(url)};
  const previousCancel=$('cancelModal').onclick;
  $('modal')?.querySelector('.dialog')?.classList.add('richNoteDialog');
- const cleanRecording=()=>{window.__audioPermissionRetry=null;if(recording){if(native){if(typeof Native.cancelAudio==='function')Native.cancelAudio();else Native.stopAudio();}recording=null}};
+ const cleanRecording=()=>{
+  if(window.__activeRichNoteCleanup!==cleanRecording)return;
+  window.__audioPermissionRetry=null;
+  if(recording){if(native){if(typeof Native.cancelAudio==='function')Native.cancelAudio();else Native.stopAudio()}recording=null}
+ };
  const release=()=>{
   if(window.__activeRichNoteCleanup!==cleanRecording)return;
   $('modal')?.querySelector('.dialog')?.classList.remove('richNoteDialog');
