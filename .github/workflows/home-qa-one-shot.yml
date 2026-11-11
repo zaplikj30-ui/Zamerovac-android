@@ -1,0 +1,74 @@
+name: Zaměřovač - canonical owner-only HOME QA, no APK
+on:
+  push:
+    branches: [qa/pr105-home-stage1-20261111]
+    paths: ['.github/workflows/home-qa-one-shot.yml']
+permissions:
+  contents: read
+concurrency:
+  group: canonical-home-qa-qa/pr105-home-stage1-20261111
+  cancel-in-progress: false
+jobs:
+  trusted-qa:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/qa/pr105-home-stage1-20261111' && github.event_name == 'push' }}
+    runs-on: [self-hosted, Windows, X64, zamerovac-qa]
+    timeout-minutes: 50
+    env:
+      CI: '1'
+      PYTHONUTF8: '1'
+      TESTED_SHA: '3f2779ec9b5c432296f9db2bad8502cc4ff63588'
+    steps:
+      - name: Verify owner service and installed tools
+        shell: cmd
+        run: |
+          if /I not "%USERNAME%"=="ZamerovacQA" exit /b 1
+          if not exist "C:\actions-runner\tools\MinGit-2.56.0.4\cmd\git.exe" exit /b 1
+          if not exist "C:\actions-runner\tools\Python313\python.exe" exit /b 1
+          echo C:\actions-runner\tools\MinGit-2.56.0.4\cmd>>"%GITHUB_PATH%"
+          echo C:\actions-runner\tools\Python313>>"%GITHUB_PATH%"
+      - name: Read-only tested source at literal SHA
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: 3f2779ec9b5c432296f9db2bad8502cc4ff63588
+          path: source
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+      - name: Read-only triggering workflow for self lint
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          path: recipe
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+      - name: Exact YAML preflight and adversarial negative tests before QA
+        shell: cmd
+        run: |
+          cd /d "%GITHUB_WORKSPACE%\source"
+          python tools\home_qa_gate.py lint-workflow "..\recipe\.github\workflows\home-qa-one-shot.yml" --strict
+          if errorlevel 1 exit /b 1
+          python -m unittest discover -s tests -p test_home_qa_gate.py -v
+          if errorlevel 1 exit /b 1
+          python tools\home_qa_gate.py windows-quick --expected-sha 3f2779ec9b5c432296f9db2bad8502cc4ff63588 --root . --check-only
+          if errorlevel 1 exit /b 1
+      - name: All quick Windows Node and Python tests
+        shell: cmd
+        run: |
+          cd /d "%GITHUB_WORKSPACE%\source"
+          set "LOCALAPPDATA=%GITHUB_WORKSPACE%\qa-evidence"
+          python tools\home_qa_gate.py windows-quick --expected-sha 3f2779ec9b5c432296f9db2bad8502cc4ff63588 --root .
+          if errorlevel 1 exit /b 1
+      - name: Controlled WSL native JDK Gradle and approved Python probes
+        shell: cmd
+        run: |
+          cd /d "%GITHUB_WORKSPACE%\source"
+          python tools\home_qa_gate.py wsl-check-from-windows --expected-sha 3f2779ec9b5c432296f9db2bad8502cc4ff63588 --root .
+          if errorlevel 1 exit /b 1
+      - name: Upload synthetic quick results, never APK
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: canonical-home-qa-3f2779ec9b5c432296f9db2bad8502cc4ff63588
+          path: qa-evidence/Zamerovac-QA/results/
+          retention-days: 7
+          if-no-files-found: ignore
