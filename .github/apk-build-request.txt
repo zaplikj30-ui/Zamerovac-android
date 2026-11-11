@@ -1,6 +1,6 @@
-# Pomocný soubor pro sestavení Zaměřovače TEST na vyžádání.
-# Běžné změny kódu APK nesestavují. Teprve změna tohoto souboru spustí workflow build-apk.yml.
-# Při požadavku na sestavení uprav číslo a popis níže, commitni do main.
+# HISTORICKÝ soubor: jeho změna již NESPOUŠTÍ build-apk.yml.
+# Aktuální sestavení/vydání jen přes schválený ruční workflow a QA bránu.
+# Původní request a reason jsou zachovány jako evidence; nezvyšovat kvůli sestavení.
 
 request: 13
 reason: jedina TEST APK 1.3.0 pro schvalene semanticke verzovani PR45, po uspesnych native a UI testech; zachovat stejny preview balicek, podpis a data bez odinstalace

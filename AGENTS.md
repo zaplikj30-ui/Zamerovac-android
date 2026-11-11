@@ -2,7 +2,7 @@
 
 ## Účel a kontext
 Tento repozitář je SAMOSTATNÝ projekt `Zamerovac-android`. Neměň repozitář `Prevadec-spojitosti`.
-Uživatel vyrábí zakázkový nábytek. Vyvíjíme vlastní Android aplikaci na zaměřování zakázek, inspirovanou pracovním postupem ImageMeteru. Nejde o kopii původního kódu, designových prostředků ani o obcházení jeho licence. Komunikuj česky a používej jednoduché vysvětlení, nevyžaduj znovu už schválené volby.
+Vyvíjíme profesionální Android Zaměřovač pro různá řemesla i domácí použití. ImageMeter je funkční reference a nástřel rozsahu, **nikoli povinná kopie designu nebo chování**. **Priorita: vlastní moderní, profesionální, jednotné a ergonomické UI.** Schválený vzhled kót, čar, šipek, úchopů a lupy zachovat; případný lepší návrh nejprve předložit vlastníkovi. Nepřebírat cizí chráněný kód, grafiku ani identitu a neobcházet licenci ImageMeteru. Komunikuj česky, jednoduše, nevyžaduj opakování již schválených rozhodnutí.
 
 ## Závazný standard jednorázové domácí QA (po schváleném začlenění)
 
@@ -60,18 +60,20 @@ Tento bod není pokyn spustit nový přepis ani sestavit APK. Kontrolní mechani
 5. **I výraznější přepracování aplikace je přípustná možnost**, pokud menší opravy nedokážou rozumně zajistit dlouhodobou bezpečnost, přesnost a udržovatelnost. Nejde o automatický souhlas s okamžitým přepisem od nuly: nejprve doložit konkrétní závady a varianty řešení, srozumitelně doporučit nejlepší cestu a vyžádat schválení konkrétního zásahu. Při rozsáhlé změně mít záložní návratovou cestu, testy před/po, bezpečnou migraci a ochranu stávajících zakázek; neoznačit výsledek za spolehlivý bez fyzického ověření tam, kde je nutné.
 6. Uživatel může navrhovat další funkce kdykoli. Pokud má přednost důležitá oprava, stabilizace či příprava architektury, **aktivně to sdělit a zařadit nové nápady na později**. Naopak neodkládat všechny chyby až po dokončení celé modernizace; rozumně kombinovat malé opravy a cílené zlepšování stavby aplikace.
 
-**Aktuální pořadí:** bezpečně dokončit rozpracovanou aktualizaci [#39 / PR #41](https://github.com/zaplikj30-ui/Zamerovac-android/pull/41), provést nezávislou kontrolu kvality a kolizí funkcí; pak podle zjištění navrhnout a provést cílenou modernizaci (případně větší přepracování po samostatném schválení). Nepřepisovat souběžně práci Codexu, nevytvářet APK kvůli dokumentaci. Technické rozhodování a výsledky průběžně evidovat v [#42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42).
+**Pořadí práce vždy ověř v posledních rozhodnutích [#42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42), [START_ZDE.md](START_ZDE.md) a aktuálních PR/CI.** Historické [#39 / PR #41](https://github.com/zaplikj30-ui/Zamerovac-android/pull/41) již není dnešní otevřený úkol. Priorita: bezpečné domácí QA, ochrana dat, přesnost a stabilizace/editor; neopakovat vyřešené audity, nezasahovat do cizích větví. Nová APK nevzniká kvůli dokumentaci; velká technologická změna až po doložení přínosů a samostatném schválení.
 
 ### Povinné porovnání architektury se seznamem funkcí a nápadů (5. 11. 2026)
 
 **Přímý pokyn uživatele:** Koordinující ChatGPT je odpovědný za to, že **sám porovnává technický návrh a skutečnou stavbu Zaměřovače se všemi známými požadavky a možnými budoucími funkcemi na GitHubu**. Uživatel má říkat, co potřebuje, ne sám hlídat architektonické dopady či objevovat rizika.
 
-- Před významnými změnami a povinně po dokončení velké aktualizace [#39 / PR #41](https://github.com/zaplikj30-ui/Zamerovac-android/pull/41) načíst nejnovější [VIZE_A_PLAN.md](VIZE_A_PLAN.md), relevantní issues (zejména #12, #17, #28, #39, #42), současný kód, testy a pravidla. Rozlišit **fungující funkce / schválené zadání / nezávazný budoucí nápad**.
+- Před významnými změnami a po dokončení důležité etapy načíst nejnovější [VIZE_A_PLAN.md](VIZE_A_PLAN.md), relevantní issues (zejména #12, #17, #28, #39, #42), současný kód, testy a pravidla. Rozlišit **fungující funkce / schválené zadání / nezávazný budoucí nápad**.
 - Zjistit, zda současná architektura bezpečně zvládne zamýšlený rozvoj: samostatné moduly, jednotky a geometrie, stabilní editovatelná data, ochrana a migrace zakázek, různé způsoby ovládání, doplnění měřidel, promítání, vzdálený tisk, sdílení, možné licence a budoucí změny technologií (Java, Kotlin, WebView i alternativy). **Neznámé budoucí funkce** zohledňovat obecně udržitelným návrhem, ne spekulativní implementací každé technologie.
 - Proaktivně najít konkrétní místa, která zbytečně ztíží rozšíření nebo způsobí konflikty nových a starých funkcí, a doporučit pořadí oprav. **Říct uživateli srozumitelně, co musíme zlepšit před další funkcí a proč**; pokud je prokázaná zásadní slabina, porovnat menší úpravy s cíleným větším přepracováním.
-- Výsledky kontroly a zbývající rizika ukládat do existujícího [#42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42), relevantní funkční testy do #28. Nevytvářet duplicitní záznamy. **Neimplementovat automaticky nezávazné nápady**, nespouštět nyní konkurenční zásahy do PR #41 ani novou APK kvůli dokumentaci.
+- Výsledky kontroly a zbývající rizika ukládat do existujícího [#42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42), relevantní funkční testy do #28. Nevytvářet duplicitní záznamy. **Neimplementovat automaticky nezávazné nápady**, nezasahovat do cizích rozpracovaných PR ani nevydávat APK kvůli dokumentaci.
 
 ### Připravenost na změny a doplnění technologií (5. 11. 2026)
+
+**Budoucí platformy, jazyky a jednotky:** Nyní Android; návrhově odděluj přesné hodnoty, geometrii, jednotky a výpočty od UI/hardwaru pro případné Windows/iOS/iPadOS. Nové a upravované texty připravuj pro překlad dle [#14](https://github.com/zaplikj30-ui/Zamerovac-android/issues/14) a [LOKALIZACE_PLAN.md](LOKALIZACE_PLAN.md). **Angličtina bude první další jazyk před budoucím mezinárodním vydáním**, nikoliv okamžitý plošný překlad. Lokalizace ani volba metrických/imperiálních jednotek nesmějí měnit přesná uložená data ani zákaznické texty.
 
 **Upřesnění uživatele:** Zaměřovač musí být stavěn tak, aby bylo možné v budoucnu **přecházet na vhodnější technologie, přidávat nové technologie a funkce** bez zbytečného rozsáhlého přepisování a bez vzájemného rozbíjení existujících funkcí. Nelze zaručit nulové potíže, ale architektura má rizika předem omezovat.
 
@@ -94,7 +96,7 @@ Před zavedením nové technologie či významnější funkce vždy posoudit jej
 
 **Budoucí požadavek: vzdálený tisk.** Počítat s bezpečným tiskem vybraných fotografií s kótami, výkresů a dokumentů na tiskárnu mimo telefon/tablet: přednostně tisk dostupný přes systémové tiskové služby a lokální Wi-Fi/síť; možnost odeslání přes internet řešit zvlášť s ověřením konkrétní služby, přihlášení a zabezpečení. Přenos obrazu a tisk jsou odlišné funkce. Zachovat přesné rozměry, viditelnost anotací, náhled před tiskem, volbu tiskárny a rozsahu a možnost zrušit. Nesmí dojít k nechtěnému odeslání zákaznických podkladů ani ke změně uložených dat. Kompatibilita tiskáren se bude ověřovat, nikoliv předpokládat.
 
-**Stav a priorita:** jde o technickou připravenost a budoucí požadavky, **nikoli o zadání nyní přidat nové funkce, oprávnění, knihovny či sestavit APK**. Po dokončení #39/PR #41 nezávisle prověřit skutečnou architekturu v #42 a navrhnout vhodné pořadí. Přesná podoba a podporovaná zařízení se rozhodnou až před implementací; některé hypotetické technologie možná vůbec nepoužijeme.
+**Stav a priorita:** jde o technickou připravenost a budoucí požadavky, **nikoli o zadání nyní přidat nové funkce, oprávnění, knihovny či sestavit APK**. Před konkrétní změnou nezávisle prověřit současnou architekturu a živé priority v #42. Přesná podoba a podporovaná zařízení se rozhodnou až před implementací; některé hypotetické technologie možná vůbec nepoužijeme.
 
 ### Nezávislé ovládání prstem, perem a myší (upřesnění 5. 11. 2026)
 
@@ -102,7 +104,7 @@ Před zavedením nové technologie či významnější funkce vždy posoudit jej
 
 **Technický princip:** obecná gesta a geometrie oddělit od API konkrétního pera/výrobce; sjednotit význam akcí bez ztráty přesnosti kót. Testovat dotyk/tah, víceprstá gesta, zoom, přerušení, výběr a editaci, rotaci a změnu velikosti okna. Dodržet schválené rozlišení vizuálních úchopů a dotykových oblastí. Při chybě nebo absenci pera musí fungovat prst. Potvrzovat kompatibilitu konkrétních značek až skutečným testem.
 
-**Stav:** pravidlo pro další práci a testování, ne potvrzení současné kompatibility se všemi pery. Nespouští změnu #39/PR #41 ani APK.
+**Stav:** pravidlo pro další práci a testování, ne potvrzení současné kompatibility se všemi pery. Neautorizuje okamžitou změnu ani APK.
 
 ### Budoucí rozšiřitelnost – ovládání, integrace, obnova a diagnostika (doplněno 5. 11. 2026)
 
@@ -119,7 +121,7 @@ Před zavedením nové technologie či významnější funkce vždy posoudit jej
 - **Diagnostika:** možnost lokálních nebo výslovně povolených technických hlášení o pádech a chybách, bez zákaznických fotografií, zakázek, adres a tajných údajů; nic neposílat na server bez transparentního rozhodnutí.
 - **Nízká paměť/životní cyklus:** testovat velké zakázky, dlouhý běh, návraty z pozadí, přerušení, systémové ukončení a výpadek sítě; zachovat původní data, rozpracované změny a přesné kóty.
 
-**Priorita:** nejprve bezpečně dokončit #39/PR #41, poté přezkoumat technický základ a testy v [#42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42). Žádné nové APK kvůli této dokumentaci.
+**Priorita:** podle živé koordinace v [#42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42) upřednostnit domácí QA, ochranu dat a ověřenou stabilizaci. Technický základ prověřovat podle konkrétních rizik, ne podle starého harmonogramu. Žádné APK kvůli dokumentaci.
 
 ### Budoucí funkce jsou zamýšlené, nikoli odepsané (upřesnění 5. 11. 2026)
 
@@ -127,9 +129,11 @@ Před zavedením nové technologie či významnější funkce vždy posoudit jej
 
 **Povinné rozlišení stavu:** (a) plánovaná budoucí schopnost, detaily otevřené; (b) pouze možnost k obchodnímu/technickému posouzení; (c) schválená konkrétní implementace; (d) skutečně implementováno a ověřeno. Pokud z kontextu není jisté, která kategorie platí, nedomýšlet závazek ani zamítnutí. **Monetizace a konkrétní reklamní model zůstávají jen otevřenými obchodními možnostmi**, protože uživatel je takto výslovně označil.
 
-**Technické řízení:** ChatGPT sám porovnává všechny plánované budoucí schopnosti a možnosti se současnou stavbou aplikace, předchází zbytečným závislostem a kolizím, ale nemá předem programovat neodsouhlasené funkce či vytvářet složitou infrastrukturu „pro jistotu“. Plánované oblasti zahrnují mj. promítání na další displeje, vzdálený tisk, další pera a vstupy, další měřidla, různé režimy ovládání a bezpečné integrace. Postupovat až po bezpečném dokončení rozpracované #39/PR #41 a povinné kontrole #42.
+**Technické řízení:** ChatGPT sám porovnává všechny plánované budoucí schopnosti a možnosti se současnou stavbou aplikace, předchází zbytečným závislostem a kolizím, ale nemá předem programovat neodsouhlasené funkce či vytvářet složitou infrastrukturu „pro jistotu“. Plánované oblasti zahrnují mj. promítání na další displeje, vzdálený tisk, další pera a vstupy, další měřidla, různé režimy ovládání a bezpečné integrace. Postupovat podle živých rozhodnutí #42 a bez ohrožení právě rozpracovaných bezpečnostních oprav.
 
 ## Povinné testování selhání a ochrany dat u každé změny (5. 11. 2026)
+
+**Rychlá kontrola jednoduchých chyb ve všech funkcích (rozhodnutí 11. 11. 2026):** Při změně testuj cíleným automatickým průchodem skutečné chování dotčené funkce a relevantní návaznosti; platí pro editor, všechny čáry/kóty/tvary, menu/tlačítka, galerii, média/hlas, koš, nastavení, Bosch a další funkce. U vizuálních funkcí kontroluj skutečné pixely, viditelnost a interakci, nejen existenci objektu v datech. Při ukládání také skutečně znovu načtené přesné hodnoty, jednotky a původní bajty. **Testy podle rizika, ne všechny těžké testy po každé drobnosti; u ochrany dat/bezpečnosti i negativní scénáře a před APK společná regrese.** PASS jen při skutečném běhu na daném SHA a prostředí; neslibuj neexistující testy.
 
 **Výslovně schválené trvalé pravidlo uživatele:** Nesmíme ověřovat pouze to, že nová či upravená funkce v běžném scénáři funguje. **Před dokončením každé významné změny podle rizika zkontroluj také, jak funkce selže, co přitom zobrazí uživateli a zda zachová původní data a správnost rozměrů.** Testování chybových cest je součástí zadání, implementace i kontroly výsledku — není až volitelnou dodatečnou revizí.
 
@@ -219,7 +223,7 @@ Před zavedením nové technologie či významnější funkce vždy posoudit jej
 
 ## Stav projektu a omezení
 - Projekt obsahuje Android Java shell/WebView a HTML/JS editor v `app/src/main/assets/`, Android nativní most v `app/src/main/java/cz/zamerovac/app/`.
-- GitHub Actions workflow `.github/workflows/build-apk.yml` sestavuje a vydává testovací APK **pouze na vyžádání**: tlačítkem Actions → Run workflow nebo zvláštním commitem, který změní `.github/apk-build-request.txt`. Workflow je nastavené na `push` jen pro tuto cestu; **běžné commity na main sestavení NESPOUŠTĚJÍ**. Emulátor `.github/workflows/emulator-smoke.yml` se spouští výhradně ručně. Při vydání zachovej kontrolu podpisu a jednoznačné verze. Zachování uživatelských dat při aktualizaci musí být navíc ověřeno na skutečném zařízení, nelze jej odvozovat pouze z úspěšného sestavení. Úspěšný build NENÍ ověření správného fungování.
+- **Aktuální sestavení a vydání ověř přímo v workflow, nikoli ze starého návodu.** K 11. 11. 2026 je `.github/workflows/build-apk.yml` pouze **ruční `workflow_dispatch`**: placená nouzová cloudová možnost s výslovným souhlasem vlastníka. Historický `.github/apk-build-request.txt` již sestavení nespouští. Důvěryhodné domácí QA na `main` má vlastní `push` triggery pro vybrané kódové/testové soubory; technické QA sestavení **není vydání**. Před commitem/PR zkontrolovat aktuální triggery a rozpočet Actions **12 USD/měsíc**; nedůvěryhodné PR/forky nikdy na domácí runner. Vydání jedné společné APK až po testovací/bezpečnostní bráně a výslovném souhlasu vlastníka. Zachovat package ID, podpis, vyšší versionCode, správný versionName a data; ověřit skutečnou instalaci na telefonu. Úspěšný build není důkaz fungování.
 - Pozor: synchronizace přes Android Storage Access Framework je podmíněna podporou zapisovatelné složky poskytovatelem Google Disku. Pokud nefunguje, zvaž bezpečnou oficiální integraci Drive API/OAuth, nikoli předstírání funkčního cloudu.
 - Bluetooth implementace v `BoschClassicReader.java` je experimentální; funkčnost je nutné ověřit na konkrétním laseru Bosch, konkrétním firmware a Android zařízení.
 - Žádné reálné zákaznické soubory nepoužívat jako testovací data bez výslovného souhlasu. Preferuj testovací zakázky.
@@ -286,16 +290,16 @@ Před zavedením nové technologie či významnější funkce vždy posoudit jej
 
 ## Jednoduchý provoz pro uživatele — koordinuje ChatGPT/Codex
 - Uživatel zadává **co má aplikace dělat nebo co nefunguje**; nemusí zadávat commity, kroky GitHubu, testování ani sestavení.
-- V jedné pracovní dávce: pochopit zadání → upravit zdrojové soubory → spustit rychlé relevantní testy → uložit změny → **jednou na závěr**, pokud uživatel chce aktualizaci či instalaci, vyvolat sestavení `.github/apk-build-request.txt` → ověřit dostupný výsledek. Neprodlužovat práci zbytečnými průběžnými vydáními ani opakovaným úplným čtením beze změny.
+- V jedné pracovní dávce: pochopit zadání → upravit zdrojové soubory → spustit rychlé relevantní testy → uložit změny → **jednou na závěr**, po dokončení schváleného balíku a regresi **teprve po výslovném schválení vlastníka** vyvolat aktuální vydávací workflow → ověřit výsledek. Neprodlužovat práci zbytečnými průběžnými vydáními ani opakovaným úplným čtením beze změny.
 - Na malé opravy spouštěj cílené testy a kontrolu syntaxe; úplný workflow build až při vydání. Důležitá ověření nesmí být vynechána (kontrola podpisu, verze, příslušné regresní testy, ochrana dat). Emulátor jen když pomůže ověřit problém, nikoli automaticky při každé opravě.
 - Uživatel má testovat jen dotykové chování, Bluetooth a jiné věci vyžadující skutečný telefon či tablet. Dej mu přímý odkaz na ověřené vydání, krátce popiš co otestovat a co je neověřené. Nepředkládej manuální kroky v GitHubu, pokud je lze obsloužit dostupnými nástroji; když přístup neumožní dokončit krok, jasně to řekni.
-- Uživatelovo „pusť se do aktualizace“ znamená dodělat aktuálně požadovaný obsah a potom jednou vydat APK; **nespouštět build nedokončené práce na začátku**. Běžná diskuse či návrh bez požadavku na instalaci build nespouští.
+- Uživatelovo „pusť se do aktualizace“ znamená dokončit schválený obsah a společnou regresi; vydání jedné APK vyžaduje následný výslovný souhlas; **nespouštět build nedokončené práce na začátku**. Běžná diskuse či návrh bez požadavku na instalaci build nespouští.
 
 ## Přirozené pokyny k aktualizaci a sestavení APK
-- Uživatel nemusí vyslovit přesné „sestav APK“. Výrazy **„uděláme aktualizaci“**, **„pusť se do aktualizace“**, **„aktualizuj aplikaci“** a podobné znamenají provést požadované úpravy, ověřit dostupné testy a **po dokončení této várky změn sestavit jednu testovací APK**. Samotné zahájení úprav ještě není pokyn sestavit nedokončený kód.
-- Přímé **„sestav APK“**, **„vytvoř testovací verzi“**, **„dej mi instalaci“** znamená spustit sestavení aktuálního stavu bez čekání na další změny.
-- Aby sestavení mohl vyvolat připojený GitHub nástroj i bez přímého API `workflow_dispatch`, načti aktuální obsah a SHA `.github/apk-build-request.txt`, **zvyš číslo `request` o 1**, zapiš stručný důvod a aktualizuj soubor na `main` samostatným commitem. Tento jediný commit vyvolá `build-apk.yml` přes filtr `paths`. Neprováděj tentýž požadavek opakovaně a nesestavuj po každém mezikroku.
-- Před změnou spouštěcího souboru musí být zamýšlené úpravy uloženy na `main`; při souběžné práci ověř poslední stav a případné konflikty. Pokud GitHub build selže, oznam to a zkus cílenou opravu. Pokud nemáš možnost číst výsledek běhu, **netvrď, že APK je hotová**; odkaž na Actions/Releases a výslovně označ stav za neověřený.
+- Uživatel nemusí vyslovit přesné „sestav APK“. Výrazy **„uděláme aktualizaci“**, **„pusť se do aktualizace“**, **„aktualizuj aplikaci“** a podobné znamenají provést požadované úpravy, ověřit dostupné testy a **po dokončení a společné regresi požádat o souhlas s vydáním jedné společné testovací APK**. Samotné zahájení úprav ještě není pokyn sestavit nedokončený kód.
+- Přímé **„sestav APK“** může znamenat povolení k **technickému QA buildu bez publikace**; **„dej mi instalaci“** je požadavek na vydání, nikoli obejití testů a výslovného schválení konkrétní APK. Pokud je nejasné, zda uživatel chce technický build, nebo zveřejnění, jednou cíleně upřesnit.
+- **Historický `.github/apk-build-request.txt` neupravuj kvůli vydání** – není aktivním spouštěčem. Technické HOME QA sestavení a skutečný release mají oddělené podmínky; vycházej z živého workflow, přesného SHA, dokončených testů a výslovného souhlasu. Placený cloud pouze při zvláštním schválení a dodržení limitu.
+- Před schváleným technickým buildem nebo vydáním ověř konkrétní checkoutovaný SHA, PR/merge, HOME QA, podpis, číslo vydání, kompatibilitu a triggery. Pokud build selže, oznam to a oprav příčinu; bezpečnostní brány netlum. Bez ověřeného výsledku **netvrď, že APK je hotová**; odkaž na Actions/Releases a označ stav pravdivě.
 
 ## Výběr režimu ChatGPT: Chat / Work / Codex (dohoda 6. 11. 2026)
 
@@ -305,6 +309,6 @@ Před zavedením nové technologie či významnější funkce vždy posoudit jej
 - **Work (Práce):** doporučit především pro rozsáhlejší samostatnou práci s dokumenty, soubory, podporovanými weby či připojenými aplikacemi: například úplný návrh a inventuru Zaměřovače, porovnání UI, přípravu podrobného plánu a dokumentace. Režim Work nenahrazuje automaticky Codex ani neznamená záruku přístupu k webu, GitHubu, místním souborům či testovacím zařízením; schopnosti ověřit pro konkrétní úkol.
 - **Codex:** přednostně složitější zásahy do zdrojového kódu, opravy datových/bezpečnostních chyb, komplexní testování, kontrolu buildů a rozsáhlejší implementaci. Když není přímé spuštění k dispozici, ChatGPT dá úplný text zadání, doporučí dostupný model a úroveň a řídí následnou kontrolu výsledků.
 - **GitHub zůstává zdrojem pravdy bez ohledu na režim.** Před změnou číst aktuální pravidla, issues, commity, PR a CI; zabránit souběžnému přepisu. Přepnutí režimu automaticky nepřenáší nedokončené lokální změny ani nespouští Codex. Důležité závěry zapisovat na GitHub bez duplicit. Uživatel přepnutí do Work/Codex provede, pokud ho ChatGPT nemůže provést dostupnou oprávněnou akcí.
-- **Nesnažit se použít Work pro každou drobnost.** Výběr musí usnadnit dosažení výsledku, ne zvýšit režii či spotřebu limitů. Neodkládat kritické opravy #39/PR #41 kvůli přípravě dokumentace nebo experimentům s režimy.
+- **Nesnažit se použít Work pro každou drobnost.** Výběr musí usnadnit dosažení výsledku, ne zvýšit režii či spotřebu limitů. Neodkládat aktuální kritické opravy evidované v #42 kvůli dokumentaci ani experimentům s režimy.
 
 **Pokyny projektu ChatGPT jsou odlišné od tohoto souboru.** Požadavek uživateli doporučit i krátké doplnění v Pokynech projektu; GitHub zápis tyto pokyny sám nemění. Bez změny programu, testů či APK.
