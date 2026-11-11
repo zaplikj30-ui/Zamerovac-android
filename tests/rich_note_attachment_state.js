@@ -49,8 +49,9 @@ function fixture(item,options={}){
  get('richText').value=item.text||'';
  get('richSize').value=String(item.insetWidth||240);
  get('richAngle').value=String(item.insetRotation||0);
- const recordIds=[],opens=[];
- const parent={id:'parent',items:[item]};
+ const recordIds=[],opens=[],editStack=Array.isArray(options.undoStart)?options.undoStart.slice():[],
+       redoStack=['saved-redo'];
+ const parent={id:'parent',items:options.newNote?[]:[item]};
  const window={isRecordLocked:()=>false};
  const stopOutcomes=Array.isArray(options.stopOutcomes)?options.stopOutcomes.slice():null;
  const Native={
@@ -66,10 +67,11 @@ function fixture(item,options={}){
     created.push(node);return node;
    }
   },
-  current:parent,selected:item.id,photoSize:{w:800,h:600},native:true,Native,
+  current:parent,selected:item.id,state:{records:[parent]},editStack,redoStack,
+  photoSize:{w:800,h:600},native:true,Native,
   uid:()=> 'record-'+(++recordSerial),
   notify:text=>messages.push(text),
-  checkpoint:()=>{checkpoints++},
+  checkpoint:()=>{checkpoints++;editStack.push(JSON.stringify(parent.items));if(editStack.length>50)editStack.shift();redoStack.length=0},
   commitEditor:()=>{commits++;return options.saveFails!==true},
   finishDraw:()=>{},openAttachment:()=>{},openNestedPhoto:(...args)=>opens.push(args),
   pickMedia:(mode,handler)=>pickerCalls.push({mode,handler}),
@@ -88,7 +90,8 @@ function fixture(item,options={}){
  const flush=()=>new Promise(resolve=>setImmediate(resolve));
  return {
   get,window,item,parent,Native,created,recordIds,messages,focuses,pickerCalls,opens,revokedUrls,
-  open:()=>sandbox.openRichNote(item,false),flush,
+  editStack,redoStack,
+  open:()=>sandbox.openRichNote(item,!!options.newNote),flush,
   preview:i=>previews.get(i),
   remove:i=>attachmentContainer.querySelectorAll('[data-remove]')[i],
   get checkpoints(){return checkpoints},get commits(){return commits}
@@ -252,6 +255,39 @@ async function run(){
  assert.equal(retry.window.__activeRichNotePersist(),true);
  assert.deepEqual(Array.from(retry.item.audioMedia),['record-1'],'Successful retry saved exactly once');
 
- console.log('PASS rich note: preview, cancel, save, duplicate and late callbacks, photo selection, lock, deletion failure, audio stop retry and blob URL cleanup');
+ // Rejected Save must not leave a mutated item that a later unrelated save publishes.
+ const writeFailureOptions={saveFails:true,undoStart:Array.from({length:50},(_,i)=>'history-'+i)};
+ const beforeFail={id:'n20',type:'note',text:'Původní',media:['voice'],audioMedia:['voice'],insetWidth:200};
+ const writeFail=fixture(beforeFail,writeFailureOptions);
+ writeFail.open();
+ writeFail.get('richText').value='Neuložené';
+ writeFail.get('richSize').value='900';
+ writeFail.get('richVoice').onclick();writeFail.get('richVoice').onclick();
+ assert.equal(writeFail.window.__activeRichNotePersist(),false,'Rejected note save must be reported');
+ assert.equal(writeFail.item.text,'Původní','Rejected write cannot mutate saved text in memory');
+ assert.equal(writeFail.item.insetWidth,200,'Rejected write cannot mutate original image geometry');
+ assert.deepEqual(Array.from(writeFail.item.media),['voice'],'Rejected write cannot attach audio');
+ assert.deepEqual(Array.from(writeFail.item.audioMedia),['voice']);
+ assert.equal(writeFail.editStack.length,50,'History capacity must stay unchanged');
+ assert.equal(writeFail.editStack[0],'history-0','Failed save cannot drop oldest Undo history');
+ assert.deepEqual(Array.from(writeFail.redoStack),['saved-redo'],'Failed save preserves Redo');
+ assert.equal(writeFail.get('modal').hidden,false,'Failed save keeps user draft available');
+ writeFail.get('cancelModal').onclick();
+ assert.equal(writeFail.item.text,'Původní','Cancel after failed save must not publish draft');
+
+ // New note failed Save must not leave a ghost record, retry must insert exactly once.
+ const newOptions={newNote:true,saveFails:true};
+ const newNote={id:'n21',type:'note',media:[],audioMedia:[],text:''};
+ const uncommitted=fixture(newNote,newOptions);
+ uncommitted.open();uncommitted.get('richText').value='Nová poznámka';
+ assert.equal(uncommitted.window.__activeRichNotePersist(),false);
+ assert.equal(uncommitted.parent.items.length,0,'Rejected first save leaves no ghost annotation');
+ assert.equal(uncommitted.item.text,'','Failed first save restores model but keeps input draft');
+ newOptions.saveFails=false;
+ assert.equal(uncommitted.window.__activeRichNotePersist(),true);
+ assert.equal(uncommitted.parent.items.length,1,'Successful retry creates the annotation');
+ assert.equal(uncommitted.parent.items[0].text,'Nová poznámka');
+
+ console.log('PASS rich note: media drafts, late callbacks, preview cleanup, stop retry, lock, delete and rollback after failed save');
 }
 run().catch(err=>{console.error(err);process.exitCode=1});
