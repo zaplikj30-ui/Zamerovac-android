@@ -40,9 +40,9 @@ public class ProtectedRevisionsTest {
         assertEquals(Set.of("original-photo","original-video"),new ProtectedRevisions(device,device.prefs).pins());
         String next=new JSONObject(exact).put("records",new JSONArray()).toString();LocalDatabase.write(device,next);hasExactDatabase();
         outbox.prepare(peer);outbox.discard(peer);peers.forget(peer);
-        assertEquals(Set.of("original-photo","original-video"),new ProtectedRevisions(device,device.prefs).pins());
+        String revisionId="revision-"+PeerWire.hash(exact.getBytes(StandardCharsets.UTF_8));assertEquals(Set.of("original-photo","original-video",revisionId),new ProtectedRevisions(device,device.prefs).pins());assertArrayEquals(exact.getBytes(StandardCharsets.UTF_8),Files.readAllBytes(new File(device.home,"media/"+revisionId).toPath()));
         boolean found=false;for(JSONObject hold:holds())if(snapshot.hash.equals(hold.getString("sourceHash"))){found=true;assertArrayEquals(snapshot.bytes,hold.getString("metadata").getBytes(StandardCharsets.UTF_8));}
-        assertTrue(found);exactBytes();assertEquals(2,Objects.requireNonNull(new File(device.home,"media").list()).length);
+        assertTrue(found);exactBytes();assertEquals(3,Objects.requireNonNull(new File(device.home,"media").list()).length); // The additional immutable JSON revision is protected too.
     }
     @Test public void purgeAndPendingCleanupRetainPhotoVideoAndExactPreimage()throws Exception{
         JSONObject result=new TrashPurger(device,device.prefs).purge(exact,exact,new JSONArray().put("photo"),text->LocalDatabase.write(device,text));
