@@ -107,7 +107,8 @@
   const left=Math.min(...corners.map(p=>p.x)),right=Math.max(...corners.map(p=>p.x));
   const top=Math.min(...corners.map(p=>p.y)),bottom=Math.max(...corners.map(p=>p.y));
   const photo={x:left,y:top,w:right-left,h:bottom-top};
-  const caption=labelRect(c,it,g,render),radius=13,gap=7;
+  let caption;c.save();try{caption=labelRect(c,it,g,render)}finally{c.restore()}
+  const radius=13,gap=7;
   const viewport=render?.viewport||{w:stageCanvas.clientWidth,h:stageCanvas.clientHeight};
   const collides=(a,b)=>b&&a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
   const options=[
