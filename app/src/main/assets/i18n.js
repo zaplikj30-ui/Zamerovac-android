@@ -31,6 +31,9 @@
     'audio.copy':'Uložit kopii originálu',
     'audio.close':'Zavřít',
     'audio.help':'Dokončený hlas připojíš v otevřené poznámce tlačítkem Připojit k této poznámce. U bodové poznámky pak potvrď Uložit. Nejistý záznam lze zkopírovat pro kontrolu; nemusí být přehratelný. Automatické mazání je vypnuté. Běžný ZIP zakázek nezahrnuje nepřipojené nahrávky.',
+    'audio.suspect':'Podezřelá kopie nahrávky. Původní obsah není potvrzen; zachována pro ruční kontrolu.',
+    'audio.copyReview':'Uložit podezřelou kopii',
+    'audio.exportedReview':'Nejistá kopie byla zapsána pro ruční kontrolu. Původní obsah tím není potvrzen.',
     'audio.exported':'Kopie byla zapsána. Uchovaný originál zůstal v aplikaci.',
     'zip.invalid':'Soubor není platnou zálohou Zaměřovače'
   });

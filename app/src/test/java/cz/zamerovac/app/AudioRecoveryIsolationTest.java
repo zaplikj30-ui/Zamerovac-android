@@ -36,6 +36,9 @@ public class AudioRecoveryIsolationTest {
         ReflectionHelpers.setField(activity,"retainedAudioExportToken",token);
         activity.onActivityResult(36,android.app.Activity.RESULT_OK,new Intent().setData(uri));
         assertTrue("Native export did not complete",closed.await(5,TimeUnit.SECONDS));assertArrayEquals(expected,output.toByteArray());
+        String actual=ArchiveIntegrity.hex(java.security.MessageDigest.getInstance("SHA-256").digest(output.toByteArray()));
+        assertEquals(ArchiveIntegrity.hex(java.security.MessageDigest.getInstance("SHA-256").digest(expected)),actual);
+        System.out.println("NATIVE_EXPORTED bytes="+output.size()+" SHA256="+actual);
     }
     @Test public void unknownJournalMustNotHideTwoValidRecordingsOrTheirNativeExports()throws Exception{
         JSONObject one=completed("voice-one",ONE),two=completed("voice-two",TWO);
@@ -141,5 +144,63 @@ public class AudioRecoveryIsolationTest {
             assertFalse(item.getBoolean("attachable"));assertTrue(tokens.add(item.getString("token")));export(item.getString("token"),item.getString("token").contains(one.getString("token"))?ONE:TWO);copies++;
         }}
         assertEquals(2,copies);exact(store.temporary(one),ONE);exact(new File(media,two.getString("temporary")),TWO);
+    }
+    static final byte[] OTHER={9,8,7,6,5,4,3,2,1,0};
+    JSONObject split(String id)throws Exception{
+        JSONObject e=completed(id,ONE);File reserved=store.temporary(e),target=new File(media,id);Files.delete(reserved.toPath());Files.write(reserved.toPath(),OTHER);
+        assertTrue(Files.isRegularFile(reserved.toPath(),LinkOption.NOFOLLOW_LINKS));assertTrue(Files.isRegularFile(target.toPath(),LinkOption.NOFOLLOW_LINKS));
+        assertEquals(ONE.length,reserved.length());assertEquals(target.length(),reserved.length());assertFalse(Files.isSameFile(target.toPath(),reserved.toPath()));
+        assertNotEquals(PeerMedia.inspect(target).getString("hash"),PeerMedia.inspect(reserved).getString("hash"));exact(target,ONE);exact(reserved,OTHER);return e;
+    }
+    JSONObject variant(JSONArray items,String id,String integrity)throws Exception{
+        for(int i=0;i<items.length();i++){JSONObject item=items.getJSONObject(i);if(id.equals(item.optString("id"))&&integrity.equals(item.optString("integrity")))return item;}
+        fail("Missing "+integrity+" copy for "+id+": "+items);return null;
+    }
+    @Test public void knownOriginalTokenMustExportJournalBytesInsteadOfDifferentRegularReservation()throws Exception{
+        JSONObject e=split("voice-split-direct");ByteArrayOutputStream output=new ByteArrayOutputStream();JSONObject proof=store.copyOriginal(e.getString("token"),output);
+        System.out.println("SPLIT_EXPORT actual_sha="+ArchiveIntegrity.hex(java.security.MessageDigest.getInstance("SHA-256").digest(output.toByteArray()))+" expected_sha="+PeerMedia.inspect(new File(media,"voice-split-direct")).getString("hash"));
+        assertArrayEquals("Known journal token selected wrong original",ONE,output.toByteArray());assertEquals(ONE.length,proof.getLong("size"));assertTrue(proof.getBoolean("verified"));
+    }
+    @Test public void nativeOriginalExportMustUseVerifiedFinalRatherThanSameSizeOtherInode()throws Exception{
+        JSONObject e=split("voice-split-native");export(e.getString("token"),ONE);exact(new File(media,"voice-split-native"),ONE);exact(store.temporary(e),OTHER);
+    }
+    @Test public void splitRecoveryMustExposeVerifiedFinalAndUncertainReservationSeparately()throws Exception{
+        JSONObject e=split("voice-split-rows");JSONArray items=new JSONArray(api.pendingAudio());JSONObject good=variant(items,"voice-split-rows","verified"),suspect=variant(items,"voice-split-rows","uncertain");
+        assertNotEquals(good.getString("token"),suspect.getString("token"));assertFalse(good.getBoolean("attachable"));assertFalse(suspect.getBoolean("attachable"));assertFalse(suspect.getBoolean("available"));
+        exportAcknowledged(good.getString("token"),ONE,true);exportAcknowledged(suspect.getString("token"),OTHER,false);exact(new File(media,"voice-split-rows"),ONE);exact(store.temporary(e),OTHER);
+    }
+    @Test public void splitUnknownEvidenceFailedSaveAndStaleCASKeepBothCopiesAndHealthyNeighbour()throws Exception{
+        JSONObject e=split("voice-split-combined"),healthy=completed("voice-healthy",TWO);File unknown=new File(home,"pending-audio-v1/unexpected.tmp");Files.write(unknown.toPath(),new byte[]{42});
+        File ledger=new File(home,"pending-audio-v1/"+e.getString("token")+".json");byte[] evidence=Files.readAllBytes(ledger.toPath());String initial="{\"schema\":1,\"records\":[]}";LocalDatabase.write(home,initial);String saved="{\"schema\":1,\"records\":[{\"id\":\"notes\",\"kind\":\"note\",\"media\":[\"voice-split-combined\",\"voice-healthy\"]}]}";
+        File blocker=new File(home,"projects.tmp");assertTrue(blocker.mkdir());try{assertFalse(new JSONObject(api.saveDataChecked(saved,initial)).getBoolean("ok"));assertEquals(initial,LocalDatabase.read(home));}finally{blocker.delete();}
+        assertTrue(new JSONObject(api.saveDataChecked(saved,initial)).getBoolean("ok"));String newer=new JSONObject(saved).put("sequence",2).toString();assertTrue(new JSONObject(api.saveDataChecked(newer,saved)).getBoolean("ok"));assertFalse(api.confirmPendingAudio(saved,"notes","","voice-split-combined"));assertFalse(api.confirmPendingAudio(newer,"notes","","voice-split-combined"));
+        for(int attempt=0;attempt<2;attempt++){
+            JSONArray items=new JSONArray(api.pendingAudio());export(variant(items,"voice-split-combined","verified").getString("token"),ONE);export(variant(items,"voice-split-combined","uncertain").getString("token"),OTHER);export(row(items,"voice-healthy").getString("token"),TWO);
+            assertEquals(newer,LocalDatabase.read(home));assertArrayEquals(evidence,Files.readAllBytes(ledger.toPath()));assertArrayEquals(new byte[]{42},Files.readAllBytes(unknown.toPath()));exact(new File(media,"voice-split-combined"),ONE);exact(store.temporary(e),OTHER);exact(store.temporary(healthy),TWO);
+        }
+    }
+    void exportAcknowledged(String token,byte[] expected,boolean verified)throws Exception{
+        android.webkit.WebView web=ReflectionHelpers.getField(activity,"web");java.util.concurrent.atomic.AtomicReference<String> script=new java.util.concurrent.atomic.AtomicReference<>();
+        doAnswer(call->{script.set(call.getArgument(0));return null;}).when(web).evaluateJavascript(contains("window.PendingAudio?.exported("),isNull());
+        export(token,expected);for(int i=0;i<40&&script.get()==null;i++){Shadows.shadowOf(android.os.Looper.getMainLooper()).idle();Thread.sleep(25);}
+        assertEquals("window.PendingAudio?.exported("+verified+")",script.get());
+    }
+    @Test public void verifiedCopyChecksStreamSHAEvenWhenChangedFileRetainsSizeInodeAndTimestamp()throws Exception{
+        JSONObject e=completed("voice-stream-sha",ONE);File target=new File(media,"voice-stream-sha");java.nio.file.attribute.FileTime stamp=Files.getLastModifiedTime(target.toPath());
+        java.util.concurrent.atomic.AtomicBoolean changed=new java.util.concurrent.atomic.AtomicBoolean();PendingAudio injected=new PendingAudio(media,prefs,step->{if(step.equals("export-read")&&changed.compareAndSet(false,true)){Files.write(target.toPath(),OTHER);Files.setLastModifiedTime(target.toPath(),stamp);}});
+        ByteArrayOutputStream output=new ByteArrayOutputStream();try{injected.copyOriginal(e.getString("token"),output);fail("Wrong stream SHA acknowledged");}catch(IOException expected){assertTrue(expected.getMessage().contains("SHA-256"));}
+        assertTrue(changed.get());assertArrayEquals(OTHER,output.toByteArray());Files.write(target.toPath(),ONE);ByteArrayOutputStream retry=new ByteArrayOutputStream();assertTrue(store.copyOriginal(e.getString("token"),retry).getBoolean("verified"));assertArrayEquals(ONE,retry.toByteArray());
+    }
+    @Test public void reverseSplitRetainsVerifiedReservationAndIndependentUncertainFinal()throws Exception{
+        JSONObject e=completed("voice-reverse",ONE);File target=new File(media,"voice-reverse");Files.delete(target.toPath());Files.write(target.toPath(),OTHER);
+        JSONArray items=new JSONArray(api.pendingAudio());JSONObject good=variant(items,"voice-reverse","verified"),bad=variant(items,"voice-reverse","uncertain");
+        assertFalse(good.getBoolean("available"));assertFalse(good.getBoolean("attachable"));exportAcknowledged(good.getString("token"),ONE,true);exportAcknowledged(bad.getString("token"),OTHER,false);exact(store.temporary(e),ONE);exact(target,OTHER);
+    }
+    @Test public void noMatchingCopyCannotClaimOriginalOrOpenDestinationButBothRawFilesRemainExportable()throws Exception{
+        JSONObject e=split("voice-no-match");byte[] third={4,4,4,4,4,4,4,4,4,4};File target=new File(media,"voice-no-match");Files.write(target.toPath(),third);
+        java.util.concurrent.atomic.AtomicInteger opened=new java.util.concurrent.atomic.AtomicInteger();try{store.copyOriginal(e.getString("token"),()->{opened.incrementAndGet();return new ByteArrayOutputStream();});fail("Missing original falsely acknowledged");}catch(IOException expected){}assertEquals(0,opened.get());
+        JSONArray items=new JSONArray(api.pendingAudio());int raw=0;for(int i=0;i<items.length();i++){JSONObject row=items.getJSONObject(i);if("voice-no-match".equals(row.optString("id"))&&row.has("token")){
+            assertEquals("uncertain",row.getString("integrity"));ByteArrayOutputStream bytes=new ByteArrayOutputStream();assertFalse(store.copyOriginal(row.getString("token"),bytes).getBoolean("verified"));assertArrayEquals(row.getString("token").startsWith("source-")?OTHER:third,bytes.toByteArray());raw++;
+        }}assertEquals(2,raw);exact(store.temporary(e),OTHER);exact(target,third);
     }
 }

@@ -471,8 +471,8 @@ public class MainActivity extends Activity {
                 final Uri destination=data.getData();
                 if(!"content".equals(destination.getScheme())||(getPackageName()+".files").equals(destination.getAuthority())){error(getString(R.string.audio_copy_invalid));return;}
                 new Thread(()->{try{
-                    new PendingAudio(new File(getFilesDir(),"media"),settings).copyOriginal(token,()->getContentResolver().openOutputStream(destination,"wt"));
-                    js("window.PendingAudio?.exported()");
+                    JSONObject proof=new PendingAudio(new File(getFilesDir(),"media"),settings).copyOriginal(token,()->getContentResolver().openOutputStream(destination,"wt"));
+                    js("window.PendingAudio?.exported("+proof.getBoolean("verified")+")");
                 }catch(Exception failure){error(getString(R.string.audio_copy_failed));}},"RetainedAudioExport").start();
             }
             return;

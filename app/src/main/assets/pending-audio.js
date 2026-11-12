@@ -29,13 +29,13 @@
    const row=document.createElement('div'),label=document.createElement('p');
    const item=typeof entry.token==='string'||typeof entry.id==='string';
    if(typeof entry.id==='string')row.dataset.audioId=entry.id;
-   label.textContent=(item?t('item',{number:++number})+' · ':'')+(entry.issue==='journal-uncertain'?t('journalWarning'):entry.available&&entry.attachable===false?t('quarantined'):entry.available&&entry.state==='needs-review'?t('bindingReview'):entry.available?t('pending'):t('review'))+(entry.createdAt?' · '+dateText(entry.createdAt):'');row.append(label);
+   label.textContent=(item?t('item',{number:++number})+' · ':'')+(entry.issue==='journal-uncertain'?t('journalWarning'):entry.issue==='source-mismatch'?t('suspect'):entry.available&&entry.attachable===false?t('quarantined'):entry.available&&entry.state==='needs-review'?t('bindingReview'):entry.available?t('pending'):t('review'))+(entry.createdAt?' · '+dateText(entry.createdAt):'');row.append(label);
    if(entry.available&&typeof entry.id==='string'){
     const play=document.createElement('button');play.type='button';play.textContent=t('play');play.onclick=()=>openAttachment(entry.id);row.append(play);
     if(attach&&entry.attachable!==false){const add=document.createElement('button');add.type='button';add.textContent=t('attach');add.onclick=()=>{if(attach(entry.id)===false)return;add.disabled=true;};row.append(add)}
    }
    if(typeof entry.token==='string'&&typeof Native.exportPendingAudio==='function'){
-    const copy=document.createElement('button');copy.type='button';copy.textContent=t('copy');copy.onclick=()=>Native.exportPendingAudio(entry.token);row.append(copy);
+    const copy=document.createElement('button');copy.type='button';copy.textContent=entry.issue==='source-mismatch'?t('copyReview'):t('copy');copy.onclick=()=>Native.exportPendingAudio(entry.token);row.append(copy);
    }
    container.append(row);
   }
@@ -57,7 +57,7 @@
    bannerCount(result.pendingAudioCount);if(result.audioPending)notify(t('retained'));
   }else if(result.audioPending)retained();else refresh();
  }
- window.PendingAudio=Object.freeze({list,confirm,retained,rows,refresh,saved,show,exported:()=>notify(t('exported'))});
+ window.PendingAudio=Object.freeze({list,confirm,retained,rows,refresh,saved,show,exported:verified=>notify(t(verified===true?'exported':'exportedReview'))});
  const previousAttachments=renderNoteAttachments;
  renderNoteAttachments=function(){
   previousAttachments();

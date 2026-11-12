@@ -30,6 +30,24 @@ async function install(page){
 async function prepare(page){await createCanvas(page,'Audio 1250,123456789 in');await tool(page,'note');await drag(page,{x:140,y:240},{x:230,y:290});await editSelected(page);await page.fill('#richText','Původní poznámka');await page.click('#okModal');await page.evaluate(()=>{current.items[0].measure='1250,123456789';current.items[0].unit='in';save()});await editSelected(page);}
 async function stop(page){await page.click('#richVoice');await page.click('#richVoice');}
 suite('pending-audio',async run=>{
+ await run('verified-original-and-suspect-reservation-have-separate-actions-and-acknowledgements',async({page,evidence})=>{
+  await install(page);await page.evaluate(()=>{
+   localStorage.setItem('audio-ui-journal',JSON.stringify([
+    {id:'voice-split',token:'verified-one',integrity:'verified',state:'needs-review',available:true,attachable:false},
+    {id:'voice-split',token:'suspect-other',integrity:'uncertain',issue:'source-mismatch',state:'needs-review',available:false,attachable:false},
+    {id:'voice-healthy',token:'healthy',state:'pending',available:true,attachable:false},
+    {issue:'journal-uncertain',state:'needs-review',available:false}
+   ]));Native.exportPendingAudio=token=>{exports.push(token);PendingAudio.exported(token!=='suspect-other')};PendingAudio.refresh();
+  });
+  const before=await page.evaluate(()=>localStorage.getItem('audio-ui-disk'));await page.click('#pendingAudioBanner');
+  const rows=page.locator('#retainedAudioList [data-audio-id="voice-split"]');assert.equal(await rows.count(),2);
+  await rows.getByText('Uložit kopii originálu',{exact:true}).click();assert.match(await page.locator('#toast').innerText(),/Kopie byla zapsána/);
+  await rows.getByText('Uložit podezřelou kopii',{exact:true}).click();assert.match(await page.locator('#toast').innerText(),/Nejistá kopie.*ruční kontrolu/);
+  assert.match(await rows.nth(1).innerText(),/Původní obsah není potvrzen/);assert.equal(await rows.getByText('Připojit k této poznámce',{exact:true}).count(),0);
+  assert.deepEqual(await page.evaluate(()=>exports),['verified-one','suspect-other']);assert.equal(await page.evaluate(()=>localStorage.getItem('audio-ui-disk')),before);
+  evidence({nativeModel:true,originalToken:'verified-one',uncertainToken:'suspect-other',nativeByteProof:'Robolectric split-inode tests'});
+ });
+
  await run('ordinary-save-uses-native-summary-without-requesting-another-full-media-scan',async({page})=>{
   await install(page);await prepare(page);
   const calls=await page.evaluate(()=>{let calls=0;const previous=Native.pendingAudio;Native.pendingAudio=()=>{calls++;return previous()};save();return calls});
