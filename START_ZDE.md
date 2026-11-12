@@ -19,6 +19,8 @@
 4. **ImageMeter je funkční reference, ne vizuální předloha.** Vlastní moderní profesionální design Zaměřovače je priorita; schválená podoba kót/úchopů/lupy se mění jen se souhlasem. Angličtina je první další jazyk před budoucím mezinárodním vydáním; nyní připravovat texty pro lokalizaci bez plošného překladu ([#14](https://github.com/zaplikj30-ui/Zamerovac-android/issues/14)).
 5. **Nespouštěj sestavení změnou `.github/apk-build-request.txt`.** Tento soubor je historický; aktuální `build-apk.yml` je ruční, s vlastníkovým schválením. Před jakýmkoli workflow ověř živé podmínky, triggery, skutečný stav QA a poslední publikovanou verzi.
 
+**Dlouhodobá návaznost na výrobu:** Zaměřování zakázkového nábytku je významný výchozí obor; Zaměřovač je však použitelný i pro další řemesla. [Konfigurátor–Nářezák](https://github.com/zaplikj30-ui/Konfigurator-Narezak-Android) zůstává **samostatnou aplikací a repozitářem**. Budoucí propojení je dlouhodobý cíl, nikoli nynější implementace: chránit možnost verzovaného předání přesných hodnot, jednotek a identit; nikdy tiše nepřepočítávat schválené výrobní podklady. Podrobnosti: [projektový plán](PROJEKTOVY_PLAN_ZAMEROVACE.md) a [vize](VIZE_A_PLAN.md).
+
 ## Historie bez ztráty podkladů
 
 **[Úplný původní START_ZDE.md, archiv do 11. 11. 2026](START_ZDE_ARCHIV_DO_2026-11-11.md)** zachovává **doslovně celý původní text** včetně historických checkpointů, testů 1–28, SHA, výsledků a odkazů. Výrazy „aktuálně“ a „další krok“ v archivu znamenají tehdejší stav, ne dnešní úkol.
