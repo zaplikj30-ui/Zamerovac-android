@@ -214,9 +214,12 @@ class GateUnitTest(unittest.TestCase):
             with mock.patch.object(GATE.platform, "system", return_value="Linux"):
                 with mock.patch.object(GATE, "APPROVED_BROWSER_SHA256", fingerprint):
                     self.assertEqual(binary, GATE.verify_browser(folder, fingerprint, {}))
-                with self.assertRaisesRegex(GATE.GateError, "wrong-hash"):
-                    GATE.verify_browser(folder, "0" * 64, {})
-            self.assertEqual(binary.read_bytes(), b"known-synthetic-executable")
+                    with self.assertRaisesRegex(GATE.GateError, "unapproved Chromium"):
+                        GATE.verify_browser(folder, "0" * 64, {})
+                    binary.write_bytes(b"tampered-synthetic-executable")
+                    with self.assertRaisesRegex(GATE.GateError, "wrong-hash"):
+                        GATE.verify_browser(folder, fingerprint, {})
+            self.assertEqual(binary.read_bytes(), b"tampered-synthetic-executable")
 
     def test_browser_first_execution_preceded_by_owner_sha_gate(self):
         browser = browser_workflow()
