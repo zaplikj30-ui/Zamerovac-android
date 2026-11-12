@@ -69,6 +69,17 @@ final class SyncLedger implements AutoCloseable {
         try{out=atomic.startWrite();out.write(text.getBytes(StandardCharsets.UTF_8));out.getFD().sync();atomic.finishWrite(out);out=null;}
         finally{if(out!=null)atomic.failWrite(out);}
     }
+    /** Absence is part of the copied inventory too; a newly appearing source must abort cutover. */
+    private static void verifyLegacySet(File source,Map<String,byte[]> copies)throws IOException{
+        for(String suffix:new String[]{"",".bak",".new"}){
+            File file=new File(source+suffix);byte[] expected=copies.get(file.getName());
+            boolean exists=Files.exists(file.toPath(),LinkOption.NOFOLLOW_LINKS);
+            if(expected==null){if(exists)throw new IOException("Během migrace vznikl nový původní doklad");}
+            else if(!exists||Files.isSymbolicLink(file.toPath())||!file.isFile()||file.length()!=expected.length||
+                    !Arrays.equals(expected,Files.readAllBytes(file.toPath())))
+                throw new IOException("Původní evidence se během migrace změnila");
+        }
+    }
     private void initialize()throws Exception{
         Map<String,byte[]> evidence=new TreeMap<>();
         File primary=new File(home,"sync-queue-v2.json"),backup=new File(primary+".bak");
@@ -79,7 +90,7 @@ final class SyncLedger implements AutoCloseable {
                 byte[] bytes=Files.readAllBytes(file.toPath());evidence.put(file.getName(),bytes);
             }
         }
-        byte[] selected=evidence.get(backup.exists()?backup.getName():primary.getName());
+        byte[] selected=evidence.get(evidence.containsKey(backup.getName())?backup.getName():primary.getName());
         String text=selected==null?EMPTY_QUEUE:JsonInput.decode(selected);SyncQueueStore.validate(new JSONObject(text));
         fault.at("legacy-copied");
         db.beginTransaction();
@@ -100,7 +111,7 @@ final class SyncLedger implements AutoCloseable {
             }
             fault.at("before-cutover");
             // No legacy writer can run concurrently: SyncQueueStore holds the shared lock.
-            for(Map.Entry<String,byte[]> item:evidence.entrySet())if(!Arrays.equals(item.getValue(),Files.readAllBytes(new File(home,item.getKey()).toPath())))throw new IOException("Původní fronta se během migrace změnila");
+            verifyLegacySet(primary,evidence);
             putDocument("migration","active");db.setVersion(1);db.setTransactionSuccessful();
         } finally { db.endTransaction(); }
         fault.at("after-cutover");
@@ -148,19 +159,20 @@ final class SyncLedger implements AutoCloseable {
     String legacyDocument(File source,String initial)throws Exception{
         String name=source.getName();
         if(!source.getParentFile().getCanonicalFile().equals(home.getCanonicalFile())||!name.matches("sync-(inbox|scan|publications)-v2-[a-zA-Z0-9-]+\\.json"))throw new IOException("Neplatná evidence transportu");
-        try(Cursor c=db.rawQuery("SELECT 1 FROM documents WHERE name=?",new String[]{name})){if(c.moveToFirst())return document(name);}
         db.beginTransaction();
         try {
+            // Check inside the writer transaction: another connection may already have cut over.
+            try(Cursor c=db.rawQuery("SELECT 1 FROM documents WHERE name=?",new String[]{name})){if(c.moveToFirst()){String text=document(name);db.setTransactionSuccessful();return text;}}
             Map<String,byte[]> copies=new TreeMap<>();
             for(String suffix:new String[]{"",".bak",".new"}){
                 File file=new File(source+suffix);if(!Files.exists(file.toPath(),LinkOption.NOFOLLOW_LINKS))continue;
                 if(!file.isFile()||Files.isSymbolicLink(file.toPath())||file.length()>PeerWire.MAX_JSON)throw new IOException("Původní evidence je neověřitelná");
                 copies.put(file.getName(),Files.readAllBytes(file.toPath()));
             }
-            byte[] chosen=copies.get(new File(source+".bak").exists()?name+".bak":name);
+            byte[] chosen=copies.get(copies.containsKey(name+".bak")?name+".bak":name);
             String text=chosen==null?initial:JsonInput.decode(chosen);JsonInput.object(text.getBytes(StandardCharsets.UTF_8));
+            fault.at("before-document-cutover");verifyLegacySet(source,copies);
             for(Map.Entry<String,byte[]> item:copies.entrySet()){
-                if(!Arrays.equals(item.getValue(),Files.readAllBytes(new File(home,item.getKey()).toPath())))throw new IOException("Evidence se během migrace změnila");
                 ContentValues v=new ContentValues();v.put("name",item.getKey());v.put("bytes",item.getValue());v.put("hash",PeerWire.hash(item.getValue()));db.insertOrThrow("legacy_sources",null,v);
             }
             putDocument(name,text);db.setTransactionSuccessful();return text;
@@ -193,7 +205,13 @@ final class SyncLedger implements AutoCloseable {
     }
     String state(String target,String revision){try(Cursor c=db.rawQuery("SELECT state FROM deliveries WHERE target=? AND revision=?",new String[]{target,revision})){return c.moveToFirst()?c.getString(0):"waiting";}}
     void contentInventory(String target,String state)throws IOException{if(!Arrays.asList("none","complete","error").contains(state))throw new IOException("Neplatný stav inventáře");putDocument("content:"+target,state);}
-    boolean contentProblem(String target)throws IOException{try(Cursor c=db.rawQuery("SELECT 1 FROM documents WHERE name=?",new String[]{"content:"+target})){return c.moveToFirst()&&"error".equals(document("content:"+target));}}
+    private String contentInventory(String target)throws IOException{
+        String name="content:"+target;
+        try(Cursor c=db.rawQuery("SELECT 1 FROM documents WHERE name=?",new String[]{name})){if(!c.moveToFirst())return "";}
+        String state=document(name); // Hash-check even small status payloads; quick_check cannot detect semantic corruption.
+        if(!Arrays.asList("none","complete","error").contains(state))throw new IOException("Poškozený stav inventáře");return state;
+    }
+    boolean contentProblem(String target)throws IOException{return "error".equals(contentInventory(target));}
     JSONObject status(String local,String epoch)throws Exception{
         JSONObject current=new JSONObject(local);current.remove("prefs");current.remove("created");current.put("syncProtocol",2);
         String hash=PeerWire.hash(CausalClock.canonical(current).getBytes(StandardCharsets.UTF_8));JSONArray rows=new JSONArray();
@@ -202,7 +220,7 @@ final class SyncLedger implements AutoCloseable {
                 String id=targets.getString(0),state="waiting",content="waiting";
                 try(Cursor c=db.rawQuery("SELECT d.state FROM deliveries d JOIN revisions r ON r.hash=d.revision WHERE d.target=? AND r.data_hash=? AND r.epoch=? AND r.content_only=0 ORDER BY r.rowid DESC LIMIT 1",new String[]{id,hash,epoch})){if(c.moveToFirst())state=c.getString(0);}
                 try(Cursor c=db.rawQuery("SELECT d.state FROM deliveries d JOIN revisions r ON r.hash=d.revision WHERE d.target=? AND r.epoch=? AND r.content_only=1 ORDER BY r.rowid DESC LIMIT 1",new String[]{id,epoch})){if(c.moveToFirst())content=c.getString(0);}
-                try(Cursor c=db.rawQuery("SELECT value FROM documents WHERE name=?",new String[]{"content:"+id})){if(c.moveToFirst()){if("none".equals(c.getString(0)))content="not-required";if("error".equals(c.getString(0)))content="error";}}
+                String inventory=contentInventory(id);if("none".equals(inventory))content="not-required";if("error".equals(inventory))content="error";
                 rows.put(new JSONObject().put("id",id).put("kind",targets.getString(1)).put("peer",targets.getString(2)).put("state",state).put("contentState",content));
             }
         }

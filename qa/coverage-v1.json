@@ -1503,6 +1503,14 @@
         {
           "path": "tools/e2e/drive-accounts.cjs",
           "layer": "chromium"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/SyncConsistencyTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/SyncAckReconciliationTest.java",
+          "layer": "native-jvm"
         }
       ],
       "coverage": "runtime-partial",

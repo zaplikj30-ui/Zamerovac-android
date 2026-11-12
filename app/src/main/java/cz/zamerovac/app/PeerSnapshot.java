@@ -77,7 +77,9 @@ final class PeerSnapshot {
     static PeerSnapshot captureRecovery(Context context,SharedPreferences prefs,ImmutableStore.Checkpoint checkpoint)throws Exception{return capture(context,prefs,checkpoint,true);}
     private static PeerSnapshot capture(Context context,SharedPreferences prefs,ImmutableStore.Checkpoint checkpoint,boolean recoveryOnly)throws Exception{
         checkpoint.check();
-        String text=LocalDatabase.readForCas(context);JSONObject data=text.isEmpty()?new JSONObject().put("schema",1).put("records",new JSONArray()):new JSONObject(text);
+        String text,startEpoch;long generation;
+        synchronized(TrashPurger.LOCK){text=LocalDatabase.readForCas(context);startEpoch=DatabaseRecovery.id(context.getFilesDir());generation=LocalDatabase.generation(context.getFilesDir());}
+        JSONObject data=text.isEmpty()?new JSONObject().put("schema",1).put("records",new JSONArray()):new JSONObject(text);
         data.remove("prefs");data.remove("created");data.put("syncProtocol",2);numbers(data,0);
         SyncRecoveryContent recovered=recoveryOnly?SyncRecoveryContent.capture(context,prefs,data,checkpoint):new SyncRecoveryContent();
         JSONArray recovery=recovered.revisions;
@@ -101,8 +103,12 @@ final class PeerSnapshot {
         // Optional envelope field: persistent project schema and media IDs do not change.
         // Revalidate primary AND the independent no_backup witness after media
         // scanning. A vanished journal cannot silently emit the old signed ACK hash.
-        String epoch=LocalDatabase.recoveryId(context);
-        if(!epoch.isEmpty())wire.put("recoveryEpoch",epoch);
+        synchronized(TrashPurger.LOCK){
+            String current=LocalDatabase.readForCas(context),epoch=DatabaseRecovery.id(context.getFilesDir());
+            if(generation!=LocalDatabase.generation(context.getFilesDir())||!text.equals(current)||!startEpoch.equals(epoch))
+                throw new IOException("Databáze se během přípravy revize změnila; přenos je nutné opakovat");
+            if(!epoch.isEmpty())wire.put("recoveryEpoch",epoch);
+        }
         byte[] bytes=CausalClock.canonical(wire).getBytes(StandardCharsets.UTF_8);if(bytes.length>PeerWire.MAX_JSON)throw new IOException("Metadata synchronizace jsou příliš velká");PeerSnapshot result=parse(bytes,wire.getString("sourceId"));for(String id:result.media.keySet()){File file=new File(directory,id);result.localStats.put(id,new long[]{file.length(),file.lastModified()});}return result;
     }
 }

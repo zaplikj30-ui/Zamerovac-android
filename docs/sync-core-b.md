@@ -1,5 +1,7 @@
 # Synchronizační jádro B – implementace a předání
 
+**Novější stav po nezávislém REQUEST FIX: #88 BLOCKED; viz [cílené pokračování](sync-p1-88-blocker.md). Níže jsou historické výsledky původní implementace.**
+
 Stav: DRAFT, bez merge, HOME Actions, APK a release. Autoritou pracovních dat zůstává `LocalDatabase`/CAS, schema1 a přesné pracovní soubory. Toto není potvrzení provozní bezpečnosti na Androidu.
 
 ## Integrační základ
