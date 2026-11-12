@@ -160,15 +160,14 @@ final class SyncLedger implements AutoCloseable {
         return PeerWire.hash((kind.length()+":"+kind+scope.length()+":"+scope+peer.length()+":"+peer).getBytes(StandardCharsets.UTF_8));
     }
     String target(String kind,String scope,String peer)throws IOException{
-        String id=targetId(kind,scope,peer);ContentValues v=new ContentValues();v.put("id",id);v.put("kind",kind);v.put("scope",PeerWire.hash(scope.getBytes(StandardCharsets.UTF_8)));v.put("peer",peer);
-        db.insertWithOnConflict("targets",null,v,SQLiteDatabase.CONFLICT_IGNORE);return id;
+        String id=targetId(kind,scope,peer);db.execSQL("INSERT OR IGNORE INTO targets(id,kind,scope,peer) VALUES(?,?,?,?)",new Object[]{id,kind,PeerWire.hash(scope.getBytes(StandardCharsets.UTF_8)),peer});return id;
     }
     void prepare(String target,PeerSnapshot snapshot)throws Exception{
         db.beginTransaction();
         try {
-            ContentValues r=new ContentValues();r.put("hash",snapshot.hash);r.put("bytes",snapshot.bytes);r.put("epoch",snapshot.wire.optString("recoveryEpoch",""));r.put("data_hash",PeerWire.hash(CausalClock.canonical(snapshot.data).getBytes(StandardCharsets.UTF_8)));r.put("content_only",snapshot.wire.optBoolean("recoveryOnly")?1:0);db.insertWithOnConflict("revisions",null,r,SQLiteDatabase.CONFLICT_IGNORE);
-            ContentValues d=new ContentValues();d.put("target",target);d.put("revision",snapshot.hash);d.put("state","waiting");db.insertWithOnConflict("deliveries",null,d,SQLiteDatabase.CONFLICT_IGNORE);
-            for(JSONObject media:snapshot.media.values()){ContentValues ref=new ContentValues();ref.put("revision",snapshot.hash);ref.put("id",media.getString("id"));ref.put("hash",media.getString("hash"));ref.put("size",media.getLong("size"));db.insertWithOnConflict("revision_media",null,ref,SQLiteDatabase.CONFLICT_IGNORE);}
+            db.execSQL("INSERT OR IGNORE INTO revisions(hash,bytes,epoch,data_hash,content_only) VALUES(?,?,?,?,?)",new Object[]{snapshot.hash,snapshot.bytes,snapshot.wire.optString("recoveryEpoch",""),PeerWire.hash(CausalClock.canonical(snapshot.data).getBytes(StandardCharsets.UTF_8)),snapshot.wire.optBoolean("recoveryOnly")?1:0});
+            db.execSQL("INSERT OR IGNORE INTO deliveries(target,revision,state) VALUES(?,?,'waiting')",new Object[]{target,snapshot.hash});
+            for(JSONObject media:snapshot.media.values())db.execSQL("INSERT OR IGNORE INTO revision_media(revision,id,hash,size) VALUES(?,?,?,?)",new Object[]{snapshot.hash,media.getString("id"),media.getString("hash"),media.getLong("size")});
             db.setTransactionSuccessful();
         } finally {db.endTransaction();}
     }
@@ -183,7 +182,7 @@ final class SyncLedger implements AutoCloseable {
     JSONObject status(String local,String epoch)throws Exception{
         JSONObject current=new JSONObject(local);current.remove("prefs");current.remove("created");current.put("syncProtocol",2);
         String hash=PeerWire.hash(CausalClock.canonical(current).getBytes(StandardCharsets.UTF_8));JSONArray rows=new JSONArray();
-        try(Cursor targets=db.rawQuery("SELECT id,kind,peer FROM targets ORDER BY id",null)){
+        try(Cursor targets=db.rawQuery("SELECT id,kind,peer FROM targets WHERE peer<>'' ORDER BY id",null)){
             while(targets.moveToNext()){
                 String id=targets.getString(0),state="waiting",content="waiting";
                 try(Cursor c=db.rawQuery("SELECT d.state FROM deliveries d JOIN revisions r ON r.hash=d.revision WHERE d.target=? AND r.data_hash=? AND r.epoch=? AND r.content_only=0 ORDER BY r.rowid DESC LIMIT 1",new String[]{id,hash,epoch})){if(c.moveToFirst())state=c.getString(0);}

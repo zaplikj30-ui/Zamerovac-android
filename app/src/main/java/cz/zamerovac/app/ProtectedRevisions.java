@@ -168,8 +168,9 @@ final class ProtectedRevisions {
     }
     void preserveSnapshot(PeerSnapshot snapshot)throws IOException{preserve("snapshot",new String(snapshot.bytes,StandardCharsets.UTF_8),snapshot);}
     /** Exact preimages from the ONE P1 registry; no new retention policy or automatic release. */
-    JSONArray databaseRevisions(JSONObject current)throws Exception{synchronized(TrashPurger.LOCK){
-        JSONArray result=new JSONArray();Set<String> seen=new HashSet<>();
+    interface RevisionConsumer {void add(String hash,String metadata,Set<String> media)throws Exception;}
+    void databaseRevisions(JSONObject current,RevisionConsumer consumer)throws Exception{synchronized(TrashPurger.LOCK){
+        Set<String> seen=new HashSet<>();String currentCanonical=CausalClock.canonical(current);
         for(Map.Entry<String,JSONObject> item:inventory(false).entrySet()){
             JSONObject summary=item.getValue();if(!"database".equals(summary.getString("kind")))continue;
             byte[] held=read(file(item.getKey()));if(!item.getKey().equals(PeerWire.hash(held)))throw new IOException("Chráněná historie se změnila");
@@ -178,10 +179,11 @@ final class ProtectedRevisions {
             // Empty bootstrap and the present state are already carried by the main snapshot.
             if(data.getJSONArray("records").length()==0&&!data.has("syncTombstones"))continue;
             data.remove("prefs");data.remove("created");data.put("syncProtocol",2);
-            if(CausalClock.canonical(data).equals(CausalClock.canonical(current)))continue;
+            if(CausalClock.canonical(data).equals(currentCanonical))continue;
             String hash=PeerWire.hash(text.getBytes(StandardCharsets.UTF_8));
-            if(seen.add(hash))result.put(new JSONObject().put("hash",hash).put("metadata",text));
-        }return result;
+            Set<String> media=new TreeSet<>();JSONArray refs=full.getJSONArray("media");for(int i=0;i<refs.length();i++)media.add(refs.getJSONObject(i).getString("id"));
+            if(seen.add(hash))consumer.add(hash,text,media);
+        }
     }}
     private void historicalReferences(Object value,Set<String> ids,int depth)throws Exception{
         if(depth>100)throw new IOException("Příliš zanořená historie ochrany");
@@ -221,7 +223,7 @@ final class ProtectedRevisions {
                     JSONObject known=old.getJSONObject("_ids").optJSONObject(id);
                     if(known!=null&&!known.getString("hash").isEmpty()){entry.put("hash",known.getString("hash")).put("size",known.getLong("size"));break;}
                 }
-            }else entry=PeerMedia.inspect(original).put("state","VERIFIED");
+            }else entry=ImmutableMediaProof.inspect(original).put("state","VERIFIED");
             for(JSONObject old:prior.values()){
                 JSONObject pinned=old.getJSONObject("_ids").optJSONObject(id);
                 if(pinned!=null&&!pinned.getString("hash").isEmpty()&&!missing&&(pinned.getLong("size")!=entry.getLong("size")||!pinned.getString("hash").equals(entry.getString("hash"))))

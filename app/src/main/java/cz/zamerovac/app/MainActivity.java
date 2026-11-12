@@ -730,13 +730,16 @@ public class MainActivity extends Activity {
         @JavascriptInterface public String preservePurgedEdit(String id,String record,String tombstone){try{JsonInput.check(tombstone);JSONObject parsed=SyncConflicts.input(record);if(!id.equals(parsed.getString("id")))throw new IOException("Odlišné ID");return SyncConflicts.purged(id,parsed,new JSONObject(tombstone)).toString();}catch(Exception failure){return "{\"error\":true}";}}
         @JavascriptInterface public String driveAccountState(){return driveSnapshot().toString();}
         @JavascriptInterface public String syncLedgerState(){
-            try{String local=LocalDatabase.readForCas(MainActivity.this);if(local.isEmpty())return "{\"localSaved\":false,\"targets\":[]}";
+            boolean localSaved=false;
+            try{String local=LocalDatabase.readForCas(MainActivity.this);if(local.isEmpty())return "{\"localSaved\":false,\"targets\":[]}";localSaved=true;
                 try(SyncLedger ledger=SyncLedger.open(getNoBackupFilesDir())){
                     JSONObject peers=new SyncPeerRegistry(getNoBackupFilesDir()).snapshot();CloudStorage cloud=new CloudStorage(MainActivity.this,settings);
-                    for(java.util.Iterator<String> it=peers.keys();it.hasNext();){String id=it.next();JSONObject peer=peers.getJSONObject(id);String identity="/"+peer.getString("fingerprint")+"/"+peer.optString("pairedAt","")+"/"+peer.optString("recovery","");ledger.target("tls","paired-tls-v2"+identity,id);if(cloud.configured("sync"))ledger.target(cloud.syncKind(),cloud.syncScope()+identity,id);}
-                    return ledger.status(local,DatabaseRecovery.id(getFilesDir())).toString();
+                    java.util.Set<String> required=new java.util.HashSet<>();
+                    for(java.util.Iterator<String> it=peers.keys();it.hasNext();){String id=it.next();JSONObject peer=peers.getJSONObject(id);String identity="/"+peer.getString("fingerprint")+"/"+peer.optString("pairedAt","")+"/"+peer.optString("recovery","");required.add(ledger.target("tls","paired-tls-v2"+identity,id));if(cloud.configured("sync"))required.add(ledger.target(cloud.syncKind(),cloud.syncScope()+identity,id));}
+                    JSONObject status=ledger.status(local,DatabaseRecovery.id(getFilesDir()));JSONArray active=new JSONArray(),all=status.getJSONArray("targets");for(int i=0;i<all.length();i++)if(required.contains(all.getJSONObject(i).getString("id")))active.put(all.getJSONObject(i));
+                    return status.put("targets",active).toString();
                 }
-            }catch(Exception failure){return "{\"localSaved\":false,\"error\":true,\"targets\":[]}";}
+            }catch(Exception failure){return "{\"localSaved\":"+localSaved+",\"error\":true,\"targets\":[]}";}
         }
         @JavascriptInterface public void driveAccountControl(String kind,String command){if(kind==null||command==null||kind.length()>6||command.length()>12)return;runOnUiThread(()->{try{DriveAccounts.kind(kind);if("backup".equals(kind)&&historyBackupBusy)throw new IOException("Operace zálohy již probíhá");if("select".equals(command))driveAccountFlow.begin(kind);else if("disconnect".equals(command)){new DriveAccounts(getNoBackupFilesDir()).disconnect(kind);driveChanged(kind,"Úložiště odpojeno. Uložené zakázky a historie zůstávají zachované.");}else if("refresh".equals(command))driveState();else throw new IOException("Neznámý příkaz účtu");}catch(Exception failure){driveState(failure.getMessage());}});}
         @JavascriptInterface public void backupHistoryControl(String command,String path,boolean allowMetered){if(command!=null&&command.length()<24&&path!=null&&path.length()<200)runOnUiThread(()->historyBackup(command,path,allowMetered));}

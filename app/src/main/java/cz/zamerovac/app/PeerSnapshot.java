@@ -27,11 +27,13 @@ final class PeerSnapshot {
         JSONArray history=wire.optJSONArray("recovery"),audio=wire.optJSONArray("detachedAudio");
         if(wire.getInt("version")==2&&(history!=null||audio!=null))throw new IOException("Starý manifest neprokazuje úplnost historie");
         if(history!=null){if(history.length()>20000)throw new IOException("Příliš mnoho historických revizí");Set<String> seen=new HashSet<>();
-            for(int i=0;i<history.length();i++){JSONObject entry=history.getJSONObject(i);String text=entry.getString("metadata"),hash=entry.getString("hash");
-                LocalDatabase.validate(text);if(!hash.equals(PeerWire.hash(text.getBytes(StandardCharsets.UTF_8)))||!seen.add(hash))throw new IOException("Neplatné přesné podklady historie");
-                ids.addAll(references(new JSONObject(text).getJSONArray("records")));
+            for(int i=0;i<history.length();i++){JSONObject entry=history.getJSONObject(i);String text=entry.optString("metadata",""),hash=entry.getString("hash");
+                if(!hash.matches("[a-f0-9]{64}")||!seen.add(hash))throw new IOException("Neplatné přesné podklady historie");
+                if(entry.has("metadata")){LocalDatabase.validate(text);if(!hash.equals(PeerWire.hash(text.getBytes(StandardCharsets.UTF_8))))throw new IOException("Změněné přesné podklady historie");ids.addAll(references(new JSONObject(text).getJSONArray("records")));}
+                else{String id=entry.getString("metadataId");if(!id.equals("revision-"+hash))throw new IOException("Neplatná identita historických bajtů");ids.add(id);}
             }
         }
+        JSONArray historical=wire.optJSONArray("recoveryMedia");if(historical!=null){if(history==null||historical.length()>20000)throw new IOException("Neplatné historické přílohy");for(int i=0;i<historical.length();i++){String id=historical.getString(i);if(!validMediaId(id))throw new IOException("Neplatný historický originál");ids.add(id);}}
         if(audio!=null){if(audio.length()>20000)throw new IOException("Příliš mnoho hlasových podkladů");for(int i=0;i<audio.length();i++){String id=audio.getString(i);if(!validMediaId(id))throw new IOException("Neplatný hlasový podklad");ids.add(id);}}
         return ids;
     }
@@ -77,13 +79,15 @@ final class PeerSnapshot {
         checkpoint.check();
         String text=LocalDatabase.readForCas(context);JSONObject data=text.isEmpty()?new JSONObject().put("schema",1).put("records",new JSONArray()):new JSONObject(text);
         data.remove("prefs");data.remove("created");data.put("syncProtocol",2);numbers(data,0);
-        JSONArray recovery=recoveryOnly?new ProtectedRevisions(context,prefs).databaseRevisions(data):new JSONArray();
+        SyncRecoveryContent recovered=recoveryOnly?SyncRecoveryContent.capture(context,prefs,data,checkpoint):new SyncRecoveryContent();
+        JSONArray recovery=recovered.revisions;
         Set<String> detached=recoveryOnly?new PendingAudio(new File(context.getFilesDir(),"media"),prefs).synchronizable():new TreeSet<>();detached.removeAll(references(data.getJSONArray("records")));
         if(recoveryOnly&&recovery.length()==0&&detached.isEmpty())return null;
         if(recoveryOnly)data=new JSONObject().put("schema",1).put("records",new JSONArray()).put("syncProtocol",2);
         JSONObject envelope=new JSONObject().put("version",recovery.length()>0||!detached.isEmpty()?3:2).put("data",data);
         if(recoveryOnly)envelope.put("recoveryOnly",true).put("contentEncoding","identity-v1");
         if(recovery.length()>0)envelope.put("recovery",recovery);if(!detached.isEmpty())envelope.put("detachedAudio",new JSONArray(detached));
+        if(!recovered.media.isEmpty())envelope.put("recoveryMedia",new JSONArray(recovered.media));
         JSONArray manifest=new JSONArray();File directory=new File(context.getFilesDir(),"media");
         for(String id:contentReferences(envelope)){
             File file=new File(directory,id);JSONObject verified=PeerMedia.inspect(file,checkpoint);

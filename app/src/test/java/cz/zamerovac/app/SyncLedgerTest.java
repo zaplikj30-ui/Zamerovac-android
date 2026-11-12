@@ -73,4 +73,13 @@ public class SyncLedgerTest {
         try(SyncLedger ledger=SyncLedger.open(home)){assertEquals(SyncLedger.EMPTY_QUEUE,ledger.queue());}
         assertEquals("partial",readText(pending.toPath()));assertEquals(SyncLedger.EMPTY_QUEUE,readText(bak.toPath()));assertTrue(base.exists());
     }
+    @Test public void lostLedgerCannotRemoveOrBlockReadingTheLastExactRecoverablePreimage()throws Exception{
+        Context c=RuntimeEnvironment.getApplication();SharedPreferences prefs=c.getSharedPreferences("ledger-loss-safety",0);LocalDatabase.write(c,"{\"schema\":1,\"records\":[]}");File media=new File(c.getFilesDir(),"media");media.mkdir();byte[] photo={1,5,8,5,80,0,1};Files.write(new File(media,"last-photo").toPath(),photo);
+        String old="{ \"schema\":1,\"records\":[{\"id\":\"old\",\"media\":[\"last-photo\"],\"measure\":\"1585,800001234567890\",\"unit\":\"in\"}]}";
+        LocalDatabase.write(c,old);String newer="{\"schema\":1,\"records\":[],\"sequence\":3}";LocalDatabase.write(c,newer);try(SyncLedger ignored=SyncLedger.open(c.getNoBackupFilesDir())){}Files.delete(new File(c.getNoBackupFilesDir(),"sync-ledger-v1.sqlite").toPath());
+        try{new SyncQueueStore(c.getNoBackupFilesDir()).read();fail("Lost ledger was reset");}catch(IOException expected){}
+        MainActivity activity=Robolectric.buildActivity(MainActivity.class).get();org.robolectric.util.ReflectionHelpers.setField(activity,"settings",prefs);JSONObject status=new JSONObject(activity.new JsApi().syncLedgerState());assertTrue(status.getBoolean("localSaved"));assertTrue(status.getBoolean("error"));
+        assertEquals(newer,LocalDatabase.readForCas(c));assertTrue(new ProtectedRevisions(c,prefs).pins().contains("last-photo"));assertArrayEquals(photo,Files.readAllBytes(new File(media,"last-photo").toPath()));PeerSnapshot recoverable=PeerSnapshot.captureRecovery(c,prefs,()->{});assertNotNull(recoverable);boolean exact=false;JSONArray history=recoverable.wire.getJSONArray("recovery");for(int i=0;i<history.length();i++)if(old.equals(new String(Files.readAllBytes(new File(media,history.getJSONObject(i).getString("metadataId")).toPath()),java.nio.charset.StandardCharsets.UTF_8)))exact=true;assertTrue("P1 preimage must remain independently readable after SQL loss",exact);
+    }
+
 }

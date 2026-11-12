@@ -219,7 +219,7 @@ public class PeerTransferTest {
   JSONObject photo=record("photo-a",aid,"1234,500000001"),original=db(record("local-b",bid,"55,123456"));media(a,photo,30);save(a,db(photo));save(b,original);AtomicBoolean dropped=new AtomicBoolean();
   try{exchange(null,(peer,phase,done,total)->{if("receiving".equals(phase)&&done==19&&dropped.compareAndSet(false,true))throw new IOException("synthetic disconnect at nineteen");});fail("Interrupted transfer completed");}catch(Exception expected){assertTrue(PeerTlsTest.contains(expected,"synthetic disconnect at nineteen"));}
   assertEquals(CausalClock.canonical(original),CausalClock.canonical(read(b)));assertTrue(as.outbox.pending(bid)>0);assertEquals(19,new File(b.home,"media").listFiles().length);
-  as=store(a,new SyncPeerRegistry(a.noBackup));bs=store(b,new SyncPeerRegistry(b.noBackup));AtomicInteger remaining=new AtomicInteger();exchange(null,(peer,phase,done,total)->{if("receiving".equals(phase)&&done==19)remaining.incrementAndGet();});assertEquals(1,remaining.get());assertEquals(30,new File(b.home,"media").listFiles().length);assertEquals(2,read(b).getJSONArray("records").length());exchange(null,null);assertEquals(0,as.outbox.pending(bid));
+  as=store(a,new SyncPeerRegistry(a.noBackup));bs=store(b,new SyncPeerRegistry(b.noBackup));AtomicInteger remaining=new AtomicInteger();exchange(null,(peer,phase,done,total)->{if("receiving".equals(phase)&&done==19)remaining.incrementAndGet();});assertEquals(1,remaining.get());assertEquals(30,new File(b.home,"media").listFiles(file->!file.getName().startsWith("revision-")).length);File[] revisionFiles=new File(b.home,"media").listFiles(file->file.getName().startsWith("revision-"));assertEquals(1,revisionFiles.length);for(File revisionFile:revisionFiles)assertEquals(revisionFile.getName().substring(9),PeerMedia.inspect(revisionFile).getString("hash"));assertEquals(2,read(b).getJSONArray("records").length());exchange(null,null);assertEquals(0,as.outbox.pending(bid));
  }
  @Test public void editDuringMediaTransferIsMergedFromLatestDatabase()throws Exception{
   JSONObject photo=record("photo-a",aid,"1585,800001");media(a,photo,3);save(a,db(photo));save(b,db(record("local-b",bid,"12,01")));AtomicBoolean edited=new AtomicBoolean();
@@ -258,7 +258,7 @@ public class PeerTransferTest {
    finalDb=historical;
   }
   assertNotNull(finalDb);
-  assertEquals(21,as.outbox.pending(bid)); // 20 independent project revisions plus one complete history intent
+  assertEquals(40,as.outbox.pending(bid)); // 20 projects, one history intent, 19 streamed revision blobs
   assertEquals(16,as.outbox.messages(bid).size());
   JSONObject old=as.outbox.messages(bid).get(0);
   File evidence=new File(a.noBackup,"sync-v2-outbox/"+old.getString("hash")+".json");
@@ -276,7 +276,7 @@ public class PeerTransferTest {
   bs=store(b,new SyncPeerRegistry(b.noBackup));
   PeerSnapshot current=as.outbox.prepare(bid);
   assertEquals(recovery,current.wire.getString("recoveryEpoch"));
-  assertEquals(21,as.outbox.quarantinedCount(bid));
+  assertEquals(40,as.outbox.quarantinedCount(bid));
   assertEquals(1,as.outbox.pendingProjects(bid));assertEquals(2,as.outbox.messages(bid).size());
   try{as.outbox.completed(bid,old);fail("Old direct ACK retired evidence");}
   catch(IOException expected){}
@@ -294,12 +294,12 @@ public class PeerTransferTest {
   assertEquals(precise,received.getJSONArray("records").getJSONObject(0)
       .getJSONArray("items").getJSONObject(0).getString("measure"));
   assertEquals(0,as.outbox.pending(bid));
-  assertEquals(21,as.outbox.quarantinedCount(bid));
+  assertEquals(40,as.outbox.quarantinedCount(bid));
   assertArrayEquals(original,Files.readAllBytes(evidence.toPath()));
   // Restart/retry uses the same production queue, not an in-memory mark.
   as=store(a,new SyncPeerRegistry(a.noBackup));
   exchange(null,null);
-  assertEquals(21,as.outbox.quarantinedCount(bid));
+  assertEquals(40,as.outbox.quarantinedCount(bid));
   assertEquals(1,read(b).getJSONArray("records").length());
   assertArrayEquals(original,Files.readAllBytes(evidence.toPath()));
  }

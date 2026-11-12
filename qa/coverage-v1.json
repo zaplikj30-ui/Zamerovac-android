@@ -1463,7 +1463,9 @@
         "app/src/main/java/cz/zamerovac/app/SyncLedger.java",
         "app/src/main/java/cz/zamerovac/app/DriveResumableUpload.java",
         "app/src/main/java/cz/zamerovac/app/PeerSnapshot.java",
-        "app/src/main/java/cz/zamerovac/app/PeerOutbox.java"
+        "app/src/main/java/cz/zamerovac/app/PeerOutbox.java",
+        "app/src/main/java/cz/zamerovac/app/SyncRecoveryContent.java",
+        "app/src/main/java/cz/zamerovac/app/ImmutableMediaProof.java"
       ],
       "tests": [
         {
@@ -1484,6 +1486,10 @@
         },
         {
           "path": "app/src/test/java/cz/zamerovac/app/PeerMediaLargeTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/ImmutableMediaProofTest.java",
           "layer": "native-jvm"
         }
       ],

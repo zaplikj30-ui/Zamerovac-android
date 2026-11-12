@@ -60,8 +60,7 @@ final class PeerDataStore {
             // A metadata failure after DB commit remains unacknowledged, and
             // a deterministic retry can finish it without duplicating records.
             new ProtectedRevisions(context,prefs).preserveSnapshot(snapshot);
-            JSONArray history=snapshot.wire.optJSONArray("recovery");
-            if(history!=null)for(int i=0;i<history.length();i++)new ProtectedRevisions(context,prefs).preserveDatabase(history.getJSONObject(i).getString("metadata"));
+            SyncRecoveryContent.preserve(snapshot,context,prefs);
             if(changed)LocalDatabase.write(context,saved.toString());
             if(!metadata.commit())throw new IOException("Metadata příloh nebyla potvrzena");
         }
