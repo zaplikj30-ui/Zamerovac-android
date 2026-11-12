@@ -1,0 +1,7 @@
+RAW GRADLE: FAIL {'PASS': 508, 'FAIL': 3, 'ERROR': 0, 'SKIP': 0}
+EXPECTED FAIL (actual FAIL): cz.zamerovac.app.SafSyncV2Test.driveStagedAckMustNotPublishAfterLocalAuthorityLostInsideProviderCommit
+EXPECTED FAIL (actual FAIL): cz.zamerovac.app.SafSyncV2Test.safDirectAckMustNotPublishAfterLocalAuthorityLostInsideProviderWrite
+PRODUCT ACCEPTANCE: FAIL {'PASS': 508, 'FAIL': 1, 'ERROR': 0, 'SKIP': 0}
+SHA: 82440269b2fcf72bd88ebced6872d8c65aea3bc7
+Evidence: /workspace/scratch/ack-approved-8244026
+BLOCKER: Product case is not PASS: cz.zamerovac.app.DatabaseInstallEvidenceTest.r10TemporaryQueuedSnapshotReadErrorRecoversAfterRestartWithoutFalseAck

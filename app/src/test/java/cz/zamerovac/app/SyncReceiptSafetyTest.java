@@ -194,4 +194,17 @@ public class SyncReceiptSafetyTest {
         try { outbox.prepareInventory(f.bid);fail("A cached media hash was advertised as a fresh inventory"); } catch(IOException expected) {}
         assertArrayEquals(bad,Files.readAllBytes(media.toPath()));assertEquals("transport-receipt",state());
     }
+    @Test public void aMissingNewReceiptSourceCannotBeSilentlyReplacedByItsSqlEvidence()throws Exception {
+        quiet();File file=new File(f.a.noBackup,"sync-v2-outbox/"+source.hash+".json");assertTrue(file.delete());
+        try { outbox.retainedSource(target(),source.hash);fail("New missing source acquired fallback authority"); } catch(IOException expected) {}
+        try(SyncLedger ledger=SyncLedger.open(f.a.noBackup)){assertArrayEquals(source.bytes,ledger.revision(source.hash,f.aid).bytes);}
+        assertFalse(file.exists());assertEquals(exact,LocalDatabase.readForCas(f.a));assertTrue(new ProtectedRevisions(f.a,f.a.prefs).hasSnapshot(source.hash));
+    }
+    @Test public void onlyVerifiedLegacyQuietReceiptsCanReadSqlSourceAndNeverConsumeSidecars()throws Exception {
+        quiet();try(SyncLedger ledger=SyncLedger.open(f.a.noBackup)){ledger.state(target(),source.hash,"transport-ack","old version receipt");}
+        File file=new File(f.a.noBackup,"sync-v2-outbox/"+source.hash+".json");assertTrue(file.delete());File sidecar=new File(file+".new");byte[] evidence={8,8,0};Files.write(sidecar.toPath(),evidence);
+        try { outbox.retainedSource(target(),source.hash);fail("Ambiguous legacy sidecar bypassed source verification"); } catch(IOException expected) {}
+        assertArrayEquals(evidence,Files.readAllBytes(sidecar.toPath()));assertTrue(sidecar.delete());
+        String before=outbox.queue.read();assertArrayEquals(source.bytes,outbox.retainedSource(target(),source.hash).bytes);assertEquals(before,outbox.queue.read());assertFalse(file.exists());
+    }
 }

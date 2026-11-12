@@ -117,7 +117,7 @@ def run():
     files = list(directory.glob("TEST-*.xml"))
     result = classify(read_cases(directory), process.returncode)
     problems = result["product_acceptance"]["problems"]
-    if len(files) < 64 or len(read_cases(directory)) < 511:
+    if len(files) < 64 or len(read_cases(directory)) < 513:
         problems.append("Incomplete full JVM suite; a targeted run cannot satisfy the final gate")
     if not files or any(file.stat().st_mtime_ns < started for file in files):
         problems.append("Missing or stale JUnit XML: compilation failure/old reports cannot satisfy the gate")

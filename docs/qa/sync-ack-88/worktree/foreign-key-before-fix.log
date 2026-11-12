@@ -1,0 +1,68 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.10.2/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+
+> Configure project :app
+Unable to initialize metrics, ensure /home/agent/.android is writable, details: /home/agent/.android/analytics.settings (No such file or directory)
+
+> Task :app:preBuild UP-TO-DATE
+> Task :app:prePreviewBuild UP-TO-DATE
+
+> Task :app:verifyDriveRegistration
+PASS registered Drive preview project/package/signing certificate; no OAuth account was contacted
+
+> Task :app:generatePreviewBuildConfig UP-TO-DATE
+> Task :app:javaPreCompilePreview UP-TO-DATE
+> Task :app:checkPreviewAarMetadata UP-TO-DATE
+> Task :app:generatePreviewResValues UP-TO-DATE
+> Task :app:mapPreviewSourceSetPaths UP-TO-DATE
+> Task :app:generatePreviewResources UP-TO-DATE
+> Task :app:mergePreviewResources UP-TO-DATE
+> Task :app:packagePreviewResources UP-TO-DATE
+> Task :app:parsePreviewLocalResources UP-TO-DATE
+> Task :app:createPreviewCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksPreview UP-TO-DATE
+> Task :app:processPreviewMainManifest UP-TO-DATE
+> Task :app:processPreviewManifest UP-TO-DATE
+> Task :app:processPreviewManifestForPackage UP-TO-DATE
+> Task :app:processPreviewResources UP-TO-DATE
+
+> Task :app:compilePreviewJavaWithJavac
+Note: /workspace/zamerovac-sync-b/app/src/main/java/cz/zamerovac/app/MainActivity.java uses or overrides a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+
+> Task :app:bundlePreviewClassesToCompileJar
+> Task :app:prePreviewUnitTestBuild UP-TO-DATE
+> Task :app:bundlePreviewClassesToRuntimeJar
+> Task :app:javaPreCompilePreviewUnitTest UP-TO-DATE
+> Task :app:compilePreviewUnitTestJavaWithJavac
+> Task :app:mergePreviewShaders UP-TO-DATE
+> Task :app:compilePreviewShaders NO-SOURCE
+> Task :app:generatePreviewAssets UP-TO-DATE
+> Task :app:mergePreviewAssets UP-TO-DATE
+> Task :app:packagePreviewUnitTestForUnitTest UP-TO-DATE
+> Task :app:generatePreviewUnitTestConfig UP-TO-DATE
+> Task :app:processPreviewJavaRes NO-SOURCE
+> Task :app:processPreviewUnitTestJavaRes UP-TO-DATE
+
+> Task :app:testPreviewUnitTest
+
+SyncReceiptSafetyTest > orphanedSqlDeliveryCannotPassQuickCheckOrRecreateLostEvidenceSilently FAILED
+    java.lang.AssertionError: SQLite quick_check accepted a delivery whose source row was lost
+        at org.junit.Assert.fail(Assert.java:89)
+        at cz.zamerovac.app.SyncReceiptSafetyTest.orphanedSqlDeliveryCannotPassQuickCheckOrRecreateLostEvidenceSilently(SyncReceiptSafetyTest.java:175)
+
+1 test completed, 1 failed
+
+> Task :app:testPreviewUnitTest FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:testPreviewUnitTest'.
+> There were failing tests. See the report at: file:///workspace/zamerovac-sync-b/app/build/reports/tests/testPreviewUnitTest/index.html
+
+* Try:
+> Run with --scan to get full insights.
+
+BUILD FAILED in 19s
+27 actionable tasks: 6 executed, 21 up-to-date

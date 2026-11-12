@@ -253,6 +253,13 @@ final class SyncLedger implements AutoCloseable {
         }return result;
     }
     Set<String> sourceRefs(){Set<String> refs=new HashSet<>();try(Cursor c=db.rawQuery("SELECT DISTINCT revision FROM deliveries",null)){while(c.moveToNext())refs.add(c.getString(0));}return refs;}
+    boolean legacyQuietSource(String hash)throws Exception{
+        JSONObject state=new JSONObject(queue());
+        for(String section:new String[]{"jobs","recoveryQuarantine"}){JSONArray jobs=state.optJSONArray(section);if(jobs==null)continue;
+            for(int i=0;i<jobs.length();i++){JSONObject job=jobs.getJSONObject(i);if(hash.equals(job.optString("sourceRef"))||"metadata".equals(job.optString("kind"))&&hash.equals(job.optString("hash")))return false;}
+        }
+        try(Cursor c=db.rawQuery("SELECT 1 FROM deliveries WHERE revision=? AND state='transport-ack' LIMIT 1",new String[]{hash})){return c.moveToFirst();}
+    }
     void receipt(String target,PeerSnapshot snapshot,JSONObject binding,String job)throws Exception{
         intent(target,snapshot,binding);fault.at("before-receipt-write");
         // A duplicate transport ACK cannot erase a stronger historical checkpoint.

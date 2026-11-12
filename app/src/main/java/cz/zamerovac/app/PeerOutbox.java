@@ -86,8 +86,13 @@ final class PeerOutbox {
     private PeerSnapshot queuedSnapshot(String source)throws Exception{
         File target=file(source);
         if(!target.exists()&&!java.nio.file.Files.isSymbolicLink(target.toPath())){
-            // Upgrade old quiet receipts whose redundant file was cleaned up. SQL is an independently hash-checked exact source.
-            try(SyncLedger ledger=SyncLedger.open(context.getNoBackupFilesDir())){return ledger.revision(source,DeviceIdentity.get(context.getNoBackupFilesDir()));}
+            // Only an old, already quiet v1 receipt may have had its redundant file legitimately cleaned up.
+            // Active/unknown sources (including R10 temporary I/O loss) must never gain ACK authority from a fallback.
+            for(String suffix:new String[]{".bak",".new"})if(java.nio.file.Files.exists(new File(target+suffix).toPath(),java.nio.file.LinkOption.NOFOLLOW_LINKS))throw new IOException("Původní revize má nevyřešený vedlejší doklad");
+            try(SyncLedger ledger=SyncLedger.open(context.getNoBackupFilesDir())){
+                if(!ledger.legacyQuietSource(source))throw new IOException("Původní aktivní revize není dostupná; SQL kopie je pouze důkaz");
+                return ledger.revision(source,DeviceIdentity.get(context.getNoBackupFilesDir()));
+            }
         }
         if(!target.isFile()||java.nio.file.Files.isSymbolicLink(target.toPath())||
             target.length()<1||target.length()>PeerWire.MAX_JSON)
