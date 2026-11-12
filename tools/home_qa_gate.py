@@ -29,6 +29,10 @@ ROOT = Path(__file__).resolve().parent.parent
 # Read-only fingerprint observed for headless Chromium on trusted HOME run #43189084331.
 # Changing the approved binary requires owner verification and a new security review.
 APPROVED_BROWSER_SHA256 = "ce4635cd0e5dc0e21494542a701f347e91c1f1d821970578d97ed8df4ced50ef"
+# Single owner-controlled implementation exception approved in #42/6839410352.
+# Never allow the entire implement/* family or another commit under this name.
+SYNC116_BRANCH = "implement/sync-core-b-20261112"
+SYNC116_SHA = "1527e3377609633c554195b0641e02e3cfb5fb5e"
 
 
 class GateError(RuntimeError):
@@ -386,8 +390,9 @@ def render_workflow(branch: str, source_sha: str, browser: bool = False,
            "only a literal trusted qa/* branch is allowed")
     demand(bool(SHA.fullmatch(source_sha)), "exact 40-character source SHA required")
     if browser:
-        demand(bool(source_branch and safe_owner_branch(source_branch)),
-               "browser requires a literal owner source branch, not PR ref")
+        demand(bool(source_branch and (safe_owner_branch(source_branch) or
+                        (source_branch == SYNC116_BRANCH and source_sha == SYNC116_SHA))),
+               "browser requires a literal approved owner branch/SHA pair, never PR/fork")
         demand(bool(validator_sha and SHA.fullmatch(validator_sha)),
                "browser requires an independently reviewed gate SHA")
         demand(bool(validator_branch and (validator_branch == "main" or
