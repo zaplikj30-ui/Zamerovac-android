@@ -66,13 +66,15 @@ Domácí PC Windows11 má pevně 16 GB RAM; WSL2 4GB/2CPU a Gradle nejvýše jed
 Varianta `render-workflow --browser` povinně vyžaduje `--source-branch`
 (větev v **owner repozitáři**), `--expected-sha` (neměnný HEAD této
 větve), `--validator-sha` (samostatně prověřený připnutý SHA kontrolního
-kódu z owner repozitáře) a `--browser-sha256` (předem prověřený SHA256
+kódu z owner repozitáře), `--validator-branch` (owner větev tohoto
+kontrolního kódu; běžně `infra/qa-browser-one-shot-20261112` před merge,
+`main` až po schváleném začlenění) a `--browser-sha256` (předem prověřený SHA256
 již nainstalovaného Chromium). Nestačí pouze syntakticky platné SHA.
 Všechny hodnoty se před generováním a spuštěním musí ověřit proti
 schválenému GitHub HEAD, zdroji větve a nezávislému review.
 
 Browser workflow stáhne zdroj **pod jménem owner větve** (nikoli PR/fork
-ref nebo libovolný hash), validator z odděleně připnutého SHA a recipe
+ref nebo libovolný hash), validator z výslovné owner větve s kontrolou jejího přesného připnutého SHA a recipe
 z triggering owner-only `qa/*` větve. **Před jakýmkoli spuštěním kódu
 ze source** zkontroluje oba skutečné `git rev-parse HEAD`, následně
 spustí `lint-workflow --strict` z připnutého validatoru, nikdy
@@ -97,3 +99,11 @@ stromově (`taskkill /T /F` na Windows), s limitem 38 minut uvnitř
 security PASS a výslovně ověřeným trust bindingem i přítomností
 offline artefaktů.** Původní main HOME 4/4 ani canonical quick+WSL
 šablona se nemění. Neplatí zde automatické povolení merge či release.
+
+**Pozor na první spuštění:** otisk headless Chromium byl přečten bez úprav PC
+z [HOME quick běhu #43189084331](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/43189084331):
+`ce4635cd0e5dc0e21494542a701f347e91c1f1d821970578d97ed8df4ced50ef`
+(`chromium_headless_shell-1234`). To dokládá lokální totožnost při měření,
+nikoli původ distributora ani PASS E2E. Hash se nesmí nahradit automatickým
+akceptováním libovolného souboru. Srovnání s očekávanou verzí a první reálný
+browser běh jsou stále HOLD do závěrečného bezpečnostního posouzení.
