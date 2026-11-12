@@ -12,10 +12,10 @@ const root = process.env.ZAMEROVAC_SOURCE_ROOT ?
 const assetRoot = path.join(root, 'app', 'src', 'main', 'assets');
 const modes = Object.freeze({
  '--smoke': ['drawing', 'quality-regressions', 'gallery-readability'],
- '--all': ['drawing','gallery-visual','workflows','interactions','zoom-grid',
+ '--all': ['legacy-conflict-persistence','drawing','gallery-visual','workflows','interactions','zoom-grid',
   'update39','gallery-state','peer-sync','drive-accounts','sync-cadence',
   'backup-history','read-only-sync','sync-edit-guard','note-sync',
-  'web-content-policy','media-import','help','release-history',
+  'web-content-policy','media-import','pending-audio','help','release-history',
   'latency','quality-regressions','gallery-readability']
 });
 const types = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8',
