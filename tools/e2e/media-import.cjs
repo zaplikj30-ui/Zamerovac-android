@@ -9,7 +9,23 @@ suite('media-import',async run=>{
   await setup(page);for(const key of ['deleted','locked']){await page.click('#galleryBtn');const token=await page.evaluate(()=>pickCalls.at(-1).id);await page.evaluate(key=>{const r=recById(folderA);r[key]=true;touch(r);save()},key);await page.evaluate(({token,key})=>onNativeMedia('synthetic-'+key,'application/pdf','Nesmí jinam',null,token),{token,key});assert.equal(await page.evaluate(()=>state.records.filter(r=>r.kind!=='folder').length),0);await page.evaluate(({token,key})=>{state.records.find(r=>r.id===folderA)[key]=false;save();onNativeMediaDone(token)},{token,key});}
   await page.evaluate(()=>{window.oldHandlerCalls=0;modal('Původní vlastník','<input id="oldOwner">',()=>{});pickMedia('file',()=>oldHandlerCalls++);});const token=await page.evaluate(()=>pickCalls.at(-1).id);await page.click('#cancelModal');await page.evaluate(()=>modal('Jiný dialog','<input id="newOwner">',()=>{}));await page.evaluate(id=>onNativeMedia('synthetic-modal','application/pdf','Starý vlastník',null,id),token);assert.equal(await page.evaluate(()=>oldHandlerCalls),0);assert.equal(await page.locator('#newOwner').isVisible(),true);assert.equal(await page.evaluate(()=>state.records.length),2);
  });
- await run('picker-cancel-and-rejected-write-keep-data-and-file-draft',async({page})=>{
-  await setup(page);const before=await page.evaluate(()=>syntheticDisk);await page.click('#galleryBtn');const token=await page.evaluate(()=>pickCalls.at(-1).id);await page.evaluate(id=>onNativeMediaDone(id),token);assert.equal(await page.evaluate(()=>syntheticDisk),before);await page.click('#galleryBtn');const next=await page.evaluate(()=>pickCalls.at(-1).id);await page.evaluate(()=>syntheticWriteFailure=true);await page.evaluate(id=>onNativeMedia('synthetic-draft','application/pdf','Neuložená příloha',null,id),next);assert.equal(await page.locator('#saveErrorBanner').isVisible(),true);assert.equal(await page.evaluate(()=>syntheticDisk),before);assert.equal(await page.evaluate(()=>state.records.find(r=>r.media?.includes('synthetic-draft')).parentId),await page.evaluate(()=>folderA));await page.evaluate(()=>syntheticWriteFailure=false);await page.locator('#saveErrorBanner button').click();assert.equal(await page.locator('#saveErrorBanner').count(),0);assert.equal(await page.evaluate(()=>JSON.parse(syntheticDisk).records.find(r=>r.media?.includes('synthetic-draft')).parentId),await page.evaluate(()=>folderA));
+ await run('picker-cancel-and-rejected-write-keep-data-without-ghost-record',async({page})=>{
+  await setup(page);const before=await page.evaluate(()=>syntheticDisk);
+  await page.click('#galleryBtn');const token=await page.evaluate(()=>pickCalls.at(-1).id);
+  await page.evaluate(id=>onNativeMediaDone(id),token);assert.equal(await page.evaluate(()=>syntheticDisk),before);
+  await page.click('#galleryBtn');const next=await page.evaluate(()=>pickCalls.at(-1).id);
+  await page.evaluate(()=>syntheticWriteFailure=true);
+  await page.evaluate(id=>onNativeMedia('synthetic-draft','application/pdf','Neuložená příloha',null,id),next);
+  assert.equal(await page.locator('#saveErrorBanner').isVisible(),true);
+  assert.equal(await page.evaluate(()=>syntheticDisk),before);
+  assert.equal(await page.evaluate(()=>state.records.some(r=>r.media?.includes('synthetic-draft'))),false,
+   'PR #99 must remove the unconfirmed record from runtime state');
+  await page.evaluate(()=>syntheticWriteFailure=false);await page.locator('#saveErrorBanner button').click();
+  assert.equal(await page.locator('#saveErrorBanner').count(),0);
+  assert.equal(await page.evaluate(()=>JSON.parse(syntheticDisk).records.some(r=>r.media?.includes('synthetic-draft'))),false,
+   'An unrelated retry must not silently confirm the old ghost');
+  await page.click('#galleryBtn');const retry=await page.evaluate(()=>pickCalls.at(-1).id);
+  await page.evaluate(id=>onNativeMedia('synthetic-retry','application/pdf','Opakovaná příloha',null,id),retry);
+  assert.equal(await page.evaluate(()=>JSON.parse(syntheticDisk).records.find(r=>r.media?.includes('synthetic-retry')).parentId),await page.evaluate(()=>folderA));
  });
 });

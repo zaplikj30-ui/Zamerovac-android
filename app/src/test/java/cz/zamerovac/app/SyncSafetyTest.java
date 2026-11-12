@@ -24,6 +24,103 @@ public class SyncSafetyTest {
   @Override protected void transferMedia(JSONObject data)throws Exception{if(fail)throw new IOException("synthetic disconnection");}
   @Override protected void publishRemote(JSONObject data){}
  }
+ @Test public void firstCloudMediaInterruptedCanResumeWithoutLosingExactData()throws Exception {
+  // Dedicated new-installation files: never depend on other tests or the default app home.
+  File receiverHome=Files.createTempDirectory(context.getCacheDir().toPath(),"first-saf-sync-").toFile();
+  Context receiver=new ContextWrapper(context){
+   @Override public Context getApplicationContext(){return this;}
+   @Override public File getFilesDir(){return receiverHome;}
+  };
+  SharedPreferences receiverPrefs=context.getSharedPreferences("first-saf-"+UUID.randomUUID(),0);
+  String mediaId="first-photo-original";
+  String measurement="1585,800001234567890",laser="1585.800001234567890";
+  JSONObject remote=new JSONObject().put("schema",1).put("records",new JSONArray().put(
+      new JSONObject().put("id","photo-first").put("rev","remote-1")
+      .put("media",new JSONArray().put(mediaId))
+      .put("items",new JSONArray().put(new JSONObject().put("id","dimension-first")
+         .put("measure",measurement).put("laserMeasuredMm",laser)))));
+  byte[] photoBytes=new byte[]{4,5,6,7,9,11,13};
+  class InterruptedFirstSync extends SyncEngine {
+   int attempts=0;
+   InterruptedFirstSync(){super(receiver,receiverPrefs);}
+   @Override protected JSONObject fetchRemote(){return remote;}
+   @Override protected void transferMedia(JSONObject incoming)throws Exception{
+    assertEquals("photo-first",incoming.getJSONArray("records").getJSONObject(0).getString("id"));
+    File target=new File(receiverHome,"media/"+mediaId);
+    Files.write(target.toPath(),photoBytes);
+    if(++attempts==1)throw new IOException("synthetic disconnect after first received original");
+   }
+   @Override protected void publishRemote(JSONObject data){}
+  }
+  InterruptedFirstSync transport=new InterruptedFirstSync();
+  assertFalse(new File(receiverHome,"projects.json").exists());
+  try{
+   transport.sync();fail("Interrupted first photo transfer was acknowledged");
+  }catch(IOException expected){
+   assertTrue(expected.getMessage().contains("synthetic disconnect"));
+  }
+  // The previously confirmed empty DB makes a media-first crash resumable.
+  String baseline=LocalDatabase.readForCas(receiverHome);
+  assertTrue(DatabaseRecovery.exists(receiverHome));
+  assertEquals(0,new JSONObject(baseline).getJSONArray("records").length());
+  assertArrayEquals(photoBytes,Files.readAllBytes(new File(receiverHome,"media/"+mediaId).toPath()));
+  assertTrue(receiverPrefs.getBoolean("syncPending",false));
+  transport.sync();transport.sync();
+  JSONArray rows=new JSONObject(LocalDatabase.readForCas(receiverHome)).getJSONArray("records");
+  assertEquals(1,rows.length());
+  JSONObject saved=rows.getJSONObject(0),item=saved.getJSONArray("items").getJSONObject(0);
+  assertEquals("photo-first",saved.getString("id"));
+  assertEquals(mediaId,saved.getJSONArray("media").getString(0));
+  assertEquals(measurement,item.getString("measure"));
+  assertEquals(laser,item.getString("laserMeasuredMm"));
+  assertArrayEquals(photoBytes,Files.readAllBytes(new File(receiverHome,"media/"+mediaId).toPath()));
+  assertEquals(3,transport.attempts);
+ }
+ @Test public void corruptFirstCloudPrimaryNeverPublishesOlderRecoveryCopy()throws Exception {
+  File receiverHome=Files.createTempDirectory(context.getCacheDir().toPath(),"corrupt-saf-sync-").toFile();
+  Context receiver=new ContextWrapper(context){
+   @Override public Context getApplicationContext(){return this;}
+   @Override public File getFilesDir(){return receiverHome;}
+  };
+  SharedPreferences receiverPrefs=context.getSharedPreferences("corrupt-saf-"+UUID.randomUUID(),0);
+  // Prove clean first-install DB before creating received media: no synthetic lost-DB state.
+  LocalDatabase.write(receiverHome,"{\"schema\":1,\"records\":[]}");
+  File mediaDir=new File(receiverHome,"media");assertTrue(mediaDir.mkdirs());
+  File originalPhoto=new File(mediaDir,"original-photo");
+  byte[] originalBytes=new byte[]{17,18,19,21,23};
+  Files.write(originalPhoto.toPath(),originalBytes);
+  JSONObject old=data("old","1000,000000000000001");
+  JSONObject newest=data("new","1585,800001234567890");
+  newest.getJSONArray("records").getJSONObject(0)
+      .put("media",new JSONArray().put("original-photo"))
+      .put("items",new JSONArray().put(new JSONObject().put("measure","1585,800001234567890")
+          .put("laserMeasuredMm","1585.800001234567890")));
+  LocalDatabase.write(receiverHome,old.toString());
+  LocalDatabase.write(receiverHome,newest.toString());
+  File primary=new File(receiverHome,"projects.json"),backup=new File(receiverHome,"projects.bak");
+  assertEquals(old.toString(),LocalDatabase.readFile(backup));
+  Files.write(primary.toPath(),"{corrupt-primary".getBytes(java.nio.charset.StandardCharsets.UTF_8));
+  byte[] damaged=Files.readAllBytes(primary.toPath()),beforeBackup=Files.readAllBytes(backup.toPath());
+  class MustNotSync extends SyncEngine {
+   MustNotSync(){super(receiver,receiverPrefs);}
+   @Override protected JSONObject fetchRemote()throws Exception{
+    fail("Corrupt primary escaped strict read and reached the provider");
+    throw new IOException("Unexpected cloud access");
+   }
+   @Override protected void transferMedia(JSONObject data)throws Exception{
+    fail("Corrupt primary escaped strict read and touched originals");
+   }
+   @Override protected void publishRemote(JSONObject data)throws Exception{
+    fail("Corrupt primary was published as confirmed");
+   }
+  }
+  try{new MustNotSync().sync();fail("Stale backup was accepted as writable state");}
+  catch(IOException expected){}
+  assertArrayEquals(damaged,Files.readAllBytes(primary.toPath()));
+  assertArrayEquals(beforeBackup,Files.readAllBytes(backup.toPath()));
+  assertArrayEquals(originalBytes,Files.readAllBytes(originalPhoto.toPath()));
+  assertTrue(receiverPrefs.getBoolean("syncPending",false));
+ }
  @Test public void slowRemoteDoesNotBlockSaveAndFinalCommitKeepsBothExactValues()throws Exception {
   LocalDatabase.write(home,data("base","1,000001").toString());prefs.edit().putString("syncBase","{\"photo\":\"base\"}").commit();
   Transport transport=new Transport(data("remote","2,000000987654321"));transport.pause=true;ExecutorService workers=Executors.newFixedThreadPool(2);

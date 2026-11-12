@@ -49,12 +49,15 @@ final class PeerSnapshot {
         new org.erdtman.jcs.JsonCanonicalizer(text);
         JSONObject wire=new JSONObject(text);JsonInput.unicode(wire);numbers(wire,0);
         if(!"cz.zamerovac.sync.snapshot".equals(wire.optString("format"))||integer(wire,"version",2)!=2||!DeviceIdentity.valid(sourceId)||!sourceId.equals(wire.getString("sourceId")))throw new IOException("Neplatná nebo cizí synchronizační revize");
+        if(wire.has("recoveryEpoch")&&(!(wire.get("recoveryEpoch") instanceof String)||
+            !DeviceIdentity.valid(wire.getString("recoveryEpoch"))))
+            throw new IOException("Neplatná identita období obnovy přenosu");
         JSONObject data=wire.getJSONObject("data");LocalDatabase.validate(data.toString());if(data.has("prefs"))throw new IOException("Nastavení zařízení nepatří do sdílené revize");return new PeerSnapshot(wire,bytes);
     }
     static PeerSnapshot capture(Context context,SharedPreferences prefs)throws Exception{return capture(context,prefs,()->{});}
     static PeerSnapshot capture(Context context,SharedPreferences prefs,ImmutableStore.Checkpoint checkpoint)throws Exception{
         checkpoint.check();
-        String text=LocalDatabase.read(context.getFilesDir());JSONObject data=text.isEmpty()?new JSONObject().put("schema",1).put("records",new JSONArray()):new JSONObject(text);
+        String text=LocalDatabase.readForCas(context);JSONObject data=text.isEmpty()?new JSONObject().put("schema",1).put("records",new JSONArray()):new JSONObject(text);
         data.remove("prefs");data.remove("created");data.put("syncProtocol",2);numbers(data,0);
         JSONArray manifest=new JSONArray();File directory=new File(context.getFilesDir(),"media");
         for(String id:references(data.getJSONArray("records"))){
@@ -64,6 +67,13 @@ final class PeerSnapshot {
             manifest.put(new JSONObject().put("id",id).put("hash",verified.getString("hash")).put("size",verified.getLong("size")).put("mime",mime).put("name",name));
         }
         checkpoint.check();JSONObject wire=new JSONObject().put("format","cz.zamerovac.sync.snapshot").put("version",2).put("sourceId",DeviceIdentity.get(context.getNoBackupFilesDir())).put("data",data).put("media",manifest);
+        // A locally recovered installation must never reuse the hash of an older
+        // signed cloud ACK, even when restored project JSON is byte-identical.
+        // Optional envelope field: persistent project schema and media IDs do not change.
+        // Revalidate primary AND the independent no_backup witness after media
+        // scanning. A vanished journal cannot silently emit the old signed ACK hash.
+        String epoch=LocalDatabase.recoveryId(context);
+        if(!epoch.isEmpty())wire.put("recoveryEpoch",epoch);
         byte[] bytes=CausalClock.canonical(wire).getBytes(StandardCharsets.UTF_8);if(bytes.length>PeerWire.MAX_JSON)throw new IOException("Metadata synchronizace jsou příliš velká");PeerSnapshot result=parse(bytes,wire.getString("sourceId"));for(String id:result.media.keySet()){File file=new File(directory,id);result.localStats.put(id,new long[]{file.length(),file.lastModified()});}return result;
     }
 }

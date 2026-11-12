@@ -89,6 +89,8 @@ public class Audit39SafetyTest {
         }finally{release.countDown();}
     }
     @Test public void exportRejectsTotalOverTwoGiBBeforeWritingAndBudgetIncludesMetadata()throws Exception{
+         // Production initializes the DB before media recording/import.
+         LocalDatabase.write(context.getFilesDir(),"{\"schema\":1,\"records\":[]}");
         File media=new File(context.getFilesDir(),"media");media.mkdirs();try(RandomAccessFile file=new RandomAccessFile(new File(media,"sparse-media"),"rw")){file.setLength(ArchiveLimits.MAX_BYTES);}
         LocalDatabase.write(context.getFilesDir(),db(new JSONObject().put("id","large").put("media",new JSONArray().put("sparse-media"))).toString());
         ByteArrayOutputStream out=new ByteArrayOutputStream();java.lang.reflect.Method export=MainActivity.class.getDeclaredMethod("exportArchive",OutputStream.class,String.class);export.setAccessible(true);
@@ -98,14 +100,20 @@ public class Audit39SafetyTest {
         ArchiveLimits.json(ArchiveLimits.MAX_JSON);try{ArchiveLimits.json(ArchiveLimits.MAX_JSON+1L);fail();}catch(IOException expected){}
     }
     @Test public void purgeProtectsLiveAudioHistoryAndSeparateImmutableBackup()throws Exception{
+         // Production initializes the DB before media recording/import.
+         LocalDatabase.write(context.getFilesDir(),"{\"schema\":1,\"records\":[]}");
         File media=new File(context.getFilesDir(),"media");media.mkdirs();for(String id:new String[]{"shared-audio","shared-history","exclusive"})Files.write(new File(media,id).toPath(),new byte[]{7});
         File immutable=new File(context.getFilesDir(),"Zamerovac-zalohy/backups/v2/blobs/exclusive");immutable.getParentFile().mkdirs();Files.write(immutable.toPath(),new byte[]{9});
         JSONObject deleted=new JSONObject().put("id","deleted").put("deleted",true).put("audioMedia",new JSONArray().put("shared-audio").put("exclusive")).put("versionHistory",new JSONArray().put(new JSONObject().put("items","[{\"media\":[\"shared-history\"]}]")));
         JSONObject live=new JSONObject().put("id","live").put("audioMedia",new JSONArray().put("shared-audio")).put("versionHistory",new JSONArray().put(new JSONObject().put("items","[{\"audioMedia\":[\"shared-history\"]}]")));
         String before=db(deleted,live).toString();LocalDatabase.write(context.getFilesDir(),before);new TrashPurger(context,prefs).purge(before,before,new JSONArray().put("deleted"),text->LocalDatabase.write(context.getFilesDir(),text));
-        assertFalse(new File(media,"exclusive").exists());assertTrue(new File(media,"shared-audio").isFile());assertTrue(new File(media,"shared-history").isFile());assertArrayEquals(new byte[]{9},Files.readAllBytes(immutable.toPath()));
+        assertArrayEquals("P1 hold must retain even exclusive original bytes",new byte[]{7},Files.readAllBytes(new File(media,"exclusive").toPath()));
+        assertTrue(new ProtectedRevisions(context,prefs).pins().containsAll(Set.of("exclusive","shared-audio","shared-history")));
+        assertTrue(new File(media,"shared-audio").isFile());assertTrue(new File(media,"shared-history").isFile());assertArrayEquals(new byte[]{9},Files.readAllBytes(immutable.toPath()));
     }
     @Test public void maximumEntryArchiveRoundTripsWithAllThreeMetadataEntries()throws Exception{
+         // Production initializes the DB before media recording/import.
+         LocalDatabase.write(context.getFilesDir(),"{\"schema\":1,\"records\":[]}");
         File media=new File(context.getFilesDir(),"media");media.mkdirs();JSONArray ids=new JSONArray();
         for(int i=0;i<ArchiveLimits.MAX_ENTRIES-3;i++){String id="boundary-media-"+i;ids.put(id);Files.write(new File(media,id).toPath(),new byte[]{42});}
         LocalDatabase.write(context.getFilesDir(),db(new JSONObject().put("id","boundary").put("media",ids).put("measure","1585,800001000000000123")).toString());

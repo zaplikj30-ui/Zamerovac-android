@@ -39,7 +39,7 @@ final class PeerMedia {
                 if(!ArchiveIntegrity.hex(hash.digest()).equals(expected.getString("hash")))throw new IOException("Kontrola přijaté přílohy selhala");out.getFD().sync();
             }
             checkpoint.check();boolean existing=matches(destination,expected,checkpoint);long existingSize=destination.length(),existingModified=destination.lastModified();
-            synchronized(TrashPurger.LOCK){if(existing){if(!destination.isFile()||Files.isSymbolicLink(destination.toPath())||destination.length()!=existingSize||destination.lastModified()!=existingModified)throw new IOException("Příloha se před potvrzením změnila");return;}if(destination.exists()||Files.isSymbolicLink(destination.toPath()))throw new IOException("Příloha vznikla souběžně. Opakuj přenos.");try{Files.move(temporary.toPath(),destination.toPath(),StandardCopyOption.ATOMIC_MOVE);}catch(AtomicMoveNotSupportedException unsupported){Files.move(temporary.toPath(),destination.toPath());}}
+            synchronized(TrashPurger.LOCK){if(existing){if(!destination.isFile()||Files.isSymbolicLink(destination.toPath())||destination.length()!=existingSize||destination.lastModified()!=existingModified)throw new IOException("Příloha se před potvrzením změnila");return;}if(destination.exists()||Files.isSymbolicLink(destination.toPath()))throw new IOException("Příloha vznikla souběžně. Opakuj přenos.");ProtectedRevisions.verifyRestoration(destination,expected);try{Files.move(temporary.toPath(),destination.toPath(),StandardCopyOption.ATOMIC_MOVE);}catch(AtomicMoveNotSupportedException unsupported){Files.move(temporary.toPath(),destination.toPath());}}
         }finally{temporary.delete();}
     }
 }

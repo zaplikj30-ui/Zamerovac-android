@@ -1364,6 +1364,44 @@
         "Objem přes 2 GiB se ověřuje předběžnou kontrolou skutečného sparse souboru a bajtovým rozpočtem, nikoli přenosem 2 GiB.",
         "Robolectric/provider doubles a JVM TLS neověřují rádio, Keystore, skutečný power-cut, OEM výkon ani živý OAuth/Drive."
       ]
+    },
+    {
+      "id": "p1-hybrid-protected-revisions",
+      "issues": [
+        42,
+        28
+      ],
+      "sources": [
+        "app/src/main/java/cz/zamerovac/app/ProtectedRevisions.java",
+        "app/src/main/java/cz/zamerovac/app/LocalDatabase.java",
+        "app/src/main/java/cz/zamerovac/app/TrashPurger.java",
+        "app/src/main/java/cz/zamerovac/app/PeerOutbox.java"
+      ],
+      "tests": [
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/ProtectedRevisionsTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/SafSyncV2Test.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/PeerTransferTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "tools/e2e/protected-data.cjs",
+          "layer": "chromium"
+        }
+      ],
+      "coverage": "runtime-partial",
+      "positive": "Přesný JSON, kóty/geometrie/laser/history, sdílené originály bez duplicit, ACK a restart, koš a opakovaný cleanup, obnova katalogového sjednocení.",
+      "negative": "Nečitelný registr, ztráta autority DB, chybějící pin, selhání katalogu a syntetický disk-full zastaví operaci; rollback nesmí odstranit chráněnou nebo živou přílohu. Původní přísné RED diagnostiky #88 zůstávají.",
+      "limits": [
+        "Fyzický Android, skutečný Drive/SAF, fyzický disk-full a power-cut NOT RUN.",
+        "Hold není recovery/ACK autorita; automatická promotion a zrušení ochrany nejsou implementované."
+      ]
     }
   ],
   "manualGates": [

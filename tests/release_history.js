@@ -90,3 +90,5 @@ assert(JSON.stringify(history.releaseChanges).includes('Oddělený výběr Googl
 assert(JSON.stringify(history.releaseChanges).includes('Nové cloudové úložiště'));
 
 for(const phrase of ['A39-01 až A39-06','UTF-8 limit','odvolání rozjednaného TLS','cyklu složek','mimo zámek ukládání','celkových bajtů','hlasová a historická média'])assert(JSON.stringify(history.releaseChanges).includes(phrase),'Missing audit fix note: '+phrase);
+
+assert.match(fs.readFileSync('app/src/main/assets/release-history.js','utf8'),/ACK synchronizace ochranu neruší/);

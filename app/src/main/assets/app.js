@@ -63,8 +63,18 @@ function reconcileSavedState(base,local,remote){
   const l=ours.get(id),d=theirs.get(id),o=old.get(id);
   if(Object.hasOwn(tombstones,id)){
    for(let record of [l,d])if(record&&!record.deleted){
-    if(record===l&&!sameSavedValue(record,o)&&sameSavedValue(record.syncClock,o?.syncClock))record={...record,syncClock:advanceSyncClock(record.syncClock||{})};
-    if(!Object.keys(record.syncClock||{}).length||['after','concurrent'].includes(compareSyncClocks(record.syncClock||{},tombstones[id]))){
+    const editedLocal=record===l&&!sameSavedValue(record,o);
+    // Native CAS has an authoritative persisted purge: an unchanged local
+    // record cannot revive it, including a legacy record without a clock.
+    // Browser-only reconciliation lacks that proof, so an unclocked legacy
+    // record stays a marked conflict copy instead of silently disappearing.
+    if(record===l&&!editedLocal&&(native||Object.keys(record.syncClock||{}).length))continue;
+    if(editedLocal&&sameSavedValue(record.syncClock,o?.syncClock))record={...record,syncClock:advanceSyncClock(record.syncClock||{})};
+    const order=compareSyncClocks(record.syncClock||{},tombstones[id]);
+    // A local edit and remote purge can have identical clock counters when
+    // interleaved on one device. Preserve the edit as a conflict copy.
+    if(!Object.keys(record.syncClock||{}).length||['after','concurrent'].includes(order)||
+       (editedLocal&&order==='equal')){
      const source='purge:'+id+':'+canonicalSavedValue(record);
      if(!conflicts.has(source)){let copy;if(native&&typeof Native.preservePurgedEdit==='function'){copy=JSON.parse(Native.preservePurgedEdit(id,JSON.stringify(record),JSON.stringify(tombstones[id])));if(copy.error||!copy.id)throw Error('Konfliktní kopie nebyla potvrzena');}else copy={...record,id:uid(),conflict:true,conflictOf:id,conflictSource:source,title:(record.title||'Položka')+' (změna po vysypání koše)',syncClock:mergeSyncClocks(record.syncClock||{},tombstones[id])};if(!Object.hasOwn(tombstones,copy.id))records.push(copy);conflicts.add(source)}
     }
@@ -73,7 +83,21 @@ function reconcileSavedState(base,local,remote){
   }
   if(purged.has(id)&&(!l||l.deleted)&&(!d||d.deleted))continue;
   if(sameSavedValue(l,d)){if(l)records.push(l);continue}
-  if(sameSavedValue(l,o)){if(d)records.push(d);continue}
+  if(sameSavedValue(l,o)){
+   if(d)records.push(d);
+   else if(!native&&l&&!l.deleted&&l.conflict===true&&
+       typeof l.conflictOf==='string'&&l.id!==l.conflictOf&&
+       typeof l.conflictSource==='string'&&
+       l.conflictSource.startsWith('purge:'+l.conflictOf+':')&&
+       purged.has(l.conflictOf)&&Object.hasOwn(tombstones,l.conflictOf)&&
+       !purged.has(l.id)&&!Object.hasOwn(tombstones,l.id)){
+    // Browser-only stale callback does not prove deletion of a previously
+    // persisted, renamed legacy conflict copy. A tombstone for the COPY id
+    // still wins. Native CAS authority never enters this fallback.
+    records.push(l);
+   }
+   continue;
+  }
   if(sameSavedValue(d,o)){if(l)records.push(l);continue}
   if(sameHierarchyIntent(l,d)){records.push(l);continue}
   if(sameHierarchyIntent(d,l)){records.push(d);continue}
@@ -111,14 +135,39 @@ function reportSaveResult(ok){
 function save(){
  if(dataLoadFailed){notify('Zakázky nelze načíst. Zápis je zablokovaný, původní data zůstávají chráněná.');return reportSaveResult(false)}
  try{
+  // Stage conflicting merges; only publish them after the native writer confirms.
+  let candidate=state,expected=persistedSnapshot;
   for(let attempt=0;attempt<3;attempt++){
-   state.syncProtocol=2;const text=JSON.stringify(state);
-   if(!native){localStorage.setItem('zamerovac-data',text);persistedSnapshot=text;return reportSaveResult(true)}
-   const result=JSON.parse(Native.saveDataChecked(text,persistedSnapshot));
-   if(result.ok){persistedSnapshot=text;return reportSaveResult(true)}
+   const text=JSON.stringify({...candidate,syncProtocol:2});
+   if(!native){localStorage.setItem('zamerovac-data',text);state.syncProtocol=2;persistedSnapshot=text;return reportSaveResult(true)}
+   const result=JSON.parse(Native.saveDataChecked(text,expected));
+   if(result?.ok===true){if(candidate!==state)applySavedState(candidate);state.syncProtocol=2;persistedSnapshot=text;return reportSaveResult(true)}
+   if(result?.ok!==false)throw new Error('Neplatné potvrzení zápisu');
    if(typeof result.current!=='string')throw new Error(result.error||'Zápis nebyl potvrzen');
-   const disk=JSON.parse(result.current),base=persistedSnapshot?JSON.parse(persistedSnapshot):initial;
-   applySavedState(reconcileSavedState(base,state,disk));persistedSnapshot=result.current;
+   const disk=JSON.parse(result.current),base=expected?JSON.parse(expected):initial;
+   if(!disk||disk.schema!==1||!Array.isArray(disk.records)||
+      disk.records.some(r=>!r||typeof r!=='object'||Array.isArray(r)||typeof r.id!=='string'||!r.id)||
+      new Set(disk.records.map(r=>r.id)).size!==disk.records.length)
+     throw new Error('Neplatná databáze při souběžném zápisu');
+   // A tombstone is not a deletion receipt while that same ID still exists.
+   // Validate all conflicts, including those where no record ID went missing.
+   const remoteIds=new Set(disk.records.map(r=>r.id));
+   if(Object.hasOwn(disk,'trashPurgedIds')&&!Array.isArray(disk.trashPurgedIds))
+    throw new Error('Neplatná evidence vysypaného koše');
+   const purged=new Set(disk.trashPurgedIds||[]);
+   if([...purged].some(id=>typeof id!=='string'||!id))
+    throw new Error('Neplatné ID v evidenci vysypaného koše');
+   const tombstones=disk.syncTombstones===undefined?{}:disk.syncTombstones;
+   if(!tombstones||typeof tombstones!=='object'||Array.isArray(tombstones))
+    throw new Error('Neplatná evidence synchronizačního koše');
+   if(disk.records.some(r=>purged.has(r.id)||Object.hasOwn(tombstones,r.id)))
+    throw new Error('Rozporný záznam a potvrzení jeho smazání');
+   const missing=(base.records||[]).filter(r=>!remoteIds.has(r.id));
+   const watched=new Set([...(base.records||[]).map(r=>r.id),...candidate.records.map(r=>r.id)]);
+   if(missing.some(r=>!purged.has(r.id)||!Object.hasOwn(tombstones,r.id))||
+      [...watched].some(id=>Object.hasOwn(tombstones,id)&&!purged.has(id)))
+    throw new Error('Neověřené odstranění záznamů při souběžném zápisu');
+   candidate=reconcileSavedState(base,candidate,disk);expected=result.current;
   }
   throw new Error('Zakázky se právě mění. Zkus uložení znovu.');
  }catch(e){notify('Neuloženo: '+e.message);return reportSaveResult(false)}
@@ -148,13 +197,25 @@ function folderContains(folderId,otherId){
  return false;
 }
 function newRecord(kind,title,parentId=currentFolder){return {id:uid(),syncClock:advanceSyncClock({}),kind,title,parentId,createdAt:stamp(),updatedAt:stamp(),rev:uid(),media:[],items:[],text:'',checks:[],width:1400,height:900,deleted:false}}
-function addRecord(r){if(!canWriteToFolder(r.parentId)){notify('Nejdříve odemkněte složku.');return null}state.records.push(r);save();showFolder();return r}
+// New records must never become visible as saved after a rejected durable write.
+function persistNewRecord(r){
+ state.records.push(r);
+ if(save()===true)return true;
+ const at=state.records.indexOf(r);
+ if(at>=0)state.records.splice(at,1);
+ return false;
+}
+function addRecord(r){
+ if(!canWriteToFolder(r.parentId)){notify('Nejdříve odemkněte složku.');return false}
+ if(!persistNewRecord(r))return false;
+ showFolder();return r;
+}
 function closeMenus(){for(let id of ['toolMenu','newMenu','navMenu','overflowMenu','editorOverflow'])$(id).hidden=true;if($('editorExtraToolbar')?.hidden===false)window.setEditorExtraToolbarExpanded?.(false)}
 let modalFocusTimer=null;
 function modal(title,markup,cb,okText='Uložit'){closeMenus();delete $('modal').dataset.actionMenu;$('okModal').classList.remove('danger');$('modalTitle').textContent=title;$('modalBody').innerHTML=markup;$('modal').hidden=false;$('okModal').textContent=okText;$('cancelModal').hidden=okText==='Zavřít';window.modalOK=cb;window.modalBackHandler=null;document.getElementById('editorUnsavedConfirm')?.remove();clearTimeout(modalFocusTimer);modalFocusTimer=setTimeout(()=>{const body=$('modalBody');if(!$('modal').hidden&&!body.contains(document.activeElement))body.querySelector('input,textarea')?.focus()},90)}
 $('okModal').onclick=()=>{try{if(window.modalOK?.()!==false){$('modal').hidden=true;window.modalOK=null;window.modalBackHandler=null}}catch(e){notify('Chyba: '+e.message)}};
 $('cancelModal').onclick=()=>{$('modal').hidden=true;window.modalOK=null;window.modalBackHandler=null;document.getElementById('editorUnsavedConfirm')?.remove()};
-function promptText(title,label,initial,done){modal(title,`<label>${escapeHtml(label)}</label><input id="promptValue" value="${escapeHtml(initial)}">`,()=>{let v=$('promptValue').value.trim();if(!v){notify('Vyplň hodnotu');return false}done(v)})}
+function promptText(title,label,initial,done){modal(title,`<label>${escapeHtml(label)}</label><input id="promptValue" value="${escapeHtml(initial)}">`,()=>{let v=$('promptValue').value.trim();if(!v){notify('Vyplň hodnotu');return false}return done(v)})}
 // ImageMeter-style browser previews. Android loads only cached small JPEG
 // thumbnails from /thumb/<id>, never the original full-size camera image.
 // A compact, high-contrast badge for any photo containing saved annotations.
@@ -202,11 +263,14 @@ function promptRenameRecord(r){
  });
  setTimeout(()=>{const input=$('renameBase');if(input){input.focus();input.setSelectionRange(input.value.length,input.value.length)}},120);
 }
-function restoreDeleted(id,seen=new Set()){
+function restoreDeleted(id,seen=new Set(),rollback=null){
  const r=recById(id,true);
  if(!r||!r.deleted||seen.has(id))return false;
+ // Keep original object references, media, dimensions, and revision metadata.
+ // No success state can be exposed if the durable CAS save is rejected.
+ if(rollback)rollback.push([r,{...r}]);
  seen.add(id);r.deleted=false;touch(r);
- for(const child of state.records.filter(x=>x.parentId===id&&x.deleted))restoreDeleted(child.id,seen);
+ for(const child of state.records.filter(x=>x.parentId===id&&x.deleted))restoreDeleted(child.id,seen,rollback);
  return true;
 }
 let trashBusy=false;
@@ -245,8 +309,8 @@ function purgeTrashRecords(ids){
 function confirmTrashPurge(ids,all){
  if(trashBusy)return;
  modal(!ids.length?'Dokončit úklid koše?':all?'Vysypat koš?':'Trvale odstranit?',
-  !ids.length?'<p>Zopakovat trvalé odstranění souborů dříve vysypaného koše? Aktivně používané a sdílené soubory zůstanou zachované.</p>':all?'<p>Opravdu vysypat koš? Všechny položky v koši budou trvale odstraněny a nebude možné je obnovit.</p>':
-  '<p>Vybraná položka v koši a její smazané podsložky budou trvale odstraněny a nebude možné je obnovit.</p>',
+  !ids.length?'<p>Zopakovat trvalé odstranění souborů dříve vysypaného koše? Aktivně používané a sdílené soubory zůstanou zachované.</p>':all?'<p>Opravdu vysypat koš? Položky zmizí z běžného koše. Chráněné revize a původní přílohy zůstávají uložené; místo se proto nemusí uvolnit.</p>':
+  '<p>Vybraná položka a její smazané podsložky zmizí z běžného koše. Chráněné revize a přílohy zůstávají uložené.</p>',
   ()=>purgeTrashRecords(ids),'Trvale odstranit');
  $('okModal').classList.add('danger');
 }
@@ -256,7 +320,14 @@ function showTrash(){
  // Cyclic/malformed deleted parent links must not hide all trash entries.
  const roots=deleted.filter(r=>!deleted.some(p=>p.id===r.parentId));
  const root=roots.length?roots:deleted;
- const body=(root.length?root.map(r=>
+ let protectionInfo='';
+ if(native&&typeof Native.protectedDataStatus==='function'){
+  try{const status=JSON.parse(Native.protectedDataStatus());
+   protectionInfo=status.error?'<p role="alert">'+escapeHtml(status.error)+'</p>':
+    '<p class="muted">Chráněné revize: '+escapeHtml(String(status.revisions))+' · původní přílohy: '+escapeHtml(String(status.media))+' · '+escapeHtml((Number(status.mediaBytes)/1048576).toFixed(1))+' MiB. '+escapeHtml(status.message)+'</p>';
+  }catch(e){protectionInfo='<p role="alert">Přehled ochrany není dostupný. Chráněné soubory nemaž ručně.</p>'}
+ }
+ const body=protectionInfo+(root.length?root.map(r=>
   '<div class="trash-entry">'+browserEntryIcon(r)+'<div><strong>'+escapeHtml(r.title)+'</strong><small>'+escapeHtml(r.kind)+'</small></div>'+
   '<button class="outline" data-restore="'+escapeHtml(r.id)+'">Obnovit</button>'+
   '<button class="outline" data-purge="'+escapeHtml(r.id)+'">Odstranit</button></div>'
@@ -267,9 +338,19 @@ function showTrash(){
  $('emptyTrash').onclick=()=>{if(deleted.length&&!dataLoadFailed)confirmTrashPurge(deleted.map(r=>r.id),true)};
  if($('retryTrashCleanup'))$('retryTrashCleanup').onclick=()=>confirmTrashPurge([],false);
  $('modalBody').querySelectorAll('[data-restore]').forEach(b=>b.onclick=()=>{
-  if(!restoreDeleted(b.dataset.restore)){notify('Položku se nepodařilo obnovit');return}
+  const rollback=[];
+  if(!restoreDeleted(b.dataset.restore,new Set(),rollback)){notify('Položku se nepodařilo obnovit');return}
   const r=recById(b.dataset.restore);if(r&&r.parentId&&!recById(r.parentId))r.parentId=null;
-  save();if(screen==='browser')showFolder();showTrash();notify('Položka obnovena');
+  if(save()!==true){
+   // Undo only this unsaved restore, in place; never replace active record objects.
+   for(const [record,before] of rollback.reverse()){
+    for(const key of Object.keys(record))if(!Object.hasOwn(before,key))delete record[key];
+    Object.assign(record,before);
+   }
+   showTrash();notify('Obnovu se nepodařilo uložit. Položka zůstává v koši.');
+   return;
+  }
+  if(screen==='browser')showFolder();showTrash();notify('Položka obnovena');
  });
  $('modalBody').querySelectorAll('[data-purge]').forEach(b=>b.onclick=()=>{
   const targets=new Set([b.dataset.purge]);
@@ -302,7 +383,7 @@ function showNewMenu(){if(!$('newMenu').hidden){closeMenus();return}if(!canWrite
 ['📷','Pořídit fotografii',()=>pickMedia('camera')],
 ['🖼️','Importovat obrázek / PDF / video',()=>pickMedia('media')],
 ['<svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h9l5 5v12H5z" fill="#f3f0e7" stroke="#a8a0ba" stroke-width="1.5"/><path d="M14 3v5h5" stroke="#a8a0ba" stroke-width="1.5"/><path d="m9 16 7.6-7.6 2.4 2.4-7.6 7.6-3.4 1z" fill="#d7c2ff" stroke="#9263d5" stroke-width="1.6"/><path d="m15.2 9.8 2.4 2.4" stroke="#9263d5" stroke-width="1.6"/></svg>','Nový náčrt',()=>promptText('Nový náčrt','Název','Nový náčrt',name=>addRecord(newRecord('canvas',name)))],
-['📝','Nová textová poznámka',()=>{let r=newRecord('note','Nová poznámka');if(!canWriteToFolder(r.parentId)){notify('Nejdříve odemkněte složku.');return}state.records.push(r);save();openNote(r)}],
+['📝','Nová textová poznámka',()=>{let r=newRecord('note','Nová poznámka');if(!canWriteToFolder(r.parentId)){notify('Nejdříve odemkněte složku.');return}if(!persistNewRecord(r))return;openNote(r)}],
 ['📁','Nová složka',()=>promptText('Nová složka','Jméno zákazníka nebo místnosti','',name=>addRecord(newRecord('folder',name)))],
 ['🎤','Hlasová poznámka',()=>recordVoice()],
 ['📎','Přidat další soubor',()=>pickMedia('file')],
@@ -323,7 +404,7 @@ async function acceptPickedMedia(request,id,mime,name,takenAt=null){
 }
 $('filePick').addEventListener('change',async(e)=>{const request=stagedMediaRequest;if(!request)return;try{for(let file of e.target.files){let mediaId=await storeMedia(file,request.id);await acceptPickedMedia(request,mediaId,file.type||'application/octet-stream',file.name)}}catch(error){notify('Příloha nebyla přidána: '+error.message)}finally{if(stagedMediaRequest===request)stagedMediaRequest=null}});
 $('filePick').addEventListener('cancel',()=>{stagedMediaRequest=null});
-async function addMediaRecord(id,name,mime,takenAt=null,folder=currentFolder){if(!canWriteToFolder(folder)){notify('Původní složka není dostupná nebo je uzamčená; příloha nebyla připojena jinam.');return null}const kind=mime.startsWith('image/')?'photo':mime.startsWith('video/')?'video':mime.startsWith('audio/')?'audio':'file',r=newRecord(kind,name,folder);r.media=[id];if(kind==='photo'&&takenAt)r.photoTakenAt=takenAt;state.records.push(r);if(!save())return null;if(screen==='browser'&&currentFolder===folder){showFolder();if(kind==='photo')openEditor(r)}return r}
+async function addMediaRecord(id,name,mime,takenAt=null,folder=currentFolder){if(!canWriteToFolder(folder)){notify('Původní složka není dostupná nebo je uzamčená; příloha nebyla připojena jinam.');return null}const kind=mime.startsWith('image/')?'photo':mime.startsWith('video/')?'video':mime.startsWith('audio/')?'audio':'file',r=newRecord(kind,name,folder);r.media=[id];if(kind==='photo'&&takenAt)r.photoTakenAt=takenAt;if(!persistNewRecord(r))return null;if(screen==='browser'&&currentFolder===folder){showFolder();if(kind==='photo')openEditor(r)}return r}
 async function storeMedia(file,importToken=null){const id=uid(),mime=file.type||'application/octet-stream';if(importToken)await MediaImportOwnership.reserve(id,importToken);if(native){let bytes=new Uint8Array(await file.arrayBuffer());const chunkSize=48*1024;if(!Native.beginMediaChecked(id,mime,file.name||'soubor',bytes.length))throw new Error('Přílohu nelze připravit k uložení');for(let off=0;off<bytes.length;off+=chunkSize){let sub=bytes.subarray(off,off+chunkSize);let s='';for(let b of sub)s+=String.fromCharCode(b);if(!Native.appendMedia(id,btoa(s)))throw new Error('Příloha nebyla zapsána');}if(!Native.finishMedia(id))throw new Error('Příloha není uložená úplně');}
 else{const db=await mediaDb();await new Promise((resolve,reject)=>{let tx=db.transaction('files','readwrite');tx.objectStore('files').put(file,id);tx.oncomplete=resolve;tx.onerror=reject})}if(importToken)await MediaImportOwnership.published(id,importToken);return id}
 let idb=null;function mediaDb(){if(!idb)idb=new Promise((res,rej)=>{let req=indexedDB.open('zamerovac-media',1);req.onupgradeneeded=()=>req.result.createObjectStore('files');req.onsuccess=()=>res(req.result);req.onerror=rej});return idb}

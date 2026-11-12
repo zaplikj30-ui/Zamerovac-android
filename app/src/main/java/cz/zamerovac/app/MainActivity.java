@@ -723,9 +723,26 @@ public class MainActivity extends Activity {
         @JavascriptInterface public String getSyncDeviceId(){try{return DeviceIdentity.get(getNoBackupFilesDir());}catch(Exception error){return "";}}
         @JavascriptInterface public String loadSyncQueue(){try{return new SyncQueueStore(getNoBackupFilesDir()).read();}catch(Exception failure){error("Frontu přenosů nelze načíst; původní stav zůstává chráněný");return "{\"error\":true}";}}
         @JavascriptInterface public boolean saveSyncQueue(long expected,String text){try{return new SyncQueueStore(getNoBackupFilesDir()).save(expected,text);}catch(Exception failure){error("Fronta přenosů nebyla uložena");return false;}}
-        @JavascriptInterface public String loadData(){synchronized(TrashPurger.LOCK){try{String text=readDb();lastUiGeneration=LocalDatabase.generation(getFilesDir());return text;}catch(Exception e){return "{\"_loadError\":true}";}}}
+        @JavascriptInterface public String loadData(){synchronized(TrashPurger.LOCK){
+            try{
+                String text=readDbForCas();
+                if(text.isEmpty()){
+                    // First launch only: durable empty base before photos can be staged.
+                    // Strict read already ruled out an older DB, recovery marker and media.
+                    String fresh="{\"schema\":1,\"records\":[]}";
+                    writeDb(fresh);
+                    text=readDbForCas();
+                }
+                lastUiGeneration=LocalDatabase.generation(getFilesDir());
+                return text;
+            }catch(Exception e){return "{\"_loadError\":true}";}
+        }}
         @JavascriptInterface public int trashCleanupCount(){
             synchronized(TrashPurger.LOCK){try{return new TrashPurger(MainActivity.this,settings).pendingCount();}catch(Exception e){return -1;}}
+        }
+        @JavascriptInterface public String protectedDataStatus(){
+            try{return new ProtectedRevisions(MainActivity.this,settings).status().toString();}
+            catch(Exception e){try{return new JSONObject().put("error",e.getMessage()).toString();}catch(Exception ignored){return "{}";}}
         }
         @JavascriptInterface public String purgeTrash(String expected,String desired,String ids){
             synchronized(TrashPurger.LOCK){
@@ -743,10 +760,15 @@ public class MainActivity extends Activity {
         @JavascriptInterface public String saveDataChecked(String text,String expected){
             synchronized(TrashPurger.LOCK){
                 try{
-                    String current=readDb();
-                    if(!current.equals(expected))return new JSONObject().put("ok",false).put("current",current.isEmpty()?"{\"schema\":1,\"records\":[]}":current).toString();
+                    // Fail closed for stale backup, corrupt primary and lost initialized DB.
+                    String current=readDbForCas();
+                    if(!current.equals(expected)){
+                        // Missing files are an I/O failure, never a valid empty CAS snapshot.
+                        if(current.isEmpty())throw new IOException("Databáze není dostupná pro porovnání");
+                        return new JSONObject().put("ok",false).put("current",current).toString();
+                    }
                     writeDb(text);lastUiGeneration=LocalDatabase.generation(getFilesDir());return "{\"ok\":true}";
-                }catch(Exception e){try{return new JSONObject().put("ok",false).put("error","Uložení se nezdařilo; poslední potvrzená data zůstávají chráněná.").toString();}catch(Exception ignored){return "{}";}}
+                }catch(Exception e){try{return new JSONObject().put("ok",false).put("error","Uložení se nezdařilo; poslední potvrzená data zůstávají chráněná. "+e.getMessage()).toString();}catch(Exception ignored){return "{}";}}
             }
         }
         @JavascriptInterface public boolean beginMedia(String id,String mime,String name){return beginMediaChecked(id,mime,name,-1);}
@@ -881,12 +903,14 @@ public class MainActivity extends Activity {
                             if(result!=android.view.PixelCopy.SUCCESS)
                                 throw new IOException("Nepodařilo se zachytit obraz ("+result+")");
                             String id=UUID.randomUUID().toString();
-                            try(FileOutputStream out=new FileOutputStream(mediaFile(id))){
+                            File captured=MediaStaging.temporary(mediaFile(id).getParentFile(),id);
+                            try{try(FileOutputStream out=new FileOutputStream(captured)){
                                 if(!bitmap.compress(Bitmap.CompressFormat.PNG,100,out))
                                     throw new IOException("Snímek se nepodařilo uložit");
+                                out.getFD().sync();
                             }
-                            settings.edit().putString("mime-"+id,"image/png")
-                                .putString("name-"+id,"obrazovka-zamerovac.png").apply();
+                            MediaStaging.commit(captured,id,settings,"image/png","obrazovka-zamerovac.png");
+                            }finally{captured.delete();}
                             js("window.onReportScreenshot("+JSONObject.quote(id)+")");
                         }catch(Exception ex){
                             error("Snímek obrazovky: "+ex.getMessage());
@@ -974,13 +998,21 @@ public class MainActivity extends Activity {
     private synchronized AudioCapture audioCapture(){if(audioCapture==null)audioCapture=new AudioCapture(new File(getFilesDir(),"media"),settings);return audioCapture;}
     private void releaseRecorder(){AudioCapture capture=audioCapture;if(capture!=null)capture.close();}
     private void closeUpload(){synchronized(TrashPurger.LOCK){try{if(activeUpload!=null)activeUpload.close();}catch(Exception ignored){}activeUpload=null;activeUploadId=null;activeUploadExpected=-1;activeUploadBytes=0;if(activeUploadTemporary!=null)activeUploadTemporary.delete();activeUploadTemporary=null;}}
+    private String readDbForCas() throws IOException {
+        try {
+            String text=LocalDatabase.readForCas(MainActivity.this);
+            if(text.isEmpty()&&databaseReadFailed)throw new IOException("Původní databáze nebyla bezpečně načtena");
+            databaseReadFailed=false;
+            return text;
+        } catch(IOException error){databaseReadFailed=true;throw error;}
+    }
     private String readDb() throws IOException {
-        try{String text=LocalDatabase.read(getFilesDir());if(text.isEmpty()&&databaseReadFailed)throw new IOException("Původní databáze nebyla bezpečně načtena");databaseReadFailed=false;return text;}
-        catch(IOException error){databaseReadFailed=true;throw error;}
+        // Export, trash and background notifications cannot treat recovery backup as live DB.
+        return readDbForCas();
     }
     private void writeDb(String data) throws IOException {
         if(databaseReadFailed)throw new IOException("Zápis zablokován: uložené zakázky nebyly bezpečně načteny");
-        LocalDatabase.write(getFilesDir(),data);
+        LocalDatabase.write(MainActivity.this,data);
     }
     @Override protected void onSaveInstanceState(Bundle out){out.putLong("cloud-tree-revision",cloudTreeRevision);out.putLong("backup-tree-revision",backupTreeRevision);if(driveAccountFlow!=null)driveAccountFlow.save(out);super.onSaveInstanceState(out);}
     private boolean storageConfigured(String kind){try{return new CloudStorage(this,settings).configured(kind);}catch(Exception invalid){return false;}}
