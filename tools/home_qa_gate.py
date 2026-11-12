@@ -26,6 +26,9 @@ SHA = re.compile(r"[0-9a-f]{40}\Z")
 CHECKOUT = re.compile(r"actions/checkout@[0-9a-f]{40}(?![0-9a-f])")
 TEST_COMMAND = re.compile(r"\bpython(?:3(?:\.\d+)?)?\s+-m\s+unittest\b")
 ROOT = Path(__file__).resolve().parent.parent
+# Temporary fail-closed pin until the trusted HOME fingerprint probe returns.
+# Browser one-shot cannot run with an unapproved binary or arbitrary digest.
+APPROVED_BROWSER_SHA256 = "c" * 64
 
 
 class GateError(RuntimeError):
@@ -318,7 +321,7 @@ def browser_workflow_recipe() -> str:
 
 def safe_owner_branch(branch: str) -> bool:
     """Reject PR refs, shell characters and ambiguous Git revision syntax."""
-    return (bool(re.fullmatch(r"[a-z][a-z0-9_-]*/[a-z][a-z0-9._/-]{2,75}", branch))
+    return (bool(re.fullmatch(r"(?:fix|infra|feature|test|chore|docs|codex|bugfix|p1)/[a-z][a-z0-9._/-]{2,75}", branch))
             and not any(x in branch for x in ("..", "//", "/.", ".lock", "@{"))
             and not branch.endswith(("/", ".")))
 
@@ -386,6 +389,8 @@ def render_workflow(branch: str, source_sha: str, browser: bool = False,
                "browser requires an independently reviewed gate SHA")
         demand(bool(browser_sha256 and re.fullmatch(r"[0-9a-f]{64}", browser_sha256)),
                "browser requires SHA256 of preverified Chromium")
+        demand(browser_sha256 == APPROVED_BROWSER_SHA256,
+               "browser SHA256 must match separately approved immutable fingerprint")
     else:
         demand(source_branch is None and validator_sha is None and browser_sha256 is None,
                "quick may not silently receive browser-only arguments")
