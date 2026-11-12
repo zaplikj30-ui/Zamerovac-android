@@ -2,6 +2,7 @@
 // Runs in existing fast Node regression, no Playwright download, no Android/APK.
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
+const {spawnSync}=require('node:child_process');
 const {initialRecords,statusReport,killTreeArgs,modes}=require('../tools/local-browser-qa.cjs');
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),'zamerovac-browser-qa-'));
 try{
@@ -24,5 +25,15 @@ try{
  assert.equal(killTreeArgs(1234,'linux'),null);
  assert.throws(()=>killTreeArgs(-1,'win32'),/PID/);
  assert.equal(modes['--all'].length,21);
+ const gateRunner=path.join(__dirname,'..','tools','local-browser-qa.cjs');
+ const sourceDir=path.join(dir,'approved-product-source');
+ const probe=spawnSync(process.execPath,['-e',
+  'process.stdout.write(require(process.argv[1]).sourceRoot)',gateRunner],
+  {cwd:path.resolve(__dirname,'..'),encoding:'utf8',timeout:10000,
+   env:{...process.env,ZAMEROVAC_SOURCE_ROOT:sourceDir}});
+ assert.equal(probe.status,0,probe.stderr);
+ assert.equal(probe.stdout,path.resolve(sourceDir),
+  'Pinned runner must execute the explicitly approved product checkout');
+
  console.log('PASS browser durable checkpoint / NOT RUN / process-tree kill contract');
 }finally{fs.rmSync(dir,{recursive:true,force:true})}
