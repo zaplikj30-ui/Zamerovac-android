@@ -2,7 +2,7 @@
 
 ## Účel a kontext
 Tento repozitář je SAMOSTATNÝ projekt `Zamerovac-android`. Neměň repozitář `Prevadec-spojitosti`.
-Vyvíjíme profesionální Android Zaměřovač pro různá řemesla i domácí použití. ImageMeter je funkční reference a nástřel rozsahu, **nikoli povinná kopie designu nebo chování**. **Priorita: vlastní moderní, profesionální, jednotné a ergonomické UI.** Schválený vzhled kót, čar, šipek, úchopů a lupy zachovat; případný lepší návrh nejprve předložit vlastníkovi. Nepřebírat cizí chráněný kód, grafiku ani identitu a neobcházet licenci ImageMeteru. Komunikuj česky, jednoduše, nevyžaduj opakování již schválených rozhodnutí.
+Vyvíjíme profesionální Android Zaměřovač pro různá řemesla i domácí použití; důležitým výchozím oborem je zaměřování zakázkového nábytku a příprava přesných podkladů pro jeho výrobu. ImageMeter je funkční reference a nástřel rozsahu, **nikoli povinná kopie designu nebo chování**. **Priorita: vlastní moderní, profesionální, jednotné a ergonomické UI.** Schválený vzhled kót, čar, šipek, úchopů a lupy zachovat; případný lepší návrh nejprve předložit vlastníkovi. Nepřebírat cizí chráněný kód, grafiku ani identitu a neobcházet licenci ImageMeteru. Komunikuj česky, jednoduše, nevyžaduj opakování již schválených rozhodnutí.
 
 ## Závazný standard jednorázové domácí QA (po schváleném začlenění)
 
