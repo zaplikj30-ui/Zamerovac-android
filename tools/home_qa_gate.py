@@ -26,9 +26,9 @@ SHA = re.compile(r"[0-9a-f]{40}\Z")
 CHECKOUT = re.compile(r"actions/checkout@[0-9a-f]{40}(?![0-9a-f])")
 TEST_COMMAND = re.compile(r"\bpython(?:3(?:\.\d+)?)?\s+-m\s+unittest\b")
 ROOT = Path(__file__).resolve().parent.parent
-# Temporary fail-closed pin until the trusted HOME fingerprint probe returns.
-# Browser one-shot cannot run with an unapproved binary or arbitrary digest.
-APPROVED_BROWSER_SHA256 = "c" * 64
+# Read-only fingerprint observed for headless Chromium on trusted HOME run #43189084331.
+# Changing the approved binary requires owner verification and a new security review.
+APPROVED_BROWSER_SHA256 = "ce4635cd0e5dc0e21494542a701f347e91c1f1d821970578d97ed8df4ced50ef"
 
 
 class GateError(RuntimeError):
@@ -294,7 +294,7 @@ def browser_workflow_recipe() -> str:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
           repository: zaplikj30-ui/Zamerovac-android
-          ref: __GATE_SHA__
+          ref: __GATE_BRANCH__
           path: gate
           fetch-depth: 1
           persist-credentials: false
@@ -354,6 +354,7 @@ def verify_browser(root: Path, expected: str, environ: dict[str, str] | None = N
     """Only preinstalled read-only browser with explicit owner-approved SHA256."""
     env = os.environ if environ is None else environ
     demand(bool(re.fullmatch(r"[0-9a-f]{64}", expected)), "pin literal browser SHA256")
+    demand(expected == APPROVED_BROWSER_SHA256, "unapproved Chromium binary SHA256")
     if platform.system() == "Windows":
         demand(root.resolve() == Path(r"C:\actions-runner\tools\ms-playwright").resolve(),
                "untrusted browser install directory")
@@ -378,6 +379,7 @@ def report_browser_fingerprints() -> None:
 
 def render_workflow(branch: str, source_sha: str, browser: bool = False,
                     source_branch: str | None = None, validator_sha: str | None = None,
+                    validator_branch: str | None = None,
                     browser_sha256: str | None = None) -> str:
     demand(bool(re.fullmatch(r"qa/[a-z][a-z0-9._-]{3,65}", branch)),
            "only a literal trusted qa/* branch is allowed")
@@ -387,18 +389,23 @@ def render_workflow(branch: str, source_sha: str, browser: bool = False,
                "browser requires a literal owner source branch, not PR ref")
         demand(bool(validator_sha and SHA.fullmatch(validator_sha)),
                "browser requires an independently reviewed gate SHA")
+        demand(bool(validator_branch and (validator_branch == "main" or
+                        safe_owner_branch(validator_branch))),
+               "validator must be an owner branch, never PR/fork ref")
         demand(bool(browser_sha256 and re.fullmatch(r"[0-9a-f]{64}", browser_sha256)),
                "browser requires SHA256 of preverified Chromium")
         demand(browser_sha256 == APPROVED_BROWSER_SHA256,
                "browser SHA256 must match separately approved immutable fingerprint")
     else:
-        demand(source_branch is None and validator_sha is None and browser_sha256 is None,
+        demand(source_branch is None and validator_sha is None and validator_branch is None
+               and browser_sha256 is None,
                "quick may not silently receive browser-only arguments")
     template = browser_workflow_recipe() if browser else ONE_SHOT_RECIPE
     return (template.replace("__QA_BRANCH__", branch)
             .replace("__SOURCE_SHA__", source_sha)
             .replace("__SOURCE_BRANCH__", source_branch or "")
             .replace("__GATE_SHA__", validator_sha or "")
+            .replace("__GATE_BRANCH__", validator_branch or "")
             .replace("__BROWSER_SHA256__", browser_sha256 or "").lstrip("\n"))
 
 
@@ -441,7 +448,165 @@ def check_workflow(content: str, strict: bool = True) -> None:
     if "          path: gate\n" in normalized:
         source = re.search(r"(?m)^      TESTED_SHA: '([0-9a-f]{40})'$", normalized)
         source_branch = re.search(r"(?m)^          ref: ([a-z0-9_./-]+)\n          path: source$", normalized)
-        validator = re.search(r"(?m)^          ref: ([0-9a-f]{40})\n          path: gate$", normalized)
+        validator = re.search(r'(?m)^          if /I not "%ACTUAL_GATE%"=="([0-9a-f]{40})" exit /b 1
+        binary = re.search(r"(?m)verify-browser --browser-root [^\n]* --expected-sha256 ([0-9a-f]{64})$", normalized)
+        demand(bool(source and source_branch and validator and validator_branch and binary),
+               "missing source provenance/validator/binary pin")
+        allowed = render_workflow(branch.group(1), source.group(1), browser=True,
+                                  source_branch=source_branch.group(1),
+                                  validator_sha=validator.group(1),
+                                  validator_branch=validator_branch.group(1),
+                                  browser_sha256=binary.group(1))
+    else:
+        source = re.search(r"(?m)^          ref: ([0-9a-f]{40})$", normalized)
+        demand(bool(source), "quick source SHA missing")
+        allowed = render_workflow(branch.group(1), source.group(1))
+    demand(normalized == allowed, "unknown YAML, PR/cloud job, checkout, steps or browser commands: STOP")
+
+
+def jdk_probes() -> None:
+    # These two files do not call Node. Full source unittest discovery is always
+    # Windows-only; this Linux JDK proof covers the two Windows-service SKIPs.
+    tests = unittest.TestSuite()
+    loader = unittest.TestLoader()
+    for pattern in ("test_address_map_link.py", "test_bosch_ble.py"):
+        tests.addTests(loader.discover(str(ROOT / "tests"), pattern=pattern))
+    result = unittest.TextTestRunner(verbosity=2).run(tests)
+    print("WSL_JDK_PROBES: run=%s failures=%s errors=%s skipped=%s" %
+          (result.testsRun, len(result.failures), len(result.errors), len(result.skipped)),
+          flush=True)
+    demand(result.testsRun == 5 and not result.failures and not result.errors and not result.skipped,
+           "WSL JDK probe incomplete (do not call SKIP a PASS)")
+
+
+def run_wsl_checked(source: Path, expected_sha: str) -> None:
+    """Only this fixed WSL script can be invoked by the canonical QA workflow.
+
+    Generic Python discovery (which calls Node) has no WSL entrypoint here.
+    Preflight runs before any Gradle/JUnit, no installation or APK tasks.
+    """
+    demand(platform.system() == "Windows", "WSL launcher must run on trusted Windows")
+    linux = r"""
+set -Eeuo pipefail
+source_dir="$(wslpath -u "$1")"
+expected="$2"
+export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+export PATH="$JAVA_HOME/bin:$PATH" CI=1
+mkdir -p /root/zamerovac-qa-commits
+temp="$(mktemp -d /root/zamerovac-qa-commits/homeguard-XXXXXXXX)"
+trap 'rc=$?; rm -rf "$temp"; exit "$rc"' EXIT
+cp -a "$source_dir/." "$temp/"
+cd "$temp"
+echo "WSL_TESTED_SOURCE_SHA=$(git rev-parse HEAD)"
+python3 tools/home_qa_gate.py wsl-native --expected-sha "$expected" --root . --gradle /opt/gradle-8.10.2/bin/gradle
+python3 tools/home_qa_gate.py wsl-jdk-probes --expected-sha "$expected" --root . --gradle /opt/gradle-8.10.2/bin/gradle
+set +e
+python3 tools/home_qa_gate.py wsl-python-node > "$temp/denied.log" 2>&1
+rejected=$?
+set -e
+test "$rejected" -eq 2
+grep -q 'Node-dependent Python unittest is WINDOWS-only' "$temp/denied.log"
+echo "PASS live WSL rejected unsupported Node dependent Python before Gradle"
+"""
+    try:
+        result = subprocess.run(
+            ["wsl.exe", "--distribution", "Zamerovac-Ubuntu-QA", "--user", "root",
+             "--exec", "/bin/bash", "-lc", linux, "_", str(source), expected_sha],
+            stdin=subprocess.DEVNULL, check=False, timeout=240,
+        )
+    except (OSError, subprocess.TimeoutExpired) as failure:
+        raise GateError("HOME QA STOP: trusted WSL launcher could not start: " + str(failure)) from failure
+    demand(result.returncode == 0, "native WSL preflight/JDK probes FAILED, exit=" + str(result.returncode))
+
+
+
+def main(argv: list[str] | None = None) -> int:
+    ap = argparse.ArgumentParser(description="Trusted HOME QA fail-fast Windows/WSL gate")
+    modes = ap.add_subparsers(dest="mode", required=True)
+    for mode in ("windows-quick", "wsl-native", "wsl-jdk-probes"):
+        parser = modes.add_parser(mode)
+        parser.add_argument("--expected-sha", required=True)
+        parser.add_argument("--root", default=str(ROOT))
+        if mode != "windows-quick":
+            parser.add_argument("--gradle", default="/opt/gradle-8.10.2/bin/gradle")
+        if mode == "windows-quick":
+            parser.add_argument("--check-only", action="store_true")
+    render = modes.add_parser("render-workflow")
+    render.add_argument("--branch", required=True)
+    render.add_argument("--expected-sha", required=True)
+    render.add_argument("--browser", action="store_true",
+                        help="single-job Windows Chromium QA, no APK or WSL")
+    render.add_argument("--source-branch")
+    render.add_argument("--validator-sha")
+    render.add_argument("--validator-branch")
+    render.add_argument("--browser-sha256")
+    render.add_argument("--output", type=Path)
+    wsl = modes.add_parser("wsl-check-from-windows")
+    wsl.add_argument("--expected-sha", required=True)
+    wsl.add_argument("--root", default=str(ROOT))
+    lint = modes.add_parser("lint-workflow")
+    lint.add_argument("path", type=Path)
+    lint.add_argument("--strict", action="store_true")
+    browser_check = modes.add_parser("verify-browser")
+    browser_check.add_argument("--browser-root", required=True, type=Path)
+    browser_check.add_argument("--expected-sha256", required=True)
+    modes.add_parser("wsl-python-node")
+    args = ap.parse_args(argv)
+    try:
+        if args.mode == "render-workflow":
+            payload = render_workflow(args.branch, args.expected_sha,
+                                      browser=args.browser, source_branch=args.source_branch,
+                                      validator_sha=args.validator_sha,
+                                      validator_branch=args.validator_branch,
+                                      browser_sha256=args.browser_sha256).encode("utf-8")
+            output_canonical_utf8(payload, args.output)
+            return 0
+        if args.mode == "verify-browser":
+            trusted_owner(os.environ)
+            selected = verify_browser(args.browser_root, args.expected_sha256)
+            print("PASS CHROMIUM_SHA256=" + args.expected_sha256 +
+                  " FILE=" + str(selected), flush=True)
+            return 0
+        if args.mode == "wsl-check-from-windows":
+            trusted_owner(os.environ)
+            check_windows()
+            root = Path(args.root).resolve()
+            actual = git_source(root, args.expected_sha)
+            print("TESTED_WINDOWS_SOURCE_SHA=" + actual, flush=True)
+            run_wsl_checked(root, actual)
+            return 0
+        if args.mode == "lint-workflow":
+            demand(args.path.is_file(), "workflow YAML does not exist: " + str(args.path))
+            check_workflow(args.path.read_text(encoding="utf-8"), strict=args.strict)
+            print("PASS HOME WORKFLOW LINT " + str(args.path))
+            return 0
+        if args.mode == "wsl-python-node":
+            raise GateError("HOME QA STOP: Node-dependent Python unittest is WINDOWS-only; "
+                            "run windows-quick, not a WSL Python discovery step")
+        trusted_owner(os.environ)
+        checkout = Path(args.root).resolve()
+        if args.mode == "windows-quick":
+            check_windows()
+        else:
+            check_wsl(Path(args.gradle))
+        actual = git_source(checkout, args.expected_sha)
+        print("HOME PREFLIGHT PASS mode=%s TESTED_SOURCE_SHA=%s" % (args.mode, actual), flush=True)
+        if args.mode == "windows-quick" and not args.check_only:
+            report_browser_fingerprints()
+            return subprocess.run(["node", "tools/local-qa.cjs", "--quick"],
+                                  cwd=checkout, check=False).returncode
+        if args.mode == "wsl-jdk-probes":
+            jdk_probes()
+        return 0
+    except (GateError, OSError) as failure:
+        print(str(failure), file=sys.stderr, flush=True)
+        return 2
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())
+, normalized)
+        validator_branch = re.search(r"(?m)^          ref: ([a-z0-9_./-]+)\n          path: gate$", normalized)
         binary = re.search(r"(?m)verify-browser --browser-root [^\n]* --expected-sha256 ([0-9a-f]{64})$", normalized)
         demand(bool(source and source_branch and validator and binary),
                "missing source provenance/validator/binary pin")
