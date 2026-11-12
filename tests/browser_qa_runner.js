@@ -25,6 +25,13 @@ try{
  assert.equal(killTreeArgs(1234,'linux'),null);
  assert.throws(()=>killTreeArgs(-1,'win32'),/PID/);
  assert.equal(modes['--all'].length,21);
+ // The pinned runner's real localhost HTTP path is exercised, not only its CLI shape.
+ const serverProbe=spawnSync(process.execPath,[gateRunner,'--self-test'],{
+  cwd:path.resolve(__dirname,'..'),encoding:'utf8',timeout:15000,
+  env:{...process.env,ZAMEROVAC_SOURCE_ROOT:path.resolve(__dirname,'..')}});
+ assert.equal(serverProbe.status,0,'Local HTTP server self-test failed: '+serverProbe.stderr);
+ assert.match(serverProbe.stdout,/PASS local Chromium server/);
+
  const gateRunner=path.join(__dirname,'..','tools','local-browser-qa.cjs');
  const sourceDir=path.join(dir,'approved-product-source');
  const probe=spawnSync(process.execPath,['-e',
