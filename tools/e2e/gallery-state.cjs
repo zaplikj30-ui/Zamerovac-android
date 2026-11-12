@@ -132,4 +132,68 @@ suite('gallery-state',async test=>{
   });assert.equal(hash,await page.evaluate(()=>originalHash));
   evidence({fitInk,zoomInk,originalSHA256:hash,lateLoadCannotReopenGallery:true});
  });
+  await test('stacked_voice_marker_gallery_and_customer_export_pixels',async({page,evidence,directory})=>{
+   await page.setViewportSize({width:412,height:850});await photo(page);
+   const before=await page.evaluate(async()=>{
+    const id=current.media[0],url=await assetUrl(id),im=new Image();
+    await new Promise((resolve,reject)=>{im.onload=resolve;im.onerror=reject;im.src=url});
+    window.__detailPhotoCache[id]=im;
+    current.items.push({id:'voice-visual',type:'note',a:{x:1050,y:650},
+     media:[id,id],audioMedia:['synthetic-audio-reference'],text:'Popisek 1250,000001 mm',
+     insetX:1100,insetY:700,insetWidth:260,insetRotation:24});
+    save();paint();
+    const db=await mediaDb(),request=db.transaction('files').objectStore('files').get(id);
+    const blob=await new Promise(resolve=>request.onsuccess=()=>resolve(request.result));
+    const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await blob.arrayBuffer()))).join(',');
+    window.__voiceMarkers=[];
+    const original=CanvasRenderingContext2D.prototype.fillText;
+    CanvasRenderingContext2D.prototype.fillText=function(value,x,y,...rest){
+     if(value==='🎙'){const p=this.getTransform().transformPoint({x,y});
+      __voiceMarkers.push({x:p.x,y:p.y,width:this.canvas.width,height:this.canvas.height,
+       gallery:this.canvas.classList?.contains('gallery-img')||false})}
+     return original.call(this,value,x,y,...rest);
+    };
+    return {items:JSON.stringify(current.items),hash};
+   });
+   const exported=await page.evaluate(async()=>{
+    __voiceMarkers.length=0;
+    const encoded=await __customerExport.render(current,{notes:true,dimensions:true,drawing:true});
+    const image=new Image();image.src='data:image/png;base64,'+encoded;await image.decode();
+    const marker=__voiceMarkers.find(x=>!x.gallery&&x.width===image.naturalWidth);
+    if(!marker)return {error:'customer PDF/ZIP marker not rendered'};
+    const canvas=document.createElement('canvas');canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;
+    const c=canvas.getContext('2d');c.drawImage(image,0,0);
+    const x=Math.floor(marker.x)-15,y=Math.floor(marker.y)-15;
+    if(x<0||y<0||x+30>=canvas.width||y+30>=canvas.height)return {error:'customer marker clipped'};
+    const pixels=c.getImageData(x,y,30,30).data;let ink=0;
+    for(let i=0;i<pixels.length;i+=4)if(pixels[i]<245||pixels[i+1]<245||pixels[i+2]<245)ink++;
+    return {width:canvas.width,height:canvas.height,ink,marker};
+   });
+   assert(!exported.error,JSON.stringify(exported));
+   assert(exported.width>1200&&exported.height>800,'Customer export must include inset outside original');
+   assert(exported.ink>8,'Customer PNG embedded in PDF/ZIP must contain actual voice pixels');
+   await page.click('#galleryMode');await page.waitForFunction(()=>!!document.querySelector('.gallery-img')?.dataset.galleryView);
+   const gallery=await page.evaluate(()=>{
+    const c=document.querySelector('.gallery-img'),markers=__voiceMarkers.filter(m=>m.gallery);
+    const p=markers[markers.length-1];if(!p)return {error:'gallery voice icon not rendered'};
+    if(p.x<14||p.y<14||p.x+14>=c.width||p.y+14>=c.height)return {error:'gallery icon clipped'};
+    const b=c.getContext('2d').getImageData(Math.floor(p.x)-14,Math.floor(p.y)-14,28,28).data;
+    let colored=0;for(let i=0;i<b.length;i+=4)
+     if(b[i]>175&&b[i+1]>125&&b[i+2]<160)colored++;
+    return {colored,marker:p};
+   });
+   assert(!gallery.error,JSON.stringify(gallery));assert(gallery.colored>8,'Gallery must have visible yellow/orange voice pixels');
+   await page.screenshot({path:path.join(directory,'stacked-voice-gallery.png')});
+   await page.click('.gallery-top [data-action="close"]');
+   const after=await page.evaluate(async()=>{
+    const db=await mediaDb(),r=db.transaction('files').objectStore('files').get(current.media[0]);
+    const blob=await new Promise(resolve=>r.onsuccess=()=>resolve(r.result));
+    const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await blob.arrayBuffer()))).join(',');
+    return {items:JSON.stringify(current.items),hash};
+   });
+   assert.deepEqual(after,before,'Read-only gallery/export must not modify originals or exact values');
+   await page.click('#editorBack');await page.reload();await page.locator('.entry-title').click();
+   assert.equal(await page.evaluate(()=>JSON.stringify(current.items)),before.items,'Exact values survive restart');
+   evidence({exported,gallery,originalSHA256:before.hash,nativePdf:'NOT RUN'});
+  });
 }).catch(e=>{console.error(e);process.exitCode=1});
