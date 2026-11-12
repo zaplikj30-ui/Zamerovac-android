@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.PeerLegacyCompatibilityTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-12T18:01:46" hostname="ae546df9bbbb" time="5.006">
+  <properties/>
+  <testcase name="legacyCapabilityTransfersCurrentV2AndKeepsUnsupportedHistoryPending" classname="cz.zamerovac.app.PeerLegacyCompatibilityTest" time="5.006"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[[Robolectric] WARN: Android SDK 36 requires Java 21 (have Java 17). Tests won't be run on SDK 36 unless explicitly requested.
+]]></system-err>
+</testsuite>

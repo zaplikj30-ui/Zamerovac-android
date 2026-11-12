@@ -1,0 +1,1734 @@
+{
+  "schema": 1,
+  "base_sha": "cf7807905f77f6fd8478c137b1b41aca6ebc3275",
+  "tested_production_sha": "cd0e57aa694b5e09dbb3048e75a2e5b5fca7ed5b",
+  "production_tree": "eb49c58ae57712b3528b47709e0eb7ca8db12ccd",
+  "latest_test_sha": "5cfcff94ffe4ac96d47c5e186f49de8f15e6b9f8",
+  "environment": {
+    "kind": "managed Linux; synthetic data; real files and loopback TLS; fake external providers",
+    "kernel": "Linux 6.18.57",
+    "jdk": "Temurin 17.0.17+10",
+    "gradle": "8.10.2",
+    "android_compile_sdk": 35,
+    "robolectric": "4.16.1",
+    "node": "24.22.1",
+    "python": "3.12.14"
+  },
+  "native": {
+    "status": "FAIL",
+    "sha": "cd0e57aa694b5e09dbb3048e75a2e5b5fca7ed5b",
+    "variant": "preview",
+    "command": "gradle --offline --no-daemon --max-workers=2 :app:testPreviewUnitTest",
+    "PASS": 476,
+    "FAIL": 2,
+    "ERROR": 0,
+    "SKIP": 0,
+    "unexpected_failures": [],
+    "diagnostic_failures": [
+      {
+        "class": "cz.zamerovac.app.SafSyncV2Test",
+        "case": "driveStagedAckMustNotPublishAfterLocalAuthorityLostInsideProviderCommit",
+        "message": "java.lang.AssertionError: Provider completed signed ACK after recovery epoch loss: Drive staged expected:<0> but was:<1>"
+      },
+      {
+        "class": "cz.zamerovac.app.SafSyncV2Test",
+        "case": "safDirectAckMustNotPublishAfterLocalAuthorityLostInsideProviderWrite",
+        "message": "java.lang.AssertionError: Provider completed signed ACK after recovery epoch loss: SAF direct expected:<0> but was:<1>"
+      }
+    ],
+    "classes": [
+      {
+        "class": "cz.zamerovac.app.AudioCaptureTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 5.085,
+        "junit_sha256": "cdd91a52f091e53db91b2e841dd3c78ae03fb6630e8fe686a5b29e17e3b024b5"
+      },
+      {
+        "class": "cz.zamerovac.app.AudioCompletedKeepTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.05,
+        "junit_sha256": "79a7e59cda7084f38911ea2aca404b6dcf0d2ec977668fb2e3e0db068059f46b"
+      },
+      {
+        "class": "cz.zamerovac.app.AudioRecoveryIsolationTest",
+        "tests": 21,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 5.069,
+        "junit_sha256": "4748434734f513b7fbe5370f4f237983e93ab1316b4272c9e1077f0f763f1244"
+      },
+      {
+        "class": "cz.zamerovac.app.Audit39FindingsTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 7.37,
+        "junit_sha256": "c6c2775e2780b6ce9bd728a817c40a93605df7f5f60df4751b8895e36d31e622"
+      },
+      {
+        "class": "cz.zamerovac.app.Audit39HandshakeTest",
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 1.373,
+        "junit_sha256": "b76df21ce8e19eb480898e4cff4a855604acc2be466b23dfc468b86890ee8510"
+      },
+      {
+        "class": "cz.zamerovac.app.Audit39SafetyTest",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 71.047,
+        "junit_sha256": "f87a1fb707f92e408dbab25825cc87c7c0922143cfb74f17c6097a6eadb514b8"
+      },
+      {
+        "class": "cz.zamerovac.app.BackupHistoryTest",
+        "tests": 11,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 1.67,
+        "junit_sha256": "eef705f6ec1fa13de8728679de5388f78b3c3d67ef596cc955fec762d98cc597"
+      },
+      {
+        "class": "cz.zamerovac.app.CloudFilesReadTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.06,
+        "junit_sha256": "fc6d02b14ce0bdb9832798fde7aaab1f07c2f3c5888916d7184064835ddf1022"
+      },
+      {
+        "class": "cz.zamerovac.app.CloudInboxTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.252,
+        "junit_sha256": "313af8fe6907f3191061f132d8682053732080b9d83cd91fed24fc460ed0a345"
+      },
+      {
+        "class": "cz.zamerovac.app.CloudPublicationsTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.266,
+        "junit_sha256": "18979a03269495ce9f86609b9f45c78be6305d4745f4aa238504cf5ac51bf2e1"
+      },
+      {
+        "class": "cz.zamerovac.app.CloudScanTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.101,
+        "junit_sha256": "26cba5bace3762750d31442a34bea8e440607cf2b75dddc56fc1be10a843930f"
+      },
+      {
+        "class": "cz.zamerovac.app.CloudStorageTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.181,
+        "junit_sha256": "c03b58881281476e877a20746b60bbfe2e8e83dc6c26badbb92d318d87fb8827"
+      },
+      {
+        "class": "cz.zamerovac.app.DatabaseInstallEvidenceTest",
+        "tests": 23,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 1.15,
+        "junit_sha256": "d28d949e3e58e80be80e095e759a500ef4f292410856ad7c1e002ed6bc8f4da6"
+      },
+      {
+        "class": "cz.zamerovac.app.DatabaseRecoveryTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.198,
+        "junit_sha256": "17a31629be675d934189f246159a8eeae26f101516a7068518ee60c561722e3f"
+      },
+      {
+        "class": "cz.zamerovac.app.DirectSyncServiceTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.885,
+        "junit_sha256": "6ff04ceeb6b8065b475438cc19429957a18c811f295bdb561909f62a74fa4601"
+      },
+      {
+        "class": "cz.zamerovac.app.DocumentBackupStoreTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.564,
+        "junit_sha256": "82920837fd69ae12431ac7d5e1c7622be42bdb530e61a3496bc083ac03bbf9cf"
+      },
+      {
+        "class": "cz.zamerovac.app.DriveAccountFlowTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.519,
+        "junit_sha256": "9d899cc2e5da6eb076c2322cbfc0200da002c91f480c6312b27173d687e758d6"
+      },
+      {
+        "class": "cz.zamerovac.app.DriveAccountsTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.081,
+        "junit_sha256": "85c8828c41ee089fbc880cdf00a031bd4a20912a1b4ffe50cb4d81dd82cfe55e"
+      },
+      {
+        "class": "cz.zamerovac.app.DriveApiTest",
+        "tests": 5,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.799,
+        "junit_sha256": "b735703a48cf7909ec1e74157e554b99a91bb617fa5a8b006723c13e0bc20aa1"
+      },
+      {
+        "class": "cz.zamerovac.app.DriveAuthorizationTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.179,
+        "junit_sha256": "73ec07e6251fc26132451b580edaa605c7c6eee380821f56a3f3ff739135c1cf"
+      },
+      {
+        "class": "cz.zamerovac.app.DriveHttpTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.087,
+        "junit_sha256": "1e57e33b841275bc6d38a2882a6e1dc0c6a28f763c26b7fdeb99cc1ca93fc944"
+      },
+      {
+        "class": "cz.zamerovac.app.DriveRegistrationTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.082,
+        "junit_sha256": "845533f240c7c800d159d1630ebefe515538d3ba7280916ab800b598b4de8828"
+      },
+      {
+        "class": "cz.zamerovac.app.DriveResumableUploadTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.202,
+        "junit_sha256": "044bc18bcc5562bb4f7b78b32bc69fbb268d0b8b0a39696e4e40ef1e658cfe36"
+      },
+      {
+        "class": "cz.zamerovac.app.DriveStoresTest",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 3.729,
+        "junit_sha256": "7366dd231816268bf0d0291c5e4cae48d7dfbd05f4f79abc9b0f4fd69ebca339"
+      },
+      {
+        "class": "cz.zamerovac.app.GuardedSyncStoreTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.017,
+        "junit_sha256": "219f6029b2ff8c673eb81bb07496ba6368cfa091571070b2941cf95b0c2dd085"
+      },
+      {
+        "class": "cz.zamerovac.app.ImmutableMediaProofTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.017,
+        "junit_sha256": "6e496c99a92e6f85501725452e989f674725c9150bd9f61db4ac9da1f6a44be3"
+      },
+      {
+        "class": "cz.zamerovac.app.MainCloudSelectionTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.173,
+        "junit_sha256": "22b200fd14dd3155d488e721b8c5eff824ff4d89d3e00361a7bf300eb184485f"
+      },
+      {
+        "class": "cz.zamerovac.app.MediaImportOwnershipTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.047,
+        "junit_sha256": "cd0c3056e853e3536acc8b1c62f9c73172998eb787531de7db74886b77ca95eb"
+      },
+      {
+        "class": "cz.zamerovac.app.MediaIngestTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.363,
+        "junit_sha256": "a120cd4950d91eee7f64fc3b78c1a9ed70420118de578f6d48468182674d70db"
+      },
+      {
+        "class": "cz.zamerovac.app.PeerDiscoveryTest",
+        "tests": 2,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.036,
+        "junit_sha256": "d2423889d112a6188fc0b5391bcebfcf133a73d8fd8a4cb4376746c9226c94bc"
+      },
+      {
+        "class": "cz.zamerovac.app.PeerMediaCheckpointTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.164,
+        "junit_sha256": "5d485bc2e7e4b825357d8cfae4d68351238999ae56d7d81ef9575fd9dc48b9c8"
+      },
+      {
+        "class": "cz.zamerovac.app.PeerMediaLargeTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 34.404,
+        "junit_sha256": "f25b2f4efbac213199c2af5db72a5b805a94c100c51fee2cd125d9aea11c7964"
+      },
+      {
+        "class": "cz.zamerovac.app.PeerSessionsTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.599,
+        "junit_sha256": "436f9ec9e63fca7ded061734df91d88014b571b114151513f59654bd7188527f"
+      },
+      {
+        "class": "cz.zamerovac.app.PeerTlsTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.49,
+        "junit_sha256": "1bc0af3b535ba9a859f792d243587c71c86dfc5034b61cbdc1c1a3a429319eb6"
+      },
+      {
+        "class": "cz.zamerovac.app.PeerTransferTest",
+        "tests": 14,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 28.114,
+        "junit_sha256": "3eec77d142f5fa4e859ed19f38805e0653ca5e513787afd3699b3f18d059dd0f"
+      },
+      {
+        "class": "cz.zamerovac.app.PeerWifiDirectTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.904,
+        "junit_sha256": "99e94c736772a0abc672f05c299371af9b2a841a4455cc5c999c0bd58c09c862"
+      },
+      {
+        "class": "cz.zamerovac.app.PendingAudioTest",
+        "tests": 15,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.668,
+        "junit_sha256": "fad01614b5585520c717342b5b4e60204b1031c014d407b3803196766d63d328"
+      },
+      {
+        "class": "cz.zamerovac.app.PhotoThumbnailsTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 2.947,
+        "junit_sha256": "da239b2b4da12217065d07e2c528b0a2576308e4ec464477e6089ce1f504df1c"
+      },
+      {
+        "class": "cz.zamerovac.app.Post147DataTest",
+        "tests": 6,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.358,
+        "junit_sha256": "b3240ad7226615ae3dcf74e8562ace862b9efdc943bc4679ecd070b05247fb75"
+      },
+      {
+        "class": "cz.zamerovac.app.Post149NativeTest",
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 1.609,
+        "junit_sha256": "aefc092a7b066d0860a22ade51b8f8e9b4150c81df84a13ac45479611715e2aa"
+      },
+      {
+        "class": "cz.zamerovac.app.ProtectedArchiveCoverageTest",
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.701,
+        "junit_sha256": "fd0ad4e0ebcafce063f13830c491ae0488f62e3fa8f33592e30c6b69dcc722f5"
+      },
+      {
+        "class": "cz.zamerovac.app.ProtectedRevisionsTest",
+        "tests": 21,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 1.753,
+        "junit_sha256": "b8817bc80b4d54bc1506f13445f44f9f2c9e8959e6873b37aed7e3392e0a676a"
+      },
+      {
+        "class": "cz.zamerovac.app.ProviderIoTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.261,
+        "junit_sha256": "6fb8d9598bcc6eb7f0bb192d61bcf92e9ff6c512f43887f14d953fa601741fd4"
+      },
+      {
+        "class": "cz.zamerovac.app.RecoveryCandidateReviewTest",
+        "tests": 20,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.829,
+        "junit_sha256": "bd6dcfbc43f93bdfb7abb89e7daef33d4162f05326dd6c14fce4f257ebaddf23"
+      },
+      {
+        "class": "cz.zamerovac.app.RecoveryInventoryTest",
+        "tests": 7,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.152,
+        "junit_sha256": "d8303b8ee7c57834bbb996aa0653d2a9abbb080de0ef9246ee0c9924d9a58c7f"
+      },
+      {
+        "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+        "tests": 40,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 3.176,
+        "junit_sha256": "51af679c20f90656d7f27868d485f9420633e3e534b092bf8adaa2c1066547b8"
+      },
+      {
+        "class": "cz.zamerovac.app.SafSyncV2Test",
+        "tests": 36,
+        "failures": 2,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 34.064,
+        "junit_sha256": "760fec529a90834b27966a7f546e2a7350a030f87c1699f498bde1b317e58fd0"
+      },
+      {
+        "class": "cz.zamerovac.app.StorageLifecycleTest",
+        "tests": 25,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 7.204,
+        "junit_sha256": "82f7ca518e50c509ba84a0c048aaf23b82928b59ae9cb577ffde95547d259649"
+      },
+      {
+        "class": "cz.zamerovac.app.SyncAdapterFaultTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.091,
+        "junit_sha256": "4b2dbf1265610cf3aa9f414b848a4fe50a432c9ef5cae529a08d7e581d8b445d"
+      },
+      {
+        "class": "cz.zamerovac.app.SyncCadenceTest",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.178,
+        "junit_sha256": "b3f4723d24247b4189cf5c96a8b6d9664bf0c1e53dd9854de93a51c327ad8037"
+      },
+      {
+        "class": "cz.zamerovac.app.SyncCanonicalTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.047,
+        "junit_sha256": "451ac580501af90e641a30f4aad082686d78674d35e4253c752b5d9bdb44a2f0"
+      },
+      {
+        "class": "cz.zamerovac.app.SyncContentTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.611,
+        "junit_sha256": "4e3c5612ccac96ede5a63fe9f8c70a13579fa4e9c2bf7536bb73bcb7419ceae1"
+      },
+      {
+        "class": "cz.zamerovac.app.SyncJobTest",
+        "tests": 4,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.259,
+        "junit_sha256": "787e852a60307e20876d82354c2e1685ed849b33ef0a0e97133970081cb6edac"
+      },
+      {
+        "class": "cz.zamerovac.app.SyncLedgerTest",
+        "tests": 9,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.7,
+        "junit_sha256": "d7fd46ee549b51ecfc656fe082e24b3828e4bd72489a38cfbcce86e2ee4772ff"
+      },
+      {
+        "class": "cz.zamerovac.app.SyncSafetyTest",
+        "tests": 13,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.566,
+        "junit_sha256": "1d36dc3c2ea49182db1d4ed9ba2af6affed5341cc7144d8d4beecae094035e28"
+      },
+      {
+        "class": "cz.zamerovac.app.SyncTlsIdentityTest",
+        "tests": 1,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.038,
+        "junit_sha256": "4f9510009fda8f65364331a42a35e840d7c786de7b9fb1c95423bee5f263f0c8"
+      },
+      {
+        "class": "cz.zamerovac.app.TrashPurgerTest",
+        "tests": 17,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.595,
+        "junit_sha256": "9e8b163767eed752cb66385ca1bccf89cf1c61f73b6405b465ad210ae8b13659"
+      },
+      {
+        "class": "cz.zamerovac.app.VideoReviewTest",
+        "tests": 8,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 2.435,
+        "junit_sha256": "44b74985239b157acea6a84a330ed22c63d68efb6248cc1bb88f333484b8c552"
+      },
+      {
+        "class": "cz.zamerovac.app.WebContentPolicyTest",
+        "tests": 3,
+        "failures": 0,
+        "errors": 0,
+        "skipped": 0,
+        "seconds": 0.301,
+        "junit_sha256": "dafbe52d6bf86f0ad7b0694e248a87ec873bdf00e5f947494a8283b65f6cc1f7"
+      }
+    ],
+    "focused_proofs": [
+      {
+        "class": "cz.zamerovac.app.DriveResumableUploadTest",
+        "cases": [
+          {
+            "name": "expiryRestartsAndQuotaAuthAndRateErrorsPreserveOriginalAndSession",
+            "status": "PASS"
+          },
+          {
+            "name": "processRestartQueriesServerAndSendsOnlyVerifiedSuffix",
+            "status": "PASS"
+          },
+          {
+            "name": "impossibleServerRangeOrEndpointCannotSendContent",
+            "status": "PASS"
+          },
+          {
+            "name": "successWithoutServerBytesDoesNotFinishAndLostFinalResponseIsReconciled",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.ImmutableMediaProofTest",
+        "cases": [
+          {
+            "name": "sameSizeAndRestoredMtimeCannotReuseAChangedOriginalProof",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.PeerMediaLargeTest",
+        "cases": [
+          {
+            "name": "threeGiBInterruptedHalfwayRestartsWholeFileAndPreservesHealthyNeighbour",
+            "status": "PASS"
+          }
+        ],
+        "stdout": "PEER_MEDIA_3GIB_RETRY_FROM_ZERO SHA256=4a2980f6530cf815661776d5aff5807f7bb38ed6fb034aeae1f26edea33b95ec HEAP_LIMIT=536870912\n"
+      },
+      {
+        "class": "cz.zamerovac.app.SyncAdapterFaultTest",
+        "cases": [
+          {
+            "name": "successfulOrTruncatedWriteCannotBecomeVerifiedReceipt",
+            "status": "PASS"
+          },
+          {
+            "name": "staleListingAndDuplicatePhysicalObjectsNeverAuthorizeDeletionOrFalseSuccess",
+            "status": "PASS"
+          },
+          {
+            "name": "lostAcknowledgementRetriesWithoutLosingOrDuplicatingLogicalContent",
+            "status": "PASS"
+          },
+          {
+            "name": "networkBudgetTreatsMeteredHotspotAndUnknownNetworkConservatively",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.SyncContentTest",
+        "cases": [
+          {
+            "name": "olderExactHistoryAndDetachedCompletedAudioEnterVersionedManifestButActiveRecordingDoesNot",
+            "status": "PASS"
+          },
+          {
+            "name": "revisionMetadataIsASeparateVerifiedBlobInsteadOfInflatingTheManifest",
+            "status": "PASS"
+          },
+          {
+            "name": "unverifiedCompletedAudioDoesNotHideHealthyProjectOrClaimContentComplete",
+            "status": "PASS"
+          },
+          {
+            "name": "recoveryArchiveIncludesPortableLedgerButNeverPrivateUploadSession",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.SyncLedgerTest",
+        "cases": [
+          {
+            "name": "lostLedgerCannotRemoveOrBlockReadingTheLastExactRecoverablePreimage",
+            "status": "PASS"
+          },
+          {
+            "name": "independentTargetsNeverInheritReceiptsOrExportSessions",
+            "status": "PASS"
+          },
+          {
+            "name": "shortWriteOrEnospcRollsBackOnlyLedgerTransaction",
+            "status": "PASS"
+          },
+          {
+            "name": "corruptLedgerIsKeptForRecoveryAndCannotReadOldJson",
+            "status": "PASS"
+          },
+          {
+            "name": "largeQueueUsesBoundedCursorRowsAndPortableFilesKeepExactBytes",
+            "status": "PASS"
+          },
+          {
+            "name": "copyVerifyCutoverPreservesLegacyBytesAndCasSurvivesRestart",
+            "status": "PASS"
+          },
+          {
+            "name": "everyMigrationCrashIsRestartableWithoutPromotingOldQueue",
+            "status": "PASS"
+          },
+          {
+            "name": "databaseLossNeverReimportsOlderJsonOrResetsEvidence",
+            "status": "PASS"
+          },
+          {
+            "name": "backupAndNewSidecarsArePreservedWithoutReadSideRename",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      }
+    ]
+  },
+  "large_tls": {
+    "status": "PASS",
+    "sha": "37fdc6bbb98d9dc62b46b4e81ebaaa513c3875fd",
+    "tests": 1,
+    "seconds": 106.36,
+    "real_loopback_tls": true,
+    "fault": "Synthetic receiver read error halfway through an actual 3GiB encrypted stream",
+    "stdout": "ACTUAL_TLS_3GIB_RETRY_FROM_ZERO SHA256=3474c4187dcbba2df7538da8a9377a0272da698a0048328a54451b80734742d5 RECEIVED=3221227886 HEAP_LIMIT=536870912\n",
+    "media": "Synthetic binary payload, not a playable camera video"
+  },
+  "legacy_compatibility": {
+    "status": "PASS",
+    "sha": "5cfcff94ffe4ac96d47c5e186f49de8f15e6b9f8",
+    "tests": 1,
+    "scope": "Simulated negotiated legacy capability over real TLS; no old installed APK"
+  },
+  "quick": {
+    "sha": "cd0e57aa694b5e09dbb3048e75a2e5b5fca7ed5b",
+    "counts": {
+      "PASS": 87,
+      "FAIL": 0,
+      "SKIP": 0,
+      "NOT RUN": 4
+    },
+    "results": [
+      {
+        "name": "syntax app/src/main/assets/address-correction.js",
+        "status": "PASS",
+        "detail": "001.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/annotation-geometry.js",
+        "status": "PASS",
+        "detail": "002.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/annotation-history.js",
+        "status": "PASS",
+        "detail": "003.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/annotation-resize.js",
+        "status": "PASS",
+        "detail": "004.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/annotation-selection.js",
+        "status": "PASS",
+        "detail": "005.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/annotation-translation.js",
+        "status": "PASS",
+        "detail": "006.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/app.js",
+        "status": "PASS",
+        "detail": "007.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/backup-history.js",
+        "status": "PASS",
+        "detail": "008.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/bulk-actions.js",
+        "status": "PASS",
+        "detail": "009.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/customer-export.js",
+        "status": "PASS",
+        "detail": "010.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/drive-accounts.js",
+        "status": "PASS",
+        "detail": "011.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/editor-extra-toolbar.js",
+        "status": "PASS",
+        "detail": "012.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/editor.js",
+        "status": "PASS",
+        "detail": "013.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/feedback-reports.js",
+        "status": "PASS",
+        "detail": "014.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/help.js",
+        "status": "PASS",
+        "detail": "015.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/i18n.js",
+        "status": "PASS",
+        "detail": "016.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/inset-workspace.js",
+        "status": "PASS",
+        "detail": "017.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/laser-autofill.js",
+        "status": "PASS",
+        "detail": "018.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/media-import-ownership.js",
+        "status": "PASS",
+        "detail": "019.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/menu-dismiss.js",
+        "status": "PASS",
+        "detail": "020.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/peer-sync.js",
+        "status": "PASS",
+        "detail": "021.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/pending-audio.js",
+        "status": "PASS",
+        "detail": "022.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/release-history.js",
+        "status": "PASS",
+        "detail": "023.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/rich-notes.js",
+        "status": "PASS",
+        "detail": "024.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/sketch.js",
+        "status": "PASS",
+        "detail": "025.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/sync-cadence.js",
+        "status": "PASS",
+        "detail": "026.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/sync-edit-guard.js",
+        "status": "PASS",
+        "detail": "027.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/toolbar-customize.js",
+        "status": "PASS",
+        "detail": "028.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/upgrade.js",
+        "status": "PASS",
+        "detail": "029.log (0 s)"
+      },
+      {
+        "name": "syntax sync/protocol-v2.js",
+        "status": "PASS",
+        "detail": "030.log (0 s)"
+      },
+      {
+        "name": "syntax sync/revision-vector.js",
+        "status": "PASS",
+        "detail": "031.log (0 s)"
+      },
+      {
+        "name": "registr QA",
+        "status": "PASS",
+        "detail": "032.log (0 s)"
+      },
+      {
+        "name": "Android focus/ANR model",
+        "status": "PASS",
+        "detail": "033.log (0 s)"
+      },
+      {
+        "name": "test tests/annotation_geometry_contract.js",
+        "status": "PASS",
+        "detail": "034.log (0 s)"
+      },
+      {
+        "name": "test tests/annotation_grip_geometry.js",
+        "status": "PASS",
+        "detail": "035.log (0 s)"
+      },
+      {
+        "name": "test tests/annotation_history_contract.js",
+        "status": "PASS",
+        "detail": "036.log (2 s)"
+      },
+      {
+        "name": "test tests/annotation_history_save_failure.js",
+        "status": "PASS",
+        "detail": "037.log (0 s)"
+      },
+      {
+        "name": "test tests/annotation_hit_geometry.js",
+        "status": "PASS",
+        "detail": "038.log (0 s)"
+      },
+      {
+        "name": "test tests/annotation_pinch_contract.js",
+        "status": "PASS",
+        "detail": "039.log (0 s)"
+      },
+      {
+        "name": "test tests/annotation_resize_contract.js",
+        "status": "PASS",
+        "detail": "040.log (0 s)"
+      },
+      {
+        "name": "test tests/annotation_selection_contract.js",
+        "status": "PASS",
+        "detail": "041.log (0 s)"
+      },
+      {
+        "name": "test tests/annotation_snap_contract.js",
+        "status": "PASS",
+        "detail": "042.log (1 s)"
+      },
+      {
+        "name": "test tests/annotation_translation_contract.js",
+        "status": "PASS",
+        "detail": "043.log (0 s)"
+      },
+      {
+        "name": "test tests/annotation_viewport_contract.js",
+        "status": "PASS",
+        "detail": "044.log (0 s)"
+      },
+      {
+        "name": "test tests/audit39_hierarchy.js",
+        "status": "PASS",
+        "detail": "045.log (0 s)"
+      },
+      {
+        "name": "test tests/bosch_history_devices.js",
+        "status": "PASS",
+        "detail": "046.log (0 s)"
+      },
+      {
+        "name": "test tests/causal_app_clock.js",
+        "status": "PASS",
+        "detail": "047.log (0 s)"
+      },
+      {
+        "name": "test tests/dimension_drag_interaction.js",
+        "status": "PASS",
+        "detail": "048.log (0 s)"
+      },
+      {
+        "name": "test tests/e2e_harness_git_preflight.js",
+        "status": "PASS",
+        "detail": "049.log (0 s)"
+      },
+      {
+        "name": "test tests/editor_full_tools.js",
+        "status": "PASS",
+        "detail": "050.log (0 s)"
+      },
+      {
+        "name": "test tests/experimental_and_precision.js",
+        "status": "PASS",
+        "detail": "051.log (0 s)"
+      },
+      {
+        "name": "test tests/extra_toolbar_interaction.js",
+        "status": "PASS",
+        "detail": "052.log (0 s)"
+      },
+      {
+        "name": "test tests/feedback_inflight_save.js",
+        "status": "PASS",
+        "detail": "053.log (0 s)"
+      },
+      {
+        "name": "test tests/feedback_raster_reuse.js",
+        "status": "PASS",
+        "detail": "054.log (0 s)"
+      },
+      {
+        "name": "test tests/feedback_report_structure.js",
+        "status": "PASS",
+        "detail": "055.log (0 s)"
+      },
+      {
+        "name": "test tests/geometry_drag_28.js",
+        "status": "PASS",
+        "detail": "056.log (0 s)"
+      },
+      {
+        "name": "test tests/gesture_history_undo_redo.js",
+        "status": "PASS",
+        "detail": "057.log (0 s)"
+      },
+      {
+        "name": "test tests/help_guide.js",
+        "status": "PASS",
+        "detail": "058.log (0 s)"
+      },
+      {
+        "name": "test tests/inset_workspace_interaction.js",
+        "status": "PASS",
+        "detail": "059.log (0 s)"
+      },
+      {
+        "name": "test tests/laser_auto_interaction.js",
+        "status": "PASS",
+        "detail": "060.log (0 s)"
+      },
+      {
+        "name": "test tests/laser_precision_regression.js",
+        "status": "PASS",
+        "detail": "061.log (0 s)"
+      },
+      {
+        "name": "test tests/laser_tap_interaction.js",
+        "status": "PASS",
+        "detail": "062.log (0 s)"
+      },
+      {
+        "name": "test tests/local_browser_qa_contract.js",
+        "status": "PASS",
+        "detail": "063.log (0 s)"
+      },
+      {
+        "name": "test tests/media_import_ownership.js",
+        "status": "PASS",
+        "detail": "064.log (0 s)"
+      },
+      {
+        "name": "test tests/menu_dismiss_interaction.js",
+        "status": "PASS",
+        "detail": "065.log (0 s)"
+      },
+      {
+        "name": "test tests/new_28_regressions.js",
+        "status": "PASS",
+        "detail": "066.log (0 s)"
+      },
+      {
+        "name": "test tests/new_record_save_failure.js",
+        "status": "PASS",
+        "detail": "067.log (0 s)"
+      },
+      {
+        "name": "test tests/note_leader_interaction.js",
+        "status": "PASS",
+        "detail": "068.log (0 s)"
+      },
+      {
+        "name": "test tests/post17_regressions.js",
+        "status": "PASS",
+        "detail": "069.log (0 s)"
+      },
+      {
+        "name": "test tests/refactor_end_to_end_undo.js",
+        "status": "PASS",
+        "detail": "070.log (0 s)"
+      },
+      {
+        "name": "test tests/refactor_shape_resize_undo.js",
+        "status": "PASS",
+        "detail": "071.log (0 s)"
+      },
+      {
+        "name": "test tests/release_history.js",
+        "status": "PASS",
+        "detail": "072.log (0 s)"
+      },
+      {
+        "name": "test tests/revision_vector.js",
+        "status": "PASS",
+        "detail": "073.log (0 s)"
+      },
+      {
+        "name": "test tests/rich_note_attachment_state.js",
+        "status": "PASS",
+        "detail": "074.log (0 s)"
+      },
+      {
+        "name": "test tests/save_acknowledgement.js",
+        "status": "PASS",
+        "detail": "075.log (0 s)"
+      },
+      {
+        "name": "test tests/save_blocked_load_regression.js",
+        "status": "PASS",
+        "detail": "076.log (0 s)"
+      },
+      {
+        "name": "test tests/save_cas_conflict_guard.js",
+        "status": "PASS",
+        "detail": "077.log (0 s)"
+      },
+      {
+        "name": "test tests/save_cas_missing_database.js",
+        "status": "PASS",
+        "detail": "078.log (0 s)"
+      },
+      {
+        "name": "test tests/save_cas_recovery_integrity.js",
+        "status": "PASS",
+        "detail": "079.log (0 s)"
+      },
+      {
+        "name": "test tests/symbol_search_interaction.js",
+        "status": "PASS",
+        "detail": "080.log (0 s)"
+      },
+      {
+        "name": "test tests/sync_canonical.js",
+        "status": "PASS",
+        "detail": "081.log (0 s)"
+      },
+      {
+        "name": "test tests/sync_conflict_bridge.js",
+        "status": "PASS",
+        "detail": "082.log (0 s)"
+      },
+      {
+        "name": "test tests/sync_protocol_v2.js",
+        "status": "PASS",
+        "detail": "083.log (1 s)"
+      },
+      {
+        "name": "test tests/trash_restore_save_confirmation.js",
+        "status": "PASS",
+        "detail": "084.log (0 s)"
+      },
+      {
+        "name": "test tests/trash_ui_interaction.js",
+        "status": "PASS",
+        "detail": "085.log (0 s)"
+      },
+      {
+        "name": "test tests/versioning.js",
+        "status": "PASS",
+        "detail": "086.log (0 s)"
+      },
+      {
+        "name": "Python unittest",
+        "status": "PASS",
+        "detail": "087.log (3 s)"
+      },
+      {
+        "name": "Gradle JVM",
+        "status": "NOT RUN",
+        "detail": "jen v režimu --native"
+      },
+      {
+        "name": "Chromium E2E",
+        "status": "NOT RUN",
+        "detail": "zatím nepřipojené"
+      },
+      {
+        "name": "Fyzický Samsung",
+        "status": "NOT RUN",
+        "detail": "vyžaduje samostatnou Android/ADB etapu"
+      },
+      {
+        "name": "APK",
+        "status": "NOT RUN",
+        "detail": "žádné sestavení ani instalace"
+      }
+    ],
+    "note": "Gradle and Chromium NOT RUN entries in this quick-only runner are covered by the separate actual runs above/below; physical device and APK remain NOT RUN."
+  },
+  "browser": {
+    "status": "PASS",
+    "sha": "949ca510cf8f79bdc7fd41d49f6b6a9422a5f377",
+    "suites": 23,
+    "cases": 90,
+    "assets_tree": "44ca21ea999be3c599de99c4f5a30bfd5120f1fb",
+    "assets_identical_to_final": true,
+    "native_bridge_is_model": true,
+    "reports": [
+      {
+        "suite": "backup-history",
+        "sha": "949ca510cf8f79bdc7fd41d49f6b6a9422a5f377",
+        "cases": [
+          {
+            "name": "offline-ui-two-histories-confirmation-and-network-exception",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "suite": "drawing",
+        "sha": "949ca510cf8f79bdc7fd41d49f6b6a9422a5f377",
+        "cases": [
+          {
+            "name": "dimension",
+            "status": "passed"
+          },
+          {
+            "name": "line",
+            "status": "passed"
+          },
+          {
+            "name": "arrow",
+            "status": "passed"
+          },
+          {
+            "name": "circle",
+            "status": "passed"
+          },
+          {
+            "name": "ellipse",
+            "status": "passed"
+          },
+          {
+            "name": "rect",
+            "status": "passed"
+          },
+          {
+            "name": "area",
+            "status": "passed"
+          },
+          {
+            "name": "polyline",
+            "status": "passed"
+          },
+          {
+            "name": "chain",
+            "status": "passed"
+          },
+          {
+            "name": "cumulative",
+            "status": "passed"
+          },
+          {
+            "name": "angle",
+            "status": "passed"
+          },
+          {
+            "name": "freehand",
+            "status": "passed"
+          },
+          {
+            "name": "target",
+            "status": "passed"
+          },
+          {
+            "name": "note",
+            "status": "passed"
+          },
+          {
+            "name": "symbol",
+            "status": "passed"
+          },
+          {
+            "name": "two_finger_pinch_keeps_undo_redo_and_exact_measure",
+            "status": "passed"
+          },
+          {
+            "name": "pan_then_pinch_does_not_resume_stale_drag",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "suite": "drive-accounts",
+        "sha": "949ca510cf8f79bdc7fd41d49f6b6a9422a5f377",
+        "cases": [
+          {
+            "name": "independent-explicit-account-controls-and-cancelled-disconnect",
+            "status": "passed"
+          },
+          {
+            "name": "unconfigured-or-invalid-state-never-pretends-account-is-ready-and-text-is-escaped",
+            "status": "passed"
+          },
+          {
+            "name": "backup-account-switch-clears-old-history-and-stale-verification",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "suite": "gallery-readability",
+        "sha": "949ca510cf8f79bdc7fd41d49f6b6a9422a5f377",
+        "cases": [
+          {
+            "name": "pixels_1200x800_412",
+            "status": "passed"
+          },
+          {
+            "name": "pixels_6000x4000_412",
+            "status": "passed"
+          },
+          {
+            "name": "pixels_1600x4800_1100",
+            "status": "passed"
+          },
+          {
+            "name": "pixels_6000x4000_412_dpr2",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "suite": "gallery-state",
+        "sha": "949ca510cf8f79bdc7fd41d49f6b6a9422a5f377",
+        "cases": [
+          {
+            "name": "render_is_read_only_even_during_nested_drawing_and_failure",
+            "status": "passed"
+          },
+          {
+            "name": "gestures_navigation_stale_load_and_exact_anchor_pixels",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "suite": "gallery-visual",
+        "sha": "949ca510cf8f79bdc7fd41d49f6b6a9422a5f377",
+        "cases": [
+          {
+            "name": "gallery_text_and_lines_remain_sharp_at_real_screen_scale",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "suite": "help",
+        "sha": "949ca510cf8f79bdc7fd41d49f6b6a9422a5f377",
+        "cases": [
+          {
+            "name": "main_menu_search_offline_and_android_back",
+            "status": "passed"
+          },
+          {
+            "name": "overflow_menu_and_small_large_screens",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "suite": "interactions",
+        "sha": "949ca510cf8f79bdc7fd41d49f6b6a9422a5f377",
+        "cases": [
+          {
+            "name": "rapid_grips_jitter_cancel",
+            "status": "passed"
+          },
+          {
+            "name": "pan_zoom_fit_and_repeated_reopen",
+            "status": "passed"
+          },
+          {
+            "name": "chain_finish_insert_remove_history",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "suite": "latency",
+        "sha": "949ca510cf8f79bdc7fd41d49f6b6a9422a5f377",
+        "cases": [
+          {
+            "name": "project_1_10_50_editable_documents",
+            "status": "passed"
+          },
+          {
+            "name": "photo_and_gallery_1200x800",
+            "status": "passed"
+          },
+          {
+            "name": "photo_and_gallery_6000x4000",
+            "status": "passed"
+          },
+          {
+            "name": "existing_feedback_320x240",
+            "status": "passed"
+          },
+          {
+            "name": "existing_feedback_1440x2800",
+            "status": "passed"
+          },
+          {
+            "name": "feedback_slow_save_blocks_close_list_and_android_back",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "suite": "legacy-conflict-persistence",
+        "sha": "949ca510cf8f79bdc7fd41d49f6b6a9422a5f377",
+        "cases": [
+          {
+            "name": "clockless-legacy-copy-persists-reopen-media-editor-and-repeat-callback",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "suite": "media-import",
+        "sha": "949ca510cf8f79bdc7fd41d49f6b6a9422a5f377",
+        "cases": [
+          {
+            "name": "delayed-native-results-stay-in-original-folder-and-stale-token-cannot-complete-new-picker",
+            "status": "passed"
+          },
+          {
+            "name": "deleted-or-locked-destination-and-closed-owner-dialog-do-not-redirect-file",
+            "status": "passed"
+          },
+          {
+            "name": "picker-cancel-and-rejected-write-keep-data-without-ghost-record",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "suite": "note-sync",
+        "sha": "949ca510cf8f79bdc7fd41d49f6b6a9422a5f377",
+        "cases": [
+          {
+            "name": "read-only-note-and-checklist-attachment-causal-autosave",
+            "status": "passed"
+          },
+          {
+            "name": "incoming-note-data-waits-and-read-only-close-does-not-create-conflict",
+            "status": "passed"
+          },
+          {
+            "name": "sketch-stroke-keeps-live-points-through-debounced-note-cas",
+            "status": "passed"
+          },
+          {
+            "name": "failed-note-write-keeps-form-and-retry-and-lock-protects-checks",
+            "status": "passed"
+          },
+          {
+            "name": "voice-keeps-owner-finishes-on-save-and-failed-stop-keeps-form",
+            "status": "passed"
+          },
+          {
+            "name": "rich-voice-failed-stop-and-disk-keep-modal-back-retry-and-cancel",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "suite": "peer-sync",
+        "sha": "949ca510cf8f79bdc7fd41d49f6b6a9422a5f377",
+        "cases": [
+          {
+            "name": "offline-folder-cycle-repair-is-visible-reachable-and-exact",
+            "status": "passed"
+          },
+          {
+            "name": "menu-settings-offline-and-data-preserved",
+            "status": "passed"
+          },
+          {
+            "name": "explicit-approval-full-code-reject-back-and-stale-session",
+            "status": "passed"
+          },
+          {
+            "name": "untrusted-names-pending-errors-and-cloud-isolation",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "suite": "pending-audio",
+        "sha": "949ca510cf8f79bdc7fd41d49f6b6a9422a5f377",
+        "cases": [
+          {
+            "name": "verified-original-and-suspect-reservation-have-separate-actions-and-acknowledgements",
+            "status": "passed"
+          },
+          {
+            "name": "ordinary-save-uses-native-summary-without-requesting-another-full-media-scan",
+            "status": "passed"
+          },
+          {
+            "name": "stop-is-only-a-draft-before-cancel-and-failed-save",
+            "status": "passed"
+          },
+          {
+            "name": "unknown-journal-warning-preserves-two-independent-copy-actions",
+            "status": "passed"
+          },
+          {
+            "name": "stop-cancel-restart-reattach-save-preserves-exact-values",
+            "status": "passed"
+          },
+          {
+            "name": "failed-save-cancel-keeps-pending-across-reload",
+            "status": "passed"
+          },
+          {
+            "name": "android-back-and-bind-failure-do-not-undo-saved-note",
+            "status": "passed"
+          },
+          {
+            "name": "failed-stop-retains-recovery-and-uncertain-export-never-attaches",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "suite": "quality-regressions",
+        "sha": "949ca510cf8f79bdc7fd41d49f6b6a9422a5f377",
+        "cases": [
+          {
+            "name": "existing_note_undo_redo_save",
+            "status": "passed"
+          },
+          {
+            "name": "existing_note_undo_redo_back",
+            "status": "passed"
+          },
+          {
+            "name": "audio_play_pause_must_not_focus_text",
+            "status": "passed"
+          },
+          {
+            "name": "two_notes_explicit_picker_double_click_cancel_back_and_late_result",
+            "status": "passed"
+          },
+          {
+            "name": "cancelled_attachment_has_no_unprotected_orphan",
+            "status": "passed"
+          },
+          {
+            "name": "note_controls_reachable_412",
+            "status": "passed"
+          },
+          {
+            "name": "note_controls_reachable_1100",
+            "status": "passed"
+          },
+          {
+            "name": "project_photo_dimension_note_reopen_and_export",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "suite": "read-only-sync",
+        "sha": "949ca510cf8f79bdc7fd41d49f6b6a9422a5f377",
+        "cases": [
+          {
+            "name": "view-photo-and-detail-without-revision-then-edit-with-history",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "suite": "release-history",
+        "sha": "949ca510cf8f79bdc7fd41d49f6b6a9422a5f377",
+        "cases": [
+          {
+            "name": "versioned_history_main_menu_offline_and_help_navigation",
+            "status": "passed"
+          },
+          {
+            "name": "settings_history_and_responsive_layout",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "suite": "sync-cadence",
+        "sha": "949ca510cf8f79bdc7fd41d49f6b6a9422a5f377",
+        "cases": [
+          {
+            "name": "frequency-selection-persists-without-changing-records-and-old-switch-can-reenable",
+            "status": "passed"
+          },
+          {
+            "name": "failed-persistence-does-not-activate-new-frequency",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "suite": "sync-edit-guard",
+        "sha": "949ca510cf8f79bdc7fd41d49f6b6a9422a5f377",
+        "cases": [
+          {
+            "name": "native-callback-during-grip-and-measure-form-preserves-both-edits",
+            "status": "passed"
+          },
+          {
+            "name": "status-message-cannot-drop-deferred-data-when-form-is-cancelled",
+            "status": "passed"
+          },
+          {
+            "name": "detail-parent-cas-keeps-live-item-references-after-conflict",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "suite": "update39",
+        "sha": "949ca510cf8f79bdc7fd41d49f6b6a9422a5f377",
+        "cases": [
+          {
+            "name": "gallery_bounded_pan_and_caption_pixels",
+            "status": "passed"
+          },
+          {
+            "name": "default_selection_corner_loupe_and_landscape_tools",
+            "status": "passed"
+          },
+          {
+            "name": "real_save_failure_and_photo_loading_errors",
+            "status": "passed"
+          },
+          {
+            "name": "help_occurrences_and_neutral_bluetooth",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "suite": "web-content-policy",
+        "sha": "949ca510cf8f79bdc7fd41d49f6b6a9422a5f377",
+        "cases": [
+          {
+            "name": "native-csp-blocks-injected-scripts-media-and-frames-keeps-real-drawing",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "suite": "workflows",
+        "sha": "949ca510cf8f79bdc7fd41d49f6b6a9422a5f377",
+        "cases": [
+          {
+            "name": "folders_move_rename_trash_restore",
+            "status": "passed"
+          },
+          {
+            "name": "bulk_copy_move_lock",
+            "status": "passed"
+          },
+          {
+            "name": "note_checklist_sketch_attachment",
+            "status": "passed"
+          },
+          {
+            "name": "photo_details_nested_gallery_png_hashes",
+            "status": "passed"
+          },
+          {
+            "name": "trash_restore_purge_and_live_media",
+            "status": "passed"
+          },
+          {
+            "name": "focus_cancel_layers_history_search",
+            "status": "passed"
+          }
+        ]
+      },
+      {
+        "suite": "zoom-grid",
+        "sha": "949ca510cf8f79bdc7fd41d49f6b6a9422a5f377",
+        "cases": [
+          {
+            "name": "buttons_grid_pixels_and_snap_independence",
+            "status": "passed"
+          },
+          {
+            "name": "trusted_two_finger_pinch_and_limits",
+            "status": "passed"
+          }
+        ]
+      }
+    ]
+  },
+  "targeted_browser": {
+    "status": "PASS",
+    "sha": "362fc0dc730e1e1cea5182e12d1a89d4304f3b60",
+    "cases": [
+      {
+        "name": "local-save-and-independent-target-receipts-never-pretend-a-backup",
+        "status": "passed"
+      },
+      {
+        "name": "independent-explicit-account-controls-and-cancelled-disconnect",
+        "status": "passed"
+      },
+      {
+        "name": "unconfigured-or-invalid-state-never-pretends-account-is-ready-and-text-is-escaped",
+        "status": "passed"
+      },
+      {
+        "name": "backup-account-switch-clears-old-history-and-stale-verification",
+        "status": "passed"
+      }
+    ]
+  },
+  "not_run": [
+    "Windows HOME QA",
+    "Physical Android/SAF/MediaRecorder, OEM/Doze, actual phone-tablet radio",
+    "Live Google account OAuth/Drive/quota",
+    "Real device disk-full and power cut",
+    "An older installed Android APK",
+    "Real-device performance with large collections",
+    "Independent Controller 40 review"
+  ],
+  "actions_started_by_this_task": 0,
+  "apk_build_or_release": false,
+  "merge": false,
+  "limits": [
+    "Manifest/file-count safety limits remain; overflow is explicit pending/error, not silent omission.",
+    "No E2EE/key management, new cloud adapter, server, migration wizard, multicloud UI or automatic P1 GC.",
+    "P1 exact preimages and media pins remain authoritative for retention; transport ACK is not backup or current remote DB health."
+  ]
+}

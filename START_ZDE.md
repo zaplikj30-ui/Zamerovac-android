@@ -4,7 +4,7 @@
 
 ## Rozpracovaná implementace synchronizace B (12. 11. 2026)
 
-Vlastní větev `implement/sync-core-b-20261112`, base main `cf7807905f77f6fd8478c137b1b41aca6ebc3275`. Převzaty ochrany #100–#102 a návaznosti audia #107 bez změn workflow. [Implementace, příčiny, průběžné testy a povinné brány](docs/sync-core-b.md). Stav [DRAFT PR #116](https://github.com/zaplikj30-ui/Zamerovac-android/pull/116); závěrečný HEAD a přesné testy jsou v PR a checkpointu #42. Nejde o merge ani APK. Další krok: dokončit a doložit společnou regresi a předat Kontrolorovi 40.
+Vlastní větev `implement/sync-core-b-20261112`, base main `cf7807905f77f6fd8478c137b1b41aca6ebc3275`. Převzaty ochrany #100–#102 a návaznosti audia #107 bez změn workflow. [Implementace, příčiny, průběžné testy a povinné brány](docs/sync-core-b.md). Stav [DRAFT PR #116](https://github.com/zaplikj30-ui/Zamerovac-android/pull/116); závěrečný HEAD a přesné testy jsou v PR a checkpointu #42. Nejde o merge ani APK. Důkazy: [finální report](docs/qa/sync-core-b/results.json). Úplná Preview JVM regrese 476 PASS / 2 zachované diagnostické FAIL #88; rychlé kontroly 87 PASS; Chromium 23 sad/90 scénářů PASS; skutečný 3GiB TLS výpadek/retry a simulovaná legacy schopnost PASS. HOME/fyzický Android/živý Drive NOT RUN. Další krok: nezávislá SOURCE kontrola Kontrolora 40; INTEGRATION/RELEASE HOLD.
 
 ## Poslední ověřený přehled (11. 11. 2026, historický snapshot)
 

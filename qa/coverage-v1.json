@@ -1491,13 +1491,25 @@
         {
           "path": "app/src/test/java/cz/zamerovac/app/ImmutableMediaProofTest.java",
           "layer": "native-jvm"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/PeerLargeTlsTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/PeerLegacyCompatibilityTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "tools/e2e/drive-accounts.cjs",
+          "layer": "chromium"
         }
       ],
       "coverage": "runtime-partial",
       "positive": "Copy/verify/cutover, exact revisions, independent destinations, official Drive resume, complete detached audio, byte-identical large media.",
       "negative": "Migration/SQL failures, corrupt or missing ledger, stale receipts, false provider success, duplicate/partial objects, metered networks and interrupted full-file retry.",
       "limits": [
-        "Final evidence and SHA in draft PR and docs/sync-core-b.md.",
+        "Exact tested SHAs, full counts and actual logs: docs/qa/sync-core-b/results.json and draft PR #116.",
         "Historical #88 diagnostics remain strict; Windows HOME and real Android/Drive NOT RUN."
       ]
     }
