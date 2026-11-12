@@ -143,7 +143,7 @@ class GateUnitTest(unittest.TestCase):
             ("python tools\\home_qa_gate.py lint-workflow", "echo lint skipped"),
             ("ref: fix/approved-owner-branch", "ref: refs/pull/3/merge"),
             ("ref: infra/approved-gate", "ref: refs/pull/7/merge"),
-            ("ACTUAL_GATE%\"==\"" + "b" * 40, "ACTUAL_GATE%\"==\"" + "d" * 40),
+            ("ACTUAL_GATE%\"==\"" + "b" * 40, "ACTUAL_GATE%\"==\"main"),
             ("expected-sha256 " + GATE.APPROVED_BROWSER_SHA256, "expected-sha256 " + "d" * 64),
             ("branches: [qa/example]", "branches: [main]"),
             ("TESTED_SHA: '" + SHA + "'", "TESTED_SHA: '" + ("f" * 40) + "'"),
