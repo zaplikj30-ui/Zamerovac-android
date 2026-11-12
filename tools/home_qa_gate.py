@@ -273,9 +273,10 @@ BROWSER_STEPS = r'''      - name: Isolated offline package-lock Chromium prerequ
           cd /d "%GITHUB_WORKSPACE%\source"
           python tools\home_qa_gate.py windows-quick --expected-sha __SOURCE_SHA__ --root . --check-only
           if errorlevel 1 exit /b 1
-          node tools\local-browser-qa.cjs --self-test
+          set "ZAMEROVAC_SOURCE_ROOT=%GITHUB_WORKSPACE%\source"
+          node "%GITHUB_WORKSPACE%\gate\tools\local-browser-qa.cjs" --self-test
           if errorlevel 1 exit /b 1
-          node tools\local-browser-qa.cjs --all
+          node "%GITHUB_WORKSPACE%\gate\tools\local-browser-qa.cjs" --all
           if errorlevel 1 exit /b 1
 '''
 
