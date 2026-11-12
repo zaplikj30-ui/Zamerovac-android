@@ -98,6 +98,59 @@ class GateUnitTest(unittest.TestCase):
             with self.subTest(patch=patch), self.assertRaises(GATE.GateError):
                 GATE.trusted_owner({**e, **patch})
 
+    def test_canonical_browser_workflow_is_exact_and_windows_only(self):
+        browser = GATE.render_workflow("qa/example", SHA, browser=True)
+        GATE.check_workflow(browser, strict=True)
+        self.assertIn("[self-hosted, Windows, X64, zamerovac-qa]", browser)
+        self.assertIn("node tools\\local-browser-qa.cjs --all", browser)
+        self.assertIn("playwright@1.62.1", browser)
+        self.assertIn("python ..\\recipe\\tools\\home_qa_gate.py lint-workflow", browser)
+        self.assertNotIn("wsl-check-from-windows", browser)
+        self.assertNotIn("assembleDebug", browser)
+        self.assertNotIn("pull_request:", browser)
+        self.assertNotIn("ubuntu-latest", browser)
+        self.assertNotEqual(browser, valid_workflow(),
+                            "Browser mode must not weaken the existing quick recipe")
+
+    def test_canonical_browser_tampering_fails_closed(self):
+        good = GATE.render_workflow("qa/example", SHA, browser=True)
+        substitutions = (
+            ("github.actor == 'zaplikj30-ui'", "github.actor == 'other'"),
+            ("[self-hosted, Windows, X64, zamerovac-qa]", "ubuntu-latest"),
+            ("persist-credentials: false", "persist-credentials: true"),
+            ("playwright@1.62.1", "playwright@latest"),
+            ("node tools\\local-browser-qa.cjs --all", "echo browser skipped"),
+            ("python ..\\recipe\\tools\\home_qa_gate.py lint-workflow", "echo lint skipped"),
+            ("branches: [qa/example]", "branches: [main]"),
+            ("ref: " + SHA, "ref: main"),
+        )
+        for original, modified in substitutions:
+            with self.subTest(modified=modified):
+                self.assertIn(original, good)
+                with self.assertRaises(GATE.GateError):
+                    GATE.check_workflow(good.replace(original, modified), strict=True)
+        with self.assertRaises(GATE.GateError):
+            GATE.check_workflow(good + "\n  unguarded:\n    runs-on: ubuntu-latest\n", strict=True)
+
+    def test_canonical_browser_cli_utf8_and_no_overwrite(self):
+        with tempfile.TemporaryDirectory() as temp:
+            folder = Path(temp) / ".github" / "workflows"
+            folder.mkdir(parents=True)
+            output = folder / "home-qa-one-shot.yml"
+            self.assertEqual(0, GATE.main([
+                "render-workflow", "--browser", "--branch", "qa/example",
+                "--expected-sha", SHA, "--output", str(output),
+            ]))
+            raw = output.read_bytes()
+            expected = GATE.render_workflow("qa/example", SHA, browser=True).encode("utf-8")
+            self.assertEqual(expected, raw)
+            self.assertEqual(0, GATE.main(["lint-workflow", str(output), "--strict"]))
+            self.assertEqual(2, GATE.main([
+                "render-workflow", "--browser", "--branch", "qa/example",
+                "--expected-sha", SHA, "--output", str(output),
+            ]), "Must not overwrite existing trusted YAML")
+            self.assertEqual(expected, output.read_bytes())
+
     def test_workflow_valid_windows_wsl_split(self):
         GATE.check_workflow(valid_workflow(), strict=True)
 
