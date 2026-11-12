@@ -51,27 +51,46 @@
   // Expand only the rendered copy; never change project coordinates or media.
   const visiblePrefs={...prefs,layerVisible:{dimensions:true,drawing:true,notes:options.notes}};
   let minX=0,minY=0,maxX=image.naturalWidth,maxY=image.naturalHeight;
-  if(options.notes&&typeof window.insetAnnotationBounds==='function'){
-   const measure=document.createElement('canvas').getContext('2d');
-   const boundsRender=annotationRenderContext(measure,{
-    view:{zoom:1,dx:0,dy:0},
-    photoSize:{w:image.naturalWidth,h:image.naturalHeight},
-    viewport:{w:image.naturalWidth,h:image.naturalHeight},
-    selected:null,exporting:true,prefs:visiblePrefs
-   });
-   for(const item of items){
-    if(item.type!=='note'||!item.media?.length)continue;
-    const box=window.insetAnnotationBounds(measure,item,boundsRender);
-    if(!box)continue;
-    minX=Math.min(minX,box.minX);minY=Math.min(minY,box.minY);
-    maxX=Math.max(maxX,box.maxX);maxY=Math.max(maxY,box.maxY);
+  const insets=options.notes&&typeof window.insetAnnotationBounds==='function'
+   ?items.filter(item=>item.type==='note'&&item.media?.length):[];
+  let measure=null;
+  if(insets.length){
+   measure=document.createElement('canvas').getContext('2d');
+   // The voice icon, caption and outlines use fixed screen pixels: measuring
+   // only at zoom=1 and scaling the resulting box clips high-resolution PDFs.
+   // Solve for source-space extents at the ACTUAL output scale (max 2400px).
+   const margin=32,limit=2400;
+   let settled=false;
+   for(let pass=0;pass<12;pass++){
+    const scale=Math.min(1,limit/Math.max(maxX-minX,maxY-minY));
+    const dx=-minX*scale,dy=-minY*scale;
+    const boundsRender=annotationRenderContext(measure,{
+     view:{zoom:scale,dx,dy},
+     photoSize:{w:image.naturalWidth,h:image.naturalHeight},
+     viewport:{w:image.naturalWidth*scale,h:image.naturalHeight*scale},
+     selected:null,exporting:true,prefs:visiblePrefs
+    });
+    let left=0,top=0,right=image.naturalWidth,bottom=image.naturalHeight;
+    for(const item of insets){
+     const box=window.insetAnnotationBounds(measure,item,boundsRender);
+     if(!box)continue;
+     if(![box.minX,box.minY,box.maxX,box.maxY].every(Number.isFinite))
+      throw new Error('Nelze určit bezpečné meze zákaznického exportu');
+     // Convert the measured pixel bounds back into photo coordinates.
+     const x0=(box.minX-dx)/scale,y0=(box.minY-dy)/scale;
+     const x1=(box.maxX-dx)/scale,y1=(box.maxY-dy)/scale;
+     if(x0<0)left=Math.min(left,x0-margin/scale);
+     if(y0<0)top=Math.min(top,y0-margin/scale);
+     if(x1>image.naturalWidth)right=Math.max(right,x1+margin/scale);
+     if(y1>image.naturalHeight)bottom=Math.max(bottom,y1+margin/scale);
+    }
+    const change=Math.max(Math.abs(left-minX),Math.abs(top-minY),
+     Math.abs(right-maxX),Math.abs(bottom-maxY))*scale;
+    minX=left;minY=top;maxX=right;maxY=bottom;
+    if(change<0.1){settled=true;break}
    }
+   if(!settled)throw new Error('Nelze bezpečně umístit detaily zákaznického exportu');
   }
-  // A margin is added only to sides that extend beyond the original photo.
-  const margin=32;
-  if(minX<0)minX-=margin;if(minY<0)minY-=margin;
-  if(maxX>image.naturalWidth)maxX+=margin;
-  if(maxY>image.naturalHeight)maxY+=margin;
   const extentW=maxX-minX,extentH=maxY-minY;
   const canvas=document.createElement('canvas');
   const scale=Math.min(1,2400/Math.max(extentW,extentH));
@@ -85,6 +104,19 @@
    // Caption width depends on the source photo, not on extra outer margins.
    viewport:{w:image.naturalWidth*scale,h:image.naturalHeight*scale},
    selected:null,exporting:true,prefs:visiblePrefs});
+  // Fail safely rather than silently cropping a voice marker or caption.
+  if(measure){
+   const finalBounds=annotationRenderContext(measure,{
+    view:{zoom:scale,dx,dy},
+    photoSize:render.photoSize,viewport:render.viewport,
+    selected:null,exporting:true,prefs:visiblePrefs
+   });
+   for(const item of insets){
+    const box=window.insetAnnotationBounds(measure,item,finalBounds);
+    if(box&&(box.minX<0||box.minY<0||box.maxX>canvas.width||box.maxY>canvas.height))
+     throw new Error('Detail nebo hlasová ikona přesahuje zákaznický export');
+   }
+  }
   // Geometry scales with the photo; captions/strokes stay readable in output pixels.
   for(const item of items)drawItem(c,item,render);
   return canvas;
