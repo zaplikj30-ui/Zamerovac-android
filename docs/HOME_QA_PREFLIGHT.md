@@ -60,3 +60,40 @@ Ověření verze není totéž co ověření SHA256 instalovaného Gradle/JDK; p
 5. Podklady, PASS/FAIL/SKIP/NOT RUN, skutečný zdrojový SHA a nezávislé schválení zapiš do existujícího issue #42. Po skončení odstraň jen jednorázové QA triggery z vlastních větví, zachovej logy. **Nikdy** automaticky nespouštěj placený cloud (limit 12 USD) ani nepřepisuj staršími workflow funkční domácí runner.
 
 Domácí PC Windows11 má pevně 16 GB RAM; WSL2 4GB/2CPU a Gradle nejvýše jeden worker. Žádná placená cloudová VM, APK, emulátor ani vydání. Tato krátká QA testuje preflight, quick a pět WSL JDK scénářů. Kompletní 382 JVM, Chromium/pixely, PDF i fyzický Samsung/Bosch zůstávají pro pozdější společnou regresi **NOT RUN** na aktuálním integrovaném SHA.
+
+## Bezpečné Chromium před sloučením (PR #115)
+
+Varianta `render-workflow --browser` povinně vyžaduje `--source-branch`
+(větev v **owner repozitáři**), `--expected-sha` (neměnný HEAD této
+větve), `--validator-sha` (samostatně prověřený připnutý SHA kontrolního
+kódu z owner repozitáře) a `--browser-sha256` (předem prověřený SHA256
+již nainstalovaného Chromium). Nestačí pouze syntakticky platné SHA.
+Všechny hodnoty se před generováním a spuštěním musí ověřit proti
+schválenému GitHub HEAD, zdroji větve a nezávislému review.
+
+Browser workflow stáhne zdroj **pod jménem owner větve** (nikoli PR/fork
+ref nebo libovolný hash), validator z odděleně připnutého SHA a recipe
+z triggering owner-only `qa/*` větve. **Před jakýmkoli spuštěním kódu
+ze source** zkontroluje oba skutečné `git rev-parse HEAD`, následně
+spustí `lint-workflow --strict` z připnutého validatoru, nikdy
+self-lint ze spouštěné QA větve. Nesouhlas znamená STOP.
+
+Playwright 1.62.1 je uzamčen v `tools/qa-browser/package-lock.json`
+včetně SHA512 integrity. `npm ci --offline --ignore-scripts` instaluje
+pouze do izolované pracovní složky; neprobíhá síťové stahování balíčků
+ani instalace binárky Chromium. Existující lokální Chromium je jen čteno
+a musí odpovídat přesnému předem schválenému SHA256; při chybě se test
+bezpečně zastaví. Pokud offline cache/chromium není připravené, je to
+**HOLD**, ne důvod obejít integritu nebo nainstalovat náhodné artefakty.
+
+Node Chromium spouštěč průběžně atomicky zapisuje `results.json` po
+každé suite. Rozlišuje dokončené PASS/FAIL, přerušené FAIL a zbývající
+NOT RUN včetně testovaného SHA. Při timeoutu ukončuje podprocesy
+stromově (`taskkill /T /F` na Windows), s limitem 38 minut uvnitř
+50min workflow a bez falešného PASS. Systém je určen pro HOME Windows
+11, sériové UI testy a syntetické údaje, bez APK/release.
+
+**Nový browser režim se nesmí poprvé spustit před nezávislým SOURCE
+security PASS a výslovně ověřeným trust bindingem i přítomností
+offline artefaktů.** Původní main HOME 4/4 ani canonical quick+WSL
+šablona se nemění. Neplatí zde automatické povolení merge či release.
