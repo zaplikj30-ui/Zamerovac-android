@@ -206,6 +206,29 @@ class GateUnitTest(unittest.TestCase):
                                           "validator_branch": "infra/approved-gate", "browser_sha256": GATE.APPROVED_BROWSER_SHA256},
                                         **values})
 
+    def test_sync116_exact_owner_branch_and_commit_only(self):
+        approved = "1527e3377609633c554195b0641e02e3cfb5fb5e"
+        branch = "implement/sync-core-b-20261112"
+        args = dict(browser=True, source_branch=branch, validator_sha="b" * 40,
+                    validator_branch="infra/approved-gate",
+                    browser_sha256=GATE.APPROVED_BROWSER_SHA256)
+        rendered = GATE.render_workflow("qa/example", approved, **args)
+        GATE.check_workflow(rendered, strict=True)
+        self.assertIn("ref: " + branch, rendered)
+        self.assertIn("TESTED_SHA: '" + approved + "'", rendered)
+        self.assertFalse(GATE.safe_owner_branch(branch),
+                         "implement/* must not become a generic allowed family")
+        for name, sha in ((branch, "a" * 40),
+                          ("implement/sync-core-b-20261113", approved),
+                          ("implement/other", approved),
+                          ("implement/sync-core-b-20261112/evil", approved),
+                          ("refs/pull/116/merge", approved),
+                          ("fork/implement/sync-core-b-20261112", approved)):
+            with self.subTest(name=name, sha=sha), self.assertRaises(GATE.GateError):
+                GATE.render_workflow("qa/example", sha, **{**args, "source_branch": name})
+        with self.assertRaises(GATE.GateError):
+            GATE.check_workflow(rendered.replace(approved, "a" * 40), strict=True)
+
     def test_browser_binary_hash_is_fail_closed_and_read_only(self):
         import hashlib
         with tempfile.TemporaryDirectory() as temp:
