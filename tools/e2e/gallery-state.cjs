@@ -231,4 +231,61 @@ suite('gallery-state',async test=>{
    assert.equal(await page.evaluate(()=>JSON.stringify(current.items)),before.items,'Exact values survive restart');
    evidence({exported,gallery,voiceDifference,originalSHA256:before.hash,nativePdf:'NOT RUN'});
   });
+  await test('customer_export_high_resolution_voice_marker_2400px',async({page,evidence})=>{
+   // Compression-friendly 8k image; run only this targeted test on a trusted
+   // serial HOME runner, not concurrently with heavy Java/Gradle jobs.
+   const buffer=Buffer.from(await page.evaluate(()=>{
+    const canvas=document.createElement('canvas');canvas.width=8000;canvas.height=6000;
+    const c=canvas.getContext('2d');c.fillStyle='#596169';c.fillRect(0,0,8000,6000);
+    return canvas.toDataURL('image/png').split(',')[1];
+   }),'base64');
+   await chooseFiles(page,'#galleryBtn',{name:'high-resolution-inset.png',mimeType:'image/png',buffer});
+   await page.waitForFunction(()=>!!stageImg&&stageImg.complete&&stageImg.naturalWidth===8000);
+   const outcome=await page.evaluate(async()=>{
+    const id=current.media[0],source=stageImg;
+    window.__detailPhotoCache[id]=source;
+    const item={id:'highres-marker',type:'note',a:{x:7950,y:220},
+     media:[id],audioMedia:['synthetic-reference-do-not-play'],text:'',
+     insetX:7900,insetY:200,insetWidth:130,insetRotation:0};
+    current.items.push(item);save();
+    const original=JSON.stringify(current.items);
+    const readHash=async()=>{
+     const db=await mediaDb(),request=db.transaction('files').objectStore('files').get(id);
+     const blob=await new Promise(resolve=>request.onsuccess=()=>resolve(request.result));
+     return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await blob.arrayBuffer()))).join(',');
+    };
+    const beforeHash=await readHash();
+    const markers=[],fill=CanvasRenderingContext2D.prototype.fillText;
+    CanvasRenderingContext2D.prototype.fillText=function(value,x,y,...rest){
+     if(value==='🎙'){
+      const p=this.getTransform().transformPoint({x,y});
+      markers.push({x:p.x,y:p.y,width:this.canvas.width,height:this.canvas.height});
+     }
+     return fill.call(this,value,x,y,...rest);
+    };
+    const encoded=await __customerExport.render(current,{notes:true,dimensions:true,drawing:true});
+    const out=new Image();out.src='data:image/png;base64,'+encoded;await out.decode();
+    const marker=markers.find(m=>m.width===out.naturalWidth&&m.height===out.naturalHeight);
+    const result={width:out.naturalWidth,height:out.naturalHeight,marker,
+     originalUnchanged:original===JSON.stringify(current.items),
+     mediaUnchanged:beforeHash===await readHash()};
+    if(!marker)return {...result,error:'no visible high-res voice marker'};
+    if(marker.x<13||marker.y<13||marker.x+13>out.naturalWidth||
+       marker.y+13>out.naturalHeight)return {...result,error:'high-resolution voice glyph clipped'};
+    const tile=document.createElement('canvas');tile.width=30;tile.height=30;
+    tile.getContext('2d').drawImage(out,
+      Math.floor(marker.x)-15,Math.floor(marker.y)-15,30,30,0,0,30,30);
+    const b=tile.getContext('2d').getImageData(0,0,30,30).data;
+    let ink=0;for(let i=0;i<b.length;i+=4){
+     if(b[i]<235||b[i+1]<235||b[i+2]<235)ink++;
+    }
+    return {...result,ink};
+   });
+   assert(!outcome.error,JSON.stringify(outcome));
+   assert.equal(Math.max(outcome.width,outcome.height),2400,'Export must keep 2400px limit');
+   assert(outcome.ink>8,'High-resolution customer PDF/ZIP must contain glyph pixels');
+   assert(outcome.mediaUnchanged&&outcome.originalUnchanged,
+    'High-resolution export must preserve media SHA-256 and original annotation');
+   evidence({highRes:outcome,sourceResolution:'8000×6000',pdfNative:'NOT RUN'});
+  });
 }).catch(e=>{console.error(e);process.exitCode=1});
