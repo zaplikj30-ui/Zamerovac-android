@@ -11,7 +11,8 @@ import java.security.MessageDigest;
 import java.util.*;
 import java.util.regex.*;
 
-/** Non-destructive audio journal. Every operation, including read/repair, owns the local I/O lock.
+/** Non-destructive audio journal. Inventory, repair and binding own the local I/O lock.
+ * Explicit copies stream outside that lock, checking retained source identity and size.
  * Each capture has its own AtomicFile: damage to one entry cannot hide the others. Audio files
  * are never deleted here. Unknown/corrupt evidence stays on disk and is reported, not reset.
  */
@@ -55,14 +56,15 @@ final class PendingAudio {
     private static String hash(byte[] bytes) throws Exception {
         return ArchiveIntegrity.hex(MessageDigest.getInstance("SHA-256").digest(bytes));
     }
-    private JSONObject read(String token) throws Exception {
+    private JSONObject read(String token) throws Exception {return read(token,true);}
+    private JSONObject read(String token,boolean repair) throws Exception {
         File file=entryFile(token);
         safe(ledger,file.getName()+".bak");safe(ledger,file.getName()+".new");
         for(String suffix:new String[]{"",".bak",".new"}){File part=new File(file+suffix);if(part.exists()&&(!part.isFile()||part.length()>16384))throw new IOException("Invalid audio journal size");}
         // A .new is unconfirmed evidence. AtomicFile.openRead may discard it when a
         // base exists; leave it intact and require review instead of silently losing it.
         if(new File(file+".new").exists())throw new IOException("Unconfirmed audio journal write");
-        byte[] bytes=new AtomicFile(file).readFully();
+        byte[] bytes=repair?new AtomicFile(file).readFully():Files.readAllBytes(new File(file+".bak").isFile()?new File(file+".bak").toPath():file.toPath());
         if(bytes.length>16384)throw new IOException("Invalid audio journal size");
         JSONObject envelope=new JSONObject(JsonInput.decode(bytes));
         String payload=envelope.getString("payload");
@@ -129,7 +131,7 @@ final class PendingAudio {
     }
     private boolean matches(File file,JSONObject e) throws Exception {
         if(!file.isFile())return false;
-        JSONObject digest=PeerMedia.inspect(file);
+        checkpoint.check("hash-media");JSONObject digest=PeerMedia.inspect(file);
         return digest.getLong("size")==e.getLong("size")&&digest.getString("hash").equals(e.getString("hash"));
     }
     private void publish(JSONObject e) throws Exception {
@@ -160,11 +162,42 @@ final class PendingAudio {
         // Reading the same values is not proof of a durable write; explicitly retry commit.
         if(!prefs.edit().putString("mime-"+e.getString("id"),"audio/mp4").putString("name-"+e.getString("id"),NAME).commit())throw new IOException("Audio metadata not confirmed");
     }
-    private Set<String> tokens() throws IOException {
-        directory(ledger);Set<String> result=new TreeSet<>();File[] files=ledger.listFiles();
-        if(files==null)throw new IOException("Cannot list audio journal");
-        for(File f:files){String n=f.getName();if(!n.matches("[a-f0-9-]{36}\\.json(\\.bak|\\.new)?"))throw new IOException("Unknown audio journal evidence");result.add(n.substring(0,36));}
-        return result;
+    /** Listing failures quarantine automatic repair, never the independently discoverable originals. */
+    private static final class Inventory {
+        final Set<String> tokens=new TreeSet<>(),ambiguous=new HashSet<>();
+        final Map<String,JSONObject> entries=new TreeMap<>();
+        final Map<String,List<File>> sources=new TreeMap<>();
+        final List<File> mediaFiles=new ArrayList<>();
+        boolean uncertain;
+    }
+    private Inventory inventory() {
+        Inventory found=new Inventory();
+        try{
+            directory(ledger);File[] files=ledger.listFiles();if(files==null)throw new IOException("Cannot list audio journal");
+            for(File file:files){String name=file.getName();
+                if(name.matches("[a-f0-9-]{36}\\.json(\\.bak|\\.new)?"))found.tokens.add(name.substring(0,36));
+                else found.uncertain=true; // Preserve unknown evidence, including directories/links.
+            }
+        }catch(Exception unreadable){found.uncertain=true;}
+        try{
+            directory(media);File[] files=media.listFiles();if(files==null)throw new IOException("Cannot list audio originals");
+            Arrays.sort(files,Comparator.comparing(File::getName));Collections.addAll(found.mediaFiles,files);
+            for(File file:files){Matcher m=TEMP.matcher(file.getName());if(m.matches()){
+                String token=m.group(2);found.tokens.add(token);found.sources.computeIfAbsent(token,k->new ArrayList<>()).add(file);
+                if(Files.isSymbolicLink(file.toPath())||!file.isFile())found.uncertain=true;
+            }else if(file.getName().startsWith(".audio-"))found.uncertain=true;}
+        }catch(Exception unreadable){found.uncertain=true;}
+        Map<String,Set<String>> owners=new HashMap<>();
+        for(String token:found.tokens){
+            try{JSONObject e=read(token,false);found.entries.put(token,e);owners.computeIfAbsent(e.getString("id"),k->new HashSet<>()).add(token);}
+            catch(Exception invalid){found.uncertain=true;}
+            List<File> sources=found.sources.getOrDefault(token,Collections.emptyList());
+            for(File file:sources){Matcher m=TEMP.matcher(file.getName());m.matches();owners.computeIfAbsent(m.group(1),k->new HashSet<>()).add(token);}
+            if(sources.size()>1||found.entries.containsKey(token)&&sources.size()==1&&!sources.get(0).getName().equals(found.entries.get(token).optString("temporary")))found.ambiguous.add(token);
+        }
+        for(Set<String> tokens:owners.values())if(tokens.size()>1)found.ambiguous.addAll(tokens);
+        if(!found.ambiguous.isEmpty())found.uncertain=true;
+        return found;
     }
     /** Exact current direct binding only; history/trash/backup references never authorize binding or deletion. */
     private static void bindings(JSONArray items,String id,String record,List<String[]> result) throws Exception {
@@ -177,45 +210,74 @@ final class PendingAudio {
     }
     private static boolean contains(JSONArray a,String id){if(a!=null)for(int i=0;i<a.length();i++)if(id.equals(a.optString(i)))return true;return false;}
     private static String[] binding(String durable,String id) throws Exception {
-        if(durable==null)return null;LocalDatabase.validate(durable);JSONObject db=new JSONObject(durable);List<String[]> result=new ArrayList<>();JSONArray records=db.getJSONArray("records");
+        if(durable==null)return null;LocalDatabase.validate(durable);return binding(new JSONObject(durable),id);
+    }
+    private static String[] binding(JSONObject db,String id) throws Exception {
+        if(db==null)return null;List<String[]> result=new ArrayList<>();JSONArray records=db.getJSONArray("records");
         for(int i=0;i<records.length();i++){JSONObject r=records.getJSONObject(i);if(r.optBoolean("deleted"))continue;
             if("note".equals(r.optString("kind"))&&contains(r.optJSONArray("media"),id))result.add(new String[]{r.getString("id"),""});
             bindings(r.optJSONArray("items"),id,r.getString("id"),result);
         }
         return result.size()==1?result.get(0):null;
     }
+    private JSONObject reviewSource(File file,String token) throws Exception {
+        JSONObject row=new JSONObject().put("state","needs-review").put("available",false).put("attachable",false);
+        Matcher m=TEMP.matcher(file.getName());if(m.matches())row.put("id",m.group(1));
+        try{File checked=safe(media,file.getName());if(checked.isFile()&&checked.length()<=MediaStaging.LIMIT)row.put("token",token);}catch(IOException unsafe){}
+        return row;
+    }
+    private boolean verifiedFinal(JSONObject e) throws Exception {
+        File source=temporary(e),target=safe(media,e.getString("id"));
+        if(source.exists()&&!Files.isSameFile(source.toPath(),target.toPath()))return false;
+        return matches(target,e);
+    }
     JSONArray recover(String durable) throws Exception {
         synchronized(TrashPurger.LOCK){
-            Set<String> tokens=tokens();Set<String> knownIds=new HashSet<>();File[] files=media.listFiles();if(files==null&&media.exists())throw new IOException("Cannot list audio originals");
-            if(files!=null)for(File f:files){Matcher m=TEMP.matcher(f.getName());if(m.matches()){tokens.add(m.group(2));knownIds.add(m.group(1));}}
+            Inventory found=inventory();Set<String> knownIds=new HashSet<>();
+            for(List<File> files:found.sources.values())for(File file:files){Matcher m=TEMP.matcher(file.getName());m.matches();knownIds.add(m.group(1));}
+            JSONObject database=null;Set<String> references=Collections.emptySet();boolean projectUncertain=false;
+            if(durable!=null)try{LocalDatabase.validate(durable);database=new JSONObject(durable);references=PeerSnapshot.cleanupReferences(database.getJSONArray("records"));}
+            catch(Exception invalid){database=null;projectUncertain=true;}
+            boolean automatic=!found.uncertain&&!projectUncertain;
             JSONArray result=new JSONArray();
-            for(String token:tokens){
+            for(String token:found.tokens){
                 if(ACTIVE.contains(token))continue;
-                JSONObject e;
-                try{e=read(token);}catch(Exception invalid){result.put(new JSONObject().put("token",token).put("state","needs-review").put("available",false));continue;}
-                knownIds.add(e.getString("id"));
-                boolean available=false;
-                if(e.getBoolean("completed")){
-                    try{resume(e);available=true;}catch(Exception error){/* KEEP both source and evidence. */}
+                JSONObject e=found.entries.get(token);
+                List<File> sources=found.sources.getOrDefault(token,Collections.emptyList());
+                if(e==null||found.ambiguous.contains(token)){
+                    for(File file:sources){JSONObject row=reviewSource(file,"source-"+file.getName());if(row.has("token"))result.put(row);}
+                    // A missing reservation must not hide the last valid published original.
+                    if(e!=null){knownIds.add(e.getString("id"));try{if(!new File(media,e.getString("temporary")).exists()&&matches(safe(media,e.getString("id")),e))
+                        result.put(new JSONObject().put("id",e.getString("id")).put("token","legacy-"+e.getString("id")).put("state","needs-review").put("available",true).put("attachable",false));}catch(Exception ignored){}}
+                    continue;
                 }
-                String state="needs-review";String[] bound=available?binding(durable,e.getString("id")):null;
+                knownIds.add(e.getString("id"));boolean available=false;
+                if(e.getBoolean("completed"))try{
+                    if(automatic){e=read(token);resume(e);available=true;}
+                    else available=verifiedFinal(e); // No publication, metadata writes or binding while quarantined.
+                }catch(Exception error){/* KEEP; a failed item must not abort its neighbours. */}
+                String state="needs-review";String[] bound=available&&automatic?binding(database,e.getString("id")):null;
                 if(bound!=null)state="bound";else if(available)state="pending";
-                if(!state.equals(e.getString("state"))||bound!=null&&(!bound[0].equals(e.optString("record"))||!bound[1].equals(e.optString("note")))){
+                if(automatic&&(!state.equals(e.getString("state"))||bound!=null&&(!bound[0].equals(e.optString("record"))||!bound[1].equals(e.optString("note"))))){
                     JSONObject next=new JSONObject(e.toString()).put("state",state);
                     if(bound!=null)next.put("record",bound[0]).put("note",bound[1]);
                     try{write(next);e=next;}catch(Exception failure){state="needs-review";}
                 }
-                if(!"bound".equals(state))result.put(new JSONObject().put("token",token).put("id",e.getString("id")).put("state",state).put("available",available).put("createdAt",e.getLong("createdAt")));
+                if(!"bound".equals(state)){
+                    JSONObject row=new JSONObject().put("id",e.getString("id")).put("state",state).put("available",available).put("attachable",available&&automatic).put("createdAt",e.getLong("createdAt"));
+                    try{original(token);row.put("token",token);}catch(Exception missing){}
+                    result.put(row);
+                }
             }
-            if(files!=null)for(File f:files)if(f.getName().startsWith(".capture-")&&f.getName().endsWith(".tmp"))
-                result.put(new JSONObject().put("token","staging-"+f.getName()).put("state","needs-review").put("available",false));
-            // Legacy audio or unreferenced files with missing metadata are uncertain evidence.
-            Set<String> references=durable==null?Collections.emptySet():PeerSnapshot.cleanupReferences(new JSONObject(durable).getJSONArray("records"));
-            if(files!=null)for(File f:files)if(validId(f.getName())&&!knownIds.contains(f.getName())){
-                String mime=prefs.getString("mime-"+f.getName(),"");
-                if((mime.startsWith("audio/")&&binding(durable,f.getName())==null)||(mime.isEmpty()&&!references.contains(f.getName())))
-                    result.put(new JSONObject().put("id",f.getName()).put("token","legacy-"+f.getName()).put("state","needs-review").put("available",false));
+            for(File f:found.mediaFiles)if(f.getName().startsWith(".capture-")&&f.getName().endsWith(".tmp"))result.put(reviewSource(f,"staging-"+f.getName()));
+            Set<String> exportable=new HashSet<>();for(int i=0;i<result.length();i++){JSONObject row=result.getJSONObject(i);if(row.has("token")&&row.has("id"))exportable.add(row.getString("id"));}
+            for(File f:found.mediaFiles)if(validId(f.getName())&&(!knownIds.contains(f.getName())||!exportable.contains(f.getName()))){
+                try{String mime=prefs.getString("mime-"+f.getName(),"");
+                    if((knownIds.contains(f.getName())&&!exportable.contains(f.getName())&&found.uncertain)||(mime.startsWith("audio/")&&(found.uncertain||projectUncertain||binding(database,f.getName())==null))||(mime.isEmpty()&&!references.contains(f.getName())))
+                        result.put(reviewSource(f,"legacy-"+f.getName()).put("id",f.getName()));
+                }catch(Exception invalid){result.put(reviewSource(f,"legacy-"+f.getName()).put("id",f.getName()));}
             }
+            if(found.uncertain||projectUncertain)result.put(new JSONObject().put("issue","journal-uncertain").put("state","needs-review").put("available",false).put("attachable",false));
             return result;
         }
     }
@@ -226,10 +288,16 @@ final class PendingAudio {
     boolean confirm(String expected,String record,String note,String id) throws Exception {
         synchronized(TrashPurger.LOCK){
             String durable=LocalDatabase.readFile(safe(media.getParentFile(),"projects.json"));syncDirectory(media.getParentFile());
-            if(!durable.equals(expected))return false;String[] bound=binding(durable,id);
+            if(!durable.equals(expected))return false;PeerSnapshot.cleanupReferences(new JSONObject(durable).getJSONArray("records"));String[] bound=binding(durable,id);
             if(bound==null||!bound[0].equals(record)||!bound[1].equals(note))return false;
-            recover(durable);
-            for(String token:tokens()){JSONObject e=read(token);if(id.equals(e.getString("id")))return "bound".equals(e.getString("state"));}
+            Inventory found=inventory();if(found.uncertain)return false;
+            for(JSONObject e:found.entries.values())if(id.equals(e.getString("id"))){
+                // Confirm only this identity. Unrelated media must not be rehashed N times for N IDs.
+                if(!e.getBoolean("completed"))return false;resume(e);
+                if(!"bound".equals(e.getString("state"))||!record.equals(e.optString("record"))||!note.equals(e.optString("note")))
+                    write(new JSONObject(e.toString()).put("state","bound").put("record",record).put("note",note));
+                return true;
+            }
             return false;
         }
     }
@@ -242,10 +310,53 @@ final class PendingAudio {
             if(token!=null&&token.startsWith("legacy-")&&validId(token.substring(7))){
                 File file=safe(media,token.substring(7));if(!file.isFile()||file.length()>MediaStaging.LIMIT)throw new IOException("Invalid legacy original");return file;
             }
+            if(token!=null&&token.startsWith("source-")){
+                String name=token.substring(7);Matcher m=TEMP.matcher(name);
+                if(!m.matches()||ACTIVE.contains(m.group(2)))throw new IOException("Invalid retained source");
+                File file=safe(media,name);if(!file.isFile()||file.length()>MediaStaging.LIMIT)throw new IOException("Invalid retained source");return file;
+            }
             if(token==null||!token.matches("[a-f0-9-]{36}")||ACTIVE.contains(token))throw new IOException("Audio not available for inspection");
-            directory(media);File[] files=media.listFiles();if(files==null)throw new IOException("Cannot list audio originals");
-            for(File file:files){Matcher m=TEMP.matcher(file.getName());if(m.matches()&&token.equals(m.group(2))){File checked=safe(media,file.getName());if(!checked.isFile()||checked.length()>MediaStaging.LIMIT)throw new IOException("Invalid retained original");return checked;}}
+            // A valid ledger identifies the intended file; never choose the first duplicate token.
+            JSONObject e=null;try{e=read(token,false);}catch(Exception invalid){}
+            if(e!=null){try{File source=temporary(e);if(source.isFile()&&source.length()<=MediaStaging.LIMIT)return source;}catch(IOException unsafe){/* The independently verified final may still be the last valid copy. */}
+                File target=safe(media,e.getString("id"));if(e.getBoolean("completed")&&matches(target,e))return target;
+            }else{
+                directory(media);File[] files=media.listFiles();if(files==null)throw new IOException("Cannot list audio originals");File only=null;
+                for(File file:files){Matcher m=TEMP.matcher(file.getName());if(m.matches()&&token.equals(m.group(2))){if(only!=null)throw new IOException("Ambiguous capture token");only=file;}}
+                if(only!=null){File checked=safe(media,only.getName());if(checked.isFile()&&checked.length()<=MediaStaging.LIMIT)return checked;}
+            }
             throw new IOException("Retained original not found");
+        }
+    }
+    /** Copy a bounded, stable original. Failures never alter the source. */
+    interface CopyDestination { OutputStream open() throws IOException; }
+    JSONObject copyOriginal(String token,OutputStream output) throws Exception {return copyOriginal(token,()->output);}
+    JSONObject copyOriginal(String token,CopyDestination destination) throws Exception {
+        File file=original(token);
+        java.nio.file.attribute.BasicFileAttributes before=Files.readAttributes(file.toPath(),java.nio.file.attribute.BasicFileAttributes.class,LinkOption.NOFOLLOW_LINKS);
+        if(!before.isRegularFile()||before.isSymbolicLink()||before.size()>MediaStaging.LIMIT||before.fileKey()==null)
+            throw new IOException("Unverifiable retained source");
+        MessageDigest digest=MessageDigest.getInstance("SHA-256");
+        long remaining=before.size();byte[] block=new byte[65536];
+        try(FileInputStream input=new FileInputStream(file)){
+            if(input.getChannel().size()!=before.size())throw new IOException("Retained source changed before copy");
+            // Open the source BEFORE a caller-selected destination can be truncated.
+            try(OutputStream output=destination.open()){
+                if(output==null)throw new IOException("Export destination unavailable");
+                while(remaining>0){
+                    checkpoint.check("export-read");
+                    int n=input.read(block,0,(int)Math.min(block.length,remaining));
+                    if(n<0)throw new EOFException("Retained source truncated");
+                    if(n==0)throw new IOException("Retained copy stalled");
+                    output.write(block,0,n);digest.update(block,0,n);remaining-=n;
+                }
+                if(input.read()!=-1)throw new IOException("Retained source grew");
+                java.nio.file.attribute.BasicFileAttributes after=Files.readAttributes(file.toPath(),java.nio.file.attribute.BasicFileAttributes.class,LinkOption.NOFOLLOW_LINKS);
+                if(!after.isRegularFile()||after.isSymbolicLink()||!before.fileKey().equals(after.fileKey())||before.size()!=after.size()||!before.lastModifiedTime().equals(after.lastModifiedTime()))
+                    throw new IOException("Retained source changed during copy");
+                output.flush();
+                return new JSONObject().put("size",before.size()).put("sha256",ArchiveIntegrity.hex(digest.digest()));
+            } // A failed close also prevents a success acknowledgement.
         }
     }
     Set<String> referencedAudio(Object value) throws Exception {
@@ -272,7 +383,8 @@ final class PendingAudio {
             try{
                 String mime=prefs.getString("mime-"+id,"");
                 if(mime.startsWith("audio/"))return true;
-                for(String token:tokens())if(id.equals(read(token).getString("id")))return true;
+                Inventory found=inventory();if(found.uncertain)return true;
+                for(JSONObject e:found.entries.values())if(id.equals(e.getString("id")))return true;
                 File[] files=media.listFiles();if(files!=null)for(File file:files){Matcher m=TEMP.matcher(file.getName());if(m.matches()&&id.equals(m.group(1)))return true;if(file.getName().startsWith(".capture-"+id+"-"))return true;}
                 return false;
             }catch(Exception uncertainty){return true;}

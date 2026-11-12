@@ -1399,11 +1399,15 @@
         {
           "path": "tools/e2e/pending-audio.cjs",
           "layer": "chromium"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/AudioRecoveryIsolationTest.java",
+          "layer": "native-jvm"
         }
       ],
       "coverage": "runtime-partial",
       "positive": "Completed audio survives metadata failure with exact SHA256; durable primary binding, restart and user recovery.",
-      "negative": "Ledger/fsync/publication faults, corrupt/missing/backup evidence, collisions, stale CAS, failed Save/Cancel, no audio GC.",
+      "negative": "Ledger/fsync/publication faults, corrupt/missing/backup evidence, collisions, stale CAS, failed Save/Cancel, no audio GC. Unknown/unreadable journal, mixed corrupt/healthy entries, duplicate reservations, missing/unsafe source links, selected-copy failure and no repeated full scan after Save.",
       "limits": [
         "Robolectric is not Android hardware/power-loss; browser Native is a model.",
         "Real disk-full, filesystem hard-link/directory fsync on devices, microphone and SAF destination require Android acceptance.",

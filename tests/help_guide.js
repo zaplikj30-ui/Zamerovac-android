@@ -13,6 +13,7 @@ assert(notesGuide?.notes.some(t=>t.includes('Uchované hlasové nahrávky')&&t.i
 assert(notesGuide?.notes.some(t=>t.includes('Připojit k této poznámce')&&t.includes('Uložit kopii originálu')),'Attach and uncertain-original recovery actions must be explained');
 assert(notesGuide?.notes.some(t=>t.includes('Automatické mazání nahrávek je vypnuté i při vysypání koše')),'No audio GC, including trash purge');
 assert(notesGuide?.notes.some(t=>t.includes('ZIP zakázek nezahrnuje nepřipojené nahrávky')),'Backup limitation must be explicit');
+assert(notesGuide?.notes.some(t=>t.includes('Ostatní dostupné originály')&&t.includes('samostatné upozornění')),'Fault isolation and export of healthy originals must be documented');
 assert(help.chapters.find(c=>c.id==='trash')?.notes.some(s=>s.includes('starších vložených záznamů')),'Trash help must describe retained legacy references');
 assert(help.chapters.find(c=>c.id==='trash')?.notes.some(s=>s.includes('nepřiměřeně zanořená')),'Trash help must explain fail-closed history check');
 assert(help.chapters.find(x=>x.id==='undo')?.notes.some(x=>x.includes('nevytvoří krok historie')&&x.includes('Znovu')),'Undo/Redo gesture preservation must be explained');

@@ -255,7 +255,7 @@ function openRichNote(item,isNew){
     completedDraftAudio.add(recording);
     if(!attachments.includes(recording))attachments.push(recording);
     audioIds.add(recording);recording=null;
-    btn.textContent='🎙 Nahrát hlas';render();notify('Hlas připojen k poznámce');
+    btn.textContent='🎙 Nahrát hlas';render();notify(window.ZamerovacI18n?.t('audio.stopped')||'Nahrávka je dokončená v návrhu. Potvrď Uložit.');
   }
  };
  $('richEditDetail').onclick=()=>{

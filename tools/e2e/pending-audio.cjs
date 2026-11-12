@@ -16,7 +16,7 @@ async function install(page){
     if(rejectWrite)return JSON.stringify({ok:false,error:'synthetic ENOSPC'});
     if(expected!==disk())return JSON.stringify({ok:false,current:disk()});localStorage.setItem('audio-ui-disk',text);
     if(!rejectBind)put(entries().map(e=>({...e,bound:referenced(JSON.parse(text),e.id)})));
-    return JSON.stringify({ok:true,audioPending:entries().some(e=>!e.bound)});
+    return JSON.stringify({ok:true,audioPending:entries().some(e=>!e.bound),pendingAudioCount:entries().filter(e=>!e.bound).length});
    },
    startAudio:id=>{recording=id;return true},stopAudio:()=>{if(!recording)return false;put([...entries(),{id:recording,token:'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',state:'pending',available:true}]);recording=null;return !rejectStop},cancelAudio:()=>{recording=null},
    pendingAudio:()=>JSON.stringify(entries().filter(e=>!e.bound)),
@@ -30,6 +30,32 @@ async function install(page){
 async function prepare(page){await createCanvas(page,'Audio 1250,123456789 in');await tool(page,'note');await drag(page,{x:140,y:240},{x:230,y:290});await editSelected(page);await page.fill('#richText','Původní poznámka');await page.click('#okModal');await page.evaluate(()=>{current.items[0].measure='1250,123456789';current.items[0].unit='in';save()});await editSelected(page);}
 async function stop(page){await page.click('#richVoice');await page.click('#richVoice');}
 suite('pending-audio',async run=>{
+ await run('ordinary-save-uses-native-summary-without-requesting-another-full-media-scan',async({page})=>{
+  await install(page);await prepare(page);
+  const calls=await page.evaluate(()=>{let calls=0;const previous=Native.pendingAudio;Native.pendingAudio=()=>{calls++;return previous()};save();return calls});
+  assert.equal(calls,0,'UI must not request another full recovery after Native already checked the save');
+ });
+
+ await run('stop-is-only-a-draft-before-cancel-and-failed-save',async({page})=>{
+  await install(page);await prepare(page);const before=await page.evaluate(()=>localStorage.getItem('audio-ui-disk'));await stop(page);
+  assert.match(await page.locator('#toast').innerText(),/Uložit/);assert.doesNotMatch(await page.locator('#toast').innerText(),/Hlas připojen k poznámce/);
+  await page.evaluate(()=>rejectWrite=true);await page.click('#okModal');assert.equal(await page.evaluate(()=>localStorage.getItem('audio-ui-disk')),before);await page.click('#cancelModal');
+ });
+ await run('unknown-journal-warning-preserves-two-independent-copy-actions',async({page})=>{
+  await install(page);await page.evaluate(()=>{localStorage.setItem('audio-ui-journal',JSON.stringify([
+   {id:'voice-one',token:'one-token',state:'pending',available:true,attachable:false},
+   {id:'voice-two',token:'two-token',state:'pending',available:true,attachable:false},
+   {issue:'journal-uncertain',state:'needs-review',available:false}
+  ]));PendingAudio.refresh()});
+  await page.click('#pendingAudioBanner');assert.match(await page.locator('#retainedAudioList').innerText(),/Evidence.*kontrolu/);
+  const buttons=page.locator('#retainedAudioList').getByText('Uložit kopii originálu',{exact:true});assert.equal(await buttons.count(),2);
+  await buttons.nth(0).click();await buttons.nth(1).click();assert.deepEqual(await page.evaluate(()=>exports),['one-token','two-token']);
+  await page.click('#okModal');await prepare(page);assert.equal(await page.locator('#richRetainedAudio').getByText('Připojit k této poznámce',{exact:true}).count(),0);
+  const saved=await page.evaluate(()=>localStorage.getItem('audio-ui-disk'));await page.fill('#richText','Neuložená změna');await page.evaluate(()=>rejectWrite=true);await page.click('#okModal');await page.click('#cancelModal');
+  assert.equal(await page.evaluate(()=>localStorage.getItem('audio-ui-disk')),saved);await page.reload();await page.click('#pendingAudioBanner');assert.equal(await page.locator('#retainedAudioList').getByText('Uložit kopii originálu',{exact:true}).count(),2);
+
+ });
+
  await run('stop-cancel-restart-reattach-save-preserves-exact-values',async({page,evidence})=>{
   await install(page);await prepare(page);await stop(page);assert.equal(await page.evaluate(()=>current.items[0].audioMedia?.length||0),0);await page.click('#cancelModal');
   const saved=await page.evaluate(()=>localStorage.getItem('audio-ui-disk'));await page.reload();assert.equal(await page.locator('#pendingAudioBanner').isVisible(),true);

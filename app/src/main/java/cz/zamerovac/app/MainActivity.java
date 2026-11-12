@@ -471,11 +471,7 @@ public class MainActivity extends Activity {
                 final Uri destination=data.getData();
                 if(!"content".equals(destination.getScheme())||(getPackageName()+".files").equals(destination.getAuthority())){error(getString(R.string.audio_copy_invalid));return;}
                 new Thread(()->{try{
-                    File original=new PendingAudio(new File(getFilesDir(),"media"),settings).original(token);
-                    try(InputStream in=new FileInputStream(original);OutputStream out=getContentResolver().openOutputStream(destination,"wt")){
-                        if(out==null)throw new IOException("Export unavailable");byte[] block=new byte[65536];int n;
-                        while((n=in.read(block))!=-1)out.write(block,0,n);out.flush();
-                    }
+                    new PendingAudio(new File(getFilesDir(),"media"),settings).copyOriginal(token,()->getContentResolver().openOutputStream(destination,"wt"));
                     js("window.PendingAudio?.exported()");
                 }catch(Exception failure){error(getString(R.string.audio_copy_failed));}},"RetainedAudioExport").start();
             }
@@ -764,9 +760,8 @@ public class MainActivity extends Activity {
                     if(!current.equals(expected))return new JSONObject().put("ok",false).put("current",current.isEmpty()?"{\"schema\":1,\"records\":[]}":current).toString();
                     writeDb(text);lastUiGeneration=LocalDatabase.generation(getFilesDir());
                     // The project commit has already succeeded. A journal failure cannot roll it back.
-                    try{if(new PendingAudio(new File(getFilesDir(),"media"),settings).recoverPrimary().length()>0)return "{\"ok\":true,\"audioPending\":true}";}
+                    try{int pending=new PendingAudio(new File(getFilesDir(),"media"),settings).recoverPrimary().length();return new JSONObject().put("ok",true).put("audioPending",pending>0).put("pendingAudioCount",pending).toString();}
                     catch(Exception uncertainty){return "{\"ok\":true,\"audioPending\":true}";}
-                    return "{\"ok\":true}";
                 }catch(Exception e){try{return new JSONObject().put("ok",false).put("error","Uložení se nezdařilo; poslední potvrzená data zůstávají chráněná.").toString();}catch(Exception ignored){return "{}";}}
             }
         }
