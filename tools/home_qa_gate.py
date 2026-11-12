@@ -9,6 +9,7 @@ Only Python standard-library dependencies are used.
 from __future__ import annotations
 
 import argparse
+import hashlib
 import os
 from pathlib import Path
 import platform
@@ -227,59 +228,173 @@ jobs:
 # Keep the existing canonical quick + WSL recipe byte-identical. A distinct,
 # strictly allowlisted mode runs REAL Chromium pixel tests on the same trusted
 # Windows service, without Android builds or full WSL/Gradle repetition.
-ONE_SHOT_BROWSER_STEPS = r'''      - name: Serial Windows Chromium pixel and editor regression
+# Legacy quick+WSL ONE_SHOT_RECIPE above stays byte-identical.
+# Browser mode runs a PINNED validator and only owner-named source branches.
+BROWSER_PREFLIGHT = r'''      - name: Check owner branch SHA and separate validator BEFORE running source code
         shell: cmd
         run: |
           cd /d "%GITHUB_WORKSPACE%\source"
-          set "PLAYWRIGHT_BROWSERS_PATH=C:\actions-runner\tools\ms-playwright"
-          set "LOCALAPPDATA=%GITHUB_WORKSPACE%\qa-evidence"
+          for /f %%H in ('git rev-parse HEAD') do set "ACTUAL_SOURCE=%%H"
+          if not defined ACTUAL_SOURCE exit /b 1
+          if /I not "%ACTUAL_SOURCE%"=="__SOURCE_SHA__" exit /b 1
+          cd /d "%GITHUB_WORKSPACE%\gate"
+          for /f %%H in ('git rev-parse HEAD') do set "ACTUAL_GATE=%%H"
+          if not defined ACTUAL_GATE exit /b 1
+          if /I not "%ACTUAL_GATE%"=="__GATE_SHA__" exit /b 1
+          python tools\home_qa_gate.py lint-workflow "..\recipe\.github\workflows\home-qa-one-shot.yml" --strict
+          if errorlevel 1 exit /b 1
+          echo TRUSTED_OWNER_SOURCE_BRANCH=__SOURCE_BRANCH__ TESTED_SOURCE_SHA=%ACTUAL_SOURCE% GATE_SHA=%ACTUAL_GATE%
+'''
+BROWSER_STEPS = r'''      - name: Isolated offline package-lock Chromium prerequisites
+        shell: cmd
+        run: |
+          if exist "%GITHUB_WORKSPACE%\qa-browser-deps" exit /b 1
+          mkdir "%GITHUB_WORKSPACE%\qa-browser-deps"
+          if errorlevel 1 exit /b 1
+          copy /y "%GITHUB_WORKSPACE%\gate\tools\qa-browser\package.json" "%GITHUB_WORKSPACE%\qa-browser-deps\package.json" >nul
+          if errorlevel 1 exit /b 1
+          copy /y "%GITHUB_WORKSPACE%\gate\tools\qa-browser\package-lock.json" "%GITHUB_WORKSPACE%\qa-browser-deps\package-lock.json" >nul
+          if errorlevel 1 exit /b 1
+          cd /d "%GITHUB_WORKSPACE%\qa-browser-deps"
+          set "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1"
+          call npm.cmd ci --offline --ignore-scripts --omit=optional --no-audit --no-fund
+          if errorlevel 1 exit /b 1
+          python "%GITHUB_WORKSPACE%\gate\tools\home_qa_gate.py" verify-browser --browser-root "C:\actions-runner\tools\ms-playwright" --expected-sha256 __BROWSER_SHA256__
+          if errorlevel 1 exit /b 1
+          echo NODE_PATH=%GITHUB_WORKSPACE%\qa-browser-deps\node_modules>>"%GITHUB_ENV%"
+          echo PLAYWRIGHT_BROWSERS_PATH=C:\actions-runner\tools\ms-playwright>>"%GITHUB_ENV%"
+          echo LOCALAPPDATA=%GITHUB_WORKSPACE%\qa-evidence>>"%GITHUB_ENV%"
+      - name: Real Chromium and editor pixel QA with durable checkpoints
+        shell: cmd
+        run: |
+          cd /d "%GITHUB_WORKSPACE%\source"
           python tools\home_qa_gate.py windows-quick --expected-sha __SOURCE_SHA__ --root . --check-only
           if errorlevel 1 exit /b 1
           node tools\local-browser-qa.cjs --self-test
-          if errorlevel 1 exit /b 1
-          call npm.cmd install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.62.1
-          if errorlevel 1 exit /b 1
-          call npx.cmd --no-install playwright install chromium
           if errorlevel 1 exit /b 1
           node tools\local-browser-qa.cjs --all
           if errorlevel 1 exit /b 1
 '''
 
 def browser_workflow_recipe() -> str:
-    """Only an exact canonical Windows-only browser variant is permitted."""
+    """Exact browser allowlist derived from unchanged quick template."""
     first = "      - name: All quick Windows Node and Python tests\n"
     last = "      - name: Upload synthetic quick results, never APK\n"
-    demand(ONE_SHOT_RECIPE.count(first) == 1 and ONE_SHOT_RECIPE.count(last) == 1,
-           "canonical recipe changed: browser mode must not guess step boundaries")
-    start = ONE_SHOT_RECIPE.index(first)
-    stop = ONE_SHOT_RECIPE.index(last, start)
-    base = ONE_SHOT_RECIPE[:start] + ONE_SHOT_BROWSER_STEPS + ONE_SHOT_RECIPE[stop:]
-    old_lint = r'python tools\home_qa_gate.py lint-workflow'
-    new_lint = r'python ..\recipe\tools\home_qa_gate.py lint-workflow'
-    demand(base.count(old_lint) == 1, "canonical lint guard changed")
-    base = base.replace(old_lint, new_lint)
-    base = base.replace("      - name: Upload synthetic quick results, never APK",
-                        "      - name: Upload small browser logs, no APK or source media")
-    base = base.replace("name: canonical-home-qa-__SOURCE_SHA__",
-                        "name: canonical-home-browser-__SOURCE_SHA__")
+    guard = "      - name: Exact YAML preflight and adversarial negative tests before QA\n"
+    demand(all(ONE_SHOT_RECIPE.count(x) == 1 for x in (first, last, guard)),
+           "canonical recipe changed")
+    recipe = ONE_SHOT_RECIPE.replace(
+        "          ref: __SOURCE_SHA__\n          path: source",
+        "          repository: zaplikj30-ui/Zamerovac-android\n"
+        "          ref: __SOURCE_BRANCH__\n          path: source")
+    fixed_gate = r'''      - name: Read-only trusted validator pinned to reviewed OWNER SHA
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: zaplikj30-ui/Zamerovac-android
+          ref: __GATE_SHA__
+          path: gate
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+'''
+    first_at = recipe.index(guard)
+    last_at = recipe.index(first, first_at)
+    recipe = recipe[:first_at] + fixed_gate + BROWSER_PREFLIGHT + recipe[last_at:]
+    first_at = recipe.index(first)
+    last_at = recipe.index(last, first_at)
+    recipe = recipe[:first_at] + BROWSER_STEPS + recipe[last_at:]
+    recipe = recipe.replace("      - name: Upload synthetic quick results, never APK",
+                            "      - name: Upload checkpointed synthetic Chromium reports, no APK")
+    recipe = recipe.replace("name: canonical-home-qa-__SOURCE_SHA__",
+                            "name: canonical-home-browser-__SOURCE_SHA__")
     old_path = "          path: qa-evidence/Zamerovac-QA/results/"
-    new_path = (
-        "          path: |\n"
-        "            qa-evidence/Zamerovac-QA/browser/**/results.json\n"
-        "            qa-evidence/Zamerovac-QA/browser/**/*.log\n"
-        "            qa-evidence/Zamerovac-QA/browser/**/evidence/**/report.json"
-    )
-    demand(base.count(old_path) == 1, "canonical artifact path changed")
-    base = base.replace(old_path, new_path).replace("retention-days: 7", "retention-days: 3")
-    return base
+    new_path = ("          path: |\n"
+                "            qa-evidence/Zamerovac-QA/browser/**/results.json\n"
+                "            qa-evidence/Zamerovac-QA/browser/**/*.log\n"
+                "            qa-evidence/Zamerovac-QA/browser/**/evidence/**/report.json")
+    demand(recipe.count(old_path) == 1, "unknown canonical artifact path")
+    return recipe.replace(old_path, new_path).replace("retention-days: 7", "retention-days: 3")
 
-def render_workflow(branch: str, source_sha: str, browser: bool = False) -> str:
+
+def safe_owner_branch(branch: str) -> bool:
+    """Reject PR refs, shell characters and ambiguous Git revision syntax."""
+    return (bool(re.fullmatch(r"[a-z][a-z0-9_-]*/[a-z][a-z0-9._/-]{2,75}", branch))
+            and not any(x in branch for x in ("..", "//", "/.", ".lock", "@{"))
+            and not branch.endswith(("/", ".")))
+
+
+def browser_candidates(root: Path) -> list[Path]:
+    allowed = {"chrome.exe", "headless_shell.exe", "chrome-headless-shell.exe"}
+    if not root.is_dir() or root.is_symlink():
+        return []
+    found = []
+    for candidate in root.glob("chromium*/**/*.exe"):
+        if candidate.name.lower() not in allowed or candidate.is_symlink():
+            continue
+        if not candidate.resolve().is_relative_to(root.resolve()):
+            continue
+        if any(part.is_symlink() for part in candidate.parents if part != root.parent):
+            continue
+        found.append(candidate)
+    return sorted(found)
+
+
+def sha256_file(path: Path) -> str:
+    digest = hashlib.sha256()
+    with path.open("rb") as stream:
+        for block in iter(lambda: stream.read(1024 * 1024), b""):
+            digest.update(block)
+    return digest.hexdigest()
+
+
+def verify_browser(root: Path, expected: str, environ: dict[str, str] | None = None) -> Path:
+    """Only preinstalled read-only browser with explicit owner-approved SHA256."""
+    env = os.environ if environ is None else environ
+    demand(bool(re.fullmatch(r"[0-9a-f]{64}", expected)), "pin literal browser SHA256")
+    if platform.system() == "Windows":
+        demand(root.resolve() == Path(r"C:\actions-runner\tools\ms-playwright").resolve(),
+               "untrusted browser install directory")
+    hits = [p for p in browser_candidates(root) if sha256_file(p) == expected]
+    demand(len(hits) == 1, "missing/ambiguous/wrong-hash Chromium binary; STOP")
+    if env.get("GITHUB_ACTIONS") == "true":
+        target = env.get("GITHUB_ENV", "")
+        demand(bool(target), "GITHUB_ENV missing")
+        with Path(target).open("a", encoding="utf-8") as stream:
+            stream.write("CHROMIUM_PATH=" + str(hits[0].resolve()) + "\n")
+    return hits[0]
+
+
+def report_browser_fingerprints() -> None:
+    """Read-only SHA256 inventory; printing a hash never means it was approved."""
+    if platform.system() != "Windows":
+        return
+    for candidate in browser_candidates(Path(r"C:\actions-runner\tools\ms-playwright")):
+        print("BROWSER_CANDIDATE_SHA256=" + sha256_file(candidate) +
+              " PATH=" + str(candidate), flush=True)
+
+
+def render_workflow(branch: str, source_sha: str, browser: bool = False,
+                    source_branch: str | None = None, validator_sha: str | None = None,
+                    browser_sha256: str | None = None) -> str:
     demand(bool(re.fullmatch(r"qa/[a-z][a-z0-9._-]{3,65}", branch)),
            "only a literal trusted qa/* branch is allowed")
     demand(bool(SHA.fullmatch(source_sha)), "exact 40-character source SHA required")
+    if browser:
+        demand(bool(source_branch and safe_owner_branch(source_branch)),
+               "browser requires a literal owner source branch, not PR ref")
+        demand(bool(validator_sha and SHA.fullmatch(validator_sha)),
+               "browser requires an independently reviewed gate SHA")
+        demand(bool(browser_sha256 and re.fullmatch(r"[0-9a-f]{64}", browser_sha256)),
+               "browser requires SHA256 of preverified Chromium")
+    else:
+        demand(source_branch is None and validator_sha is None and browser_sha256 is None,
+               "quick may not silently receive browser-only arguments")
     template = browser_workflow_recipe() if browser else ONE_SHOT_RECIPE
     return (template.replace("__QA_BRANCH__", branch)
-            .replace("__SOURCE_SHA__", source_sha).lstrip("\n"))
+            .replace("__SOURCE_SHA__", source_sha)
+            .replace("__SOURCE_BRANCH__", source_branch or "")
+            .replace("__GATE_SHA__", validator_sha or "")
+            .replace("__BROWSER_SHA256__", browser_sha256 or "").lstrip("\n"))
 
 
 
@@ -313,19 +428,27 @@ def output_canonical_utf8(payload: bytes, output: Path | None) -> None:
 
 
 def check_workflow(content: str, strict: bool = True) -> None:
-    """Refuse all YAML outside known-good single-job one-shot template."""
-    demand(strict, "permissive legacy YAML scan is no longer allowed")
+    """Exact allowlist: no injected steps, jobs, triggers, or unreviewed scripts."""
+    demand(strict, "permissive YAML scan is forbidden")
     normalized = content.replace("\r\n", "\n")
     branch = re.search(r"(?m)^    branches: \[(qa/[a-z][a-z0-9._-]{3,65})\]$", normalized)
-    source = re.search(r"(?m)^          ref: ([0-9a-f]{40})$", normalized)
-    demand(bool(branch and source), "unknown workflow: render approved HOME recipe")
-    allowed = (
-        render_workflow(branch.group(1), source.group(1)),
-        render_workflow(branch.group(1), source.group(1), browser=True),
-    )
-    demand(normalized in allowed,
-           "unknown YAML, job, trigger, checkout, browser, step order or WSL command: STOP")
-
+    demand(bool(branch), "unknown owner-only QA branch")
+    if "          path: gate\n" in normalized:
+        source = re.search(r"(?m)^      TESTED_SHA: '([0-9a-f]{40})'$", normalized)
+        source_branch = re.search(r"(?m)^          ref: ([a-z0-9_./-]+)\n          path: source$", normalized)
+        validator = re.search(r"(?m)^          ref: ([0-9a-f]{40})\n          path: gate$", normalized)
+        binary = re.search(r"(?m)verify-browser --browser-root [^\n]* --expected-sha256 ([0-9a-f]{64})$", normalized)
+        demand(bool(source and source_branch and validator and binary),
+               "missing source provenance/validator/binary pin")
+        allowed = render_workflow(branch.group(1), source.group(1), browser=True,
+                                  source_branch=source_branch.group(1),
+                                  validator_sha=validator.group(1),
+                                  browser_sha256=binary.group(1))
+    else:
+        source = re.search(r"(?m)^          ref: ([0-9a-f]{40})$", normalized)
+        demand(bool(source), "quick source SHA missing")
+        allowed = render_workflow(branch.group(1), source.group(1))
+    demand(normalized == allowed, "unknown YAML, PR/cloud job, checkout, steps or browser commands: STOP")
 
 
 def jdk_probes() -> None:
@@ -400,6 +523,9 @@ def main(argv: list[str] | None = None) -> int:
     render.add_argument("--expected-sha", required=True)
     render.add_argument("--browser", action="store_true",
                         help="single-job Windows Chromium QA, no APK or WSL")
+    render.add_argument("--source-branch")
+    render.add_argument("--validator-sha")
+    render.add_argument("--browser-sha256")
     render.add_argument("--output", type=Path)
     wsl = modes.add_parser("wsl-check-from-windows")
     wsl.add_argument("--expected-sha", required=True)
@@ -407,13 +533,24 @@ def main(argv: list[str] | None = None) -> int:
     lint = modes.add_parser("lint-workflow")
     lint.add_argument("path", type=Path)
     lint.add_argument("--strict", action="store_true")
+    browser_check = modes.add_parser("verify-browser")
+    browser_check.add_argument("--browser-root", required=True, type=Path)
+    browser_check.add_argument("--expected-sha256", required=True)
     modes.add_parser("wsl-python-node")
     args = ap.parse_args(argv)
     try:
         if args.mode == "render-workflow":
             payload = render_workflow(args.branch, args.expected_sha,
-                                      browser=args.browser).encode("utf-8")
+                                      browser=args.browser, source_branch=args.source_branch,
+                                      validator_sha=args.validator_sha,
+                                      browser_sha256=args.browser_sha256).encode("utf-8")
             output_canonical_utf8(payload, args.output)
+            return 0
+        if args.mode == "verify-browser":
+            trusted_owner(os.environ)
+            selected = verify_browser(args.browser_root, args.expected_sha256)
+            print("PASS CHROMIUM_SHA256=" + args.expected_sha256 +
+                  " FILE=" + str(selected), flush=True)
             return 0
         if args.mode == "wsl-check-from-windows":
             trusted_owner(os.environ)
@@ -440,6 +577,7 @@ def main(argv: list[str] | None = None) -> int:
         actual = git_source(checkout, args.expected_sha)
         print("HOME PREFLIGHT PASS mode=%s TESTED_SOURCE_SHA=%s" % (args.mode, actual), flush=True)
         if args.mode == "windows-quick" and not args.check_only:
+            report_browser_fingerprints()
             return subprocess.run(["node", "tools/local-qa.cjs", "--quick"],
                                   cwd=checkout, check=False).returncode
         if args.mode == "wsl-jdk-probes":
