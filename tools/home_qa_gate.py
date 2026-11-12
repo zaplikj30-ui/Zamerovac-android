@@ -233,6 +233,8 @@ ONE_SHOT_BROWSER_STEPS = r'''      - name: Serial Windows Chromium pixel and edi
           cd /d "%GITHUB_WORKSPACE%\source"
           set "PLAYWRIGHT_BROWSERS_PATH=C:\actions-runner\tools\ms-playwright"
           set "LOCALAPPDATA=%GITHUB_WORKSPACE%\qa-evidence"
+          python tools\home_qa_gate.py windows-quick --expected-sha __SOURCE_SHA__ --root . --check-only
+          if errorlevel 1 exit /b 1
           node tools\local-browser-qa.cjs --self-test
           if errorlevel 1 exit /b 1
           call npm.cmd install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.62.1
