@@ -183,6 +183,41 @@ suite('gallery-state',async test=>{
     return {colored,marker:p};
    });
    assert(!gallery.error,JSON.stringify(gallery));assert(gallery.colored>8,'Gallery must contain visible voice glyph pixels');
+   // A positive raster alone can be a false PASS because of photo/text ink.
+   // Compare real browser pixels with the SAME photo, caption and transform,
+   // changing only audioMedia on a throwaway cloned item.
+   const voiceDifference=await page.evaluate(()=>{
+    const item=current.items.find(x=>x.id==='voice-visual');
+    const image=__detailPhotoCache[item.media[0]];
+    const render=canvas=>annotationRenderContext(canvas.getContext('2d'),{
+     view:{zoom:1,dx:0,dy:0},photoSize:{w:1200,h:800},
+     viewport:{w:1700,h:1250},selected:null,exporting:true,prefs});
+    function draw(audio){
+     const canvas=document.createElement('canvas');
+     canvas.width=1700;canvas.height=1250;
+     const c=canvas.getContext('2d'),orig=c.fillText.bind(c);
+     let center=null;
+     c.fillText=(text,x,y,...rest)=>{
+      if(text==='🎙')center=c.getTransform().transformPoint({x,y});
+      return orig(text,x,y,...rest);
+     };
+     renderPhotoInset(c,{...item,audioMedia:audio?item.audioMedia:[]},image,()=>{},render(canvas));
+     return {canvas,center};
+    }
+    const on=draw(true),off=draw(false);
+    if(!on.center||off.center)return {error:'missing positive or unexpected negative marker'};
+    const x=Math.round(on.center.x)-15,y=Math.round(on.center.y)-15;
+    if(x<0||y<0||x+30>1700||y+30>1250)return {error:'marker outside shared raster'};
+    const a=on.canvas.getContext('2d').getImageData(x,y,30,30).data;
+    const b=off.canvas.getContext('2d').getImageData(x,y,30,30).data;
+    let changed=0;
+    for(let i=0;i<a.length;i+=4){
+     if(Math.abs(a[i]-b[i])+Math.abs(a[i+1]-b[i+1])+Math.abs(a[i+2]-b[i+2])>50)changed++;
+    }
+    return {changed,positiveMarker:on.center,negativeMarkerAbsent:!off.center};
+   });
+   assert(!voiceDifference.error,JSON.stringify(voiceDifference));
+   assert(voiceDifference.changed>8,'Voice glyph must change real pixels versus no-voice negative control');
    await page.screenshot({path:path.join(directory,'stacked-voice-gallery.png')});
    await page.click('.gallery-top [data-action="close"]');
    const after=await page.evaluate(async()=>{
@@ -194,6 +229,6 @@ suite('gallery-state',async test=>{
    assert.deepEqual(after,before,'Read-only gallery/export must not modify originals or exact values');
    await page.click('#editorBack');await page.reload();await page.locator('.entry-title').click();
    assert.equal(await page.evaluate(()=>JSON.stringify(current.items)),before.items,'Exact values survive restart');
-   evidence({exported,gallery,originalSHA256:before.hash,nativePdf:'NOT RUN'});
+   evidence({exported,gallery,voiceDifference,originalSHA256:before.hash,nativePdf:'NOT RUN'});
   });
 }).catch(e=>{console.error(e);process.exitCode=1});
