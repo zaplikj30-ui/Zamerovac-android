@@ -17,6 +17,16 @@
     'trash.restored':'Položka obnovena',
     'trash.failed':'Položku se nepodařilo obnovit',
     'folder.locked':'Nejdříve odemkněte složku.',
+    'audio.title':'Uchované hlasové nahrávky',
+    'audio.retained':'Nahrávka zůstala uchovaná. Připojení ověř v přehledu Uchované hlasové nahrávky.',
+    'audio.pending':'Dokončená nahrávka čeká na připojení k poznámce.',
+    'audio.review':'Nahrávka nebo její evidence vyžaduje kontrolu. Dokončení není potvrzené; originál se nemaže.',
+    'audio.play':'Přehrát',
+    'audio.attach':'Připojit k této poznámce',
+    'audio.copy':'Uložit kopii originálu',
+    'audio.close':'Zavřít',
+    'audio.help':'Dokončený hlas připojíš v otevřené poznámce tlačítkem Připojit k této poznámce. U bodové poznámky pak potvrď Uložit. Nejistý záznam lze zkopírovat pro kontrolu; nemusí být přehratelný. Automatické mazání je vypnuté. Běžný ZIP zakázek nezahrnuje nepřipojené nahrávky.',
+    'audio.exported':'Kopie byla zapsána. Uchovaný originál zůstal v aplikaci.',
     'zip.invalid':'Soubor není platnou zálohou Zaměřovače'
   });
   function t(key,params){

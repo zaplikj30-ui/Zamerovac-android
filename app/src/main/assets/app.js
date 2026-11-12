@@ -115,7 +115,7 @@ function save(){
    state.syncProtocol=2;const text=JSON.stringify(state);
    if(!native){localStorage.setItem('zamerovac-data',text);persistedSnapshot=text;return reportSaveResult(true)}
    const result=JSON.parse(Native.saveDataChecked(text,persistedSnapshot));
-   if(result.ok){persistedSnapshot=text;return reportSaveResult(true)}
+   if(result.ok){persistedSnapshot=text;if(result.audioPending)window.PendingAudio?.retained();return reportSaveResult(true)}
    if(typeof result.current!=='string')throw new Error(result.error||'Zápis nebyl potvrzen');
    const disk=JSON.parse(result.current),base=persistedSnapshot?JSON.parse(persistedSnapshot):initial;
    applySavedState(reconcileSavedState(base,state,disk));persistedSnapshot=result.current;
@@ -357,7 +357,7 @@ window.__audioPermissionDenied=()=>{window.__audioPermissionRetry=null;notify('M
 function finishNoteRecording(){
  window.__audioPermissionRetry=null;if(!window.recording)return true;
  const id=window.recording,owner=noteRecordingOwner,recorded=Native.stopAudio();window.recording=null;noteRecordingOwner=null;$('recordAudio').textContent='● Hlasová poznámka';
- if(!recorded){notify('Záznam hlasu nebyl bezpečně uložen. Poznámka zůstává otevřená.');return false}
+ if(!recorded){if(window.PendingAudio)window.PendingAudio.retained();else notify('Záznam hlasu nebyl bezpečně uložen. Poznámka zůstává otevřená.');return false}
  const target=owner&&state.records.find(r=>r===owner);
  if(!target||target.deleted||target.kind!=='note'||window.isRecordLocked?.(target)){notify('Původní poznámka není dostupná nebo je uzamčená; hlas nebyl připojen k jiné poznámce.');return false}
  if(!target.media.includes(id))target.media.push(id);touch(target);if(!save())return false;if(noteActive===target)renderNoteAttachments();return true;

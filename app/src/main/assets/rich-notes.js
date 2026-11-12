@@ -21,12 +21,13 @@ function openRichNote(item,isNew){
  // Respect an already saved custom size (including deliberately tiny insets).
  const initialInsetWidth=Number(item.insetWidth)||Math.max(140,Math.min(1400,Math.round(photoSize.w*.42)));
  let recording=null;
- // MediaStaging.commit already saved complete original bytes at Stop.
+ // Native journal retains completed original bytes independently of this dialog.
  // Without audited GC, cancelling this draft must never delete that file.
  const completedDraftAudio=new Set();
  const warnRetainedAudio=()=>{
   if([...completedDraftAudio].some(id=>!Array.isArray(item.media)||!item.media.includes(id)))
-   notify('Nepřipojená hlasová nahrávka zůstala uložená; bezpečné automatické čištění zatím není dostupné');
+   if(window.PendingAudio)window.PendingAudio.retained();else notify('Nepřipojená hlasová nahrávka zůstala uložená; bezpečné automatické čištění zatím není dostupné');
+  window.PendingAudio?.refresh();
  };
  const failedStop=()=>{
   recording=null; // AudioCapture.stop() closes the recorder on false.
@@ -99,7 +100,7 @@ function openRichNote(item,isNew){
   // edits records the new value and makes Undo silently leave that value in place.
   if(recording){
    if(!Native.stopAudio()){
-    failedStop();notify('Nahrávka se nepodařila. Spusť nové nahrávání.');return false;
+    failedStop();if(window.PendingAudio)window.PendingAudio.retained();else notify('Nahrávka se nepodařila. Spusť nové nahrávání.');return false;
    }
    completedDraftAudio.add(recording);
    if(!attachments.includes(recording))attachments.push(recording);
@@ -161,6 +162,7 @@ function openRichNote(item,isNew){
    notify('Změny poznámky nejsou uložené. Zkus Uložit znovu.');
    return false;
   }
+  window.PendingAudio?.confirm(parent.id,item.id,completedDraftAudio);
   if(wasNew)finishDraw(item);
   release();
   return true;
@@ -174,7 +176,7 @@ function openRichNote(item,isNew){
  '<div class="row wrap"><button type="button" class="outline" id="richPhotoCamera">📷 Vyfotit detail</button>'+
  '<button type="button" class="outline" id="richPhotoPick">🖼️ Vybrat fotografii</button>'+
  '<button type="button" class="outline" id="richVoice">🎙 Nahrát hlas</button></div>'+
- '<div id="richAttachments"></div>'+
+ '<div id="richAttachments"></div><div id="richRetainedAudio"></div>'+
  '<label>Velikost vložené fotografie</label><input id="richSize" type="range" min="70" max="1500" step="10" value="'+initialInsetWidth+'">'+
  '<label>Natočení detailu (stupně)</label><input id="richAngle" type="range" min="-180" max="180" step="5" value="'+(item.insetRotation||0)+'">'+
  '<div class="row wrap"><button type="button" class="outline" id="richEditDetail">✎ Kótovat vloženou fotografii</button>'+
@@ -230,6 +232,10 @@ function openRichNote(item,isNew){
  };
  $('richPhotoCamera').onclick=()=>pickMedia('camera',photoHandler);
  $('richPhotoPick').onclick=()=>pickMedia('media',photoHandler);
+ window.PendingAudio?.rows($('richRetainedAudio'),id=>{
+  if(window.__activeRichNoteCleanup!==cleanRecording||$('modal').hidden||current!==parent||window.isRecordLocked?.(parent)||(!isNew&&!parent.items.includes(item)))return false;
+  if(!attachments.includes(id))attachments.push(id);audioIds.add(id);completedDraftAudio.add(id);render();return true;
+ });
  $('richVoice').onclick=()=>{
   if(!native){notify('Záznam hlasu funguje v Android verzi');return}
   const btn=$('richVoice');
@@ -244,7 +250,7 @@ function openRichNote(item,isNew){
     window.__audioPermissionRetry=start;start();
   }else{
     if(!Native.stopAudio()){
-     failedStop();notify('Nahrávka se nepodařila. Spusť nové nahrávání.');return;
+     failedStop();if(window.PendingAudio)window.PendingAudio.retained();else notify('Nahrávka se nepodařila. Spusť nové nahrávání.');return;
     }
     completedDraftAudio.add(recording);
     if(!attachments.includes(recording))attachments.push(recording);

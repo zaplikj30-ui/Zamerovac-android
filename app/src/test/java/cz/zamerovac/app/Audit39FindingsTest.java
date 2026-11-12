@@ -77,7 +77,7 @@ public class Audit39FindingsTest {
   try{BackupImporter.importZip(context,Uri.fromFile(zip),new JSONObject(before),prefs);}
   catch(IOException rejected){fail("Export returned success but its own importer rejects it: "+rejected.getMessage());}
  }
- @Test public void purgeMustRemoveExclusiveVoiceAndHistoricalMedia()throws Exception {
+ @Test public void purgeRetainsExclusiveVoiceAndRemovesHistoricalPhoto()throws Exception {
   File media=new File(context.getFilesDir(),"media");media.mkdirs();
   for(String id:new String[]{"voice-only","history-only","shared-safe"})Files.write(new File(media,id).toPath(),new byte[]{1,2,3});
   JSONObject removed=new JSONObject().put("id","deleted-record").put("deleted",true)
@@ -88,6 +88,8 @@ public class Audit39FindingsTest {
   JSONObject result=new TrashPurger(context,prefs).purge(saved,saved,new JSONArray().put("deleted-record"),text->LocalDatabase.write(context.getFilesDir(),text));
   assertTrue(new File(media,"shared-safe").isFile());assertEquals(0,result.getInt("pending"));
   boolean voice=new File(media,"voice-only").exists(),history=new File(media,"history-only").exists();
-  assertTrue("Reported complete purge retained exclusive files: voice="+voice+", history="+history,!voice&&!history);
+  // Variant B deliberately retains completed/uncertain audio after trash purge.
+  assertTrue("Voice must be retained",voice);assertArrayEquals(new byte[]{1,2,3},Files.readAllBytes(new File(media,"voice-only").toPath()));
+  assertFalse("Ordinary historical photo cleanup must remain effective",history);
  }
 }

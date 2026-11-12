@@ -186,4 +186,27 @@ public class StorageLifecycleTest {
         String snapshot=activity.new JsApi().loadData();JSONObject result=new JSONObject(activity.new JsApi().purgeTrash(snapshot,snapshot,"[\"video-record\"]"));assertFalse(result.has("error"));assertTrue(new File(dir,"original-video").isFile());
     }
 
+    @Test public void pendingAudioBridgeBindsOnlyAfterDurableCompareSaveAndNeverRevertsNewerData()throws Exception {
+        media();persist(fixture());MainActivity.JsApi api=activity.new JsApi();String before=api.loadData();
+        byte[] original={0,1,2,3,4,5,20,40,80,(byte)255};
+        AudioCapture.Recorder recorder=new AudioCapture.Recorder(){public void start(File f)throws Exception{Files.write(f.toPath(),original);}public void stop(){}public void release(){}};
+        AudioCapture capture=new AudioCapture(dir,prefs,()->recorder);assertTrue(capture.start("voice-bridge"));assertTrue(capture.stop());
+        assertEquals(1,new JSONArray(api.pendingAudio()).length());assertFalse(api.confirmPendingAudio(before,"photo-record","dim","voice-bridge"));
+        JSONObject edited=fixture(),note=edited.getJSONArray("records").getJSONObject(1).getJSONArray("items").getJSONObject(0);
+        note.getJSONArray("media").put("voice-bridge");note.put("audioMedia",new JSONArray().put("voice-bridge"));String saved=edited.toString();
+        File blocker=new File(context.getFilesDir(),"projects.tmp");assertTrue(blocker.mkdir());
+        try{assertFalse(new JSONObject(api.saveDataChecked(saved,before)).getBoolean("ok"));assertEquals(1,new JSONArray(api.pendingAudio()).length());}finally{blocker.delete();}
+        assertTrue(new JSONObject(api.saveDataChecked(saved,before)).getBoolean("ok"));assertEquals(0,new JSONArray(api.pendingAudio()).length());
+        assertTrue(api.confirmPendingAudio(saved,"photo-record","dim","voice-bridge"));assertFalse(api.confirmPendingAudio(saved,"photo-record","other-note","voice-bridge"));
+        String newer=fixture().put("sequence",999).toString();assertTrue(new JSONObject(api.saveDataChecked(newer,saved)).getBoolean("ok"));
+        assertFalse(api.confirmPendingAudio(saved,"photo-record","dim","voice-bridge"));assertEquals(newer,api.loadData());assertEquals(1,new JSONArray(api.pendingAudio()).length());
+        assertArrayEquals(original,Files.readAllBytes(new File(dir,"voice-bridge").toPath()));
+        assertEquals("0,000000123456789",new JSONObject(api.loadData()).getJSONArray("records").getJSONObject(1).getJSONArray("items").getJSONObject(0).getString("measure"));
+    }
+    @Test public void retainedAudioExportRejectsFileUriBeforeOpeningOrTruncatingOriginal()throws Exception {
+        PendingAudio store=new PendingAudio(dir,prefs);JSONObject e=store.begin("voice-export-safe");File original=store.temporary(e);Files.write(original.toPath(),new byte[]{7,8,9});store.complete(e);store.abandon(e);
+        ReflectionHelpers.setField(activity,"retainedAudioExportToken",e.getString("token"));
+        activity.onActivityResult(36,android.app.Activity.RESULT_OK,new Intent().setData(Uri.fromFile(original)));
+        assertArrayEquals(new byte[]{7,8,9},Files.readAllBytes(original.toPath()));assertArrayEquals(new byte[]{7,8,9},Files.readAllBytes(new File(dir,"voice-export-safe").toPath()));
+    }
 }

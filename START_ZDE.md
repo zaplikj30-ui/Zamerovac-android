@@ -1,3 +1,7 @@
+> **Pracovní checkpoint PR #107 – QA-107-03, varianta B (12. 11. 2026):** Codex implementuje trvalou ochranu hlasu, obnovu a bezpečné potvrzení vazeb bez GC. [Návrh, testy a limity](docs/qa107-variant-b.md). Finální stav a přesný otestovaný SHA patří do existujícího [PR #107](https://github.com/zaplikj30-ui/Zamerovac-android/pull/107) a [#42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42). Publikaci checkpointu v tomto prostředí zablokovala automatická kontrola oprávnění; do vyřešení není změna ověřeně uložená na GitHubu. Žádný merge/APK ani předání jako READY před dokončením finálních testů a publikace.
+>
+> Tato pracovní větev má historický základ `c604860…`; před prací ověřen živý `main=cf780790…`. Novější hlavní rozcestník na main se nepřepisuje. Níže zůstává původní historický obsah této větve, nikoli současné pořadí úkolů.
+
 # Zaměřovač – START ZDE (aktuální stav, rozhodnutí a další práce)
 
 **Kontrolní bod 8. 11. 2026, B14 – přestavba historie editoru, před případným merge PR #71:**

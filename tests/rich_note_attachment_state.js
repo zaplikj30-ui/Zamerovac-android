@@ -60,6 +60,7 @@ function fixture(item,options={}){
   updatedAt:'2026-11-11T00:00:00Z',items:options.newNote?[]:[item]};
  if(Object.hasOwn(options,'versionHistory'))parent.versionHistory=options.versionHistory;
  const window={isRecordLocked:()=>false};
+ if(options.pendingBridge)window.PendingAudio=options.pendingBridge;
  const stopOutcomes=Array.isArray(options.stopOutcomes)?options.stopOutcomes.slice():null;
  const finishedAudio=new Map();
  let recorderActive=false,recorderId=null,stopCalls=0;
@@ -446,6 +447,17 @@ async function run(){
  assert.deepEqual(Array.from(failureRetains.finishedAudio.get('record-1')),completedBefore);
  assert.deepEqual(Array.from(failureRetains.item.media),[]);
  assert.ok(failureRetains.messages.some(m=>m.includes('Nepřipojená hlasová')));
+
+ const confirmations=[];
+ const pendingBridge={rows(){},refresh(){},retained(){},confirm:(...args)=>confirmations.push(args)};
+ const durable=fixture({id:'bound-note',type:'note',media:[],audioMedia:[]},{pendingBridge});
+ durable.open();durable.get('richVoice').onclick();durable.get('richVoice').onclick();
+ assert.equal(confirmations.length,0,'Stop is not a durable project binding');
+ assert.equal(durable.window.__activeRichNotePersist(),true);
+ assert.equal(confirmations.length,1);assert.equal(confirmations[0][0],'parent');assert.equal(confirmations[0][1],'bound-note');assert.deepEqual([...confirmations[0][2]],['record-1']);
+ const rejected=fixture({id:'unbound-note',type:'note',media:[],audioMedia:[]},{pendingBridge,saveFails:true});
+ rejected.open();rejected.get('richVoice').onclick();rejected.get('richVoice').onclick();assert.equal(rejected.window.__activeRichNotePersist(),false);rejected.get('cancelModal').onclick();
+ assert.equal(confirmations.length,1,'Failed Save and Cancel must not acknowledge a binding');
 
  console.log('PASS rich note: media drafts, races, cleanup, retry, lock, rejected delete/save rollback and newer-data protection');
 }

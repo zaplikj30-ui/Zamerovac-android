@@ -1364,6 +1364,51 @@
         "Objem přes 2 GiB se ověřuje předběžnou kontrolou skutečného sparse souboru a bajtovým rozpočtem, nikoli přenosem 2 GiB.",
         "Robolectric/provider doubles a JVM TLS neověřují rádio, Keystore, skutečný power-cut, OEM výkon ani živý OAuth/Drive."
       ]
+    },
+    {
+      "id": "pending-audio-retention",
+      "issues": [
+        42
+      ],
+      "sources": [
+        "app/src/main/java/cz/zamerovac/app/PendingAudio.java",
+        "app/src/main/java/cz/zamerovac/app/AudioCapture.java",
+        "app/src/main/java/cz/zamerovac/app/MediaStaging.java",
+        "app/src/main/java/cz/zamerovac/app/MainActivity.java",
+        "app/src/main/java/cz/zamerovac/app/TrashPurger.java",
+        "app/src/main/assets/pending-audio.js",
+        "app/src/main/assets/rich-notes.js"
+      ],
+      "tests": [
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/AudioCompletedKeepTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/PendingAudioTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/StorageLifecycleTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "tests/rich_note_attachment_state.js",
+          "layer": "node"
+        },
+        {
+          "path": "tools/e2e/pending-audio.cjs",
+          "layer": "chromium"
+        }
+      ],
+      "coverage": "runtime-partial",
+      "positive": "Completed audio survives metadata failure with exact SHA256; durable primary binding, restart and user recovery.",
+      "negative": "Ledger/fsync/publication faults, corrupt/missing/backup evidence, collisions, stale CAS, failed Save/Cancel, no audio GC.",
+      "limits": [
+        "Robolectric is not Android hardware/power-loss; browser Native is a model.",
+        "Real disk-full, filesystem hard-link/directory fsync on devices, microphone and SAF destination require Android acceptance.",
+        "Pending audio is private local evidence; ordinary project ZIP/sync does not export unbound recordings."
+      ]
     }
   ],
   "manualGates": [

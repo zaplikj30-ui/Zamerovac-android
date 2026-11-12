@@ -14,6 +14,12 @@ final class MediaStaging {
         if(!directory.isDirectory()&&!directory.mkdirs())throw new IOException("Nelze vytvořit úložiště příloh");
         synchronized(TrashPurger.LOCK){if(new File(directory,id).exists())throw new IOException("Existující originál se nesmí přepsat");File temporary=new File(directory,".capture-"+id+"-"+UUID.randomUUID()+".tmp");if(!temporary.createNewFile())throw new IOException("Nelze připravit přílohu");return temporary;}
     }
+    /** Atomic CREATE_NEW publication without replacing an existing inode. Keep the recovery link. */
+    static void publishAudio(File source,File target)throws IOException{
+        if(!source.isFile()||Files.isSymbolicLink(source.toPath())||Files.isSymbolicLink(target.toPath())||
+           !source.getCanonicalFile().getParentFile().equals(target.getCanonicalFile().getParentFile()))throw new IOException("Unsafe audio publication");
+        Files.createLink(target.toPath(),source.toPath());
+    }
     static void commit(File temporary,String id,SharedPreferences prefs,String mime,String name)throws Exception{
         if(id==null||!id.matches("[a-zA-Z0-9_-]{3,120}")||temporary==null||!temporary.isFile()||temporary.length()<1||temporary.length()>LIMIT||!metadata(mime,name))throw new IOException("Příloha není úplná nebo má neplatná metadata");
         try(RandomAccessFile file=new RandomAccessFile(temporary,"rw")){file.getFD().sync();}

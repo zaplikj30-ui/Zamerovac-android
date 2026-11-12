@@ -84,7 +84,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class MainActivity extends Activity {
-    private static final int REQUEST_FILE=20,REQUEST_TREE=21,REQUEST_CAMERA=22,REQUEST_EXPORT=23,REQUEST_PERMISSIONS=24,REQUEST_ATTACH=25,REQUEST_CAMERA_PERMISSION=26,REQUEST_PHOTO_LOCATION=27,REQUEST_BACKUP=28,REQUEST_IMPORT_BACKUP=29,REQUEST_ISSUE_EXPORT=30,REQUEST_BLUETOOTH_PERMISSION=31,REQUEST_CUSTOMER_EXPORT=32,REQUEST_WIFI_DIRECT_PERMISSION=33,REQUEST_BACKUP_TREE=34,REQUEST_SYNC_NOTIFICATION=35;
+    private static final int REQUEST_FILE=20,REQUEST_TREE=21,REQUEST_CAMERA=22,REQUEST_EXPORT=23,REQUEST_PERMISSIONS=24,REQUEST_ATTACH=25,REQUEST_CAMERA_PERMISSION=26,REQUEST_PHOTO_LOCATION=27,REQUEST_BACKUP=28,REQUEST_IMPORT_BACKUP=29,REQUEST_ISSUE_EXPORT=30,REQUEST_BLUETOOTH_PERMISSION=31,REQUEST_CUSTOMER_EXPORT=32,REQUEST_WIFI_DIRECT_PERMISSION=33,REQUEST_BACKUP_TREE=34,REQUEST_SYNC_NOTIFICATION=35,REQUEST_RETAINED_AUDIO=36;
+    private String retainedAudioExportToken;
     private DriveAccountFlow driveAccountFlow;
     private final java.util.concurrent.ExecutorService zipRestores=new java.util.concurrent.ThreadPoolExecutor(1,1,0,java.util.concurrent.TimeUnit.SECONDS,new java.util.concurrent.SynchronousQueue<>(),new java.util.concurrent.ThreadPoolExecutor.AbortPolicy());
     private long cloudTreeRevision=-1,backupTreeRevision=-1;
@@ -464,6 +465,22 @@ public class MainActivity extends Activity {
     }
     @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);
         if(driveAccountFlow!=null&&driveAccountFlow.result(request,result,data))return;
+        if(request==REQUEST_RETAINED_AUDIO){
+            final String token=retainedAudioExportToken;retainedAudioExportToken=null;
+            if(result==RESULT_OK&&data!=null&&data.getData()!=null&&token!=null){
+                final Uri destination=data.getData();
+                if(!"content".equals(destination.getScheme())||(getPackageName()+".files").equals(destination.getAuthority())){error(getString(R.string.audio_copy_invalid));return;}
+                new Thread(()->{try{
+                    File original=new PendingAudio(new File(getFilesDir(),"media"),settings).original(token);
+                    try(InputStream in=new FileInputStream(original);OutputStream out=getContentResolver().openOutputStream(destination,"wt")){
+                        if(out==null)throw new IOException("Export unavailable");byte[] block=new byte[65536];int n;
+                        while((n=in.read(block))!=-1)out.write(block,0,n);out.flush();
+                    }
+                    js("window.PendingAudio?.exported()");
+                }catch(Exception failure){error(getString(R.string.audio_copy_failed));}},"RetainedAudioExport").start();
+            }
+            return;
+        }
         if(request==REQUEST_FILE){if(fileCallback!=null){Uri[] resultUris=null;if(result==RESULT_OK&&data!=null){if(data.getClipData()!=null){int n=data.getClipData().getItemCount();resultUris=new Uri[n];for(int i=0;i<n;i++)resultUris[i]=data.getClipData().getItemAt(i).getUri();}else if(data.getData()!=null)resultUris=new Uri[]{data.getData()};}fileCallback.onReceiveValue(resultUris);fileCallback=null;}return;}
         if(result!=RESULT_OK){
             if(request==REQUEST_TREE)cloudTreeRevision=-1;if(request==REQUEST_BACKUP_TREE)backupTreeRevision=-1;
@@ -745,7 +762,11 @@ public class MainActivity extends Activity {
                 try{
                     String current=readDb();
                     if(!current.equals(expected))return new JSONObject().put("ok",false).put("current",current.isEmpty()?"{\"schema\":1,\"records\":[]}":current).toString();
-                    writeDb(text);lastUiGeneration=LocalDatabase.generation(getFilesDir());return "{\"ok\":true}";
+                    writeDb(text);lastUiGeneration=LocalDatabase.generation(getFilesDir());
+                    // The project commit has already succeeded. A journal failure cannot roll it back.
+                    try{if(new PendingAudio(new File(getFilesDir(),"media"),settings).recoverPrimary().length()>0)return "{\"ok\":true,\"audioPending\":true}";}
+                    catch(Exception uncertainty){return "{\"ok\":true,\"audioPending\":true}";}
+                    return "{\"ok\":true}";
                 }catch(Exception e){try{return new JSONObject().put("ok",false).put("error","Uložení se nezdařilo; poslední potvrzená data zůstávají chráněná.").toString();}catch(Exception ignored){return "{}";}}
             }
         }
@@ -833,6 +854,23 @@ public class MainActivity extends Activity {
             if(!validId(id))return false;
             if(checkSelfPermission(Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){runOnUiThread(()->requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO},REQUEST_PERMISSIONS));return false;}
             try{return audioCapture().start(id);}catch(Exception failure){error("Mikrofon: záznam se nepodařilo zahájit. Existující přílohy zůstaly zachované.");return false;}
+        }
+        @JavascriptInterface public void exportPendingAudio(String token){
+            runOnUiThread(()->{
+                if(retainedAudioExportToken!=null){error(getString(R.string.audio_copy_busy));return;}
+                try{
+                new PendingAudio(new File(getFilesDir(),"media"),settings).original(token);
+                retainedAudioExportToken=token;
+                startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).setType("audio/mp4").addCategory(Intent.CATEGORY_OPENABLE).putExtra(Intent.EXTRA_TITLE,getString(R.string.audio_copy_title)),REQUEST_RETAINED_AUDIO);
+            }catch(Exception failure){retainedAudioExportToken=null;error(getString(R.string.audio_copy_unavailable));}});
+        }
+        @JavascriptInterface public String pendingAudio(){
+            try{return new PendingAudio(new File(getFilesDir(),"media"),settings).recoverPrimary().toString();}
+            catch(Exception uncertainty){return "[{\"state\":\"needs-review\",\"available\":false}]";}
+        }
+        @JavascriptInterface public boolean confirmPendingAudio(String expected,String record,String note,String id){
+            try{return new PendingAudio(new File(getFilesDir(),"media"),settings).confirm(expected,record,note,id);}
+            catch(Exception uncertainty){return false;}
         }
         @JavascriptInterface public boolean stopAudio(){try{return audioCapture!=null&&audioCapture.stop();}catch(Exception failure){error("Nahrávání se nepodařilo bezpečně uložit. Hlas nebyl připojen.");return false;}}
         @JavascriptInterface public void cancelAudio(){releaseRecorder();}
