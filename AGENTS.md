@@ -24,14 +24,7 @@ Pro každý nový důvěryhodný owner-only test na větvi `qa/*` používej **j
 
 ### Praktické omezení spotřeby Codexu – 7. 11. 2026
 
-- Před zadáním vybrat **nejmenší smysluplný rozsah**, očekávaný výstup a relevantní již známé důkazy (konkrétní soubory, issue, PR, neúspěšný test); neposílat kvůli jedné chybě znovu všeobecný audit celé aplikace.
-- Reuse aktuálních GitHub podkladů a předchozího checkpointu, ale **nepřeskočit povinné načtení pravidel a ověření HEAD/CI**. Pokud důkazy chybí, Codex musí provést potřebnou diagnostiku – šetření nesmí založit opravu na domněnce.
-- V prvním průchodu reprodukovat problém a spustit dotčené cílené testy; širší relevantní regresi provést při dokončení balíku, před merge a před jedinou APK. **Neomezovat testy ukládání, přesnosti nebo dat jen kvůli tokenům.**
-- Nepřikazovat opakované zdlouhavé skenování nezměněného repozitáře ani zbytečně dlouhé průběžné reporty. Výsledek má být stručný: změny, důkazy, PASS/FAIL/SKIP/NOT RUN, otevřená rizika, odkazy; podrobný log ponechat v CI/PR.
-- Preferovat menší dokončitelné kroky se zachovanou kontinuitou v existujícím issue/PR. Nerozbíjet atomickou bezpečnostní opravu jen pro úsporu. Jakmile blokuje limit či infrastruktura, zapsat konkrétní checkpoint a přerušit bez předstírání dokončení.
-- Model, úroveň přemýšlení a skutečnou spotřebu vyhodnocovat podle **ověřené dostupnosti a reálných výsledků**, nikoli podle nedoloženého univerzálního tvrzení, že vyšší režim vždy spotřebuje přesný násobek.
-
-Tato změna je **jen rozdělení práce a limitů**; sama neautorizuje přepis, merge PR, novou technologii, změnu chování ani vydání APK.
+Před zadáním využij existující důkazy, issue, PR a přesný SHA; pokud něco chybí, proveď nutnou diagnostiku. Reprodukuj skutečnou chybu a relevantní testy, při dokončení schváleného balíku společnou regresi. **Nikdy nešetři na testech dat, přesnosti či bezpečnosti**, ale neopakuj bezdůvodně nezměněné obecné audity. Jeden úkol má být dokončitelný, avšak bezpečnostně neoddělitelné změny se nerozdělují uměle. Při blokéru ulož konkrétní checkpoint (HEAD, změny, PASS/FAIL/SKIP/NOT RUN, prostředí, rizika, další krok) do existujícího PR/issue. Model, úroveň a náklady doporučuj podle skutečné dostupnosti; neslibuj neověřenou úsporu kreditů. **Tento odstavec sám neschvaluje přepis, merge, APK ani další výdaje.**
 
 ## NEPŘEHLÉDNOUT – aplikace je dosud pouze testovací (uživatel opakovaně potvrdil 7. 11. 2026)
 
@@ -90,8 +83,6 @@ Před zavedením nové technologie či významnější funkce vždy posoudit jej
 
 ### Výhledová nezávislost na technologiích, promítání a vzdálený tisk (5. 11. 2026)
 
-**Upřesnění uživatele:** Nejde pouze o nové operační systémy. Zaměřovač má být technicky připravený na případnou **změnu či doplnění programovacích jazyků, frameworků, vykreslování a komunikačních technologií** (např. Java, Kotlin, JavaScript, WebView či něco, co dnes neznáme). Stabilní data, geometrie, hodnoty kót, jednotky a editovatelné objekty nemají zbytečně záviset na jedné technologii. Připravovat rozumné hranice mezi částmi, nepreventivně nezavádět každou myslitelnou knihovnu. Před konkrétní změnou posoudit reálný přínos, migrační rizika, kompatibilitu a testy.
-
 **Budoucí nápad, zatím nepovinná funkce: „Promítat“ s ikonou Cast.** Možnost vyslat pracovní obrazovku nebo vybranou fotografii s kótami / náčrt na TV, monitor, projektor či jiný displej **bez vazby na Samsung nebo jediného výrobce**. Před návrhem zmapovat systémové zrcadlení, bezdrátové technologie (Google Cast/Chromecast, Miracast, AirPlay a další dostupné způsoby dle platformy), kabelový výstup a možnost vlastní cílené prezentace. Tyto způsoby **nejsou navzájem zaměnitelné a nemusí být dostupné v každé kombinaci zařízení**; neslibovat univerzální výčet všech přijímačů z jednoho tlačítka. Při realizaci chránit soukromí zákaznických dat, spouštět přenos vědomě, ukázat stav a nabídnout ukončení.
 
 **Budoucí požadavek: vzdálený tisk.** Počítat s bezpečným tiskem vybraných fotografií s kótami, výkresů a dokumentů na tiskárnu mimo telefon/tablet: přednostně tisk dostupný přes systémové tiskové služby a lokální Wi-Fi/síť; možnost odeslání přes internet řešit zvlášť s ověřením konkrétní služby, přihlášení a zabezpečení. Přenos obrazu a tisk jsou odlišné funkce. Zachovat přesné rozměry, viditelnost anotací, náhled před tiskem, volbu tiskárny a rozsahu a možnost zrušit. Nesmí dojít k nechtěnému odeslání zákaznických podkladů ani ke změně uložených dat. Kompatibilita tiskáren se bude ověřovat, nikoliv předpokládat.
@@ -121,15 +112,11 @@ Před zavedením nové technologie či významnější funkce vždy posoudit jej
 - **Diagnostika:** možnost lokálních nebo výslovně povolených technických hlášení o pádech a chybách, bez zákaznických fotografií, zakázek, adres a tajných údajů; nic neposílat na server bez transparentního rozhodnutí.
 - **Nízká paměť/životní cyklus:** testovat velké zakázky, dlouhý běh, návraty z pozadí, přerušení, systémové ukončení a výpadek sítě; zachovat původní data, rozpracované změny a přesné kóty.
 
-**Priorita:** podle živé koordinace v [#42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42) upřednostnit domácí QA, ochranu dat a ověřenou stabilizaci. Technický základ prověřovat podle konkrétních rizik, ne podle starého harmonogramu. Žádné APK kvůli dokumentaci.
-
 ### Budoucí funkce jsou zamýšlené, nikoli odepsané (upřesnění 5. 11. 2026)
 
 **Oprava dřívější interpretace:** Když uživatel mluví o „nezávazných nápadech“, často tím myslí **funkce, které v aplikaci do budoucna chce, ale ještě nemají domyšlené chování, technické řešení nebo pořadí**. Nesmíme je automaticky označit za nepodstatné hypotézy, které se mohou ignorovat. U těchto záměrů s jejich **budoucím přidáním počítat při návrhu architektury**. Současně **to není schválení okamžité implementace**: konkrétní zadání, prioritu, čas a bezpečné testy je nutné dohodnout zvlášť.
 
 **Povinné rozlišení stavu:** (a) plánovaná budoucí schopnost, detaily otevřené; (b) pouze možnost k obchodnímu/technickému posouzení; (c) schválená konkrétní implementace; (d) skutečně implementováno a ověřeno. Pokud z kontextu není jisté, která kategorie platí, nedomýšlet závazek ani zamítnutí. **Monetizace a konkrétní reklamní model zůstávají jen otevřenými obchodními možnostmi**, protože uživatel je takto výslovně označil.
-
-**Technické řízení:** ChatGPT sám porovnává všechny plánované budoucí schopnosti a možnosti se současnou stavbou aplikace, předchází zbytečným závislostem a kolizím, ale nemá předem programovat neodsouhlasené funkce či vytvářet složitou infrastrukturu „pro jistotu“. Plánované oblasti zahrnují mj. promítání na další displeje, vzdálený tisk, další pera a vstupy, další měřidla, různé režimy ovládání a bezpečné integrace. Postupovat podle živých rozhodnutí #42 a bez ohrožení právě rozpracovaných bezpečnostních oprav.
 
 ## Povinné testování selhání a ochrany dat u každé změny (5. 11. 2026)
 
@@ -217,9 +204,7 @@ Před zavedením nové technologie či významnější funkce vždy posoudit jej
 
 ## Současný testovací režim – zálohy nejsou podmínkou (výslovné upřesnění uživatele 4. 11. 2026)
 
-**Zaměřovač je zatím výhradně zkušební aplikace a uživatel ji NEPOUŽÍVÁ při skutečné práci ani pro ostré zákaznické zakázky.** Všechna současná data v aplikaci jsou pro něj postradatelná; výslovně akceptuje jejich případnou ztrátu. **Nemá zálohu a nechce být před dalšími běžnými testy ani instalacemi opakovaně dotazován na její vytvoření.** Nenuť jej zálohovat ani neblokuj postup testů požadavkem na záložní ZIP. Zálohu lze zmínit jen jako nepovinnou možnost, nikoli nutnou podmínku.
-
-**Rozlišení:** Tento souhlas se ztrátou vlastních *testovacích* dat neznamená souhlas se zhoršením ochrany dat v aplikaci: nadále vyvíjet a ověřovat bezpečné zachování dat při aktualizaci, importu a mazání. Pro destruktivní scénáře dál používat testovací položky, bez zásahu do jiných aplikací. Jakmile uživatel oznámí přechod na skutečné zakázky, společně znovu zavést přiměřená pravidla záloh a ochrany reálných dat. Nespouštět žádné další APK jen kvůli této dokumentační změně.
+**V aplikaci zatím nejsou ostré zákaznické zakázky; všechna nynější testovací data jsou postradatelná.** Uživatel nemá zálohu a výslovně nechce opakované výzvy k zálohování ani blokování testů a instalací kvůli ZIP. Nepovinnou zálohu lze zmínit, ale nevyžadovat. Toto **není** souhlas se slabou ochranou budoucích dat: testovat bezpečné aktualizace, import, mazání, obnovu a přesnost; pro destruktivní případy používat testovací položky, bez zásahu do jiných aplikací. Při oznámeném přechodu na ostré zakázky znovu zavést přiměřený postup zálohování. Jde o pravidlo, ne povel vydat APK.
 
 ## Stav projektu a omezení
 - Projekt obsahuje Android Java shell/WebView a HTML/JS editor v `app/src/main/assets/`, Android nativní most v `app/src/main/java/cz/zamerovac/app/`.
@@ -264,51 +249,27 @@ Před zavedením nové technologie či významnější funkce vždy posoudit jej
 
 ## Rozdělení práce mezi ChatGPT a Codex – rozhoduje asistent
 
-**Výslovné doplnění uživatele 4. 11. 2026 – text pro Codex musí připravit ChatGPT:** Uživatel řekl: „Ulož si, že mi dáš pokyn a text a já to vložím do Codexu. Bavili jsme se, že takhle budeme fungovat, že rozhodneš, jestli to máš udělat ty nebo Codex. Akorát mi to musíš poslat text, co mám vložit do Codexu.“ Tato dohoda je závazná pro další chaty.
+Dohoda 4. 11. 2026: **Uživatel není programátor a nemusí rozhodovat, co patří ChatGPT a co Codexu.** Koordinátor zvolí podle rizika, složitosti, dostupných nástrojů, souběhu a limitů. Podrobnější kritéria jsou v části „Úsporné rozdělení práce a ochrana limitů Codexu“. Menší ověřitelné změny může bezpečně provést ChatGPT; složité editorové, datové, synchronizační a nativní zásahy dostává přednostně Codex. **Riziko má přednost před počtem souborů.**
 
-- **Vždy rozhoduje ChatGPT** na základě rizika, rozsahu a aktuálních možností, ne uživatel. Rozhodnutí stručně oznámí.
-- **Když ChatGPT zvolí Codex a v tomto chatu nemá přímo dostupnou akci ke spuštění Codexu, sám sepíše kompletní, konkrétní a ihned použitelný český prompt ve zkopírovatelném bloku.** Zahrne repozitář, přesné zadání a schválený rozsah, odkazy na související issues / commity, ochranu dat a přesnosti, testy, pravidla společné APK a požadovaný výsledek (commity / PR / kontrola). Uživatel jen tento text vloží do Codexu, bez dalšího vymýšlení nebo vyhledávání podkladů.
-- **Nelze tvrdit, že Codex běží, že dostal zadání nebo že je práce předaná, dokud uživatel tento prompt skutečně neodešle nebo dostupný nástroj spuštění nepotvrdí.** GitHub issue je podklad pro předání, nikoliv samo o sobě spuštění Codexu.
-- ChatGPT může předem zapsat schválený požadavek a odkazy na GitHub. Po skutečném dokončení Codexem kontroluje nové commity, změny, testy a případné kolize a až potom řídí jediné společné vydání APK. Není povinností uživatele posuzovat technický výsledek.
-- **Nezapomeň připravit také návrh jednořádkového doplnění Pokynů projektu ChatGPT**, které si může vložit uživatel; GitHub sám tyto Pokyny neupravuje.
-
-**Dohoda s uživatelem 4. 11. 2026:** Uživatel není programátor a **nemá sám posuzovat**, zda úprava patří klasickému ChatGPT, nebo Codexu. **Koordinující ChatGPT sám zhodnotí složitost, riziko, dostupné nástroje, aktuální souběžnou práci a omezený limit Codexu** a zvolí nejlepší cestu. Zbytečně se na toto rozdělení uživatele neptá.
-
-- **Klasický ChatGPT přednostně provádí** bezpečně zvládnutelné menší opravy, jednoduché úpravy textů či UI, kontrolu GitHubu, dokumentaci, cílené testy a kontrolu výsledků, pokud má potřebné nástroje a přístup. Nezůstává pouze u plánování, když může změnu skutečně dokončit.
-- **Codex přednostně dostává** náročnější, rozsáhlejší nebo více soubory zasahující implementace, složité ladění a změny, kde jeho vývojové prostředí přinese skutečný přínos. **Riziko má přednost před velikostí:** i malý zásah do mazání zakázek, ukládání dat, přesnosti kót nebo exportů může vyžadovat silnější kontrolu.
-- **Kombinovaný postup** je vítaný: ChatGPT s uživatelem vyjasní zadání a uloží je na GitHub, podle potřeby předá práci Codexu, ověří jeho commity/PR a připraví společné fyzické testování. Nepředávat Codexu každou drobnost jen ze zvyku; šetřit jeho limit, ale nikoli na úkor kvality.
-- **Souběh:** před vlastní implementací zkontrolovat rozpracovanou práci/PR Codexu a do stejného místa bez koordinace nezasahovat. Pokud potřebné nástroje chybějí, oznámit omezení a nabídnout věcně připravené předání. Respektovat výslovnou volbu uživatele.
-- V obou variantách platí **GitHub jako zdroj pravdy**, skutečné změny a testy, průběžné ukládání, jediná APK až po dokončení schválené aktualizace a oddělení úspěšného buildu od ověření na zařízení.
+Když je zvolen Codex a neexistuje přímý nástroj k jeho spuštění, **ChatGPT připraví jeden kompletní konkrétní český prompt ve zkopírovatelném bloku**: repo, aktuální SHA/base, PR/issues a soubory, hranice schválení, prokázaná chyba, ochrana přesných dat/originálů, testy, očekávaný GitHub výstup a brána jedné APK. Uživatel jej pouze vloží; ChatGPT nesmí tvrdit, že Codex zadání dostal nebo běží, dokud není skutečně spuštěn. Po dokončení samostatně ověří commity, testy, bezpečnost a kolize. Při souběhu nezasahovat do cizí větve; při nedostupných nástrojích výslovně sdělit omezení.
 
 ## Doporučený způsob práce
-1. Přečti README.md a existující kód, než cokoliv změníš.
-2. Opravuj konkrétní chyby, nevytvářej nový projekt od nuly bez důvodu.
-3. Při úpravách spouštěj cílené rychlé lokální kontroly a testy, pokud to prostředí umožňuje. Plný Gradle build a kontrolu testovací APK prováděj souhrnně před testováním či vydáním, nikoli po každém drobném commitu přes GitHub Actions. Emulátor spouštěj ručně jen při potřebě ověřit chování a výsledky potvrď na skutečném zařízení.
-4. Průběžně commituj změny do tohoto repozitáře; popisuj přesně co je implementované, co je jen prototyp a co není ověřené.
-5. Pokud uživatel pošle screenshot nebo chybu z Androidu, nejprve reprodukuj/diagnostikuj problém a navrhni opravu přímo v repozitáři.
-6. Vzájemná spolupráce mezi ChatGPT a Codexem probíhá pomocí commitů v GitHubu. Neznamená to sdílení celé konverzace ani automatické synchronizování kontextu mimo tento repozitář.
+
+Před úpravou načti README, aktuální kód, `AGENTS.md`, [START_ZDE.md](START_ZDE.md), relevantní issues/PR/CI a ověř HEAD. Oprav příčinu konkrétní chyby; nevytvářej bez schválení nový projekt či přepis od nuly. Screenshot nebo hlášení z telefonu nejprve diagnostikuj a podle možností reprodukuj. Testuj cíleně na přesném SHA, skutečný Android a Bosch ověř fyzicky; drahé buildy sdružuj do jedné závěrečné etapy. Commituj a zaznamenávej skutečné implementace, prototypy a neověřené části na GitHub; práce chatů/Codexu se nepřenáší automaticky mimo GitHub.
 
 ## Jednoduchý provoz pro uživatele — koordinuje ChatGPT/Codex
-- Uživatel zadává **co má aplikace dělat nebo co nefunguje**; nemusí zadávat commity, kroky GitHubu, testování ani sestavení.
-- V jedné pracovní dávce: pochopit zadání → upravit zdrojové soubory → spustit rychlé relevantní testy → uložit změny → **jednou na závěr**, po dokončení schváleného balíku a regresi **teprve po výslovném schválení vlastníka** vyvolat aktuální vydávací workflow → ověřit výsledek. Neprodlužovat práci zbytečnými průběžnými vydáními ani opakovaným úplným čtením beze změny.
-- Na malé opravy spouštěj cílené testy a kontrolu syntaxe; úplný workflow build až při vydání. Důležitá ověření nesmí být vynechána (kontrola podpisu, verze, příslušné regresní testy, ochrana dat). Emulátor jen když pomůže ověřit problém, nikoli automaticky při každé opravě.
-- Uživatel má testovat jen dotykové chování, Bluetooth a jiné věci vyžadující skutečný telefon či tablet. Dej mu přímý odkaz na ověřené vydání, krátce popiš co otestovat a co je neověřené. Nepředkládej manuální kroky v GitHubu, pokud je lze obsloužit dostupnými nástroji; když přístup neumožní dokončit krok, jasně to řekni.
-- Uživatelovo „pusť se do aktualizace“ znamená dokončit schválený obsah a společnou regresi; vydání jedné APK vyžaduje následný výslovný souhlas; **nespouštět build nedokončené práce na začátku**. Běžná diskuse či návrh bez požadavku na instalaci build nespouští.
+
+Uživatel zadává funkční potřebu, nikoli commity, workflow nebo ruční kroky GitHubu. ChatGPT sám provede dostupné běžné kroky, sdělí výsledek a fyzické ověření telefonu/tabletu/Bosch přenechá uživateli s konkrétním postupem a odkazem na skutečné vydání. Testovat malé změny cíleně; důležitá ověření nevynechávat.
 
 ## Přirozené pokyny k aktualizaci a sestavení APK
-- Uživatel nemusí vyslovit přesné „sestav APK“. Výrazy **„uděláme aktualizaci“**, **„pusť se do aktualizace“**, **„aktualizuj aplikaci“** a podobné znamenají provést požadované úpravy, ověřit dostupné testy a **po dokončení a společné regresi požádat o souhlas s vydáním jedné společné testovací APK**. Samotné zahájení úprav ještě není pokyn sestavit nedokončený kód.
-- Přímé **„sestav APK“** může znamenat povolení k **technickému QA buildu bez publikace**; **„dej mi instalaci“** je požadavek na vydání, nikoli obejití testů a výslovného schválení konkrétní APK. Pokud je nejasné, zda uživatel chce technický build, nebo zveřejnění, jednou cíleně upřesnit.
-- **Historický `.github/apk-build-request.txt` neupravuj kvůli vydání** – není aktivním spouštěčem. Technické HOME QA sestavení a skutečný release mají oddělené podmínky; vycházej z živého workflow, přesného SHA, dokončených testů a výslovného souhlasu. Placený cloud pouze při zvláštním schválení a dodržení limitu.
-- Před schváleným technickým buildem nebo vydáním ověř konkrétní checkoutovaný SHA, PR/merge, HOME QA, podpis, číslo vydání, kompatibilitu a triggery. Pokud build selže, oznam to a oprav příčinu; bezpečnostní brány netlum. Bez ověřeného výsledku **netvrď, že APK je hotová**; odkaž na Actions/Releases a označ stav pravdivě.
+
+- **„Pusť se do aktualizace / aktualizuj“:** dokonči schválený balík a cílené testy, poté společnou regresi; teprve následně požádej o **výslovný souhlas s jednou společnou testovací APK**. Dokumentace a rozpracovaný kód APK nespouštějí.
+- **„Sestav APK“** může znamenat technický QA build *bez publikace*. **„Dej mi instalaci“** žádá vydání, nikoli obejití kontrol; při podstatné nejasnosti jednou rozliš technický build od publikace.
+- **Výdaje a spuštění:** historický `.github/apk-build-request.txt` už **není spouštěčem**. Před jakýmkoli spuštěním zkontroluj aktuální workflow, owner/main guardy, placený limit 12 USD/měsíc a schválení. Nedůvěryhodné PR/forky nespouštěj na domácím runneru.
+- **Bezpečnost vydání:** ověř skutečně checkoutovaný HEAD/SHA, nezávislé review, relevantní HOME QA/regresi, podpis, package ID, vzestupný versionCode, versionName, zachování zákaznických dat a kompatibility. Neúspěšný build řeš příčinou, nikoli oslabením brány. Technický build není release; cloud PASS není HOME ani fyzický PASS. Nevydávej neověřenou APK za hotovou; po schváleném vydání dej odkaz a stručný seznam neověřených fyzických scénářů.
 
 ## Výběr režimu ChatGPT: Chat / Work / Codex (dohoda 6. 11. 2026)
 
-**ChatGPT sám doporučuje vhodný pracovní režim podle cíle, rizika, dostupných nástrojů a limitů; uživatel nemusí volbu technicky řešit.** Tato zásada doplňuje výše uvedené rozdělení práce a nenahrazuje ho.
+**ChatGPT doporučí vhodný dostupný režim s ohledem na riziko a limit; uživatel nemusí znát technické rozdíly.** Běžný Chat je vhodný pro koordinaci, vysvětlování a menší ověřitelné změny. Work může pomoci s rozsáhlou prací přes soubory a aplikace, pokud má skutečně dostupné nástroje; **nenahrazuje automaticky Codex**. Codex je vhodný pro větší související programování a testování. Nepředstírat spuštění Codexu, přenos lokální práce mezi režimy nebo zajištěný přístup k zařízením. Volba režimu nemá zdržovat aktuální bezpečnostní opravy.
 
-- **Běžný Chat:** každodenní rozhodování, vysvětlování, průběžná kontrola GitHubu, menší bezpečné úpravy, evidence požadavků a výsledků. Pokud má přímý přístup k odpovídajícím nástrojům, má úkol provést, ne automaticky přesouvat jinam.
-- **Work (Práce):** doporučit především pro rozsáhlejší samostatnou práci s dokumenty, soubory, podporovanými weby či připojenými aplikacemi: například úplný návrh a inventuru Zaměřovače, porovnání UI, přípravu podrobného plánu a dokumentace. Režim Work nenahrazuje automaticky Codex ani neznamená záruku přístupu k webu, GitHubu, místním souborům či testovacím zařízením; schopnosti ověřit pro konkrétní úkol.
-- **Codex:** přednostně složitější zásahy do zdrojového kódu, opravy datových/bezpečnostních chyb, komplexní testování, kontrolu buildů a rozsáhlejší implementaci. Když není přímé spuštění k dispozici, ChatGPT dá úplný text zadání, doporučí dostupný model a úroveň a řídí následnou kontrolu výsledků.
-- **GitHub zůstává zdrojem pravdy bez ohledu na režim.** Před změnou číst aktuální pravidla, issues, commity, PR a CI; zabránit souběžnému přepisu. Přepnutí režimu automaticky nepřenáší nedokončené lokální změny ani nespouští Codex. Důležité závěry zapisovat na GitHub bez duplicit. Uživatel přepnutí do Work/Codex provede, pokud ho ChatGPT nemůže provést dostupnou oprávněnou akcí.
-- **Nesnažit se použít Work pro každou drobnost.** Výběr musí usnadnit dosažení výsledku, ne zvýšit režii či spotřebu limitů. Neodkládat aktuální kritické opravy evidované v #42 kvůli dokumentaci ani experimentům s režimy.
-
-**Pokyny projektu ChatGPT jsou odlišné od tohoto souboru.** Požadavek uživateli doporučit i krátké doplnění v Pokynech projektu; GitHub zápis tyto pokyny sám nemění. Bez změny programu, testů či APK.
+**Pokyny projektu ChatGPT jsou oddělené od GitHub `AGENTS.md`.** Když vznikne opravdu užitečné dlouhodobé pravidlo, doporuč krátké neduplicitní doplnění projektu a nabídni text; samotný GitHub zápis uživatelské nastavení nemění. Nic neměň bez potřebného schválení. Dokumentace sama nespouští APK.
