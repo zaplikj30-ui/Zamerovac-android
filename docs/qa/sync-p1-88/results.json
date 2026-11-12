@@ -1,0 +1,3740 @@
+{
+  "status": "BLOCKED",
+  "tested_sha": "3326995e934ba7e088e47a35e26cdc40cb2a5dfd",
+  "base_main": "cf7807905f77f6fd8478c137b1b41aca6ebc3275",
+  "previous_head": "e4e17bca28a31651cb05e4625cb7eb36ecc5685b",
+  "production_tree": "101c5ac1e9865ddc46869891931c1126471023d2",
+  "environment": {
+    "os": "Linux",
+    "kernel": "6.18.57",
+    "jdk": "Temurin 17.0.17+10",
+    "gradle": "8.10.2",
+    "sdk": 35,
+    "robolectric": "4.16.1",
+    "browser": "Chromium / Playwright",
+    "data": "synthetic; actual files/SQLite/loopback TLS; fake remote providers"
+  },
+  "native": {
+    "status": "FAIL",
+    "counts": {
+      "PASS": 485,
+      "FAIL": 4,
+      "ERROR": 0,
+      "SKIP": 0
+    },
+    "classes": [
+      {
+        "class": "cz.zamerovac.app.AudioCaptureTest",
+        "counts": {
+          "PASS": 5,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "unconfirmedMetadataKeepsCompletedOriginal",
+            "status": "PASS"
+          },
+          {
+            "case": "existingAndLateCollidingOriginalsAndMetadataStayUnchanged",
+            "status": "PASS"
+          },
+          {
+            "case": "onlySuccessfulStopPublishesCompleteFileAndConfirmedMetadata",
+            "status": "PASS"
+          },
+          {
+            "case": "startStopEmptyAndCancelFailuresNeverPublishPartialRecording",
+            "status": "PASS"
+          },
+          {
+            "case": "slowRecorderStartNeverOwnsGlobalDatabaseLock",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.AudioCompletedKeepTest",
+        "counts": {
+          "PASS": 1,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "completedOriginalSurvivesMetadataCommitFalse",
+            "status": "PASS"
+          }
+        ],
+        "stdout": "EXACT_ORIGINAL_AND_RETAINED_SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a bytes=10\n"
+      },
+      {
+        "class": "cz.zamerovac.app.AudioRecoveryIsolationTest",
+        "counts": {
+          "PASS": 21,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "nativeOriginalExportMustUseVerifiedFinalRatherThanSameSizeOtherInode",
+            "status": "PASS"
+          },
+          {
+            "case": "duplicateAudioIdsInTwoJournalsRemainSeparateExportableOriginals",
+            "status": "PASS"
+          },
+          {
+            "case": "aFailedBindingWriteDoesNotRollBackProjectOrHideOtherHealthyAudio",
+            "status": "PASS"
+          },
+          {
+            "case": "outputFailureDoesNotChangeSourceAndRetryChecksLengthAndDigest",
+            "status": "PASS"
+          },
+          {
+            "case": "reverseSplitRetainsVerifiedReservationAndIndependentUncertainFinal",
+            "status": "PASS"
+          },
+          {
+            "case": "validFinalOriginalIsExportableWhenItsReservationLinkIsMissing",
+            "status": "PASS"
+          },
+          {
+            "case": "combinedUnknownCorruptEvidenceAndWriteFailureKeepHealthyExportsAndTrashRetention",
+            "status": "PASS"
+          },
+          {
+            "case": "oneChangedAudioHashDoesNotHideTheTwoUnchangedOriginals",
+            "status": "PASS"
+          },
+          {
+            "case": "duplicateReservationTokenExposesBothOriginalsWithoutChoosingAnArbitraryOne",
+            "status": "PASS"
+          },
+          {
+            "case": "malformedProjectHistoryCannotHideHealthyAudioOrRewriteProject",
+            "status": "PASS"
+          },
+          {
+            "case": "knownOriginalTokenMustExportJournalBytesInsteadOfDifferentRegularReservation",
+            "status": "PASS"
+          },
+          {
+            "case": "verifiedCopyChecksStreamSHAEvenWhenChangedFileRetainsSizeInodeAndTimestamp",
+            "status": "PASS"
+          },
+          {
+            "case": "malformedHistoryCannotReconfirmAnOldBoundFlag",
+            "status": "PASS"
+          },
+          {
+            "case": "invalidSourceCannotOpenOrTruncateTheChosenCopyDestination",
+            "status": "PASS"
+          },
+          {
+            "case": "confirmationHashesOnlySelectedAudioAndReportsMultiFileRecoveryCost",
+            "status": "PASS"
+          },
+          {
+            "case": "splitUnknownEvidenceFailedSaveAndStaleCASKeepBothCopiesAndHealthyNeighbour",
+            "status": "PASS"
+          },
+          {
+            "case": "unknownJournalMustNotHideTwoValidRecordingsOrTheirNativeExports",
+            "status": "PASS"
+          },
+          {
+            "case": "unsafeReservationCannotHideTheLastVerifiedFinalCopy",
+            "status": "PASS"
+          },
+          {
+            "case": "noMatchingCopyCannotClaimOriginalOrOpenDestinationButBothRawFilesRemainExportable",
+            "status": "PASS"
+          },
+          {
+            "case": "unreadableJournalDirectoryDoesNotPreventRawExportOfBothReservations",
+            "status": "PASS"
+          },
+          {
+            "case": "splitRecoveryMustExposeVerifiedFinalAndUncertainReservationSeparately",
+            "status": "PASS"
+          }
+        ],
+        "stdout": "voice-split-native SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\n.audio-voice-split-native--1b8aae7a-b611-4016-b570-5ff2b651dca4.tmp SIZE=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec\nNATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\nvoice-split-native SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\n.audio-voice-split-native--1b8aae7a-b611-4016-b570-5ff2b651dca4.tmp SIZE=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec\nNATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\nNATIVE_EXPORTED bytes=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc\n.audio-voice-duplicate--7dd6cc29-b0e3-4c9e-9fb5-51f42cb7c8ab.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\n.audio-voice-duplicate--a133dd45-16e4-488b-b16d-7fa5ce8e2cdf.tmp SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc\nNATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\n.audio-voice-write-one--3decbbad-3b0d-4f91-9a1d-a173ff662c25.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\n.audio-voice-write-two--c9c12ebd-5e3f-448a-b770-fea5176f29c3.tmp SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc\n.audio-voice-copy--d15f8cd8-df3d-4039-88c4-d244d7d4ec5f.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\nNATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\nNATIVE_EXPORTED bytes=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec\n.audio-voice-reverse--f894835b-9148-481d-847b-3722d658310d.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\nvoice-reverse SIZE=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec\nvoice-final-only SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\nNATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\nNATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\nNATIVE_EXPORTED bytes=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc\nNATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\n.audio-voice-combo-one--7dbeddf2-5d58-4ff1-95df-82c6126077ce.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\n.audio-voice-combo-two--c381c07f-7bf9-4a4e-9fda-36be8c6d9315.tmp SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc\n.audio-voice-combo-bad--22306643-f4ce-42a1-81d1-156b93b074b8.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\nNATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\nNATIVE_EXPORTED bytes=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc\nNATIVE_EXPORTED bytes=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc\n.audio-voice-hash-one--557bc99b-77f7-4ea9-9a70-78fdbe665d30.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\n.audio-voice-hash-two--b306c887-f77d-4f0f-87ad-f06a9c835e68.tmp SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc\nNATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\nNATIVE_EXPORTED bytes=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc\n.audio-voice-token-two--191160d1-559f-4a87-971a-63a8539a866b.tmp SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc\n.audio-voice-token-one--191160d1-559f-4a87-971a-63a8539a866b.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\nNATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\nNATIVE_EXPORTED bytes=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc\nvoice-split-direct SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\n.audio-voice-split-direct--0aae082b-a967-44d3-ad71-839f37451fed.tmp SIZE=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec\nSPLIT_EXPORT actual_sha=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a expected_sha=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\nNATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\n.audio-voice-bound-history--fe99b65b-3852-4f01-9efb-07bc4864d633.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\n.audio-voice-close-failure--bd5972ee-eb10-4817-b45c-4463bfa49be5.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\nvoice-close-failure SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\nHOST_ONLY_PERFORMANCE bytes=25165824 recovery_ms=94 selected_confirm_ms=49 recovery_hashes=3 confirm_hashes=1 Android_performance=NOT_RUN\nvoice-split-combined SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\n.audio-voice-split-combined--d02bc5bc-051e-40fa-9dad-71e473d30d3a.tmp SIZE=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec\nNATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\nNATIVE_EXPORTED bytes=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec\nNATIVE_EXPORTED bytes=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc\nvoice-split-combined SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\n.audio-voice-split-combined--d02bc5bc-051e-40fa-9dad-71e473d30d3a.tmp SIZE=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec\n.audio-voice-healthy--8e89ce9e-fa76-4f19-91a5-6fd16fdbf50d.tmp SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc\nNATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\nNATIVE_EXPORTED bytes=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec\nNATIVE_EXPORTED bytes=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc\nvoice-split-combined SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\n.audio-voice-split-combined--d02bc5bc-051e-40fa-9dad-71e473d30d3a.tmp SIZE=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec\n.audio-voice-healthy--8e89ce9e-fa76-4f19-91a5-6fd16fdbf50d.tmp SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc\nvoice-one SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\nvoice-two SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc\nNATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\nNATIVE_EXPORTED bytes=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc\n.audio-voice-one--4caef3bf-7cc6-4f6f-94be-8d62f02011bf.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\n.audio-voice-two--af9271a8-122d-49ce-a6a5-807f9e4cee5e.tmp SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc\nNATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\nNATIVE_EXPORTED bytes=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc\n.audio-voice-one--4caef3bf-7cc6-4f6f-94be-8d62f02011bf.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\n.audio-voice-two--af9271a8-122d-49ce-a6a5-807f9e4cee5e.tmp SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc\nNATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\noutside SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc\nvoice-safe-final SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\nvoice-no-match SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\n.audio-voice-no-match--7af8f986-bea1-48b1-857b-fbd157f03920.tmp SIZE=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec\n.audio-voice-no-match--7af8f986-bea1-48b1-857b-fbd157f03920.tmp SIZE=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec\nvoice-no-match SIZE=10 SHA256=4001ba71acef633247a0806147b959216c7013b82c0d88630e72e4d6bee6efed\nNATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\nNATIVE_EXPORTED bytes=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc\n.audio-voice-dir-one--04bd9645-0878-4602-880b-cf967815f761.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\n.audio-voice-dir-two--f11b7dd0-a184-4bee-9a97-b9f80b9bc2f4.tmp SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc\nvoice-split-rows SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\n.audio-voice-split-rows--80d72630-363a-4018-b6d1-dcfe36c74c0d.tmp SIZE=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec\nNATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\nNATIVE_EXPORTED bytes=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec\nvoice-split-rows SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a\n.audio-voice-split-rows--80d72630-363a-4018-b6d1-dcfe36c74c0d.tmp SIZE=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec\n"
+      },
+      {
+        "class": "cz.zamerovac.app.Audit39FindingsTest",
+        "counts": {
+          "PASS": 5,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "successfulZipExportMustFitImporterEntryLimit",
+            "status": "PASS"
+          },
+          {
+            "case": "independentOfflineFolderMovesMustNotCreateUnreachableCycle",
+            "status": "PASS"
+          },
+          {
+            "case": "purgeMustRemoveExclusiveVoiceAndHistoricalMedia",
+            "status": "PASS"
+          },
+          {
+            "case": "stalledZipProviderMustNotBlockLocalSave",
+            "status": "PASS"
+          },
+          {
+            "case": "acknowledgedUnicodeDatabaseMustBeReadableImmediately",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.Audit39HandshakeTest",
+        "counts": {
+          "PASS": 11,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "revocationBetweenCommitAndFinalPeerConfirmationAbortsHandshake",
+            "status": "PASS"
+          },
+          {
+            "case": "forgetInvalidatesNewPairingAndFreshExplicitPairingStillWorks",
+            "status": "PASS"
+          },
+          {
+            "case": "forgetIsNotDroppedWhenAllTransferWorkersAreBusy",
+            "status": "PASS"
+          },
+          {
+            "case": "revokedDuringKnownHandshakeMustNotBeReapproved",
+            "status": "PASS"
+          },
+          {
+            "case": "mutualApprovalBindsCertificatesBeforeExactEncryptedPayload",
+            "status": "PASS"
+          },
+          {
+            "case": "rememberedRouteMustAnswerWithExpectedPinnedIdentityBeforeAnyPayload",
+            "status": "PASS"
+          },
+          {
+            "case": "oneSidedDurablePairingRequiresFreshComparisonOnBothScreens",
+            "status": "PASS"
+          },
+          {
+            "case": "pinnedReconnectDoesNotNeedAnotherApprovalAndUnknownCertificateIsDenied",
+            "status": "PASS"
+          },
+          {
+            "case": "certificateCannotClaimAnotherInstallIdentityEvenDuringPairing",
+            "status": "PASS"
+          },
+          {
+            "case": "revokedBindingAndOversizeFramesAreRejected",
+            "status": "PASS"
+          },
+          {
+            "case": "rejectedPairingSavesNeitherTrustBinding",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.Audit39SafetyTest",
+        "counts": {
+          "PASS": 8,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "streamingBudgetRejectsGrowthAndOversizedJsonWithoutWritingExcessByte",
+            "status": "PASS"
+          },
+          {
+            "case": "stalledProviderTimesOutWithoutPublishingOrLeakingMedia",
+            "status": "PASS"
+          },
+          {
+            "case": "purgeProtectsLiveAudioHistoryAndSeparateImmutableBackup",
+            "status": "PASS"
+          },
+          {
+            "case": "maximumEntryArchiveRoundTripsWithAllThreeMetadataEntries",
+            "status": "PASS"
+          },
+          {
+            "case": "sharedHierarchyFixturesConvergeAndPreserveAllPayloadsAndInputs",
+            "status": "PASS"
+          },
+          {
+            "case": "utf8LimitBelowAtAndAbovePreservesBothConfirmedCopies",
+            "status": "PASS"
+          },
+          {
+            "case": "slowRestoreCommitsLatestLocalEditAndRollsBackFailedCommit",
+            "status": "PASS"
+          },
+          {
+            "case": "exportStreamsThreeGiBAndBudgetIncludesMetadata",
+            "status": "PASS"
+          }
+        ],
+        "stdout": "THREE_GIB_ZIP_EXACT_BYTES=3221225472 HEAP_LIMIT=536870912\n"
+      },
+      {
+        "class": "cz.zamerovac.app.BackupHistoryTest",
+        "counts": {
+          "PASS": 11,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "historyRestoreRefusesStaleBackupAndKeepsAllExistingMedia",
+            "status": "PASS"
+          },
+          {
+            "case": "storageFailureAndDamagedBlobKeepPreviousPointAndCurrentData",
+            "status": "PASS"
+          },
+          {
+            "case": "zeroProgressAndOversizedBackupStreamsFailWithoutPublishingOrChangingDatabase",
+            "status": "PASS"
+          },
+          {
+            "case": "latestLocalEditSurvivesSlowRestoreAndCommitFailureRollsBackNewMedia",
+            "status": "PASS"
+          },
+          {
+            "case": "historyRestoreIntoCleanReceiverKeepsExactDimensionAndOriginalBytes",
+            "status": "PASS"
+          },
+          {
+            "case": "providerReadFailureIsNotTreatedAsCorruptionOrPermissionToPublishRepair",
+            "status": "PASS"
+          },
+          {
+            "case": "interruptedCanonicalBlockCanRetryAfterRestartWithoutOverwritingPartialFile",
+            "status": "PASS"
+          },
+          {
+            "case": "corruptedCanonicalGetsVerifiedImmutableRepairAndBothHistoricalManifestsStayUnchanged",
+            "status": "PASS"
+          },
+          {
+            "case": "nestedNotesAudioAndSerializedHistoryGetIndependentMediaIds",
+            "status": "PASS"
+          },
+          {
+            "case": "twoHistoriesShareOneHundredOriginalsAndOldAndNewRestoreExactBytes",
+            "status": "PASS"
+          },
+          {
+            "case": "unsafePathAndMissingBlobCannotBeReportedComplete",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.CloudFilesReadTest",
+        "counts": {
+          "PASS": 4,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "oversizedBlobCannotCopyTrailingBytesOrReadOneWholeExtraBlock",
+            "status": "PASS"
+          },
+          {
+            "case": "oversizedControlFrameReadsOnlyDeclaredLimitPlusOneAndCloses",
+            "status": "PASS"
+          },
+          {
+            "case": "exactMessageAndBlobKeepEveryByteAndHash",
+            "status": "PASS"
+          },
+          {
+            "case": "zeroProgressInvalidLimitsAndInterruptNeverSpinOrAcknowledge",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.CloudInboxTest",
+        "counts": {
+          "PASS": 5,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "committedReceiptSurvivesReopenAndIsScopedToInstallationAndStore",
+            "status": "PASS"
+          },
+          {
+            "case": "cachedAndReopenedInboxInvalidateEveryReceiptAfterDatabaseFallback",
+            "status": "PASS"
+          },
+          {
+            "case": "supersededLocalIntentCannotBecomeRemoteAcknowledgementAndRecoveryInvalidatesIt",
+            "status": "PASS"
+          },
+          {
+            "case": "failedReceiptWriteCannotTurnUnacknowledgedCommitIntoCachedSuccess",
+            "status": "PASS"
+          },
+          {
+            "case": "missingCommitAndChangedImmutableMessageCannotBeAcknowledged",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.CloudPublicationsTest",
+        "counts": {
+          "PASS": 4,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "repairRequestUsesDurableCounterBackoffAndNeverTreatsPublicationAsDataAck",
+            "status": "PASS"
+          },
+          {
+            "case": "failedAtomicReceiptCannotEnterCacheOrAdvanceRepair",
+            "status": "PASS"
+          },
+          {
+            "case": "verifiedReceiptSurvivesRestartButMissingChangedExpiredOrForeignStoreCannotReuseIt",
+            "status": "PASS"
+          },
+          {
+            "case": "completeSnapshotPublicationIsScopedDurableExpiringAndStillNotADataAck",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.CloudScanTest",
+        "counts": {
+          "PASS": 2,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "failedCursorWriteDoesNotAdvanceCachedStateOrAcceptUnsafePosition",
+            "status": "PASS"
+          },
+          {
+            "case": "roundRobinSurvivesRestartWithoutTrustingOrDiscardingMessage",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.CloudStorageTest",
+        "counts": {
+          "PASS": 5,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "independentBackendsAndDisconnectNeverSilentlyFallBackToOldFolder",
+            "status": "PASS"
+          },
+          {
+            "case": "accountProjectAndCancellationScopeCannotReuseOldStoreOrNamespace",
+            "status": "PASS"
+          },
+          {
+            "case": "invalidProjectConfigurationNeverCallsDriveApiOrChangesSelectedAccount",
+            "status": "PASS"
+          },
+          {
+            "case": "offlineMeteredWifiOnlyAndExplicitExceptionUseCurrentNetwork",
+            "status": "PASS"
+          },
+          {
+            "case": "missingProjectDoesNotBecomeASafFallbackOrAuthorizeAnAccount",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.DatabaseInstallEvidenceTest",
+        "counts": {
+          "PASS": 23,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "corruptedPrimaryWithValidOldBackupLeavesBytesAndRequiresRecoveryEpoch",
+            "status": "PASS"
+          },
+          {
+            "case": "lostTextOnlyDatabaseAndJournalNeverBecomesFreshInstall",
+            "status": "PASS"
+          },
+          {
+            "case": "approvedPairingWithoutAnyProjectCanInitializeButNeverResetAfterFirstSave",
+            "status": "PASS"
+          },
+          {
+            "case": "interruptedOrCorruptEvidenceMustNotAuthorizeReset",
+            "status": "PASS"
+          },
+          {
+            "case": "temporaryUnreadablePrimaryRetriesWithoutRotatingEpoch",
+            "status": "PASS"
+          },
+          {
+            "case": "redundantNoBackupEvidenceSurvivesSelectiveFilesLossAndRestart",
+            "status": "PASS"
+          },
+          {
+            "case": "recoveredSnapshotUsesNewHashAndRejectsOldCloudAckIdentity",
+            "status": "PASS"
+          },
+          {
+            "case": "oversizedBaseBackupAndNewMarkersAreAlwaysRejected",
+            "status": "PASS"
+          },
+          {
+            "case": "firstInstallWithIdentityAloneIsStillClean",
+            "status": "PASS"
+          },
+          {
+            "case": "interruptedAtomicWriteIsDetectedWithoutDestroyingValidPrimary",
+            "status": "PASS"
+          },
+          {
+            "case": "r9MissingRecoveryJournalCannotReacceptPreRecoveryAckOrOverwritePhoto",
+            "status": "PASS"
+          },
+          {
+            "case": "staleOutboxIsRetainedButCannotBeReacknowledged",
+            "status": "PASS"
+          },
+          {
+            "case": "migratedLegacyPrimarySurvivesLaterLossAsEvidence",
+            "status": "PASS"
+          },
+          {
+            "case": "delayedBlobAckKeepsExactOriginalAndArchivedSnapshot",
+            "status": "PASS"
+          },
+          {
+            "case": "r10TemporaryQueuedSnapshotReadErrorRecoversAfterRestartWithoutFalseAck",
+            "status": "PASS"
+          },
+          {
+            "case": "unreadableMarkerNeverGetsSilentlyReplaced",
+            "status": "PASS"
+          },
+          {
+            "case": "r9MismatchedRecoveryJournalIsRejectedWithoutMutatingOriginal",
+            "status": "PASS"
+          },
+          {
+            "case": "legacyPrimaryMigratesToBothLocationsWithoutChangingExactData",
+            "status": "PASS"
+          },
+          {
+            "case": "unmarkedLegacyPairingRemainsFailClosedWithoutPrimary",
+            "status": "PASS"
+          },
+          {
+            "case": "legacySyncReceiptsAlonePreventNewBlankDatabaseAndRetireOldAck",
+            "status": "PASS"
+          },
+          {
+            "case": "firstCleanTextOnlySaveCreatesDurableEvidence",
+            "status": "PASS"
+          },
+          {
+            "case": "malformedSurvivorOrUnusableMarkerCannotBeSilentlyRepaired",
+            "status": "PASS"
+          },
+          {
+            "case": "symlinkEvidenceIsNeverInterpretedAsAbsent",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.DatabaseRecoveryTest",
+        "counts": {
+          "PASS": 7,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "partialAndCompleteUnconfirmedTemporaryFilesNeverReplaceConfirmedDatabaseOnRead",
+            "status": "PASS"
+          },
+          {
+            "case": "restartResidueAfterBackupPublicationKeepsPrimaryAndFallbackDoesNotPromotePendingData",
+            "status": "PASS"
+          },
+          {
+            "case": "deletedDatabaseInvalidatesReceiptsAndMalformedJournalFailsClosed",
+            "status": "PASS"
+          },
+          {
+            "case": "fallbackRotatesDurablyOnceAndNeverOverwritesEitherOriginal",
+            "status": "PASS"
+          },
+          {
+            "case": "orphanOriginalNeverAuthorizesImplicitFreshDatabase",
+            "status": "PASS"
+          },
+          {
+            "case": "failedDatabaseStagingPreservesConfirmedPrimaryAndRecoveryCopy",
+            "status": "PASS"
+          },
+          {
+            "case": "failedRecoveryJournalCannotReturnOlderDataAsConfirmed",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.DirectSyncServiceTest",
+        "counts": {
+          "PASS": 6,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "activityStopDetachesUiCancelsPairingAndPreservesServiceCoordinator",
+            "status": "PASS"
+          },
+          {
+            "case": "serviceOwnsOneCoordinatorAndPrivateNotificationWithExplicitStop",
+            "status": "PASS"
+          },
+          {
+            "case": "resumeReadsConfirmedBackgroundDataWithoutReplayingStaleScreen",
+            "status": "PASS"
+          },
+          {
+            "case": "disabledOrDeniedServiceNeverPretendsTransferStartedAndKeepsData",
+            "status": "PASS"
+          },
+          {
+            "case": "transferWakeLockIsBoundedReleasedAndCannotRestartAfterClose",
+            "status": "PASS"
+          },
+          {
+            "case": "failedOrDetachedUiDoesNotPreventOtherObserverOrDurableCommit",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.DocumentBackupStoreTest",
+        "counts": {
+          "PASS": 3,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "cloudProviderNeedsUnmeteredNetworkOrOneExplicitException",
+            "status": "PASS"
+          },
+          {
+            "case": "duplicateProviderNamesAndUnsafeNamespaceCannotSelectAnOverwriteTarget",
+            "status": "PASS"
+          },
+          {
+            "case": "nullOrDeniedProviderIsNeverConsideredAnEmptySuccessfulHistory",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.DriveAccountFlowTest",
+        "counts": {
+          "PASS": 6,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "oldConsentCannotOverwriteNewerAccountEvenAfterSwitchingBack",
+            "status": "PASS"
+          },
+          {
+            "case": "failedAccountCommitAndInvalidRestoredFlowCannotActivateASelection",
+            "status": "PASS"
+          },
+          {
+            "case": "stoppedAuthorizationIgnoresLateCallbackAndResumesOnlyOnce",
+            "status": "PASS"
+          },
+          {
+            "case": "explicitPickerAndVerifiedGrantOnlySelectTheTargetFeature",
+            "status": "PASS"
+          },
+          {
+            "case": "cancelOrMissingScopePreserveExistingAccountAndNeverSaveAToken",
+            "status": "PASS"
+          },
+          {
+            "case": "consentSurvivesRecreationWithNoTokenInSavedState",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.DriveAccountsTest",
+        "counts": {
+          "PASS": 3,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "featuresKeepIndependentExplicitBindingsAndDisconnectDoesNotTouchTheOther",
+            "status": "PASS"
+          },
+          {
+            "case": "bindingStopsOldAccountAndInvalidInputOrCorruptStateDoesNotResetToEmpty",
+            "status": "PASS"
+          },
+          {
+            "case": "failedAtomicWriteCannotSelectAnUnconfirmedAccountEvenInLiveInstance",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.DriveApiTest",
+        "counts": {
+          "PASS": 5,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "openStreamsOnlyDeclaredObjectBytesAndNeverUsesArbitraryIds",
+            "status": "PASS"
+          },
+          {
+            "case": "incompleteCyclicMalformedAndFailedListingsCannotLookLikeEmptyStorage",
+            "status": "PASS"
+          },
+          {
+            "case": "createOnlyUploadUsesExact256KiBChunksAndChecksServerProgress",
+            "status": "PASS"
+          },
+          {
+            "case": "completePaginationIncludesEmptyPagesAndCarriesOpaqueTokens",
+            "status": "PASS"
+          },
+          {
+            "case": "hostileSessionPartialSourceWrongRangeAndPrematureFinalDoNotComplete",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.DriveAuthorizationTest",
+        "counts": {
+          "PASS": 6,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "memoryCacheExpiresAnd401InvalidatesOnlyTheRejectedToken",
+            "status": "PASS"
+          },
+          {
+            "case": "accountChangeDuringAuthorizationPreventsCachingAndMainThreadCannotBlock",
+            "status": "PASS"
+          },
+          {
+            "case": "sdkRequestPinsSelectedAccountAndOnlyAppDataScope",
+            "status": "PASS"
+          },
+          {
+            "case": "interruptionAbandonsAuthorizationWithoutReturningAResult",
+            "status": "PASS"
+          },
+          {
+            "case": "consentMissingScopeAndDeveloperFailureNeverReturnATokenOrExposeServerText",
+            "status": "PASS"
+          },
+          {
+            "case": "sdkIntegrationDoesNotRequestBroadAccountsContactsPhoneOrSmsPermissions",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.DriveHttpTest",
+        "counts": {
+          "PASS": 4,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "restrictedEndpointsHeadersAndDeniedPolicyNeverOpenAConnection",
+            "status": "PASS"
+          },
+          {
+            "case": "unknownLengthReadsOnlyLimitPlusOneAndDynamicPolicyStopsBeforeNextRead",
+            "status": "PASS"
+          },
+          {
+            "case": "tokenIsOnlyAHeaderAndRedirectsCannotForwardIt",
+            "status": "PASS"
+          },
+          {
+            "case": "uploadPolicyIsCheckedBetween64KiBBlocksAnd401InvalidatesTokenOnce",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.DriveRegistrationTest",
+        "counts": {
+          "PASS": 3,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "invalidPublicProjectIdsCannotActivateAuthorization",
+            "status": "PASS"
+          },
+          {
+            "case": "nativeUiRecognizesRegistrationWithoutPretendingAnAccountOrChangingDatabase",
+            "status": "PASS"
+          },
+          {
+            "case": "generatedPreviewMatchesPublicRegistrationAndKeepsAuthorizationScopeNarrow",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.DriveResumableUploadTest",
+        "counts": {
+          "PASS": 4,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "expiryRestartsAndQuotaAuthAndRateErrorsPreserveOriginalAndSession",
+            "status": "PASS"
+          },
+          {
+            "case": "processRestartQueriesServerAndSendsOnlyVerifiedSuffix",
+            "status": "PASS"
+          },
+          {
+            "case": "impossibleServerRangeOrEndpointCannotSendContent",
+            "status": "PASS"
+          },
+          {
+            "case": "successWithoutServerBytesDoesNotFinishAndLostFinalResponseIsReconciled",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.DriveStoresTest",
+        "counts": {
+          "PASS": 8,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "duplicateAddressedBlobsAreVerifiedAndOrphanCleanupNeverTouchesActiveStage",
+            "status": "PASS"
+          },
+          {
+            "case": "corruptedDriveBackupUsesNewPhysicalCopyAndRestoresOldHistoryWithoutReplacingObjects",
+            "status": "PASS"
+          },
+          {
+            "case": "fullSignedNativeSyncThroughDriveRestPreservesExactValuesAndOriginals",
+            "status": "PASS"
+          },
+          {
+            "case": "twoDriveHistoriesDeduplicate100OriginalsAndRestoreDespiteSyncIndependence",
+            "status": "PASS"
+          },
+          {
+            "case": "deniedOrExpiredApiDoesNotCreateABackupPointOrHideExistingHistory",
+            "status": "PASS"
+          },
+          {
+            "case": "cancellationDuringPublishStopsBeforeNextChunkAndCleansStagingWithoutAck",
+            "status": "PASS"
+          },
+          {
+            "case": "interruptedDriveMediaKeepsReceiverDatabaseAndOutboxUntilVerifiedRetry",
+            "status": "PASS"
+          },
+          {
+            "case": "stagedCloseAbortsAndVerifiedPublishRetainsNamespaceAndCapabilities",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.GuardedSyncStoreTest",
+        "counts": {
+          "PASS": 1,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "cancelledRouteStopsNextChunkButAlwaysClosesOwnedResources",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.ImmutableMediaProofTest",
+        "counts": {
+          "PASS": 1,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "sameSizeAndRestoredMtimeCannotReuseAChangedOriginalProof",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.MainCloudSelectionTest",
+        "counts": {
+          "PASS": 4,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "failedNativeFrequencyChangeCannotReplaceConfirmedJobOrPreferences",
+            "status": "PASS"
+          },
+          {
+            "case": "nativeDisconnectStopsOnlyItsFeatureAndSnapshotNeverExposesTokens",
+            "status": "PASS"
+          },
+          {
+            "case": "confirmedFrequencyControlsActualJobAndManualCancelsItWithoutChangingRecords",
+            "status": "PASS"
+          },
+          {
+            "case": "staleSystemPickerCannotOverwriteARecentlySelectedDriveAccount",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.MediaImportOwnershipTest",
+        "counts": {
+          "PASS": 3,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "abandonedRequestRemainsTrackedWithoutDeletingMedia",
+            "status": "PASS"
+          },
+          {
+            "case": "receiptSurvivesRestartAndRejectsReassignment",
+            "status": "PASS"
+          },
+          {
+            "case": "invalidIdsOrFailedCommitCannotAuthorizeUnownedMedia",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.MediaIngestTest",
+        "counts": {
+          "PASS": 3,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "actualActivityResultUsesWorkerLeavesUiAndConfirmedSavingAvailable",
+            "status": "PASS"
+          },
+          {
+            "case": "providerTimeoutAndCancellationKeepDatabaseAndOriginalAndDiscardStaging",
+            "status": "PASS"
+          },
+          {
+            "case": "metadataDeadlineAndUnsafeSourcesFailBeforePublishing",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.PeerDiscoveryTest",
+        "counts": {
+          "PASS": 2,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "missingRadioSupportAndPermissionDoNotInventConnectedDevices",
+            "status": "PASS"
+          },
+          {
+            "case": "localRoutesRejectInternetLoopbackMulticastAndWildcard",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.PeerLargeTlsTest",
+        "counts": {
+          "PASS": 1,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "threeGiBActualTlsDropsHalfwayAndRetryPreservesExactGeometryAndOriginals",
+            "status": "PASS"
+          }
+        ],
+        "stdout": "ACTUAL_TLS_3GIB_RETRY_FROM_ZERO SHA256=3474c4187dcbba2df7538da8a9377a0272da698a0048328a54451b80734742d5 RECEIVED=3221227886 HEAP_LIMIT=536870912\n"
+      },
+      {
+        "class": "cz.zamerovac.app.PeerLegacyCompatibilityTest",
+        "counts": {
+          "PASS": 1,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "legacyCapabilityTransfersCurrentV2AndKeepsUnsupportedHistoryPending",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.PeerMediaCheckpointTest",
+        "counts": {
+          "PASS": 4,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "cancelledTransferAndZeroProgressLeaveNoPartialDestination",
+            "status": "PASS"
+          },
+          {
+            "case": "localHashYieldsBetweenBlocksAndNeverChangesOriginal",
+            "status": "PASS"
+          },
+          {
+            "case": "simultaneousDifferentOriginalIsNeverReplacedByVerifiedTemporaryFile",
+            "status": "PASS"
+          },
+          {
+            "case": "duplicateVerificationRunsOutsideDatabaseLockAndRetainsExactOriginal",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.PeerMediaLargeTest",
+        "counts": {
+          "PASS": 1,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "threeGiBInterruptedHalfwayRestartsWholeFileAndPreservesHealthyNeighbour",
+            "status": "PASS"
+          }
+        ],
+        "stdout": "PEER_MEDIA_3GIB_RETRY_FROM_ZERO SHA256=4a2980f6530cf815661776d5aff5807f7bb38ed6fb034aeae1f26edea33b95ec HEAP_LIMIT=536870912\n"
+      },
+      {
+        "class": "cz.zamerovac.app.PeerSessionsTest",
+        "counts": {
+          "PASS": 3,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "authenticatedNearbySupersedesEitherLanDirectionButLanCannotDisplaceNearby",
+            "status": "PASS"
+          },
+          {
+            "case": "sameRouteTieUsesInitiatorPreferenceAndDifferentPeersStayIndependent",
+            "status": "PASS"
+          },
+          {
+            "case": "simultaneousRoutesConvergeOnOneNearbyLeaseWithoutStaleRemoval",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.PeerTlsTest",
+        "counts": {
+          "PASS": 7,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "mutualApprovalBindsCertificatesBeforeExactEncryptedPayload",
+            "status": "PASS"
+          },
+          {
+            "case": "rememberedRouteMustAnswerWithExpectedPinnedIdentityBeforeAnyPayload",
+            "status": "PASS"
+          },
+          {
+            "case": "oneSidedDurablePairingRequiresFreshComparisonOnBothScreens",
+            "status": "PASS"
+          },
+          {
+            "case": "pinnedReconnectDoesNotNeedAnotherApprovalAndUnknownCertificateIsDenied",
+            "status": "PASS"
+          },
+          {
+            "case": "certificateCannotClaimAnotherInstallIdentityEvenDuringPairing",
+            "status": "PASS"
+          },
+          {
+            "case": "revokedBindingAndOversizeFramesAreRejected",
+            "status": "PASS"
+          },
+          {
+            "case": "rejectedPairingSavesNeitherTrustBinding",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.PeerTransferTest",
+        "counts": {
+          "PASS": 14,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "fallbackOnResponderInvalidatesRemoteAckAndRestoresExactDataWithoutNewUserEdit",
+            "status": "PASS"
+          },
+          {
+            "case": "recoveryOnInitiatorInvalidatesRemoteAckBeforeResponderPreparesSnapshot",
+            "status": "PASS"
+          },
+          {
+            "case": "diskFailureBeforePeerDatabaseCommitLeavesMetadataAndExactDataUntouched",
+            "status": "PASS"
+          },
+          {
+            "case": "corruptAndPartialStreamsDoNotPublishMedia",
+            "status": "PASS"
+          },
+          {
+            "case": "disconnectNineteenthOfThirtyKeepsDatabaseAndResumesAfterReopen",
+            "status": "PASS"
+          },
+          {
+            "case": "firstSyncIntoCleanReceiverKeepsExactPhotoAndNoDuplicateOnRetry",
+            "status": "PASS"
+          },
+          {
+            "case": "receiverFailureBeforeFirstPhotoBaselineIsNotDatabaseLoss",
+            "status": "PASS"
+          },
+          {
+            "case": "editDuringMediaTransferIsMergedFromLatestDatabase",
+            "status": "PASS"
+          },
+          {
+            "case": "coalescesOnlyObservedRevisionsAndRejectsUnsafeMetadata",
+            "status": "PASS"
+          },
+          {
+            "case": "corruptReceiverCannotAcceptOldBackupOrAckPeerSnapshot",
+            "status": "PASS"
+          },
+          {
+            "case": "completeBidirectionalMediaAndExactAnnotationsRemainIdempotent",
+            "status": "PASS"
+          },
+          {
+            "case": "recoveryQuarantineWithMoreThanSixteenOldJobsDoesNotBlockDirectTls",
+            "status": "PASS"
+          },
+          {
+            "case": "sameMediaIdDifferentBytesRefusesWithoutOverwritingOrFalseAck",
+            "status": "PASS"
+          },
+          {
+            "case": "interruptedFirstPhotoTransferKeepsCleanBaselineAndResumesSafely",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.PeerWifiDirectTest",
+        "counts": {
+          "PASS": 7,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "lostGroupRetriesAreBoundedAndBusyRadioRetainsPendingState",
+            "status": "PASS"
+          },
+          {
+            "case": "lateGroupReplyAfterDisconnectAndCloseCannotPublishEndpoint",
+            "status": "PASS"
+          },
+          {
+            "case": "noUnknownPermissionlessDisabledOrRevokedAutoConnections",
+            "status": "PASS"
+          },
+          {
+            "case": "channelLossReinitializesAndOldPeerCallbackCannotConnect",
+            "status": "PASS"
+          },
+          {
+            "case": "automaticRecreatesKnownRouteAndKeepsExpectedIdentityOutOfUi",
+            "status": "PASS"
+          },
+          {
+            "case": "incomingRouteUsesActualGroupInterfaceForOwnerAndClearsAfterDisconnect",
+            "status": "PASS"
+          },
+          {
+            "case": "onlyAuthenticatedRouteIsDurableAndForgettingRemovesIt",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.PendingAudioTest",
+        "counts": {
+          "PASS": 15,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "faultsAtEveryDurabilityBoundaryKeepOriginalAndRecoveryIsRepeatable",
+            "status": "PASS"
+          },
+          {
+            "case": "ledgerPathAndAudioSymlinksAreRejectedWithoutTouchingTargets",
+            "status": "PASS"
+          },
+          {
+            "case": "collisionsConcurrentReservationsAndPublicationCannotOverwriteEitherCopy",
+            "status": "PASS"
+          },
+          {
+            "case": "restartBetweenJournalAndPublicationRecoversCompletedBytes",
+            "status": "PASS"
+          },
+          {
+            "case": "trashPurgeRetainsPendingBoundAndUnknownAudioWhileOtherMediaStillDeletes",
+            "status": "PASS"
+          },
+          {
+            "case": "realUnwritableJournalLocationAndActiveRecoveryKeepCapture",
+            "status": "PASS"
+          },
+          {
+            "case": "prefsMemoryValuesAfterFailedCommitAreNeverTreatedAsDurableMetadata",
+            "status": "PASS"
+          },
+          {
+            "case": "completedMetadataFailurePreservesExactBytes",
+            "status": "PASS"
+          },
+          {
+            "case": "historyUndoTrashBackupAndOldRestoreDoNotAuthorizeDeletionOrBinding",
+            "status": "PASS"
+          },
+          {
+            "case": "failedLedgerAfterProjectCommitDoesNotUndoDurableProject",
+            "status": "PASS"
+          },
+          {
+            "case": "unconfirmedNewJournalAndExportOfCorruptEvidencePreserveExactOriginal",
+            "status": "PASS"
+          },
+          {
+            "case": "corruptMissingAndAtomicBackupJournalNeverHideOrDeleteOriginals",
+            "status": "PASS"
+          },
+          {
+            "case": "legacyUnknownAndInterruptedCaptureRemainVisibleAndExportable",
+            "status": "PASS"
+          },
+          {
+            "case": "boundRequiresExactDurableSnapshotAndNoteIdentityAndIsIdempotent",
+            "status": "PASS"
+          },
+          {
+            "case": "emptyLargeAndChangedOriginalsNeverAcquireFalseCompletedProof",
+            "status": "PASS"
+          }
+        ],
+        "stdout": "ORIGINAL_AND_RECOVERED_SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a EXACT_BYTES=10\n"
+      },
+      {
+        "class": "cz.zamerovac.app.PhotoThumbnailsTest",
+        "counts": {
+          "PASS": 3,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "mirroredExifThumbnailAndReusePreserveEveryOriginalByte",
+            "status": "PASS"
+          },
+          {
+            "case": "coldDecoderDoesNotBlockDatabaseAndPurgedSourceCannotPublishLateCache",
+            "status": "PASS"
+          },
+          {
+            "case": "malformedImageAndCacheWriteFailureDoNotTouchOriginal",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.Post147DataTest",
+        "counts": {
+          "PASS": 6,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "unreadableDatabaseNeverBecomesWritableEmptyState",
+            "status": "PASS"
+          },
+          {
+            "case": "originalBackupExporterRoundTripsEditableDataAndOriginalMedia",
+            "status": "PASS"
+          },
+          {
+            "case": "emptyExportAndInvalidImagesFailWithoutDatabaseWrites",
+            "status": "PASS"
+          },
+          {
+            "case": "invalidOrIncompleteBackupCannotReplaceExistingRecords",
+            "status": "PASS"
+          },
+          {
+            "case": "customerZipContainsOnlyRasterPdfForOneAndMultiplePhotos",
+            "status": "PASS"
+          },
+          {
+            "case": "importAddsCopyAndPreservesLegacyPrecisionAndUnknownFields",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.Post149NativeTest",
+        "counts": {
+          "PASS": 9,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "videoTimeoutAndErrorsPreserveOriginalAndPauseReleasesPlayback",
+            "status": "PASS"
+          },
+          {
+            "case": "earlyGattCallbackIsQueuedAndTimeoutClosesOnlyItsOwnSession",
+            "status": "PASS"
+          },
+          {
+            "case": "permissionReplyAfterCancelDoesNotRestartScan",
+            "status": "PASS"
+          },
+          {
+            "case": "videoRejectsMissingAndTraversalIds",
+            "status": "PASS"
+          },
+          {
+            "case": "blockedThumbnailCannotHoldDataLockOrLoadForever",
+            "status": "PASS"
+          },
+          {
+            "case": "rotationKeepsActivityWebViewAndSavedProject",
+            "status": "PASS"
+          },
+          {
+            "case": "videoUsesInternalPlayerAndReadOnlyLargeFileDescriptor",
+            "status": "PASS"
+          },
+          {
+            "case": "pagesStayTogetherAndIncompletePdfCannotBeSaved",
+            "status": "PASS"
+          },
+          {
+            "case": "videoThumbnailCacheAndUnsupportedFormatNeverChangeOriginal",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.ProtectedArchiveCoverageTest",
+        "counts": {
+          "PASS": 9,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "changedHoldDuringCopyCannotPublishCompleteArchive",
+            "status": "PASS"
+          },
+          {
+            "case": "unconfirmedAtomicSidecarsAreCopiedByteExactlyButNotSourceComplete",
+            "status": "PASS"
+          },
+          {
+            "case": "pinnedPhotoAndVideoMatchHashesAndCannotBeReplacedBySameLengthContent",
+            "status": "PASS"
+          },
+          {
+            "case": "tamperedArchivedHistoricalHoldCannotPassVerification",
+            "status": "PASS"
+          },
+          {
+            "case": "interruptedProtectedArchiveLeavesNoCompleteMarkerAndCanRetry",
+            "status": "PASS"
+          },
+          {
+            "case": "exactOldRevisionAndBothCatalogsSurviveRotationVerifyAndSeparateRecoveryCopy",
+            "status": "PASS"
+          },
+          {
+            "case": "missingWitnessOrCorruptCatalogCannotClaimCompleteP1Archive",
+            "status": "PASS"
+          },
+          {
+            "case": "missingEntireP1RegistryNeverClaimsHistoricalSourceCompleteness",
+            "status": "PASS"
+          },
+          {
+            "case": "brokenOrMissingImmutableHoldMustNotBeCertified",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.ProtectedRevisionsTest",
+        "counts": {
+          "PASS": 21,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "purgeAndPendingCleanupRetainPhotoVideoAndExactPreimage",
+            "status": "PASS"
+          },
+          {
+            "case": "rollbackKeepsPinnedAndLiveButRemovesUnreferencedNewFile",
+            "status": "PASS"
+          },
+          {
+            "case": "jsonLookingNoteTextAndEmbeddedLegacyHistoryRemainExact",
+            "status": "PASS"
+          },
+          {
+            "case": "retainedExactStateRestoresAsSeparateCopyThroughExistingImporter",
+            "status": "PASS"
+          },
+          {
+            "case": "atomicBackupAndCompleteUnpublishedHoldRepairAfterRestart",
+            "status": "PASS"
+          },
+          {
+            "case": "severalExactMetadataRevisionsShareOneSetOfOriginalBytes",
+            "status": "PASS"
+          },
+          {
+            "case": "ackSupersessionForgetAndRestartNeverReleaseOriginals",
+            "status": "PASS"
+          },
+          {
+            "case": "alreadyLostOriginalIsTruthfulEvidenceAndCannotPublishACompleteSnapshot",
+            "status": "PASS"
+          },
+          {
+            "case": "validOrphanRepairsCatalogUnionAfterRestart",
+            "status": "PASS"
+          },
+          {
+            "case": "losingBothCatalogsCannotAuthorizeCleanupFromAnAssumedEmptyRegistry",
+            "status": "PASS"
+          },
+          {
+            "case": "unreadableBackupCannotBeSilentlyOverwrittenByRotation",
+            "status": "PASS"
+          },
+          {
+            "case": "catalogWriteFailureBlocksPublicationAndRepairsOnRetry",
+            "status": "PASS"
+          },
+          {
+            "case": "safLateAckCannotReleaseRecoverableSnapshot",
+            "status": "PASS"
+          },
+          {
+            "case": "missingRegistryAndCorruptManifestFailClosed",
+            "status": "PASS"
+          },
+          {
+            "case": "preUpgradeBackupRevisionSurvivesRotationByteExactly",
+            "status": "PASS"
+          },
+          {
+            "case": "missingPinnedIdRejectsReuseAndAcceptsOnlyByteExactPeerRestoration",
+            "status": "PASS"
+          },
+          {
+            "case": "driveLateAckCannotReleaseRecoverableSnapshot",
+            "status": "PASS"
+          },
+          {
+            "case": "recoveryAuthorityLossCannotReleasePinsOrAuthorizeRestore",
+            "status": "PASS"
+          },
+          {
+            "case": "changedOriginalCannotBeBlessedAsANewProtectedVersion",
+            "status": "PASS"
+          },
+          {
+            "case": "retentionAloneCannotMasqueradeAsFreshDatabaseAuthority",
+            "status": "PASS"
+          },
+          {
+            "case": "lowSpaceRejectsReplacementWithoutTouchingConfirmedBytes",
+            "status": "PASS"
+          }
+        ],
+        "stdout": "HYBRID_DISK_GROWTH {\"revisionsAdded\":5,\"originalBytes\":12,\"originalFileCount\":2,\"metadataBytesBefore\":1193,\"metadataBytesAfter\":5963}\n"
+      },
+      {
+        "class": "cz.zamerovac.app.ProviderIoTest",
+        "counts": {
+          "PASS": 3,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "timeoutReleasesCallerEvenWhenReadIgnoresInterruptAndCancellationBlocks",
+            "status": "PASS"
+          },
+          {
+            "case": "timedOutWriterOwnsItsBytesAndCannotUseMutatedCallerBuffer",
+            "status": "PASS"
+          },
+          {
+            "case": "successfulStreamsAndLateResourceCleanupRespectByteAndCloseContracts",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.RecoveryCandidateReviewTest",
+        "counts": {
+          "PASS": 20,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "verifiedExistingArchiveIsReadOnlyEvidenceNotPromotion",
+            "status": "PASS"
+          },
+          {
+            "case": "invalidTombstoneClockWithSameIdIsBlockedWithoutRepair",
+            "status": "PASS"
+          },
+          {
+            "case": "healthyCurrentCandidateWithExactMediaHistoryAndTombstonesIsOnlyChecked",
+            "status": "PASS"
+          },
+          {
+            "case": "concurrentTombstoneClockWithSameIdIsBlockedAndPreservesEverything",
+            "status": "PASS"
+          },
+          {
+            "case": "sameSizeChangedMediaCannotUseOldArchive",
+            "status": "PASS"
+          },
+          {
+            "case": "olderHigherTombstoneClockBlocksLowerNewerValue",
+            "status": "PASS"
+          },
+          {
+            "case": "invalidJournalWithoutSideEffectsMustBeBlocked",
+            "status": "PASS"
+          },
+          {
+            "case": "missingOriginalMediaIsBlockedNotInvented",
+            "status": "PASS"
+          },
+          {
+            "case": "olderBackupCannotOverrideNewerDimensionAndTombstone",
+            "status": "PASS"
+          },
+          {
+            "case": "newerDominatingTombstoneClockStillAllowsReadOnlyCheck",
+            "status": "PASS"
+          },
+          {
+            "case": "archivedOldDatabaseNeverCertifiesNewerMeasurements",
+            "status": "PASS"
+          },
+          {
+            "case": "legacyJournalBakAloneMustRemainByteExactAndUnknown",
+            "status": "PASS"
+          },
+          {
+            "case": "journalBaseAndNewMustNotDiscardUnfinishedBytes",
+            "status": "PASS"
+          },
+          {
+            "case": "secondReadAndRestartDoNotChangeAnyEvidenceOrPeerQueue",
+            "status": "PASS"
+          },
+          {
+            "case": "damagedPrimaryCannotImplicitlyAuthorizeHealthyBackup",
+            "status": "PASS"
+          },
+          {
+            "case": "byteIdenticalUnconfirmedTmpNeverReceivesCheckedReadOnly",
+            "status": "PASS"
+          },
+          {
+            "case": "sourceChangedDuringScanIsBlockedWithoutFurtherWrites",
+            "status": "PASS"
+          },
+          {
+            "case": "malformedSchemaIsBlockedWithoutRepair",
+            "status": "PASS"
+          },
+          {
+            "case": "validJournalReadsEpochWithoutMutatingAnyEvidence",
+            "status": "PASS"
+          },
+          {
+            "case": "sameSizeMediaModifiedDuringScanIsBlocked",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.RecoveryInventoryTest",
+        "counts": {
+          "PASS": 7,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "malformedJournalAndPendingTrashAreReportedWithoutRepair",
+            "status": "PASS"
+          },
+          {
+            "case": "symlinkCannotEscapePrivateMediaDirectory",
+            "status": "PASS"
+          },
+          {
+            "case": "textOnlyProjectsDoNotRequireInventedMediaOrLostUndoHistory",
+            "status": "PASS"
+          },
+          {
+            "case": "corruptedPrimaryIsFlaggedWhileOldBackupIsNeverPromoted",
+            "status": "PASS"
+          },
+          {
+            "case": "missingReferencedPhotoIsIncompleteNotAValidRestorableSnapshot",
+            "status": "PASS"
+          },
+          {
+            "case": "orphanedOriginalMediaAreListedWithoutCreatingAnyDatabase",
+            "status": "PASS"
+          },
+          {
+            "case": "validPrimaryBackupDeletedRecordsHistoryAndExactMediaAreReadOnly",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+        "counts": {
+          "PASS": 40,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "existingConfirmedArchiveRejectsChangedPrefsOnly",
+            "status": "PASS"
+          },
+          {
+            "case": "unreadableLivePhotoDuringSecondInventoryFailsClosedWithoutSourceMutation",
+            "status": "PASS"
+          },
+          {
+            "case": "existingConfirmedArchiveRejectsDisappearingOriginalPhoto",
+            "status": "PASS"
+          },
+          {
+            "case": "oversizedCompleteMarkerIsRejectedBeforeOpenAndPreservesSources",
+            "status": "PASS"
+          },
+          {
+            "case": "interruptedStageIsNeverCompleteAndRetryAfterRestartIsIdempotent",
+            "status": "PASS"
+          },
+          {
+            "case": "androidFallbackStillRejectsSymlinkAncestorOnVerifyAndReuse",
+            "status": "PASS"
+          },
+          {
+            "case": "forgedSecondManifestCannotFinalizeInterruptedArchive",
+            "status": "PASS"
+          },
+          {
+            "case": "boundedManifestAcceptsValidVerifyReuseAndInterruptedFinish",
+            "status": "PASS"
+          },
+          {
+            "case": "storageExhaustedMidWriteLeavesOnlyUncommittedStagingEvidence",
+            "status": "PASS"
+          },
+          {
+            "case": "androidFallbackWithoutFileKeyRemainsFailClosed",
+            "status": "PASS"
+          },
+          {
+            "case": "symbolicLinkInAtomicFileSidecarCannotBeCertified",
+            "status": "PASS"
+          },
+          {
+            "case": "archivedMediaDirectorySymlinkToIdenticalLiveOriginalIsRejected",
+            "status": "PASS"
+          },
+          {
+            "case": "changingSourceDuringCopyFailsWithoutPublishingArchive",
+            "status": "PASS"
+          },
+          {
+            "case": "androidCreationTimeFallbackAllowsExactArchiveVerifyAndReuse",
+            "status": "PASS"
+          },
+          {
+            "case": "validManifestMetadataSurvivesVerifyReuseAndInterruptedFinalization",
+            "status": "PASS"
+          },
+          {
+            "case": "corruptedCompleteMarkerWithCorrectLengthIsRejected",
+            "status": "PASS"
+          },
+          {
+            "case": "forgedSecondManifestCannotChangeConfirmedArchiveMetadata",
+            "status": "PASS"
+          },
+          {
+            "case": "unmodifiedSourcesReuseConfirmedAndSafelyFinishUnconfirmed",
+            "status": "PASS"
+          },
+          {
+            "case": "existingConfirmedArchiveRejectsUnsafeNewSidecarSymlink",
+            "status": "PASS"
+          },
+          {
+            "case": "existingConfirmedArchiveRejectsPreciseDimensionChangedDuringReuse",
+            "status": "PASS"
+          },
+          {
+            "case": "completeGrowingAfterFirstReadIsBoundedToOneExtraByte",
+            "status": "PASS"
+          },
+          {
+            "case": "damagedPrimaryIsPreservedAsEvidenceNeverReplacedByOldBackup",
+            "status": "PASS"
+          },
+          {
+            "case": "symlinkOutsideAppIsNeverCopiedAndTamperedArchiveCannotVerify",
+            "status": "PASS"
+          },
+          {
+            "case": "expandingManifestDuringSecondReadCannotFinalizeInterruptedCopy",
+            "status": "PASS"
+          },
+          {
+            "case": "crashAfterAtomicArchiveRenameBeforeMarkerCanBeSafelyFinalized",
+            "status": "PASS"
+          },
+          {
+            "case": "snapshotKeepsExactDimensionsOldBackupTrashJournalMediaPrefsAndOutbox",
+            "status": "PASS"
+          },
+          {
+            "case": "expandingManifestDuringFirstReadIsBoundedAndRejected",
+            "status": "PASS"
+          },
+          {
+            "case": "atomicFileSidecarsAreArchivedByteForByteWithoutPromotingThem",
+            "status": "PASS"
+          },
+          {
+            "case": "lowStorageFailsBeforeStagingAndNeverChangesPrimary",
+            "status": "PASS"
+          },
+          {
+            "case": "existingConfirmedArchiveRejectsNewAtomicSidecarOnly",
+            "status": "PASS"
+          },
+          {
+            "case": "interruptedArchiveRejectsDriftAfterMarkerButKeepsArchivedEvidence",
+            "status": "PASS"
+          },
+          {
+            "case": "androidFallbackStillRejectsRealDirectoryReplacementDuringCopy",
+            "status": "PASS"
+          },
+          {
+            "case": "existingConfirmedArchiveRejectsSameLengthPhotoMutationDuringReuse",
+            "status": "PASS"
+          },
+          {
+            "case": "sameSizeManifestRewrittenDuringReadFailsIdentityCheck",
+            "status": "PASS"
+          },
+          {
+            "case": "disappearingOriginalFailsInsteadOfInventingIt",
+            "status": "PASS"
+          },
+          {
+            "case": "mediaDirectorySwappedToSymlinkDuringCopyIsNeverConfirmed",
+            "status": "PASS"
+          },
+          {
+            "case": "existingArchiveRejectsPhotoMutationInsideMarkerVerification",
+            "status": "PASS"
+          },
+          {
+            "case": "androidFallbackStillRejectsSymlinkSwapDuringCopy",
+            "status": "PASS"
+          },
+          {
+            "case": "interruptedBeforeCompleteRejectsSourceChangeWithoutPublishingMarker",
+            "status": "PASS"
+          },
+          {
+            "case": "absentPhotoAndTextOnlyOrOrphanMediaHaveTruthfulCompleteness",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.SafSyncV2Test",
+        "counts": {
+          "PASS": 34,
+          "FAIL": 2,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "quarantinedHistoricalOutboxDoesNotBlockFreshSignedCloudSync",
+            "status": "PASS"
+          },
+          {
+            "case": "signedRepairFixesSameSizeCorruptBlobAndReplayedRequestDoesNotRedownloadIt",
+            "status": "PASS"
+          },
+          {
+            "case": "repairAfterFinalAckRestoresFallbackReceiverAndNeverOverwritesCorruptRemoteCopy",
+            "status": "PASS"
+          },
+          {
+            "case": "authenticatedDirectArrivalDuringLocalHashReleasesCloudGateBeforePublication",
+            "status": "PASS"
+          },
+          {
+            "case": "interruptedBlobAndRestartResumeWithoutPublishingPartialDatabase",
+            "status": "PASS"
+          },
+          {
+            "case": "meteredMetadataUsesExistingOriginalButMissingLargePhotoWaits",
+            "status": "PASS"
+          },
+          {
+            "case": "committedInboxSurvivesLostAckAndAvoidsReadingOldMessagesAfterRestart",
+            "status": "PASS"
+          },
+          {
+            "case": "largeRepairWaitsForUnmeteredPolicy",
+            "status": "PASS"
+          },
+          {
+            "case": "missingFileStillRequiredByNewerLocalVersionCannotBeRetired",
+            "status": "PASS"
+          },
+          {
+            "case": "fallbackAfterFinalCloudAckReappliesHistoricalMessageDespiteCachedInbox",
+            "status": "PASS"
+          },
+          {
+            "case": "deletedCloudCopyIsRepublishedWithoutOverwritingLocalOriginal",
+            "status": "PASS"
+          },
+          {
+            "case": "driveLateAckKeepsOriginalsAndRejectsUnapprovedRecoveryOnRestart",
+            "status": "PASS"
+          },
+          {
+            "case": "newCloudNamespacePublishesCompleteCopyDespitePriorConfirmedPeerAck",
+            "status": "PASS"
+          },
+          {
+            "case": "concurrentLocalVersionCannotRetireAnUnfinishedRemoteSnapshot",
+            "status": "PASS"
+          },
+          {
+            "case": "forgedAcknowledgementCannotClearQueueAndRevokedAuthorCannotWrite",
+            "status": "PASS"
+          },
+          {
+            "case": "observedReceiverRecoveryCannotReuseHistoricalSignedCloudAck",
+            "status": "PASS"
+          },
+          {
+            "case": "signedImmutableMessagesConvergeAndNoMutableProjectsFileExists",
+            "status": "PASS"
+          },
+          {
+            "case": "newlyAvailableDirectRouteYieldsCloudBetweenChunksWithoutClearingQueue",
+            "status": "PASS"
+          },
+          {
+            "case": "rejectedNetworkPolicyDoesNotEvenListOrReadProvider",
+            "status": "PASS"
+          },
+          {
+            "case": "pendingSourceReopenDoesNotReadAlreadyVerifiedLargeOriginalAgain",
+            "status": "PASS"
+          },
+          {
+            "case": "recoveredPeerCannotClearCloudAckBarrierByUnpairAndRepair",
+            "status": "PASS"
+          },
+          {
+            "case": "coordinatorRevocationDuringCloudAckProofCannotCompleteStaleOutbox",
+            "status": "PASS"
+          },
+          {
+            "case": "signedBodyCannotBeChangedReaddressedOrUsedAsAnotherProofKind",
+            "status": "PASS"
+          },
+          {
+            "case": "corruptionAfterAckOutputCreateCannotPublishValidCloudAck",
+            "status": "PASS"
+          },
+          {
+            "case": "purgedPendingPhotoDoesNotBlockNewerTombstoneOrFalselyAckMissingOldMedia",
+            "status": "PASS"
+          },
+          {
+            "case": "missingSnapshotRequestsVerifiedMetadataAndLegacyStateStillConverges",
+            "status": "PASS"
+          },
+          {
+            "case": "manyInvalidMessagesUseBoundedBatchesResumeAfterRestartAndCannotClearOutbox",
+            "status": "PASS"
+          },
+          {
+            "case": "legacyRemoteRecoveryHoldSurvivesCoordinatorForgetNewCertificateAndRestart",
+            "status": "PASS"
+          },
+          {
+            "case": "driveStagedAckMustNotPublishAfterLocalAuthorityLostInsideProviderCommit",
+            "status": "FAIL",
+            "message": "java.lang.AssertionError: Provider completed signed ACK after recovery epoch loss: Drive staged expected:<0> but was:<1>"
+          },
+          {
+            "case": "networkPolicyChangeDuringLargeUploadStopsAtNextChunkAndRecovers",
+            "status": "PASS"
+          },
+          {
+            "case": "unavailableOldMetadataDoesNotBlockNewerIncomingOrOwnOutgoingAndNeverGetsAcked",
+            "status": "PASS"
+          },
+          {
+            "case": "safDirectAckMustNotPublishAfterLocalAuthorityLostInsideProviderWrite",
+            "status": "FAIL",
+            "message": "java.lang.AssertionError: Provider completed signed ACK after recovery epoch loss: SAF direct expected:<0> but was:<1>"
+          },
+          {
+            "case": "forgedOrUnreferencedRepairCannotTriggerLargeReadsOrClearOutbox",
+            "status": "PASS"
+          },
+          {
+            "case": "historicalSignedAckCannotHideIncompleteNewNamespaceOnMeteredNetwork",
+            "status": "PASS"
+          },
+          {
+            "case": "rejectedNetworkPolicyCannotExposeStaleFallbackAsConfirmed",
+            "status": "PASS"
+          },
+          {
+            "case": "safLateAckKeepsOriginalsAndRejectsUnapprovedRecoveryOnRestart",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.StorageLifecycleTest",
+        "counts": {
+          "PASS": 25,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "compareAndSaveRejectsStaleSnapshotAndReportsDiskFailure",
+            "status": "PASS"
+          },
+          {
+            "case": "archiveRestoreCannotTouchCorruptPrimaryOrResurrectOldBackup",
+            "status": "PASS"
+          },
+          {
+            "case": "firstLaunchInitializesDatabaseBeforeFirstPhotoAndExactMeasurement",
+            "status": "PASS"
+          },
+          {
+            "case": "mediaUploadCannotAcknowledgeFailedMetadataOrUnsafeInputs",
+            "status": "PASS"
+          },
+          {
+            "case": "failedAudioStopReleasesRecorderAndDoesNotAttachAnEmptyFile",
+            "status": "PASS"
+          },
+          {
+            "case": "unsafeZipPathsCannotEscapeAndInvalidMediaReferencesFailSafely",
+            "status": "PASS"
+          },
+          {
+            "case": "annotationHistoryProtectsSharedMediaDuringAnotherRecordsPurge",
+            "status": "PASS"
+          },
+          {
+            "case": "corruptedPrimaryWithOlderValidBackupNeverAcknowledgesCAS",
+            "status": "PASS"
+          },
+          {
+            "case": "pendingAudioBridgeBindsOnlyAfterDurableCompareSaveAndNeverRevertsNewerData",
+            "status": "PASS"
+          },
+          {
+            "case": "mediaUploadStagesAndAcknowledgesOnlyCompleteFilesWithoutOverwritingOriginals",
+            "status": "PASS"
+          },
+          {
+            "case": "duplicateIncomingRecordIdsAreRejectedBeforeAnyMediaWrites",
+            "status": "PASS"
+          },
+          {
+            "case": "missingAndEmptyNestedMediaAbortBeforeAnyArchiveBytes",
+            "status": "PASS"
+          },
+          {
+            "case": "lostDatabaseAfterReopenCannotLookLikeFreshInstallation",
+            "status": "PASS"
+          },
+          {
+            "case": "missingDatabaseCannotMasqueradeAsEmptyCASAndCanRecover",
+            "status": "PASS"
+          },
+          {
+            "case": "archiveRestoreOnCleanInstallationBootstrapsBeforeFirstOriginal",
+            "status": "PASS"
+          },
+          {
+            "case": "cleanFirstInstallAndLegacyMediaAreDistinctWithoutChangingSchema",
+            "status": "PASS"
+          },
+          {
+            "case": "retainedAudioExportRejectsFileUriBeforeOpeningOrTruncatingOriginal",
+            "status": "PASS"
+          },
+          {
+            "case": "exportWriteFailurePropagatesAndPreservesDatabaseAndOriginals",
+            "status": "PASS"
+          },
+          {
+            "case": "repeatedRestoreCreatesIntentionalIsolatedCopiesAndPreservesAllLinks",
+            "status": "PASS"
+          },
+          {
+            "case": "parallelSaveAndFiftyExportsHaveCompleteSnapshotsAndUnchangedOriginals",
+            "status": "PASS"
+          },
+          {
+            "case": "rotatedExifThumbnailAndCacheLeaveJpegBytesMetadataAndDimensionsUntouched",
+            "status": "PASS"
+          },
+          {
+            "case": "uriCopyStagesPartialDataAndDoesNotOverwriteExistingOriginal",
+            "status": "PASS"
+          },
+          {
+            "case": "v2ArchiveRoundtripAndTamperOrMissingManifestFailBeforeWrites",
+            "status": "PASS"
+          },
+          {
+            "case": "cancelledPickersSettleOnceWithoutChangingConfirmedDataOrOriginals",
+            "status": "PASS"
+          },
+          {
+            "case": "confirmedDatabaseSurvivesActivityPauseStopAndNewInstance",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.SyncAckReconciliationTest",
+        "counts": {
+          "PASS": 0,
+          "FAIL": 2,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "driveLateDuplicateAckRestartBothAndRetryMustNotFalselyFinish",
+            "status": "FAIL",
+            "message": "java.lang.AssertionError: Historical cloud ACK retired the working intent while receiver authority was lost"
+          },
+          {
+            "case": "safLateDuplicateAckRestartBothAndRetryMustNotFalselyFinish",
+            "status": "FAIL",
+            "message": "java.lang.AssertionError: Historical cloud ACK retired the working intent while receiver authority was lost"
+          }
+        ],
+        "stdout": "ACK_COUNTEREXAMPLE staged=true late=true falselyRetired=true restartBoth=verified simulatedRestore=true newerRevision=preserved photoVideoAudio=exact realTlsRetry=verified\nACK_COUNTEREXAMPLE staged=false late=true falselyRetired=true restartBoth=verified simulatedRestore=true newerRevision=preserved photoVideoAudio=exact realTlsRetry=verified\n"
+      },
+      {
+        "class": "cz.zamerovac.app.SyncAdapterFaultTest",
+        "counts": {
+          "PASS": 4,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "successfulOrTruncatedWriteCannotBecomeVerifiedReceipt",
+            "status": "PASS"
+          },
+          {
+            "case": "staleListingAndDuplicatePhysicalObjectsNeverAuthorizeDeletionOrFalseSuccess",
+            "status": "PASS"
+          },
+          {
+            "case": "lostAcknowledgementRetriesWithoutLosingOrDuplicatingLogicalContent",
+            "status": "PASS"
+          },
+          {
+            "case": "networkBudgetTreatsMeteredHotspotAndUnknownNetworkConservatively",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.SyncCadenceTest",
+        "counts": {
+          "PASS": 8,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "twoEnginesCannotBothClaimTheSameAutomaticAttempt",
+            "status": "PASS"
+          },
+          {
+            "case": "manualAndDisabledModesNeverClaimAutomaticallyButExplicitRetryWorks",
+            "status": "PASS"
+          },
+          {
+            "case": "failedWriteCannotActivateUnconfirmedModeOrConsumeAttempt",
+            "status": "PASS"
+          },
+          {
+            "case": "defaultAndLegacySettingsKeepTheirMeaning",
+            "status": "PASS"
+          },
+          {
+            "case": "explicitIntervalsAreExactInForegroundAndJobAndSurviveReopen",
+            "status": "PASS"
+          },
+          {
+            "case": "clockRollbackRebootAndLongWaitCannotStrandQueue",
+            "status": "PASS"
+          },
+          {
+            "case": "foregroundAndJobShareDurableAttemptAndAccountSwitchDoesNotWaitForOldStore",
+            "status": "PASS"
+          },
+          {
+            "case": "invalidInputAndCorruptJournalFailClosedWithoutChangingDatabase",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.SyncCanonicalTest",
+        "counts": {
+          "PASS": 3,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "javaAndEcmaScriptHaveIdenticalCanonicalBytesAndJobIds",
+            "status": "PASS"
+          },
+          {
+            "case": "conflictCopyMatchesEcmaScriptAndDoesNotDependOnMergeOrder",
+            "status": "PASS"
+          },
+          {
+            "case": "invalidUnicodeIsRejectedInsteadOfSilentlyChangingBytes",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.SyncConsistencyTest",
+        "counts": {
+          "PASS": 7,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "directPrimaryChangeCannotBypassTheProcessGenerationCheck",
+            "status": "PASS"
+          },
+          {
+            "case": "concurrentCommitCannotBeHiddenInsideSnapshotCapture",
+            "status": "PASS"
+          },
+          {
+            "case": "changedInventoryBytesCannotFalselyRemoveTheContentRequirement",
+            "status": "PASS"
+          },
+          {
+            "case": "lazyDocumentCutoverAlsoChecksAbsentSourcesAndKeepsSqlAuthorityOnRetry",
+            "status": "PASS"
+          },
+          {
+            "case": "newlyAppearingLegacyQueueMustAbortCutoverAndSurviveRestart",
+            "status": "PASS"
+          },
+          {
+            "case": "newlyAppearingBackupMustAbortCutoverWithoutLosingEitherVersion",
+            "status": "PASS"
+          },
+          {
+            "case": "preRecoveryJsonCannotAcquireTheNewEpochDuringCapture",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.SyncContentTest",
+        "counts": {
+          "PASS": 4,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "olderExactHistoryAndDetachedCompletedAudioEnterVersionedManifestButActiveRecordingDoesNot",
+            "status": "PASS"
+          },
+          {
+            "case": "revisionMetadataIsASeparateVerifiedBlobInsteadOfInflatingTheManifest",
+            "status": "PASS"
+          },
+          {
+            "case": "unverifiedCompletedAudioDoesNotHideHealthyProjectOrClaimContentComplete",
+            "status": "PASS"
+          },
+          {
+            "case": "recoveryArchiveIncludesPortableLedgerButNeverPrivateUploadSession",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.SyncJobTest",
+        "counts": {
+          "PASS": 4,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "disabledAutoSyncNeverCallsEngine",
+            "status": "PASS"
+          },
+          {
+            "case": "oldCancelledWorkerCannotClearOrCompleteNewAttempt",
+            "status": "PASS"
+          },
+          {
+            "case": "successfulAndFailedUncancelledAttemptsReportCorrectRetry",
+            "status": "PASS"
+          },
+          {
+            "case": "manualFrequencyNeverCallsEngineEvenIfLegacyAutoFlagIsTrue",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.SyncLedgerTest",
+        "counts": {
+          "PASS": 9,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "lostLedgerCannotRemoveOrBlockReadingTheLastExactRecoverablePreimage",
+            "status": "PASS"
+          },
+          {
+            "case": "independentTargetsNeverInheritReceiptsOrExportSessions",
+            "status": "PASS"
+          },
+          {
+            "case": "shortWriteOrEnospcRollsBackOnlyLedgerTransaction",
+            "status": "PASS"
+          },
+          {
+            "case": "corruptLedgerIsKeptForRecoveryAndCannotReadOldJson",
+            "status": "PASS"
+          },
+          {
+            "case": "largeQueueUsesBoundedCursorRowsAndPortableFilesKeepExactBytes",
+            "status": "PASS"
+          },
+          {
+            "case": "copyVerifyCutoverPreservesLegacyBytesAndCasSurvivesRestart",
+            "status": "PASS"
+          },
+          {
+            "case": "everyMigrationCrashIsRestartableWithoutPromotingOldQueue",
+            "status": "PASS"
+          },
+          {
+            "case": "databaseLossNeverReimportsOlderJsonOrResetsEvidence",
+            "status": "PASS"
+          },
+          {
+            "case": "backupAndNewSidecarsArePreservedWithoutReadSideRename",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.SyncSafetyTest",
+        "counts": {
+          "PASS": 13,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "purgedConflictDoesNotReviveAndLegacyCopyDoesNotMultiply",
+            "status": "PASS"
+          },
+          {
+            "case": "transferFailurePreservesConfirmedDatabaseAndPersistsPendingState",
+            "status": "PASS"
+          },
+          {
+            "case": "sharedWriterRejectsInvalidDataBeforeTouchingConfirmedCopies",
+            "status": "PASS"
+          },
+          {
+            "case": "slowRemoteDoesNotBlockSaveAndFinalCommitKeepsBothExactValues",
+            "status": "PASS"
+          },
+          {
+            "case": "deeplyNestedOrMalformedUtf8DataIsRejectedWithoutReplacingTheDatabase",
+            "status": "PASS"
+          },
+          {
+            "case": "concurrentPurgeKeepsIndependentEditAsOneStableCopyAndNeverRevivesOriginal",
+            "status": "PASS"
+          },
+          {
+            "case": "durableQueueSurvivesReopenAndRejectsStaleOrInvalidRevision",
+            "status": "PASS"
+          },
+          {
+            "case": "causalRevisionBeatsWallClockWithoutChangingMeasurement",
+            "status": "PASS"
+          },
+          {
+            "case": "retryCannotDuplicateConflictEvenWhenExternalRevisionsAreEqual",
+            "status": "PASS"
+          },
+          {
+            "case": "installationIdentityIsStableAndVectorsValidateExactCounters",
+            "status": "PASS"
+          },
+          {
+            "case": "corruptFirstCloudPrimaryNeverPublishesOlderRecoveryCopy",
+            "status": "PASS"
+          },
+          {
+            "case": "firstCloudMediaInterruptedCanResumeWithoutLosingExactData",
+            "status": "PASS"
+          },
+          {
+            "case": "webBridgeCannotInvokeLegacyUnconditionalDatabaseWriter",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.SyncTlsIdentityTest",
+        "counts": {
+          "PASS": 1,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "simultaneousStartupCannotRegenerateOrMixTheInstallationKey",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.TrashPurgerTest",
+        "counts": {
+          "PASS": 17,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "nativeBridgeChecksDiskSnapshotAndKeepsLegacyUnsavedDefaults",
+            "status": "PASS"
+          },
+          {
+            "case": "malformedBalancedJsonStringAlsoBlocksMediaDeletion",
+            "status": "PASS"
+          },
+          {
+            "case": "purgeKeepsSharedOriginalsReferencedInsideSerializedJsonObjects",
+            "status": "PASS"
+          },
+          {
+            "case": "knownP1PinnedPendingCanFinishCleanupWithoutDeletingOriginal",
+            "status": "PASS"
+          },
+          {
+            "case": "legacyPendingWithoutPinFailsClosedBeforeAnyCommitAfterRestart",
+            "status": "PASS"
+          },
+          {
+            "case": "failedBackupWriteNeverUnlinksMedia",
+            "status": "PASS"
+          },
+          {
+            "case": "staleSnapshotOrRestoredRecordCannotDeleteAnything",
+            "status": "PASS"
+          },
+          {
+            "case": "pendingCleanupCannotDeleteMediaReusedByActiveRecord",
+            "status": "PASS"
+          },
+          {
+            "case": "syncDoesNotResurrectPurgedTrashButPreservesRemoteActiveRecord",
+            "status": "PASS"
+          },
+          {
+            "case": "invalidStructuredHistoryAbortsPurgeInsteadOfDiscardingPossibleReference",
+            "status": "PASS"
+          },
+          {
+            "case": "excessiveCombinedDepthAbortsPurgeWithoutDeletingOriginals",
+            "status": "PASS"
+          },
+          {
+            "case": "failedDatabaseWriteLeavesAllMediaAndRecordsRecoverable",
+            "status": "PASS"
+          },
+          {
+            "case": "failedUnlinkIsReportedAndRetryableAfterRestart",
+            "status": "PASS"
+          },
+          {
+            "case": "purgeRemovesOnlyDeletedRecordsAndExclusiveNestedMediaAndSurvivesRestart",
+            "status": "PASS"
+          },
+          {
+            "case": "restartedCleanupKeepsExactBytesReusedByNoteHistory",
+            "status": "PASS"
+          },
+          {
+            "case": "backupExportAndRestoreAfterPurgeKeepActivePrecisionAndSharedMedia",
+            "status": "PASS"
+          },
+          {
+            "case": "pendingCleanupMustRecheckSerializedObjectReferencesAfterRestart",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      },
+      {
+        "class": "cz.zamerovac.app.VideoReviewTest",
+        "counts": {
+          "PASS": 8,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "recreationPreservesFullscreenSeekAndPlayPauseState",
+            "status": "PASS"
+          },
+          {
+            "case": "explicitVideoEntryRejectsInvalidMissingAndEscapingFiles",
+            "status": "PASS"
+          },
+          {
+            "case": "legacyAndRestoredVideoWithoutMimeUseInternalPlayer",
+            "status": "PASS"
+          },
+          {
+            "case": "fullscreenAndBackReusePlayerAndPreservePosition",
+            "status": "PASS"
+          },
+          {
+            "case": "rotatingBothWaysRecreatesFullscreenWithExactPosition",
+            "status": "PASS"
+          },
+          {
+            "case": "rotationBeforePreparationDoesNotLosePendingSeek",
+            "status": "PASS"
+          },
+          {
+            "case": "fullscreenErrorKeepsVisibleMessageAndEscape",
+            "status": "PASS"
+          },
+          {
+            "case": "legacyFullscreenHidesNavigationAndRestoresSystemBars",
+            "status": "PASS"
+          }
+        ],
+        "stdout": "WARN: No type identifier when getting name for resource number 0x00000000\n"
+      },
+      {
+        "class": "cz.zamerovac.app.WebContentPolicyTest",
+        "counts": {
+          "PASS": 3,
+          "FAIL": 0,
+          "ERROR": 0,
+          "SKIP": 0
+        },
+        "cases": [
+          {
+            "case": "requestsCannotFallThroughToRemoteNetworkOrExecutableMedia",
+            "status": "PASS"
+          },
+          {
+            "case": "exactPackagedDocumentIsTheOnlyAllowedInPlaceNavigation",
+            "status": "PASS"
+          },
+          {
+            "case": "clickedExternalUrlOpensBrowserAndPopupNeverReceivesNativeBridge",
+            "status": "PASS"
+          }
+        ],
+        "stdout": ""
+      }
+    ],
+    "unexpected_failures": [],
+    "command": "gradle --offline --no-daemon --max-workers=2 :app:testPreviewUnitTest"
+  },
+  "quick": {
+    "schema": 1,
+    "mode": "--quick",
+    "created": "2026-11-12T21:01:53.074Z",
+    "results": [
+      {
+        "name": "syntax app/src/main/assets/address-correction.js",
+        "status": "PASS",
+        "detail": "001.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/annotation-geometry.js",
+        "status": "PASS",
+        "detail": "002.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/annotation-history.js",
+        "status": "PASS",
+        "detail": "003.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/annotation-resize.js",
+        "status": "PASS",
+        "detail": "004.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/annotation-selection.js",
+        "status": "PASS",
+        "detail": "005.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/annotation-translation.js",
+        "status": "PASS",
+        "detail": "006.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/app.js",
+        "status": "PASS",
+        "detail": "007.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/backup-history.js",
+        "status": "PASS",
+        "detail": "008.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/bulk-actions.js",
+        "status": "PASS",
+        "detail": "009.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/customer-export.js",
+        "status": "PASS",
+        "detail": "010.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/drive-accounts.js",
+        "status": "PASS",
+        "detail": "011.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/editor-extra-toolbar.js",
+        "status": "PASS",
+        "detail": "012.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/editor.js",
+        "status": "PASS",
+        "detail": "013.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/feedback-reports.js",
+        "status": "PASS",
+        "detail": "014.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/help.js",
+        "status": "PASS",
+        "detail": "015.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/i18n.js",
+        "status": "PASS",
+        "detail": "016.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/inset-workspace.js",
+        "status": "PASS",
+        "detail": "017.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/laser-autofill.js",
+        "status": "PASS",
+        "detail": "018.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/media-import-ownership.js",
+        "status": "PASS",
+        "detail": "019.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/menu-dismiss.js",
+        "status": "PASS",
+        "detail": "020.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/peer-sync.js",
+        "status": "PASS",
+        "detail": "021.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/pending-audio.js",
+        "status": "PASS",
+        "detail": "022.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/release-history.js",
+        "status": "PASS",
+        "detail": "023.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/rich-notes.js",
+        "status": "PASS",
+        "detail": "024.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/sketch.js",
+        "status": "PASS",
+        "detail": "025.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/sync-cadence.js",
+        "status": "PASS",
+        "detail": "026.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/sync-edit-guard.js",
+        "status": "PASS",
+        "detail": "027.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/toolbar-customize.js",
+        "status": "PASS",
+        "detail": "028.log (0 s)"
+      },
+      {
+        "name": "syntax app/src/main/assets/upgrade.js",
+        "status": "PASS",
+        "detail": "029.log (0 s)"
+      },
+      {
+        "name": "syntax sync/protocol-v2.js",
+        "status": "PASS",
+        "detail": "030.log (0 s)"
+      },
+      {
+        "name": "syntax sync/revision-vector.js",
+        "status": "PASS",
+        "detail": "031.log (0 s)"
+      },
+      {
+        "name": "registr QA",
+        "status": "PASS",
+        "detail": "032.log (0 s)"
+      },
+      {
+        "name": "Android focus/ANR model",
+        "status": "PASS",
+        "detail": "033.log (0 s)"
+      },
+      {
+        "name": "test tests/annotation_geometry_contract.js",
+        "status": "PASS",
+        "detail": "034.log (0 s)"
+      },
+      {
+        "name": "test tests/annotation_grip_geometry.js",
+        "status": "PASS",
+        "detail": "035.log (0 s)"
+      },
+      {
+        "name": "test tests/annotation_history_contract.js",
+        "status": "PASS",
+        "detail": "036.log (3 s)"
+      },
+      {
+        "name": "test tests/annotation_history_save_failure.js",
+        "status": "PASS",
+        "detail": "037.log (0 s)"
+      },
+      {
+        "name": "test tests/annotation_hit_geometry.js",
+        "status": "PASS",
+        "detail": "038.log (0 s)"
+      },
+      {
+        "name": "test tests/annotation_pinch_contract.js",
+        "status": "PASS",
+        "detail": "039.log (0 s)"
+      },
+      {
+        "name": "test tests/annotation_resize_contract.js",
+        "status": "PASS",
+        "detail": "040.log (0 s)"
+      },
+      {
+        "name": "test tests/annotation_selection_contract.js",
+        "status": "PASS",
+        "detail": "041.log (0 s)"
+      },
+      {
+        "name": "test tests/annotation_snap_contract.js",
+        "status": "PASS",
+        "detail": "042.log (1 s)"
+      },
+      {
+        "name": "test tests/annotation_translation_contract.js",
+        "status": "PASS",
+        "detail": "043.log (1 s)"
+      },
+      {
+        "name": "test tests/annotation_viewport_contract.js",
+        "status": "PASS",
+        "detail": "044.log (0 s)"
+      },
+      {
+        "name": "test tests/audit39_hierarchy.js",
+        "status": "PASS",
+        "detail": "045.log (0 s)"
+      },
+      {
+        "name": "test tests/bosch_history_devices.js",
+        "status": "PASS",
+        "detail": "046.log (0 s)"
+      },
+      {
+        "name": "test tests/causal_app_clock.js",
+        "status": "PASS",
+        "detail": "047.log (0 s)"
+      },
+      {
+        "name": "test tests/dimension_drag_interaction.js",
+        "status": "PASS",
+        "detail": "048.log (0 s)"
+      },
+      {
+        "name": "test tests/e2e_harness_git_preflight.js",
+        "status": "PASS",
+        "detail": "049.log (0 s)"
+      },
+      {
+        "name": "test tests/editor_full_tools.js",
+        "status": "PASS",
+        "detail": "050.log (0 s)"
+      },
+      {
+        "name": "test tests/experimental_and_precision.js",
+        "status": "PASS",
+        "detail": "051.log (0 s)"
+      },
+      {
+        "name": "test tests/extra_toolbar_interaction.js",
+        "status": "PASS",
+        "detail": "052.log (0 s)"
+      },
+      {
+        "name": "test tests/feedback_inflight_save.js",
+        "status": "PASS",
+        "detail": "053.log (0 s)"
+      },
+      {
+        "name": "test tests/feedback_raster_reuse.js",
+        "status": "PASS",
+        "detail": "054.log (0 s)"
+      },
+      {
+        "name": "test tests/feedback_report_structure.js",
+        "status": "PASS",
+        "detail": "055.log (0 s)"
+      },
+      {
+        "name": "test tests/geometry_drag_28.js",
+        "status": "PASS",
+        "detail": "056.log (0 s)"
+      },
+      {
+        "name": "test tests/gesture_history_undo_redo.js",
+        "status": "PASS",
+        "detail": "057.log (0 s)"
+      },
+      {
+        "name": "test tests/help_guide.js",
+        "status": "PASS",
+        "detail": "058.log (0 s)"
+      },
+      {
+        "name": "test tests/inset_workspace_interaction.js",
+        "status": "PASS",
+        "detail": "059.log (0 s)"
+      },
+      {
+        "name": "test tests/laser_auto_interaction.js",
+        "status": "PASS",
+        "detail": "060.log (0 s)"
+      },
+      {
+        "name": "test tests/laser_precision_regression.js",
+        "status": "PASS",
+        "detail": "061.log (0 s)"
+      },
+      {
+        "name": "test tests/laser_tap_interaction.js",
+        "status": "PASS",
+        "detail": "062.log (0 s)"
+      },
+      {
+        "name": "test tests/local_browser_qa_contract.js",
+        "status": "PASS",
+        "detail": "063.log (0 s)"
+      },
+      {
+        "name": "test tests/media_import_ownership.js",
+        "status": "PASS",
+        "detail": "064.log (0 s)"
+      },
+      {
+        "name": "test tests/menu_dismiss_interaction.js",
+        "status": "PASS",
+        "detail": "065.log (0 s)"
+      },
+      {
+        "name": "test tests/new_28_regressions.js",
+        "status": "PASS",
+        "detail": "066.log (0 s)"
+      },
+      {
+        "name": "test tests/new_record_save_failure.js",
+        "status": "PASS",
+        "detail": "067.log (0 s)"
+      },
+      {
+        "name": "test tests/note_leader_interaction.js",
+        "status": "PASS",
+        "detail": "068.log (0 s)"
+      },
+      {
+        "name": "test tests/post17_regressions.js",
+        "status": "PASS",
+        "detail": "069.log (0 s)"
+      },
+      {
+        "name": "test tests/refactor_end_to_end_undo.js",
+        "status": "PASS",
+        "detail": "070.log (0 s)"
+      },
+      {
+        "name": "test tests/refactor_shape_resize_undo.js",
+        "status": "PASS",
+        "detail": "071.log (0 s)"
+      },
+      {
+        "name": "test tests/release_history.js",
+        "status": "PASS",
+        "detail": "072.log (0 s)"
+      },
+      {
+        "name": "test tests/revision_vector.js",
+        "status": "PASS",
+        "detail": "073.log (0 s)"
+      },
+      {
+        "name": "test tests/rich_note_attachment_state.js",
+        "status": "PASS",
+        "detail": "074.log (0 s)"
+      },
+      {
+        "name": "test tests/save_acknowledgement.js",
+        "status": "PASS",
+        "detail": "075.log (0 s)"
+      },
+      {
+        "name": "test tests/save_blocked_load_regression.js",
+        "status": "PASS",
+        "detail": "076.log (0 s)"
+      },
+      {
+        "name": "test tests/save_cas_conflict_guard.js",
+        "status": "PASS",
+        "detail": "077.log (0 s)"
+      },
+      {
+        "name": "test tests/save_cas_missing_database.js",
+        "status": "PASS",
+        "detail": "078.log (0 s)"
+      },
+      {
+        "name": "test tests/save_cas_recovery_integrity.js",
+        "status": "PASS",
+        "detail": "079.log (0 s)"
+      },
+      {
+        "name": "test tests/symbol_search_interaction.js",
+        "status": "PASS",
+        "detail": "080.log (0 s)"
+      },
+      {
+        "name": "test tests/sync_canonical.js",
+        "status": "PASS",
+        "detail": "081.log (0 s)"
+      },
+      {
+        "name": "test tests/sync_conflict_bridge.js",
+        "status": "PASS",
+        "detail": "082.log (0 s)"
+      },
+      {
+        "name": "test tests/sync_protocol_v2.js",
+        "status": "PASS",
+        "detail": "083.log (2 s)"
+      },
+      {
+        "name": "test tests/trash_restore_save_confirmation.js",
+        "status": "PASS",
+        "detail": "084.log (0 s)"
+      },
+      {
+        "name": "test tests/trash_ui_interaction.js",
+        "status": "PASS",
+        "detail": "085.log (0 s)"
+      },
+      {
+        "name": "test tests/versioning.js",
+        "status": "PASS",
+        "detail": "086.log (0 s)"
+      },
+      {
+        "name": "Python unittest",
+        "status": "PASS",
+        "detail": "087.log (5 s)"
+      },
+      {
+        "name": "Gradle JVM",
+        "status": "NOT RUN",
+        "detail": "jen v režimu --native"
+      },
+      {
+        "name": "Chromium E2E",
+        "status": "NOT RUN",
+        "detail": "zatím nepřipojené"
+      },
+      {
+        "name": "Fyzický Samsung",
+        "status": "NOT RUN",
+        "detail": "vyžaduje samostatnou Android/ADB etapu"
+      },
+      {
+        "name": "APK",
+        "status": "NOT RUN",
+        "detail": "žádné sestavení ani instalace"
+      }
+    ],
+    "counts": {
+      "PASS": 87,
+      "FAIL": 0,
+      "SKIP": 0,
+      "NOT RUN": 4
+    }
+  },
+  "browser": {
+    "counts": {
+      "PASS": 23,
+      "FAIL": 0,
+      "SKIP": 0,
+      "NOT RUN": 0
+    },
+    "scenarios": 91,
+    "suites": [
+      {
+        "suite": "legacy-conflict-persistence",
+        "sha": "3326995e934ba7e088e47a35e26cdc40cb2a5dfd",
+        "cases": [
+          {
+            "case": "clockless-legacy-copy-persists-reopen-media-editor-and-repeat-callback",
+            "status": "PASS"
+          }
+        ]
+      },
+      {
+        "suite": "drawing",
+        "sha": "3326995e934ba7e088e47a35e26cdc40cb2a5dfd",
+        "cases": [
+          {
+            "case": "dimension",
+            "status": "PASS"
+          },
+          {
+            "case": "line",
+            "status": "PASS"
+          },
+          {
+            "case": "arrow",
+            "status": "PASS"
+          },
+          {
+            "case": "circle",
+            "status": "PASS"
+          },
+          {
+            "case": "ellipse",
+            "status": "PASS"
+          },
+          {
+            "case": "rect",
+            "status": "PASS"
+          },
+          {
+            "case": "area",
+            "status": "PASS"
+          },
+          {
+            "case": "polyline",
+            "status": "PASS"
+          },
+          {
+            "case": "chain",
+            "status": "PASS"
+          },
+          {
+            "case": "cumulative",
+            "status": "PASS"
+          },
+          {
+            "case": "angle",
+            "status": "PASS"
+          },
+          {
+            "case": "freehand",
+            "status": "PASS"
+          },
+          {
+            "case": "target",
+            "status": "PASS"
+          },
+          {
+            "case": "note",
+            "status": "PASS"
+          },
+          {
+            "case": "symbol",
+            "status": "PASS"
+          },
+          {
+            "case": "two_finger_pinch_keeps_undo_redo_and_exact_measure",
+            "status": "PASS"
+          },
+          {
+            "case": "pan_then_pinch_does_not_resume_stale_drag",
+            "status": "PASS"
+          }
+        ]
+      },
+      {
+        "suite": "gallery-visual",
+        "sha": "3326995e934ba7e088e47a35e26cdc40cb2a5dfd",
+        "cases": [
+          {
+            "case": "gallery_text_and_lines_remain_sharp_at_real_screen_scale",
+            "status": "PASS"
+          }
+        ]
+      },
+      {
+        "suite": "workflows",
+        "sha": "3326995e934ba7e088e47a35e26cdc40cb2a5dfd",
+        "cases": [
+          {
+            "case": "folders_move_rename_trash_restore",
+            "status": "PASS"
+          },
+          {
+            "case": "bulk_copy_move_lock",
+            "status": "PASS"
+          },
+          {
+            "case": "note_checklist_sketch_attachment",
+            "status": "PASS"
+          },
+          {
+            "case": "photo_details_nested_gallery_png_hashes",
+            "status": "PASS"
+          },
+          {
+            "case": "trash_restore_purge_and_live_media",
+            "status": "PASS"
+          },
+          {
+            "case": "focus_cancel_layers_history_search",
+            "status": "PASS"
+          }
+        ]
+      },
+      {
+        "suite": "interactions",
+        "sha": "3326995e934ba7e088e47a35e26cdc40cb2a5dfd",
+        "cases": [
+          {
+            "case": "rapid_grips_jitter_cancel",
+            "status": "PASS"
+          },
+          {
+            "case": "pan_zoom_fit_and_repeated_reopen",
+            "status": "PASS"
+          },
+          {
+            "case": "chain_finish_insert_remove_history",
+            "status": "PASS"
+          }
+        ]
+      },
+      {
+        "suite": "zoom-grid",
+        "sha": "3326995e934ba7e088e47a35e26cdc40cb2a5dfd",
+        "cases": [
+          {
+            "case": "buttons_grid_pixels_and_snap_independence",
+            "status": "PASS"
+          },
+          {
+            "case": "trusted_two_finger_pinch_and_limits",
+            "status": "PASS"
+          }
+        ]
+      },
+      {
+        "suite": "update39",
+        "sha": "3326995e934ba7e088e47a35e26cdc40cb2a5dfd",
+        "cases": [
+          {
+            "case": "gallery_bounded_pan_and_caption_pixels",
+            "status": "PASS"
+          },
+          {
+            "case": "default_selection_corner_loupe_and_landscape_tools",
+            "status": "PASS"
+          },
+          {
+            "case": "real_save_failure_and_photo_loading_errors",
+            "status": "PASS"
+          },
+          {
+            "case": "help_occurrences_and_neutral_bluetooth",
+            "status": "PASS"
+          }
+        ]
+      },
+      {
+        "suite": "gallery-state",
+        "sha": "3326995e934ba7e088e47a35e26cdc40cb2a5dfd",
+        "cases": [
+          {
+            "case": "render_is_read_only_even_during_nested_drawing_and_failure",
+            "status": "PASS"
+          },
+          {
+            "case": "gestures_navigation_stale_load_and_exact_anchor_pixels",
+            "status": "PASS"
+          }
+        ]
+      },
+      {
+        "suite": "peer-sync",
+        "sha": "3326995e934ba7e088e47a35e26cdc40cb2a5dfd",
+        "cases": [
+          {
+            "case": "offline-folder-cycle-repair-is-visible-reachable-and-exact",
+            "status": "PASS"
+          },
+          {
+            "case": "menu-settings-offline-and-data-preserved",
+            "status": "PASS"
+          },
+          {
+            "case": "explicit-approval-full-code-reject-back-and-stale-session",
+            "status": "PASS"
+          },
+          {
+            "case": "untrusted-names-pending-errors-and-cloud-isolation",
+            "status": "PASS"
+          }
+        ]
+      },
+      {
+        "suite": "drive-accounts",
+        "sha": "3326995e934ba7e088e47a35e26cdc40cb2a5dfd",
+        "cases": [
+          {
+            "case": "local-save-and-independent-target-receipts-never-pretend-a-backup",
+            "status": "PASS"
+          },
+          {
+            "case": "independent-explicit-account-controls-and-cancelled-disconnect",
+            "status": "PASS"
+          },
+          {
+            "case": "unconfigured-or-invalid-state-never-pretends-account-is-ready-and-text-is-escaped",
+            "status": "PASS"
+          },
+          {
+            "case": "backup-account-switch-clears-old-history-and-stale-verification",
+            "status": "PASS"
+          }
+        ]
+      },
+      {
+        "suite": "sync-cadence",
+        "sha": "3326995e934ba7e088e47a35e26cdc40cb2a5dfd",
+        "cases": [
+          {
+            "case": "frequency-selection-persists-without-changing-records-and-old-switch-can-reenable",
+            "status": "PASS"
+          },
+          {
+            "case": "failed-persistence-does-not-activate-new-frequency",
+            "status": "PASS"
+          }
+        ]
+      },
+      {
+        "suite": "backup-history",
+        "sha": "3326995e934ba7e088e47a35e26cdc40cb2a5dfd",
+        "cases": [
+          {
+            "case": "offline-ui-two-histories-confirmation-and-network-exception",
+            "status": "PASS"
+          }
+        ]
+      },
+      {
+        "suite": "read-only-sync",
+        "sha": "3326995e934ba7e088e47a35e26cdc40cb2a5dfd",
+        "cases": [
+          {
+            "case": "view-photo-and-detail-without-revision-then-edit-with-history",
+            "status": "PASS"
+          }
+        ]
+      },
+      {
+        "suite": "sync-edit-guard",
+        "sha": "3326995e934ba7e088e47a35e26cdc40cb2a5dfd",
+        "cases": [
+          {
+            "case": "native-callback-during-grip-and-measure-form-preserves-both-edits",
+            "status": "PASS"
+          },
+          {
+            "case": "status-message-cannot-drop-deferred-data-when-form-is-cancelled",
+            "status": "PASS"
+          },
+          {
+            "case": "detail-parent-cas-keeps-live-item-references-after-conflict",
+            "status": "PASS"
+          }
+        ]
+      },
+      {
+        "suite": "note-sync",
+        "sha": "3326995e934ba7e088e47a35e26cdc40cb2a5dfd",
+        "cases": [
+          {
+            "case": "read-only-note-and-checklist-attachment-causal-autosave",
+            "status": "PASS"
+          },
+          {
+            "case": "incoming-note-data-waits-and-read-only-close-does-not-create-conflict",
+            "status": "PASS"
+          },
+          {
+            "case": "sketch-stroke-keeps-live-points-through-debounced-note-cas",
+            "status": "PASS"
+          },
+          {
+            "case": "failed-note-write-keeps-form-and-retry-and-lock-protects-checks",
+            "status": "PASS"
+          },
+          {
+            "case": "voice-keeps-owner-finishes-on-save-and-failed-stop-keeps-form",
+            "status": "PASS"
+          },
+          {
+            "case": "rich-voice-failed-stop-and-disk-keep-modal-back-retry-and-cancel",
+            "status": "PASS"
+          }
+        ]
+      },
+      {
+        "suite": "web-content-policy",
+        "sha": "3326995e934ba7e088e47a35e26cdc40cb2a5dfd",
+        "cases": [
+          {
+            "case": "native-csp-blocks-injected-scripts-media-and-frames-keeps-real-drawing",
+            "status": "PASS"
+          }
+        ]
+      },
+      {
+        "suite": "media-import",
+        "sha": "3326995e934ba7e088e47a35e26cdc40cb2a5dfd",
+        "cases": [
+          {
+            "case": "delayed-native-results-stay-in-original-folder-and-stale-token-cannot-complete-new-picker",
+            "status": "PASS"
+          },
+          {
+            "case": "deleted-or-locked-destination-and-closed-owner-dialog-do-not-redirect-file",
+            "status": "PASS"
+          },
+          {
+            "case": "picker-cancel-and-rejected-write-keep-data-without-ghost-record",
+            "status": "PASS"
+          }
+        ]
+      },
+      {
+        "suite": "pending-audio",
+        "sha": "3326995e934ba7e088e47a35e26cdc40cb2a5dfd",
+        "cases": [
+          {
+            "case": "verified-original-and-suspect-reservation-have-separate-actions-and-acknowledgements",
+            "status": "PASS"
+          },
+          {
+            "case": "ordinary-save-uses-native-summary-without-requesting-another-full-media-scan",
+            "status": "PASS"
+          },
+          {
+            "case": "stop-is-only-a-draft-before-cancel-and-failed-save",
+            "status": "PASS"
+          },
+          {
+            "case": "unknown-journal-warning-preserves-two-independent-copy-actions",
+            "status": "PASS"
+          },
+          {
+            "case": "stop-cancel-restart-reattach-save-preserves-exact-values",
+            "status": "PASS"
+          },
+          {
+            "case": "failed-save-cancel-keeps-pending-across-reload",
+            "status": "PASS"
+          },
+          {
+            "case": "android-back-and-bind-failure-do-not-undo-saved-note",
+            "status": "PASS"
+          },
+          {
+            "case": "failed-stop-retains-recovery-and-uncertain-export-never-attaches",
+            "status": "PASS"
+          }
+        ]
+      },
+      {
+        "suite": "help",
+        "sha": "3326995e934ba7e088e47a35e26cdc40cb2a5dfd",
+        "cases": [
+          {
+            "case": "main_menu_search_offline_and_android_back",
+            "status": "PASS"
+          },
+          {
+            "case": "overflow_menu_and_small_large_screens",
+            "status": "PASS"
+          }
+        ]
+      },
+      {
+        "suite": "release-history",
+        "sha": "3326995e934ba7e088e47a35e26cdc40cb2a5dfd",
+        "cases": [
+          {
+            "case": "versioned_history_main_menu_offline_and_help_navigation",
+            "status": "PASS"
+          },
+          {
+            "case": "settings_history_and_responsive_layout",
+            "status": "PASS"
+          }
+        ]
+      },
+      {
+        "suite": "latency",
+        "sha": "3326995e934ba7e088e47a35e26cdc40cb2a5dfd",
+        "cases": [
+          {
+            "case": "project_1_10_50_editable_documents",
+            "status": "PASS"
+          },
+          {
+            "case": "photo_and_gallery_1200x800",
+            "status": "PASS"
+          },
+          {
+            "case": "photo_and_gallery_6000x4000",
+            "status": "PASS"
+          },
+          {
+            "case": "existing_feedback_320x240",
+            "status": "PASS"
+          },
+          {
+            "case": "existing_feedback_1440x2800",
+            "status": "PASS"
+          },
+          {
+            "case": "feedback_slow_save_blocks_close_list_and_android_back",
+            "status": "PASS"
+          }
+        ]
+      },
+      {
+        "suite": "quality-regressions",
+        "sha": "3326995e934ba7e088e47a35e26cdc40cb2a5dfd",
+        "cases": [
+          {
+            "case": "existing_note_undo_redo_save",
+            "status": "PASS"
+          },
+          {
+            "case": "existing_note_undo_redo_back",
+            "status": "PASS"
+          },
+          {
+            "case": "audio_play_pause_must_not_focus_text",
+            "status": "PASS"
+          },
+          {
+            "case": "two_notes_explicit_picker_double_click_cancel_back_and_late_result",
+            "status": "PASS"
+          },
+          {
+            "case": "cancelled_attachment_has_no_unprotected_orphan",
+            "status": "PASS"
+          },
+          {
+            "case": "note_controls_reachable_412",
+            "status": "PASS"
+          },
+          {
+            "case": "note_controls_reachable_1100",
+            "status": "PASS"
+          },
+          {
+            "case": "project_photo_dimension_note_reopen_and_export",
+            "status": "PASS"
+          }
+        ]
+      },
+      {
+        "suite": "gallery-readability",
+        "sha": "3326995e934ba7e088e47a35e26cdc40cb2a5dfd",
+        "cases": [
+          {
+            "case": "pixels_1200x800_412",
+            "status": "PASS"
+          },
+          {
+            "case": "pixels_6000x4000_412",
+            "status": "PASS"
+          },
+          {
+            "case": "pixels_1600x4800_1100",
+            "status": "PASS"
+          },
+          {
+            "case": "pixels_6000x4000_412_dpr2",
+            "status": "PASS"
+          }
+        ]
+      }
+    ]
+  },
+  "original_SafSyncV2Test_sha256": "e5eedbb30c6d32d5668a8cf4aabc7c61aee0951c473f7bfe617e6fde7f04e1ad",
+  "not_run": [
+    "HOME Windows",
+    "Physical Android/SAF/OEM/MediaRecorder/Doze and two-device radio",
+    "Live Drive/OAuth/quota",
+    "Real power-cut/ENOSPC",
+    "Production authorized restore",
+    "OS-process restart of both devices",
+    "Independent Controller 40 re-review"
+  ],
+  "no_merge": true,
+  "no_apk": true,
+  "no_actions": true
+}

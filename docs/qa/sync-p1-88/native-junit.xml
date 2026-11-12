@@ -1,0 +1,985 @@
+<?xml version='1.0' encoding='utf-8'?>
+<testsuites><testsuite name="cz.zamerovac.app.AudioCaptureTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:03:05" hostname="ae546df9bbbb" time="2.386">
+  <properties />
+  <testcase name="unconfirmedMetadataKeepsCompletedOriginal" classname="cz.zamerovac.app.AudioCaptureTest" time="1.975" />
+  <testcase name="existingAndLateCollidingOriginalsAndMetadataStayUnchanged" classname="cz.zamerovac.app.AudioCaptureTest" time="0.166" />
+  <testcase name="onlySuccessfulStopPublishesCompleteFileAndConfirmedMetadata" classname="cz.zamerovac.app.AudioCaptureTest" time="0.108" />
+  <testcase name="startStopEmptyAndCancelFailuresNeverPublishPartialRecording" classname="cz.zamerovac.app.AudioCaptureTest" time="0.085" />
+  <testcase name="slowRecorderStartNeverOwnsGlobalDatabaseLock" classname="cz.zamerovac.app.AudioCaptureTest" time="0.051" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.AudioCompletedKeepTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:03:08" hostname="ae546df9bbbb" time="0.115">
+  <properties />
+  <testcase name="completedOriginalSurvivesMetadataCommitFalse" classname="cz.zamerovac.app.AudioCompletedKeepTest" time="0.115" />
+  <system-out>EXACT_ORIGINAL_AND_RETAINED_SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a bytes=10
+</system-out>
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.AudioRecoveryIsolationTest" tests="21" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:03:08" hostname="ae546df9bbbb" time="8.267">
+  <properties />
+  <testcase name="nativeOriginalExportMustUseVerifiedFinalRatherThanSameSizeOtherInode" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="5.341" />
+  <testcase name="duplicateAudioIdsInTwoJournalsRemainSeparateExportableOriginals" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.187" />
+  <testcase name="aFailedBindingWriteDoesNotRollBackProjectOrHideOtherHealthyAudio" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.102" />
+  <testcase name="outputFailureDoesNotChangeSourceAndRetryChecksLengthAndDigest" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.083" />
+  <testcase name="reverseSplitRetainsVerifiedReservationAndIndependentUncertainFinal" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.204" />
+  <testcase name="validFinalOriginalIsExportableWhenItsReservationLinkIsMissing" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.101" />
+  <testcase name="combinedUnknownCorruptEvidenceAndWriteFailureKeepHealthyExportsAndTrashRetention" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.196" />
+  <testcase name="oneChangedAudioHashDoesNotHideTheTwoUnchangedOriginals" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.104" />
+  <testcase name="duplicateReservationTokenExposesBothOriginalsWithoutChoosingAnArbitraryOne" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.082" />
+  <testcase name="malformedProjectHistoryCannotHideHealthyAudioOrRewriteProject" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.091" />
+  <testcase name="knownOriginalTokenMustExportJournalBytesInsteadOfDifferentRegularReservation" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.05" />
+  <testcase name="verifiedCopyChecksStreamSHAEvenWhenChangedFileRetainsSizeInodeAndTimestamp" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.08" />
+  <testcase name="malformedHistoryCannotReconfirmAnOldBoundFlag" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.106" />
+  <testcase name="invalidSourceCannotOpenOrTruncateTheChosenCopyDestination" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.075" />
+  <testcase name="confirmationHashesOnlySelectedAudioAndReportsMultiFileRecoveryCost" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.889" />
+  <testcase name="splitUnknownEvidenceFailedSaveAndStaleCASKeepBothCopiesAndHealthyNeighbour" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.136" />
+  <testcase name="unknownJournalMustNotHideTwoValidRecordingsOrTheirNativeExports" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.11" />
+  <testcase name="unsafeReservationCannotHideTheLastVerifiedFinalCopy" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.078" />
+  <testcase name="noMatchingCopyCannotClaimOriginalOrOpenDestinationButBothRawFilesRemainExportable" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.065" />
+  <testcase name="unreadableJournalDirectoryDoesNotPreventRawExportOfBothReservations" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.049" />
+  <testcase name="splitRecoveryMustExposeVerifiedFinalAndUncertainReservationSeparately" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.133" />
+  <system-out>voice-split-native SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-split-native--1b8aae7a-b611-4016-b570-5ff2b651dca4.tmp SIZE=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+voice-split-native SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-split-native--1b8aae7a-b611-4016-b570-5ff2b651dca4.tmp SIZE=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+.audio-voice-duplicate--7dd6cc29-b0e3-4c9e-9fb5-51f42cb7c8ab.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-duplicate--a133dd45-16e4-488b-b16d-7fa5ce8e2cdf.tmp SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-write-one--3decbbad-3b0d-4f91-9a1d-a173ff662c25.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-write-two--c9c12ebd-5e3f-448a-b770-fea5176f29c3.tmp SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+.audio-voice-copy--d15f8cd8-df3d-4039-88c4-d244d7d4ec5f.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec
+.audio-voice-reverse--f894835b-9148-481d-847b-3722d658310d.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+voice-reverse SIZE=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec
+voice-final-only SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-combo-one--7dbeddf2-5d58-4ff1-95df-82c6126077ce.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-combo-two--c381c07f-7bf9-4a4e-9fda-36be8c6d9315.tmp SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+.audio-voice-combo-bad--22306643-f4ce-42a1-81d1-156b93b074b8.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+NATIVE_EXPORTED bytes=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+.audio-voice-hash-one--557bc99b-77f7-4ea9-9a70-78fdbe665d30.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-hash-two--b306c887-f77d-4f0f-87ad-f06a9c835e68.tmp SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+.audio-voice-token-two--191160d1-559f-4a87-971a-63a8539a866b.tmp SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+.audio-voice-token-one--191160d1-559f-4a87-971a-63a8539a866b.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+voice-split-direct SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-split-direct--0aae082b-a967-44d3-ad71-839f37451fed.tmp SIZE=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec
+SPLIT_EXPORT actual_sha=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a expected_sha=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-bound-history--fe99b65b-3852-4f01-9efb-07bc4864d633.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-close-failure--bd5972ee-eb10-4817-b45c-4463bfa49be5.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+voice-close-failure SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+HOST_ONLY_PERFORMANCE bytes=25165824 recovery_ms=94 selected_confirm_ms=49 recovery_hashes=3 confirm_hashes=1 Android_performance=NOT_RUN
+voice-split-combined SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-split-combined--d02bc5bc-051e-40fa-9dad-71e473d30d3a.tmp SIZE=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec
+NATIVE_EXPORTED bytes=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+voice-split-combined SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-split-combined--d02bc5bc-051e-40fa-9dad-71e473d30d3a.tmp SIZE=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec
+.audio-voice-healthy--8e89ce9e-fa76-4f19-91a5-6fd16fdbf50d.tmp SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec
+NATIVE_EXPORTED bytes=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+voice-split-combined SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-split-combined--d02bc5bc-051e-40fa-9dad-71e473d30d3a.tmp SIZE=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec
+.audio-voice-healthy--8e89ce9e-fa76-4f19-91a5-6fd16fdbf50d.tmp SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+voice-one SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+voice-two SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+.audio-voice-one--4caef3bf-7cc6-4f6f-94be-8d62f02011bf.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-two--af9271a8-122d-49ce-a6a5-807f9e4cee5e.tmp SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+.audio-voice-one--4caef3bf-7cc6-4f6f-94be-8d62f02011bf.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-two--af9271a8-122d-49ce-a6a5-807f9e4cee5e.tmp SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+outside SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+voice-safe-final SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+voice-no-match SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-no-match--7af8f986-bea1-48b1-857b-fbd157f03920.tmp SIZE=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec
+.audio-voice-no-match--7af8f986-bea1-48b1-857b-fbd157f03920.tmp SIZE=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec
+voice-no-match SIZE=10 SHA256=4001ba71acef633247a0806147b959216c7013b82c0d88630e72e4d6bee6efed
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+.audio-voice-dir-one--04bd9645-0878-4602-880b-cf967815f761.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-dir-two--f11b7dd0-a184-4bee-9a97-b9f80b9bc2f4.tmp SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+voice-split-rows SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-split-rows--80d72630-363a-4018-b6d1-dcfe36c74c0d.tmp SIZE=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec
+voice-split-rows SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-split-rows--80d72630-363a-4018-b6d1-dcfe36c74c0d.tmp SIZE=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec
+</system-out>
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.Audit39FindingsTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:03:16" hostname="ae546df9bbbb" time="13.153">
+  <properties />
+  <testcase name="successfulZipExportMustFitImporterEntryLimit" classname="cz.zamerovac.app.Audit39FindingsTest" time="12.703" />
+  <testcase name="independentOfflineFolderMovesMustNotCreateUnreachableCycle" classname="cz.zamerovac.app.Audit39FindingsTest" time="0.052" />
+  <testcase name="purgeMustRemoveExclusiveVoiceAndHistoricalMedia" classname="cz.zamerovac.app.Audit39FindingsTest" time="0.076" />
+  <testcase name="stalledZipProviderMustNotBlockLocalSave" classname="cz.zamerovac.app.Audit39FindingsTest" time="0.072" />
+  <testcase name="acknowledgedUnicodeDatabaseMustBeReadableImmediately" classname="cz.zamerovac.app.Audit39FindingsTest" time="0.25" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.Audit39HandshakeTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:03:30" hostname="ae546df9bbbb" time="1.805">
+  <properties />
+  <testcase name="revocationBetweenCommitAndFinalPeerConfirmationAbortsHandshake" classname="cz.zamerovac.app.Audit39HandshakeTest" time="0.305" />
+  <testcase name="forgetInvalidatesNewPairingAndFreshExplicitPairingStillWorks" classname="cz.zamerovac.app.Audit39HandshakeTest" time="0.134" />
+  <testcase name="forgetIsNotDroppedWhenAllTransferWorkersAreBusy" classname="cz.zamerovac.app.Audit39HandshakeTest" time="0.194" />
+  <testcase name="revokedDuringKnownHandshakeMustNotBeReapproved" classname="cz.zamerovac.app.Audit39HandshakeTest" time="0.367" />
+  <testcase name="mutualApprovalBindsCertificatesBeforeExactEncryptedPayload" classname="cz.zamerovac.app.Audit39HandshakeTest" time="0.129" />
+  <testcase name="rememberedRouteMustAnswerWithExpectedPinnedIdentityBeforeAnyPayload" classname="cz.zamerovac.app.Audit39HandshakeTest" time="0.131" />
+  <testcase name="oneSidedDurablePairingRequiresFreshComparisonOnBothScreens" classname="cz.zamerovac.app.Audit39HandshakeTest" time="0.098" />
+  <testcase name="pinnedReconnectDoesNotNeedAnotherApprovalAndUnknownCertificateIsDenied" classname="cz.zamerovac.app.Audit39HandshakeTest" time="0.095" />
+  <testcase name="certificateCannotClaimAnotherInstallIdentityEvenDuringPairing" classname="cz.zamerovac.app.Audit39HandshakeTest" time="0.199" />
+  <testcase name="revokedBindingAndOversizeFramesAreRejected" classname="cz.zamerovac.app.Audit39HandshakeTest" time="0.092" />
+  <testcase name="rejectedPairingSavesNeitherTrustBinding" classname="cz.zamerovac.app.Audit39HandshakeTest" time="0.056" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.Audit39SafetyTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:03:31" hostname="ae546df9bbbb" time="118.406">
+  <properties />
+  <testcase name="streamingBudgetRejectsGrowthAndOversizedJsonWithoutWritingExcessByte" classname="cz.zamerovac.app.Audit39SafetyTest" time="0.022" />
+  <testcase name="stalledProviderTimesOutWithoutPublishingOrLeakingMedia" classname="cz.zamerovac.app.Audit39SafetyTest" time="0.113" />
+  <testcase name="purgeProtectsLiveAudioHistoryAndSeparateImmutableBackup" classname="cz.zamerovac.app.Audit39SafetyTest" time="0.079" />
+  <testcase name="maximumEntryArchiveRoundTripsWithAllThreeMetadataEntries" classname="cz.zamerovac.app.Audit39SafetyTest" time="42.287" />
+  <testcase name="sharedHierarchyFixturesConvergeAndPreserveAllPayloadsAndInputs" classname="cz.zamerovac.app.Audit39SafetyTest" time="0.116" />
+  <testcase name="utf8LimitBelowAtAndAbovePreservesBothConfirmedCopies" classname="cz.zamerovac.app.Audit39SafetyTest" time="6.103" />
+  <testcase name="slowRestoreCommitsLatestLocalEditAndRollsBackFailedCommit" classname="cz.zamerovac.app.Audit39SafetyTest" time="0.073" />
+  <testcase name="exportStreamsThreeGiBAndBudgetIncludesMetadata" classname="cz.zamerovac.app.Audit39SafetyTest" time="69.61" />
+  <system-out>THREE_GIB_ZIP_EXACT_BYTES=3221225472 HEAP_LIMIT=536870912
+</system-out>
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.BackupHistoryTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:05:30" hostname="ae546df9bbbb" time="3.579">
+  <properties />
+  <testcase name="historyRestoreRefusesStaleBackupAndKeepsAllExistingMedia" classname="cz.zamerovac.app.BackupHistoryTest" time="0.187" />
+  <testcase name="storageFailureAndDamagedBlobKeepPreviousPointAndCurrentData" classname="cz.zamerovac.app.BackupHistoryTest" time="0.08" />
+  <testcase name="zeroProgressAndOversizedBackupStreamsFailWithoutPublishingOrChangingDatabase" classname="cz.zamerovac.app.BackupHistoryTest" time="0.34" />
+  <testcase name="latestLocalEditSurvivesSlowRestoreAndCommitFailureRollsBackNewMedia" classname="cz.zamerovac.app.BackupHistoryTest" time="0.249" />
+  <testcase name="historyRestoreIntoCleanReceiverKeepsExactDimensionAndOriginalBytes" classname="cz.zamerovac.app.BackupHistoryTest" time="0.111" />
+  <testcase name="providerReadFailureIsNotTreatedAsCorruptionOrPermissionToPublishRepair" classname="cz.zamerovac.app.BackupHistoryTest" time="0.065" />
+  <testcase name="interruptedCanonicalBlockCanRetryAfterRestartWithoutOverwritingPartialFile" classname="cz.zamerovac.app.BackupHistoryTest" time="0.158" />
+  <testcase name="corruptedCanonicalGetsVerifiedImmutableRepairAndBothHistoricalManifestsStayUnchanged" classname="cz.zamerovac.app.BackupHistoryTest" time="0.22" />
+  <testcase name="nestedNotesAudioAndSerializedHistoryGetIndependentMediaIds" classname="cz.zamerovac.app.BackupHistoryTest" time="0.115" />
+  <testcase name="twoHistoriesShareOneHundredOriginalsAndOldAndNewRestoreExactBytes" classname="cz.zamerovac.app.BackupHistoryTest" time="1.97" />
+  <testcase name="unsafePathAndMissingBlobCannotBeReportedComplete" classname="cz.zamerovac.app.BackupHistoryTest" time="0.081" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.CloudFilesReadTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:05:33" hostname="ae546df9bbbb" time="0.121">
+  <properties />
+  <testcase name="oversizedBlobCannotCopyTrailingBytesOrReadOneWholeExtraBlock" classname="cz.zamerovac.app.CloudFilesReadTest" time="0.021" />
+  <testcase name="oversizedControlFrameReadsOnlyDeclaredLimitPlusOneAndCloses" classname="cz.zamerovac.app.CloudFilesReadTest" time="0.053" />
+  <testcase name="exactMessageAndBlobKeepEveryByteAndHash" classname="cz.zamerovac.app.CloudFilesReadTest" time="0.028" />
+  <testcase name="zeroProgressInvalidLimitsAndInterruptNeverSpinOrAcknowledge" classname="cz.zamerovac.app.CloudFilesReadTest" time="0.017" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.CloudInboxTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:05:34" hostname="ae546df9bbbb" time="0.641">
+  <properties />
+  <testcase name="committedReceiptSurvivesReopenAndIsScopedToInstallationAndStore" classname="cz.zamerovac.app.CloudInboxTest" time="0.128" />
+  <testcase name="cachedAndReopenedInboxInvalidateEveryReceiptAfterDatabaseFallback" classname="cz.zamerovac.app.CloudInboxTest" time="0.23" />
+  <testcase name="supersededLocalIntentCannotBecomeRemoteAcknowledgementAndRecoveryInvalidatesIt" classname="cz.zamerovac.app.CloudInboxTest" time="0.1" />
+  <testcase name="failedReceiptWriteCannotTurnUnacknowledgedCommitIntoCachedSuccess" classname="cz.zamerovac.app.CloudInboxTest" time="0.102" />
+  <testcase name="missingCommitAndChangedImmutableMessageCannotBeAcknowledged" classname="cz.zamerovac.app.CloudInboxTest" time="0.041" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.CloudPublicationsTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:05:34" hostname="ae546df9bbbb" time="0.578">
+  <properties />
+  <testcase name="repairRequestUsesDurableCounterBackoffAndNeverTreatsPublicationAsDataAck" classname="cz.zamerovac.app.CloudPublicationsTest" time="0.15" />
+  <testcase name="failedAtomicReceiptCannotEnterCacheOrAdvanceRepair" classname="cz.zamerovac.app.CloudPublicationsTest" time="0.059" />
+  <testcase name="verifiedReceiptSurvivesRestartButMissingChangedExpiredOrForeignStoreCannotReuseIt" classname="cz.zamerovac.app.CloudPublicationsTest" time="0.151" />
+  <testcase name="completeSnapshotPublicationIsScopedDurableExpiringAndStillNotADataAck" classname="cz.zamerovac.app.CloudPublicationsTest" time="0.128" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.CloudScanTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:05:35" hostname="ae546df9bbbb" time="0.384">
+  <properties />
+  <testcase name="failedCursorWriteDoesNotAdvanceCachedStateOrAcceptUnsafePosition" classname="cz.zamerovac.app.CloudScanTest" time="0.198" />
+  <testcase name="roundRobinSurvivesRestartWithoutTrustingOrDiscardingMessage" classname="cz.zamerovac.app.CloudScanTest" time="0.186" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.CloudStorageTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:05:35" hostname="ae546df9bbbb" time="0.494">
+  <properties />
+  <testcase name="independentBackendsAndDisconnectNeverSilentlyFallBackToOldFolder" classname="cz.zamerovac.app.CloudStorageTest" time="0.282" />
+  <testcase name="accountProjectAndCancellationScopeCannotReuseOldStoreOrNamespace" classname="cz.zamerovac.app.CloudStorageTest" time="0.077" />
+  <testcase name="invalidProjectConfigurationNeverCallsDriveApiOrChangesSelectedAccount" classname="cz.zamerovac.app.CloudStorageTest" time="0.046" />
+  <testcase name="offlineMeteredWifiOnlyAndExplicitExceptionUseCurrentNetwork" classname="cz.zamerovac.app.CloudStorageTest" time="0.065" />
+  <testcase name="missingProjectDoesNotBecomeASafFallbackOrAuthorizeAnAccount" classname="cz.zamerovac.app.CloudStorageTest" time="0.024" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.DatabaseInstallEvidenceTest" tests="23" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:05:36" hostname="ae546df9bbbb" time="1.642">
+  <properties />
+  <testcase name="corruptedPrimaryWithValidOldBackupLeavesBytesAndRequiresRecoveryEpoch" classname="cz.zamerovac.app.DatabaseInstallEvidenceTest" time="0.061" />
+  <testcase name="lostTextOnlyDatabaseAndJournalNeverBecomesFreshInstall" classname="cz.zamerovac.app.DatabaseInstallEvidenceTest" time="0.029" />
+  <testcase name="approvedPairingWithoutAnyProjectCanInitializeButNeverResetAfterFirstSave" classname="cz.zamerovac.app.DatabaseInstallEvidenceTest" time="0.079" />
+  <testcase name="interruptedOrCorruptEvidenceMustNotAuthorizeReset" classname="cz.zamerovac.app.DatabaseInstallEvidenceTest" time="0.019" />
+  <testcase name="temporaryUnreadablePrimaryRetriesWithoutRotatingEpoch" classname="cz.zamerovac.app.DatabaseInstallEvidenceTest" time="0.058" />
+  <testcase name="redundantNoBackupEvidenceSurvivesSelectiveFilesLossAndRestart" classname="cz.zamerovac.app.DatabaseInstallEvidenceTest" time="0.028" />
+  <testcase name="recoveredSnapshotUsesNewHashAndRejectsOldCloudAckIdentity" classname="cz.zamerovac.app.DatabaseInstallEvidenceTest" time="0.03" />
+  <testcase name="oversizedBaseBackupAndNewMarkersAreAlwaysRejected" classname="cz.zamerovac.app.DatabaseInstallEvidenceTest" time="0.045" />
+  <testcase name="firstInstallWithIdentityAloneIsStillClean" classname="cz.zamerovac.app.DatabaseInstallEvidenceTest" time="0.032" />
+  <testcase name="interruptedAtomicWriteIsDetectedWithoutDestroyingValidPrimary" classname="cz.zamerovac.app.DatabaseInstallEvidenceTest" time="0.065" />
+  <testcase name="r9MissingRecoveryJournalCannotReacceptPreRecoveryAckOrOverwritePhoto" classname="cz.zamerovac.app.DatabaseInstallEvidenceTest" time="0.111" />
+  <testcase name="staleOutboxIsRetainedButCannotBeReacknowledged" classname="cz.zamerovac.app.DatabaseInstallEvidenceTest" time="0.141" />
+  <testcase name="migratedLegacyPrimarySurvivesLaterLossAsEvidence" classname="cz.zamerovac.app.DatabaseInstallEvidenceTest" time="0.048" />
+  <testcase name="delayedBlobAckKeepsExactOriginalAndArchivedSnapshot" classname="cz.zamerovac.app.DatabaseInstallEvidenceTest" time="0.1" />
+  <testcase name="r10TemporaryQueuedSnapshotReadErrorRecoversAfterRestartWithoutFalseAck" classname="cz.zamerovac.app.DatabaseInstallEvidenceTest" time="0.525" />
+  <testcase name="unreadableMarkerNeverGetsSilentlyReplaced" classname="cz.zamerovac.app.DatabaseInstallEvidenceTest" time="0.02" />
+  <testcase name="r9MismatchedRecoveryJournalIsRejectedWithoutMutatingOriginal" classname="cz.zamerovac.app.DatabaseInstallEvidenceTest" time="0.066" />
+  <testcase name="legacyPrimaryMigratesToBothLocationsWithoutChangingExactData" classname="cz.zamerovac.app.DatabaseInstallEvidenceTest" time="0.022" />
+  <testcase name="unmarkedLegacyPairingRemainsFailClosedWithoutPrimary" classname="cz.zamerovac.app.DatabaseInstallEvidenceTest" time="0.026" />
+  <testcase name="legacySyncReceiptsAlonePreventNewBlankDatabaseAndRetireOldAck" classname="cz.zamerovac.app.DatabaseInstallEvidenceTest" time="0.032" />
+  <testcase name="firstCleanTextOnlySaveCreatesDurableEvidence" classname="cz.zamerovac.app.DatabaseInstallEvidenceTest" time="0.027" />
+  <testcase name="malformedSurvivorOrUnusableMarkerCannotBeSilentlyRepaired" classname="cz.zamerovac.app.DatabaseInstallEvidenceTest" time="0.03" />
+  <testcase name="symlinkEvidenceIsNeverInterpretedAsAbsent" classname="cz.zamerovac.app.DatabaseInstallEvidenceTest" time="0.046" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.DatabaseRecoveryTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:05:37" hostname="ae546df9bbbb" time="0.35">
+  <properties />
+  <testcase name="partialAndCompleteUnconfirmedTemporaryFilesNeverReplaceConfirmedDatabaseOnRead" classname="cz.zamerovac.app.DatabaseRecoveryTest" time="0.04" />
+  <testcase name="restartResidueAfterBackupPublicationKeepsPrimaryAndFallbackDoesNotPromotePendingData" classname="cz.zamerovac.app.DatabaseRecoveryTest" time="0.058" />
+  <testcase name="deletedDatabaseInvalidatesReceiptsAndMalformedJournalFailsClosed" classname="cz.zamerovac.app.DatabaseRecoveryTest" time="0.034" />
+  <testcase name="fallbackRotatesDurablyOnceAndNeverOverwritesEitherOriginal" classname="cz.zamerovac.app.DatabaseRecoveryTest" time="0.063" />
+  <testcase name="orphanOriginalNeverAuthorizesImplicitFreshDatabase" classname="cz.zamerovac.app.DatabaseRecoveryTest" time="0.038" />
+  <testcase name="failedDatabaseStagingPreservesConfirmedPrimaryAndRecoveryCopy" classname="cz.zamerovac.app.DatabaseRecoveryTest" time="0.066" />
+  <testcase name="failedRecoveryJournalCannotReturnOlderDataAsConfirmed" classname="cz.zamerovac.app.DatabaseRecoveryTest" time="0.051" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.DirectSyncServiceTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:05:38" hostname="ae546df9bbbb" time="2.458">
+  <properties />
+  <testcase name="activityStopDetachesUiCancelsPairingAndPreservesServiceCoordinator" classname="cz.zamerovac.app.DirectSyncServiceTest" time="1.863" />
+  <testcase name="serviceOwnsOneCoordinatorAndPrivateNotificationWithExplicitStop" classname="cz.zamerovac.app.DirectSyncServiceTest" time="0.145" />
+  <testcase name="resumeReadsConfirmedBackgroundDataWithoutReplayingStaleScreen" classname="cz.zamerovac.app.DirectSyncServiceTest" time="0.134" />
+  <testcase name="disabledOrDeniedServiceNeverPretendsTransferStartedAndKeepsData" classname="cz.zamerovac.app.DirectSyncServiceTest" time="0.1" />
+  <testcase name="transferWakeLockIsBoundedReleasedAndCannotRestartAfterClose" classname="cz.zamerovac.app.DirectSyncServiceTest" time="0.067" />
+  <testcase name="failedOrDetachedUiDoesNotPreventOtherObserverOrDurableCommit" classname="cz.zamerovac.app.DirectSyncServiceTest" time="0.149" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.DocumentBackupStoreTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:05:40" hostname="ae546df9bbbb" time="0.867">
+  <properties />
+  <testcase name="cloudProviderNeedsUnmeteredNetworkOrOneExplicitException" classname="cz.zamerovac.app.DocumentBackupStoreTest" time="0.644" />
+  <testcase name="duplicateProviderNamesAndUnsafeNamespaceCannotSelectAnOverwriteTarget" classname="cz.zamerovac.app.DocumentBackupStoreTest" time="0.201" />
+  <testcase name="nullOrDeniedProviderIsNeverConsideredAnEmptySuccessfulHistory" classname="cz.zamerovac.app.DocumentBackupStoreTest" time="0.021" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.DriveAccountFlowTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:05:41" hostname="ae546df9bbbb" time="0.757">
+  <properties />
+  <testcase name="oldConsentCannotOverwriteNewerAccountEvenAfterSwitchingBack" classname="cz.zamerovac.app.DriveAccountFlowTest" time="0.411" />
+  <testcase name="failedAccountCommitAndInvalidRestoredFlowCannotActivateASelection" classname="cz.zamerovac.app.DriveAccountFlowTest" time="0.042" />
+  <testcase name="stoppedAuthorizationIgnoresLateCallbackAndResumesOnlyOnce" classname="cz.zamerovac.app.DriveAccountFlowTest" time="0.056" />
+  <testcase name="explicitPickerAndVerifiedGrantOnlySelectTheTargetFeature" classname="cz.zamerovac.app.DriveAccountFlowTest" time="0.037" />
+  <testcase name="cancelOrMissingScopePreserveExistingAccountAndNeverSaveAToken" classname="cz.zamerovac.app.DriveAccountFlowTest" time="0.066" />
+  <testcase name="consentSurvivesRecreationWithNoTokenInSavedState" classname="cz.zamerovac.app.DriveAccountFlowTest" time="0.107" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.DriveAccountsTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:05:42" hostname="ae546df9bbbb" time="0.231">
+  <properties />
+  <testcase name="featuresKeepIndependentExplicitBindingsAndDisconnectDoesNotTouchTheOther" classname="cz.zamerovac.app.DriveAccountsTest" time="0.021" />
+  <testcase name="bindingStopsOldAccountAndInvalidInputOrCorruptStateDoesNotResetToEmpty" classname="cz.zamerovac.app.DriveAccountsTest" time="0.109" />
+  <testcase name="failedAtomicWriteCannotSelectAnUnconfirmedAccountEvenInLiveInstance" classname="cz.zamerovac.app.DriveAccountsTest" time="0.1" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.DriveApiTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:05:42" hostname="ae546df9bbbb" time="1.872">
+  <properties />
+  <testcase name="openStreamsOnlyDeclaredObjectBytesAndNeverUsesArbitraryIds" classname="cz.zamerovac.app.DriveApiTest" time="1.7" />
+  <testcase name="incompleteCyclicMalformedAndFailedListingsCannotLookLikeEmptyStorage" classname="cz.zamerovac.app.DriveApiTest" time="0.027" />
+  <testcase name="createOnlyUploadUsesExact256KiBChunksAndChecksServerProgress" classname="cz.zamerovac.app.DriveApiTest" time="0.061" />
+  <testcase name="completePaginationIncludesEmptyPagesAndCarriesOpaqueTokens" classname="cz.zamerovac.app.DriveApiTest" time="0.032" />
+  <testcase name="hostileSessionPartialSourceWrongRangeAndPrematureFinalDoNotComplete" classname="cz.zamerovac.app.DriveApiTest" time="0.051" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.DriveAuthorizationTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:05:44" hostname="ae546df9bbbb" time="0.304">
+  <properties />
+  <testcase name="memoryCacheExpiresAnd401InvalidatesOnlyTheRejectedToken" classname="cz.zamerovac.app.DriveAuthorizationTest" time="0.041" />
+  <testcase name="accountChangeDuringAuthorizationPreventsCachingAndMainThreadCannotBlock" classname="cz.zamerovac.app.DriveAuthorizationTest" time="0.066" />
+  <testcase name="sdkRequestPinsSelectedAccountAndOnlyAppDataScope" classname="cz.zamerovac.app.DriveAuthorizationTest" time="0.028" />
+  <testcase name="interruptionAbandonsAuthorizationWithoutReturningAResult" classname="cz.zamerovac.app.DriveAuthorizationTest" time="0.063" />
+  <testcase name="consentMissingScopeAndDeveloperFailureNeverReturnATokenOrExposeServerText" classname="cz.zamerovac.app.DriveAuthorizationTest" time="0.039" />
+  <testcase name="sdkIntegrationDoesNotRequestBroadAccountsContactsPhoneOrSmsPermissions" classname="cz.zamerovac.app.DriveAuthorizationTest" time="0.066" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.DriveHttpTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:05:45" hostname="ae546df9bbbb" time="0.199">
+  <properties />
+  <testcase name="restrictedEndpointsHeadersAndDeniedPolicyNeverOpenAConnection" classname="cz.zamerovac.app.DriveHttpTest" time="0.026" />
+  <testcase name="unknownLengthReadsOnlyLimitPlusOneAndDynamicPolicyStopsBeforeNextRead" classname="cz.zamerovac.app.DriveHttpTest" time="0.018" />
+  <testcase name="tokenIsOnlyAHeaderAndRedirectsCannotForwardIt" classname="cz.zamerovac.app.DriveHttpTest" time="0.047" />
+  <testcase name="uploadPolicyIsCheckedBetween64KiBBlocksAnd401InvalidatesTokenOnce" classname="cz.zamerovac.app.DriveHttpTest" time="0.107" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.DriveRegistrationTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:05:45" hostname="ae546df9bbbb" time="0.087">
+  <properties />
+  <testcase name="invalidPublicProjectIdsCannotActivateAuthorization" classname="cz.zamerovac.app.DriveRegistrationTest" time="0.018" />
+  <testcase name="nativeUiRecognizesRegistrationWithoutPretendingAnAccountOrChangingDatabase" classname="cz.zamerovac.app.DriveRegistrationTest" time="0.053" />
+  <testcase name="generatedPreviewMatchesPublicRegistrationAndKeepsAuthorizationScopeNarrow" classname="cz.zamerovac.app.DriveRegistrationTest" time="0.015" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.DriveResumableUploadTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:05:45" hostname="ae546df9bbbb" time="0.452">
+  <properties />
+  <testcase name="expiryRestartsAndQuotaAuthAndRateErrorsPreserveOriginalAndSession" classname="cz.zamerovac.app.DriveResumableUploadTest" time="0.244" />
+  <testcase name="processRestartQueriesServerAndSendsOnlyVerifiedSuffix" classname="cz.zamerovac.app.DriveResumableUploadTest" time="0.066" />
+  <testcase name="impossibleServerRangeOrEndpointCannotSendContent" classname="cz.zamerovac.app.DriveResumableUploadTest" time="0.109" />
+  <testcase name="successWithoutServerBytesDoesNotFinishAndLostFinalResponseIsReconciled" classname="cz.zamerovac.app.DriveResumableUploadTest" time="0.032" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.DriveStoresTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:05:45" hostname="ae546df9bbbb" time="6.437">
+  <properties />
+  <testcase name="duplicateAddressedBlobsAreVerifiedAndOrphanCleanupNeverTouchesActiveStage" classname="cz.zamerovac.app.DriveStoresTest" time="0.025" />
+  <testcase name="corruptedDriveBackupUsesNewPhysicalCopyAndRestoresOldHistoryWithoutReplacingObjects" classname="cz.zamerovac.app.DriveStoresTest" time="0.217" />
+  <testcase name="fullSignedNativeSyncThroughDriveRestPreservesExactValuesAndOriginals" classname="cz.zamerovac.app.DriveStoresTest" time="2.507" />
+  <testcase name="twoDriveHistoriesDeduplicate100OriginalsAndRestoreDespiteSyncIndependence" classname="cz.zamerovac.app.DriveStoresTest" time="1.795" />
+  <testcase name="deniedOrExpiredApiDoesNotCreateABackupPointOrHideExistingHistory" classname="cz.zamerovac.app.DriveStoresTest" time="0.095" />
+  <testcase name="cancellationDuringPublishStopsBeforeNextChunkAndCleansStagingWithoutAck" classname="cz.zamerovac.app.DriveStoresTest" time="0.098" />
+  <testcase name="interruptedDriveMediaKeepsReceiverDatabaseAndOutboxUntilVerifiedRetry" classname="cz.zamerovac.app.DriveStoresTest" time="1.667" />
+  <testcase name="stagedCloseAbortsAndVerifiedPublishRetainsNamespaceAndCapabilities" classname="cz.zamerovac.app.DriveStoresTest" time="0.033" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.GuardedSyncStoreTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:05:52" hostname="ae546df9bbbb" time="0.022">
+  <properties />
+  <testcase name="cancelledRouteStopsNextChunkButAlwaysClosesOwnedResources" classname="cz.zamerovac.app.GuardedSyncStoreTest" time="0.022" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.ImmutableMediaProofTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:05:52" hostname="ae546df9bbbb" time="0.063">
+  <properties />
+  <testcase name="sameSizeAndRestoredMtimeCannotReuseAChangedOriginalProof" classname="cz.zamerovac.app.ImmutableMediaProofTest" time="0.063" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.MainCloudSelectionTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:05:52" hostname="ae546df9bbbb" time="0.414">
+  <properties />
+  <testcase name="failedNativeFrequencyChangeCannotReplaceConfirmedJobOrPreferences" classname="cz.zamerovac.app.MainCloudSelectionTest" time="0.124" />
+  <testcase name="nativeDisconnectStopsOnlyItsFeatureAndSnapshotNeverExposesTokens" classname="cz.zamerovac.app.MainCloudSelectionTest" time="0.092" />
+  <testcase name="confirmedFrequencyControlsActualJobAndManualCancelsItWithoutChangingRecords" classname="cz.zamerovac.app.MainCloudSelectionTest" time="0.106" />
+  <testcase name="staleSystemPickerCannotOverwriteARecentlySelectedDriveAccount" classname="cz.zamerovac.app.MainCloudSelectionTest" time="0.092" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.MediaImportOwnershipTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:05:52" hostname="ae546df9bbbb" time="0.161">
+  <properties />
+  <testcase name="abandonedRequestRemainsTrackedWithoutDeletingMedia" classname="cz.zamerovac.app.MediaImportOwnershipTest" time="0.054" />
+  <testcase name="receiptSurvivesRestartAndRejectsReassignment" classname="cz.zamerovac.app.MediaImportOwnershipTest" time="0.043" />
+  <testcase name="invalidIdsOrFailedCommitCannotAuthorizeUnownedMedia" classname="cz.zamerovac.app.MediaImportOwnershipTest" time="0.064" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.MediaIngestTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:05:52" hostname="ae546df9bbbb" time="0.415">
+  <properties />
+  <testcase name="actualActivityResultUsesWorkerLeavesUiAndConfirmedSavingAvailable" classname="cz.zamerovac.app.MediaIngestTest" time="0.105" />
+  <testcase name="providerTimeoutAndCancellationKeepDatabaseAndOriginalAndDiscardStaging" classname="cz.zamerovac.app.MediaIngestTest" time="0.191" />
+  <testcase name="metadataDeadlineAndUnsafeSourcesFailBeforePublishing" classname="cz.zamerovac.app.MediaIngestTest" time="0.118" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.PeerDiscoveryTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:05:53" hostname="ae546df9bbbb" time="0.159">
+  <properties />
+  <testcase name="missingRadioSupportAndPermissionDoNotInventConnectedDevices" classname="cz.zamerovac.app.PeerDiscoveryTest" time="0.085" />
+  <testcase name="localRoutesRejectInternetLoopbackMulticastAndWildcard" classname="cz.zamerovac.app.PeerDiscoveryTest" time="0.074" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.PeerLargeTlsTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:05:53" hostname="ae546df9bbbb" time="125.617">
+  <properties />
+  <testcase name="threeGiBActualTlsDropsHalfwayAndRetryPreservesExactGeometryAndOriginals" classname="cz.zamerovac.app.PeerLargeTlsTest" time="125.617" />
+  <system-out>ACTUAL_TLS_3GIB_RETRY_FROM_ZERO SHA256=3474c4187dcbba2df7538da8a9377a0272da698a0048328a54451b80734742d5 RECEIVED=3221227886 HEAP_LIMIT=536870912
+</system-out>
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.PeerLegacyCompatibilityTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:07:59" hostname="ae546df9bbbb" time="0.41">
+  <properties />
+  <testcase name="legacyCapabilityTransfersCurrentV2AndKeepsUnsupportedHistoryPending" classname="cz.zamerovac.app.PeerLegacyCompatibilityTest" time="0.41" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.PeerMediaCheckpointTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:07:59" hostname="ae546df9bbbb" time="0.119">
+  <properties />
+  <testcase name="cancelledTransferAndZeroProgressLeaveNoPartialDestination" classname="cz.zamerovac.app.PeerMediaCheckpointTest" time="0.029" />
+  <testcase name="localHashYieldsBetweenBlocksAndNeverChangesOriginal" classname="cz.zamerovac.app.PeerMediaCheckpointTest" time="0.028" />
+  <testcase name="simultaneousDifferentOriginalIsNeverReplacedByVerifiedTemporaryFile" classname="cz.zamerovac.app.PeerMediaCheckpointTest" time="0.028" />
+  <testcase name="duplicateVerificationRunsOutsideDatabaseLockAndRetainsExactOriginal" classname="cz.zamerovac.app.PeerMediaCheckpointTest" time="0.034" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.PeerMediaLargeTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:07:59" hostname="ae546df9bbbb" time="39.8">
+  <properties />
+  <testcase name="threeGiBInterruptedHalfwayRestartsWholeFileAndPreservesHealthyNeighbour" classname="cz.zamerovac.app.PeerMediaLargeTest" time="39.8" />
+  <system-out>PEER_MEDIA_3GIB_RETRY_FROM_ZERO SHA256=4a2980f6530cf815661776d5aff5807f7bb38ed6fb034aeae1f26edea33b95ec HEAP_LIMIT=536870912
+</system-out>
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.PeerSessionsTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:08:39" hostname="ae546df9bbbb" time="0.729">
+  <properties />
+  <testcase name="authenticatedNearbySupersedesEitherLanDirectionButLanCannotDisplaceNearby" classname="cz.zamerovac.app.PeerSessionsTest" time="0.724" />
+  <testcase name="sameRouteTieUsesInitiatorPreferenceAndDifferentPeersStayIndependent" classname="cz.zamerovac.app.PeerSessionsTest" time="0.001" />
+  <testcase name="simultaneousRoutesConvergeOnOneNearbyLeaseWithoutStaleRemoval" classname="cz.zamerovac.app.PeerSessionsTest" time="0.004" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.PeerTlsTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:08:40" hostname="ae546df9bbbb" time="0.462">
+  <properties />
+  <testcase name="mutualApprovalBindsCertificatesBeforeExactEncryptedPayload" classname="cz.zamerovac.app.PeerTlsTest" time="0.154" />
+  <testcase name="rememberedRouteMustAnswerWithExpectedPinnedIdentityBeforeAnyPayload" classname="cz.zamerovac.app.PeerTlsTest" time="0.055" />
+  <testcase name="oneSidedDurablePairingRequiresFreshComparisonOnBothScreens" classname="cz.zamerovac.app.PeerTlsTest" time="0.045" />
+  <testcase name="pinnedReconnectDoesNotNeedAnotherApprovalAndUnknownCertificateIsDenied" classname="cz.zamerovac.app.PeerTlsTest" time="0.067" />
+  <testcase name="certificateCannotClaimAnotherInstallIdentityEvenDuringPairing" classname="cz.zamerovac.app.PeerTlsTest" time="0.06" />
+  <testcase name="revokedBindingAndOversizeFramesAreRejected" classname="cz.zamerovac.app.PeerTlsTest" time="0.042" />
+  <testcase name="rejectedPairingSavesNeitherTrustBinding" classname="cz.zamerovac.app.PeerTlsTest" time="0.038" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.PeerTransferTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:08:40" hostname="ae546df9bbbb" time="29.521">
+  <properties />
+  <testcase name="fallbackOnResponderInvalidatesRemoteAckAndRestoresExactDataWithoutNewUserEdit" classname="cz.zamerovac.app.PeerTransferTest" time="0.867" />
+  <testcase name="recoveryOnInitiatorInvalidatesRemoteAckBeforeResponderPreparesSnapshot" classname="cz.zamerovac.app.PeerTransferTest" time="0.643" />
+  <testcase name="diskFailureBeforePeerDatabaseCommitLeavesMetadataAndExactDataUntouched" classname="cz.zamerovac.app.PeerTransferTest" time="0.077" />
+  <testcase name="corruptAndPartialStreamsDoNotPublishMedia" classname="cz.zamerovac.app.PeerTransferTest" time="0.054" />
+  <testcase name="disconnectNineteenthOfThirtyKeepsDatabaseAndResumesAfterReopen" classname="cz.zamerovac.app.PeerTransferTest" time="4.321" />
+  <testcase name="firstSyncIntoCleanReceiverKeepsExactPhotoAndNoDuplicateOnRetry" classname="cz.zamerovac.app.PeerTransferTest" time="0.618" />
+  <testcase name="receiverFailureBeforeFirstPhotoBaselineIsNotDatabaseLoss" classname="cz.zamerovac.app.PeerTransferTest" time="0.08" />
+  <testcase name="editDuringMediaTransferIsMergedFromLatestDatabase" classname="cz.zamerovac.app.PeerTransferTest" time="0.667" />
+  <testcase name="coalescesOnlyObservedRevisionsAndRejectsUnsafeMetadata" classname="cz.zamerovac.app.PeerTransferTest" time="0.129" />
+  <testcase name="corruptReceiverCannotAcceptOldBackupOrAckPeerSnapshot" classname="cz.zamerovac.app.PeerTransferTest" time="0.057" />
+  <testcase name="completeBidirectionalMediaAndExactAnnotationsRemainIdempotent" classname="cz.zamerovac.app.PeerTransferTest" time="1.031" />
+  <testcase name="recoveryQuarantineWithMoreThanSixteenOldJobsDoesNotBlockDirectTls" classname="cz.zamerovac.app.PeerTransferTest" time="20.194" />
+  <testcase name="sameMediaIdDifferentBytesRefusesWithoutOverwritingOrFalseAck" classname="cz.zamerovac.app.PeerTransferTest" time="0.101" />
+  <testcase name="interruptedFirstPhotoTransferKeepsCleanBaselineAndResumesSafely" classname="cz.zamerovac.app.PeerTransferTest" time="0.682" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.PeerWifiDirectTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:09:10" hostname="ae546df9bbbb" time="0.891">
+  <properties />
+  <testcase name="lostGroupRetriesAreBoundedAndBusyRadioRetainsPendingState" classname="cz.zamerovac.app.PeerWifiDirectTest" time="0.746" />
+  <testcase name="lateGroupReplyAfterDisconnectAndCloseCannotPublishEndpoint" classname="cz.zamerovac.app.PeerWifiDirectTest" time="0.033" />
+  <testcase name="noUnknownPermissionlessDisabledOrRevokedAutoConnections" classname="cz.zamerovac.app.PeerWifiDirectTest" time="0.017" />
+  <testcase name="channelLossReinitializesAndOldPeerCallbackCannotConnect" classname="cz.zamerovac.app.PeerWifiDirectTest" time="0.018" />
+  <testcase name="automaticRecreatesKnownRouteAndKeepsExpectedIdentityOutOfUi" classname="cz.zamerovac.app.PeerWifiDirectTest" time="0.017" />
+  <testcase name="incomingRouteUsesActualGroupInterfaceForOwnerAndClearsAfterDisconnect" classname="cz.zamerovac.app.PeerWifiDirectTest" time="0.04" />
+  <testcase name="onlyAuthenticatedRouteIsDurableAndForgettingRemovesIt" classname="cz.zamerovac.app.PeerWifiDirectTest" time="0.019" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.PendingAudioTest" tests="15" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:09:11" hostname="ae546df9bbbb" time="0.709">
+  <properties />
+  <testcase name="faultsAtEveryDurabilityBoundaryKeepOriginalAndRecoveryIsRepeatable" classname="cz.zamerovac.app.PendingAudioTest" time="0.088" />
+  <testcase name="ledgerPathAndAudioSymlinksAreRejectedWithoutTouchingTargets" classname="cz.zamerovac.app.PendingAudioTest" time="0.025" />
+  <testcase name="collisionsConcurrentReservationsAndPublicationCannotOverwriteEitherCopy" classname="cz.zamerovac.app.PendingAudioTest" time="0.026" />
+  <testcase name="restartBetweenJournalAndPublicationRecoversCompletedBytes" classname="cz.zamerovac.app.PendingAudioTest" time="0.041" />
+  <testcase name="trashPurgeRetainsPendingBoundAndUnknownAudioWhileOtherMediaStillDeletes" classname="cz.zamerovac.app.PendingAudioTest" time="0.047" />
+  <testcase name="realUnwritableJournalLocationAndActiveRecoveryKeepCapture" classname="cz.zamerovac.app.PendingAudioTest" time="0.044" />
+  <testcase name="prefsMemoryValuesAfterFailedCommitAreNeverTreatedAsDurableMetadata" classname="cz.zamerovac.app.PendingAudioTest" time="0.037" />
+  <testcase name="completedMetadataFailurePreservesExactBytes" classname="cz.zamerovac.app.PendingAudioTest" time="0.042" />
+  <testcase name="historyUndoTrashBackupAndOldRestoreDoNotAuthorizeDeletionOrBinding" classname="cz.zamerovac.app.PendingAudioTest" time="0.068" />
+  <testcase name="failedLedgerAfterProjectCommitDoesNotUndoDurableProject" classname="cz.zamerovac.app.PendingAudioTest" time="0.035" />
+  <testcase name="unconfirmedNewJournalAndExportOfCorruptEvidencePreserveExactOriginal" classname="cz.zamerovac.app.PendingAudioTest" time="0.034" />
+  <testcase name="corruptMissingAndAtomicBackupJournalNeverHideOrDeleteOriginals" classname="cz.zamerovac.app.PendingAudioTest" time="0.032" />
+  <testcase name="legacyUnknownAndInterruptedCaptureRemainVisibleAndExportable" classname="cz.zamerovac.app.PendingAudioTest" time="0.022" />
+  <testcase name="boundRequiresExactDurableSnapshotAndNoteIdentityAndIsIdempotent" classname="cz.zamerovac.app.PendingAudioTest" time="0.046" />
+  <testcase name="emptyLargeAndChangedOriginalsNeverAcquireFalseCompletedProof" classname="cz.zamerovac.app.PendingAudioTest" time="0.12" />
+  <system-out>ORIGINAL_AND_RECOVERED_SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a EXACT_BYTES=10
+</system-out>
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.PhotoThumbnailsTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:09:12" hostname="ae546df9bbbb" time="3.362">
+  <properties />
+  <testcase name="mirroredExifThumbnailAndReusePreserveEveryOriginalByte" classname="cz.zamerovac.app.PhotoThumbnailsTest" time="3.291" />
+  <testcase name="coldDecoderDoesNotBlockDatabaseAndPurgedSourceCannotPublishLateCache" classname="cz.zamerovac.app.PhotoThumbnailsTest" time="0.046" />
+  <testcase name="malformedImageAndCacheWriteFailureDoNotTouchOriginal" classname="cz.zamerovac.app.PhotoThumbnailsTest" time="0.025" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.Post147DataTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:09:15" hostname="ae546df9bbbb" time="0.389">
+  <properties />
+  <testcase name="unreadableDatabaseNeverBecomesWritableEmptyState" classname="cz.zamerovac.app.Post147DataTest" time="0.136" />
+  <testcase name="originalBackupExporterRoundTripsEditableDataAndOriginalMedia" classname="cz.zamerovac.app.Post147DataTest" time="0.144" />
+  <testcase name="emptyExportAndInvalidImagesFailWithoutDatabaseWrites" classname="cz.zamerovac.app.Post147DataTest" time="0.02" />
+  <testcase name="invalidOrIncompleteBackupCannotReplaceExistingRecords" classname="cz.zamerovac.app.Post147DataTest" time="0.025" />
+  <testcase name="customerZipContainsOnlyRasterPdfForOneAndMultiplePhotos" classname="cz.zamerovac.app.Post147DataTest" time="0.041" />
+  <testcase name="importAddsCopyAndPreservesLegacyPrecisionAndUnknownFields" classname="cz.zamerovac.app.Post147DataTest" time="0.022" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.Post149NativeTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:09:15" hostname="ae546df9bbbb" time="1.735">
+  <properties />
+  <testcase name="videoTimeoutAndErrorsPreserveOriginalAndPauseReleasesPlayback" classname="cz.zamerovac.app.Post149NativeTest" time="0.521" />
+  <testcase name="earlyGattCallbackIsQueuedAndTimeoutClosesOnlyItsOwnSession" classname="cz.zamerovac.app.Post149NativeTest" time="0.308" />
+  <testcase name="permissionReplyAfterCancelDoesNotRestartScan" classname="cz.zamerovac.app.Post149NativeTest" time="0.045" />
+  <testcase name="videoRejectsMissingAndTraversalIds" classname="cz.zamerovac.app.Post149NativeTest" time="0.029" />
+  <testcase name="blockedThumbnailCannotHoldDataLockOrLoadForever" classname="cz.zamerovac.app.Post149NativeTest" time="0.145" />
+  <testcase name="rotationKeepsActivityWebViewAndSavedProject" classname="cz.zamerovac.app.Post149NativeTest" time="0.052" />
+  <testcase name="videoUsesInternalPlayerAndReadOnlyLargeFileDescriptor" classname="cz.zamerovac.app.Post149NativeTest" time="0.036" />
+  <testcase name="pagesStayTogetherAndIncompletePdfCannotBeSaved" classname="cz.zamerovac.app.Post149NativeTest" time="0.034" />
+  <testcase name="videoThumbnailCacheAndUnsupportedFormatNeverChangeOriginal" classname="cz.zamerovac.app.Post149NativeTest" time="0.559" />
+  <system-out />
+  <system-err>Invalid ID 0x00000000.
+</system-err>
+</testsuite><testsuite name="cz.zamerovac.app.ProtectedArchiveCoverageTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:09:17" hostname="ae546df9bbbb" time="0.786">
+  <properties />
+  <testcase name="changedHoldDuringCopyCannotPublishCompleteArchive" classname="cz.zamerovac.app.ProtectedArchiveCoverageTest" time="0.1" />
+  <testcase name="unconfirmedAtomicSidecarsAreCopiedByteExactlyButNotSourceComplete" classname="cz.zamerovac.app.ProtectedArchiveCoverageTest" time="0.141" />
+  <testcase name="pinnedPhotoAndVideoMatchHashesAndCannotBeReplacedBySameLengthContent" classname="cz.zamerovac.app.ProtectedArchiveCoverageTest" time="0.21" />
+  <testcase name="tamperedArchivedHistoricalHoldCannotPassVerification" classname="cz.zamerovac.app.ProtectedArchiveCoverageTest" time="0.098" />
+  <testcase name="interruptedProtectedArchiveLeavesNoCompleteMarkerAndCanRetry" classname="cz.zamerovac.app.ProtectedArchiveCoverageTest" time="0.067" />
+  <testcase name="exactOldRevisionAndBothCatalogsSurviveRotationVerifyAndSeparateRecoveryCopy" classname="cz.zamerovac.app.ProtectedArchiveCoverageTest" time="0.06" />
+  <testcase name="missingWitnessOrCorruptCatalogCannotClaimCompleteP1Archive" classname="cz.zamerovac.app.ProtectedArchiveCoverageTest" time="0.039" />
+  <testcase name="missingEntireP1RegistryNeverClaimsHistoricalSourceCompleteness" classname="cz.zamerovac.app.ProtectedArchiveCoverageTest" time="0.026" />
+  <testcase name="brokenOrMissingImmutableHoldMustNotBeCertified" classname="cz.zamerovac.app.ProtectedArchiveCoverageTest" time="0.045" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.ProtectedRevisionsTest" tests="21" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:09:18" hostname="ae546df9bbbb" time="1.609">
+  <properties />
+  <testcase name="purgeAndPendingCleanupRetainPhotoVideoAndExactPreimage" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.051" />
+  <testcase name="rollbackKeepsPinnedAndLiveButRemovesUnreferencedNewFile" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.041" />
+  <testcase name="jsonLookingNoteTextAndEmbeddedLegacyHistoryRemainExact" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.046" />
+  <testcase name="retainedExactStateRestoresAsSeparateCopyThroughExistingImporter" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.068" />
+  <testcase name="atomicBackupAndCompleteUnpublishedHoldRepairAfterRestart" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.039" />
+  <testcase name="severalExactMetadataRevisionsShareOneSetOfOriginalBytes" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.065" />
+  <testcase name="ackSupersessionForgetAndRestartNeverReleaseOriginals" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.129" />
+  <testcase name="alreadyLostOriginalIsTruthfulEvidenceAndCannotPublishACompleteSnapshot" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.071" />
+  <testcase name="validOrphanRepairsCatalogUnionAfterRestart" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.034" />
+  <testcase name="losingBothCatalogsCannotAuthorizeCleanupFromAnAssumedEmptyRegistry" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.052" />
+  <testcase name="unreadableBackupCannotBeSilentlyOverwrittenByRotation" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.033" />
+  <testcase name="catalogWriteFailureBlocksPublicationAndRepairsOnRetry" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.07" />
+  <testcase name="safLateAckCannotReleaseRecoverableSnapshot" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.353" />
+  <testcase name="missingRegistryAndCorruptManifestFailClosed" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.05" />
+  <testcase name="preUpgradeBackupRevisionSurvivesRotationByteExactly" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.04" />
+  <testcase name="missingPinnedIdRejectsReuseAndAcceptsOnlyByteExactPeerRestoration" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.047" />
+  <testcase name="driveLateAckCannotReleaseRecoverableSnapshot" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.266" />
+  <testcase name="recoveryAuthorityLossCannotReleasePinsOrAuthorizeRestore" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.04" />
+  <testcase name="changedOriginalCannotBeBlessedAsANewProtectedVersion" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.035" />
+  <testcase name="retentionAloneCannotMasqueradeAsFreshDatabaseAuthority" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.033" />
+  <testcase name="lowSpaceRejectsReplacementWithoutTouchingConfirmedBytes" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.045" />
+  <system-out>HYBRID_DISK_GROWTH {"revisionsAdded":5,"originalBytes":12,"originalFileCount":2,"metadataBytesBefore":1193,"metadataBytesAfter":5963}
+</system-out>
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.ProviderIoTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:09:19" hostname="ae546df9bbbb" time="0.257">
+  <properties />
+  <testcase name="timeoutReleasesCallerEvenWhenReadIgnoresInterruptAndCancellationBlocks" classname="cz.zamerovac.app.ProviderIoTest" time="0.087" />
+  <testcase name="timedOutWriterOwnsItsBytesAndCannotUseMutatedCallerBuffer" classname="cz.zamerovac.app.ProviderIoTest" time="0.083" />
+  <testcase name="successfulStreamsAndLateResourceCleanupRespectByteAndCloseContracts" classname="cz.zamerovac.app.ProviderIoTest" time="0.085" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.RecoveryCandidateReviewTest" tests="20" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:09:20" hostname="ae546df9bbbb" time="0.984">
+  <properties />
+  <testcase name="verifiedExistingArchiveIsReadOnlyEvidenceNotPromotion" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.07" />
+  <testcase name="invalidTombstoneClockWithSameIdIsBlockedWithoutRepair" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.058" />
+  <testcase name="healthyCurrentCandidateWithExactMediaHistoryAndTombstonesIsOnlyChecked" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.036" />
+  <testcase name="concurrentTombstoneClockWithSameIdIsBlockedAndPreservesEverything" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.068" />
+  <testcase name="sameSizeChangedMediaCannotUseOldArchive" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.054" />
+  <testcase name="olderHigherTombstoneClockBlocksLowerNewerValue" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.071" />
+  <testcase name="invalidJournalWithoutSideEffectsMustBeBlocked" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.063" />
+  <testcase name="missingOriginalMediaIsBlockedNotInvented" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.116" />
+  <testcase name="olderBackupCannotOverrideNewerDimensionAndTombstone" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.089" />
+  <testcase name="newerDominatingTombstoneClockStillAllowsReadOnlyCheck" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.032" />
+  <testcase name="archivedOldDatabaseNeverCertifiesNewerMeasurements" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.072" />
+  <testcase name="legacyJournalBakAloneMustRemainByteExactAndUnknown" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.023" />
+  <testcase name="journalBaseAndNewMustNotDiscardUnfinishedBytes" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.024" />
+  <testcase name="secondReadAndRestartDoNotChangeAnyEvidenceOrPeerQueue" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.04" />
+  <testcase name="damagedPrimaryCannotImplicitlyAuthorizeHealthyBackup" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.029" />
+  <testcase name="byteIdenticalUnconfirmedTmpNeverReceivesCheckedReadOnly" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.023" />
+  <testcase name="sourceChangedDuringScanIsBlockedWithoutFurtherWrites" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.032" />
+  <testcase name="malformedSchemaIsBlockedWithoutRepair" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.025" />
+  <testcase name="validJournalReadsEpochWithoutMutatingAnyEvidence" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.024" />
+  <testcase name="sameSizeMediaModifiedDuringScanIsBlocked" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.029" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.RecoveryInventoryTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:09:21" hostname="ae546df9bbbb" time="0.143">
+  <properties />
+  <testcase name="malformedJournalAndPendingTrashAreReportedWithoutRepair" classname="cz.zamerovac.app.RecoveryInventoryTest" time="0.022" />
+  <testcase name="symlinkCannotEscapePrivateMediaDirectory" classname="cz.zamerovac.app.RecoveryInventoryTest" time="0.015" />
+  <testcase name="textOnlyProjectsDoNotRequireInventedMediaOrLostUndoHistory" classname="cz.zamerovac.app.RecoveryInventoryTest" time="0.021" />
+  <testcase name="corruptedPrimaryIsFlaggedWhileOldBackupIsNeverPromoted" classname="cz.zamerovac.app.RecoveryInventoryTest" time="0.026" />
+  <testcase name="missingReferencedPhotoIsIncompleteNotAValidRestorableSnapshot" classname="cz.zamerovac.app.RecoveryInventoryTest" time="0.016" />
+  <testcase name="orphanedOriginalMediaAreListedWithoutCreatingAnyDatabase" classname="cz.zamerovac.app.RecoveryInventoryTest" time="0.014" />
+  <testcase name="validPrimaryBackupDeletedRecordsHistoryAndExactMediaAreReadOnly" classname="cz.zamerovac.app.RecoveryInventoryTest" time="0.028" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.RecoveryProtectionArchiveTest" tests="40" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:09:21" hostname="ae546df9bbbb" time="3.467">
+  <properties />
+  <testcase name="existingConfirmedArchiveRejectsChangedPrefsOnly" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.089" />
+  <testcase name="unreadableLivePhotoDuringSecondInventoryFailsClosedWithoutSourceMutation" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.361" />
+  <testcase name="existingConfirmedArchiveRejectsDisappearingOriginalPhoto" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.076" />
+  <testcase name="oversizedCompleteMarkerIsRejectedBeforeOpenAndPreservesSources" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.076" />
+  <testcase name="interruptedStageIsNeverCompleteAndRetryAfterRestartIsIdempotent" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.055" />
+  <testcase name="androidFallbackStillRejectsSymlinkAncestorOnVerifyAndReuse" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.207" />
+  <testcase name="forgedSecondManifestCannotFinalizeInterruptedArchive" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.093" />
+  <testcase name="boundedManifestAcceptsValidVerifyReuseAndInterruptedFinish" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.094" />
+  <testcase name="storageExhaustedMidWriteLeavesOnlyUncommittedStagingEvidence" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.075" />
+  <testcase name="androidFallbackWithoutFileKeyRemainsFailClosed" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.022" />
+  <testcase name="symbolicLinkInAtomicFileSidecarCannotBeCertified" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.022" />
+  <testcase name="archivedMediaDirectorySymlinkToIdenticalLiveOriginalIsRejected" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.092" />
+  <testcase name="changingSourceDuringCopyFailsWithoutPublishingArchive" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.035" />
+  <testcase name="androidCreationTimeFallbackAllowsExactArchiveVerifyAndReuse" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.218" />
+  <testcase name="validManifestMetadataSurvivesVerifyReuseAndInterruptedFinalization" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.104" />
+  <testcase name="corruptedCompleteMarkerWithCorrectLengthIsRejected" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.072" />
+  <testcase name="forgedSecondManifestCannotChangeConfirmedArchiveMetadata" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.067" />
+  <testcase name="unmodifiedSourcesReuseConfirmedAndSafelyFinishUnconfirmed" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.101" />
+  <testcase name="existingConfirmedArchiveRejectsUnsafeNewSidecarSymlink" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.061" />
+  <testcase name="existingConfirmedArchiveRejectsPreciseDimensionChangedDuringReuse" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.061" />
+  <testcase name="completeGrowingAfterFirstReadIsBoundedToOneExtraByte" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.086" />
+  <testcase name="damagedPrimaryIsPreservedAsEvidenceNeverReplacedByOldBackup" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.053" />
+  <testcase name="symlinkOutsideAppIsNeverCopiedAndTamperedArchiveCannotVerify" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.047" />
+  <testcase name="expandingManifestDuringSecondReadCannotFinalizeInterruptedCopy" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.258" />
+  <testcase name="crashAfterAtomicArchiveRenameBeforeMarkerCanBeSafelyFinalized" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.097" />
+  <testcase name="snapshotKeepsExactDimensionsOldBackupTrashJournalMediaPrefsAndOutbox" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.127" />
+  <testcase name="expandingManifestDuringFirstReadIsBoundedAndRejected" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.091" />
+  <testcase name="atomicFileSidecarsAreArchivedByteForByteWithoutPromotingThem" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.042" />
+  <testcase name="lowStorageFailsBeforeStagingAndNeverChangesPrimary" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.022" />
+  <testcase name="existingConfirmedArchiveRejectsNewAtomicSidecarOnly" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.066" />
+  <testcase name="interruptedArchiveRejectsDriftAfterMarkerButKeepsArchivedEvidence" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.07" />
+  <testcase name="androidFallbackStillRejectsRealDirectoryReplacementDuringCopy" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.044" />
+  <testcase name="existingConfirmedArchiveRejectsSameLengthPhotoMutationDuringReuse" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.052" />
+  <testcase name="sameSizeManifestRewrittenDuringReadFailsIdentityCheck" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.054" />
+  <testcase name="disappearingOriginalFailsInsteadOfInventingIt" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.023" />
+  <testcase name="mediaDirectorySwappedToSymlinkDuringCopyIsNeverConfirmed" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.023" />
+  <testcase name="existingArchiveRejectsPhotoMutationInsideMarkerVerification" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.127" />
+  <testcase name="androidFallbackStillRejectsSymlinkSwapDuringCopy" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.056" />
+  <testcase name="interruptedBeforeCompleteRejectsSourceChangeWithoutPublishingMarker" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.055" />
+  <testcase name="absentPhotoAndTextOnlyOrOrphanMediaHaveTruthfulCompleteness" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.066" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.SafSyncV2Test" tests="36" skipped="0" failures="2" errors="0" timestamp="2026-11-12T21:01:56" hostname="ae546df9bbbb" time="64.795">
+  <properties />
+  <testcase name="quarantinedHistoricalOutboxDoesNotBlockFreshSignedCloudSync" classname="cz.zamerovac.app.SafSyncV2Test" time="28.288" />
+  <testcase name="signedRepairFixesSameSizeCorruptBlobAndReplayedRequestDoesNotRedownloadIt" classname="cz.zamerovac.app.SafSyncV2Test" time="2.644" />
+  <testcase name="repairAfterFinalAckRestoresFallbackReceiverAndNeverOverwritesCorruptRemoteCopy" classname="cz.zamerovac.app.SafSyncV2Test" time="1.279" />
+  <testcase name="authenticatedDirectArrivalDuringLocalHashReleasesCloudGateBeforePublication" classname="cz.zamerovac.app.SafSyncV2Test" time="1.991" />
+  <testcase name="interruptedBlobAndRestartResumeWithoutPublishingPartialDatabase" classname="cz.zamerovac.app.SafSyncV2Test" time="3.66" />
+  <testcase name="meteredMetadataUsesExistingOriginalButMissingLargePhotoWaits" classname="cz.zamerovac.app.SafSyncV2Test" time="2.428" />
+  <testcase name="committedInboxSurvivesLostAckAndAvoidsReadingOldMessagesAfterRestart" classname="cz.zamerovac.app.SafSyncV2Test" time="0.874" />
+  <testcase name="largeRepairWaitsForUnmeteredPolicy" classname="cz.zamerovac.app.SafSyncV2Test" time="1.622" />
+  <testcase name="missingFileStillRequiredByNewerLocalVersionCannotBeRetired" classname="cz.zamerovac.app.SafSyncV2Test" time="0.2" />
+  <testcase name="fallbackAfterFinalCloudAckReappliesHistoricalMessageDespiteCachedInbox" classname="cz.zamerovac.app.SafSyncV2Test" time="0.708" />
+  <testcase name="deletedCloudCopyIsRepublishedWithoutOverwritingLocalOriginal" classname="cz.zamerovac.app.SafSyncV2Test" time="1.331" />
+  <testcase name="driveLateAckKeepsOriginalsAndRejectsUnapprovedRecoveryOnRestart" classname="cz.zamerovac.app.SafSyncV2Test" time="0.421" />
+  <testcase name="newCloudNamespacePublishesCompleteCopyDespitePriorConfirmedPeerAck" classname="cz.zamerovac.app.SafSyncV2Test" time="0.966" />
+  <testcase name="concurrentLocalVersionCannotRetireAnUnfinishedRemoteSnapshot" classname="cz.zamerovac.app.SafSyncV2Test" time="1.935" />
+  <testcase name="forgedAcknowledgementCannotClearQueueAndRevokedAuthorCannotWrite" classname="cz.zamerovac.app.SafSyncV2Test" time="0.233" />
+  <testcase name="observedReceiverRecoveryCannotReuseHistoricalSignedCloudAck" classname="cz.zamerovac.app.SafSyncV2Test" time="0.643" />
+  <testcase name="signedImmutableMessagesConvergeAndNoMutableProjectsFileExists" classname="cz.zamerovac.app.SafSyncV2Test" time="0.69" />
+  <testcase name="newlyAvailableDirectRouteYieldsCloudBetweenChunksWithoutClearingQueue" classname="cz.zamerovac.app.SafSyncV2Test" time="1.076" />
+  <testcase name="rejectedNetworkPolicyDoesNotEvenListOrReadProvider" classname="cz.zamerovac.app.SafSyncV2Test" time="0.153" />
+  <testcase name="pendingSourceReopenDoesNotReadAlreadyVerifiedLargeOriginalAgain" classname="cz.zamerovac.app.SafSyncV2Test" time="1.211" />
+  <testcase name="recoveredPeerCannotClearCloudAckBarrierByUnpairAndRepair" classname="cz.zamerovac.app.SafSyncV2Test" time="0.7" />
+  <testcase name="coordinatorRevocationDuringCloudAckProofCannotCompleteStaleOutbox" classname="cz.zamerovac.app.SafSyncV2Test" time="0.769" />
+  <testcase name="signedBodyCannotBeChangedReaddressedOrUsedAsAnotherProofKind" classname="cz.zamerovac.app.SafSyncV2Test" time="0.055" />
+  <testcase name="corruptionAfterAckOutputCreateCannotPublishValidCloudAck" classname="cz.zamerovac.app.SafSyncV2Test" time="0.283" />
+  <testcase name="purgedPendingPhotoDoesNotBlockNewerTombstoneOrFalselyAckMissingOldMedia" classname="cz.zamerovac.app.SafSyncV2Test" time="1.978" />
+  <testcase name="missingSnapshotRequestsVerifiedMetadataAndLegacyStateStillConverges" classname="cz.zamerovac.app.SafSyncV2Test" time="0.867" />
+  <testcase name="manyInvalidMessagesUseBoundedBatchesResumeAfterRestartAndCannotClearOutbox" classname="cz.zamerovac.app.SafSyncV2Test" time="1.935" />
+  <testcase name="legacyRemoteRecoveryHoldSurvivesCoordinatorForgetNewCertificateAndRestart" classname="cz.zamerovac.app.SafSyncV2Test" time="1.085" />
+  <testcase name="driveStagedAckMustNotPublishAfterLocalAuthorityLostInsideProviderCommit" classname="cz.zamerovac.app.SafSyncV2Test" time="0.171">
+    <failure message="java.lang.AssertionError: Provider completed signed ACK after recovery epoch loss: Drive staged expected:&lt;0&gt; but was:&lt;1&gt;" type="java.lang.AssertionError">java.lang.AssertionError: Provider completed signed ACK after recovery epoch loss: Drive staged expected:&lt;0&gt; but was:&lt;1&gt;
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.failNotEquals(Assert.java:835)
+	at org.junit.Assert.assertEquals(Assert.java:647)
+	at cz.zamerovac.app.SafSyncV2Test.ackProviderBoundary(SafSyncV2Test.java:301)
+	at cz.zamerovac.app.SafSyncV2Test.driveStagedAckMustNotPublishAfterLocalAuthorityLostInsideProviderCommit(SafSyncV2Test.java:305)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:26)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.robolectric.RobolectricTestRunner$HelperTestRunner$1.evaluate(RobolectricTestRunner.java:524)
+	at org.robolectric.internal.SandboxTestRunner.executeInSandbox(SandboxTestRunner.java:494)
+	at org.robolectric.internal.SandboxTestRunner.access$900(SandboxTestRunner.java:67)
+	at org.robolectric.internal.SandboxTestRunner$7.evaluate(SandboxTestRunner.java:442)
+	at org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)
+	at org.robolectric.internal.SandboxTestRunner.access$600(SandboxTestRunner.java:67)
+	at org.robolectric.internal.SandboxTestRunner$6.evaluate(SandboxTestRunner.java:333)
+	at org.robolectric.internal.SandboxTestRunner$3.evaluate(SandboxTestRunner.java:233)
+	at org.robolectric.internal.SandboxTestRunner$5.lambda$evaluate$0(SandboxTestRunner.java:317)
+	at org.robolectric.internal.bytecode.Sandbox.lambda$runOnMainThread$0(Sandbox.java:101)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+</failure>
+  </testcase>
+  <testcase name="networkPolicyChangeDuringLargeUploadStopsAtNextChunkAndRecovers" classname="cz.zamerovac.app.SafSyncV2Test" time="1.403" />
+  <testcase name="unavailableOldMetadataDoesNotBlockNewerIncomingOrOwnOutgoingAndNeverGetsAcked" classname="cz.zamerovac.app.SafSyncV2Test" time="1.243" />
+  <testcase name="safDirectAckMustNotPublishAfterLocalAuthorityLostInsideProviderWrite" classname="cz.zamerovac.app.SafSyncV2Test" time="0.216">
+    <failure message="java.lang.AssertionError: Provider completed signed ACK after recovery epoch loss: SAF direct expected:&lt;0&gt; but was:&lt;1&gt;" type="java.lang.AssertionError">java.lang.AssertionError: Provider completed signed ACK after recovery epoch loss: SAF direct expected:&lt;0&gt; but was:&lt;1&gt;
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.failNotEquals(Assert.java:835)
+	at org.junit.Assert.assertEquals(Assert.java:647)
+	at cz.zamerovac.app.SafSyncV2Test.ackProviderBoundary(SafSyncV2Test.java:301)
+	at cz.zamerovac.app.SafSyncV2Test.safDirectAckMustNotPublishAfterLocalAuthorityLostInsideProviderWrite(SafSyncV2Test.java:308)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:26)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.robolectric.RobolectricTestRunner$HelperTestRunner$1.evaluate(RobolectricTestRunner.java:524)
+	at org.robolectric.internal.SandboxTestRunner.executeInSandbox(SandboxTestRunner.java:494)
+	at org.robolectric.internal.SandboxTestRunner.access$900(SandboxTestRunner.java:67)
+	at org.robolectric.internal.SandboxTestRunner$7.evaluate(SandboxTestRunner.java:442)
+	at org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)
+	at org.robolectric.internal.SandboxTestRunner.access$600(SandboxTestRunner.java:67)
+	at org.robolectric.internal.SandboxTestRunner$6.evaluate(SandboxTestRunner.java:333)
+	at org.robolectric.internal.SandboxTestRunner$3.evaluate(SandboxTestRunner.java:233)
+	at org.robolectric.internal.SandboxTestRunner$5.lambda$evaluate$0(SandboxTestRunner.java:317)
+	at org.robolectric.internal.bytecode.Sandbox.lambda$runOnMainThread$0(Sandbox.java:101)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+</failure>
+  </testcase>
+  <testcase name="forgedOrUnreferencedRepairCannotTriggerLargeReadsOrClearOutbox" classname="cz.zamerovac.app.SafSyncV2Test" time="0.246" />
+  <testcase name="historicalSignedAckCannotHideIncompleteNewNamespaceOnMeteredNetwork" classname="cz.zamerovac.app.SafSyncV2Test" time="1.11" />
+  <testcase name="rejectedNetworkPolicyCannotExposeStaleFallbackAsConfirmed" classname="cz.zamerovac.app.SafSyncV2Test" time="0.089" />
+  <testcase name="safLateAckKeepsOriginalsAndRejectsUnapprovedRecoveryOnRestart" classname="cz.zamerovac.app.SafSyncV2Test" time="0.26" />
+  <system-out />
+  <system-err>[Robolectric] WARN: Android SDK 36 requires Java 21 (have Java 17). Tests won't be run on SDK 36 unless explicitly requested.
+</system-err>
+</testsuite><testsuite name="cz.zamerovac.app.StorageLifecycleTest" tests="25" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:09:24" hostname="ae546df9bbbb" time="10.079">
+  <properties />
+  <testcase name="compareAndSaveRejectsStaleSnapshotAndReportsDiskFailure" classname="cz.zamerovac.app.StorageLifecycleTest" time="1.889" />
+  <testcase name="archiveRestoreCannotTouchCorruptPrimaryOrResurrectOldBackup" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.033" />
+  <testcase name="firstLaunchInitializesDatabaseBeforeFirstPhotoAndExactMeasurement" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.035" />
+  <testcase name="mediaUploadCannotAcknowledgeFailedMetadataOrUnsafeInputs" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.243" />
+  <testcase name="failedAudioStopReleasesRecorderAndDoesNotAttachAnEmptyFile" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.097" />
+  <testcase name="unsafeZipPathsCannotEscapeAndInvalidMediaReferencesFailSafely" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.037" />
+  <testcase name="annotationHistoryProtectsSharedMediaDuringAnotherRecordsPurge" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.043" />
+  <testcase name="corruptedPrimaryWithOlderValidBackupNeverAcknowledgesCAS" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.047" />
+  <testcase name="pendingAudioBridgeBindsOnlyAfterDurableCompareSaveAndNeverRevertsNewerData" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.08" />
+  <testcase name="mediaUploadStagesAndAcknowledgesOnlyCompleteFilesWithoutOverwritingOriginals" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.021" />
+  <testcase name="duplicateIncomingRecordIdsAreRejectedBeforeAnyMediaWrites" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.034" />
+  <testcase name="missingAndEmptyNestedMediaAbortBeforeAnyArchiveBytes" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.036" />
+  <testcase name="lostDatabaseAfterReopenCannotLookLikeFreshInstallation" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.552" />
+  <testcase name="missingDatabaseCannotMasqueradeAsEmptyCASAndCanRecover" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.038" />
+  <testcase name="archiveRestoreOnCleanInstallationBootstrapsBeforeFirstOriginal" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.056" />
+  <testcase name="cleanFirstInstallAndLegacyMediaAreDistinctWithoutChangingSchema" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.029" />
+  <testcase name="retainedAudioExportRejectsFileUriBeforeOpeningOrTruncatingOriginal" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.027" />
+  <testcase name="exportWriteFailurePropagatesAndPreservesDatabaseAndOriginals" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.042" />
+  <testcase name="repeatedRestoreCreatesIntentionalIsolatedCopiesAndPreservesAllLinks" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.041" />
+  <testcase name="parallelSaveAndFiftyExportsHaveCompleteSnapshotsAndUnchangedOriginals" classname="cz.zamerovac.app.StorageLifecycleTest" time="1.384" />
+  <testcase name="rotatedExifThumbnailAndCacheLeaveJpegBytesMetadataAndDimensionsUntouched" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.038" />
+  <testcase name="uriCopyStagesPartialDataAndDoesNotOverwriteExistingOriginal" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.03" />
+  <testcase name="v2ArchiveRoundtripAndTamperOrMissingManifestFailBeforeWrites" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.049" />
+  <testcase name="cancelledPickersSettleOnceWithoutChangingConfirmedDataOrOriginals" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.035" />
+  <testcase name="confirmedDatabaseSurvivesActivityPauseStopAndNewInstance" classname="cz.zamerovac.app.StorageLifecycleTest" time="5.147" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.SyncAckReconciliationTest" tests="2" skipped="0" failures="2" errors="0" timestamp="2026-11-12T21:03:01" hostname="ae546df9bbbb" time="4.532">
+  <properties />
+  <testcase name="driveLateDuplicateAckRestartBothAndRetryMustNotFalselyFinish" classname="cz.zamerovac.app.SyncAckReconciliationTest" time="2.664">
+    <failure message="java.lang.AssertionError: Historical cloud ACK retired the working intent while receiver authority was lost" type="java.lang.AssertionError">java.lang.AssertionError: Historical cloud ACK retired the working intent while receiver authority was lost
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertFalse(Assert.java:65)
+	at cz.zamerovac.app.SyncAckReconciliationTest.lateAckRestartAndRecovery(SyncAckReconciliationTest.java:108)
+	at cz.zamerovac.app.SyncAckReconciliationTest.driveLateDuplicateAckRestartBothAndRetryMustNotFalselyFinish(SyncAckReconciliationTest.java:110)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:26)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.robolectric.RobolectricTestRunner$HelperTestRunner$1.evaluate(RobolectricTestRunner.java:524)
+	at org.robolectric.internal.SandboxTestRunner.executeInSandbox(SandboxTestRunner.java:494)
+	at org.robolectric.internal.SandboxTestRunner.access$900(SandboxTestRunner.java:67)
+	at org.robolectric.internal.SandboxTestRunner$7.evaluate(SandboxTestRunner.java:442)
+	at org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)
+	at org.robolectric.internal.SandboxTestRunner.access$600(SandboxTestRunner.java:67)
+	at org.robolectric.internal.SandboxTestRunner$6.evaluate(SandboxTestRunner.java:333)
+	at org.robolectric.internal.SandboxTestRunner$3.evaluate(SandboxTestRunner.java:233)
+	at org.robolectric.internal.SandboxTestRunner$5.lambda$evaluate$0(SandboxTestRunner.java:317)
+	at org.robolectric.internal.bytecode.Sandbox.lambda$runOnMainThread$0(Sandbox.java:101)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+</failure>
+  </testcase>
+  <testcase name="safLateDuplicateAckRestartBothAndRetryMustNotFalselyFinish" classname="cz.zamerovac.app.SyncAckReconciliationTest" time="1.868">
+    <failure message="java.lang.AssertionError: Historical cloud ACK retired the working intent while receiver authority was lost" type="java.lang.AssertionError">java.lang.AssertionError: Historical cloud ACK retired the working intent while receiver authority was lost
+	at org.junit.Assert.fail(Assert.java:89)
+	at org.junit.Assert.assertTrue(Assert.java:42)
+	at org.junit.Assert.assertFalse(Assert.java:65)
+	at cz.zamerovac.app.SyncAckReconciliationTest.lateAckRestartAndRecovery(SyncAckReconciliationTest.java:108)
+	at cz.zamerovac.app.SyncAckReconciliationTest.safLateDuplicateAckRestartBothAndRetryMustNotFalselyFinish(SyncAckReconciliationTest.java:111)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke0(Native Method)
+	at java.base/jdk.internal.reflect.NativeMethodAccessorImpl.invoke(NativeMethodAccessorImpl.java:77)
+	at java.base/jdk.internal.reflect.DelegatingMethodAccessorImpl.invoke(DelegatingMethodAccessorImpl.java:43)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:569)
+	at org.junit.runners.model.FrameworkMethod$1.runReflectiveCall(FrameworkMethod.java:59)
+	at org.junit.internal.runners.model.ReflectiveCallable.run(ReflectiveCallable.java:12)
+	at org.junit.runners.model.FrameworkMethod.invokeExplosively(FrameworkMethod.java:56)
+	at org.junit.internal.runners.statements.InvokeMethod.evaluate(InvokeMethod.java:17)
+	at org.junit.internal.runners.statements.RunBefores.evaluate(RunBefores.java:26)
+	at org.junit.runners.ParentRunner$3.evaluate(ParentRunner.java:306)
+	at org.robolectric.RobolectricTestRunner$HelperTestRunner$1.evaluate(RobolectricTestRunner.java:524)
+	at org.robolectric.internal.SandboxTestRunner.executeInSandbox(SandboxTestRunner.java:494)
+	at org.robolectric.internal.SandboxTestRunner.access$900(SandboxTestRunner.java:67)
+	at org.robolectric.internal.SandboxTestRunner$7.evaluate(SandboxTestRunner.java:442)
+	at org.junit.runners.BlockJUnit4ClassRunner$1.evaluate(BlockJUnit4ClassRunner.java:100)
+	at org.junit.runners.ParentRunner.runLeaf(ParentRunner.java:366)
+	at org.junit.runners.BlockJUnit4ClassRunner.runChild(BlockJUnit4ClassRunner.java:103)
+	at org.robolectric.internal.SandboxTestRunner.access$600(SandboxTestRunner.java:67)
+	at org.robolectric.internal.SandboxTestRunner$6.evaluate(SandboxTestRunner.java:333)
+	at org.robolectric.internal.SandboxTestRunner$3.evaluate(SandboxTestRunner.java:233)
+	at org.robolectric.internal.SandboxTestRunner$5.lambda$evaluate$0(SandboxTestRunner.java:317)
+	at org.robolectric.internal.bytecode.Sandbox.lambda$runOnMainThread$0(Sandbox.java:101)
+	at java.base/java.util.concurrent.FutureTask.run(FutureTask.java:264)
+	at java.base/java.util.concurrent.ThreadPoolExecutor.runWorker(ThreadPoolExecutor.java:1136)
+	at java.base/java.util.concurrent.ThreadPoolExecutor$Worker.run(ThreadPoolExecutor.java:635)
+	at java.base/java.lang.Thread.run(Thread.java:840)
+</failure>
+  </testcase>
+  <system-out>ACK_COUNTEREXAMPLE staged=true late=true falselyRetired=true restartBoth=verified simulatedRestore=true newerRevision=preserved photoVideoAudio=exact realTlsRetry=verified
+ACK_COUNTEREXAMPLE staged=false late=true falselyRetired=true restartBoth=verified simulatedRestore=true newerRevision=preserved photoVideoAudio=exact realTlsRetry=verified
+</system-out>
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.SyncAdapterFaultTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:09:35" hostname="ae546df9bbbb" time="0.139">
+  <properties />
+  <testcase name="successfulOrTruncatedWriteCannotBecomeVerifiedReceipt" classname="cz.zamerovac.app.SyncAdapterFaultTest" time="0.052" />
+  <testcase name="staleListingAndDuplicatePhysicalObjectsNeverAuthorizeDeletionOrFalseSuccess" classname="cz.zamerovac.app.SyncAdapterFaultTest" time="0.02" />
+  <testcase name="lostAcknowledgementRetriesWithoutLosingOrDuplicatingLogicalContent" classname="cz.zamerovac.app.SyncAdapterFaultTest" time="0.048" />
+  <testcase name="networkBudgetTreatsMeteredHotspotAndUnknownNetworkConservatively" classname="cz.zamerovac.app.SyncAdapterFaultTest" time="0.019" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.SyncCadenceTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:09:35" hostname="ae546df9bbbb" time="0.198">
+  <properties />
+  <testcase name="twoEnginesCannotBothClaimTheSameAutomaticAttempt" classname="cz.zamerovac.app.SyncCadenceTest" time="0.026" />
+  <testcase name="manualAndDisabledModesNeverClaimAutomaticallyButExplicitRetryWorks" classname="cz.zamerovac.app.SyncCadenceTest" time="0.044" />
+  <testcase name="failedWriteCannotActivateUnconfirmedModeOrConsumeAttempt" classname="cz.zamerovac.app.SyncCadenceTest" time="0.02" />
+  <testcase name="defaultAndLegacySettingsKeepTheirMeaning" classname="cz.zamerovac.app.SyncCadenceTest" time="0.02" />
+  <testcase name="explicitIntervalsAreExactInForegroundAndJobAndSurviveReopen" classname="cz.zamerovac.app.SyncCadenceTest" time="0.021" />
+  <testcase name="clockRollbackRebootAndLongWaitCannotStrandQueue" classname="cz.zamerovac.app.SyncCadenceTest" time="0.019" />
+  <testcase name="foregroundAndJobShareDurableAttemptAndAccountSwitchDoesNotWaitForOldStore" classname="cz.zamerovac.app.SyncCadenceTest" time="0.029" />
+  <testcase name="invalidInputAndCorruptJournalFailClosedWithoutChangingDatabase" classname="cz.zamerovac.app.SyncCadenceTest" time="0.018" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.SyncCanonicalTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:09:35" hostname="ae546df9bbbb" time="0.081">
+  <properties />
+  <testcase name="javaAndEcmaScriptHaveIdenticalCanonicalBytesAndJobIds" classname="cz.zamerovac.app.SyncCanonicalTest" time="0.021" />
+  <testcase name="conflictCopyMatchesEcmaScriptAndDoesNotDependOnMergeOrder" classname="cz.zamerovac.app.SyncCanonicalTest" time="0.044" />
+  <testcase name="invalidUnicodeIsRejectedInsteadOfSilentlyChangingBytes" classname="cz.zamerovac.app.SyncCanonicalTest" time="0.015" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.SyncConsistencyTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:09:35" hostname="ae546df9bbbb" time="0.238">
+  <properties />
+  <testcase name="directPrimaryChangeCannotBypassTheProcessGenerationCheck" classname="cz.zamerovac.app.SyncConsistencyTest" time="0.029" />
+  <testcase name="concurrentCommitCannotBeHiddenInsideSnapshotCapture" classname="cz.zamerovac.app.SyncConsistencyTest" time="0.058" />
+  <testcase name="changedInventoryBytesCannotFalselyRemoveTheContentRequirement" classname="cz.zamerovac.app.SyncConsistencyTest" time="0.031" />
+  <testcase name="lazyDocumentCutoverAlsoChecksAbsentSourcesAndKeepsSqlAuthorityOnRetry" classname="cz.zamerovac.app.SyncConsistencyTest" time="0.027" />
+  <testcase name="newlyAppearingLegacyQueueMustAbortCutoverAndSurviveRestart" classname="cz.zamerovac.app.SyncConsistencyTest" time="0.042" />
+  <testcase name="newlyAppearingBackupMustAbortCutoverWithoutLosingEitherVersion" classname="cz.zamerovac.app.SyncConsistencyTest" time="0.023" />
+  <testcase name="preRecoveryJsonCannotAcquireTheNewEpochDuringCapture" classname="cz.zamerovac.app.SyncConsistencyTest" time="0.028" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.SyncContentTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:09:35" hostname="ae546df9bbbb" time="0.773">
+  <properties />
+  <testcase name="olderExactHistoryAndDetachedCompletedAudioEnterVersionedManifestButActiveRecordingDoesNot" classname="cz.zamerovac.app.SyncContentTest" time="0.069" />
+  <testcase name="revisionMetadataIsASeparateVerifiedBlobInsteadOfInflatingTheManifest" classname="cz.zamerovac.app.SyncContentTest" time="0.441" />
+  <testcase name="unverifiedCompletedAudioDoesNotHideHealthyProjectOrClaimContentComplete" classname="cz.zamerovac.app.SyncContentTest" time="0.068" />
+  <testcase name="recoveryArchiveIncludesPortableLedgerButNeverPrivateUploadSession" classname="cz.zamerovac.app.SyncContentTest" time="0.195" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.SyncJobTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:09:36" hostname="ae546df9bbbb" time="0.223">
+  <properties />
+  <testcase name="disabledAutoSyncNeverCallsEngine" classname="cz.zamerovac.app.SyncJobTest" time="0.152" />
+  <testcase name="oldCancelledWorkerCannotClearOrCompleteNewAttempt" classname="cz.zamerovac.app.SyncJobTest" time="0.023" />
+  <testcase name="successfulAndFailedUncancelledAttemptsReportCorrectRetry" classname="cz.zamerovac.app.SyncJobTest" time="0.017" />
+  <testcase name="manualFrequencyNeverCallsEngineEvenIfLegacyAutoFlagIsTrue" classname="cz.zamerovac.app.SyncJobTest" time="0.031" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.SyncLedgerTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:09:36" hostname="ae546df9bbbb" time="0.66">
+  <properties />
+  <testcase name="lostLedgerCannotRemoveOrBlockReadingTheLastExactRecoverablePreimage" classname="cz.zamerovac.app.SyncLedgerTest" time="0.065" />
+  <testcase name="independentTargetsNeverInheritReceiptsOrExportSessions" classname="cz.zamerovac.app.SyncLedgerTest" time="0.061" />
+  <testcase name="shortWriteOrEnospcRollsBackOnlyLedgerTransaction" classname="cz.zamerovac.app.SyncLedgerTest" time="0.023" />
+  <testcase name="corruptLedgerIsKeptForRecoveryAndCannotReadOldJson" classname="cz.zamerovac.app.SyncLedgerTest" time="0.021" />
+  <testcase name="largeQueueUsesBoundedCursorRowsAndPortableFilesKeepExactBytes" classname="cz.zamerovac.app.SyncLedgerTest" time="0.365" />
+  <testcase name="copyVerifyCutoverPreservesLegacyBytesAndCasSurvivesRestart" classname="cz.zamerovac.app.SyncLedgerTest" time="0.022" />
+  <testcase name="everyMigrationCrashIsRestartableWithoutPromotingOldQueue" classname="cz.zamerovac.app.SyncLedgerTest" time="0.061" />
+  <testcase name="databaseLossNeverReimportsOlderJsonOrResetsEvidence" classname="cz.zamerovac.app.SyncLedgerTest" time="0.02" />
+  <testcase name="backupAndNewSidecarsArePreservedWithoutReadSideRename" classname="cz.zamerovac.app.SyncLedgerTest" time="0.018" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.SyncSafetyTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:09:37" hostname="ae546df9bbbb" time="0.398">
+  <properties />
+  <testcase name="purgedConflictDoesNotReviveAndLegacyCopyDoesNotMultiply" classname="cz.zamerovac.app.SyncSafetyTest" time="0.018" />
+  <testcase name="transferFailurePreservesConfirmedDatabaseAndPersistsPendingState" classname="cz.zamerovac.app.SyncSafetyTest" time="0.027" />
+  <testcase name="sharedWriterRejectsInvalidDataBeforeTouchingConfirmedCopies" classname="cz.zamerovac.app.SyncSafetyTest" time="0.023" />
+  <testcase name="slowRemoteDoesNotBlockSaveAndFinalCommitKeepsBothExactValues" classname="cz.zamerovac.app.SyncSafetyTest" time="0.047" />
+  <testcase name="deeplyNestedOrMalformedUtf8DataIsRejectedWithoutReplacingTheDatabase" classname="cz.zamerovac.app.SyncSafetyTest" time="0.044" />
+  <testcase name="concurrentPurgeKeepsIndependentEditAsOneStableCopyAndNeverRevivesOriginal" classname="cz.zamerovac.app.SyncSafetyTest" time="0.041" />
+  <testcase name="durableQueueSurvivesReopenAndRejectsStaleOrInvalidRevision" classname="cz.zamerovac.app.SyncSafetyTest" time="0.027" />
+  <testcase name="causalRevisionBeatsWallClockWithoutChangingMeasurement" classname="cz.zamerovac.app.SyncSafetyTest" time="0.037" />
+  <testcase name="retryCannotDuplicateConflictEvenWhenExternalRevisionsAreEqual" classname="cz.zamerovac.app.SyncSafetyTest" time="0.036" />
+  <testcase name="installationIdentityIsStableAndVectorsValidateExactCounters" classname="cz.zamerovac.app.SyncSafetyTest" time="0.017" />
+  <testcase name="corruptFirstCloudPrimaryNeverPublishesOlderRecoveryCopy" classname="cz.zamerovac.app.SyncSafetyTest" time="0.033" />
+  <testcase name="firstCloudMediaInterruptedCanResumeWithoutLosingExactData" classname="cz.zamerovac.app.SyncSafetyTest" time="0.032" />
+  <testcase name="webBridgeCannotInvokeLegacyUnconditionalDatabaseWriter" classname="cz.zamerovac.app.SyncSafetyTest" time="0.015" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.SyncTlsIdentityTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:09:37" hostname="ae546df9bbbb" time="0.038">
+  <properties />
+  <testcase name="simultaneousStartupCannotRegenerateOrMixTheInstallationKey" classname="cz.zamerovac.app.SyncTlsIdentityTest" time="0.038" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.TrashPurgerTest" tests="17" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:09:37" hostname="ae546df9bbbb" time="0.471">
+  <properties />
+  <testcase name="nativeBridgeChecksDiskSnapshotAndKeepsLegacyUnsavedDefaults" classname="cz.zamerovac.app.TrashPurgerTest" time="0.034" />
+  <testcase name="malformedBalancedJsonStringAlsoBlocksMediaDeletion" classname="cz.zamerovac.app.TrashPurgerTest" time="0.018" />
+  <testcase name="purgeKeepsSharedOriginalsReferencedInsideSerializedJsonObjects" classname="cz.zamerovac.app.TrashPurgerTest" time="0.041" />
+  <testcase name="knownP1PinnedPendingCanFinishCleanupWithoutDeletingOriginal" classname="cz.zamerovac.app.TrashPurgerTest" time="0.027" />
+  <testcase name="legacyPendingWithoutPinFailsClosedBeforeAnyCommitAfterRestart" classname="cz.zamerovac.app.TrashPurgerTest" time="0.023" />
+  <testcase name="failedBackupWriteNeverUnlinksMedia" classname="cz.zamerovac.app.TrashPurgerTest" time="0.025" />
+  <testcase name="staleSnapshotOrRestoredRecordCannotDeleteAnything" classname="cz.zamerovac.app.TrashPurgerTest" time="0.016" />
+  <testcase name="pendingCleanupCannotDeleteMediaReusedByActiveRecord" classname="cz.zamerovac.app.TrashPurgerTest" time="0.032" />
+  <testcase name="syncDoesNotResurrectPurgedTrashButPreservesRemoteActiveRecord" classname="cz.zamerovac.app.TrashPurgerTest" time="0.023" />
+  <testcase name="invalidStructuredHistoryAbortsPurgeInsteadOfDiscardingPossibleReference" classname="cz.zamerovac.app.TrashPurgerTest" time="0.018" />
+  <testcase name="excessiveCombinedDepthAbortsPurgeWithoutDeletingOriginals" classname="cz.zamerovac.app.TrashPurgerTest" time="0.019" />
+  <testcase name="failedDatabaseWriteLeavesAllMediaAndRecordsRecoverable" classname="cz.zamerovac.app.TrashPurgerTest" time="0.033" />
+  <testcase name="failedUnlinkIsReportedAndRetryableAfterRestart" classname="cz.zamerovac.app.TrashPurgerTest" time="0.027" />
+  <testcase name="purgeRemovesOnlyDeletedRecordsAndExclusiveNestedMediaAndSurvivesRestart" classname="cz.zamerovac.app.TrashPurgerTest" time="0.038" />
+  <testcase name="restartedCleanupKeepsExactBytesReusedByNoteHistory" classname="cz.zamerovac.app.TrashPurgerTest" time="0.03" />
+  <testcase name="backupExportAndRestoreAfterPurgeKeepActivePrecisionAndSharedMedia" classname="cz.zamerovac.app.TrashPurgerTest" time="0.038" />
+  <testcase name="pendingCleanupMustRecheckSerializedObjectReferencesAfterRestart" classname="cz.zamerovac.app.TrashPurgerTest" time="0.028" />
+  <system-out />
+  <system-err />
+</testsuite><testsuite name="cz.zamerovac.app.VideoReviewTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:09:38" hostname="ae546df9bbbb" time="2.575">
+  <properties />
+  <testcase name="recreationPreservesFullscreenSeekAndPlayPauseState" classname="cz.zamerovac.app.VideoReviewTest" time="0.565" />
+  <testcase name="explicitVideoEntryRejectsInvalidMissingAndEscapingFiles" classname="cz.zamerovac.app.VideoReviewTest" time="0.122" />
+  <testcase name="legacyAndRestoredVideoWithoutMimeUseInternalPlayer" classname="cz.zamerovac.app.VideoReviewTest" time="0.058" />
+  <testcase name="fullscreenAndBackReusePlayerAndPreservePosition" classname="cz.zamerovac.app.VideoReviewTest" time="0.111" />
+  <testcase name="rotatingBothWaysRecreatesFullscreenWithExactPosition" classname="cz.zamerovac.app.VideoReviewTest" time="0.704" />
+  <testcase name="rotationBeforePreparationDoesNotLosePendingSeek" classname="cz.zamerovac.app.VideoReviewTest" time="0.08" />
+  <testcase name="fullscreenErrorKeepsVisibleMessageAndEscape" classname="cz.zamerovac.app.VideoReviewTest" time="0.099" />
+  <testcase name="legacyFullscreenHidesNavigationAndRestoresSystemBars" classname="cz.zamerovac.app.VideoReviewTest" time="0.827" />
+  <system-out>WARN: No type identifier when getting name for resource number 0x00000000
+</system-out>
+  <system-err>Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+Invalid ID 0x00000000.
+</system-err>
+</testsuite><testsuite name="cz.zamerovac.app.WebContentPolicyTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-12T21:09:40" hostname="ae546df9bbbb" time="0.313">
+  <properties />
+  <testcase name="requestsCannotFallThroughToRemoteNetworkOrExecutableMedia" classname="cz.zamerovac.app.WebContentPolicyTest" time="0.137" />
+  <testcase name="exactPackagedDocumentIsTheOnlyAllowedInPlaceNavigation" classname="cz.zamerovac.app.WebContentPolicyTest" time="0.033" />
+  <testcase name="clickedExternalUrlOpensBrowserAndPopupNeverReceivesNativeBridge" classname="cz.zamerovac.app.WebContentPolicyTest" time="0.143" />
+  <system-out />
+  <system-err />
+</testsuite></testsuites>

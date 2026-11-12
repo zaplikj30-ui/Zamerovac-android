@@ -1,0 +1,450 @@
+PASS syntax app/src/main/assets/address-correction.js 001.log (0 s)
+PASS syntax app/src/main/assets/annotation-geometry.js 002.log (0 s)
+PASS syntax app/src/main/assets/annotation-history.js 003.log (0 s)
+PASS syntax app/src/main/assets/annotation-resize.js 004.log (0 s)
+PASS syntax app/src/main/assets/annotation-selection.js 005.log (0 s)
+PASS syntax app/src/main/assets/annotation-translation.js 006.log (0 s)
+PASS syntax app/src/main/assets/app.js 007.log (0 s)
+PASS syntax app/src/main/assets/backup-history.js 008.log (0 s)
+PASS syntax app/src/main/assets/bulk-actions.js 009.log (0 s)
+PASS syntax app/src/main/assets/customer-export.js 010.log (0 s)
+PASS syntax app/src/main/assets/drive-accounts.js 011.log (0 s)
+PASS syntax app/src/main/assets/editor-extra-toolbar.js 012.log (0 s)
+PASS syntax app/src/main/assets/editor.js 013.log (0 s)
+PASS syntax app/src/main/assets/feedback-reports.js 014.log (0 s)
+PASS syntax app/src/main/assets/help.js 015.log (0 s)
+PASS syntax app/src/main/assets/i18n.js 016.log (0 s)
+PASS syntax app/src/main/assets/inset-workspace.js 017.log (0 s)
+PASS syntax app/src/main/assets/laser-autofill.js 018.log (0 s)
+PASS syntax app/src/main/assets/media-import-ownership.js 019.log (0 s)
+PASS syntax app/src/main/assets/menu-dismiss.js 020.log (0 s)
+PASS syntax app/src/main/assets/peer-sync.js 021.log (0 s)
+PASS syntax app/src/main/assets/pending-audio.js 022.log (0 s)
+PASS syntax app/src/main/assets/release-history.js 023.log (0 s)
+PASS syntax app/src/main/assets/rich-notes.js 024.log (0 s)
+PASS syntax app/src/main/assets/sketch.js 025.log (0 s)
+PASS syntax app/src/main/assets/sync-cadence.js 026.log (0 s)
+PASS syntax app/src/main/assets/sync-edit-guard.js 027.log (0 s)
+PASS syntax app/src/main/assets/toolbar-customize.js 028.log (0 s)
+PASS syntax app/src/main/assets/upgrade.js 029.log (0 s)
+PASS syntax sync/protocol-v2.js 030.log (0 s)
+PASS syntax sync/revision-vector.js 031.log (0 s)
+PASS registr QA 032.log (0 s)
+PASS Android focus/ANR model 033.log (0 s)
+PASS test tests/annotation_geometry_contract.js 034.log (0 s)
+PASS test tests/annotation_grip_geometry.js 035.log (0 s)
+PASS test tests/annotation_history_contract.js 036.log (3 s)
+PASS test tests/annotation_history_save_failure.js 037.log (0 s)
+PASS test tests/annotation_hit_geometry.js 038.log (0 s)
+PASS test tests/annotation_pinch_contract.js 039.log (0 s)
+PASS test tests/annotation_resize_contract.js 040.log (0 s)
+PASS test tests/annotation_selection_contract.js 041.log (0 s)
+PASS test tests/annotation_snap_contract.js 042.log (1 s)
+PASS test tests/annotation_translation_contract.js 043.log (1 s)
+PASS test tests/annotation_viewport_contract.js 044.log (0 s)
+PASS test tests/audit39_hierarchy.js 045.log (0 s)
+PASS test tests/bosch_history_devices.js 046.log (0 s)
+PASS test tests/causal_app_clock.js 047.log (0 s)
+PASS test tests/dimension_drag_interaction.js 048.log (0 s)
+PASS test tests/e2e_harness_git_preflight.js 049.log (0 s)
+PASS test tests/editor_full_tools.js 050.log (0 s)
+PASS test tests/experimental_and_precision.js 051.log (0 s)
+PASS test tests/extra_toolbar_interaction.js 052.log (0 s)
+PASS test tests/feedback_inflight_save.js 053.log (0 s)
+PASS test tests/feedback_raster_reuse.js 054.log (0 s)
+PASS test tests/feedback_report_structure.js 055.log (0 s)
+PASS test tests/geometry_drag_28.js 056.log (0 s)
+PASS test tests/gesture_history_undo_redo.js 057.log (0 s)
+PASS test tests/help_guide.js 058.log (0 s)
+PASS test tests/inset_workspace_interaction.js 059.log (0 s)
+PASS test tests/laser_auto_interaction.js 060.log (0 s)
+PASS test tests/laser_precision_regression.js 061.log (0 s)
+PASS test tests/laser_tap_interaction.js 062.log (0 s)
+PASS test tests/local_browser_qa_contract.js 063.log (0 s)
+PASS test tests/media_import_ownership.js 064.log (0 s)
+PASS test tests/menu_dismiss_interaction.js 065.log (0 s)
+PASS test tests/new_28_regressions.js 066.log (0 s)
+PASS test tests/new_record_save_failure.js 067.log (0 s)
+PASS test tests/note_leader_interaction.js 068.log (0 s)
+PASS test tests/post17_regressions.js 069.log (0 s)
+PASS test tests/refactor_end_to_end_undo.js 070.log (0 s)
+PASS test tests/refactor_shape_resize_undo.js 071.log (0 s)
+PASS test tests/release_history.js 072.log (0 s)
+PASS test tests/revision_vector.js 073.log (0 s)
+PASS test tests/rich_note_attachment_state.js 074.log (0 s)
+PASS test tests/save_acknowledgement.js 075.log (0 s)
+PASS test tests/save_blocked_load_regression.js 076.log (0 s)
+PASS test tests/save_cas_conflict_guard.js 077.log (0 s)
+PASS test tests/save_cas_missing_database.js 078.log (0 s)
+PASS test tests/save_cas_recovery_integrity.js 079.log (0 s)
+PASS test tests/symbol_search_interaction.js 080.log (0 s)
+PASS test tests/sync_canonical.js 081.log (0 s)
+PASS test tests/sync_conflict_bridge.js 082.log (0 s)
+PASS test tests/sync_protocol_v2.js 083.log (2 s)
+PASS test tests/trash_restore_save_confirmation.js 084.log (0 s)
+PASS test tests/trash_ui_interaction.js 085.log (0 s)
+PASS test tests/versioning.js 086.log (0 s)
+PASS Python unittest 087.log (5 s)
+NOT RUN Gradle JVM jen v režimu --native
+NOT RUN Chromium E2E zatím nepřipojené
+NOT RUN Fyzický Samsung vyžaduje samostatnou Android/ADB etapu
+NOT RUN APK žádné sestavení ani instalace
+Lokální výsledky: /workspace/qa-results/Zamerovac-QA/results/qa-2026-11-12T21-01-30-796Z
+Součet: {"PASS":87,"FAIL":0,"SKIP":0,"NOT RUN":4}
+
+
+=== syntax app/src/main/assets/address-correction.js ===
+
+=== syntax app/src/main/assets/annotation-geometry.js ===
+
+=== syntax app/src/main/assets/annotation-history.js ===
+
+=== syntax app/src/main/assets/annotation-resize.js ===
+
+=== syntax app/src/main/assets/annotation-selection.js ===
+
+=== syntax app/src/main/assets/annotation-translation.js ===
+
+=== syntax app/src/main/assets/app.js ===
+
+=== syntax app/src/main/assets/backup-history.js ===
+
+=== syntax app/src/main/assets/bulk-actions.js ===
+
+=== syntax app/src/main/assets/customer-export.js ===
+
+=== syntax app/src/main/assets/drive-accounts.js ===
+
+=== syntax app/src/main/assets/editor-extra-toolbar.js ===
+
+=== syntax app/src/main/assets/editor.js ===
+
+=== syntax app/src/main/assets/feedback-reports.js ===
+
+=== syntax app/src/main/assets/help.js ===
+
+=== syntax app/src/main/assets/i18n.js ===
+
+=== syntax app/src/main/assets/inset-workspace.js ===
+
+=== syntax app/src/main/assets/laser-autofill.js ===
+
+=== syntax app/src/main/assets/media-import-ownership.js ===
+
+=== syntax app/src/main/assets/menu-dismiss.js ===
+
+=== syntax app/src/main/assets/peer-sync.js ===
+
+=== syntax app/src/main/assets/pending-audio.js ===
+
+=== syntax app/src/main/assets/release-history.js ===
+
+=== syntax app/src/main/assets/rich-notes.js ===
+
+=== syntax app/src/main/assets/sketch.js ===
+
+=== syntax app/src/main/assets/sync-cadence.js ===
+
+=== syntax app/src/main/assets/sync-edit-guard.js ===
+
+=== syntax app/src/main/assets/toolbar-customize.js ===
+
+=== syntax app/src/main/assets/upgrade.js ===
+
+=== syntax sync/protocol-v2.js ===
+
+=== syntax sync/revision-vector.js ===
+
+=== registr QA ===
+PASS coverage map: 43 areas, real file references, positive/negative criteria and explicit gaps. This audit does not run those tests or verify devices.
+
+=== Android focus/ANR model ===
+PASS Android window gate: native app focus required; OS/app ANR, missing focus and another activity rejected
+
+=== test tests/annotation_geometry_contract.js ===
+PASS B2: pure transforms, precise models, legacy corners/area/cumulative, no mutation
+
+=== test tests/annotation_grip_geometry.js ===
+PASS B3: grip geometry, midpoint move zone, isolation, legacy adapter, no mutation
+
+=== test tests/annotation_history_contract.js ===
+PASS B14: 10,000 differential edits/undo/redo, exact values/media, invalid snapshots atomic, bounded history
+
+=== test tests/annotation_history_save_failure.js ===
+PASS B14: real Undo/Redo, failed write banner, retry, exact data/media, malformed snapshot no-write
+
+=== test tests/annotation_hit_geometry.js ===
+PASS B4: touch hit shapes, shifted dimensions, caption priority, adapter, immutable values
+
+=== test tests/annotation_pinch_contract.js ===
+PASS B11: 42000 pure two-pointer pinch comparisons, input immutability and zoom bounds
+
+=== test tests/annotation_resize_contract.js ===
+PASS B7: 32,000 old/new resize calculations, immutable precise models, 4 shapes, script order
+
+=== test tests/annotation_selection_contract.js ===
+PASS B5: laser target segments, grip precedence, selection, unchanged precise data
+
+=== test tests/annotation_snap_contract.js ===
+PASS B9: 42000 deterministic legacy/pure snap comparisons, immutable inputs, own-object exemption
+
+=== test tests/annotation_translation_contract.js ===
+PASS B6: 24,000 differential cases, no mutation, zoom, bounds, exact values, module order
+
+=== test tests/annotation_viewport_contract.js ===
+PASS B10: 42000 legacy/pure fit + zoom differential comparisons, anchored cursor, zoom bounds
+
+=== test tests/audit39_hierarchy.js ===
+PASS A39-03: shared Java/JS hierarchy fixtures, offline CAS moves, stable repeat and exact values
+PASS A39-03: transport-neutral JS merge follows the same hierarchy contract
+
+=== test tests/bosch_history_devices.js ===
+OK: meter-specific history, simple single-meter UI, legacy migration and safe deletion
+
+=== test tests/causal_app_clock.js ===
+PASS actual app clock helpers: causal order, bounds, tombstone versus independent edit, no old revival and active editor copy
+
+=== test tests/dimension_drag_interaction.js ===
+OK: dragging endpoints works, tiny double taps never change or collapse dimensions/lines
+
+=== test tests/e2e_harness_git_preflight.js ===
+PASS: git ENOENT fails before Chromium launch; no 8-minute timeout
+
+=== test tests/editor_full_tools.js ===
+OK: full editor tools, labels, segments, Bosch-compatible model and icon ordering
+
+=== test tests/experimental_and_precision.js ===
+OK: experimenty vypnuté ve výchozím stavu, menu, ikony a desetiny mm
+
+=== test tests/extra_toolbar_interaction.js ===
+OK: expandable two-row ImageMeter-style toolbar and accessible toggle
+
+=== test tests/feedback_inflight_save.js ===
+PASS: slow feedback Save blocks close/list/Back, stale callbacks cannot publish
+
+=== test tests/feedback_raster_reuse.js ===
+PASS: feedback raster reuse, transactional localStorage save/readback, failed writes, draft retention and safe deletion
+
+=== test tests/feedback_report_structure.js ===
+OK: vlaječka, kreslení S Penem, offline evidence a hromadný ZIP
+
+=== test tests/geometry_drag_28.js ===
+OK: quad, circle, target plus B7 rect and ellipse size changes preserve precise values
+
+=== test tests/gesture_history_undo_redo.js ===
+PASS B8/B12/B13: tap, jitter, multi-touch, cancel, exit and exact Undo/Redo
+
+=== test tests/help_guide.js ===
+PASS full offline help: 25 chapters, Czech search, offline scripts, safe menus and Back
+
+=== test tests/inset_workspace_interaction.js ===
+OK: move outside photo, independent arrow anchor, caption, resize, persistence
+
+=== test tests/laser_auto_interaction.js ===
+OK: Bosch měří přímo vybranou kótu, bezpečný převod a uložení
+
+=== test tests/laser_precision_regression.js ===
+PASS laser-precision/dimension
+PASS laser-precision/line
+PASS laser-precision/arrow
+PASS laser-precision/circle
+PASS laser-precision/ellipse
+PASS laser-precision/target
+PASS laser-precision/chain
+PASS laser-precision/cumulative
+PASS laser-precision/polyline
+PASS laser-precision/angle
+
+=== test tests/laser_tap_interaction.js ===
+OK: laser nevyžaduje dodatečné klepnutí na kótu
+
+=== test tests/local_browser_qa_contract.js ===
+PASS: local Chromium server isolates assets/symlinks, correct HTTP/MIME, strict statuses, exact suite allowlist
+
+=== test tests/media_import_ownership.js ===
+PASS N4-A: reserve, duplicate owner, stale token, publish, restart and fail closed
+
+=== test tests/menu_dismiss_interaction.js ===
+OK: outside menu gestures captured completely; inside/openers/forms preserved
+
+=== test tests/new_28_regressions.js ===
+OK: locale registry, quadrilateral area, grip contours, archive/lock/search source contracts
+
+=== test tests/new_record_save_failure.js ===
+PASS: 8 real creation/save cases, no ghost after failed native CAS, exact old data/media
+
+=== test tests/note_leader_interaction.js ===
+OK: note without text/media, automatic arrow at fixed photo point, independent handles
+
+=== test tests/post17_regressions.js ===
+OK: #17 transformed contours, area, readable text, finish/persist paths, exact hints, short/long grip zones
+OK: annotation Back saves on confirmation, discards explicitly, or keeps editing
+
+=== test tests/refactor_end_to_end_undo.js ===
+PASS: B1-B6 dimension and polyline, actual drag/Undo/Redo, precise saved values and jitter
+
+=== test tests/refactor_shape_resize_undo.js ===
+PASS B7: real rect/area/circle/ellipse gesture, Undo/Redo, exact laser and side values
+
+=== test tests/release_history.js ===
+PASS true versioned changelog: fixed releases, improvements, no future notes, offline, help and menus
+
+=== test tests/revision_vector.js ===
+revision vectors: positive, concurrent and invalid-input cases passed
+
+=== test tests/rich_note_attachment_state.js ===
+PASS rich note: media drafts, races, cleanup, retry, lock, rejected delete/save rollback and newer-data protection
+
+=== test tests/save_acknowledgement.js ===
+PASS: rejected write, acknowledgement, exact conflict values, retry and delayed native callback
+
+=== test tests/save_blocked_load_regression.js ===
+PASS B15: blocked-load/save flags and banner, real retry, native CAS failure, exact values and media
+
+=== test tests/save_cas_conflict_guard.js ===
+PASS B16: 10 fail-closed native CAS responses, valid retry, exact dimensions and media
+
+=== test tests/save_cas_missing_database.js ===
+PASS B16-R1: 12 native CAS / true merge / no phantom purge / retry / exact media scenarios
+
+=== test tests/save_cas_recovery_integrity.js ===
+PASS B16-R2/R3/R4 Node production VM: 16 strict recovery, tombstone, purge, retry and bootstrap scenarios
+
+=== test tests/symbol_search_interaction.js ===
+OK: vyhledávání symbolů bez diakritiky, mezer a drobných překlepů
+
+=== test tests/sync_canonical.js ===
+PASS shared RFC8785 canonical bytes, job IDs, source references and invalid Unicode
+
+=== test tests/sync_conflict_bridge.js ===
+PASS shared deterministic conflict bridge, exact active draft, duplicate suppression and failed bridge
+
+=== test tests/sync_protocol_v2.js ===
+PASS isolated v2 core: 30 synthetic file tasks/simulated failover, persistent queue/restart, idempotent ack, metered policy, exact conflicts, 2 device histories/100 deduplicated blobs, old/new restore and storage faults
+
+=== test tests/trash_restore_save_confirmation.js ===
+PASS: real trash restore, CAS fail/rollback (5), successful save/reconciliation (2), exact media and clock
+
+=== test tests/trash_ui_interaction.js ===
+OK: native purge preserves live editor/note references, exact values, stale-snapshot errors and repeated taps
+
+=== test tests/versioning.js ===
+PASS semantic versioning and monotonic Android update requirements
+
+=== Python unittest ===
+test_address_script_loaded_and_valid (test_address_and_icons.PhotoAddressAndIconsTest.test_address_script_loaded_and_valid) ... ok
+test_manually_confirmed_address_is_preserved (test_address_and_icons.PhotoAddressAndIconsTest.test_manually_confirmed_address_is_preserved) ... ok
+test_ruian_only_looks_at_real_addresses (test_address_and_icons.PhotoAddressAndIconsTest.test_ruian_only_looks_at_real_addresses) ... ok
+test_rural_house_number_not_discarded_when_street_missing (test_address_and_icons.PhotoAddressAndIconsTest.test_rural_house_number_not_discarded_when_street_missing) ... ok
+test_svg_icons_not_placeholder_characters (test_address_and_icons.PhotoAddressAndIconsTest.test_svg_icons_not_placeholder_characters) ... ok
+test_valid_and_invalid_coordinates (test_address_map_link.AddressMapLinkTest.test_valid_and_invalid_coordinates) ... ok
+test_binary_distance_frame (test_bosch_ble.BoschBleTests.test_binary_distance_frame) ... ok
+test_meter_history_separate_button_and_long_press (test_bosch_ble.BoschBleTests.test_meter_history_separate_button_and_long_press) ... ok
+test_meter_identity_is_private_and_persistent (test_bosch_ble.BoschBleTests.test_meter_identity_is_private_and_persistent) ... ok
+test_protocol_integration (test_bosch_ble.BoschBleTests.test_protocol_integration) ... ok
+test_cloud_is_manual_only (test_ci_cloud_release_gate.CloudReleaseSafetyGateTest.test_cloud_is_manual_only) ... ok
+test_no_stale_fixed_release_notes (test_ci_cloud_release_gate.CloudReleaseSafetyGateTest.test_no_stale_fixed_release_notes) ... ok
+test_owner_main_and_two_explicit_approvals (test_ci_cloud_release_gate.CloudReleaseSafetyGateTest.test_owner_main_and_two_explicit_approvals) ... ok
+test_preflight_checks_old_package_before_expensive_build (test_ci_cloud_release_gate.CloudReleaseSafetyGateTest.test_preflight_checks_old_package_before_expensive_build) ... ok
+test_release_race_stops_publication (test_ci_cloud_release_gate.CloudReleaseSafetyGateTest.test_release_race_stops_publication) ... ok
+test_version_comes_from_published_apk_not_workflow_counter (test_ci_cloud_release_gate.CloudReleaseSafetyGateTest.test_version_comes_from_published_apk_not_workflow_counter) ... ok
+test_other_selection_tools_remain (test_dimension_selection.DimensionSelectionTests.test_other_selection_tools_remain) ... ok
+test_soft_outline_includes_line_terminal_ticks_and_arrows (test_dimension_selection.DimensionSelectionTests.test_soft_outline_includes_line_terminal_ticks_and_arrows) ... ok
+test_visual_rings_are_translucent_and_independent_of_touch_target (test_dimension_selection.DimensionSelectionTests.test_visual_rings_are_translucent_and_independent_of_touch_target) ... ok
+test_white_selection_is_behind_yellow_line_not_drawn_over_it (test_dimension_selection.DimensionSelectionTests.test_white_selection_is_behind_yellow_line_not_drawn_over_it) ... ok
+test_current_tool_is_highlighted_with_accessible_state (test_editor_toolbar.EditorToolbarTests.test_current_tool_is_highlighted_with_accessible_state) ... ok
+test_existing_tools_and_repeat_mode_still_available (test_editor_toolbar.EditorToolbarTests.test_existing_tools_and_repeat_mode_still_available) ... ok
+test_new_sketch_menu_uses_consistent_name_and_icon (test_editor_toolbar.EditorToolbarTests.test_new_sketch_menu_uses_consistent_name_and_icon) ... ok
+test_style_button_is_pencil_and_ruler_not_dimension_shortcut (test_editor_toolbar.EditorToolbarTests.test_style_button_is_pencil_and_ruler_not_dimension_shortcut) ... ok
+test_toolbar_extension_parses (test_editor_toolbar.EditorToolbarTests.test_toolbar_extension_parses) ... ok
+test_tools_only_behind_plus (test_editor_toolbar.EditorToolbarTests.test_tools_only_behind_plus) ... ok
+test_undo_and_redo_icons_are_exact_mirrors (test_editor_toolbar.EditorToolbarTests.test_undo_and_redo_icons_are_exact_mirrors) ... ok
+test_back_persists_unsaved_photo_note (test_gallery_camera_notes.PhotoNotesGalleryTests.test_back_persists_unsaved_photo_note) ... ok
+test_camera_cancellation_cleans_state (test_gallery_camera_notes.PhotoNotesGalleryTests.test_camera_cancellation_cleans_state) ... ok
+test_gallery_includes_outside_insets (test_gallery_camera_notes.PhotoNotesGalleryTests.test_gallery_includes_outside_insets) ... ok
+test_adversarial_comment_only_preflight_before_gradle_rejected (test_home_qa_gate.GateUnitTest.test_adversarial_comment_only_preflight_before_gradle_rejected) ... ok
+test_adversarial_extra_cloud_job_must_fail_closed (test_home_qa_gate.GateUnitTest.test_adversarial_extra_cloud_job_must_fail_closed) ... ok
+test_adversarial_fake_jdk_and_gradle_files_are_not_valid_versions (test_home_qa_gate.GateUnitTest.test_adversarial_fake_jdk_and_gradle_files_are_not_valid_versions) ... ok
+test_adversarial_inline_pr_trigger_and_unguarded_job_rejected (test_home_qa_gate.GateUnitTest.test_adversarial_inline_pr_trigger_and_unguarded_job_rejected) ... ok
+test_adversarial_powershell_wsl_python_alias_rejected (test_home_qa_gate.GateUnitTest.test_adversarial_powershell_wsl_python_alias_rejected) ... ok
+test_adversarial_python_script_triplequote_wsl_discovery_rejected (test_home_qa_gate.GateUnitTest.test_adversarial_python_script_triplequote_wsl_discovery_rejected) ... ok
+test_adversarial_wrong_executable_versions_rejected (test_home_qa_gate.GateUnitTest.test_adversarial_wrong_executable_versions_rejected) ... ok
+test_all_home_workflows_never_run_node_python_unittest_inside_wsl (test_home_qa_gate.GateUnitTest.test_all_home_workflows_never_run_node_python_unittest_inside_wsl) ... ok
+test_current_trusted_home_workflows_are_safe_from_wsl_node_discovery (test_home_qa_gate.GateUnitTest.test_current_trusted_home_workflows_are_safe_from_wsl_node_discovery) ... ok
+test_owner_controlled_ci_positive (test_home_qa_gate.GateUnitTest.test_owner_controlled_ci_positive) ... ok
+test_python_x_utf8_explicit_subprocess_remains_supported (test_home_qa_gate.GateUnitTest.test_python_x_utf8_explicit_subprocess_remains_supported) ... ok
+test_render_explicit_output_file_utf8_without_pythonutf8 (test_home_qa_gate.GateUnitTest.test_render_explicit_output_file_utf8_without_pythonutf8) ... ok
+test_render_output_file_refuses_overwriting_existing_yaml (test_home_qa_gate.GateUnitTest.test_render_output_file_refuses_overwriting_existing_yaml) ... ok
+test_render_rejects_noncanonical_output_location (test_home_qa_gate.GateUnitTest.test_render_rejects_noncanonical_output_location) ... ok
+test_render_rejects_unsafe_branch_or_sha (test_home_qa_gate.GateUnitTest.test_render_rejects_unsafe_branch_or_sha) ... ok
+test_render_stdout_redirect_cp1250_must_be_utf8_bytes (test_home_qa_gate.GateUnitTest.test_render_stdout_redirect_cp1250_must_be_utf8_bytes) ... ok
+test_source_sha_exact_accept (test_home_qa_gate.GateUnitTest.test_source_sha_exact_accept) ... ok
+test_strict_rejects_disagreement_of_source_and_expected (test_home_qa_gate.GateUnitTest.test_strict_rejects_disagreement_of_source_and_expected) ... ok
+test_strict_rejects_missing_preflight_before_junit (test_home_qa_gate.GateUnitTest.test_strict_rejects_missing_preflight_before_junit) ... ok
+test_strict_rejects_untrusted_checkout_ref (test_home_qa_gate.GateUnitTest.test_strict_rejects_untrusted_checkout_ref) ... ok
+test_windows_node_missing_is_fail_fast (test_home_qa_gate.GateUnitTest.test_windows_node_missing_is_fail_fast) ... ok
+test_windows_python_and_node_positive (test_home_qa_gate.GateUnitTest.test_windows_python_and_node_positive) ... ok
+test_windows_python_missing_is_fail_fast (test_home_qa_gate.GateUnitTest.test_windows_python_missing_is_fail_fast) ... ok
+test_workflow_rejects_missing_wsl_node_before_gradle (test_home_qa_gate.GateUnitTest.test_workflow_rejects_missing_wsl_node_before_gradle) ... ok
+test_workflow_rejects_unpinned_actions_cloud_and_credentials (test_home_qa_gate.GateUnitTest.test_workflow_rejects_unpinned_actions_cloud_and_credentials) ... ok
+test_workflow_rejects_wsl_direct_unittest (test_home_qa_gate.GateUnitTest.test_workflow_rejects_wsl_direct_unittest) ... ok
+test_workflow_valid_windows_wsl_split (test_home_qa_gate.GateUnitTest.test_workflow_valid_windows_wsl_split) ... ok
+test_wrong_or_nonliteral_source_rejected (test_home_qa_gate.GateUnitTest.test_wrong_or_nonliteral_source_rejected) ... ok
+test_wsl_must_not_run_windows_python_node (test_home_qa_gate.GateUnitTest.test_wsl_must_not_run_windows_python_node) ... HOME QA STOP: Node-dependent Python unittest is WINDOWS-only; run windows-quick, not a WSL Python discovery step
+ok
+test_wsl_native_missing_java_rejected_before_junit (test_home_qa_gate.GateUnitTest.test_wsl_native_missing_java_rejected_before_junit) ... ok
+test_wsl_native_valid_even_without_node (test_home_qa_gate.GateUnitTest.test_wsl_native_valid_even_without_node) ... ok
+test_wsl_on_plain_linux_is_rejected (test_home_qa_gate.GateUnitTest.test_wsl_on_plain_linux_is_rejected) ... ok
+test_api_only_correct_repo (test_home_qa_version_preflight.HomeQaCodePreflight.test_api_only_correct_repo) ... ok
+test_authorization_stripped_cross_origin (test_home_qa_version_preflight.HomeQaCodePreflight.test_authorization_stripped_cross_origin) ... ok
+test_current_and_future_release_codes_not_fixed (test_home_qa_version_preflight.HomeQaCodePreflight.test_current_and_future_release_codes_not_fixed) ... ok
+test_downgrade_overflow_and_bad_semver_stop (test_home_qa_version_preflight.HomeQaCodePreflight.test_downgrade_overflow_and_bad_semver_stop) ... ok
+test_https_only_redirect (test_home_qa_version_preflight.HomeQaCodePreflight.test_https_only_redirect) ... ok
+test_missing_release_fails_closed (test_home_qa_version_preflight.HomeQaCodePreflight.test_missing_release_fails_closed) ... ok
+test_prior_signature_package_and_version_code (test_home_qa_version_preflight.HomeQaCodePreflight.test_prior_signature_package_and_version_code) ... ok
+test_published_latest_ignores_draft (test_home_qa_version_preflight.HomeQaCodePreflight.test_published_latest_ignores_draft) ... ok
+test_version_name_mismatch_rejected (test_home_qa_version_preflight.HomeQaCodePreflight.test_version_name_mismatch_rejected) ... ok
+test_workflow_requires_exact_dynamic_preflight (test_home_qa_version_preflight.HomeQaCodePreflight.test_workflow_requires_exact_dynamic_preflight) ... ok
+test_cross_host_signed_asset_never_receives_token (test_home_release_asset_redirect.ReleaseRedirectSecurity.test_cross_host_signed_asset_never_receives_token) ... ok
+test_insecure_http_redirect_is_rejected (test_home_release_asset_redirect.ReleaseRedirectSecurity.test_insecure_http_redirect_is_rejected) ... ok
+test_other_https_host_also_never_receives_token (test_home_release_asset_redirect.ReleaseRedirectSecurity.test_other_https_host_also_never_receives_token) ... ok
+test_plain_python_would_forward_fake_token (test_home_release_asset_redirect.ReleaseRedirectSecurity.test_plain_python_would_forward_fake_token) ... ok
+test_request_rejects_non_api_origin_before_network (test_home_release_asset_redirect.ReleaseRedirectSecurity.test_request_rejects_non_api_origin_before_network) ... ok
+test_request_rejects_wrong_repo_before_network (test_home_release_asset_redirect.ReleaseRedirectSecurity.test_request_rejects_wrong_repo_before_network) ... ok
+test_same_origin_github_api_retains_token (test_home_release_asset_redirect.ReleaseRedirectSecurity.test_same_origin_github_api_retains_token) ... ok
+test_workflow_stays_owner_only_and_manual (test_home_release_asset_redirect.ReleaseRedirectSecurity.test_workflow_stays_owner_only_and_manual) ... ok
+test_all_authenticated_redirects_refused (test_home_release_publish_url_security.ReleasePublishingSecurity.test_all_authenticated_redirects_refused) ... ok
+test_exact_upload_endpoint_and_name_allowed (test_home_release_publish_url_security.ReleasePublishingSecurity.test_exact_upload_endpoint_and_name_allowed) ... ok
+test_expected_release_api_calls_allowed (test_home_release_publish_url_security.ReleasePublishingSecurity.test_expected_release_api_calls_allowed) ... ok
+test_publish_uses_restrictive_opener_not_default_urlopen (test_home_release_publish_url_security.ReleasePublishingSecurity.test_publish_uses_restrictive_opener_not_default_urlopen) ... ok
+test_upload_host_cannot_be_used_for_arbitrary_paths (test_home_release_publish_url_security.ReleasePublishingSecurity.test_upload_host_cannot_be_used_for_arbitrary_paths) ... ok
+test_workflow_requires_owner_main_and_approved_release (test_home_release_publish_url_security.ReleasePublishingSecurity.test_workflow_requires_owner_main_and_approved_release) ... ok
+test_wrong_hosts_ports_paths_and_schemes_rejected (test_home_release_publish_url_security.ReleasePublishingSecurity.test_wrong_hosts_ports_paths_and_schemes_rejected) ... ok
+test_detail_can_leave_photo_without_moving_note_anchor (test_imagemeter_inset.ImageMeterInsetTests.test_detail_can_leave_photo_without_moving_note_anchor) ... ok
+test_grips_match_video_without_changing_hit_targets (test_imagemeter_inset.ImageMeterInsetTests.test_grips_match_video_without_changing_hit_targets) ... ok
+test_image_border_stays_yellow_when_selected (test_imagemeter_inset.ImageMeterInsetTests.test_image_border_stays_yellow_when_selected) ... ok
+test_new_inset_is_large_enough_and_existing_size_survives (test_imagemeter_inset.ImageMeterInsetTests.test_new_inset_is_large_enough_and_existing_size_survives) ... ok
+test_original_image_remains_editable (test_imagemeter_inset.ImageMeterInsetTests.test_original_image_remains_editable) ... ok
+test_cloud_and_media_are_real_modules (test_project.SourceSmokeTest.test_cloud_and_media_are_real_modules) ... ok
+test_dimension_endpoints_match_grips_and_loupe (test_project.SourceSmokeTest.test_dimension_endpoints_match_grips_and_loupe) ... ok
+test_editor_controls_present (test_project.SourceSmokeTest.test_editor_controls_present) ... ok
+test_excluded_tools (test_project.SourceSmokeTest.test_excluded_tools) ... ok
+test_installed_version_visible_to_user (test_project.SourceSmokeTest.test_installed_version_visible_to_user) ... ok
+test_javascript_syntax (test_project.SourceSmokeTest.test_javascript_syntax) ... ok
+test_manifest_and_resources (test_project.SourceSmokeTest.test_manifest_and_resources) ... ok
+test_photo_capture_time_and_readable_location (test_project.SourceSmokeTest.test_photo_capture_time_and_readable_location) ... ok
+test_photo_thumbnails_and_menu (test_project.SourceSmokeTest.test_photo_thumbnails_and_menu) ... ok
+test_photo_waits_before_drawing_annotations (test_project.SourceSmokeTest.test_photo_waits_before_drawing_annotations) ... ok
+test_reference_magnifier_geometry (test_project.SourceSmokeTest.test_reference_magnifier_geometry) ... ok
+test_all_added_javascript_compiles (test_upgrade.BigUpdateSmokeTest.test_all_added_javascript_compiles) ... ok
+test_backup_includes_originals_and_isolated_restore (test_upgrade.BigUpdateSmokeTest.test_backup_includes_originals_and_isolated_restore) ... ok
+test_deferred_ideas_are_not_claimed_as_shipped (test_upgrade.BigUpdateSmokeTest.test_deferred_ideas_are_not_claimed_as_shipped) ... ok
+test_diagnostics_and_version_history_present (test_upgrade.BigUpdateSmokeTest.test_diagnostics_and_version_history_present) ... ok
+test_new_modules_are_loaded_from_app_index (test_upgrade.BigUpdateSmokeTest.test_new_modules_are_loaded_from_app_index) ... ok
+test_photo_notes_contain_editable_detail (test_upgrade.BigUpdateSmokeTest.test_photo_notes_contain_editable_detail) ... ok
+test_preview_id_and_signing_are_not_changed (test_upgrade.BigUpdateSmokeTest.test_preview_id_and_signing_are_not_changed) ... ok
+
+----------------------------------------------------------------------
+Ran 110 tests in 4.691s
+
+OK

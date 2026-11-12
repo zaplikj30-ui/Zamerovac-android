@@ -1,0 +1,102 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.10.2/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+
+> Configure project :app
+Unable to initialize metrics, ensure /home/agent/.android is writable, details: /home/agent/.android/analytics.settings (No such file or directory)
+
+> Task :app:preBuild UP-TO-DATE
+> Task :app:prePreviewBuild UP-TO-DATE
+
+> Task :app:verifyDriveRegistration
+PASS registered Drive preview project/package/signing certificate; no OAuth account was contacted
+
+> Task :app:generatePreviewBuildConfig UP-TO-DATE
+> Task :app:javaPreCompilePreview UP-TO-DATE
+> Task :app:checkPreviewAarMetadata UP-TO-DATE
+> Task :app:generatePreviewResValues UP-TO-DATE
+> Task :app:mapPreviewSourceSetPaths UP-TO-DATE
+> Task :app:generatePreviewResources UP-TO-DATE
+> Task :app:mergePreviewResources UP-TO-DATE
+> Task :app:packagePreviewResources UP-TO-DATE
+> Task :app:parsePreviewLocalResources UP-TO-DATE
+> Task :app:createPreviewCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksPreview UP-TO-DATE
+> Task :app:processPreviewMainManifest UP-TO-DATE
+> Task :app:processPreviewManifest UP-TO-DATE
+> Task :app:processPreviewManifestForPackage UP-TO-DATE
+> Task :app:processPreviewResources UP-TO-DATE
+> Task :app:compilePreviewJavaWithJavac UP-TO-DATE
+> Task :app:bundlePreviewClassesToRuntimeJar UP-TO-DATE
+> Task :app:bundlePreviewClassesToCompileJar UP-TO-DATE
+> Task :app:prePreviewUnitTestBuild UP-TO-DATE
+> Task :app:javaPreCompilePreviewUnitTest UP-TO-DATE
+> Task :app:compilePreviewUnitTestJavaWithJavac
+> Task :app:mergePreviewShaders UP-TO-DATE
+> Task :app:compilePreviewShaders NO-SOURCE
+> Task :app:generatePreviewAssets UP-TO-DATE
+> Task :app:mergePreviewAssets UP-TO-DATE
+> Task :app:packagePreviewUnitTestForUnitTest UP-TO-DATE
+> Task :app:generatePreviewUnitTestConfig UP-TO-DATE
+> Task :app:processPreviewJavaRes NO-SOURCE
+> Task :app:processPreviewUnitTestJavaRes UP-TO-DATE
+
+> Task :app:testPreviewUnitTest
+
+SafSyncV2Test > driveStagedAckMustNotPublishAfterLocalAuthorityLostInsideProviderCommit FAILED
+    java.lang.AssertionError: Provider completed signed ACK after recovery epoch loss: Drive staged expected:<0> but was:<1>
+        at org.junit.Assert.fail(Assert.java:89)
+        at org.junit.Assert.failNotEquals(Assert.java:835)
+        at org.junit.Assert.assertEquals(Assert.java:647)
+        at cz.zamerovac.app.SafSyncV2Test.ackProviderBoundary(SafSyncV2Test.java:301)
+        at cz.zamerovac.app.SafSyncV2Test.driveStagedAckMustNotPublishAfterLocalAuthorityLostInsideProviderCommit(SafSyncV2Test.java:305)
+
+SafSyncV2Test > safDirectAckMustNotPublishAfterLocalAuthorityLostInsideProviderWrite FAILED
+    java.lang.AssertionError: Provider completed signed ACK after recovery epoch loss: SAF direct expected:<0> but was:<1>
+        at org.junit.Assert.fail(Assert.java:89)
+        at org.junit.Assert.failNotEquals(Assert.java:835)
+        at org.junit.Assert.assertEquals(Assert.java:647)
+        at cz.zamerovac.app.SafSyncV2Test.ackProviderBoundary(SafSyncV2Test.java:301)
+        at cz.zamerovac.app.SafSyncV2Test.safDirectAckMustNotPublishAfterLocalAuthorityLostInsideProviderWrite(SafSyncV2Test.java:308)
+
+SyncConsistencyTest > concurrentCommitCannotBeHiddenInsideSnapshotCapture FAILED
+    java.lang.AssertionError: Capture returned obsolete JSON after a concurrent commit
+        at org.junit.Assert.fail(Assert.java:89)
+        at cz.zamerovac.app.SyncConsistencyTest.snapshotChange(SyncConsistencyTest.java:70)
+        at cz.zamerovac.app.SyncConsistencyTest.concurrentCommitCannotBeHiddenInsideSnapshotCapture(SyncConsistencyTest.java:77)
+
+SyncConsistencyTest > changedInventoryBytesCannotFalselyRemoveTheContentRequirement FAILED
+    java.lang.AssertionError: Unchecked content bytes falsely became not-required
+        at org.junit.Assert.fail(Assert.java:89)
+        at cz.zamerovac.app.SyncConsistencyTest.changedInventoryBytesCannotFalselyRemoveTheContentRequirement(SyncConsistencyTest.java:50)
+
+SyncConsistencyTest > newlyAppearingLegacyQueueMustAbortCutoverAndSurviveRestart FAILED
+    java.lang.AssertionError: Migration silently replaced a newly appearing queue with an empty ledger
+        at org.junit.Assert.fail(Assert.java:89)
+        at cz.zamerovac.app.SyncConsistencyTest.newlyAppearingLegacyQueueMustAbortCutoverAndSurviveRestart(SyncConsistencyTest.java:28)
+
+SyncConsistencyTest > newlyAppearingBackupMustAbortCutoverWithoutLosingEitherVersion FAILED
+    java.lang.AssertionError: Migration ignored a newly appearing AtomicFile backup
+        at org.junit.Assert.fail(Assert.java:89)
+        at cz.zamerovac.app.SyncConsistencyTest.newlyAppearingBackupMustAbortCutoverWithoutLosingEitherVersion(SyncConsistencyTest.java:36)
+
+SyncConsistencyTest > preRecoveryJsonCannotAcquireTheNewEpochDuringCapture FAILED
+    java.lang.AssertionError: Pre-recovery JSON was stamped with a new recovery epoch
+        at org.junit.Assert.fail(Assert.java:89)
+        at cz.zamerovac.app.SyncConsistencyTest.snapshotChange(SyncConsistencyTest.java:70)
+        at cz.zamerovac.app.SyncConsistencyTest.preRecoveryJsonCannotAcquireTheNewEpochDuringCapture(SyncConsistencyTest.java:78)
+
+7 tests completed, 7 failed
+
+> Task :app:testPreviewUnitTest FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:testPreviewUnitTest'.
+> There were failing tests. See the report at: file:///workspace/zamerovac-sync-b/app/build/reports/tests/testPreviewUnitTest/index.html
+
+* Try:
+> Run with --scan to get full insights.
+
+BUILD FAILED in 18s
+27 actionable tasks: 3 executed, 24 up-to-date

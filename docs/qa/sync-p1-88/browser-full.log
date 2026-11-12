@@ -1,0 +1,137 @@
+
+=== legacy-conflict-persistence ===
+PASS legacy-conflict-persistence/clockless-legacy-copy-persists-reopen-media-editor-and-repeat-callback
+
+=== drawing ===
+PASS drawing/dimension
+PASS drawing/line
+PASS drawing/arrow
+PASS drawing/circle
+PASS drawing/ellipse
+PASS drawing/rect
+PASS drawing/area
+PASS drawing/polyline
+PASS drawing/chain
+PASS drawing/cumulative
+PASS drawing/angle
+PASS drawing/freehand
+PASS drawing/target
+PASS drawing/note
+PASS drawing/symbol
+PASS drawing/two_finger_pinch_keeps_undo_redo_and_exact_measure
+PASS drawing/pan_then_pinch_does_not_resume_stale_drag
+
+=== gallery-visual ===
+PASS gallery-visual/gallery_text_and_lines_remain_sharp_at_real_screen_scale
+
+=== workflows ===
+PASS workflows/folders_move_rename_trash_restore
+PASS workflows/bulk_copy_move_lock
+PASS workflows/note_checklist_sketch_attachment
+PASS workflows/photo_details_nested_gallery_png_hashes
+PASS workflows/trash_restore_purge_and_live_media
+PASS workflows/focus_cancel_layers_history_search
+
+=== interactions ===
+PASS interactions/rapid_grips_jitter_cancel
+PASS interactions/pan_zoom_fit_and_repeated_reopen
+PASS interactions/chain_finish_insert_remove_history
+
+=== zoom-grid ===
+PASS zoom-grid/buttons_grid_pixels_and_snap_independence
+PASS zoom-grid/trusted_two_finger_pinch_and_limits
+
+=== update39 ===
+PASS update39/gallery_bounded_pan_and_caption_pixels
+PASS update39/default_selection_corner_loupe_and_landscape_tools
+PASS update39/real_save_failure_and_photo_loading_errors
+PASS update39/help_occurrences_and_neutral_bluetooth
+
+=== gallery-state ===
+PASS gallery-state/render_is_read_only_even_during_nested_drawing_and_failure
+PASS gallery-state/gestures_navigation_stale_load_and_exact_anchor_pixels
+
+=== peer-sync ===
+PASS peer-sync/offline-folder-cycle-repair-is-visible-reachable-and-exact
+PASS peer-sync/menu-settings-offline-and-data-preserved
+PASS peer-sync/explicit-approval-full-code-reject-back-and-stale-session
+PASS peer-sync/untrusted-names-pending-errors-and-cloud-isolation
+
+=== drive-accounts ===
+PASS drive-accounts/local-save-and-independent-target-receipts-never-pretend-a-backup
+PASS drive-accounts/independent-explicit-account-controls-and-cancelled-disconnect
+PASS drive-accounts/unconfigured-or-invalid-state-never-pretends-account-is-ready-and-text-is-escaped
+PASS drive-accounts/backup-account-switch-clears-old-history-and-stale-verification
+
+=== sync-cadence ===
+PASS sync-cadence/frequency-selection-persists-without-changing-records-and-old-switch-can-reenable
+PASS sync-cadence/failed-persistence-does-not-activate-new-frequency
+
+=== backup-history ===
+PASS backup-history/offline-ui-two-histories-confirmation-and-network-exception
+
+=== read-only-sync ===
+PASS read-only-sync/view-photo-and-detail-without-revision-then-edit-with-history
+
+=== sync-edit-guard ===
+PASS sync-edit-guard/native-callback-during-grip-and-measure-form-preserves-both-edits
+PASS sync-edit-guard/status-message-cannot-drop-deferred-data-when-form-is-cancelled
+PASS sync-edit-guard/detail-parent-cas-keeps-live-item-references-after-conflict
+
+=== note-sync ===
+PASS note-sync/read-only-note-and-checklist-attachment-causal-autosave
+PASS note-sync/incoming-note-data-waits-and-read-only-close-does-not-create-conflict
+PASS note-sync/sketch-stroke-keeps-live-points-through-debounced-note-cas
+PASS note-sync/failed-note-write-keeps-form-and-retry-and-lock-protects-checks
+PASS note-sync/voice-keeps-owner-finishes-on-save-and-failed-stop-keeps-form
+PASS note-sync/rich-voice-failed-stop-and-disk-keep-modal-back-retry-and-cancel
+
+=== web-content-policy ===
+PASS web-content-policy/native-csp-blocks-injected-scripts-media-and-frames-keeps-real-drawing
+
+=== media-import ===
+PASS media-import/delayed-native-results-stay-in-original-folder-and-stale-token-cannot-complete-new-picker
+PASS media-import/deleted-or-locked-destination-and-closed-owner-dialog-do-not-redirect-file
+PASS media-import/picker-cancel-and-rejected-write-keep-data-without-ghost-record
+
+=== pending-audio ===
+PASS pending-audio/verified-original-and-suspect-reservation-have-separate-actions-and-acknowledgements
+PASS pending-audio/ordinary-save-uses-native-summary-without-requesting-another-full-media-scan
+PASS pending-audio/stop-is-only-a-draft-before-cancel-and-failed-save
+PASS pending-audio/unknown-journal-warning-preserves-two-independent-copy-actions
+PASS pending-audio/stop-cancel-restart-reattach-save-preserves-exact-values
+PASS pending-audio/failed-save-cancel-keeps-pending-across-reload
+PASS pending-audio/android-back-and-bind-failure-do-not-undo-saved-note
+PASS pending-audio/failed-stop-retains-recovery-and-uncertain-export-never-attaches
+
+=== help ===
+PASS help/main_menu_search_offline_and_android_back
+PASS help/overflow_menu_and_small_large_screens
+
+=== release-history ===
+PASS release-history/versioned_history_main_menu_offline_and_help_navigation
+PASS release-history/settings_history_and_responsive_layout
+
+=== latency ===
+PASS latency/project_1_10_50_editable_documents
+PASS latency/photo_and_gallery_1200x800
+PASS latency/photo_and_gallery_6000x4000
+PASS latency/existing_feedback_320x240
+PASS latency/existing_feedback_1440x2800
+PASS latency/feedback_slow_save_blocks_close_list_and_android_back
+
+=== quality-regressions ===
+PASS quality-regressions/existing_note_undo_redo_save
+PASS quality-regressions/existing_note_undo_redo_back
+PASS quality-regressions/audio_play_pause_must_not_focus_text
+PASS quality-regressions/two_notes_explicit_picker_double_click_cancel_back_and_late_result
+PASS quality-regressions/cancelled_attachment_has_no_unprotected_orphan
+PASS quality-regressions/note_controls_reachable_412
+PASS quality-regressions/note_controls_reachable_1100
+PASS quality-regressions/project_photo_dimension_note_reopen_and_export
+
+=== gallery-readability ===
+PASS gallery-readability/pixels_1200x800_412
+PASS gallery-readability/pixels_6000x4000_412
+PASS gallery-readability/pixels_1600x4800_1100
+PASS gallery-readability/pixels_6000x4000_412_dpr2
