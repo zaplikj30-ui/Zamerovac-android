@@ -15,7 +15,7 @@ final class PeerHandshake {
         Request(String peerId,String name,String code){this.peerId=peerId;this.name=name;this.code=code;}
         JSONObject json()throws Exception{return new JSONObject().put("sessionId",sessionId).put("peerId",peerId).put("name",name).put("code",code);}
     }
-    static final class Peer {final String id,name,fingerprint;final boolean recoveryContent;Peer(String id,String name,String fingerprint){this(id,name,fingerprint,true);}Peer(String id,String name,String fingerprint,boolean recoveryContent){this.id=id;this.name=name;this.fingerprint=fingerprint;this.recoveryContent=recoveryContent;}}
+    static final class Peer {final String id,name,fingerprint;final boolean recoveryContent,inventory;Peer(String id,String name,String fingerprint){this(id,name,fingerprint,true,false);}Peer(String id,String name,String fingerprint,boolean recoveryContent){this(id,name,fingerprint,recoveryContent,false);}Peer(String id,String name,String fingerprint,boolean recoveryContent,boolean inventory){this.id=id;this.name=name;this.fingerprint=fingerprint;this.recoveryContent=recoveryContent;this.inventory=inventory;}}
     static Peer negotiate(SSLSocket socket,String localId,String localName,SyncTls identity,SyncPeerRegistry registry,BooleanSupplier pairing,Approval approval)throws Exception{
         return negotiate(socket,localId,localName,identity,registry,pairing,approval,null);
     }
@@ -24,7 +24,7 @@ final class PeerHandshake {
         long trustRevision=registry.revision();
         if(!DeviceIdentity.valid(localId))throw new IOException("Neplatná místní identita");socket.setSoTimeout(15000);SyncTls.secure(socket);socket.startHandshake();
         DataInputStream in=new DataInputStream(socket.getInputStream());DataOutputStream out=new DataOutputStream(socket.getOutputStream());String localNonce=PeerWire.nonce();String fingerprint=SyncTls.fingerprint((X509Certificate)socket.getSession().getPeerCertificates()[0]);
-        JSONObject hello=new JSONObject().put("type","hello").put("version",2).put("snapshotVersion",3).put("id",localId).put("name",localName).put("nonce",localNonce).put("paired",registry.hasFingerprint(fingerprint));
+        JSONObject hello=new JSONObject().put("type","hello").put("version",2).put("snapshotVersion",3).put("inventoryVersion",1).put("id",localId).put("name",localName).put("nonce",localNonce).put("paired",registry.hasFingerprint(fingerprint));
         PeerWire.write(out,hello,PeerWire.MAX_HELLO);JSONObject remote=PeerWire.read(in,PeerWire.MAX_HELLO);
         if(!"hello".equals(remote.optString("type"))||!(remote.opt("version") instanceof Number)||remote.getDouble("version")!=2)throw new IOException("Nekompatibilní verze synchronizačního protokolu");
         String id=remote.getString("id"),name=remote.getString("name"),nonce=remote.getString("nonce");
@@ -44,6 +44,7 @@ final class PeerHandshake {
         JSONObject committed=PeerWire.read(in,PeerWire.MAX_HELLO);if(!"committed".equals(committed.optString("type"))||!Boolean.TRUE.equals(committed.opt("accepted")))throw new IOException("Protistrana nepotvrdila uložení párování");
         registry.checkHandshake(id,fingerprint,trustRevision,true);
         boolean recoveryContent=remote.optInt("snapshotVersion",2)>=3;
-        socket.setSoTimeout(15000);return new Peer(id,name,fingerprint,recoveryContent);
+        Object inventoryVersion=remote.opt("inventoryVersion");boolean inventory=inventoryVersion instanceof Number&&((Number)inventoryVersion).doubleValue()==1.0;
+        socket.setSoTimeout(15000);return new Peer(id,name,fingerprint,recoveryContent,inventory);
     }
 }

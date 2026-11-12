@@ -9,6 +9,19 @@ final class PeerDataStore {
     final Context context;final SharedPreferences prefs;final PeerOutbox outbox;final SyncPeerRegistry peers;
     interface Change {void saved(JSONObject data,String transport)throws Exception;}
     private final Change listener;
+    /** Minted only after full SHA verification and a durable apply. Never from a manifest claim alone. */
+    static final class VerifiedInventory {
+        final PeerSnapshot snapshot;private final Map<String,ImmutableMediaProof.Stamp> stamps;
+        private VerifiedInventory(PeerSnapshot snapshot,Map<String,ImmutableMediaProof.Stamp> stamps)throws Exception{this.snapshot=PeerSnapshot.parse(snapshot.bytes,snapshot.wire.getString("sourceId"));this.stamps=new HashMap<>(stamps);}
+        void validate(Context context)throws Exception{
+            if(!snapshot.hash.equals(PeerWire.hash(snapshot.bytes))||!CausalClock.canonical(snapshot.wire).equals(CausalClock.canonical(PeerSnapshot.parse(snapshot.bytes,snapshot.wire.getString("sourceId")).wire)))throw new IOException("Ověřený inventář změnil původní metadata");
+            for(JSONObject media:snapshot.media.values()){
+                File file=new File(context.getFilesDir(),"media/"+media.getString("id"));ImmutableMediaProof.Stamp stamp=stamps.get(media.getString("id"));
+                if(stamp!=null){if(!stamp.same(ImmutableMediaProof.stamp(file)))throw new IOException("Ověřený inventář změnil původní přílohu");}
+                else if(!PeerMedia.matches(file,media))throw new IOException("Ověřená příloha není dostupná");
+            }
+        }
+    }
     PeerDataStore(Context context,SharedPreferences prefs,SyncPeerRegistry peers,Change listener){this.context=context;this.prefs=prefs;this.peers=peers;outbox=new PeerOutbox(context,prefs,peers);this.listener=listener;}
     void trusted(PeerHandshake.Peer peer)throws Exception{if(!peers.isTrusted(peer.id,peer.fingerprint))throw new IOException("Párování bylo odebráno");}
     JSONArray needed(PeerSnapshot snapshot,PeerHandshake.Peer peer)throws Exception{return needed(snapshot,peer,()->{});}
@@ -46,10 +59,17 @@ final class PeerDataStore {
     }
     JSONObject apply(PeerSnapshot snapshot,PeerHandshake.Peer peer)throws Exception{return apply(snapshot,peer,()->{});}
     JSONObject apply(PeerSnapshot snapshot,PeerHandshake.Peer peer,ImmutableStore.Checkpoint checkpoint)throws Exception{
+        return apply(snapshot,peer,checkpoint,null);
+    }
+    VerifiedInventory applyInventory(PeerSnapshot snapshot,PeerHandshake.Peer peer)throws Exception{
+        List<VerifiedInventory> verified=new ArrayList<>();apply(snapshot,peer,()->{},verified);return verified.get(0);
+    }
+    private JSONObject apply(PeerSnapshot snapshot,PeerHandshake.Peer peer,ImmutableStore.Checkpoint checkpoint,List<VerifiedInventory> receipt)throws Exception{
         checkpoint.check();
         trusted(peer);
         // Recheck even files confirmed earlier: the user may have purged a record during a slow transfer.
-        Map<String,long[]> verified=new HashMap<>();for(JSONObject media:snapshot.media.values()){File file=new File(outbox.mediaDirectory,media.getString("id"));if(!PeerMedia.matches(file,media,checkpoint))throw new IOException("Před potvrzením chybí příloha");verified.put(media.getString("id"),new long[]{file.length(),file.lastModified()});}
+        Map<String,ImmutableMediaProof.Stamp> stamps=new HashMap<>();
+        Map<String,long[]> verified=new HashMap<>();for(JSONObject media:snapshot.media.values()){File file=new File(outbox.mediaDirectory,media.getString("id"));ImmutableMediaProof.Stamp before=ImmutableMediaProof.stamp(file);if(!PeerMedia.matches(file,media,checkpoint))throw new IOException("Před potvrzením chybí příloha");ImmutableMediaProof.Stamp after=ImmutableMediaProof.stamp(file);if(before!=null&&!before.same(after))throw new IOException("Příloha se během ověřování změnila");stamps.put(media.getString("id"),after);verified.put(media.getString("id"),new long[]{file.length(),file.lastModified()});}
         JSONObject saved;boolean changed;
         synchronized(TrashPurger.LOCK){
             trusted(peer);for(Map.Entry<String,long[]> entry:verified.entrySet()){File file=new File(outbox.mediaDirectory,entry.getKey());if(!file.isFile()||java.nio.file.Files.isSymbolicLink(file.toPath())||file.length()!=entry.getValue()[0]||file.lastModified()!=entry.getValue()[1])throw new IOException("Příloha se před potvrzením změnila. Přenos zůstává čekající.");}String text=LocalDatabase.readForCas(context);JSONObject current=text.isEmpty()?new JSONObject().put("schema",1).put("records",new JSONArray()).put("prefs",new JSONObject()):new JSONObject(text);
@@ -63,6 +83,7 @@ final class PeerDataStore {
             SyncRecoveryContent.preserve(snapshot,context,prefs);
             if(changed)LocalDatabase.write(context,saved.toString());
             if(!metadata.commit())throw new IOException("Metadata příloh nebyla potvrzena");
+            if(receipt!=null){VerifiedInventory proof=new VerifiedInventory(snapshot,stamps);proof.validate(context);receipt.add(proof);}
         }
         if(changed&&listener!=null)listener.saved(saved,"direct");return saved;
     }

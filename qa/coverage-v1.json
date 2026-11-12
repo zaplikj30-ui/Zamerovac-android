@@ -1521,6 +1521,50 @@
         "Exact tested SHAs, full counts and actual logs: docs/qa/sync-core-b/results.json and draft PR #116.",
         "Historical #88 diagnostics remain strict; Windows HOME and real Android/Drive NOT RUN."
       ]
+    },
+    {
+      "id": "sync-ack-recoverable-obligations",
+      "issues": [
+        42,
+        88
+      ],
+      "sources": [
+        "app/src/main/java/cz/zamerovac/app/PeerOutbox.java",
+        "app/src/main/java/cz/zamerovac/app/SyncLedger.java",
+        "app/src/main/java/cz/zamerovac/app/PeerTransfer.java",
+        "app/src/main/java/cz/zamerovac/app/PeerDataStore.java",
+        "tools/sync-ack-acceptance.py"
+      ],
+      "tests": [
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/SyncReceiptSafetyTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/SyncAckReconciliationTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/SafSyncV2Test.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "tests/test_sync_ack_acceptance.py",
+          "layer": "python"
+        },
+        {
+          "path": "tools/e2e/drive-accounts.cjs",
+          "layer": "chromium"
+        }
+      ],
+      "coverage": "runtime-partial",
+      "positive": "Durable exact per-target obligations survive quiet ACK; live authenticated, byte-verified causal inventories establish historical checkpoints only.",
+      "negative": "Late/duplicate/stale ACK, identity/epoch/scope changes, SQL ENOSPC/crash, corrupted sources and absent/changed media; offline health remains UNKNOWN.",
+      "limits": [
+        "Owner-approved product gate is separate from raw Gradle FAIL with two unchanged EXPECTED FAIL physical counterexamples.",
+        "Exact final SHA and complete evidence in PR #116; HOME, real Android/SAF/Drive, OS reboot and power-cut NOT RUN.",
+        "No cloud challenge, new server, GC or automatic database recovery."
+      ]
     }
   ],
   "manualGates": [

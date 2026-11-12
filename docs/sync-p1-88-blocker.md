@@ -1,5 +1,7 @@
 # Synchronizace B po REQUEST FIX: #88 BLOCKED
 
+**Historické posouzení HEAD9261454. Novější výslovně schválené pokračování a nová testovací brána jsou v [implementaci bezpečných následků ACK](sync-ack-88-acceptance.md).**
+
 Navazuje na [review Kontrolora 40](https://github.com/zaplikj30-ui/Zamerovac-android/pull/116#pullrequestreview-5880046227) a [rozhodnutí koordinace](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42#issuecomment-6833084810). Výchozí HEAD je `e4e17bca28a31651cb05e4625cb7eb36ecc5685b`, base main `cf7807905f77f6fd8478c137b1b41aca6ebc3275`. Pokračování probíhá pouze ve větvi draft PR #116. Finální přesný HEAD a běhy jsou v PR a připojených důkazech. Žádný merge, APK, Actions ani HOME.
 
 ## Výsledek rozhodovací brány

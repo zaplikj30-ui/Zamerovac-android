@@ -58,6 +58,9 @@ final class SyncQueueStore {
     }
     String read()throws Exception{synchronized(LOCK){try(SyncLedger ledger=SyncLedger.open(home)){return ledger.queue();}}}
     boolean save(long expected,String text)throws Exception{
+        return save(expected,text,ledger->{});
+    }
+    boolean save(long expected,String text,SyncLedger.QueueWrite receipt)throws Exception{
         synchronized(LOCK){
             JsonInput.check(text);
             JSONObject next=new JSONObject(text);
@@ -76,7 +79,7 @@ final class SyncQueueStore {
             String committed=attachedEvidence?next.toString():text;
             byte[] bytes=committed.getBytes(StandardCharsets.UTF_8);
             if(bytes.length>20L*1024*1024)throw new IOException("Fronta je příliš velká");
-            try(SyncLedger ledger=SyncLedger.open(home)){return ledger.saveQueue(expected,committed);}
+            try(SyncLedger ledger=SyncLedger.open(home)){return ledger.saveQueue(expected,committed,receipt);}
         }
     }
 

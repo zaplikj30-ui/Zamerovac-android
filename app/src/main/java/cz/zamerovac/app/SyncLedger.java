@@ -51,6 +51,9 @@ final class SyncLedger implements AutoCloseable {
             try(Cursor c=database.rawQuery("PRAGMA quick_check",null)){
                 if(!c.moveToFirst()||!"ok".equals(c.getString(0)))throw new IOException("Poškozená evidence přenosů");
             }
+            try(Cursor c=database.rawQuery("PRAGMA foreign_key_check",null)){
+                if(c.moveToFirst())throw new IOException("Evidence ztratila navázaný původní podklad; automatická oprava je zakázána");
+            }
             int version=database.getVersion();
             if(version>1||version<0)throw new IOException("Nepodporovaná verze evidence");
             if(version==0){
@@ -149,11 +152,15 @@ final class SyncLedger implements AutoCloseable {
         }catch(Exception invalid){throw new IOException("Index fronty nebyl potvrzen",invalid);}
     }
     String queue()throws Exception {String text=document("queue");SyncQueueStore.validate(new JSONObject(text));return text;}
+    interface QueueWrite {void apply(SyncLedger ledger)throws Exception;}
     boolean saveQueue(long expected,String text)throws Exception{
+        return saveQueue(expected,text,ledger->{});
+    }
+    boolean saveQueue(long expected,String text,QueueWrite receipt)throws Exception{
         SyncQueueStore.validate(new JSONObject(text));
         if(new JSONObject(text).getLong("revision")!=expected+1)throw new IOException("Neplatný krok fronty");
         db.beginTransaction();
-        try {if(new JSONObject(queue()).getLong("revision")!=expected)return false;fault.at("before-queue-write");putDocument("queue",text);fault.at("after-queue-write");db.setTransactionSuccessful();return true;}
+        try {if(new JSONObject(queue()).getLong("revision")!=expected)return false;fault.at("before-queue-write");putDocument("queue",text);fault.at("after-queue-write");receipt.apply(this);fault.at("before-receipt-commit");db.setTransactionSuccessful();return true;}
         finally {db.endTransaction();}
     }
     String legacyDocument(File source,String initial)throws Exception{
@@ -187,7 +194,8 @@ final class SyncLedger implements AutoCloseable {
         return PeerWire.hash((kind.length()+":"+kind+scope.length()+":"+scope+peer.length()+":"+peer).getBytes(StandardCharsets.UTF_8));
     }
     String target(String kind,String scope,String peer)throws IOException{
-        String id=targetId(kind,scope,peer);db.execSQL("INSERT OR IGNORE INTO targets(id,kind,scope,peer) VALUES(?,?,?,?)",new Object[]{id,kind,PeerWire.hash(scope.getBytes(StandardCharsets.UTF_8)),peer});return id;
+        String id=targetId(kind,scope,peer),scopeHash=PeerWire.hash(scope.getBytes(StandardCharsets.UTF_8));db.execSQL("INSERT OR IGNORE INTO targets(id,kind,scope,peer) VALUES(?,?,?,?)",new Object[]{id,kind,scopeHash,peer});
+        try(Cursor c=db.rawQuery("SELECT kind,scope,peer FROM targets WHERE id=?",new String[]{id})){if(!c.moveToFirst()||!kind.equals(c.getString(0))||!scopeHash.equals(c.getString(1))||!peer.equals(c.getString(2)))throw new IOException("Identita SQL cíle se změnila");}return id;
     }
     void prepare(String target,PeerSnapshot snapshot)throws Exception{
         db.beginTransaction();
@@ -199,11 +207,58 @@ final class SyncLedger implements AutoCloseable {
         } finally {db.endTransaction();}
     }
     void state(String target,String revision,String state,String proof)throws IOException{
-        if(!Arrays.asList("waiting","transferring","transport-ack","verified-object","error","conflict").contains(state)||proof==null||proof.length()>4096)throw new IOException("Neplatný stav přenosu");
+        if(!Arrays.asList("waiting","transferring","transport-ack","transport-receipt","verified-checkpoint","unknown","verified-object","error","conflict").contains(state)||proof==null||proof.length()>4096)throw new IOException("Neplatný stav přenosu");
         ContentValues v=new ContentValues();v.put("state",state);v.put("proof",proof);
         if(db.update("deliveries",v,"target=? AND revision=?",new String[]{target,revision})!=1)throw new IOException("Cíl nemá připravenou revizi");
     }
     String state(String target,String revision){try(Cursor c=db.rawQuery("SELECT state FROM deliveries WHERE target=? AND revision=?",new String[]{target,revision})){return c.moveToFirst()?c.getString(0):"waiting";}}
+    static boolean received(String state){return Arrays.asList("transport-ack","transport-receipt","verified-checkpoint").contains(state);}
+    private boolean hasDocument(String name){try(Cursor c=db.rawQuery("SELECT 1 FROM documents WHERE name=?",new String[]{name})){return c.moveToFirst();}}
+    /** Permanent, hash-checked source and manifest, separate from the disposable active-upload queue. */
+    void intent(String target,PeerSnapshot snapshot,JSONObject binding)throws Exception{
+        try(Cursor c=db.rawQuery("SELECT 1 FROM revisions WHERE hash=?",new String[]{snapshot.hash})){if(c.moveToFirst())revision(snapshot.hash,snapshot.wire.getString("sourceId"));}
+        prepare(target,snapshot);
+        JSONObject descriptor=new JSONObject().put("version",1).put("target",target).put("sourceRef",snapshot.hash)
+            .put("size",snapshot.bytes.length).put("epoch",snapshot.wire.optString("recoveryEpoch",""))
+            .put("manifest",PeerWire.hash(CausalClock.canonical(snapshot.wire.getJSONArray("media")).getBytes(StandardCharsets.UTF_8)))
+            .put("binding",new JSONObject(binding.toString()));
+        String name="intent:"+target+":"+snapshot.hash,text=CausalClock.canonical(descriptor);
+        if(hasDocument(name)){if(!text.equals(document(name)))throw new IOException("Záměr má jinou identitu nebo původní obsah");}
+        else putDocument(name,text);
+        revision(snapshot.hash,snapshot.wire.getString("sourceId")); // Also verify an existing SQL row; INSERT OR IGNORE is not integrity evidence.
+    }
+    PeerSnapshot revision(String hash,String author)throws Exception{
+        if(hash==null||!hash.matches("[a-f0-9]{64}"))throw new IOException("Neplatný původní snímek");
+        PeerSnapshot snapshot=PeerSnapshot.parse(readPayload("revisions","hash",hash,"bytes"),author);
+        if(!hash.equals(snapshot.hash))throw new IOException("Původní SQL snímek se změnil");
+        try(Cursor c=db.rawQuery("SELECT epoch,data_hash,content_only FROM revisions WHERE hash=?",new String[]{hash})){
+            if(!c.moveToFirst()||!snapshot.wire.optString("recoveryEpoch","").equals(c.getString(0))||
+                !PeerWire.hash(CausalClock.canonical(snapshot.data).getBytes(StandardCharsets.UTF_8)).equals(c.getString(1))||
+                (snapshot.wire.optBoolean("recoveryOnly")?1:0)!=c.getInt(2))throw new IOException("SQL původní revize má jiné doklady");
+        }
+        Set<String> ids=new HashSet<>();
+        try(Cursor c=db.rawQuery("SELECT id,hash,size FROM revision_media WHERE revision=?",new String[]{hash})){
+            while(c.moveToNext()){JSONObject media=snapshot.media.get(c.getString(0));if(media==null||!media.getString("hash").equals(c.getString(1))||media.getLong("size")!=c.getLong(2))throw new IOException("SQL manifest se změnil");ids.add(c.getString(0));}
+        }
+        if(!ids.equals(snapshot.media.keySet()))throw new IOException("SQL manifest není úplný");return snapshot;
+    }
+    JSONObject descriptor(String target,String hash)throws Exception{
+        String name="intent:"+target+":"+hash;if(!hasDocument(name))return null;
+        JSONObject d=new JSONObject(document(name));
+        if(d.getInt("version")!=1||!target.equals(d.getString("target"))||!hash.equals(d.getString("sourceRef")))throw new IOException("Poškozený obnovitelný záměr");return d;
+    }
+    JSONArray intents(String peer)throws Exception{
+        JSONArray result=new JSONArray();try(Cursor c=db.rawQuery("SELECT d.target,d.revision,d.state,t.kind FROM deliveries d JOIN targets t ON t.id=d.target WHERE t.peer=? ORDER BY d.rowid",new String[]{peer})){
+            while(c.moveToNext())result.put(new JSONObject().put("target",c.getString(0)).put("sourceRef",c.getString(1)).put("state",c.getString(2)).put("kind",c.getString(3)));
+        }return result;
+    }
+    Set<String> sourceRefs(){Set<String> refs=new HashSet<>();try(Cursor c=db.rawQuery("SELECT DISTINCT revision FROM deliveries",null)){while(c.moveToNext())refs.add(c.getString(0));}return refs;}
+    void receipt(String target,PeerSnapshot snapshot,JSONObject binding,String job)throws Exception{
+        intent(target,snapshot,binding);fault.at("before-receipt-write");
+        // A duplicate transport ACK cannot erase a stronger historical checkpoint.
+        if(!"verified-checkpoint".equals(state(target,snapshot.hash)))state(target,snapshot.hash,"transport-receipt",job);
+        fault.at("after-receipt-write");
+    }
     void contentInventory(String target,String state)throws IOException{if(!Arrays.asList("none","complete","error").contains(state))throw new IOException("Neplatný stav inventáře");putDocument("content:"+target,state);}
     private String contentInventory(String target)throws IOException{
         String name="content:"+target;
@@ -221,7 +276,8 @@ final class SyncLedger implements AutoCloseable {
                 try(Cursor c=db.rawQuery("SELECT d.state FROM deliveries d JOIN revisions r ON r.hash=d.revision WHERE d.target=? AND r.data_hash=? AND r.epoch=? AND r.content_only=0 ORDER BY r.rowid DESC LIMIT 1",new String[]{id,hash,epoch})){if(c.moveToFirst())state=c.getString(0);}
                 try(Cursor c=db.rawQuery("SELECT d.state FROM deliveries d JOIN revisions r ON r.hash=d.revision WHERE d.target=? AND r.epoch=? AND r.content_only=1 ORDER BY r.rowid DESC LIMIT 1",new String[]{id,epoch})){if(c.moveToFirst())content=c.getString(0);}
                 String inventory=contentInventory(id);if("none".equals(inventory))content="not-required";if("error".equals(inventory))content="error";
-                rows.put(new JSONObject().put("id",id).put("kind",targets.getString(1)).put("peer",targets.getString(2)).put("state",state).put("contentState",content));
+                // All persisted receipts/checkpoints are historical. Offline current receiver health is UNKNOWN.
+                rows.put(new JSONObject().put("id",id).put("kind",targets.getString(1)).put("peer",targets.getString(2)).put("state",state).put("receiverState","UNKNOWN").put("contentState",content));
             }
         }
         return new JSONObject().put("localSaved",true).put("backupCreated",false).put("targets",rows);

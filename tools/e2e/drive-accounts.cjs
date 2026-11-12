@@ -4,6 +4,15 @@ const initial={projectConfigured:true,busy:false,sync:{backend:'saf'},backup:{ba
 async function mock(page,value=initial){await page.evaluate(value=>{window.driveView=value;window.driveCalls=[];window.Native={driveAccountState:()=>JSON.stringify(driveView),driveAccountControl:(kind,action)=>driveCalls.push({kind,action}),directSyncControl:()=>{},directSyncState:()=>JSON.stringify({enabled:false,active:false,peers:{},candidates:[]}),backupHistoryControl:()=>{}};},value);}
 async function state(page,value){await page.evaluate(value=>{driveView=value;onNativeDriveAccounts(JSON.stringify(value));},value);}
 suite('drive-accounts',async run=>{
+ await run('historical-receipt-and-live-checkpoint-never-become-current-health-after-disconnect',async({page})=>{
+  const before=await page.evaluate(()=>JSON.stringify(state));await mock(page);
+  await page.evaluate(()=>{window.ledgerStatus={localSaved:true,backupCreated:false,targets:[{kind:'drive',state:'transport-receipt',receiverState:'UNKNOWN',contentState:'transport-receipt'}]};Native.syncLedgerState=()=>JSON.stringify(ledgerStatus);openZamerovacPeers();});
+  let text=await page.locator('#peerSyncPanel').innerText();assert.match(text,/přijetí této revize bylo potvrzeno/);assert.match(text,/Současný stav druhého zařízení není ověřený/);
+  await page.evaluate(()=>{ledgerStatus.targets[0].state='verified-checkpoint';onNativeDriveAccounts(JSON.stringify(driveView));});
+  text=await page.locator('#peerSyncPanel').innerText();assert.match(text,/obsah byl ověřen při posledním přímém spojení/);assert.match(text,/Současný stav druhého zařízení není ověřený/);assert.doesNotMatch(text,/aktuálně zdrav|záloha byla vytvořena/);
+  await page.evaluate(()=>{ledgerStatus.targets[0].state='waiting';onNativeDriveAccounts(JSON.stringify(driveView));});
+  text=await page.locator('#peerSyncPanel').innerText();assert.match(text,/čeká na přenos/);assert.doesNotMatch(text,/obsah byl ověřen při posledním přímém spojení/);assert.equal(await page.evaluate(()=>JSON.stringify(state)),before);
+ });
  await run('local-save-and-independent-target-receipts-never-pretend-a-backup',async({page})=>{
   const before=await page.evaluate(()=>JSON.stringify(state));await mock(page);
   await page.evaluate(()=>{window.ledgerStatus={localSaved:true,backupCreated:false,privateSession:'synthetic-private-session',targets:[{kind:'tls',state:'waiting',contentState:'waiting'},{kind:'drive',state:'transport-ack',contentState:'error'}]};Native.syncLedgerState=()=>JSON.stringify(ledgerStatus);openZamerovacPeers();});

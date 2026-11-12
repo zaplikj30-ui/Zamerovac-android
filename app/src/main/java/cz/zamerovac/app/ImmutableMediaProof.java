@@ -11,13 +11,13 @@ import java.util.concurrent.TimeUnit;
 final class ImmutableMediaProof {
     interface Hash {JSONObject inspect(File file)throws Exception;}
     private static final Map<String,Entry> CACHE=new LinkedHashMap<String,Entry>(128,.75f,true){protected boolean removeEldestEntry(Map.Entry<String,ImmutableMediaProof.Entry> e){return size()>1024;}};
-    private static final class Stamp {
+    static final class Stamp {
         final Object inode;final long size;final FileTime modified,changed;
         Stamp(BasicFileAttributes a,FileTime changed){inode=a.fileKey();size=a.size();modified=a.lastModifiedTime();this.changed=changed;}
         boolean same(Stamp other){return other!=null&&Objects.equals(inode,other.inode)&&size==other.size&&modified.equals(other.modified)&&changed.equals(other.changed);}
     }
     private static final class Entry {final Stamp stamp;final String proof;Entry(Stamp stamp,JSONObject proof){this.stamp=stamp;this.proof=proof.toString();}}
-    private static Stamp stamp(File file)throws IOException{
+    static Stamp stamp(File file)throws IOException{
         BasicFileAttributes attrs=Files.readAttributes(file.toPath(),BasicFileAttributes.class,LinkOption.NOFOLLOW_LINKS);
         if(!attrs.isRegularFile()||attrs.isSymbolicLink())throw new IOException("Nebezpečný originál");
         try {
