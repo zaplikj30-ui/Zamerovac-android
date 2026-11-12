@@ -6,7 +6,9 @@ const http = require('node:http');
 const path = require('node:path');
 const os = require('node:os');
 const {spawn, spawnSync} = require('node:child_process');
-const root = path.resolve(__dirname, '..');
+// Pinned QA runner lives in the gate checkout; the product under test is separate.
+const root = process.env.ZAMEROVAC_SOURCE_ROOT ?
+ path.resolve(process.env.ZAMEROVAC_SOURCE_ROOT) : path.resolve(__dirname, '..');
 const assetRoot = path.join(root, 'app', 'src', 'main', 'assets');
 const modes = Object.freeze({
  '--smoke': ['drawing', 'quality-regressions', 'gallery-readability'],
@@ -210,4 +212,4 @@ async function main(){
  await run(mode);
 }
 if(require.main===module)main().catch(error=>{console.error('FAIL local browser QA: '+String(error.stack||error));process.exitCode=1});
-module.exports={createStaticServer,statusReport,initialRecords,killTreeArgs,modes};
+module.exports={createStaticServer,statusReport,initialRecords,killTreeArgs,modes,sourceRoot:root};
