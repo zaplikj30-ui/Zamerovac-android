@@ -98,12 +98,42 @@
   const width=clamp(c.measureText(text).width+18,88,Math.max(88,(render?.viewport.w??stageCanvas.clientWidth)-20));
   return {x:p.x-width/2,y:p.y-fs/2-7,w:width,h:fs+15,p,text,fs};
  }
+ // Place the audio indicator next to the inset rather than over text or photo.
+ // Only screen-space drawing is affected; the stored note and hit areas stay intact.
+ function audioMarkerPosition(c,it,g,render){
+  if(!Array.isArray(it.audioMedia)||!it.audioMedia.length)return null;
+  const corners=[turn({x:-g.w/2,y:-g.h/2},g),turn({x:g.w/2,y:-g.h/2},g),
+   turn({x:g.w/2,y:g.h/2},g),turn({x:-g.w/2,y:g.h/2},g)];
+  const left=Math.min(...corners.map(p=>p.x)),right=Math.max(...corners.map(p=>p.x));
+  const top=Math.min(...corners.map(p=>p.y)),bottom=Math.max(...corners.map(p=>p.y));
+  const photo={x:left,y:top,w:right-left,h:bottom-top};
+  const caption=labelRect(c,it,g,render),radius=13,gap=7;
+  const viewport=render?.viewport||{w:stageCanvas.clientWidth,h:stageCanvas.clientHeight};
+  const collides=(a,b)=>b&&a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
+  const options=[
+   {x:right+gap+radius,y:bottom-radius}, // right/bottom, outside the inset
+   {x:right-radius,y:Math.max(bottom,caption?caption.y+caption.h:bottom)+gap+radius},
+   {x:left-gap-radius,y:bottom-radius},
+   {x:right-radius,y:top-gap-radius},
+   {x:left-gap-radius,y:top+radius}
+  ];
+  for(const p of options){
+   const marker={x:p.x-radius,y:p.y-radius,w:radius*2,h:radius*2};
+   // Export/gallery expands the output bounds; editor stays in the viewport.
+   if(!render?.exporting&&(marker.x<2||marker.y<2||
+    marker.x+marker.w>viewport.w-2||marker.y+marker.h>viewport.h-2))continue;
+   if(!collides(marker,photo)&&!collides(marker,caption))return p;
+  }
+  return null; // no safe place: do not obscure a dimension or a caption
+ }
  // Shared bounds use the same geometry and default caption placement as rendering.
  window.insetAnnotationBounds=function(c,it,render){
   const image=window.__detailPhotoCache?.[it.media?.[0]];if(!image?.naturalWidth)return null;
   const g=layout(it,image,render),corners=[turn({x:-g.w/2,y:-g.h/2},g),turn({x:g.w/2,y:-g.h/2},g),turn({x:g.w/2,y:g.h/2},g),turn({x:-g.w/2,y:g.h/2},g)];
   const label=labelRect(c,it,g,render);
   if(label)corners.push({x:label.x,y:label.y},{x:label.x+label.w,y:label.y+label.h});
+  const marker=audioMarkerPosition(c,it,g,render);
+  if(marker)corners.push({x:marker.x-13,y:marker.y-13},{x:marker.x+13,y:marker.y+13});
   return {minX:Math.min(...corners.map(p=>p.x))-18,minY:Math.min(...corners.map(p=>p.y))-18,maxX:Math.max(...corners.map(p=>p.x))+18,maxY:Math.max(...corners.map(p=>p.y))+18};
  };
  function renderLabel(c,it,g,render){
@@ -173,11 +203,13 @@
   }finally{c.restore();}
   // ImageMeter zachovává textovou část poznámky i po vložení detailu.
   renderLabel(c,it,g,render);
-  // Přítomnost hlasu vyznačujeme ikonou, i když není vyplněný text.
-  if(Array.isArray(it.audioMedia)&&it.audioMedia.length){
-   const p=labelPosition(it,g,render);
-   c.save();c.font='bold 22px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillStyle='#f7dc27';
-   c.fillText('🎙',p.x+(it.text?Math.min(140,g.w/2):0),p.y+(it.text?0:3));c.restore();
+  // Recalculate the marker on zoom, rotation, drag and in the export renderer.
+  const audioMarker=audioMarkerPosition(c,it,g,render);
+  if(audioMarker){
+   c.save();try{
+    c.font='bold 22px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillStyle='#f7dc27';
+    c.fillText('🎙',audioMarker.x,audioMarker.y);
+   }finally{c.restore();}
   }
   // Bílý úchopový bod na konci šipky pouze při skutečném přetahování.
   if(show&&active?.item===it&&active.kind==='anchor'&&active.changed&&!render.exporting)
