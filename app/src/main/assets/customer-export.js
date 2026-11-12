@@ -47,15 +47,44 @@
   const image=await loadImage(record.media[0]);
   const items=selectedItems(record,options);
   if(options.notes)await preloadNotes(items);
+  // A customer PDF/ZIP may contain a detail outside the original photo.
+  // Expand only the rendered copy; never change project coordinates or media.
+  const visiblePrefs={...prefs,layerVisible:{dimensions:true,drawing:true,notes:options.notes}};
+  let minX=0,minY=0,maxX=image.naturalWidth,maxY=image.naturalHeight;
+  if(options.notes&&typeof window.insetAnnotationBounds==='function'){
+   const measure=document.createElement('canvas').getContext('2d');
+   const boundsRender=annotationRenderContext(measure,{
+    view:{zoom:1,dx:0,dy:0},
+    photoSize:{w:image.naturalWidth,h:image.naturalHeight},
+    viewport:{w:image.naturalWidth,h:image.naturalHeight},
+    selected:null,exporting:true,prefs:visiblePrefs
+   });
+   for(const item of items){
+    if(item.type!=='note'||!item.media?.length)continue;
+    const box=window.insetAnnotationBounds(measure,item,boundsRender);
+    if(!box)continue;
+    minX=Math.min(minX,box.minX);minY=Math.min(minY,box.minY);
+    maxX=Math.max(maxX,box.maxX);maxY=Math.max(maxY,box.maxY);
+   }
+  }
+  // A margin is added only to sides that extend beyond the original photo.
+  const margin=32;
+  if(minX<0)minX-=margin;if(minY<0)minY-=margin;
+  if(maxX>image.naturalWidth)maxX+=margin;
+  if(maxY>image.naturalHeight)maxY+=margin;
+  const extentW=maxX-minX,extentH=maxY-minY;
   const canvas=document.createElement('canvas');
-  const scale=Math.min(1,2400/Math.max(image.naturalWidth,image.naturalHeight));
-  canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));
-  canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
-  const c=canvas.getContext('2d');
-  c.fillStyle='#fff';c.fillRect(0,0,canvas.width,canvas.height);c.drawImage(image,0,0,canvas.width,canvas.height);
-  const render=annotationRenderContext(c,{view:{zoom:scale,dx:0,dy:0},
-   photoSize:{w:image.naturalWidth,h:image.naturalHeight},viewport:{w:canvas.width,h:canvas.height},
-   selected:null,exporting:true,prefs:{...prefs,layerVisible:{dimensions:true,drawing:true,notes:options.notes}}});
+  const scale=Math.min(1,2400/Math.max(extentW,extentH));
+  canvas.width=Math.max(1,Math.round(extentW*scale));
+  canvas.height=Math.max(1,Math.round(extentH*scale));
+  const c=canvas.getContext('2d'),dx=-minX*scale,dy=-minY*scale;
+  c.fillStyle='#fff';c.fillRect(0,0,canvas.width,canvas.height);
+  c.drawImage(image,dx,dy,image.naturalWidth*scale,image.naturalHeight*scale);
+  const render=annotationRenderContext(c,{view:{zoom:scale,dx,dy},
+   photoSize:{w:image.naturalWidth,h:image.naturalHeight},
+   // Caption width depends on the source photo, not on extra outer margins.
+   viewport:{w:image.naturalWidth*scale,h:image.naturalHeight*scale},
+   selected:null,exporting:true,prefs:visiblePrefs});
   // Geometry scales with the photo; captions/strokes stay readable in output pixels.
   for(const item of items)drawItem(c,item,render);
   return canvas;
