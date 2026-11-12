@@ -5,7 +5,7 @@ const fs = require('node:fs');
 const http = require('node:http');
 const path = require('node:path');
 const os = require('node:os');
-const {spawn} = require('node:child_process');
+const {spawn, spawnSync} = require('node:child_process');
 const root = path.resolve(__dirname, '..');
 const assetRoot = path.join(root, 'app', 'src', 'main', 'assets');
 const modes = Object.freeze({
@@ -50,66 +50,126 @@ function createStaticServer(assets){
   });
  });
 }
-function statusReport(mode,records,dir){
+function statusReport(mode,records,dir,sourceSha=null){
  const counts={PASS:0,FAIL:0,SKIP:0,'NOT RUN':0};
- for(const record of records)counts[record.status]++;
- const report={schema:1,mode,createdAt:new Date().toISOString(),counts,records,
-  evidencePath:dir,scope:'Local Chromium synthetic-data tests, not Android/WebView/device acceptance'};
- fs.writeFileSync(path.join(dir,'results.json'),JSON.stringify(report,null,2)+'\n');
+ for(const record of records){if(!Object.hasOwn(counts,record.status))throw Error('Unknown QA state '+record.status);counts[record.status]++}
+ const report={schema:2,mode,sourceSha,createdAt:new Date().toISOString(),counts,records,
+  scope:'Local Chromium synthetic-data tests, not Android/WebView/device acceptance'};
+ const destination=path.join(dir,'results.json'),temp=destination+'.tmp';
+ fs.writeFileSync(temp,JSON.stringify(report,null,2)+'\n','utf8');
+ fs.renameSync(temp,destination);
  return report;
 }
+function initialRecords(mode){
+ return modes[mode].map(suite=>({suite,status:'NOT RUN',exitCode:null,signal:null,
+  elapsedMs:0,error:'not yet executed',timedOut:false,log:null}));
+}
+function killTreeArgs(pid,platform=process.platform){
+ if(!Number.isInteger(pid)||pid<=0)throw Error('Invalid PID');
+ return platform==='win32'?['taskkill.exe',['/PID',String(pid),'/T','/F']]:null;
+}
+async function terminateTree(child){
+ if(!child?.pid)return;
+ const cmd=killTreeArgs(child.pid);
+ if(cmd){
+  await new Promise(resolve=>{
+   const killer=spawn(cmd[0],cmd[1],{windowsHide:true,stdio:'ignore'});
+   const timer=setTimeout(()=>{killer.kill();resolve()},10000);
+   killer.once('error',()=>{clearTimeout(timer);child.kill('SIGKILL');resolve()});
+   killer.once('close',()=>{clearTimeout(timer);resolve()});
+  });
+ }else{
+  try{process.kill(-child.pid,'SIGKILL')}catch(_){child.kill('SIGKILL')}
+ }
+}
+function testedSha(){
+ const result=spawnSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8',timeout:10000,windowsHide:true});
+ if(result.error||result.status!==0)throw Error('Cannot verify Git checkout SHA');
+ const sha=String(result.stdout||'').trim();
+ if(!/^[0-9a-f]{40}$/.test(sha))throw Error('Invalid checkout SHA');
+ if(process.env.TESTED_SHA&&sha!==process.env.TESTED_SHA)throw Error('Wrong browser source SHA');
+ return sha;
+}
+
 function listen(server){return new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',()=>{server.off('error',reject);resolve(server.address().port)})})}
 function close(server){return new Promise(resolve=>server.close(resolve))}
 function verifyBrowser(){
  let p;try{p=require.resolve('playwright',{paths:[root]})}
- catch(error){throw Error('Chybí Playwright. Ve složce Zaměřovače spusť: npm install --no-save --package-lock=false playwright@1.62.1')}
+ catch(error){throw Error('Playwright 1.62.1 missing: reviewed offline lockfile required; no auto-install')}
+ const version=require(path.join(path.dirname(p),'package.json')).version;
+ if(version!=='1.62.1')throw Error('Wrong Playwright version: '+version);
  const chromium=require(p).chromium;
  const executable=process.env.CHROMIUM_PATH||chromium.executablePath();
- if(!fs.existsSync(executable))throw Error('Chromium není nainstalovaný: '+executable+'; spusť: npx playwright install chromium');
+ if(!fs.existsSync(executable))throw Error('Verified Chromium missing: '+executable+'; no runtime install');
  return executable;
 }
-async function execute(script,env,logFile){
+async function execute(script,env,logFile,maxDurationMs=8*60*1000){
  return new Promise(resolve=>{
   const started=Date.now(),out=fs.createWriteStream(logFile,{flags:'w'});
-  const child=spawn(process.execPath,[path.join(root,'tools/e2e',script+'.cjs')],{cwd:root,env,windowsHide:true,stdio:['ignore','pipe','pipe']});
-  let error=null,timedOut=false;
-  const timer=setTimeout(()=>{timedOut=true;child.kill()},8*60*1000);
-  child.on('error',e=>{error=e;out.write(String(e)+'\n')});
-  child.stdout?.on('data',data=>out.write(data));child.stderr?.on('data',data=>out.write(data));
-  child.on('close',(exitCode,signal)=>{clearTimeout(timer);out.end();resolve({status:!timedOut&&!error&&exitCode===0?'PASS':'FAIL',
-   exitCode,signal,elapsedMs:Date.now()-started,error:error?.message||null,timedOut})});
+  const child=spawn(process.execPath,[path.join(root,'tools/e2e',script+'.cjs')],
+   {cwd:root,env,detached:process.platform!=='win32',windowsHide:true,stdio:['ignore','pipe','pipe']});
+  let error=null,timedOut=false,settled=false;
+  const finish=(exitCode,signal)=>{
+   if(settled)return;
+   settled=true;clearTimeout(timer);out.end();
+   resolve({status:!timedOut&&!error&&exitCode===0?'PASS':'FAIL',
+    exitCode,signal,elapsedMs:Date.now()-started,error:error?.message||null,timedOut});
+  };
+  const timer=setTimeout(async()=>{
+   timedOut=true;
+   try{await terminateTree(child)}catch(e){error=e}
+   setTimeout(()=>{child.kill('SIGKILL');finish(null,'TIMEOUT')},12000).unref();
+  },maxDurationMs);
+  child.on('error',e=>{error=e;out.write(String(e)+'\n');finish(null,'SPAWN_ERROR')});
+  child.stdout?.on('data',data=>{if(!settled)out.write(data)});
+  child.stderr?.on('data',data=>{if(!settled)out.write(data)});
+  child.on('close',finish);
  });
 }
 async function run(mode){
  if(!fs.existsSync(path.join(assetRoot,'index.html')))throw Error('Chybí pracovní kopie aplikace: '+assetRoot);
- const browser=verifyBrowser();
+ const sourceSha=testedSha();
  const date=new Date().toISOString().replace(/[:.]/g,'-');
  const dir=path.join(process.env.LOCALAPPDATA||path.join(os.homedir(),'.local','share'),
   'Zamerovac-QA','browser','run-'+date+'-'+process.pid);
  fs.mkdirSync(dir,{recursive:true});
+ const records=initialRecords(mode);
+ statusReport(mode,records,dir,sourceSha); // durable NOT RUN before browser setup
  const server=createStaticServer(assetRoot);
- const records=[];
- let port;
+ let port,failed=false;
+ const deadline=Date.now()+38*60*1000; // shorter than 50-minute workflow timeout
  try{
+  const browser=verifyBrowser();
   port=await listen(server);
   const env={...process.env,CI:'1',CHROMIUM_PATH:browser,
    ZAMEROVAC_BASE_URL:'http://127.0.0.1:'+port,
    ZAMEROVAC_E2E_DIR:path.join(dir,'evidence')};
-  for(const name of modes[mode]){
-   const file=path.join(dir,name+'.log');
-   const outcome=await execute(name,env,file);
-   records.push({suite:name,...outcome,log:file});
+  for(let i=0;i<records.length;i++){
+   if(Date.now()+5000>=deadline){failed=true;break}
+   const name=records[i].suite,file=path.join(dir,name+'.log');
+   records[i]={...records[i],status:'FAIL',error:'interrupted during execution',log:file};
+   statusReport(mode,records,dir,sourceSha); // interrupted work is never PASS
+   const outcome=await execute(name,env,file,Math.min(8*60*1000,deadline-Date.now()));
+   records[i]={suite:name,...outcome,log:file};
+   statusReport(mode,records,dir,sourceSha);
    console.log(outcome.status+' '+name+' ('+Math.round(outcome.elapsedMs/1000)+' s)');
    if(outcome.status==='FAIL'){
-    const log=fs.readFileSync(file,'utf8');console.error(log.slice(-1500));
+    failed=true;
+    const log=fs.existsSync(file)?fs.readFileSync(file,'utf8'):'';
+    console.error(log.slice(-1500));
    }
   }
- }finally{await close(server)}
- const report=statusReport(mode,records,dir);
+ }finally{
+  if(port)await Promise.race([close(server),new Promise(resolve=>setTimeout(resolve,3000))]);
+  statusReport(mode,records,dir,sourceSha);
+ }
+ const report=statusReport(mode,records,dir,sourceSha);
  console.log('Výsledky Chromium: '+path.join(dir,'results.json'));
- console.log('PASS '+report.counts.PASS+' / FAIL '+report.counts.FAIL);
- if(report.counts.FAIL)process.exitCode=1;
+ console.log('PASS '+report.counts.PASS+' / FAIL '+report.counts.FAIL+
+             ' / NOT RUN '+report.counts['NOT RUN']);
+ if(failed||report.counts.FAIL||report.counts['NOT RUN'])process.exitCode=1;
 }
+
 async function main(){
  const mode=process.argv[2]||'--smoke';
  if(mode==='--help'){
@@ -140,4 +200,4 @@ async function main(){
  await run(mode);
 }
 if(require.main===module)main().catch(error=>{console.error('FAIL local browser QA: '+String(error.stack||error));process.exitCode=1});
-module.exports={createStaticServer,statusReport,modes};
+module.exports={createStaticServer,statusReport,initialRecords,killTreeArgs,modes};
