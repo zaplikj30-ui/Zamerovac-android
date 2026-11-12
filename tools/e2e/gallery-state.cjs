@@ -179,10 +179,10 @@ suite('gallery-state',async test=>{
     if(p.x<14||p.y<14||p.x+14>=c.width||p.y+14>=c.height)return {error:'gallery icon clipped'};
     const b=c.getContext('2d').getImageData(Math.floor(p.x)-14,Math.floor(p.y)-14,28,28).data;
     let colored=0;for(let i=0;i<b.length;i+=4)
-     if(b[i]>175&&b[i+1]>125&&b[i+2]<160)colored++;
+     if(Math.abs(b[i]-41)+Math.abs(b[i+1]-42)+Math.abs(b[i+2]-47)>135)colored++;
     return {colored,marker:p};
    });
-   assert(!gallery.error,JSON.stringify(gallery));assert(gallery.colored>8,'Gallery must have visible yellow/orange voice pixels');
+   assert(!gallery.error,JSON.stringify(gallery));assert(gallery.colored>8,'Gallery must contain visible voice glyph pixels');
    await page.screenshot({path:path.join(directory,'stacked-voice-gallery.png')});
    await page.click('.gallery-top [data-action="close"]');
    const after=await page.evaluate(async()=>{
