@@ -94,8 +94,9 @@ final class RecoveryProtectionArchive {
                 File destination=new File(payload,path);
                 File parent=destination.getParentFile();
                 createDirectoriesChecked(stage,parent);
-                if(path.equals("no_backup/sync-ledger-v1.export.json")){
-                    byte[] projection=ledgerProjection(noBackup);if(projection.length!=entry.getLong("size")||!PeerWire.hash(projection).equals(entry.getString("sha256")))throw new IOException("Evidence přenosů se během archivace změnila");writeSynced(destination,projection);
+                if(path.equals("no_backup/sync-ledger-v1.export.json")||SyncLedger.exportPath(path)){
+                    byte[] projection;if(path.equals("no_backup/sync-ledger-v1.export.json"))projection=ledgerProjection(noBackup);else try(SyncLedger ledger=SyncLedger.open(noBackup)){projection=ledger.exportFile(path);}
+                    if(projection.length!=entry.getLong("size")||!PeerWire.hash(projection).equals(entry.getString("sha256")))throw new IOException("Evidence přenosů se během archivace změnila");writeSynced(destination,projection);
                 }else copyExact(stage,source(home,noBackup,path),destination,entry,checkpoint);
             }
             byte[] after=canonical(manifest(home,noBackup));
@@ -208,11 +209,12 @@ final class RecoveryProtectionArchive {
         if(exists(new File(noBackup,"sync-ledger-v1.install"))||exists(new File(noBackup,"sync-ledger-v1.sqlite"))){
             byte[] projection=ledgerProjection(noBackup);if(projection.length>MAX_META)throw new IOException("Přenosná evidence přenosů je příliš velká");
             putSource(sources,"no_backup/sync-ledger-v1.export.json",projection.length,PeerWire.hash(projection),"PRESENT");
+            JSONArray exported=new JSONObject(JsonInput.decode(projection)).getJSONArray("files");for(int i=0;i<exported.length();i++){JSONObject entry=exported.getJSONObject(i);String path=entry.getString("path");if(!SyncLedger.exportPath(path)||entry.getLong("size")>MAX_META)throw new IOException("Neplatný přenositelný podklad");putSource(sources,path,entry.getLong("size"),entry.getString("hash"),"PRESENT");}
         }
         File audioJournal=new File(home,"pending-audio-v1");
         if(safeDirectory(audioJournal,false)){
             File[] audioFiles=audioJournal.listFiles();if(audioFiles==null)throw new IOException("Hlasové doklady nelze archivovat");
-            for(File file:audioFiles){if(!file.getName().matches("[a-f0-9-]{36}\\.json(\\.bak|\\.new)?"))throw new IOException("Neznámá hlasová evidence");String path="files/pending-audio-v1/"+file.getName();JSONObject info=inspectExtra(file,path);putSource(sources,path,info.getLong("size"),info.getString("sha256"),"PRESENT");}
+            for(File file:audioFiles){if(!file.getName().matches("[a-f0-9-]{36}\\.json(\\.bak|\\.new)?"))throw new IOException("Neznámá hlasová evidence");String path="files/pending-audio-v1/"+file.getName();JSONObject info=inspectExtra(file,path);boolean pending=file.getName().endsWith(".bak")||file.getName().endsWith(".new");if(pending)sourceComplete=false;putSource(sources,path,info.getLong("size"),info.getString("sha256"),pending?"UNCONFIRMED":"PRESENT");}
         }
         File[] audioSources=new File(home,"media").listFiles();
         if(audioSources!=null)for(File file:audioSources)if(file.getName().matches("\\.audio-[a-zA-Z0-9_-]{3,120}--[a-f0-9-]{36}\\.tmp")){
@@ -414,7 +416,7 @@ final class RecoveryProtectionArchive {
         boolean journal=path.matches("files/(projects\\.recovery-v1\\.json(\\.bak|\\.new)?|trash-cleanup\\.json(\\.bak|\\.new)?|projects\\.bak(\\.bak|\\.new)|zamerovac-install-state-v1\\.marker(\\.bak|\\.new)?)");
         boolean media=path.startsWith("files/media/")&&
             (PeerSnapshot.validMediaId(path.substring("files/media/".length()))||path.matches("files/media/\\.audio-[a-zA-Z0-9_-]{3,120}--[a-f0-9-]{36}\\.tmp"));
-        boolean ledger=path.equals("no_backup/sync-ledger-v1.export.json")||path.matches("files/pending-audio-v1/[a-f0-9-]{36}\\.json(\\.bak|\\.new)?");
+        boolean ledger=path.equals("no_backup/sync-ledger-v1.export.json")||SyncLedger.exportPath(path)||path.matches("files/pending-audio-v1/[a-f0-9-]{36}\\.json(\\.bak|\\.new)?");
         boolean nativeEvidence=path.matches("no_backup/(zamerovac-install-state-v1\\.marker(\\.bak|\\.new)?|sync-peers-v2\\.json(\\.bak|\\.new)?|sync-queue-v2\\.json(\\.bak|\\.new)?)");
         boolean other=path.matches("no_backup/sync-(inbox|scan|publications)-v2-[a-f0-9-]{36}-[a-f0-9]{64}\\.json(\\.bak|\\.new)?");
         boolean queued=path.matches("no_backup/sync-v2-outbox/[a-f0-9]{64}\\.json(\\.bak|\\.new)?");
@@ -662,6 +664,10 @@ final class RecoveryProtectionArchive {
         File payload=new File(stage,"payload");
         for(File area:new File[]{new File(payload,"files/media"),
                 new File(payload,"files/protected-revisions"),
+                new File(payload,"files/pending-audio-v1"),
+                new File(payload,"no_backup/sync-ledger-documents"),
+                new File(payload,"no_backup/sync-ledger-revisions"),
+                new File(payload,"no_backup/sync-ledger-legacy"),
                 new File(payload,"no_backup/sync-v2-outbox"),new File(payload,"files"),
                 new File(payload,"no_backup"),new File(payload,"shared_prefs"),
                 payload,stage}){

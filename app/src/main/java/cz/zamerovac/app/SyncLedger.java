@@ -106,10 +106,25 @@ final class SyncLedger implements AutoCloseable {
         fault.at("after-cutover");
     }
     private String document(String name)throws IOException{
-        try(Cursor c=db.rawQuery("SELECT value,hash FROM documents WHERE name=?",new String[]{name})){
-            if(!c.moveToFirst())throw new IOException("Evidence je neúplná");String text=c.getString(0);
-            if(!PeerWire.hash(text.getBytes(StandardCharsets.UTF_8)).equals(c.getString(1)))throw new IOException("Evidence má jiné kontrolní bajty");return text;
-        }
+        return new String(readPayload("documents","name",name,"value"),StandardCharsets.UTF_8);
+    }
+    /** Android CursorWindow is small. Never select an entire 20MiB TEXT/BLOB into one cursor row. */
+    private byte[] readPayload(String table,String keyColumn,String key,String column)throws IOException{
+        db.beginTransaction();try{
+            long size;String expected;
+            try(Cursor c=db.rawQuery("SELECT length(CAST("+column+" AS BLOB)),hash FROM "+table+" WHERE "+keyColumn+"=?",new String[]{key})){
+                if(!c.moveToFirst())throw new IOException("Evidence je neúplná");size=c.getLong(0);expected=c.getString(1);
+            }
+            if(size<0||size>PeerWire.MAX_JSON)throw new IOException("Evidence překračuje bezpečný limit metadat");
+            ByteArrayOutputStream bytes=new ByteArrayOutputStream((int)size);
+            for(long at=0;at<size;){
+                int count=(int)Math.min(65536,size-at);
+                try(Cursor c=db.rawQuery("SELECT substr(CAST("+column+" AS BLOB),?,?) FROM "+table+" WHERE "+keyColumn+"=?",new String[]{String.valueOf(at+1),String.valueOf(count),key})){
+                    if(!c.moveToFirst())throw new IOException("Podklad evidence zmizel");byte[] chunk=c.getBlob(0);if(chunk.length!=count)throw new IOException("Neúplný podklad evidence");bytes.write(chunk,0,chunk.length);
+                }at+=count;
+            }
+            byte[] result=bytes.toByteArray();if(!expected.equals(PeerWire.hash(result)))throw new IOException("Evidence má jiné kontrolní bajty");db.setTransactionSuccessful();return result;
+        }finally{db.endTransaction();}
     }
     private void putDocument(String name,String text)throws IOException{
         ContentValues v=new ContentValues();v.put("name",name);v.put("value",text);v.put("hash",PeerWire.hash(text.getBytes(StandardCharsets.UTF_8)));
@@ -211,11 +226,30 @@ final class SyncLedger implements AutoCloseable {
     /** Portable non-secret evidence; resumable session URLs and credentials never leave no_backup. */
     JSONObject portable()throws Exception{
         db.beginTransaction();try{
-        JSONObject result=new JSONObject().put("format","cz.zamerovac.sync.ledger").put("version",1).put("queue",new JSONObject(queue()));
-        for(String table:new String[]{"targets","deliveries","documents"}){JSONArray rows=new JSONArray();try(Cursor c=db.rawQuery("SELECT * FROM "+table+" ORDER BY 1,2",null)){while(c.moveToNext()){JSONObject row=new JSONObject();for(int i=0;i<c.getColumnCount();i++)row.put(c.getColumnName(i),c.getString(i));rows.put(row);}}result.put(table,rows);}
-        JSONArray revisions=new JSONArray();try(Cursor c=db.rawQuery("SELECT hash,bytes FROM revisions ORDER BY hash",null)){while(c.moveToNext()){byte[] bytes=c.getBlob(1);if(!c.getString(0).equals(PeerWire.hash(bytes)))throw new IOException("Historická revize evidence je poškozená");revisions.put(new JSONObject().put("hash",c.getString(0)).put("metadata",JsonInput.decode(bytes)));}}result.put("revisions",revisions);
+        JSONObject result=new JSONObject().put("format","cz.zamerovac.sync.ledger").put("version",1).put("queueDocument","queue");
+        for(String table:new String[]{"targets","deliveries"}){JSONArray rows=new JSONArray();try(Cursor c=db.rawQuery("SELECT * FROM "+table+" ORDER BY 1,2",null)){while(c.moveToNext()){JSONObject row=new JSONObject();for(int i=0;i<c.getColumnCount();i++)row.put(c.getColumnName(i),c.getString(i));rows.put(row);}}result.put(table,rows);}
+        // Only descriptors live in the index. Export one bounded payload at a time.
+        JSONArray files=new JSONArray();
+        try(Cursor c=db.rawQuery("SELECT name,length(CAST(value AS BLOB)),hash FROM documents ORDER BY name",null)){while(c.moveToNext())files.put(new JSONObject().put("name",c.getString(0)).put("path","no_backup/sync-ledger-documents/"+PeerWire.hash(c.getString(0).getBytes(StandardCharsets.UTF_8))+".json").put("size",c.getLong(1)).put("hash",c.getString(2)));}
+        try(Cursor c=db.rawQuery("SELECT hash,length(bytes) FROM revisions ORDER BY hash",null)){while(c.moveToNext())files.put(new JSONObject().put("path","no_backup/sync-ledger-revisions/"+c.getString(0)+".json").put("size",c.getLong(1)).put("hash",c.getString(0)));}
+        try(Cursor c=db.rawQuery("SELECT name,length(bytes),hash FROM legacy_sources ORDER BY name",null)){while(c.moveToNext())files.put(new JSONObject().put("name",c.getString(0)).put("path","no_backup/sync-ledger-legacy/"+PeerWire.hash(c.getString(0).getBytes(StandardCharsets.UTF_8))+".bin").put("size",c.getLong(1)).put("hash",c.getString(2)));}
+        result.put("files",files);
         db.setTransactionSuccessful();return result;
         }finally{db.endTransaction();}
+    }
+    static boolean exportPath(String path){return path!=null&&path.matches("no_backup/sync-ledger-(documents|revisions|legacy)/[a-f0-9]{64}\\.(json|bin)");}
+    byte[] exportFile(String path)throws Exception{
+        if(!exportPath(path))throw new IOException("Neplatný podklad evidence");
+        String key=path.substring(path.lastIndexOf('/')+1,path.lastIndexOf('.'));byte[] bytes=null;String expected="";
+        if(path.contains("/sync-ledger-revisions/")){
+            bytes=readPayload("revisions","hash",key,"bytes");expected=key;
+        }else{
+            boolean document=path.contains("/sync-ledger-documents/");String table=document?"documents":"legacy_sources";
+            try(Cursor c=db.rawQuery("SELECT name,hash FROM "+table+" ORDER BY name",null)){
+                while(c.moveToNext())if(key.equals(PeerWire.hash(c.getString(0).getBytes(StandardCharsets.UTF_8)))){bytes=readPayload(table,"name",c.getString(0),document?"value":"bytes");expected=c.getString(1);break;}
+            }
+        }
+        if(bytes==null||bytes.length>PeerWire.MAX_JSON||!expected.equals(PeerWire.hash(bytes)))throw new IOException("Podklad evidence chybí nebo má jiné bajty");return bytes;
     }
     @Override public void close(){db.close();}
 }

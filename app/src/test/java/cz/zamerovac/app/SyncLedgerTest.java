@@ -82,4 +82,9 @@ public class SyncLedgerTest {
         assertEquals(newer,LocalDatabase.readForCas(c));assertTrue(new ProtectedRevisions(c,prefs).pins().contains("last-photo"));assertArrayEquals(photo,Files.readAllBytes(new File(media,"last-photo").toPath()));PeerSnapshot recoverable=PeerSnapshot.captureRecovery(c,prefs,()->{});assertNotNull(recoverable);boolean exact=false;JSONArray history=recoverable.wire.getJSONArray("recovery");for(int i=0;i<history.length();i++)if(old.equals(new String(Files.readAllBytes(new File(media,history.getJSONObject(i).getString("metadataId")).toPath()),java.nio.charset.StandardCharsets.UTF_8)))exact=true;assertTrue("P1 preimage must remain independently readable after SQL loss",exact);
     }
 
+    @Test public void largeQueueUsesBoundedCursorRowsAndPortableFilesKeepExactBytes()throws Exception{
+        String text=new JSONObject().put("version",2).put("revision",1).put("jobs",new JSONArray()).put("opaque","ž".repeat(1600000)).toString();SyncQueueStore queue=new SyncQueueStore(home);assertTrue(queue.save(0,text));assertEquals(text,new SyncQueueStore(home).read());
+        try(SyncLedger ledger=SyncLedger.open(home)){JSONObject portable=ledger.portable();assertTrue("Portable index must not aggregate large JSON bodies",portable.toString().length()<65536);JSONArray files=portable.getJSONArray("files");boolean found=false;for(int i=0;i<files.length();i++){JSONObject file=files.getJSONObject(i);if("queue".equals(file.optString("name"))){assertArrayEquals(text.getBytes(java.nio.charset.StandardCharsets.UTF_8),ledger.exportFile(file.getString("path")));found=true;}}assertTrue(found);}
+    }
+
 }
