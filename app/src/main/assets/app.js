@@ -115,7 +115,7 @@ function save(){
    state.syncProtocol=2;const text=JSON.stringify(state);
    if(!native){localStorage.setItem('zamerovac-data',text);persistedSnapshot=text;return reportSaveResult(true)}
    const result=JSON.parse(Native.saveDataChecked(text,persistedSnapshot));
-   if(result.ok){persistedSnapshot=text;if(result.audioPending)window.PendingAudio?.retained();return reportSaveResult(true)}
+   if(result.ok){persistedSnapshot=text;if(result.audioPending)window.PendingAudio?.retained();else window.PendingAudio?.refresh();return reportSaveResult(true)}
    if(typeof result.current!=='string')throw new Error(result.error||'Zápis nebyl potvrzen');
    const disk=JSON.parse(result.current),base=persistedSnapshot?JSON.parse(persistedSnapshot):initial;
    applySavedState(reconcileSavedState(base,state,disk));persistedSnapshot=result.current;

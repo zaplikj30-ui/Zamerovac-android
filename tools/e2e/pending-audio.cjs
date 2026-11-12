@@ -1,7 +1,7 @@
 'use strict';
 // Real Chromium/UI/persistence; Native microphone/journal are explicitly a model here.
 // Real filesystem + AtomicFile + bridge coverage is PendingAudioTest/StorageLifecycleTest.
-const {suite,assert,createCanvas,tool,drag,editSelected}=require('./harness.cjs');
+const {suite,assert,createCanvas,tool,drag,editSelected,redo}=require('./harness.cjs');
 async function install(page){
  await page.addInitScript(()=>{
   const disk=()=>localStorage.getItem('audio-ui-disk')||'';
@@ -16,7 +16,7 @@ async function install(page){
     if(rejectWrite)return JSON.stringify({ok:false,error:'synthetic ENOSPC'});
     if(expected!==disk())return JSON.stringify({ok:false,current:disk()});localStorage.setItem('audio-ui-disk',text);
     if(!rejectBind)put(entries().map(e=>({...e,bound:referenced(JSON.parse(text),e.id)})));
-    return JSON.stringify({ok:true,audioPending:rejectBind});
+    return JSON.stringify({ok:true,audioPending:entries().some(e=>!e.bound)});
    },
    startAudio:id=>{recording=id;return true},stopAudio:()=>{if(!recording)return false;put([...entries(),{id:recording,token:'aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa',state:'pending',available:true}]);recording=null;return !rejectStop},cancelAudio:()=>{recording=null},
    pendingAudio:()=>JSON.stringify(entries().filter(e=>!e.bound)),
@@ -38,6 +38,7 @@ suite('pending-audio',async run=>{
   await page.locator('#richRetainedAudio').getByText('Připojit k této poznámce',{exact:true}).click();assert.equal(await page.evaluate(()=>current.items[0].audioMedia?.length||0),0);
   await page.click('#okModal');const item=await page.evaluate(()=>JSON.parse(localStorage.getItem('audio-ui-disk')).records.find(r=>r.kind==='canvas').items[0]);
   assert.equal(item.audioMedia.length,1);assert.equal(item.measure,'1250,123456789');assert.equal(item.unit,'in');assert.equal(item.text,'Původní poznámka');assert.notEqual(await page.evaluate(()=>localStorage.getItem('audio-ui-disk')),saved);
+  await page.click('#undo');assert.equal(await page.evaluate(()=>PendingAudio.list().length),1);assert.equal(await page.evaluate(()=>current.items[0].measure),'1250,123456789');await redo(page);assert.equal(await page.evaluate(()=>PendingAudio.list().length),0);
   await page.reload();assert.equal(await page.locator('#pendingAudioBanner').count(),0);evidence({nativeModel:true,originalBytes:'Covered by Robolectric, not this browser test',measure:item.measure,unit:item.unit});
  });
  await run('failed-save-cancel-keeps-pending-across-reload',async({page})=>{

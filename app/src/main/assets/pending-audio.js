@@ -7,7 +7,7 @@
   try{const entries=JSON.parse(Native.pendingAudio());if(!Array.isArray(entries))throw Error();return entries;}
   catch(error){return [{state:'needs-review',available:false}]}
  };
- const retained=()=>notify(t('retained'));
+ const retained=()=>{notify(t('retained'));refresh()};
  function confirm(record,note,ids){
   if(!native||typeof Native.confirmPendingAudio!=='function')return;
   for(const id of ids){

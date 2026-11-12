@@ -137,4 +137,13 @@ public class PendingAudioTest {
         exact(store.original("legacy-voice-legacy"));exact(store.original("staging-"+staged.getName()));
         for(int i=0;i<result.length();i++){assertFalse(result.getJSONObject(i).getBoolean("available"));assertEquals("needs-review",result.getJSONObject(i).getString("state"));}
     }
+    @Test public void prefsMemoryValuesAfterFailedCommitAreNeverTreatedAsDurableMetadata()throws Exception {
+        SharedPreferences failed=mock(SharedPreferences.class);SharedPreferences.Editor edit=mock(SharedPreferences.Editor.class);
+        when(failed.edit()).thenReturn(edit);when(edit.putString(anyString(),anyString())).thenReturn(edit);when(edit.commit()).thenReturn(false);
+        when(failed.getString(startsWith("mime-"),anyString())).thenReturn("audio/mp4");when(failed.getString(startsWith("name-"),anyString())).thenReturn("Hlasová poznámka.m4a");
+        PendingAudio failing=new PendingAudio(media,failed);JSONObject e=failing.begin("voice-memory");Files.write(failing.temporary(e).toPath(),ORIGINAL);
+        try{failing.complete(e);fail();}catch(IOException expected){}failing.abandon(e);
+        JSONArray result=new PendingAudio(media,failed).recoverPrimary();assertFalse(result.getJSONObject(0).getBoolean("available"));assertEquals("needs-review",result.getJSONObject(0).getString("state"));exact(new File(media,"voice-memory"));
+        assertTrue(store.recoverPrimary().getJSONObject(0).getBoolean("available"));exact(store.temporary(e));
+    }
 }
