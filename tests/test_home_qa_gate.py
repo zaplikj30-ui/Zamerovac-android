@@ -142,7 +142,7 @@ class GateUnitTest(unittest.TestCase):
             ("ref: " + "b" * 40, "ref: " + "d" * 40),
             ("expected-sha256 " + "c" * 64, "expected-sha256 " + "d" * 64),
             ("branches: [qa/example]", "branches: [main]"),
-            ("ref: " + SHA, "ref: main"),
+            ("TESTED_SHA: '" + SHA + "'", "TESTED_SHA: '" + ("f" * 40) + "'"),
         )
         for original, modified in substitutions:
             with self.subTest(modified=modified):
