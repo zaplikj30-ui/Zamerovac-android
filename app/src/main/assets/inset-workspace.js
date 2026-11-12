@@ -98,15 +98,39 @@
   const width=clamp(c.measureText(text).width+18,88,Math.max(88,(render?.viewport.w??stageCanvas.clientWidth)-20));
   return {x:p.x-width/2,y:p.y-fs/2-7,w:width,h:fs+15,p,text,fs};
  }
+ // All visible sheets rotate around the front photograph's centre.
+ // Reuse these screen-space bounds for the icon AND export/gallery extents.
+ function insetVisibleBlocks(it,g,render){
+  const count=(it.media||[]).filter(id=>!(it.audioMedia||[]).includes(id)).length;
+  const step=Math.min(10,72/Math.max(1,count-1));
+  const blocks=[];
+  for(let layer=0;layer<Math.max(1,count);layer++){
+   const offset=layer*step;
+   const corners=[
+    {x:-g.w/2+offset,y:-g.h/2-offset},
+    {x:g.w/2+offset,y:-g.h/2-offset},
+    {x:g.w/2+offset,y:g.h/2-offset},
+    {x:-g.w/2+offset,y:g.h/2-offset}
+   ].map(p=>turn(p,g));
+   const xs=corners.map(p=>p.x),ys=corners.map(p=>p.y);
+   blocks.push({x:Math.min(...xs),y:Math.min(...ys),
+    w:Math.max(...xs)-Math.min(...xs),h:Math.max(...ys)-Math.min(...ys)});
+  }
+  // The stack's numeric counter is visible only in the editor/gallery.
+  if(count>1&&!render?.exporting){
+   const offset=step*(count-1);
+   const centre=turn({x:g.w/2+offset+15,y:-g.h/2-offset-11},g);
+   blocks.push({x:centre.x-13,y:centre.y-13,w:26,h:26});
+  }
+  return blocks;
+ }
  // Place the audio indicator next to the inset rather than over text or photo.
  // Only screen-space drawing is affected; the stored note and hit areas stay intact.
  function audioMarkerPosition(c,it,g,render){
   if(!Array.isArray(it.audioMedia)||!it.audioMedia.length)return null;
-  const corners=[turn({x:-g.w/2,y:-g.h/2},g),turn({x:g.w/2,y:-g.h/2},g),
-   turn({x:g.w/2,y:g.h/2},g),turn({x:-g.w/2,y:g.h/2},g)];
-  const left=Math.min(...corners.map(p=>p.x)),right=Math.max(...corners.map(p=>p.x));
-  const top=Math.min(...corners.map(p=>p.y)),bottom=Math.max(...corners.map(p=>p.y));
-  const photo={x:left,y:top,w:right-left,h:bottom-top};
+  const blocks=insetVisibleBlocks(it,g,render);
+  const left=Math.min(...blocks.map(p=>p.x)),right=Math.max(...blocks.map(p=>p.x+p.w));
+  const top=Math.min(...blocks.map(p=>p.y)),bottom=Math.max(...blocks.map(p=>p.y+p.h));
   let caption;c.save();try{caption=labelRect(c,it,g,render)}finally{c.restore()}
   const radius=13,gap=7;
   const viewport=render?.viewport||{w:stageCanvas.clientWidth,h:stageCanvas.clientHeight};
@@ -123,14 +147,16 @@
    // Export/gallery expands the output bounds; editor stays in the viewport.
    if(!render?.exporting&&(marker.x<2||marker.y<2||
     marker.x+marker.w>viewport.w-2||marker.y+marker.h>viewport.h-2))continue;
-   if(!collides(marker,photo)&&!collides(marker,caption))return p;
+   if(blocks.every(block=>!collides(marker,block))&&!collides(marker,caption))return p;
   }
-  return null; // no safe place: do not obscure a dimension or a caption
+  return null; // no safe place: never obscure the inset, its stack or caption
  }
  // Shared bounds use the same geometry and default caption placement as rendering.
  window.insetAnnotationBounds=function(c,it,render){
   const image=window.__detailPhotoCache?.[it.media?.[0]];if(!image?.naturalWidth)return null;
-  const g=layout(it,image,render),corners=[turn({x:-g.w/2,y:-g.h/2},g),turn({x:g.w/2,y:-g.h/2},g),turn({x:g.w/2,y:g.h/2},g),turn({x:-g.w/2,y:g.h/2},g)];
+  const g=layout(it,image,render);
+  const corners=insetVisibleBlocks(it,g,render).flatMap(box=>
+   [{x:box.x,y:box.y},{x:box.x+box.w,y:box.y+box.h}]);
   const label=labelRect(c,it,g,render);
   if(label)corners.push({x:label.x,y:label.y},{x:label.x+label.w,y:label.y+label.h});
   const marker=audioMarkerPosition(c,it,g,render);
