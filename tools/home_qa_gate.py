@@ -224,12 +224,61 @@ jobs:
 '''
 
 
-def render_workflow(branch: str, source_sha: str) -> str:
+# Keep the existing canonical quick + WSL recipe byte-identical. A distinct,
+# strictly allowlisted mode runs REAL Chromium pixel tests on the same trusted
+# Windows service, without Android builds or full WSL/Gradle repetition.
+ONE_SHOT_BROWSER_STEPS = r'''      - name: Serial Windows Chromium pixel and editor regression
+        shell: cmd
+        run: |
+          cd /d "%GITHUB_WORKSPACE%\source"
+          set "PLAYWRIGHT_BROWSERS_PATH=C:\actions-runner\tools\ms-playwright"
+          set "LOCALAPPDATA=%GITHUB_WORKSPACE%\qa-evidence"
+          node tools\local-browser-qa.cjs --self-test
+          if errorlevel 1 exit /b 1
+          call npm.cmd install --no-save --package-lock=false --ignore-scripts --no-audit --no-fund playwright@1.62.1
+          if errorlevel 1 exit /b 1
+          call npx.cmd --no-install playwright install chromium
+          if errorlevel 1 exit /b 1
+          node tools\local-browser-qa.cjs --all
+          if errorlevel 1 exit /b 1
+'''
+
+def browser_workflow_recipe() -> str:
+    """Only an exact canonical Windows-only browser variant is permitted."""
+    first = "      - name: All quick Windows Node and Python tests\n"
+    last = "      - name: Upload synthetic quick results, never APK\n"
+    demand(ONE_SHOT_RECIPE.count(first) == 1 and ONE_SHOT_RECIPE.count(last) == 1,
+           "canonical recipe changed: browser mode must not guess step boundaries")
+    start = ONE_SHOT_RECIPE.index(first)
+    stop = ONE_SHOT_RECIPE.index(last, start)
+    base = ONE_SHOT_RECIPE[:start] + ONE_SHOT_BROWSER_STEPS + ONE_SHOT_RECIPE[stop:]
+    old_lint = r'python tools\home_qa_gate.py lint-workflow'
+    new_lint = r'python ..\recipe\tools\home_qa_gate.py lint-workflow'
+    demand(base.count(old_lint) == 1, "canonical lint guard changed")
+    base = base.replace(old_lint, new_lint)
+    base = base.replace("      - name: Upload synthetic quick results, never APK",
+                        "      - name: Upload small browser logs, no APK or source media")
+    base = base.replace("name: canonical-home-qa-__SOURCE_SHA__",
+                        "name: canonical-home-browser-__SOURCE_SHA__")
+    old_path = "          path: qa-evidence/Zamerovac-QA/results/"
+    new_path = (
+        "          path: |\n"
+        "            qa-evidence/Zamerovac-QA/browser/**/results.json\n"
+        "            qa-evidence/Zamerovac-QA/browser/**/*.log\n"
+        "            qa-evidence/Zamerovac-QA/browser/**/evidence/**/report.json"
+    )
+    demand(base.count(old_path) == 1, "canonical artifact path changed")
+    base = base.replace(old_path, new_path).replace("retention-days: 7", "retention-days: 3")
+    return base
+
+def render_workflow(branch: str, source_sha: str, browser: bool = False) -> str:
     demand(bool(re.fullmatch(r"qa/[a-z][a-z0-9._-]{3,65}", branch)),
            "only a literal trusted qa/* branch is allowed")
     demand(bool(SHA.fullmatch(source_sha)), "exact 40-character source SHA required")
-    return (ONE_SHOT_RECIPE.replace("__QA_BRANCH__", branch)
+    template = browser_workflow_recipe() if browser else ONE_SHOT_RECIPE
+    return (template.replace("__QA_BRANCH__", branch)
             .replace("__SOURCE_SHA__", source_sha).lstrip("\n"))
+
 
 
 def output_canonical_utf8(payload: bytes, output: Path | None) -> None:
@@ -268,8 +317,12 @@ def check_workflow(content: str, strict: bool = True) -> None:
     branch = re.search(r"(?m)^    branches: \[(qa/[a-z][a-z0-9._-]{3,65})\]$", normalized)
     source = re.search(r"(?m)^          ref: ([0-9a-f]{40})$", normalized)
     demand(bool(branch and source), "unknown workflow: render approved HOME recipe")
-    demand(normalized == render_workflow(branch.group(1), source.group(1)),
-           "unknown YAML, job, trigger, checkout, step order or WSL command: STOP")
+    allowed = (
+        render_workflow(branch.group(1), source.group(1)),
+        render_workflow(branch.group(1), source.group(1), browser=True),
+    )
+    demand(normalized in allowed,
+           "unknown YAML, job, trigger, checkout, browser, step order or WSL command: STOP")
 
 
 
@@ -343,6 +396,8 @@ def main(argv: list[str] | None = None) -> int:
     render = modes.add_parser("render-workflow")
     render.add_argument("--branch", required=True)
     render.add_argument("--expected-sha", required=True)
+    render.add_argument("--browser", action="store_true",
+                        help="single-job Windows Chromium QA, no APK or WSL")
     render.add_argument("--output", type=Path)
     wsl = modes.add_parser("wsl-check-from-windows")
     wsl.add_argument("--expected-sha", required=True)
@@ -354,7 +409,8 @@ def main(argv: list[str] | None = None) -> int:
     args = ap.parse_args(argv)
     try:
         if args.mode == "render-workflow":
-            payload = render_workflow(args.branch, args.expected_sha).encode("utf-8")
+            payload = render_workflow(args.branch, args.expected_sha,
+                                      browser=args.browser).encode("utf-8")
             output_canonical_utf8(payload, args.output)
             return 0
         if args.mode == "wsl-check-from-windows":
