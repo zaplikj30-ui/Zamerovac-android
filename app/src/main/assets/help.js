@@ -334,6 +334,7 @@ const chapters=[
       "Při více přílohách se orientuj podle jejich seznamu nebo galerie."
     ],
     "notes": [
+      "Je-li vedle vložené detailní fotografie dost místa, značka hlasové přílohy se zobrazuje mimo její rámeček a textový popisek. Jde jen o označení nahrávky; posun, otočení ani přiblížení detailu nemění zvukový soubor.",
       "Příloha a její detail jsou součástí projektu; zálohovací ZIP má zachovat jejich vazby.",
       "Zákaznické PDF může tyto přílohy obsahovat pouze po povolení soukromých poznámek."
     ],
