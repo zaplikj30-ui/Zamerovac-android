@@ -26,7 +26,7 @@ def valid_workflow():
 def browser_workflow():
     return GATE.render_workflow("qa/example", SHA, browser=True,
                                 source_branch="fix/approved-owner-branch",
-                                validator_sha="b" * 40, browser_sha256="c" * 64)
+                                validator_sha="b" * 40, validator_branch="infra/approved-gate", browser_sha256=GATE.APPROVED_BROWSER_SHA256)
 
 
 class GateUnitTest(unittest.TestCase):
@@ -112,8 +112,8 @@ class GateUnitTest(unittest.TestCase):
         self.assertNotIn("npm.cmd install --no-save", browser)
         self.assertNotIn("playwright install chromium", browser)
         self.assertIn("ref: fix/approved-owner-branch", browser)
-        self.assertIn("ref: " + "b" * 40, browser)
-        self.assertIn("expected-sha256 " + "c" * 64, browser)
+        self.assertIn("ref: infra/approved-gate", browser)
+        self.assertIn("expected-sha256 " + GATE.APPROVED_BROWSER_SHA256, browser)
         self.assertIn("python tools\\home_qa_gate.py windows-quick --expected-sha " + SHA +
                       " --root . --check-only", browser)
         self.assertIn("python tools\\home_qa_gate.py lint-workflow", browser)
@@ -139,8 +139,9 @@ class GateUnitTest(unittest.TestCase):
             ("node tools\\local-browser-qa.cjs --all", "echo browser skipped"),
             ("python tools\\home_qa_gate.py lint-workflow", "echo lint skipped"),
             ("ref: fix/approved-owner-branch", "ref: refs/pull/3/merge"),
-            ("ref: " + "b" * 40, "ref: " + "d" * 40),
-            ("expected-sha256 " + "c" * 64, "expected-sha256 " + "d" * 64),
+            ("ref: infra/approved-gate", "ref: refs/pull/7/merge"),
+            ("ACTUAL_GATE%\"==\"" + "b" * 40, "ACTUAL_GATE%\"==\"" + "d" * 40),
+            ("expected-sha256 " + GATE.APPROVED_BROWSER_SHA256, "expected-sha256 " + "d" * 64),
             ("branches: [qa/example]", "branches: [main]"),
             ("TESTED_SHA: '" + SHA + "'", "TESTED_SHA: '" + ("f" * 40) + "'"),
         )
@@ -161,7 +162,8 @@ class GateUnitTest(unittest.TestCase):
                 "render-workflow", "--browser", "--branch", "qa/example",
                 "--expected-sha", SHA,
                 "--source-branch", "fix/approved-owner-branch",
-                "--validator-sha", "b" * 40, "--browser-sha256", "c" * 64,
+                "--validator-sha", "b" * 40,
+                "--validator-branch", "infra/approved-gate", "--browser-sha256", GATE.APPROVED_BROWSER_SHA256,
                 "--output", str(output),
             ]))
             raw = output.read_bytes()
@@ -172,7 +174,8 @@ class GateUnitTest(unittest.TestCase):
                 "render-workflow", "--browser", "--branch", "qa/example",
                 "--expected-sha", SHA,
                 "--source-branch", "fix/approved-owner-branch",
-                "--validator-sha", "b" * 40, "--browser-sha256", "c" * 64,
+                "--validator-sha", "b" * 40,
+                "--validator-branch", "infra/approved-gate", "--browser-sha256", GATE.APPROVED_BROWSER_SHA256,
                 "--output", str(output),
             ]), "Must not overwrite existing trusted YAML")
             self.assertEqual(expected, output.read_bytes())
@@ -182,15 +185,22 @@ class GateUnitTest(unittest.TestCase):
                      "origin/fork@{1}", "fork:bad", "", "fix/.hidden", "fix/foo.lock"):
             with self.subTest(name=name), self.assertRaises(GATE.GateError):
                 GATE.render_workflow("qa/example", SHA, browser=True,
-                                     source_branch=name, validator_sha="b" * 40,
-                                     browser_sha256="c" * 64)
+                                     source_branch=name, validator_sha="b" * 40, validator_branch="infra/approved-gate",
+                                     browser_sha256=GATE.APPROVED_BROWSER_SHA256)
         with self.assertRaises(GATE.GateError):
             GATE.render_workflow("qa/example", SHA, browser=True)
+        with self.assertRaises(GATE.GateError):
+            GATE.render_workflow("qa/example", SHA, browser=True,
+                                 source_branch="fix/approved-owner-branch",
+                                 validator_branch="refs/pull/7/merge",
+                                 validator_sha="b" * 40,
+                                 browser_sha256=GATE.APPROVED_BROWSER_SHA256)
         for values in ({"validator_sha": "main"}, {"browser_sha256": "0" * 40}):
             with self.subTest(values=values), self.assertRaises(GATE.GateError):
                 GATE.render_workflow("qa/example", SHA, browser=True,
                                      **{**{"source_branch": "fix/approved-owner-branch",
-                                          "validator_sha": "b" * 40, "browser_sha256": "c" * 64},
+                                          "validator_sha": "b" * 40,
+                                          "validator_branch": "infra/approved-gate", "browser_sha256": GATE.APPROVED_BROWSER_SHA256},
                                         **values})
 
     def test_browser_binary_hash_is_fail_closed_and_read_only(self):
@@ -202,7 +212,8 @@ class GateUnitTest(unittest.TestCase):
             binary.write_bytes(b"known-synthetic-executable")
             fingerprint = hashlib.sha256(binary.read_bytes()).hexdigest()
             with mock.patch.object(GATE.platform, "system", return_value="Linux"):
-                self.assertEqual(binary, GATE.verify_browser(folder, fingerprint, {}))
+                with mock.patch.object(GATE, "APPROVED_BROWSER_SHA256", fingerprint):
+                    self.assertEqual(binary, GATE.verify_browser(folder, fingerprint, {}))
                 with self.assertRaisesRegex(GATE.GateError, "wrong-hash"):
                     GATE.verify_browser(folder, "0" * 64, {})
             self.assertEqual(binary.read_bytes(), b"known-synthetic-executable")
