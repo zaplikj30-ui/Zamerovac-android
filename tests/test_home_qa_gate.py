@@ -23,6 +23,11 @@ CHECKOUT = "11d5960a326750d5838078e36cf38b85af677262"
 def valid_workflow():
     return GATE.render_workflow("qa/example", SHA)
 
+def browser_workflow():
+    return GATE.render_workflow("qa/example", SHA, browser=True,
+                                source_branch="fix/approved-owner-branch",
+                                validator_sha="b" * 40, browser_sha256="c" * 64)
+
 
 class GateUnitTest(unittest.TestCase):
     def test_source_sha_exact_accept(self):
@@ -99,14 +104,22 @@ class GateUnitTest(unittest.TestCase):
                 GATE.trusted_owner({**e, **patch})
 
     def test_canonical_browser_workflow_is_exact_and_windows_only(self):
-        browser = GATE.render_workflow("qa/example", SHA, browser=True)
+        browser = browser_workflow()
         GATE.check_workflow(browser, strict=True)
         self.assertIn("[self-hosted, Windows, X64, zamerovac-qa]", browser)
         self.assertIn("node tools\\local-browser-qa.cjs --all", browser)
-        self.assertIn("playwright@1.62.1", browser)
+        self.assertIn("npm.cmd ci --offline --ignore-scripts", browser)
+        self.assertNotIn("npm.cmd install --no-save", browser)
+        self.assertNotIn("playwright install chromium", browser)
+        self.assertIn("ref: fix/approved-owner-branch", browser)
+        self.assertIn("ref: " + "b" * 40, browser)
+        self.assertIn("expected-sha256 " + "c" * 64, browser)
         self.assertIn("python tools\\home_qa_gate.py windows-quick --expected-sha " + SHA +
                       " --root . --check-only", browser)
-        self.assertIn("python ..\\recipe\\tools\\home_qa_gate.py lint-workflow", browser)
+        self.assertIn("python tools\\home_qa_gate.py lint-workflow", browser)
+        self.assertLess(browser.index("ACTUAL_SOURCE"), browser.index("python tools\\home_qa_gate.py lint-workflow"))
+        self.assertLess(browser.index("python tools\\home_qa_gate.py lint-workflow"), browser.index("npm.cmd ci --offline"))
+        self.assertNotIn("python -m unittest discover", browser)
         self.assertNotIn("wsl-check-from-windows", browser)
         self.assertNotIn("assembleDebug", browser)
         self.assertNotIn("pull_request:", browser)
@@ -115,16 +128,19 @@ class GateUnitTest(unittest.TestCase):
                             "Browser mode must not weaken the existing quick recipe")
 
     def test_canonical_browser_tampering_fails_closed(self):
-        good = GATE.render_workflow("qa/example", SHA, browser=True)
+        good = browser_workflow()
         substitutions = (
             ("github.actor == 'zaplikj30-ui'", "github.actor == 'other'"),
             ("[self-hosted, Windows, X64, zamerovac-qa]", "ubuntu-latest"),
             ("persist-credentials: false", "persist-credentials: true"),
-            ("playwright@1.62.1", "playwright@latest"),
+            ("npm.cmd ci --offline", "npm.cmd install playwright@latest"),
             ("python tools\\home_qa_gate.py windows-quick --expected-sha",
              "echo missing_SHA_check"),
             ("node tools\\local-browser-qa.cjs --all", "echo browser skipped"),
-            ("python ..\\recipe\\tools\\home_qa_gate.py lint-workflow", "echo lint skipped"),
+            ("python tools\\home_qa_gate.py lint-workflow", "echo lint skipped"),
+            ("ref: fix/approved-owner-branch", "ref: refs/pull/3/merge"),
+            ("ref: " + "b" * 40, "ref: " + "d" * 40),
+            ("expected-sha256 " + "c" * 64, "expected-sha256 " + "d" * 64),
             ("branches: [qa/example]", "branches: [main]"),
             ("ref: " + SHA, "ref: main"),
         )
@@ -143,17 +159,63 @@ class GateUnitTest(unittest.TestCase):
             output = folder / "home-qa-one-shot.yml"
             self.assertEqual(0, GATE.main([
                 "render-workflow", "--browser", "--branch", "qa/example",
-                "--expected-sha", SHA, "--output", str(output),
+                "--expected-sha", SHA,
+                "--source-branch", "fix/approved-owner-branch",
+                "--validator-sha", "b" * 40, "--browser-sha256", "c" * 64,
+                "--output", str(output),
             ]))
             raw = output.read_bytes()
-            expected = GATE.render_workflow("qa/example", SHA, browser=True).encode("utf-8")
+            expected = browser_workflow().encode("utf-8")
             self.assertEqual(expected, raw)
             self.assertEqual(0, GATE.main(["lint-workflow", str(output), "--strict"]))
             self.assertEqual(2, GATE.main([
                 "render-workflow", "--browser", "--branch", "qa/example",
-                "--expected-sha", SHA, "--output", str(output),
+                "--expected-sha", SHA,
+                "--source-branch", "fix/approved-owner-branch",
+                "--validator-sha", "b" * 40, "--browser-sha256", "c" * 64,
+                "--output", str(output),
             ]), "Must not overwrite existing trusted YAML")
             self.assertEqual(expected, output.read_bytes())
+
+    def test_browser_bad_trust_arguments_stop_before_execution(self):
+        for name in ("refs/pull/3/merge", "fix/../../evil", "qa/demo &&whoami",
+                     "origin/fork@{1}", "fork:bad", "", "fix/.hidden", "fix/foo.lock"):
+            with self.subTest(name=name), self.assertRaises(GATE.GateError):
+                GATE.render_workflow("qa/example", SHA, browser=True,
+                                     source_branch=name, validator_sha="b" * 40,
+                                     browser_sha256="c" * 64)
+        with self.assertRaises(GATE.GateError):
+            GATE.render_workflow("qa/example", SHA, browser=True)
+        for values in ({"validator_sha": "main"}, {"browser_sha256": "0" * 40}):
+            with self.subTest(values=values), self.assertRaises(GATE.GateError):
+                GATE.render_workflow("qa/example", SHA, browser=True,
+                                     **{**{"source_branch": "fix/approved-owner-branch",
+                                          "validator_sha": "b" * 40, "browser_sha256": "c" * 64},
+                                        **values})
+
+    def test_browser_binary_hash_is_fail_closed_and_read_only(self):
+        import hashlib
+        with tempfile.TemporaryDirectory() as temp:
+            folder = Path(temp) / "ms-playwright"
+            binary = folder / "chromium-123" / "chrome-win" / "chrome.exe"
+            binary.parent.mkdir(parents=True)
+            binary.write_bytes(b"known-synthetic-executable")
+            fingerprint = hashlib.sha256(binary.read_bytes()).hexdigest()
+            with mock.patch.object(GATE.platform, "system", return_value="Linux"):
+                self.assertEqual(binary, GATE.verify_browser(folder, fingerprint, {}))
+                with self.assertRaisesRegex(GATE.GateError, "wrong-hash"):
+                    GATE.verify_browser(folder, "0" * 64, {})
+            self.assertEqual(binary.read_bytes(), b"known-synthetic-executable")
+
+    def test_browser_first_execution_preceded_by_owner_sha_gate(self):
+        browser = browser_workflow()
+        self.assertIn("repository: zaplikj30-ui/Zamerovac-android", browser)
+        self.assertIn('if /I not "%ACTUAL_SOURCE%"=="' + SHA + '" exit /b 1', browser)
+        self.assertIn('if /I not "%ACTUAL_GATE%"=="' + "b" * 40 + '" exit /b 1', browser)
+        self.assertLess(browser.index("ACTUAL_SOURCE"), browser.index("python tools\\home_qa_gate.py lint-workflow"))
+        self.assertLess(browser.index("python tools\\home_qa_gate.py lint-workflow"), browser.index("npm.cmd ci --offline"))
+        self.assertNotIn("python -m unittest discover", browser)
+        self.assertNotIn("npx.cmd --no-install playwright install", browser)
 
     def test_workflow_valid_windows_wsl_split(self):
         GATE.check_workflow(valid_workflow(), strict=True)
