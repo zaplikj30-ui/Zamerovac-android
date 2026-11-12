@@ -107,12 +107,15 @@ class GateUnitTest(unittest.TestCase):
         browser = browser_workflow()
         GATE.check_workflow(browser, strict=True)
         self.assertIn("[self-hosted, Windows, X64, zamerovac-qa]", browser)
-        self.assertIn("node tools\\local-browser-qa.cjs --all", browser)
+        self.assertIn("node \"%GITHUB_WORKSPACE%\\gate\\tools\\local-browser-qa.cjs\" --all", browser)
         self.assertIn("npm.cmd ci --offline --ignore-scripts", browser)
         self.assertNotIn("npm.cmd install --no-save", browser)
         self.assertNotIn("playwright install chromium", browser)
         self.assertIn("ref: fix/approved-owner-branch", browser)
         self.assertIn("ref: infra/approved-gate", browser)
+        self.assertIn('set "ZAMEROVAC_SOURCE_ROOT=%GITHUB_WORKSPACE%\\source"', browser)
+        self.assertIn('node "%GITHUB_WORKSPACE%\\gate\\tools\\local-browser-qa.cjs" --self-test', browser)
+        self.assertNotIn('node tools\\local-browser-qa.cjs --all', browser)
         self.assertIn("expected-sha256 " + GATE.APPROVED_BROWSER_SHA256, browser)
         self.assertIn("python tools\\home_qa_gate.py windows-quick --expected-sha " + SHA +
                       " --root . --check-only", browser)
@@ -136,7 +139,7 @@ class GateUnitTest(unittest.TestCase):
             ("npm.cmd ci --offline", "npm.cmd install playwright@latest"),
             ("python tools\\home_qa_gate.py windows-quick --expected-sha",
              "echo missing_SHA_check"),
-            ("node tools\\local-browser-qa.cjs --all", "echo browser skipped"),
+            ("node \"%GITHUB_WORKSPACE%\\gate\\tools\\local-browser-qa.cjs\" --all", "echo browser skipped"),
             ("python tools\\home_qa_gate.py lint-workflow", "echo lint skipped"),
             ("ref: fix/approved-owner-branch", "ref: refs/pull/3/merge"),
             ("ref: infra/approved-gate", "ref: refs/pull/7/merge"),
