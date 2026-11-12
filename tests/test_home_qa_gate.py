@@ -104,6 +104,8 @@ class GateUnitTest(unittest.TestCase):
         self.assertIn("[self-hosted, Windows, X64, zamerovac-qa]", browser)
         self.assertIn("node tools\\local-browser-qa.cjs --all", browser)
         self.assertIn("playwright@1.62.1", browser)
+        self.assertIn("python tools\\home_qa_gate.py windows-quick --expected-sha " + SHA +
+                      " --root . --check-only", browser)
         self.assertIn("python ..\\recipe\\tools\\home_qa_gate.py lint-workflow", browser)
         self.assertNotIn("wsl-check-from-windows", browser)
         self.assertNotIn("assembleDebug", browser)
@@ -119,6 +121,8 @@ class GateUnitTest(unittest.TestCase):
             ("[self-hosted, Windows, X64, zamerovac-qa]", "ubuntu-latest"),
             ("persist-credentials: false", "persist-credentials: true"),
             ("playwright@1.62.1", "playwright@latest"),
+            ("python tools\\home_qa_gate.py windows-quick --expected-sha",
+             "echo missing_SHA_check"),
             ("node tools\\local-browser-qa.cjs --all", "echo browser skipped"),
             ("python ..\\recipe\\tools\\home_qa_gate.py lint-workflow", "echo lint skipped"),
             ("branches: [qa/example]", "branches: [main]"),
