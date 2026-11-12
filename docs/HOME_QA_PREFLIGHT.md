@@ -6,7 +6,7 @@
 
 Ad hoc HOME YAML spouštěl obecné Python unittest ve WSL, kde není Node. Původní `lint-workflow --strict` chybně schvaloval i další nechráněné cloudové joby, PR triggery a skryté Python→WSL příkazy, protože jen hledal správné řetězce v libovolné části souboru. Test-first RED nezávisle ověřil šest těchto příkladů.
 
-**Varianta A (vybrána):** pouze jediná bezpečná, přesně generovaná YAML šablona, nikoli regexy vydávající se za plný YAML parser. `render-workflow` vloží doslovnou důvěryhodnou větev `qa/*` a úplné 40znakové SOURCE SHA. `lint-workflow --strict` porovná celý výsledný YAML s jedinou povolenou šablonou. Cokoli navíc nebo jinak, například `ubuntu-24.04`, `on: [push,pull_request]`, další job/step, nepinovaný checkout, jiná oprávnění, maskovaný komentář, PowerShell proměnná `$cmd`, `bash -lc` nebo Python `script=r"""..."""`, skončí **STOP**.
+**Varianta A (vybrána):** pouze výslovně povolené, přesně generované YAML šablony, nikoli regexy vydávající se za plný YAML parser. `render-workflow` vloží doslovnou důvěryhodnou větev `qa/*` a úplné 40znakové SOURCE SHA. `lint-workflow --strict` porovná celý výsledný YAML s výslovně povolenou šablonou. Původní quick/WSL šablona zůstává beze změny; nová samostatná varianta Chromium má vlastní přesnou šablonu. Cokoli navíc nebo jinak, například `ubuntu-24.04`, `on: [push,pull_request]`, další job/step, nepinovaný checkout, jiná oprávnění, maskovaný komentář, PowerShell proměnná `$cmd`, `bash -lc` nebo Python `script=r"""..."""`, skončí **STOP**.
 
 Varianta B (instalace dalšího Node do WSL) nebyla zvolena: nepomohla by proti falešnému schvalování neznámých workflow a zdvojila by údržbu runtime.
 
@@ -22,6 +22,21 @@ python tools\home_qa_gate.py lint-workflow .github\workflows\home-qa-one-shot.ym
 **UTF-8 na českém Windows:** Používej `--output` místo běžného přesměrování `>`. Generátor zapisuje přímo **UTF-8 bez BOM** i při `PYTHONUTF8=0` a systémovém CP1250, kontroluje přesný povolený název souboru a **odmítne přepsat existující** YAML. Chceš-li zachovat přesměrování `>`, nová verze zapisuje na binární stdout bajty UTF-8, nikoliv ANSI/CP1250. Explicitní `python -X utf8 tools\\home_qa_gate.py render-workflow ...` zůstává kompatibilní. Po vytvoření vždy proveď `lint-workflow --strict`; chyba UTF‑8 je STOP, nikoli důvod vypnout linter. Pokud soubor již existuje, nejprve samostatně ověř jeho původ a aktuální SHA, neodstraňuj jej automaticky.
 
 `PLNY_SOURCE_SHA` musí být doslovných 40 hex znaků skutečně vybraného a schváleného commitu. Recept vynucuje jediný owner-only Windows `self-hosted` job, pouze vlastní `push` do přesné `qa/*` větve, `contents: read`, připnutý checkout bez přetrvávajících přihlašovacích údajů, původní SOURCE SHA a pořadí **lint + testy → Windows quick → řízený WSL launcher**. Soubor se jmenuje přesně `.github/workflows/home-qa-one-shot.yml`. Není přípustné jej ručně rozšiřovat o neověřené kroky.
+
+## Doplňková QA varianta Chromium pro rozpracovaný SHA (bez merge)
+
+Tento režim **nenahrazuje** fungující čtyřjobové HOME QA na `main`. Jde o druhý přesně generovaný kanonický one-shot pro vlastní důvěryhodnou `qa/*` větev, aby se před merge daly otestovat pixely a ovládání z konkrétního SHA. Nejde o obecné spouštění libovolných PR/forků; vstupní commit musí být výslovně prověřen jako vlastníkova větev v našem repozitáři. Zásadní změna pracovního postupu vyžaduje nezávislé bezpečnostní review, dříve než bude režim poprvé skutečně spuštěn.
+
+Po ověření úplného SOURCE SHA a kontrole triggerů použije důvěryhodný koordinátor na **nové, neexistující** `qa/*` větvi kanonický generátor v režimu `--browser`. Má vlastní testy, které odmítají změněný job, nechráněný branch trigger, fork/PR, cloud, nepinovanou verzi Playwright, odstranění SHA preflightu či výměnu checkoutu.
+
+```bat
+python tools\home_qa_gate.py render-workflow --browser --branch qa/overena-browser-qa --expected-sha PLNY_SOURCE_SHA --output .github\workflows\home-qa-one-shot.yml
+python tools\home_qa_gate.py lint-workflow .github\workflows\home-qa-one-shot.yml --strict
+```
+
+Prohlížečová varianta používá `actions/checkout` s doslovným zdrojovým SHA, **oddělený read-only checkout receptu**, kontrolu receptu vlastním kanonickým `lint-workflow --strict` a další `windows-quick --check-only` kontrolu skutečně checkoutovaného SHA. Jediný Windows `self-hosted` job pak sériově spustí bezpečnostní self-test lokálního webserveru, připnutý Playwright `1.62.1`, Chromium a existující `node tools/local-browser-qa.cjs --all`. Vyžaduje funkční domácí službu; nevyžaduje APK, Android emulátor, WSL Node ani placený GitHub-hosted runner. Zveřejňují se jen omezené protokoly syntetických scénářů (3 dny), ne původní fotografie či mediální soubory. Runner pracuje sekvenčně na PC s pevnými 16 GB RAM.
+
+Kanonická šablona **neblokuje vytvoření úplně jiného workflow**, a proto je nezbytné posuzovat i samotný GitHub diff nových souborů a triggerů před každým spuštěním. Pokud nejde potvrdit vlastnictví zdroje, přesný SHA, předchozí bezpečnostní review nebo stabilitu runneru, **STOP**. Výsledek vždy uvést jako PASS/FAIL/SKIP/NOT RUN, prostředí a skutečný testovaný SHA. Nový SHA po úpravě kódu vyžaduje novou testovací kontrolu; historický PASS se nepřenáší.
 
 ## Skutečný fail-fast preflight
 
