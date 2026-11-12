@@ -448,7 +448,8 @@ def check_workflow(content: str, strict: bool = True) -> None:
     if "          path: gate\n" in normalized:
         source = re.search(r"(?m)^      TESTED_SHA: '([0-9a-f]{40})'$", normalized)
         source_branch = re.search(r"(?m)^          ref: ([a-z0-9_./-]+)\n          path: source$", normalized)
-        validator = re.search(r'(?m)^          if /I not "%ACTUAL_GATE%"=="([0-9a-f]{40})" exit /b 1
+        validator = re.search(r'(?m)^          if /I not "%ACTUAL_GATE%"=="([0-9a-f]{40})" exit /b 1$', normalized)
+        validator_branch = re.search(r"(?m)^          ref: ([a-z0-9_./-]+)\n          path: gate$", normalized)
         binary = re.search(r"(?m)verify-browser --browser-root [^\n]* --expected-sha256 ([0-9a-f]{64})$", normalized)
         demand(bool(source and source_branch and validator and validator_branch and binary),
                "missing source provenance/validator/binary pin")
