@@ -124,7 +124,7 @@ public class PeerTransferTest {
  @Test public void completeBidirectionalMediaAndExactAnnotationsRemainIdempotent()throws Exception{
   JSONObject photo=record("photo-a",aid,"0,000000000123456789"),note=record("note-b",bid,"99999999,123456789");media(a,photo,3);photo.put("notes",new JSONArray().put(new JSONObject().put("text","Přesná poznámka").put("audioMedia",new JSONArray().put("media-1"))));photo.getJSONArray("items").put(new JSONObject().put("type","detail").put("detailItems",new JSONArray().put(new JSONObject().put("media",new JSONArray().put("media-2")).put("measure","1585,800001"))));save(a,db(photo));save(b,db(note));
   exchange(null,null);exchange(null,null);assertEquals(2,read(a).getJSONArray("records").length());assertEquals(CausalClock.canonical(read(a)),CausalClock.canonical(read(b)));assertEquals(CausalClock.canonical(photo),CausalClock.canonical(read(b).getJSONArray("records").getJSONObject(1)));
-  for(int i=0;i<3;i++)assertArrayEquals(Files.readAllBytes(new File(a.home,"media/media-"+i).toPath()),Files.readAllBytes(new File(b.home,"media/media-"+i).toPath()));assertEquals("Zkušební foto 2",b.prefs.getString("name-media-2",null));assertEquals(0,as.outbox.pending(bid));assertEquals(0,bs.outbox.pending(aid));assertTrue(new File(a.noBackup,"sync-queue-v2.json").exists());assertFalse(new File(a.home,"sync-queue-v2.json").exists());
+  for(int i=0;i<3;i++)assertArrayEquals(Files.readAllBytes(new File(a.home,"media/media-"+i).toPath()),Files.readAllBytes(new File(b.home,"media/media-"+i).toPath()));assertEquals("Zkušební foto 2",b.prefs.getString("name-media-2",null));assertEquals(0,as.outbox.pending(bid));assertEquals(0,bs.outbox.pending(aid));assertTrue(new File(a.noBackup,"sync-ledger-v1.sqlite").isFile());assertTrue(new File(a.noBackup,"sync-ledger-v1.install").isFile());assertFalse(new File(a.home,"sync-queue-v2.json").exists());
  }
  @Test public void corruptReceiverCannotAcceptOldBackupOrAckPeerSnapshot()throws Exception{
   JSONObject source=record("photo-from-peer",aid,"1585,800001234567890");
@@ -236,8 +236,8 @@ public class PeerTransferTest {
   bytes[1]^=1;try{PeerMedia.receive(target,"media-0",new ByteArrayInputStream(bytes),expected);fail("Wrong hash committed");}catch(IOException correct){assertTrue(correct.getMessage().contains("Kontrola přijaté"));}assertEquals(0,target.listFiles().length);
  }
  @Test public void coalescesOnlyObservedRevisionsAndRejectsUnsafeMetadata()throws Exception{
-  JSONObject original=record("photo-a",aid,"100,0001");save(a,db(original));as.outbox.prepare(bid);JSONObject newer=new JSONObject(original.toString()).put("syncClock",new JSONObject().put(aid,2)).put("title","new title");save(a,db(newer));as.outbox.prepare(bid);assertEquals(1,as.outbox.messages(bid).size());
-  JSONObject independent=new JSONObject(original.toString()).put("syncClock",new JSONObject().put(bid,1)).put("title","independent");save(a,db(independent));as.outbox.prepare(bid);assertEquals(2,as.outbox.messages(bid).size());
+  JSONObject original=record("photo-a",aid,"100,0001");save(a,db(original));as.outbox.prepare(bid);JSONObject newer=new JSONObject(original.toString()).put("syncClock",new JSONObject().put(aid,2)).put("title","new title");save(a,db(newer));as.outbox.prepare(bid);assertEquals(1,as.outbox.pendingProjects(bid));assertEquals(2,as.outbox.messages(bid).size());
+  JSONObject independent=new JSONObject(original.toString()).put("syncClock",new JSONObject().put(bid,1)).put("title","independent");save(a,db(independent));as.outbox.prepare(bid);assertEquals(2,as.outbox.pendingProjects(bid));assertEquals(3,as.outbox.messages(bid).size());
   PeerSnapshot snapshot=PeerSnapshot.capture(a,a.prefs);try{PeerSnapshot.parse(snapshot.bytes,bid);fail("Spoofed source accepted");}catch(IOException expected){assertTrue(expected.getMessage().contains("cizí"));}
   JSONObject wire=new JSONObject(snapshot.wire.toString()).put("sourceId",aid);wire.getJSONObject("data").put("unsafeInteger",9007199254740992L);try{PeerSnapshot.parse(wire.toString().getBytes(StandardCharsets.UTF_8),aid);fail("Inexact number accepted");}catch(IOException expected){assertTrue(expected.getMessage().contains("Číselné pole"));}
   String duplicate="{\"format\":1,\"format\":2}";try{PeerSnapshot.parse(duplicate.getBytes(StandardCharsets.UTF_8),aid);fail("Duplicate JSON key accepted");}catch(IOException expected){}
@@ -258,7 +258,7 @@ public class PeerTransferTest {
    finalDb=historical;
   }
   assertNotNull(finalDb);
-  assertEquals(20,as.outbox.pending(bid));
+  assertEquals(21,as.outbox.pending(bid)); // 20 independent project revisions plus one complete history intent
   assertEquals(16,as.outbox.messages(bid).size());
   JSONObject old=as.outbox.messages(bid).get(0);
   File evidence=new File(a.noBackup,"sync-v2-outbox/"+old.getString("hash")+".json");
@@ -276,8 +276,8 @@ public class PeerTransferTest {
   bs=store(b,new SyncPeerRegistry(b.noBackup));
   PeerSnapshot current=as.outbox.prepare(bid);
   assertEquals(recovery,current.wire.getString("recoveryEpoch"));
-  assertEquals(20,as.outbox.quarantinedCount(bid));
-  assertEquals(1,as.outbox.messages(bid).size());
+  assertEquals(21,as.outbox.quarantinedCount(bid));
+  assertEquals(1,as.outbox.pendingProjects(bid));assertEquals(2,as.outbox.messages(bid).size());
   try{as.outbox.completed(bid,old);fail("Old direct ACK retired evidence");}
   catch(IOException expected){}
   assertArrayEquals(original,Files.readAllBytes(evidence.toPath()));
@@ -294,12 +294,12 @@ public class PeerTransferTest {
   assertEquals(precise,received.getJSONArray("records").getJSONObject(0)
       .getJSONArray("items").getJSONObject(0).getString("measure"));
   assertEquals(0,as.outbox.pending(bid));
-  assertEquals(20,as.outbox.quarantinedCount(bid));
+  assertEquals(21,as.outbox.quarantinedCount(bid));
   assertArrayEquals(original,Files.readAllBytes(evidence.toPath()));
   // Restart/retry uses the same production queue, not an in-memory mark.
   as=store(a,new SyncPeerRegistry(a.noBackup));
   exchange(null,null);
-  assertEquals(20,as.outbox.quarantinedCount(bid));
+  assertEquals(21,as.outbox.quarantinedCount(bid));
   assertEquals(1,read(b).getJSONArray("records").length());
   assertArrayEquals(original,Files.readAllBytes(evidence.toPath()));
  }

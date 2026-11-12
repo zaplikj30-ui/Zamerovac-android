@@ -173,8 +173,8 @@ public class SyncSafetyTest {
  @Test public void durableQueueSurvivesReopenAndRejectsStaleOrInvalidRevision()throws Exception {
   SyncQueueStore store=new SyncQueueStore(home);assertEquals(0,new JSONObject(store.read()).getInt("revision"));String one="{\"version\":2,\"revision\":1,\"jobs\":[]}";assertTrue(store.save(0,one));assertEquals(one,new SyncQueueStore(home).read());assertFalse(store.save(0,one));
   try{store.save(1,"{\"version\":2,\"revision\":2.5,\"jobs\":[]}");fail("Fractional revision accepted");}catch(Exception expected){}assertEquals(one,store.read());
-  File blocker=new File(home,"sync-queue-v2.json.new");blocker.mkdirs();java.nio.file.Files.write(new File(blocker,"block").toPath(),new byte[]{1});
-  try{try{store.save(1,"{\"version\":2,\"revision\":2,\"jobs\":[]}");fail("Write failure hidden");}catch(IOException expected){}assertEquals(one,store.read());}finally{new File(blocker,"block").delete();blocker.delete();}
+  LedgerTestFault.block(home);
+  try{try{store.save(1,"{\"version\":2,\"revision\":2,\"jobs\":[]}");fail("Write failure hidden");}catch(IOException expected){}assertEquals(one,store.read());}finally{LedgerTestFault.unblock(home);}
  }
  @Test public void installationIdentityIsStableAndVectorsValidateExactCounters()throws Exception {
   String id=DeviceIdentity.get(context.getNoBackupFilesDir());assertTrue(DeviceIdentity.valid(id));assertEquals(id,DeviceIdentity.get(context.getNoBackupFilesDir()));assertNotEquals(id,DeviceIdentity.get(new File(context.getNoBackupFilesDir(),"another-installation")));assertEquals("concurrent",CausalClock.compare(clock(1,0),clock(0,1)));assertEquals(2,CausalClock.advance(clock(1,0),A).getLong(A));

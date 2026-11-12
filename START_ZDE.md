@@ -2,6 +2,10 @@
 
 > **Platná pravidla a brány:** [AGENTS.md](AGENTS.md), [projektový plán](PROJEKTOVY_PLAN_ZAMEROVACE.md) a poslední rozhodnutí v [issue #42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42). Tento krátký soubor nenahrazuje historii ani důkazy. **Před vývojovou prací vždy ověř aktuální HEAD, relevantní issues a komentáře, PR, CI, dotčené soubory a Releases.** Před zápisem ověř HEAD a kolize znovu.
 
+## Rozpracovaná implementace synchronizace B (12. 11. 2026)
+
+Vlastní větev `implement/sync-core-b-20261112`, base main `cf7807905f77f6fd8478c137b1b41aca6ebc3275`. Převzaty ochrany #100–#102 a návaznosti audia #107 bez změn workflow. [Implementace, příčiny, průběžné testy a povinné brány](docs/sync-core-b.md). Stav DRAFT; závěrečný HEAD a přesné testy jsou v PR a checkpointu #42. Nejde o merge ani APK. Další krok: dokončit a doložit společnou regresi a předat Kontrolorovi 40.
+
 ## Poslední ověřený přehled (11. 11. 2026, historický snapshot)
 
 - `main` při této revizi: `c604860db4fddeefc077e27411bc1941815f7d94`. **Není zaručeno, že je to dnešní nejnovější HEAD.**

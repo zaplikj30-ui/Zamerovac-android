@@ -67,7 +67,7 @@ const chapters=[
       "Náhledy v přehledu se vytvářejí se zmenšeným dekódováním mimo zámek místní databáze, aby načítání fotografie neblokovalo ukládání. U náhledu se respektuje otočení i zrcadlení EXIF; originál zůstává beze změny. Při chybě nebo odstranění fotografie se nepublikuje opožděný náhled.",
       "Opakované otevření stejné fotografie využívá omezenou paměťovou mezipaměť dekódovaných obrázků. Po úplném restartu se originál načítá znovu. Při načítání nebo chybě se samostatné kóty nezobrazují na prázdném podkladu; originály ani hodnoty se nemění.",
       "Příloha se připojí až po potvrzení celého zápisu. Při přerušení se nedokončený soubor odmítne a existující originál se nepřepíše.",
-      "Přidávání ze systémového výběru běží mimo hlavní vlákno a zobrazuje průběh. Po dobu dávky nezačínej další výběr. Výsledek patří do původní složky nebo poznámky; po přechodu jinam se tam nepřesměruje. Je-li původní cíl smazaný, uzamčený nebo dialog zavřený, příloha se jinam nepřipojí. Jedna dávka má nejvýše 1024 souborů a jeden soubor nejvýše 2 GiB."
+      "Přidávání ze systémového výběru běží mimo hlavní vlákno a zobrazuje průběh. Po dobu dávky nezačínej další výběr. Výsledek patří do původní složky nebo poznámky; po přechodu jinam se tam nepřesměruje. Je-li původní cíl smazaný, uzamčený nebo dialog zavřený, příloha se jinam nepřipojí. Jedna dávka má nejvýše 1024 souborů ; velikost souboru omezuje volné místo a schopnosti úložiště."
     ],
     "keywords": [
       "foto",
@@ -307,13 +307,15 @@ const chapters=[
     ],
     "notes": [
       "Hlasové nahrávání vyžaduje přístup k mikrofonu. Při odmítnutém oprávnění lze zkusit nastavení Androidu.",
-      "Hlas se připojí k původní poznámce až po úspěšném ukončení záznamu a potvrzení souboru. Uložit nebo šipka zpět v textové poznámce nahrávání ukončí. Při chybě mikrofonu nebo zápisu zůstane formulář otevřený; u bodové poznámky zůstane otevřený i po neúspěšném Zpět. Zrušit bodovou poznámku rozpracovaný hlas zahodí.",
-      "Nahrávej v otevřené aplikaci; systém může mikrofon na pozadí omezit. Nedokončený hlas se při zničení obrazovky nepřipojí. Existující originál ani při kolizi identifikátoru nepřepisuj. Přílohy s neplatnými metadaty nebo nad 2 GiB se odmítnou.",
+      "Hlasovou přílohu v bodové poznámce nejprve bezpečně ukonči tlačítkem Zastavit; k poznámce se zapíše až po potvrzení Uložit nebo po úspěšném Zpět. Zrušit zachová původní text a přílohy. Když Zastavit selže, původní pokus je ukončený a je nutné spustit nové nahrávání; neukládej neúplný hlas. Dokončená, ale nepotvrzená nahrávka zůstane v přehledu Uchované hlasové nahrávky i po restartu. V otevřené poznámce použij Připojit k této poznámce a Uložit. Záznam s nejistým dokončením nebo poškozenou evidencí se nemaže; tlačítkem Uložit kopii originálu jej lze zkopírovat pro kontrolu. Neznámá nebo poškozená evidence vyvolá samostatné upozornění a pozastaví automatické opravy i potvrzování připojení. Ostatní dostupné originály zůstávají v přehledu a lze uložit jejich jednotlivé kopie. Při nesouladu souborů se ověřený originál nabízí samostatně a obsah musí odpovídat evidovanému SHA. Tlačítko Uložit podezřelou kopii zachrání oddělený nejistý soubor pro ruční kontrolu; taková kopie není potvrzením původního obsahu ani připojení k poznámce. Dokončení v návrhu ještě neznamená úspěšné uložení poznámky. Automatické mazání nahrávek je vypnuté i při vysypání koše. ZIP zakázek nezahrnuje nepřipojené nahrávky; jejich kopii ulož samostatně. Uložit nebo šipka zpět v textové poznámce nahrávání ukončí. Při chybě mikrofonu nebo zápisu zůstane formulář otevřený; u bodové poznámky zůstane otevřený i po neúspěšném Zpět.",
+      "Nahrávej v otevřené aplikaci; systém může mikrofon na pozadí omezit. Nedokončený hlas se při zničení obrazovky nepřipojí. Existující originál ani při kolizi identifikátoru nepřepisuj. Přílohy s neplatnými metadaty se odmítnou; při nedostatku místa přenos zůstane nedokončený.",
       "Checklisty a přílohy dostávají revizi a průběžně se ukládají. Příchozí synchronizace během otevřené poznámky počká na dokončení její úpravy. Při chybě zápisu tlačítko Uložit formulář nezavře; zopakuj uložení.",
+      "Bodová poznámka může obsahovat zvuk i detailní fotografii. Přehrávání zvuku nemá samo otevřít klávesnici. Do kótování detailu lze vstoupit jen přes obrazovou přílohu, nikoli přes nahraný zvuk. Chybějící náhled nezmění uložený originál. Když smazání není potvrzené, dialog zůstane otevřený.",
       "Pouhé otevření a zavření textové poznámky nebo zobrazení prázdné skici nemění její obsah ani revizi. Uzamčená poznámka nedovolí měnit checklist ani odebírat přílohy.",
       "Soukromé poznámky do zákaznického PDF patří jen při výslovné volbě."
     ],
     "keywords": [
+      "uchované nahrávky", "obnova hlasu",
       "checklist",
       "poznámkový blok",
       "audio",
@@ -439,7 +441,7 @@ const chapters=[
       "Pokud přerušená nebo poškozená záloha zanechá neúplný datový blok, nový pokus může z dostupného originálu vytvořit další ověřenou kopii. Původní soubor a historické manifesty nepřepisuje. Kontrola i obnova vybírají jen úplný obsah se správným součtem. Chyba oprávnění nebo čtení se nesmí vydávat za opravenou zálohu; pokud chybí všechny kopie i originál, obnova není možná. Ověření může vyžadovat další čtení velkých souborů.",
       "Automatická frekvence ani automatické promazávání nejsou zapnuté. Systémovou složku lze spravovat v jejím správci souborů; hromadné odstranění dat této aplikace v nastavení Disku smaže i její body. Sdílené bloky nemaž bez kontroly všech historií, jinak můžeš poškodit více bodů; synchronizace je nikdy nemaže.",
       "Nevyvážej pouhé zákaznické PDF, pokud chceš později upravovat kóty.",
-      "ZIP podporuje nejvýše 20 000 položek včetně tří metadatových souborů, celkem 2 GiB rozbalených dat a 20 MiB UTF-8 pro každý JSON. Nadlimitní export skončí chybou; nepovažuj jej za hotovou zálohu.",
+      "ZIP podporuje nejvýše 20 000 položek včetně tří metadatových souborů, 20 MiB UTF-8 pro každý JSON a postupné zpracování velkých médií podle dostupného místa. Nadlimitní export skončí chybou; nepovažuj jej za hotovou zálohu.",
       "Při čtení ZIP ze systémového úložiště můžeš dál ukládat místní práci. Obnova přidá nové kopie k aktuálním zakázkám; pomalý poskytovatel má časový limit a přerušení nepotvrdí obnovu.",
       "Nové ZIP zálohy obsahují kontrolní součty SHA-256 a velikosti souborů. Obnova je ověří před vytvořením kopií; starší ZIP zůstávají přijímány bez této dodatečné kontroly.",
       "Chybějící nebo prázdná příloha export zálohy zastaví. Neúspěšný zápis se neoznačí jako hotová záloha; původní zakázky zůstávají zachované.",

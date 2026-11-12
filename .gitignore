@@ -14,3 +14,5 @@ __pycache__/
 /emulator-results/
 
 /tools/drive-config-checks/build/
+
+/tools/debug-signing.p12

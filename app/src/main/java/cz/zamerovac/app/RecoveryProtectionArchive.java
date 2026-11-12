@@ -91,11 +91,12 @@ final class RecoveryProtectionArchive {
             for(int i=0;i<files.length();i++){
                 JSONObject entry=files.getJSONObject(i);
                 String path=entry.getString("path");
-                File source=source(home,noBackup,path);
                 File destination=new File(payload,path);
                 File parent=destination.getParentFile();
                 createDirectoriesChecked(stage,parent);
-                copyExact(stage,source,destination,entry,checkpoint);
+                if(path.equals("no_backup/sync-ledger-v1.export.json")){
+                    byte[] projection=ledgerProjection(noBackup);if(projection.length!=entry.getLong("size")||!PeerWire.hash(projection).equals(entry.getString("sha256")))throw new IOException("Evidence přenosů se během archivace změnila");writeSynced(destination,projection);
+                }else copyExact(stage,source(home,noBackup,path),destination,entry,checkpoint);
             }
             byte[] after=canonical(manifest(home,noBackup));
             if(!Arrays.equals(encoded,after))
@@ -203,6 +204,19 @@ final class RecoveryProtectionArchive {
             String path="no_backup/"+item.getName();
             JSONObject evidence=inspectExtra(item,path);
             putSource(sources,path,evidence.getLong("size"),evidence.getString("sha256"),"PRESENT");
+        }
+        if(exists(new File(noBackup,"sync-ledger-v1.install"))||exists(new File(noBackup,"sync-ledger-v1.sqlite"))){
+            byte[] projection=ledgerProjection(noBackup);if(projection.length>MAX_META)throw new IOException("Přenosná evidence přenosů je příliš velká");
+            putSource(sources,"no_backup/sync-ledger-v1.export.json",projection.length,PeerWire.hash(projection),"PRESENT");
+        }
+        File audioJournal=new File(home,"pending-audio-v1");
+        if(safeDirectory(audioJournal,false)){
+            File[] audioFiles=audioJournal.listFiles();if(audioFiles==null)throw new IOException("Hlasové doklady nelze archivovat");
+            for(File file:audioFiles){if(!file.getName().matches("[a-f0-9-]{36}\\.json(\\.bak|\\.new)?"))throw new IOException("Neznámá hlasová evidence");String path="files/pending-audio-v1/"+file.getName();JSONObject info=inspectExtra(file,path);putSource(sources,path,info.getLong("size"),info.getString("sha256"),"PRESENT");}
+        }
+        File[] audioSources=new File(home,"media").listFiles();
+        if(audioSources!=null)for(File file:audioSources)if(file.getName().matches("\\.audio-[a-zA-Z0-9_-]{3,120}--[a-f0-9-]{36}\\.tmp")){
+            String path="files/media/"+file.getName();JSONObject info=inspectExtra(file,path);putSource(sources,path,info.getLong("size"),info.getString("sha256"),"UNCONFIRMED");sourceComplete=false;
         }
         // MainActivity persists original media MIME/name settings in
         // shared_prefs/zamerovac.xml, outside files/ and no_backup/.
@@ -392,19 +406,21 @@ final class RecoveryProtectionArchive {
         String hash=hashStable(path,limit(name));
         return new JSONObject().put("size",attrs.size()).put("sha256",hash);
     }
+    private static byte[] ledgerProjection(File noBackup)throws Exception{try(SyncLedger ledger=SyncLedger.open(noBackup)){return canonical(ledger.portable());}}
 
     private static void validatePath(String path)throws IOException{
         boolean prefs="shared_prefs/zamerovac.xml".equals(path);
         boolean db=path.matches("files/(projects\\.json(\\.bak)?|projects\\.bak|projects\\.tmp|projects\\.backup\\.tmp)");
         boolean journal=path.matches("files/(projects\\.recovery-v1\\.json(\\.bak|\\.new)?|trash-cleanup\\.json(\\.bak|\\.new)?|projects\\.bak(\\.bak|\\.new)|zamerovac-install-state-v1\\.marker(\\.bak|\\.new)?)");
         boolean media=path.startsWith("files/media/")&&
-            PeerSnapshot.validMediaId(path.substring("files/media/".length()));
+            (PeerSnapshot.validMediaId(path.substring("files/media/".length()))||path.matches("files/media/\\.audio-[a-zA-Z0-9_-]{3,120}--[a-f0-9-]{36}\\.tmp"));
+        boolean ledger=path.equals("no_backup/sync-ledger-v1.export.json")||path.matches("files/pending-audio-v1/[a-f0-9-]{36}\\.json(\\.bak|\\.new)?");
         boolean nativeEvidence=path.matches("no_backup/(zamerovac-install-state-v1\\.marker(\\.bak|\\.new)?|sync-peers-v2\\.json(\\.bak|\\.new)?|sync-queue-v2\\.json(\\.bak|\\.new)?)");
         boolean other=path.matches("no_backup/sync-(inbox|scan|publications)-v2-[a-f0-9-]{36}-[a-f0-9]{64}\\.json(\\.bak|\\.new)?");
         boolean queued=path.matches("no_backup/sync-v2-outbox/[a-f0-9]{64}\\.json(\\.bak|\\.new)?");
         boolean protectedFile=path.matches("files/protected-revisions/([a-f0-9]{64}\\.json|catalog\\.json)(\\.bak|\\.new)?");
         boolean protectedWitness=path.matches("no_backup/protected-revisions\\.json(\\.bak|\\.new)?");
-        if(!db&&!journal&&!media&&!nativeEvidence&&!other&&!queued&&!prefs&&!protectedFile&&!protectedWitness)
+        if(!db&&!journal&&!media&&!nativeEvidence&&!other&&!queued&&!prefs&&!protectedFile&&!protectedWitness&&!ledger)
             throw new IOException("Nepovolená cesta ochranné kopie");
     }
     private static long limit(String path)throws IOException{

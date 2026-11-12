@@ -12,7 +12,13 @@ final class PeerOutbox {
     private final Object lock;
     final Context context;final SharedPreferences prefs;final File mediaDirectory;
     final SyncQueueStore queue;final SyncPeerRegistry peers;private final File directory;
-    private PeerSnapshot cached;private long cachedGeneration=-1;
+    private PeerSnapshot cached;private long cachedGeneration=-1;private String cachedContent="";
+    private String destinationKind="tls",destinationScope="paired-tls-v2";
+    void destination(String kind,String scope){destinationKind=kind;destinationScope=scope;}
+    private String target(SyncLedger ledger,String peer)throws Exception{
+        JSONObject identity=peers.snapshot().getJSONObject(peer);
+        return ledger.target(destinationKind,destinationScope+"/"+identity.getString("fingerprint")+"/"+identity.optString("pairedAt","")+"/"+identity.optString("recovery",""),peer);
+    }
     PeerOutbox(Context context,SharedPreferences prefs,SyncPeerRegistry peers){this.context=context;this.prefs=prefs;this.peers=peers;mediaDirectory=new File(context.getFilesDir(),"media");directory=new File(context.getNoBackupFilesDir(),"sync-v2-outbox");queue=new SyncQueueStore(context.getNoBackupFilesDir());lock=LOCKS.computeIfAbsent(directory.getAbsolutePath(),key->new Object());}
     static String jobId(String peer,String kind,String hash,String sourceRef,String mediaId)throws Exception{
         return PeerWire.hash(CausalClock.canonical(new JSONObject().put("format","cz.zamerovac.sync.job").put("version",2).put("peer",peer).put("kind",kind).put("hash",hash).put("sourceRef",sourceRef==null?JSONObject.NULL:sourceRef).put("mediaId",mediaId==null?JSONObject.NULL:mediaId)).getBytes(StandardCharsets.UTF_8));
@@ -41,13 +47,23 @@ final class PeerOutbox {
     }
     private interface Mutation {boolean apply(JSONObject queue)throws Exception;}
     private void mutate(Mutation mutation)throws Exception{for(int attempt=0;attempt<8;attempt++){JSONObject current=new JSONObject(queue.read());long revision=current.getLong("revision");if(!mutation.apply(current))return;current.put("revision",revision+1);if(queue.save(revision,current.toString()))return;}throw new IOException("Fronta se souběžně změnila, přenos zůstává čekající");}
+    private String contentStamp()throws IOException{
+        StringBuilder stamp=new StringBuilder();
+        for(String name:new String[]{"media","protected-revisions","pending-audio-v1"}){
+            File directory=new File(context.getFilesDir(),name);File[] files=directory.listFiles();
+            if(files==null){if(directory.exists())throw new IOException("Obsah přenosu nelze načíst");continue;}
+            Arrays.sort(files,Comparator.comparing(File::getName));
+            for(File file:files)stamp.append(name).append('/').append(file.getName()).append(':').append(file.length()).append(':').append(file.lastModified()).append(';');
+        }
+        return PeerWire.hash(stamp.toString().getBytes(StandardCharsets.UTF_8));
+    }
     private PeerSnapshot current(ImmutableStore.Checkpoint checkpoint)throws Exception{
         checkpoint.check();
         // Detect a fallback even when this outbox still holds a cached newer snapshot.
         LocalDatabase.read(context);
-        long generation=LocalDatabase.generation(context.getFilesDir());boolean fresh=cached!=null&&cachedGeneration==generation;
+        long generation=LocalDatabase.generation(context.getFilesDir());String content=contentStamp();boolean fresh=cached!=null&&cachedGeneration==generation&&cachedContent.equals(content);
         if(fresh)for(Map.Entry<String,long[]> item:cached.localStats.entrySet()){File file=new File(mediaDirectory,item.getKey());if(!file.isFile()||file.length()!=item.getValue()[0]||file.lastModified()!=item.getValue()[1]){fresh=false;break;}}
-        if(fresh)return cached;PeerSnapshot snapshot=PeerSnapshot.capture(context,prefs,checkpoint);cached=snapshot;cachedGeneration=generation;return snapshot;
+        if(fresh)return cached;PeerSnapshot snapshot=PeerSnapshot.capture(context,prefs,checkpoint);cached=snapshot;cachedGeneration=generation;cachedContent=content;return snapshot;
     }
     PeerSnapshot prepare(String peer)throws Exception{return prepare(peer,false);}
     PeerSnapshot prepare(String peer,boolean forcePublication)throws Exception{return prepare(peer,forcePublication,()->{});}
@@ -115,14 +131,31 @@ final class PeerOutbox {
     private PeerSnapshot prepareLocked(String peer,boolean forcePublication,ImmutableStore.Checkpoint checkpoint)throws Exception{
         if(!DeviceIdentity.valid(peer)||!peers.snapshot().has(peer))
             throw new IOException("Zařízení není spárované");
-        PeerSnapshot snapshot=current(checkpoint);checkpoint.check();
+        PeerSnapshot primary=current(checkpoint);checkpoint.check();prepareSnapshot(peer,forcePublication,checkpoint,primary);
+        try{
+            PeerSnapshot recovery=PeerSnapshot.captureRecovery(context,prefs,checkpoint);
+            if(recovery!=null)prepareSnapshot(peer,false,checkpoint,recovery);
+            try(SyncLedger ledger=SyncLedger.open(context.getNoBackupFilesDir())){ledger.contentInventory(target(ledger,peer),recovery==null?"none":"complete");}
+        }catch(CloudScan.Deferred|java.io.InterruptedIOException deferred){throw deferred;}
+        catch(Exception incomplete){try(SyncLedger ledger=SyncLedger.open(context.getNoBackupFilesDir())){ledger.contentInventory(target(ledger,peer),"error");}}
+        return primary;
+    }
+    boolean contentProblem(String peer)throws Exception{try(SyncLedger ledger=SyncLedger.open(context.getNoBackupFilesDir())){return ledger.contentProblem(target(ledger,peer));}}
+    private PeerSnapshot prepareSnapshot(String peer,boolean forcePublication,ImmutableStore.Checkpoint checkpoint,PeerSnapshot snapshot)throws Exception{
+
         synchronized(TrashPurger.LOCK){
             LocalDatabase.readForCas(context);
             protectSources(null,false);
             String epoch=DatabaseRecovery.id(context.getFilesDir());
             if(!epoch.equals(snapshot.wire.optString("recoveryEpoch","")))
                 throw new IOException("Období databáze se během přípravy přenosu změnilo");
-            boolean alreadyAcked=!forcePublication&&snapshot.hash.equals(peers.lastAck(peer));
+            boolean acknowledgedDestination;
+            try(SyncLedger ledger=SyncLedger.open(context.getNoBackupFilesDir())){
+                String destination=target(ledger,peer);ledger.prepare(destination,snapshot);
+                acknowledgedDestination=!forcePublication&&"transport-ack".equals(ledger.state(destination,snapshot.hash));
+                if(!"tls".equals(destinationKind)&&!peers.cloudAckAllowed(peer))acknowledgedDestination=false;
+            }
+            final boolean alreadyAcked=acknowledgedDestination;
             // Independent of jobs, peer identity, ACKs and recovery authority.
             new ProtectedRevisions(context,prefs).preserveSnapshot(snapshot);
             if(!alreadyAcked)persist(snapshot);
@@ -145,7 +178,7 @@ final class PeerOutbox {
                     JSONObject job=active.getJSONObject(i);
                     if(peer.equals(job.getString("peer"))&&"metadata".equals(job.getString("kind"))&&
                         !snapshot.hash.equals(job.getString("hash"))){
-                        try{if(dominates(snapshot.data,load(job).data)&&
+                        try{if(supersedes(snapshot,load(job))&&
                             new ProtectedRevisions(context,prefs).hasSnapshot(job.getString("sourceRef")))
                             obsolete.add(job.getString("hash"));}
                         catch(IOException unreadable){/* keep questionable evidence, never delete */}
@@ -176,6 +209,14 @@ final class PeerOutbox {
             cleanup(); // retains every quarantined source
         }
         return snapshot;
+    }
+    private static boolean supersedes(PeerSnapshot next,PeerSnapshot old)throws Exception{
+        if(next.wire.optBoolean("recoveryOnly")!=old.wire.optBoolean("recoveryOnly"))return false;
+        if(!old.wire.optBoolean("recoveryOnly"))return dominates(next.data,old.data);
+        Set<String> retained=new HashSet<>();JSONArray revisions=next.wire.optJSONArray("recovery");
+        if(revisions!=null)for(int i=0;i<revisions.length();i++)retained.add(revisions.getJSONObject(i).getString("hash"));
+        revisions=old.wire.optJSONArray("recovery");if(revisions!=null)for(int i=0;i<revisions.length();i++)if(!retained.contains(revisions.getJSONObject(i).getString("hash")))return false;
+        return next.media.keySet().containsAll(old.media.keySet());
     }
     private static JSONObject job(String peer,String kind,String hash,long size,String source,String media)throws Exception{
         return new JSONObject().put("id",jobId(peer,kind,hash,source,media)).put("peer",peer).put("kind",kind).put("hash",hash).put("size",size).put("sourceRef",source).put("payload",media==null?JSONObject.NULL:new JSONObject().put("mediaId",media)).put("attempts",0).put("nextAttempt",0);
@@ -210,6 +251,12 @@ final class PeerOutbox {
         for(int i=0;i<jobs.length();i++)
             if(peer.equals(jobs.getJSONObject(i).getString("peer")))count++;
         return count;
+    }
+    int pendingProjects(String peer)throws Exception{
+        int count=0;JSONArray jobs=new JSONObject(queue.read()).getJSONArray("jobs");
+        for(int i=0;i<jobs.length();i++){JSONObject job=jobs.getJSONObject(i);if(!peer.equals(job.optString("peer"))||!"metadata".equals(job.optString("kind")))continue;
+            try{if(!queuedSnapshot(job.getString("sourceRef")).wire.optBoolean("recoveryOnly"))count++;}catch(Exception unknown){count++;}
+        }return count;
     }
     int quarantinedCount(String peer)throws Exception{
         JSONArray rows=new JSONObject(queue.read()).optJSONArray("recoveryQuarantine");
@@ -306,7 +353,11 @@ final class PeerOutbox {
             verifyAckJob(matched,DatabaseRecovery.id(context.getFilesDir()));
             if(!acknowledge(id,hash,size,true))
                 throw new IOException("Potvrzovaná položka již není v aktivní frontě");
-            peers.acknowledged(peer,hash);
+            if(!load(matched).wire.optBoolean("recoveryOnly"))peers.acknowledged(peer,hash);
+            try(SyncLedger ledger=SyncLedger.open(context.getNoBackupFilesDir())){
+                // ACK is a transport receipt for this exact destination/epoch, never a backup.
+                ledger.state(target(ledger,peer),hash,"transport-ack",id);
+            }
             cleanup();
         }}
     }

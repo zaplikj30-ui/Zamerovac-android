@@ -84,7 +84,8 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class MainActivity extends Activity {
-    private static final int REQUEST_FILE=20,REQUEST_TREE=21,REQUEST_CAMERA=22,REQUEST_EXPORT=23,REQUEST_PERMISSIONS=24,REQUEST_ATTACH=25,REQUEST_CAMERA_PERMISSION=26,REQUEST_PHOTO_LOCATION=27,REQUEST_BACKUP=28,REQUEST_IMPORT_BACKUP=29,REQUEST_ISSUE_EXPORT=30,REQUEST_BLUETOOTH_PERMISSION=31,REQUEST_CUSTOMER_EXPORT=32,REQUEST_WIFI_DIRECT_PERMISSION=33,REQUEST_BACKUP_TREE=34,REQUEST_SYNC_NOTIFICATION=35;
+    private static final int REQUEST_FILE=20,REQUEST_TREE=21,REQUEST_CAMERA=22,REQUEST_EXPORT=23,REQUEST_PERMISSIONS=24,REQUEST_ATTACH=25,REQUEST_CAMERA_PERMISSION=26,REQUEST_PHOTO_LOCATION=27,REQUEST_BACKUP=28,REQUEST_IMPORT_BACKUP=29,REQUEST_ISSUE_EXPORT=30,REQUEST_BLUETOOTH_PERMISSION=31,REQUEST_CUSTOMER_EXPORT=32,REQUEST_WIFI_DIRECT_PERMISSION=33,REQUEST_BACKUP_TREE=34,REQUEST_SYNC_NOTIFICATION=35,REQUEST_RETAINED_AUDIO=36;
+    private String retainedAudioExportToken;
     private DriveAccountFlow driveAccountFlow;
     private final java.util.concurrent.ExecutorService zipRestores=new java.util.concurrent.ThreadPoolExecutor(1,1,0,java.util.concurrent.TimeUnit.SECONDS,new java.util.concurrent.SynchronousQueue<>(),new java.util.concurrent.ThreadPoolExecutor.AbortPolicy());
     private long cloudTreeRevision=-1,backupTreeRevision=-1;
@@ -464,6 +465,18 @@ public class MainActivity extends Activity {
     }
     @Override protected void onActivityResult(int request,int result,Intent data){super.onActivityResult(request,result,data);
         if(driveAccountFlow!=null&&driveAccountFlow.result(request,result,data))return;
+        if(request==REQUEST_RETAINED_AUDIO){
+            final String token=retainedAudioExportToken;retainedAudioExportToken=null;
+            if(result==RESULT_OK&&data!=null&&data.getData()!=null&&token!=null){
+                final Uri destination=data.getData();
+                if(!"content".equals(destination.getScheme())||(getPackageName()+".files").equals(destination.getAuthority())){error(getString(R.string.audio_copy_invalid));return;}
+                new Thread(()->{try{
+                    JSONObject proof=new PendingAudio(new File(getFilesDir(),"media"),settings).copyOriginal(token,()->getContentResolver().openOutputStream(destination,"wt"));
+                    js("window.PendingAudio?.exported("+proof.getBoolean("verified")+")");
+                }catch(Exception failure){error(getString(R.string.audio_copy_failed));}},"RetainedAudioExport").start();
+            }
+            return;
+        }
         if(request==REQUEST_FILE){if(fileCallback!=null){Uri[] resultUris=null;if(result==RESULT_OK&&data!=null){if(data.getClipData()!=null){int n=data.getClipData().getItemCount();resultUris=new Uri[n];for(int i=0;i<n;i++)resultUris[i]=data.getClipData().getItemAt(i).getUri();}else if(data.getData()!=null)resultUris=new Uri[]{data.getData()};}fileCallback.onReceiveValue(resultUris);fileCallback=null;}return;}
         if(result!=RESULT_OK){
             if(request==REQUEST_TREE)cloudTreeRevision=-1;if(request==REQUEST_BACKUP_TREE)backupTreeRevision=-1;
@@ -716,6 +729,15 @@ public class MainActivity extends Activity {
         @JavascriptInterface public String resolveSyncConflict(String local,String remote){try{return SyncConflicts.normal(SyncConflicts.input(local),SyncConflicts.input(remote)).toString();}catch(Exception failure){return "{\"error\":true}";}}
         @JavascriptInterface public String preservePurgedEdit(String id,String record,String tombstone){try{JsonInput.check(tombstone);JSONObject parsed=SyncConflicts.input(record);if(!id.equals(parsed.getString("id")))throw new IOException("Odlišné ID");return SyncConflicts.purged(id,parsed,new JSONObject(tombstone)).toString();}catch(Exception failure){return "{\"error\":true}";}}
         @JavascriptInterface public String driveAccountState(){return driveSnapshot().toString();}
+        @JavascriptInterface public String syncLedgerState(){
+            try{String local=LocalDatabase.readForCas(MainActivity.this);if(local.isEmpty())return "{\"localSaved\":false,\"targets\":[]}";
+                try(SyncLedger ledger=SyncLedger.open(getNoBackupFilesDir())){
+                    JSONObject peers=new SyncPeerRegistry(getNoBackupFilesDir()).snapshot();CloudStorage cloud=new CloudStorage(MainActivity.this,settings);
+                    for(java.util.Iterator<String> it=peers.keys();it.hasNext();){String id=it.next();JSONObject peer=peers.getJSONObject(id);String identity="/"+peer.getString("fingerprint")+"/"+peer.optString("pairedAt","")+"/"+peer.optString("recovery","");ledger.target("tls","paired-tls-v2"+identity,id);if(cloud.configured("sync"))ledger.target(cloud.syncKind(),cloud.syncScope()+identity,id);}
+                    return ledger.status(local,DatabaseRecovery.id(getFilesDir())).toString();
+                }
+            }catch(Exception failure){return "{\"localSaved\":false,\"error\":true,\"targets\":[]}";}
+        }
         @JavascriptInterface public void driveAccountControl(String kind,String command){if(kind==null||command==null||kind.length()>6||command.length()>12)return;runOnUiThread(()->{try{DriveAccounts.kind(kind);if("backup".equals(kind)&&historyBackupBusy)throw new IOException("Operace zálohy již probíhá");if("select".equals(command))driveAccountFlow.begin(kind);else if("disconnect".equals(command)){new DriveAccounts(getNoBackupFilesDir()).disconnect(kind);driveChanged(kind,"Úložiště odpojeno. Uložené zakázky a historie zůstávají zachované.");}else if("refresh".equals(command))driveState();else throw new IOException("Neznámý příkaz účtu");}catch(Exception failure){driveState(failure.getMessage());}});}
         @JavascriptInterface public void backupHistoryControl(String command,String path,boolean allowMetered){if(command!=null&&command.length()<24&&path!=null&&path.length()<200)runOnUiThread(()->historyBackup(command,path,allowMetered));}
         @JavascriptInterface public void directSyncControl(String command,String argument){if(command!=null&&command.length()<40&&argument!=null&&argument.length()<200)runOnUiThread(()->directCommand(command,argument));}
@@ -767,14 +789,18 @@ public class MainActivity extends Activity {
                         if(current.isEmpty())throw new IOException("Databáze není dostupná pro porovnání");
                         return new JSONObject().put("ok",false).put("current",current).toString();
                     }
-                    writeDb(text);lastUiGeneration=LocalDatabase.generation(getFilesDir());return "{\"ok\":true}";
+                    writeDb(text);lastUiGeneration=LocalDatabase.generation(getFilesDir());
+                    // The project commit has already succeeded. A journal failure cannot roll it back.
+                    try{int pending=new PendingAudio(new File(getFilesDir(),"media"),settings).recoverPrimary().length();return new JSONObject().put("ok",true).put("audioPending",pending>0).put("pendingAudioCount",pending).toString();}
+                    catch(Exception uncertainty){return "{\"ok\":true,\"audioPending\":true}";}
+
                 }catch(Exception e){try{return new JSONObject().put("ok",false).put("error","Uložení se nezdařilo; poslední potvrzená data zůstávají chráněná. "+e.getMessage()).toString();}catch(Exception ignored){return "{}";}}
             }
         }
         @JavascriptInterface public boolean beginMedia(String id,String mime,String name){return beginMediaChecked(id,mime,name,-1);}
         @JavascriptInterface public boolean beginMediaChecked(String id,String mime,String name,long expected){
             synchronized(TrashPurger.LOCK){
-                if(!validId(id)||!MediaStaging.metadata(mime,name)||activeUpload!=null||mediaFile(id).exists()||expected>2L*1024*1024*1024||expected< -1)return false;
+                if(!validId(id)||!MediaStaging.metadata(mime,name)||activeUpload!=null||mediaFile(id).exists()||expected>PeerSnapshot.MAX_MEDIA||expected< -1)return false;
                 try{activeUploadTemporary=new File(mediaFile(id).getParentFile(),id+".upload-"+UUID.randomUUID()+".tmp");activeUpload=new FileOutputStream(activeUploadTemporary);activeUploadId=id;activeUploadMime=mime;activeUploadName=name;activeUploadExpected=expected;activeUploadBytes=0;return true;}
                 catch(Exception failure){closeUpload();error("Přílohu nelze připravit k zápisu");return false;}
             }
@@ -783,7 +809,7 @@ public class MainActivity extends Activity {
             synchronized(TrashPurger.LOCK){
                 if(activeUpload==null||id==null||!id.equals(activeUploadId))return false;
                 try{if(chunk==null||chunk.length()>128*1024)throw new IOException("Neplatná část přílohy");
-                    byte[] bytes=Base64.decode(chunk,Base64.DEFAULT);if(activeUploadBytes+bytes.length>2L*1024*1024*1024||(activeUploadExpected>=0&&activeUploadBytes+bytes.length>activeUploadExpected))throw new IOException("Příloha má jinou délku");
+                    byte[] bytes=Base64.decode(chunk,Base64.DEFAULT);if(activeUploadBytes+bytes.length>PeerSnapshot.MAX_MEDIA||(activeUploadExpected>=0&&activeUploadBytes+bytes.length>activeUploadExpected))throw new IOException("Příloha má jinou délku");
                     activeUpload.write(bytes);activeUploadBytes+=bytes.length;return true;
                 }catch(Exception failure){closeUpload();error("Zápis přílohy se nezdařil");return false;}
             }
@@ -855,6 +881,23 @@ public class MainActivity extends Activity {
             if(!validId(id))return false;
             if(checkSelfPermission(Manifest.permission.RECORD_AUDIO)!=PackageManager.PERMISSION_GRANTED){runOnUiThread(()->requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO},REQUEST_PERMISSIONS));return false;}
             try{return audioCapture().start(id);}catch(Exception failure){error("Mikrofon: záznam se nepodařilo zahájit. Existující přílohy zůstaly zachované.");return false;}
+        }
+        @JavascriptInterface public void exportPendingAudio(String token){
+            runOnUiThread(()->{
+                if(retainedAudioExportToken!=null){error(getString(R.string.audio_copy_busy));return;}
+                try{
+                new PendingAudio(new File(getFilesDir(),"media"),settings).original(token);
+                retainedAudioExportToken=token;
+                startActivityForResult(new Intent(Intent.ACTION_CREATE_DOCUMENT).setType("audio/mp4").addCategory(Intent.CATEGORY_OPENABLE).putExtra(Intent.EXTRA_TITLE,getString(R.string.audio_copy_title)),REQUEST_RETAINED_AUDIO);
+            }catch(Exception failure){retainedAudioExportToken=null;error(getString(R.string.audio_copy_unavailable));}});
+        }
+        @JavascriptInterface public String pendingAudio(){
+            try{return new PendingAudio(new File(getFilesDir(),"media"),settings).recoverPrimary().toString();}
+            catch(Exception uncertainty){return "[{\"state\":\"needs-review\",\"available\":false}]";}
+        }
+        @JavascriptInterface public boolean confirmPendingAudio(String expected,String record,String note,String id){
+            try{return new PendingAudio(new File(getFilesDir(),"media"),settings).confirm(expected,record,note,id);}
+            catch(Exception uncertainty){return false;}
         }
         @JavascriptInterface public boolean stopAudio(){try{return audioCapture!=null&&audioCapture.stop();}catch(Exception failure){error("Nahrávání se nepodařilo bezpečně uložit. Hlas nebyl připojen.");return false;}}
         @JavascriptInterface public void cancelAudio(){releaseRecorder();}

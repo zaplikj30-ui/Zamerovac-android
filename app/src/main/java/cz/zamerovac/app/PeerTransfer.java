@@ -30,11 +30,12 @@ final class PeerTransfer {
         DataInputStream in=new DataInputStream(new BufferedInputStream(trackedInput,65536));DataOutputStream out=new DataOutputStream(new BufferedOutputStream(trackedOutput,65536));
         // Java sockets have no write timeout. Close a stalled writer as well as a stalled reader.
         ScheduledFuture<?> watchdog=heartbeat.scheduleAtFixedRate(()->{if(System.nanoTime()-activity.get()>TimeUnit.SECONDS.toNanos(45))try{socket.close();}catch(IOException ignored){}},5,5,TimeUnit.SECONDS);
-        try{if(initiator){send(in,out,peer);receive(in,out,peer);}else{receive(in,out,peer);send(in,out,peer);}store.trusted(peer);store.outbox.prepare(peer.id);update(peer,store.outbox.pending(peer.id)==0&&store.outbox.quarantinedCount(peer.id)==0?"done":"waiting",0,store.outbox.pending(peer.id));}
+        try{if(initiator){send(in,out,peer);receive(in,out,peer);}else{receive(in,out,peer);send(in,out,peer);}store.trusted(peer);store.outbox.prepare(peer.id);update(peer,store.outbox.pending(peer.id)==0&&store.outbox.quarantinedCount(peer.id)==0&&!store.outbox.contentProblem(peer.id)?"done":"waiting",0,store.outbox.pending(peer.id));}
         finally{watchdog.cancel(false);heartbeat.shutdownNow();}
     }
     private void send(DataInputStream in,DataOutputStream out,PeerHandshake.Peer peer)throws Exception{
         working(out,()->{update(peer,"preparing",0,0);store.outbox.prepare(peer.id);return null;});List<JSONObject> messages=store.outbox.messages(peer.id);
+        if(!peer.recoveryContent){List<JSONObject> compatible=new ArrayList<>();for(JSONObject job:messages)if(!store.outbox.load(job).wire.optBoolean("recoveryOnly"))compatible.add(job);messages=compatible;}
         PeerWire.write(out,new JSONObject().put("type","batch").put("count",messages.size()).put("recovery",LocalDatabase.recoveryId(store.context)),PeerWire.MAX_HELLO);
         for(JSONObject job:messages){
             store.trusted(peer);PeerSnapshot snapshot=store.outbox.load(job);

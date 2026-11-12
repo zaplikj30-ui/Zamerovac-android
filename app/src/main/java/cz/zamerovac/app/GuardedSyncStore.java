@@ -8,6 +8,7 @@ final class GuardedSyncStore implements SyncStore {
  GuardedSyncStore(SyncStore delegate,Guard guard){this(delegate,guard,()->{});}
  GuardedSyncStore(SyncStore delegate,Guard guard,Guard ackGuard){this.delegate=delegate.checked(guard);this.guard=guard;this.ackGuard=ackGuard;}
  public String namespace(){return delegate.namespace();}
+ public String uploadPath(String proposed,String hash,long size)throws Exception{guard.check();return delegate.uploadPath(proposed,hash,size);}
  public SyncStore checked(ImmutableStore.Checkpoint checkpoint){return new GuardedSyncStore(delegate,()->{guard.check();checkpoint.check();},ackGuard);}
  public List<Entry> list(String path)throws Exception{guard.check();return delegate.list(path);}
  public InputStream open(String path)throws Exception{guard.check();InputStream source=delegate.open(path);return new InputStream(){public int read()throws IOException{guard.check();return source.read();}public int read(byte[] bytes,int offset,int length)throws IOException{guard.check();return source.read(bytes,offset,length);}public void close()throws IOException{source.close();}};}

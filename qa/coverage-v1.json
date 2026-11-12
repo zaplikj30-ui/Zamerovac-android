@@ -1402,6 +1402,98 @@
         "Fyzický Android, skutečný Drive/SAF, fyzický disk-full a power-cut NOT RUN.",
         "Hold není recovery/ACK autorita; automatická promotion a zrušení ochrany nejsou implementované."
       ]
+    },
+    {
+      "id": "pending-audio-retention",
+      "issues": [
+        42
+      ],
+      "sources": [
+        "app/src/main/java/cz/zamerovac/app/PendingAudio.java",
+        "app/src/main/java/cz/zamerovac/app/AudioCapture.java",
+        "app/src/main/java/cz/zamerovac/app/MediaStaging.java",
+        "app/src/main/java/cz/zamerovac/app/MainActivity.java",
+        "app/src/main/java/cz/zamerovac/app/TrashPurger.java",
+        "app/src/main/assets/pending-audio.js",
+        "app/src/main/assets/rich-notes.js"
+      ],
+      "tests": [
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/AudioCompletedKeepTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/PendingAudioTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/StorageLifecycleTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "tests/rich_note_attachment_state.js",
+          "layer": "node"
+        },
+        {
+          "path": "tools/e2e/pending-audio.cjs",
+          "layer": "chromium"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/AudioRecoveryIsolationTest.java",
+          "layer": "native-jvm"
+        }
+      ],
+      "coverage": "runtime-partial",
+      "positive": "Completed audio survives metadata failure with exact SHA256; durable primary binding, restart and user recovery.",
+      "negative": "Ledger/fsync/publication faults, corrupt/missing/backup evidence, collisions, stale CAS, failed Save/Cancel, no audio GC. Unknown/unreadable journal, mixed corrupt/healthy entries, duplicate reservations, missing/unsafe source links, selected-copy failure and no repeated full scan after Save. QA-107-06: different regular reservation/final inodes with equal size and unequal SHA, verified original versus uncertain copy, and expected export stream SHA.",
+      "limits": [
+        "Robolectric is not Android hardware/power-loss; browser Native is a model.",
+        "Real disk-full, filesystem hard-link/directory fsync on devices, microphone and SAF destination require Android acceptance.",
+        "Pending audio is private local evidence; ordinary project ZIP/sync does not export unbound recordings."
+      ]
+    },
+    {
+      "id": "sync-core-b-ledger-adapters-content",
+      "issues": [
+        42,
+        38,
+        28
+      ],
+      "sources": [
+        "app/src/main/java/cz/zamerovac/app/SyncLedger.java",
+        "app/src/main/java/cz/zamerovac/app/DriveResumableUpload.java",
+        "app/src/main/java/cz/zamerovac/app/PeerSnapshot.java",
+        "app/src/main/java/cz/zamerovac/app/PeerOutbox.java"
+      ],
+      "tests": [
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/SyncLedgerTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/SyncContentTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/SyncAdapterFaultTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/DriveResumableUploadTest.java",
+          "layer": "native-jvm"
+        },
+        {
+          "path": "app/src/test/java/cz/zamerovac/app/PeerMediaLargeTest.java",
+          "layer": "native-jvm"
+        }
+      ],
+      "coverage": "runtime-partial",
+      "positive": "Copy/verify/cutover, exact revisions, independent destinations, official Drive resume, complete detached audio, byte-identical large media.",
+      "negative": "Migration/SQL failures, corrupt or missing ledger, stale receipts, false provider success, duplicate/partial objects, metered networks and interrupted full-file retry.",
+      "limits": [
+        "Final evidence and SHA in draft PR and docs/sync-core-b.md.",
+        "Historical #88 diagnostics remain strict; Windows HOME and real Android/Drive NOT RUN."
+      ]
     }
   ],
   "manualGates": [

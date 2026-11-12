@@ -643,11 +643,11 @@ public class DatabaseInstallEvidenceTest {
             assertEquals(newHash,prepared.prepare(secondPeer).hash);
             assertEquals(0,prepared.quarantinedCount(firstPeer));
             assertEquals(0,prepared.quarantinedCount(secondPeer));
-            assertEquals(4,prepared.pending(firstPeer)); // two metadata + two photo jobs
-            assertEquals(4,prepared.pending(secondPeer));
+            assertEquals(6,prepared.pending(firstPeer)); // two project metadata/photo pairs plus the history metadata/photo pair
+            assertEquals(6,prepared.pending(secondPeer));
             // Unknown old bytes cannot be used by either sender or its ACK.
             java.util.List<JSONObject> safe=prepared.messages(firstPeer);
-            assertEquals(1,safe.size());
+            assertEquals(2,safe.size());assertTrue(prepared.load(safe.get(1)).wire.getBoolean("recoveryOnly"));
             assertEquals(newHash,safe.get(0).getString("hash"));
             try{prepared.completed(firstPeer,originalMetadata);
                 fail("Unverifiable historical queued metadata was ACKed");}
@@ -680,10 +680,10 @@ public class DatabaseInstallEvidenceTest {
         java.util.Set<String> ids=new java.util.HashSet<>();
         for(int i=0;i<jobs.length();i++)
             assertTrue("Duplicate active job ID",ids.add(jobs.getJSONObject(i).getString("id")));
-        assertEquals(8,ids.size());
+        assertEquals(12,ids.size());
         for(String peer:new String[]{firstPeer,secondPeer}){
             java.util.List<JSONObject> metadata=reopened.messages(peer);
-            assertEquals(2,metadata.size());
+            assertEquals(3,metadata.size());assertTrue(reopened.load(metadata.get(2)).wire.getBoolean("recoveryOnly"));
             assertEquals(older.hash,metadata.get(0).getString("hash"));
             assertEquals(newHash,metadata.get(1).getString("hash"));
             org.json.JSONArray active=new JSONObject(reopened.queue.read()).getJSONArray("jobs");
@@ -695,7 +695,7 @@ public class DatabaseInstallEvidenceTest {
                     job.getLong("size"),false));
                 confirmedPhotos++;
             }
-            assertEquals(2,confirmedPhotos);
+            assertEquals(3,confirmedPhotos);
             for(JSONObject job:metadata)reopened.completed(peer,job);
             assertEquals(newHash,registry.lastAck(peer));
             assertEquals(0,reopened.pending(peer));

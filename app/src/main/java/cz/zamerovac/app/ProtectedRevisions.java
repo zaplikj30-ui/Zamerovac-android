@@ -167,6 +167,22 @@ final class ProtectedRevisions {
         preserve("database",metadata,null);
     }
     void preserveSnapshot(PeerSnapshot snapshot)throws IOException{preserve("snapshot",new String(snapshot.bytes,StandardCharsets.UTF_8),snapshot);}
+    /** Exact preimages from the ONE P1 registry; no new retention policy or automatic release. */
+    JSONArray databaseRevisions(JSONObject current)throws Exception{synchronized(TrashPurger.LOCK){
+        JSONArray result=new JSONArray();Set<String> seen=new HashSet<>();
+        for(Map.Entry<String,JSONObject> item:inventory(false).entrySet()){
+            JSONObject summary=item.getValue();if(!"database".equals(summary.getString("kind")))continue;
+            byte[] held=read(file(item.getKey()));if(!item.getKey().equals(PeerWire.hash(held)))throw new IOException("Chráněná historie se změnila");
+            JSONObject full=new JSONObject(JsonInput.decode(held,3*LocalDatabase.MAX_BYTES));
+            String text=full.getString("metadata");JSONObject data=new JSONObject(text);
+            // Empty bootstrap and the present state are already carried by the main snapshot.
+            if(data.getJSONArray("records").length()==0&&!data.has("syncTombstones"))continue;
+            data.remove("prefs");data.remove("created");data.put("syncProtocol",2);
+            if(CausalClock.canonical(data).equals(CausalClock.canonical(current)))continue;
+            String hash=PeerWire.hash(text.getBytes(StandardCharsets.UTF_8));
+            if(seen.add(hash))result.put(new JSONObject().put("hash",hash).put("metadata",text));
+        }return result;
+    }}
     private void historicalReferences(Object value,Set<String> ids,int depth)throws Exception{
         if(depth>100)throw new IOException("Příliš zanořená historie ochrany");
         if(value instanceof JSONObject){JSONObject object=(JSONObject)value;for(Iterator<String> it=object.keys();it.hasNext();)historicalReferences(object.get(it.next()),ids,depth+1);}
@@ -193,7 +209,7 @@ final class ProtectedRevisions {
         Map<String,JSONObject> prior=inventory(true);String source=PeerWire.hash(metadata.getBytes(StandardCharsets.UTF_8));
         for(JSONObject old:prior.values())if(kind.equals(old.getString("kind"))&&source.equals(old.getString("sourceHash")))return;
         JSONObject data=new JSONObject(metadata);if(snapshot!=null)data=data.getJSONObject("data");LocalDatabase.validate(data.toString());
-        Set<String> ids=snapshot==null?PeerSnapshot.cleanupReferences(data.getJSONArray("records")):PeerSnapshot.references(data.getJSONArray("records"));
+        Set<String> ids=snapshot==null?PeerSnapshot.cleanupReferences(data.getJSONArray("records")):new TreeSet<>(snapshot.media.keySet());
         // Also include older embedded JSON objects and unknown history fields.
         historicalReferences(data.getJSONArray("records"),ids,0);
         boolean complete=true;JSONArray media=new JSONArray();for(String id:ids){

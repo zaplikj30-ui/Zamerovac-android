@@ -39,7 +39,7 @@ final class DriveObjectStore {
         @Override public void flush()throws IOException{if(closed||sealed)throw new IOException("Příprava Disku je uzavřená");output.flush();}
         @Override public void publish()throws IOException{
             if(published)return;if(closed||sealed)throw new IOException("Příprava Disku již skončila");sealed=true;
-            try{output.getFD().sync();output.close();try(InputStream input=new FileInputStream(file)){api.upload(path,input,size);}published=true;}catch(IOException failure){throw failure;}catch(Exception failure){throw new IOException("Disk nepotvrdil publikaci",failure);}
+            try{output.getFD().sync();output.close();new DriveResumableUpload(api,staging.getParentFile(),namespace).upload(path,file);published=true;}catch(IOException failure){throw failure;}catch(Exception failure){throw new IOException("Disk nepotvrdil publikaci",failure);}
         }
         @Override public void close()throws IOException{if(closed)return;closed=true;try{output.close();}finally{synchronized(ACTIVE){ACTIVE.remove(file);file.delete();}}}
     }

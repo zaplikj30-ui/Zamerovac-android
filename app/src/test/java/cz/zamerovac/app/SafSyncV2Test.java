@@ -106,7 +106,7 @@ public class SafSyncV2Test {
   if(acknowledged==1){
    sync(a,ai,false).sync();
    assertEquals("Sender may retire *queue metadata*, not originals",0,
-       new PeerOutbox(a,a.prefs,new SyncPeerRegistry(a.noBackup)).pending(bid));
+       new PeerOutbox(a,a.prefs,new SyncPeerRegistry(a.noBackup)).pendingProjects(bid));
   }
   assertArrayEquals(sourceDb,Files.readAllBytes(new File(a.home,"projects.json").toPath()));
   assertEquals(exactSource,LocalDatabase.readForCas(a));
@@ -350,11 +350,11 @@ public class SafSyncV2Test {
   for(ImmutableStore.Entry entry:store.list("sync/v2/acks/"+aid+"/"+bid)){JSONObject ack=CloudProof.verify(CloudProof.read(store.open("sync/v2/acks/"+aid+"/"+bid+"/"+entry.name),PeerWire.MAX_HELLO),bi.certificate(),CloudProof.ACK,bid,aid);assertNotEquals(old.hash,ack.getString("hash"));}
  }
  @Test public void newCloudNamespacePublishesCompleteCopyDespitePriorConfirmedPeerAck()throws Exception{
-  canonicalFiles(2,4000);converge();PeerSnapshot current=PeerSnapshot.capture(a,a.prefs);assertEquals(current.hash,ar.lastAck(bid));assertEquals(0,new PeerOutbox(a,a.prefs,ar).pending(bid));int oldFiles=store.list("sync/v2/blobs").size();Store selected=new Store(new File(store.root.getParentFile(),"new-provider"));assertTrue(engine(a,ai,selected,false).sync().pending);assertEquals(3,selected.list("sync/v2/blobs").size());CloudFiles.find(selected,current.hash,current.bytes.length);for(JSONObject media:current.media.values())CloudFiles.find(selected,media.getString("hash"),media.getLong("size"));assertTrue(new PeerOutbox(a,a.prefs,ar).pending(bid)>0);
+  canonicalFiles(2,4000);converge();PeerSnapshot current=PeerSnapshot.capture(a,a.prefs);assertEquals(current.hash,ar.lastAck(bid));assertEquals(0,new PeerOutbox(a,a.prefs,ar).pending(bid));int oldFiles=store.list("sync/v2/blobs").size();Store selected=new Store(new File(store.root.getParentFile(),"new-provider"));assertTrue(engine(a,ai,selected,false).sync().pending);assertEquals(4,selected.list("sync/v2/blobs").size()); /* Three live blobs plus exact recovery metadata. */CloudFiles.find(selected,current.hash,current.bytes.length);for(JSONObject media:current.media.values())CloudFiles.find(selected,media.getString("hash"),media.getLong("size"));assertTrue(new PeerOutbox(a,a.prefs,ar).pending(bid)>0);
   engine(b,bi,selected,false).sync();engine(a,ai,selected,false).sync();assertEquals(0,new PeerOutbox(a,a.prefs,ar).pending(bid));assertEquals(oldFiles,store.list("sync/v2/blobs").size());assertEquals("1585,800001",new JSONObject(LocalDatabase.read(b.home)).getJSONArray("records").getJSONObject(0).getJSONArray("items").getJSONObject(0).getString("measure"));
  }
  @Test public void historicalSignedAckCannotHideIncompleteNewNamespaceOnMeteredNetwork()throws Exception{
-  canonicalFiles(1,1500000);converge();PeerSnapshot current=PeerSnapshot.capture(a,a.prefs);Store selected=new Store(new File(store.root.getParentFile(),"new-metered-provider"));selected.largeHash=current.media.get("original-0").getString("hash");CloudFiles.publish(selected,"sync/v2/acks/"+aid+"/"+bid,current.hash,CloudProof.sign(CloudProof.body(CloudProof.ACK,bid,aid,current.hash,current.bytes.length),bi));SafSyncV2 first=engine(a,ai,selected,true);assertTrue(first.sync().pending);assertFalse(first.publications.snapshotPublished(bid,current.hash));assertEquals(0,selected.readsOfLarge);assertTrue(new PeerOutbox(a,a.prefs,ar).pending(bid)>0);engine(a,ai,selected,false).sync();CloudFiles.find(selected,selected.largeHash,1500000);assertTrue(new CloudPublications(a.noBackup,aid,selected.namespace()).snapshotPublished(bid,current.hash));assertEquals(0,new PeerOutbox(a,a.prefs,ar).pending(bid));
+  canonicalFiles(1,1500000);converge();PeerSnapshot current=PeerSnapshot.capture(a,a.prefs);Store selected=new Store(new File(store.root.getParentFile(),"new-metered-provider"));selected.largeHash=current.media.get("original-0").getString("hash");CloudFiles.publish(selected,"sync/v2/acks/"+aid+"/"+bid,current.hash,CloudProof.sign(CloudProof.body(CloudProof.ACK,bid,aid,current.hash,current.bytes.length),bi));SafSyncV2 first=engine(a,ai,selected,true);assertTrue(first.sync().pending);assertFalse(first.publications.snapshotPublished(bid,current.hash));assertEquals(0,selected.readsOfLarge);assertTrue(new PeerOutbox(a,a.prefs,ar).pending(bid)>0);engine(a,ai,selected,false).sync();CloudFiles.find(selected,selected.largeHash,1500000);assertTrue(new CloudPublications(a.noBackup,aid,selected.namespace()).snapshotPublished(bid,current.hash));assertEquals(0,new PeerOutbox(a,a.prefs,ar).pendingProjects(bid));assertTrue("Auxiliary history still needs the receiver ACK",new PeerOutbox(a,a.prefs,ar).pending(bid)>0);
  }
  @Test public void repairAfterFinalAckRestoresFallbackReceiverAndNeverOverwritesCorruptRemoteCopy()throws Exception{
   // Legacy name: cloud repair must wait for a separately authorized Stage 3 recovery.
@@ -396,7 +396,7 @@ public class SafSyncV2Test {
  }
 
 @Test public void purgedPendingPhotoDoesNotBlockNewerTombstoneOrFalselyAckMissingOldMedia()throws Exception{
-  canonicalFiles(1,1500000);PeerSnapshot old=PeerSnapshot.capture(a,a.prefs);sync(a,ai,true).sync();String oldName=store.list("sync/v2/messages/"+bid+"/"+aid).get(0).name;assertTrue(sync(b,bi,false).sync().pending);JSONObject deleted=new JSONObject(LocalDatabase.read(a.home));deleted.getJSONArray("records").getJSONObject(0).put("deleted",true).put("syncClock",new JSONObject().put(aid,2));LocalDatabase.write(a.home,deleted.toString());String saved=LocalDatabase.read(a.home);synchronized(TrashPurger.LOCK){new TrashPurger(a,a.prefs).purge(saved,saved,new JSONArray().put("photo-a"),text->LocalDatabase.write(a.home,text));}assertTrue("Approved hybrid retention keeps the last original after purge",new File(a.home,"media/original-0").exists());assertTrue(new ProtectedRevisions(a,a.prefs).pins().contains("original-0"));SafSyncV2.Result last=null;for(int i=0;i<7;i++){sync(a,ai,false).sync();last=sync(b,bi,false).sync();}assertNotNull(last);assertFalse(last.pending);assertEquals(0,new JSONObject(LocalDatabase.read(b.home)).getJSONArray("records").length());assertTrue(new JSONObject(LocalDatabase.read(b.home)).getJSONObject("syncTombstones").has("photo-a"));JSONObject receipt=new CloudInbox(b.noBackup,bid,store.namespace(),b.home).get(aid,oldName);assertTrue(receipt.getBoolean("obsolete"));assertFalse(receipt.getBoolean("acked"));for(ImmutableStore.Entry entry:store.list("sync/v2/acks/"+aid+"/"+bid)){JSONObject proof=CloudProof.verify(CloudProof.read(store.open("sync/v2/acks/"+aid+"/"+bid+"/"+entry.name),PeerWire.MAX_HELLO),bi.certificate(),CloudProof.ACK,bid,aid);assertNotEquals(old.hash,proof.getString("hash"));}
+  canonicalFiles(1,1500000);PeerSnapshot old=PeerSnapshot.capture(a,a.prefs);sync(a,ai,true).sync();String oldName=store.list("sync/v2/messages/"+bid+"/"+aid).get(0).name;assertTrue(sync(b,bi,false).sync().pending);JSONObject deleted=new JSONObject(LocalDatabase.read(a.home));deleted.getJSONArray("records").getJSONObject(0).put("deleted",true).put("syncClock",new JSONObject().put(aid,2));LocalDatabase.write(a.home,deleted.toString());String saved=LocalDatabase.read(a.home);synchronized(TrashPurger.LOCK){new TrashPurger(a,a.prefs).purge(saved,saved,new JSONArray().put("photo-a"),text->LocalDatabase.write(a.home,text));}assertTrue("Approved hybrid retention keeps the last original after purge",new File(a.home,"media/original-0").exists());assertTrue(new ProtectedRevisions(a,a.prefs).pins().contains("original-0"));sync(a,ai,true).sync();assertTrue("Historical content remains pending on metered network",sync(b,bi,true).sync().pending);assertEquals(0,new JSONObject(LocalDatabase.read(b.home)).getJSONArray("records").length());SafSyncV2.Result last=null;for(int i=0;i<7;i++){sync(a,ai,false).sync();last=sync(b,bi,false).sync();}assertNotNull(last);assertFalse(last.pending);assertEquals(0,new JSONObject(LocalDatabase.read(b.home)).getJSONArray("records").length());assertTrue(new JSONObject(LocalDatabase.read(b.home)).getJSONObject("syncTombstones").has("photo-a"));JSONObject receipt=new CloudInbox(b.noBackup,bid,store.namespace(),b.home).get(aid,oldName);assertTrue(receipt.getBoolean("obsolete"));assertFalse(receipt.getBoolean("acked"));for(ImmutableStore.Entry entry:store.list("sync/v2/acks/"+aid+"/"+bid)){JSONObject proof=CloudProof.verify(CloudProof.read(store.open("sync/v2/acks/"+aid+"/"+bid+"/"+entry.name),PeerWire.MAX_HELLO),bi.certificate(),CloudProof.ACK,bid,aid);assertNotEquals(old.hash,proof.getString("hash"));}
  }
  @Test public void concurrentLocalVersionCannotRetireAnUnfinishedRemoteSnapshot()throws Exception{
   canonicalFiles(1,1500000);sync(a,ai,true).sync();String name=store.list("sync/v2/messages/"+bid+"/"+aid).get(0).name;JSONObject independent=new JSONObject(original.toString());independent.getJSONArray("records").getJSONObject(0).put("syncClock",new JSONObject().put(bid,1)).put("media",new JSONArray()).getJSONArray("items").getJSONObject(0).put("measure","999,000001");LocalDatabase.write(b.home,independent.toString());String before=LocalDatabase.read(b.home);assertTrue(sync(b,bi,false).sync().pending);assertEquals(before,LocalDatabase.read(b.home));assertNull(new CloudInbox(b.noBackup,bid,store.namespace(),b.home).get(aid,name));converge();JSONArray records=new JSONObject(LocalDatabase.read(b.home)).getJSONArray("records");assertEquals(2,records.length());Set<String> values=new HashSet<>();for(int i=0;i<records.length();i++)values.add(records.getJSONObject(i).getJSONArray("items").getJSONObject(0).getString("measure"));assertEquals(Set.of("1585,800001","999,000001"),values);
@@ -543,7 +543,7 @@ public class SafSyncV2Test {
    LocalDatabase.write(a,finalDb.toString());
    outbox.prepare(bid);
   }
-  assertEquals(20,outbox.pending(bid));
+  assertEquals(21,outbox.pending(bid)); // Includes the separate recovery-content intent
   JSONObject old=outbox.messages(bid).get(0);
   File originalFile=new File(a.noBackup,"sync-v2-outbox/"+old.getString("hash")+".json");
   byte[] originalBytes=Files.readAllBytes(originalFile.toPath());
@@ -559,7 +559,7 @@ public class SafSyncV2Test {
   PeerSnapshot current=new PeerOutbox(a,a.prefs,new SyncPeerRegistry(a.noBackup)).prepare(bid);
   assertEquals(epoch,current.wire.getString("recoveryEpoch"));
   assertNotEquals(old.getString("hash"),current.hash);
-  assertEquals(20,new PeerOutbox(a,a.prefs,ar).quarantinedCount(bid));
+  assertEquals(21,new PeerOutbox(a,a.prefs,ar).quarantinedCount(bid));
   // The actual signed-cloud send/receive/ACK path must process the fresh job.
   SafSyncV2.Result first=sync(a,ai,false).sync();
   assertTrue("Archived evidence must not be reported as fully ACKed",first.pending);
@@ -571,7 +571,7 @@ public class SafSyncV2Test {
       .getJSONArray("items").getJSONObject(0).getString("measure"));
   PeerOutbox restarted=new PeerOutbox(a,a.prefs,new SyncPeerRegistry(a.noBackup));
   assertEquals(0,restarted.pending(bid));
-  assertEquals(20,restarted.quarantinedCount(bid));
+  assertEquals(21,restarted.quarantinedCount(bid));
   assertArrayEquals(originalBytes,Files.readAllBytes(originalFile.toPath()));
   assertTrue(new SyncPeerRegistry(a.noBackup).lastAck(bid).matches("[a-f0-9]{64}"));
   assertNotEquals(old.getString("hash"),new SyncPeerRegistry(a.noBackup).lastAck(bid));
@@ -584,7 +584,7 @@ public class SafSyncV2Test {
   }
   sync(a,ai,false).sync();
   sync(b,bi,false).sync();
-  assertEquals(20,new PeerOutbox(a,a.prefs,ar).quarantinedCount(bid));
+  assertEquals(21,new PeerOutbox(a,a.prefs,ar).quarantinedCount(bid));
   assertEquals(1,new JSONObject(LocalDatabase.read(b.home)).getJSONArray("records").length());
   assertArrayEquals(originalBytes,Files.readAllBytes(originalFile.toPath()));
  }

@@ -94,6 +94,7 @@ final class TrashPurger {
         if(db.optInt("schema")!=1)throw new IOException("Nepodporovaná databáze");
         JSONArray records=db.getJSONArray("records"),kept=new JSONArray();
         Set<String> ids=new HashSet<>(),candidates=pending();
+        Set<String> oldCandidates=new HashSet<>(candidates);
         for(int i=0;i<requested.length();i++)ids.add(requested.getString(i));
         JSONObject tombstones=db.optJSONObject("syncTombstones");if(tombstones==null)tombstones=new JSONObject();
         int removed=0;
@@ -124,6 +125,13 @@ final class TrashPurger {
         if(!unverifiedPending.isEmpty())throw new IOException(
             "Neověřený seznam úklidu obsahuje přílohy bez trvalé ochrany. "
             +"Úklid byl zastaven; původní soubory a databáze zůstaly beze změny.");
+        // Variant B is deliberately non-destructive for audio, even after explicit trash purge.
+        // This also protects stale cleanup intents and corrupted/missing journal evidence.
+        // Apply the established JSON/depth validation to removed references too.
+        strings(records,new HashSet<>());
+        PendingAudio audio=new PendingAudio(new File(home,"media"),prefs);
+        candidates.removeAll(audio.referencedAudio(records));
+        candidates.removeIf(id->audio.protects(id)||oldCandidates.contains(id)&&prefs.getString("mime-"+id,"").isEmpty());
         // Save the cleanup intent first. A failure here cannot change records or media.
         atomic(pendingFile(),new JSONArray(candidates).toString());
         String next=db.toString();

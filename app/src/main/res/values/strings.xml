@@ -6,4 +6,9 @@
     <string name="bluetooth_laser_missing">Nenalezen laser Bosch. Zapni laser a zkus hledat znovu; jiný měřič lze vybrat ručně.</string>
     <string name="bluetooth_choose_other">Vybrat jiné Bluetooth zařízení</string>
     <string name="bluetooth_choose_bosch">Vybrat laser Bosch</string>
+    <string name="audio_copy_failed">Kopie uchované nahrávky nebyla potvrzena. Originál zůstal v aplikaci.</string>
+    <string name="audio_copy_invalid">Neplatný cíl kopie. Originál zůstal v aplikaci.</string>
+    <string name="audio_copy_busy">Nejdříve dokonči ukládání předchozí kopie.</string>
+    <string name="audio_copy_unavailable">Uchovanou nahrávku nelze nyní kopírovat. Originál zůstal v aplikaci.</string>
+    <string name="audio_copy_title">Uchovana-nahravka.m4a</string>
 </resources>

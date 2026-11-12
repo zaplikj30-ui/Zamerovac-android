@@ -33,7 +33,7 @@ final class PeerDataStore {
     boolean superseded(PeerSnapshot incoming,PeerHandshake.Peer peer,JSONArray needed,LocalReceipt receipt)throws Exception{return superseded(incoming,peer,needed,receipt,()->{});}
     boolean superseded(PeerSnapshot incoming,PeerHandshake.Peer peer,JSONArray needed,LocalReceipt receipt,ImmutableStore.Checkpoint checkpoint)throws Exception{
         checkpoint.check();
-        if(needed.length()==0)return false;trusted(peer);long generation;
+        if(needed.length()==0||incoming.wire.optBoolean("recoveryOnly"))return false;trusted(peer);long generation;
         synchronized(TrashPurger.LOCK){String text=LocalDatabase.readForCas(context);JSONObject current=text.isEmpty()?new JSONObject().put("schema",1).put("records",new JSONArray()):new JSONObject(text);if(!PeerOutbox.dominates(current,incoming.data))return false;Set<String> refs=PeerSnapshot.references(current.getJSONArray("records"));for(int i=0;i<needed.length();i++)if(refs.contains(needed.getString(i)))return false;generation=LocalDatabase.generation(context.getFilesDir());}
         // Hash current originals only after the cheap causal/reference checks prove retirement is possible.
         PeerSnapshot local=PeerSnapshot.capture(context,prefs,checkpoint);if(!PeerOutbox.dominates(local.data,incoming.data))return false;
@@ -60,6 +60,8 @@ final class PeerDataStore {
             // A metadata failure after DB commit remains unacknowledged, and
             // a deterministic retry can finish it without duplicating records.
             new ProtectedRevisions(context,prefs).preserveSnapshot(snapshot);
+            JSONArray history=snapshot.wire.optJSONArray("recovery");
+            if(history!=null)for(int i=0;i<history.length();i++)new ProtectedRevisions(context,prefs).preserveDatabase(history.getJSONObject(i).getString("metadata"));
             if(changed)LocalDatabase.write(context,saved.toString());
             if(!metadata.commit())throw new IOException("Metadata příloh nebyla potvrzena");
         }

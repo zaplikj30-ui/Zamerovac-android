@@ -12,6 +12,13 @@ function render(host,kind,disabled){host.replaceChildren();const row=view[kind]|
  host.append(node('p',row.backend==='drive'?'Vybraný účet: '+String(row.account).slice(0,320):row.backend==='none'?'Úložiště této funkce je odpojené.':'Pro tuto funkci lze použít systémovou složku nebo samostatně připojit Google Disk.'));
  if(!ready)host.append(node('p','Připojení Disku vyžaduje Android aplikaci s touto aktualizací.','muted'));
  else if(!view.projectConfigured)host.append(node('p','Připojení Google Disku čeká na dokončení nastavení této verze aplikace.','muted'));
+ if(kind==='sync'&&typeof root.Native?.syncLedgerState==='function'){
+  try{const status=JSON.parse(root.Native.syncLedgerState());host.append(node('p',status.localSaved?'Zakázky jsou místně uložené.':'Místní uložení nyní nelze ověřit.','muted'));
+   if(status.error)host.append(node('p','Evidenci přenosů nelze ověřit. Přenos zůstává nedokončený.','peer-error'));
+   for(const target of status.targets||[]){const name=target.kind==='tls'?'Spárované zařízení':target.kind==='drive'?'Google Disk':'Vybraná složka';host.append(node('p',name+': '+(target.state==='transport-ack'?'přijetí této revize bylo potvrzeno':'čeká na přenos nebo potvrzení')+(target.contentState==='error'?' · historické nebo hlasové podklady vyžadují kontrolu.':target.contentState==='waiting'?' · úplnost historických podkladů čeká na ověření.':'.'),'muted'));}
+   host.append(node('p','Potvrzení přenosu není historická záloha. Dostupnost druhého zařízení se znovu ověřuje při připojení.','muted'));
+  }catch(error){host.append(node('p','Stav přenosů se nepodařilo načíst.','peer-error'));}
+ }
  if(message)host.append(node('p',message,'peer-error'));
  const controls=node('div',null,'row wrap'),select=node('button',row.backend==='drive'?'Změnit Google účet':'Připojit Google účet','outline');select.type='button';select.id=kind==='sync'?'driveSyncSelect':'driveBackupSelect';select.disabled=disabled||!!view.busy||!!view.error||!ready||!view.projectConfigured;select.onclick=()=>command(kind,'select');controls.append(select);
  if(row.backend==='drive'){const disconnect=node('button','Odpojit Disk pro tuto funkci','outline');disconnect.type='button';disconnect.id=kind==='sync'?'driveSyncDisconnect':'driveBackupDisconnect';disconnect.disabled=disabled||!!view.busy||!ready;disconnect.onclick=()=>{if(root.confirm('Odpojit Disk pouze pro tuto funkci? Zakázky v zařízení a historické zálohy zůstanou zachované.'))command(kind,'disconnect');};controls.append(disconnect);}host.append(controls);
