@@ -76,7 +76,11 @@ async function terminateTree(child){
    const killer=spawn(cmd[0],cmd[1],{windowsHide:true,stdio:'ignore'});
    const timer=setTimeout(()=>{killer.kill();resolve()},10000);
    killer.once('error',()=>{clearTimeout(timer);child.kill('SIGKILL');resolve()});
-   killer.once('close',()=>{clearTimeout(timer);resolve()});
+   killer.once('close',exitCode=>{
+    clearTimeout(timer);
+    if(exitCode!==0)child.kill('SIGKILL');
+    resolve();
+   });
   });
  }else{
   try{process.kill(-child.pid,'SIGKILL')}catch(_){child.kill('SIGKILL')}
@@ -111,9 +115,11 @@ async function execute(script,env,logFile,maxDurationMs=8*60*1000){
   let error=null,timedOut=false,settled=false;
   const finish=(exitCode,signal)=>{
    if(settled)return;
-   settled=true;clearTimeout(timer);out.end();
-   resolve({status:!timedOut&&!error&&exitCode===0?'PASS':'FAIL',
-    exitCode,signal,elapsedMs:Date.now()-started,error:error?.message||null,timedOut});
+   settled=true;clearTimeout(timer);
+   const outcome={status:!timedOut&&!error&&exitCode===0?'PASS':'FAIL',
+    exitCode,signal,elapsedMs:Date.now()-started,error:error?.message||null,timedOut};
+   // Complete the log write BEFORE a synchronous failed-suite read or PASS marker.
+   out.end(()=>resolve(outcome));
   };
   const timer=setTimeout(async()=>{
    timedOut=true;
@@ -160,7 +166,11 @@ async function run(mode){
    }
   }
  }finally{
-  if(port)await Promise.race([close(server),new Promise(resolve=>setTimeout(resolve,3000))]);
+  if(port){
+   // Do not let a failed browser keep HTTP keepalive sockets alive indefinitely.
+   if(typeof server.closeAllConnections==='function')server.closeAllConnections();
+   await Promise.race([close(server),new Promise(resolve=>setTimeout(resolve,3000))]);
+  }
   statusReport(mode,records,dir,sourceSha);
  }
  const report=statusReport(mode,records,dir,sourceSha);
