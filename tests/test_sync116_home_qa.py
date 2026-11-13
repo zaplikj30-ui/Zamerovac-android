@@ -115,6 +115,34 @@ class Sync116QaOnlyTests(unittest.TestCase):
                     with self.assertRaises(QA.Stop):
                         QA.source_guard(source, QA.EXPECTED_SHA)
 
+    def test_temporary_root_waiver_only_for_one_owner_jvm_run(self):
+        env = {
+            "GITHUB_REPOSITORY": "zaplikj30-ui/Zamerovac-android",
+            "GITHUB_REF": QA.TEMP_QA_REF,
+            "GITHUB_ACTOR": "zaplikj30-ui",
+            "GITHUB_TRIGGERING_ACTOR": "zaplikj30-ui",
+            "GITHUB_RUN_ATTEMPT": "1",
+            "GITHUB_RUN_ID": "43407410666",
+        }
+        self.assertTrue(QA.owner_root_waiver(env, QA.EXPECTED_SHA,
+                                              "43407410666", "1"))
+        changes = [
+            ("GITHUB_REF", "refs/heads/qa/other"),
+            ("GITHUB_REPOSITORY", "other/repo"),
+            ("GITHUB_ACTOR", "attacker"),
+            ("GITHUB_TRIGGERING_ACTOR", "attacker"),
+            ("GITHUB_RUN_ATTEMPT", "2"),
+            ("GITHUB_RUN_ID", "different"),
+        ]
+        for key, value in changes:
+            with self.subTest(key=key):
+                self.assertFalse(QA.owner_root_waiver({**env, key: value},
+                                                       QA.EXPECTED_SHA, "43407410666", "1"))
+        self.assertFalse(QA.owner_root_waiver(env, "0" * 40,
+                                              "43407410666", "1"))
+        self.assertFalse(QA.owner_root_waiver(env, QA.EXPECTED_SHA,
+                                              "43407410666", "2"))
+
     def test_nonroot_wsl_is_mandatory_before_source_execution(self):
         with mock.patch.object(QA.platform, "system", return_value="Linux"), \
              mock.patch.object(QA.platform, "release", return_value="microsoft-WSL2"), \
