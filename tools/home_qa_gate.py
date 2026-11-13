@@ -270,20 +270,20 @@ BROWSER_PREFLIGHT = r'''      - name: Check owner branch SHA and separate valida
 BROWSER_STEPS = r'''      - name: Isolated offline package-lock Chromium prerequisites
         shell: cmd
         run: |
-          if exist "%GITHUB_WORKSPACE%\qa-browser-deps" exit /b 1
-          mkdir "%GITHUB_WORKSPACE%\qa-browser-deps"
+          if exist "%GITHUB_WORKSPACE%\qa-browser-deps-%GITHUB_RUN_ID%-%GITHUB_RUN_ATTEMPT%" exit /b 1
+          mkdir "%GITHUB_WORKSPACE%\qa-browser-deps-%GITHUB_RUN_ID%-%GITHUB_RUN_ATTEMPT%"
           if errorlevel 1 exit /b 1
-          copy /y "%GITHUB_WORKSPACE%\gate\tools\qa-browser\package.json" "%GITHUB_WORKSPACE%\qa-browser-deps\package.json" >nul
+          copy /y "%GITHUB_WORKSPACE%\gate\tools\qa-browser\package.json" "%GITHUB_WORKSPACE%\qa-browser-deps-%GITHUB_RUN_ID%-%GITHUB_RUN_ATTEMPT%\package.json" >nul
           if errorlevel 1 exit /b 1
-          copy /y "%GITHUB_WORKSPACE%\gate\tools\qa-browser\package-lock.json" "%GITHUB_WORKSPACE%\qa-browser-deps\package-lock.json" >nul
+          copy /y "%GITHUB_WORKSPACE%\gate\tools\qa-browser\package-lock.json" "%GITHUB_WORKSPACE%\qa-browser-deps-%GITHUB_RUN_ID%-%GITHUB_RUN_ATTEMPT%\package-lock.json" >nul
           if errorlevel 1 exit /b 1
-          cd /d "%GITHUB_WORKSPACE%\qa-browser-deps"
+          cd /d "%GITHUB_WORKSPACE%\qa-browser-deps-%GITHUB_RUN_ID%-%GITHUB_RUN_ATTEMPT%"
           set "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1"
           call npm.cmd ci --offline --ignore-scripts --omit=optional --no-audit --no-fund
           if errorlevel 1 exit /b 1
           python "%GITHUB_WORKSPACE%\gate\tools\home_qa_gate.py" verify-browser --browser-root "C:\actions-runner\tools\ms-playwright" --expected-sha256 __BROWSER_SHA256__
           if errorlevel 1 exit /b 1
-          echo NODE_PATH=%GITHUB_WORKSPACE%\qa-browser-deps\node_modules>>"%GITHUB_ENV%"
+          echo NODE_PATH=%GITHUB_WORKSPACE%\qa-browser-deps-%GITHUB_RUN_ID%-%GITHUB_RUN_ATTEMPT%\node_modules>>"%GITHUB_ENV%"
           echo PLAYWRIGHT_BROWSERS_PATH=C:\actions-runner\tools\ms-playwright>>"%GITHUB_ENV%"
           echo LOCALAPPDATA=%GITHUB_WORKSPACE%\qa-evidence>>"%GITHUB_ENV%"
       - name: Real Chromium and editor pixel QA with durable checkpoints
