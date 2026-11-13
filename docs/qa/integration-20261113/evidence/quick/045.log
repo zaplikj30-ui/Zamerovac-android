@@ -1,0 +1,2 @@
+PASS A39-03: shared Java/JS hierarchy fixtures, offline CAS moves, stable repeat and exact values
+PASS A39-03: transport-neutral JS merge follows the same hierarchy contract

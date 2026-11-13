@@ -1,0 +1,38 @@
+{
+  "suite": "drive-accounts",
+  "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+  "startedAt": "2026-11-13T12:12:04.484Z",
+  "syntheticOnly": true,
+  "cases": [
+    {
+      "name": "historical-receipt-and-live-checkpoint-never-become-current-health-after-disconnect",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    },
+    {
+      "name": "local-save-and-independent-target-receipts-never-pretend-a-backup",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    },
+    {
+      "name": "independent-explicit-account-controls-and-cancelled-disconnect",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    },
+    {
+      "name": "unconfigured-or-invalid-state-never-pretends-account-is-ready-and-text-is-escaped",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    },
+    {
+      "name": "backup-account-switch-clears-old-history-and-stale-verification",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    }
+  ]
+}

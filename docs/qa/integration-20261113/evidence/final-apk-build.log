@@ -1,0 +1,54 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.10.2/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+
+> Configure project :app
+Unable to initialize metrics, ensure /home/agent/.android is writable, details: /home/agent/.android/analytics.settings (No such file or directory)
+
+> Task :app:verifyDriveRegistration
+PASS registered Drive preview project/package/signing certificate; no OAuth account was contacted
+
+> Task :app:preBuild UP-TO-DATE
+> Task :app:prePreviewBuild UP-TO-DATE
+> Task :app:mergePreviewNativeDebugMetadata NO-SOURCE
+> Task :app:generatePreviewBuildConfig UP-TO-DATE
+> Task :app:javaPreCompilePreview UP-TO-DATE
+> Task :app:checkPreviewAarMetadata UP-TO-DATE
+> Task :app:generatePreviewResValues UP-TO-DATE
+> Task :app:mapPreviewSourceSetPaths UP-TO-DATE
+> Task :app:generatePreviewResources UP-TO-DATE
+> Task :app:mergePreviewResources UP-TO-DATE
+> Task :app:packagePreviewResources UP-TO-DATE
+> Task :app:parsePreviewLocalResources UP-TO-DATE
+> Task :app:createPreviewCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksPreview UP-TO-DATE
+> Task :app:processPreviewMainManifest UP-TO-DATE
+> Task :app:processPreviewManifest UP-TO-DATE
+> Task :app:processPreviewManifestForPackage UP-TO-DATE
+> Task :app:processPreviewResources UP-TO-DATE
+> Task :app:compilePreviewJavaWithJavac UP-TO-DATE
+> Task :app:mergePreviewShaders UP-TO-DATE
+> Task :app:compilePreviewShaders NO-SOURCE
+> Task :app:generatePreviewAssets UP-TO-DATE
+> Task :app:mergePreviewAssets UP-TO-DATE
+> Task :app:compressPreviewAssets UP-TO-DATE
+> Task :app:checkPreviewDuplicateClasses
+> Task :app:desugarPreviewFileDependencies
+> Task :app:mergeExtDexPreview
+> Task :app:mergeLibDexPreview
+> Task :app:dexBuilderPreview
+> Task :app:mergePreviewGlobalSynthetics
+> Task :app:processPreviewJavaRes NO-SOURCE
+> Task :app:mergePreviewJavaResource
+> Task :app:mergeProjectDexPreview
+> Task :app:mergePreviewJniLibFolders
+> Task :app:mergePreviewNativeLibs NO-SOURCE
+> Task :app:stripPreviewDebugSymbols NO-SOURCE
+> Task :app:validateSigningPreview
+> Task :app:writePreviewAppMetadata
+> Task :app:writePreviewSigningConfigVersions
+> Task :app:packagePreview
+> Task :app:createPreviewApkListingFileRedirect
+> Task :app:assemblePreview
+
+BUILD SUCCESSFUL in 37s
+34 actionable tasks: 15 executed, 19 up-to-date

@@ -1,0 +1,194 @@
+{
+  "suite": "gallery-readability",
+  "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+  "startedAt": "2026-11-13T12:14:44.877Z",
+  "syntheticOnly": true,
+  "cases": [
+    {
+      "name": "pixels_1200x800_412",
+      "status": "passed",
+      "steps": [
+        "Actual visible glyph ink and line pixels at fit",
+        "Actual visible glyph ink and line pixels at zoom"
+      ],
+      "evidence": [
+        {
+          "fixture": {
+            "photo": [
+              1200,
+              800
+            ],
+            "viewport": {
+              "width": 412,
+              "height": 850
+            }
+          },
+          "zoom": "fit",
+          "fontCssPx": 16.89602340227151,
+          "inkHeightCssPx": 20,
+          "inkPixels": 347,
+          "yellowPixels": 945,
+          "ratio": 1
+        },
+        {
+          "fixture": {
+            "photo": [
+              1200,
+              800
+            ],
+            "viewport": {
+              "width": 412,
+              "height": 850
+            }
+          },
+          "zoom": "zoom",
+          "fontCssPx": 16.896023402271506,
+          "inkHeightCssPx": 20,
+          "inkPixels": 347,
+          "yellowPixels": 1139,
+          "ratio": 1
+        }
+      ]
+    },
+    {
+      "name": "pixels_6000x4000_412",
+      "status": "passed",
+      "steps": [
+        "Actual visible glyph ink and line pixels at fit",
+        "Actual visible glyph ink and line pixels at zoom"
+      ],
+      "evidence": [
+        {
+          "fixture": {
+            "photo": [
+              6000,
+              4000
+            ],
+            "viewport": {
+              "width": 412,
+              "height": 850
+            }
+          },
+          "zoom": "fit",
+          "fontCssPx": 16.896023402271506,
+          "inkHeightCssPx": 20,
+          "inkPixels": 347,
+          "yellowPixels": 963,
+          "ratio": 1
+        },
+        {
+          "fixture": {
+            "photo": [
+              6000,
+              4000
+            ],
+            "viewport": {
+              "width": 412,
+              "height": 850
+            }
+          },
+          "zoom": "zoom",
+          "fontCssPx": 16.896023402271506,
+          "inkHeightCssPx": 20,
+          "inkPixels": 347,
+          "yellowPixels": 1139,
+          "ratio": 1
+        }
+      ]
+    },
+    {
+      "name": "pixels_1600x4800_1100",
+      "status": "passed",
+      "steps": [
+        "Actual visible glyph ink and line pixels at fit",
+        "Actual visible glyph ink and line pixels at zoom"
+      ],
+      "evidence": [
+        {
+          "fixture": {
+            "photo": [
+              1600,
+              4800
+            ],
+            "viewport": {
+              "width": 1100,
+              "height": 700
+            }
+          },
+          "zoom": "fit",
+          "fontCssPx": 15.205261271176258,
+          "inkHeightCssPx": 51,
+          "inkPixels": 411,
+          "yellowPixels": 755,
+          "ratio": 1
+        },
+        {
+          "fixture": {
+            "photo": [
+              1600,
+              4800
+            ],
+            "viewport": {
+              "width": 1100,
+              "height": 700
+            }
+          },
+          "zoom": "zoom",
+          "fontCssPx": 15.205261271176258,
+          "inkHeightCssPx": 51,
+          "inkPixels": 411,
+          "yellowPixels": 1010,
+          "ratio": 1
+        }
+      ]
+    },
+    {
+      "name": "pixels_6000x4000_412_dpr2",
+      "status": "passed",
+      "steps": [
+        "Actual visible glyph ink and line pixels at fit",
+        "Actual visible glyph ink and line pixels at zoom"
+      ],
+      "evidence": [
+        {
+          "fixture": {
+            "photo": [
+              6000,
+              4000
+            ],
+            "viewport": {
+              "width": 412,
+              "height": 850
+            },
+            "density": 2
+          },
+          "zoom": "fit",
+          "fontCssPx": 16.896023402271506,
+          "inkHeightCssPx": 20.5,
+          "inkPixels": 1519,
+          "yellowPixels": 3898,
+          "ratio": 0.5
+        },
+        {
+          "fixture": {
+            "photo": [
+              6000,
+              4000
+            ],
+            "viewport": {
+              "width": 412,
+              "height": 850
+            },
+            "density": 2
+          },
+          "zoom": "zoom",
+          "fontCssPx": 16.896023402271506,
+          "inkHeightCssPx": 20,
+          "inkPixels": 347,
+          "yellowPixels": 1139,
+          "ratio": 1
+        }
+      ]
+    }
+  ]
+}

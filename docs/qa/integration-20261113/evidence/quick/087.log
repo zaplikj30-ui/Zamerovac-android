@@ -1,0 +1,1 @@
+PASS: real trash restore, CAS fail/rollback (5), successful save/reconciliation (2), exact media and clock

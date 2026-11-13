@@ -1,0 +1,480 @@
+{
+  "suite": "latency",
+  "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+  "startedAt": "2026-11-13T12:13:37.125Z",
+  "syntheticOnly": true,
+  "cases": [
+    {
+      "name": "project_1_10_50_editable_documents",
+      "status": "passed",
+      "steps": [],
+      "evidence": [
+        {
+          "platform": "Linux Chromium/localStorage; synthetic hierarchy and exact editable dimensions",
+          "samples": [
+            {
+              "count": 1,
+              "iteration": 0,
+              "itemsPerDocument": 20,
+              "jsonBytes": 7608,
+              "confirmedSaveReadbackMs": 1.3999999999068677
+            },
+            {
+              "count": 1,
+              "iteration": 1,
+              "itemsPerDocument": 20,
+              "jsonBytes": 7608,
+              "confirmedSaveReadbackMs": 0.7999999999301508
+            },
+            {
+              "count": 1,
+              "iteration": 2,
+              "itemsPerDocument": 20,
+              "jsonBytes": 7608,
+              "confirmedSaveReadbackMs": 3
+            },
+            {
+              "count": 10,
+              "iteration": 0,
+              "itemsPerDocument": 20,
+              "jsonBytes": 65478,
+              "confirmedSaveReadbackMs": 2.200000000069849
+            },
+            {
+              "count": 10,
+              "iteration": 1,
+              "itemsPerDocument": 20,
+              "jsonBytes": 65478,
+              "confirmedSaveReadbackMs": 2.699999999953434
+            },
+            {
+              "count": 10,
+              "iteration": 2,
+              "itemsPerDocument": 20,
+              "jsonBytes": 65478,
+              "confirmedSaveReadbackMs": 9.099999999976717
+            },
+            {
+              "count": 50,
+              "iteration": 0,
+              "itemsPerDocument": 20,
+              "jsonBytes": 323518,
+              "confirmedSaveReadbackMs": 54.699999999953434
+            },
+            {
+              "count": 50,
+              "iteration": 1,
+              "itemsPerDocument": 20,
+              "jsonBytes": 323518,
+              "confirmedSaveReadbackMs": 5.700000000069849
+            },
+            {
+              "count": 50,
+              "iteration": 2,
+              "itemsPerDocument": 20,
+              "jsonBytes": 323518,
+              "confirmedSaveReadbackMs": 6.799999999930151
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "photo_and_gallery_1200x800",
+      "status": "passed",
+      "steps": [],
+      "evidence": [
+        {
+          "size": [
+            1200,
+            800
+          ],
+          "pngBytes": 1504385,
+          "fixtureDelivery": "local file path",
+          "platform": "Linux Chromium/localStorage/IndexedDB; open includes UI file chooser automation",
+          "samples": [
+            {
+              "iteration": 0,
+              "openMs": 669.5999999999767,
+              "galleryMs": 96.19999999995343,
+              "confirmedSaveReadbackMs": 1.1999999999534339
+            },
+            {
+              "iteration": 1,
+              "openMs": 422.80000000004657,
+              "galleryMs": 113.59999999997672,
+              "confirmedSaveReadbackMs": 3.599999999976717
+            },
+            {
+              "iteration": 2,
+              "openMs": 421,
+              "galleryMs": 97.40000000002328,
+              "confirmedSaveReadbackMs": 1.099999999976717
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "photo_and_gallery_6000x4000",
+      "status": "passed",
+      "steps": [],
+      "evidence": [
+        {
+          "size": [
+            6000,
+            4000
+          ],
+          "pngBytes": 37578667,
+          "fixtureDelivery": "local file path",
+          "platform": "Linux Chromium/localStorage/IndexedDB; open includes UI file chooser automation",
+          "samples": [
+            {
+              "iteration": 0,
+              "openMs": 3813.29999999993,
+              "galleryMs": 77.60000000009313,
+              "confirmedSaveReadbackMs": 2.200000000069849
+            },
+            {
+              "iteration": 1,
+              "openMs": 3176.5,
+              "galleryMs": 34.800000000046566,
+              "confirmedSaveReadbackMs": 1.5
+            },
+            {
+              "iteration": 2,
+              "openMs": 3282.3000000000466,
+              "galleryMs": 46.39999999990687,
+              "confirmedSaveReadbackMs": 1.3999999999068677
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "existing_feedback_320x240",
+      "status": "passed",
+      "steps": [],
+      "evidence": [
+        {
+          "size": [
+            320,
+            240
+          ],
+          "originalPngBytes": 121559,
+          "platform": "Chromium with Native bridge model; no Android disk delay",
+          "samples": [
+            {
+              "iteration": 0,
+              "totalMs": 30.400000000023283,
+              "saved": {
+                "id": "feedback-latency",
+                "title": "Syntetická připomínka",
+                "description": "Výkon",
+                "screenshotId": "synthetic-screen",
+                "annotations": [
+                  {
+                    "type": "pen",
+                    "points": [
+                      [
+                        0.1,
+                        0.1
+                      ],
+                      [
+                        0.4,
+                        0.4
+                      ]
+                    ],
+                    "color": "#f7dc27",
+                    "width": 3
+                  }
+                ],
+                "videos": [],
+                "createdAt": "2026-11-13T12:14:03.118Z",
+                "updatedAt": "2026-11-13T12:14:04.094Z",
+                "type": "change",
+                "resolved": true,
+                "annotatedId": "f09c054d-5301-41e0-b9bc-0ae667c344bd"
+              },
+              "stats": {
+                "begin": 1,
+                "chunks": 3,
+                "finish": 1,
+                "bytes": 123545,
+                "bridgeMs": 0.09999999997671694,
+                "encodeMs": 9.599999999976717
+              }
+            },
+            {
+              "iteration": 1,
+              "totalMs": 1.2000000000698492,
+              "saved": {
+                "id": "feedback-latency",
+                "title": "Syntetická připomínka",
+                "description": "Výkon",
+                "screenshotId": "synthetic-screen",
+                "annotations": [
+                  {
+                    "type": "pen",
+                    "points": [
+                      [
+                        0.1,
+                        0.1
+                      ],
+                      [
+                        0.4,
+                        0.4
+                      ]
+                    ],
+                    "color": "#f7dc27",
+                    "width": 3
+                  }
+                ],
+                "videos": [],
+                "createdAt": "2026-11-13T12:14:03.118Z",
+                "updatedAt": "2026-11-13T12:14:04.303Z",
+                "type": "change",
+                "resolved": true,
+                "annotatedId": "f09c054d-5301-41e0-b9bc-0ae667c344bd"
+              },
+              "stats": {
+                "begin": 0,
+                "chunks": 0,
+                "finish": 0,
+                "bytes": 0,
+                "bridgeMs": 0,
+                "encodeMs": 0
+              }
+            },
+            {
+              "iteration": 2,
+              "totalMs": 2,
+              "saved": {
+                "id": "feedback-latency",
+                "title": "Syntetická připomínka",
+                "description": "Výkon",
+                "screenshotId": "synthetic-screen",
+                "annotations": [
+                  {
+                    "type": "pen",
+                    "points": [
+                      [
+                        0.1,
+                        0.1
+                      ],
+                      [
+                        0.4,
+                        0.4
+                      ]
+                    ],
+                    "color": "#f7dc27",
+                    "width": 3
+                  }
+                ],
+                "videos": [],
+                "createdAt": "2026-11-13T12:14:03.118Z",
+                "updatedAt": "2026-11-13T12:14:04.452Z",
+                "type": "change",
+                "resolved": true,
+                "annotatedId": "f09c054d-5301-41e0-b9bc-0ae667c344bd"
+              },
+              "stats": {
+                "begin": 0,
+                "chunks": 0,
+                "finish": 0,
+                "bytes": 0,
+                "bridgeMs": 0,
+                "encodeMs": 0
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "existing_feedback_1440x2800",
+      "status": "passed",
+      "steps": [],
+      "evidence": [
+        {
+          "size": [
+            1440,
+            2800
+          ],
+          "originalPngBytes": 6311031,
+          "platform": "Chromium with Native bridge model; no Android disk delay",
+          "samples": [
+            {
+              "iteration": 0,
+              "totalMs": 524,
+              "saved": {
+                "id": "feedback-latency",
+                "title": "Syntetická připomínka",
+                "description": "Výkon",
+                "screenshotId": "synthetic-screen",
+                "annotations": [
+                  {
+                    "type": "pen",
+                    "points": [
+                      [
+                        0.1,
+                        0.1
+                      ],
+                      [
+                        0.4,
+                        0.4
+                      ]
+                    ],
+                    "color": "#f7dc27",
+                    "width": 3
+                  }
+                ],
+                "videos": [],
+                "createdAt": "2026-11-13T12:14:06.780Z",
+                "updatedAt": "2026-11-13T12:14:08.088Z",
+                "type": "change",
+                "resolved": true,
+                "annotatedId": "51c82d1c-d322-4ed6-858e-64158ef7115e"
+              },
+              "stats": {
+                "begin": 1,
+                "chunks": 129,
+                "finish": 1,
+                "bytes": 6322507,
+                "bridgeMs": 5.700000000651926,
+                "encodeMs": 333.5
+              }
+            },
+            {
+              "iteration": 1,
+              "totalMs": 7.900000000023283,
+              "saved": {
+                "id": "feedback-latency",
+                "title": "Syntetická připomínka",
+                "description": "Výkon",
+                "screenshotId": "synthetic-screen",
+                "annotations": [
+                  {
+                    "type": "pen",
+                    "points": [
+                      [
+                        0.1,
+                        0.1
+                      ],
+                      [
+                        0.4,
+                        0.4
+                      ]
+                    ],
+                    "color": "#f7dc27",
+                    "width": 3
+                  }
+                ],
+                "videos": [],
+                "createdAt": "2026-11-13T12:14:06.780Z",
+                "updatedAt": "2026-11-13T12:14:09.121Z",
+                "type": "change",
+                "resolved": true,
+                "annotatedId": "51c82d1c-d322-4ed6-858e-64158ef7115e"
+              },
+              "stats": {
+                "begin": 0,
+                "chunks": 0,
+                "finish": 0,
+                "bytes": 0,
+                "bridgeMs": 0,
+                "encodeMs": 0
+              }
+            },
+            {
+              "iteration": 2,
+              "totalMs": 1.5,
+              "saved": {
+                "id": "feedback-latency",
+                "title": "Syntetická připomínka",
+                "description": "Výkon",
+                "screenshotId": "synthetic-screen",
+                "annotations": [
+                  {
+                    "type": "pen",
+                    "points": [
+                      [
+                        0.1,
+                        0.1
+                      ],
+                      [
+                        0.4,
+                        0.4
+                      ]
+                    ],
+                    "color": "#f7dc27",
+                    "width": 3
+                  }
+                ],
+                "videos": [],
+                "createdAt": "2026-11-13T12:14:06.780Z",
+                "updatedAt": "2026-11-13T12:14:09.439Z",
+                "type": "change",
+                "resolved": true,
+                "annotatedId": "51c82d1c-d322-4ed6-858e-64158ef7115e"
+              },
+              "stats": {
+                "begin": 0,
+                "chunks": 0,
+                "finish": 0,
+                "bytes": 0,
+                "bridgeMs": 0,
+                "encodeMs": 0
+              }
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "feedback_slow_save_blocks_close_list_and_android_back",
+      "status": "passed",
+      "steps": [],
+      "evidence": [
+        {
+          "scenario": "actual Chromium clicks while PNG encode deliberately delayed",
+          "result": {
+            "reports": [
+              {
+                "id": "feedback-save-guard",
+                "title": "Pomalá připomínka",
+                "description": "Rozpracovaný snímek",
+                "screenshotId": "save-guard-screen",
+                "annotatedId": "a97a509c-e03b-47fa-bece-d03c6ee864c2",
+                "annotations": [
+                  {
+                    "type": "pen",
+                    "points": [
+                      [
+                        0.1,
+                        0.1
+                      ],
+                      [
+                        0.3,
+                        0.4
+                      ]
+                    ]
+                  }
+                ],
+                "videos": [],
+                "resolved": false,
+                "createdAt": "2026-11-13T12:14:11.586Z",
+                "updatedAt": "2026-11-13T12:14:12.282Z",
+                "type": "change"
+              }
+            ],
+            "counts": {
+              "begin": 1,
+              "finish": 1
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

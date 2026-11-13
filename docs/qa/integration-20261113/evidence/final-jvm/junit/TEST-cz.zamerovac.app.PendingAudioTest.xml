@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.PendingAudioTest" tests="15" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:17:07" hostname="4b8cafdccf99" time="0.7">
+  <properties/>
+  <testcase name="faultsAtEveryDurabilityBoundaryKeepOriginalAndRecoveryIsRepeatable" classname="cz.zamerovac.app.PendingAudioTest" time="0.097"/>
+  <testcase name="ledgerPathAndAudioSymlinksAreRejectedWithoutTouchingTargets" classname="cz.zamerovac.app.PendingAudioTest" time="0.029"/>
+  <testcase name="collisionsConcurrentReservationsAndPublicationCannotOverwriteEitherCopy" classname="cz.zamerovac.app.PendingAudioTest" time="0.032"/>
+  <testcase name="restartBetweenJournalAndPublicationRecoversCompletedBytes" classname="cz.zamerovac.app.PendingAudioTest" time="0.032"/>
+  <testcase name="trashPurgeRetainsPendingBoundAndUnknownAudioWhileOtherMediaStillDeletes" classname="cz.zamerovac.app.PendingAudioTest" time="0.05"/>
+  <testcase name="realUnwritableJournalLocationAndActiveRecoveryKeepCapture" classname="cz.zamerovac.app.PendingAudioTest" time="0.03"/>
+  <testcase name="prefsMemoryValuesAfterFailedCommitAreNeverTreatedAsDurableMetadata" classname="cz.zamerovac.app.PendingAudioTest" time="0.039"/>
+  <testcase name="completedMetadataFailurePreservesExactBytes" classname="cz.zamerovac.app.PendingAudioTest" time="0.039"/>
+  <testcase name="historyUndoTrashBackupAndOldRestoreDoNotAuthorizeDeletionOrBinding" classname="cz.zamerovac.app.PendingAudioTest" time="0.067"/>
+  <testcase name="failedLedgerAfterProjectCommitDoesNotUndoDurableProject" classname="cz.zamerovac.app.PendingAudioTest" time="0.042"/>
+  <testcase name="unconfirmedNewJournalAndExportOfCorruptEvidencePreserveExactOriginal" classname="cz.zamerovac.app.PendingAudioTest" time="0.031"/>
+  <testcase name="corruptMissingAndAtomicBackupJournalNeverHideOrDeleteOriginals" classname="cz.zamerovac.app.PendingAudioTest" time="0.034"/>
+  <testcase name="legacyUnknownAndInterruptedCaptureRemainVisibleAndExportable" classname="cz.zamerovac.app.PendingAudioTest" time="0.023"/>
+  <testcase name="boundRequiresExactDurableSnapshotAndNoteIdentityAndIsIdempotent" classname="cz.zamerovac.app.PendingAudioTest" time="0.043"/>
+  <testcase name="emptyLargeAndChangedOriginalsNeverAcquireFalseCompletedProof" classname="cz.zamerovac.app.PendingAudioTest" time="0.107"/>
+  <system-out><![CDATA[ORIGINAL_AND_RECOVERED_SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a EXACT_BYTES=10
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

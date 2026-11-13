@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.PeerWifiDirectTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:17:06" hostname="4b8cafdccf99" time="1.044">
+  <properties/>
+  <testcase name="lostGroupRetriesAreBoundedAndBusyRadioRetainsPendingState" classname="cz.zamerovac.app.PeerWifiDirectTest" time="0.875"/>
+  <testcase name="lateGroupReplyAfterDisconnectAndCloseCannotPublishEndpoint" classname="cz.zamerovac.app.PeerWifiDirectTest" time="0.022"/>
+  <testcase name="noUnknownPermissionlessDisabledOrRevokedAutoConnections" classname="cz.zamerovac.app.PeerWifiDirectTest" time="0.023"/>
+  <testcase name="channelLossReinitializesAndOldPeerCallbackCannotConnect" classname="cz.zamerovac.app.PeerWifiDirectTest" time="0.019"/>
+  <testcase name="automaticRecreatesKnownRouteAndKeepsExpectedIdentityOutOfUi" classname="cz.zamerovac.app.PeerWifiDirectTest" time="0.023"/>
+  <testcase name="incomingRouteUsesActualGroupInterfaceForOwnerAndClearsAfterDisconnect" classname="cz.zamerovac.app.PeerWifiDirectTest" time="0.026"/>
+  <testcase name="onlyAuthenticatedRouteIsDurableAndForgettingRemovesIt" classname="cz.zamerovac.app.PeerWifiDirectTest" time="0.055"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

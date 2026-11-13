@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.RecoveryProtectionArchiveTest" tests="40" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:17:18" hostname="4b8cafdccf99" time="3.4">
+  <properties/>
+  <testcase name="existingConfirmedArchiveRejectsChangedPrefsOnly" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.063"/>
+  <testcase name="unreadableLivePhotoDuringSecondInventoryFailsClosedWithoutSourceMutation" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.334"/>
+  <testcase name="existingConfirmedArchiveRejectsDisappearingOriginalPhoto" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.102"/>
+  <testcase name="oversizedCompleteMarkerIsRejectedBeforeOpenAndPreservesSources" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.096"/>
+  <testcase name="interruptedStageIsNeverCompleteAndRetryAfterRestartIsIdempotent" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.057"/>
+  <testcase name="androidFallbackStillRejectsSymlinkAncestorOnVerifyAndReuse" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.207"/>
+  <testcase name="forgedSecondManifestCannotFinalizeInterruptedArchive" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.118"/>
+  <testcase name="boundedManifestAcceptsValidVerifyReuseAndInterruptedFinish" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.074"/>
+  <testcase name="storageExhaustedMidWriteLeavesOnlyUncommittedStagingEvidence" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.052"/>
+  <testcase name="androidFallbackWithoutFileKeyRemainsFailClosed" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.025"/>
+  <testcase name="symbolicLinkInAtomicFileSidecarCannotBeCertified" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.024"/>
+  <testcase name="archivedMediaDirectorySymlinkToIdenticalLiveOriginalIsRejected" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.048"/>
+  <testcase name="changingSourceDuringCopyFailsWithoutPublishingArchive" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.027"/>
+  <testcase name="androidCreationTimeFallbackAllowsExactArchiveVerifyAndReuse" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.193"/>
+  <testcase name="validManifestMetadataSurvivesVerifyReuseAndInterruptedFinalization" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.096"/>
+  <testcase name="corruptedCompleteMarkerWithCorrectLengthIsRejected" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.073"/>
+  <testcase name="forgedSecondManifestCannotChangeConfirmedArchiveMetadata" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.077"/>
+  <testcase name="unmodifiedSourcesReuseConfirmedAndSafelyFinishUnconfirmed" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.116"/>
+  <testcase name="existingConfirmedArchiveRejectsUnsafeNewSidecarSymlink" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.063"/>
+  <testcase name="existingConfirmedArchiveRejectsPreciseDimensionChangedDuringReuse" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.064"/>
+  <testcase name="completeGrowingAfterFirstReadIsBoundedToOneExtraByte" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.083"/>
+  <testcase name="damagedPrimaryIsPreservedAsEvidenceNeverReplacedByOldBackup" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.048"/>
+  <testcase name="symlinkOutsideAppIsNeverCopiedAndTamperedArchiveCannotVerify" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.042"/>
+  <testcase name="expandingManifestDuringSecondReadCannotFinalizeInterruptedCopy" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.12"/>
+  <testcase name="crashAfterAtomicArchiveRenameBeforeMarkerCanBeSafelyFinalized" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.053"/>
+  <testcase name="snapshotKeepsExactDimensionsOldBackupTrashJournalMediaPrefsAndOutbox" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.247"/>
+  <testcase name="expandingManifestDuringFirstReadIsBoundedAndRejected" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.159"/>
+  <testcase name="atomicFileSidecarsAreArchivedByteForByteWithoutPromotingThem" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.061"/>
+  <testcase name="lowStorageFailsBeforeStagingAndNeverChangesPrimary" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.026"/>
+  <testcase name="existingConfirmedArchiveRejectsNewAtomicSidecarOnly" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.063"/>
+  <testcase name="interruptedArchiveRejectsDriftAfterMarkerButKeepsArchivedEvidence" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.089"/>
+  <testcase name="androidFallbackStillRejectsRealDirectoryReplacementDuringCopy" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.044"/>
+  <testcase name="existingConfirmedArchiveRejectsSameLengthPhotoMutationDuringReuse" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.058"/>
+  <testcase name="sameSizeManifestRewrittenDuringReadFailsIdentityCheck" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.062"/>
+  <testcase name="disappearingOriginalFailsInsteadOfInventingIt" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.029"/>
+  <testcase name="mediaDirectorySwappedToSymlinkDuringCopyIsNeverConfirmed" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.026"/>
+  <testcase name="existingArchiveRejectsPhotoMutationInsideMarkerVerification" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.099"/>
+  <testcase name="androidFallbackStillRejectsSymlinkSwapDuringCopy" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.054"/>
+  <testcase name="interruptedBeforeCompleteRejectsSourceChangeWithoutPublishingMarker" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.057"/>
+  <testcase name="absentPhotoAndTextOnlyOrOrphanMediaHaveTruthfulCompleteness" classname="cz.zamerovac.app.RecoveryProtectionArchiveTest" time="0.067"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

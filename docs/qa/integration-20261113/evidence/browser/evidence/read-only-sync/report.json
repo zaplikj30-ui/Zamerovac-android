@@ -1,0 +1,14 @@
+{
+  "suite": "read-only-sync",
+  "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+  "startedAt": "2026-11-13T12:12:16.281Z",
+  "syntheticOnly": true,
+  "cases": [
+    {
+      "name": "view-photo-and-detail-without-revision-then-edit-with-history",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    }
+  ]
+}

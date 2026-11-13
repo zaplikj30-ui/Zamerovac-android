@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.SyncAckReconciliationTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:18:11" hostname="4b8cafdccf99" time="6.367">
+  <properties/>
+  <testcase name="driveLateDuplicateAckRestartBothAndRetryMustNotFalselyFinish" classname="cz.zamerovac.app.SyncAckReconciliationTest" time="3.369"/>
+  <testcase name="safLateDuplicateAckRestartBothAndRetryMustNotFalselyFinish" classname="cz.zamerovac.app.SyncAckReconciliationTest" time="2.998"/>
+  <system-out><![CDATA[ACK_COUNTEREXAMPLE staged=true late=true falselyRetired=false restartBoth=verified simulatedRestore=true newerRevision=preserved photoVideoAudio=exact realTlsRetry=verified
+ACK_COUNTEREXAMPLE staged=false late=true falselyRetired=false restartBoth=verified simulatedRestore=true newerRevision=preserved photoVideoAudio=exact realTlsRetry=verified
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

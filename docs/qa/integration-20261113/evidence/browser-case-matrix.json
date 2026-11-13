@@ -1,0 +1,578 @@
+[
+  {
+    "suite": "backup-history",
+    "name": "offline-ui-two-histories-confirmation-and-network-exception",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "drawing",
+    "name": "dimension",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "drawing",
+    "name": "line",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "drawing",
+    "name": "arrow",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "drawing",
+    "name": "circle",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "drawing",
+    "name": "ellipse",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "drawing",
+    "name": "rect",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "drawing",
+    "name": "area",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "drawing",
+    "name": "polyline",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "drawing",
+    "name": "chain",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "drawing",
+    "name": "cumulative",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "drawing",
+    "name": "angle",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "drawing",
+    "name": "freehand",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "drawing",
+    "name": "target",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "drawing",
+    "name": "note",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "drawing",
+    "name": "symbol",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "drawing",
+    "name": "two_finger_pinch_keeps_undo_redo_and_exact_measure",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "drawing",
+    "name": "pan_then_pinch_does_not_resume_stale_drag",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "drive-accounts",
+    "name": "historical-receipt-and-live-checkpoint-never-become-current-health-after-disconnect",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "drive-accounts",
+    "name": "local-save-and-independent-target-receipts-never-pretend-a-backup",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "drive-accounts",
+    "name": "independent-explicit-account-controls-and-cancelled-disconnect",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "drive-accounts",
+    "name": "unconfigured-or-invalid-state-never-pretends-account-is-ready-and-text-is-escaped",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "drive-accounts",
+    "name": "backup-account-switch-clears-old-history-and-stale-verification",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "gallery-readability",
+    "name": "pixels_1200x800_412",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "gallery-readability",
+    "name": "pixels_6000x4000_412",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "gallery-readability",
+    "name": "pixels_1600x4800_1100",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "gallery-readability",
+    "name": "pixels_6000x4000_412_dpr2",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "gallery-state",
+    "name": "approved_inset_handles_have_real_pixels_and_stay_out_of_export",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "gallery-state",
+    "name": "render_is_read_only_even_during_nested_drawing_and_failure",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "gallery-state",
+    "name": "gestures_navigation_stale_load_and_exact_anchor_pixels",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "gallery-state",
+    "name": "stacked_voice_marker_gallery_and_customer_export_pixels",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "gallery-state",
+    "name": "customer_export_high_resolution_voice_marker_2400px",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "gallery-visual",
+    "name": "gallery_text_and_lines_remain_sharp_at_real_screen_scale",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "help",
+    "name": "main_menu_search_offline_and_android_back",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "help",
+    "name": "overflow_menu_and_small_large_screens",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "interactions",
+    "name": "rapid_grips_jitter_cancel",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "interactions",
+    "name": "pan_zoom_fit_and_repeated_reopen",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "interactions",
+    "name": "chain_finish_insert_remove_history",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "latency",
+    "name": "project_1_10_50_editable_documents",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "latency",
+    "name": "photo_and_gallery_1200x800",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "latency",
+    "name": "photo_and_gallery_6000x4000",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "latency",
+    "name": "existing_feedback_320x240",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "latency",
+    "name": "existing_feedback_1440x2800",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "latency",
+    "name": "feedback_slow_save_blocks_close_list_and_android_back",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "legacy-conflict-persistence",
+    "name": "clockless-legacy-copy-persists-reopen-media-editor-and-repeat-callback",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "media-import",
+    "name": "issue46-two-notes-back-focus-cancel-and-delayed-picker-callback",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "media-import",
+    "name": "delayed-native-results-stay-in-original-folder-and-stale-token-cannot-complete-new-picker",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "media-import",
+    "name": "deleted-or-locked-destination-and-closed-owner-dialog-do-not-redirect-file",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "media-import",
+    "name": "picker-cancel-and-rejected-write-keep-data-without-ghost-record",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "note-sync",
+    "name": "read-only-note-and-checklist-attachment-causal-autosave",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "note-sync",
+    "name": "incoming-note-data-waits-and-read-only-close-does-not-create-conflict",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "note-sync",
+    "name": "sketch-stroke-keeps-live-points-through-debounced-note-cas",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "note-sync",
+    "name": "failed-note-write-keeps-form-and-retry-and-lock-protects-checks",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "note-sync",
+    "name": "voice-keeps-owner-finishes-on-save-and-failed-stop-keeps-form",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "note-sync",
+    "name": "rich-voice-failed-stop-and-disk-keep-modal-back-retry-and-cancel",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "peer-sync",
+    "name": "offline-folder-cycle-repair-is-visible-reachable-and-exact",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "peer-sync",
+    "name": "menu-settings-offline-and-data-preserved",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "peer-sync",
+    "name": "explicit-approval-full-code-reject-back-and-stale-session",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "peer-sync",
+    "name": "untrusted-names-pending-errors-and-cloud-isolation",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "pending-audio",
+    "name": "verified-original-and-suspect-reservation-have-separate-actions-and-acknowledgements",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "pending-audio",
+    "name": "ordinary-save-uses-native-summary-without-requesting-another-full-media-scan",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "pending-audio",
+    "name": "stop-is-only-a-draft-before-cancel-and-failed-save",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "pending-audio",
+    "name": "unknown-journal-warning-preserves-two-independent-copy-actions",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "pending-audio",
+    "name": "stop-cancel-restart-reattach-save-preserves-exact-values",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "pending-audio",
+    "name": "failed-save-cancel-keeps-pending-across-reload",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "pending-audio",
+    "name": "android-back-and-bind-failure-do-not-undo-saved-note",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "pending-audio",
+    "name": "failed-stop-retains-recovery-and-uncertain-export-never-attaches",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "quality-regressions",
+    "name": "existing_note_undo_redo_save",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "quality-regressions",
+    "name": "existing_note_undo_redo_back",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "quality-regressions",
+    "name": "audio_play_pause_must_not_focus_text",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "quality-regressions",
+    "name": "two_notes_explicit_picker_double_click_cancel_back_and_late_result",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "quality-regressions",
+    "name": "cancelled_attachment_has_no_unprotected_orphan",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "quality-regressions",
+    "name": "note_controls_reachable_412",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "quality-regressions",
+    "name": "note_controls_reachable_1100",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "quality-regressions",
+    "name": "project_photo_dimension_note_reopen_and_export",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "read-only-sync",
+    "name": "view-photo-and-detail-without-revision-then-edit-with-history",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "release-history",
+    "name": "versioned_history_main_menu_offline_and_help_navigation",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "release-history",
+    "name": "settings_history_and_responsive_layout",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "sync-cadence",
+    "name": "frequency-selection-persists-without-changing-records-and-old-switch-can-reenable",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "sync-cadence",
+    "name": "failed-persistence-does-not-activate-new-frequency",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "sync-edit-guard",
+    "name": "native-callback-during-grip-and-measure-form-preserves-both-edits",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "sync-edit-guard",
+    "name": "status-message-cannot-drop-deferred-data-when-form-is-cancelled",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "sync-edit-guard",
+    "name": "detail-parent-cas-keeps-live-item-references-after-conflict",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "update39",
+    "name": "gallery_bounded_pan_and_caption_pixels",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "update39",
+    "name": "default_selection_corner_loupe_and_landscape_tools",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "update39",
+    "name": "real_save_failure_and_photo_loading_errors",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "update39",
+    "name": "help_occurrences_and_neutral_bluetooth",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "web-content-policy",
+    "name": "native-csp-blocks-injected-scripts-media-and-frames-keeps-real-drawing",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "workflows",
+    "name": "folders_move_rename_trash_restore",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "workflows",
+    "name": "bulk_copy_move_lock",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "workflows",
+    "name": "note_checklist_sketch_attachment",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "workflows",
+    "name": "photo_details_nested_gallery_png_hashes",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "workflows",
+    "name": "trash_restore_purge_and_live_media",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "workflows",
+    "name": "focus_cancel_layers_history_search",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "zoom-grid",
+    "name": "buttons_grid_pixels_and_snap_independence",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  },
+  {
+    "suite": "zoom-grid",
+    "name": "trusted_two_finger_pinch_and_limits",
+    "status": "passed",
+    "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639"
+  }
+]

@@ -1,0 +1,13 @@
+// Opt-in author proof outside product sources; no tracked Gradle/CI guards change.
+allprojects {
+ afterEvaluate { p ->
+  if(p.path == ':app') {
+   p.android.sourceSets.test.java.srcDir('/workspace/integration-evidence/supplemental-pdf-src')
+   p.tasks.withType(Test).configureEach {
+    systemProperty 'integration.png', '/workspace/qa-results/Zamerovac-QA/browser/run-2026-11-13T12-09-45-020Z-3549/evidence/gallery-state/rotated-inset-with-caption.png'
+    systemProperty 'integration.pdf', '/workspace/integration-evidence/browser-to-native-pdf.zip'
+    reports.junitXml.outputLocation = p.file('/workspace/integration-evidence/supplemental-pdf-junit')
+   }
+  }
+ }
+}

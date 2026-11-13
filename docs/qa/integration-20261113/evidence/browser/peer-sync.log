@@ -1,0 +1,4 @@
+PASS peer-sync/offline-folder-cycle-repair-is-visible-reachable-and-exact
+PASS peer-sync/menu-settings-offline-and-data-preserved
+PASS peer-sync/explicit-approval-full-code-reject-back-and-stale-session
+PASS peer-sync/untrusted-names-pending-errors-and-cloud-isolation

@@ -1,0 +1,3 @@
+OK: app/build/customer-pdf-1.zip: 1 PDFs, strict parser, image-only, correct aspect and rendered fixture colors
+OK: app/build/customer-pdf-3.zip: 3 PDFs, strict parser, image-only, correct aspect and rendered fixture colors
+OK: app/build/customer-pdf-multipage.zip: 1 PDFs, strict parser, image-only, correct aspect and rendered fixture colors

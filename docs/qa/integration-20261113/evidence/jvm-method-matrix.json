@@ -1,0 +1,3597 @@
+{
+  "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+  "suites": [
+    {
+      "file": "TEST-cz.zamerovac.app.AudioCaptureTest.xml",
+      "sha256": "7fc4d9f9f0cf4467a35d25cf6113c294c8eaaa429b8c82fc528a171adf9ab5ef",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.AudioCompletedKeepTest.xml",
+      "sha256": "1660e973c0fc99d534c2823dc5235abc291495caa641eafbf48c768878b92058",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.AudioRecoveryIsolationTest.xml",
+      "sha256": "9698800a6a696f827bebc74775285c2505a271926a07f86796f539958cd84bbd",
+      "tests": "21",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.Audit39FindingsTest.xml",
+      "sha256": "49e542916eddd1ed4762d41f5ca9810e88b0e8fa91551a1a66e41c1ded1c0c17",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.Audit39HandshakeTest.xml",
+      "sha256": "144123930e44598c707b83e02d2dd081d5f7d9768cebdc1a908254dacb279386",
+      "tests": "11",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.Audit39SafetyTest.xml",
+      "sha256": "8b403dd41d4b4b74ea6e020a4c3a28870d1ea7c200dda5108ab95742c74f9386",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.BackupHistoryTest.xml",
+      "sha256": "77aede45b46e2a473a8ea8c603a3f6100f4c3637b191f1b32ac661cfe9078b10",
+      "tests": "11",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.CloudFilesReadTest.xml",
+      "sha256": "84d5a4cea92a33fc97f8e6f48d92f40916af1c6d74a1eb023fb2633e9e67e6c8",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.CloudInboxTest.xml",
+      "sha256": "08005d7d15eb7d124f43583123c63dcab9d6fa7f6071826a648ab0d78b310691",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.CloudPublicationsTest.xml",
+      "sha256": "9f551fa037f05c31e68760df9a254da25ec5d9c34ada5cbab9ca346ea8dee16b",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.CloudScanTest.xml",
+      "sha256": "4d2349fedeaf6fc55da531377241e8a7fa1b8df9f36702b637635cd453595ee9",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.CloudStorageTest.xml",
+      "sha256": "e587d6d3a7fe66f1e6551256ffeda2a8c1afa90e0b662f8498d46d95307d0e84",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.DatabaseInstallEvidenceTest.xml",
+      "sha256": "571effaa543d091c435b3f0b80318a819b54c532a1bca0c7616ba821daf4a715",
+      "tests": "23",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.DatabaseRecoveryTest.xml",
+      "sha256": "a64129e87c0794db82a0914e0575cd0a386ed7267c8efb77c4c35ea0ccce6691",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.DirectSyncServiceTest.xml",
+      "sha256": "3d6b7fdf8e303de5d180916d0099e34bafed4a0b57ed29698dec78bc2243f83f",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.DocumentBackupStoreTest.xml",
+      "sha256": "2fe8c47b1e1968b045f8083a38a9302224907bd3f8a477d9923b73bd7cc16441",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.DriveAccountFlowTest.xml",
+      "sha256": "58d36ba2f116efdb9b89126ca57e8a5d2d690fc278d1336d481814b6539c55ee",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.DriveAccountsTest.xml",
+      "sha256": "a65db2afed11d7d97a41ab312f860100340326c53b12721052c940a907233269",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.DriveApiTest.xml",
+      "sha256": "338be32cb4e4cc456e15ce1dc13f03ba8757f6762225828cf89c1adce4556b52",
+      "tests": "5",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.DriveAuthorizationTest.xml",
+      "sha256": "e981de09b8410ef90c3ab2762c4bf6ab66bf0d986cf52352240ac8775bcb993b",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.DriveHttpTest.xml",
+      "sha256": "608d3095ce456ce54f545169d1b4adaf7ed11e251316084975d224e1e6cc1605",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.DriveRegistrationTest.xml",
+      "sha256": "a20ad2a75f66c6ac95430beb110b51cbc300a280add65c364c664b79a50bdf08",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.DriveResumableUploadTest.xml",
+      "sha256": "0ebaae5afef7e508779ba4614cefc6161428fa996f181acc9fbc341c02377e5d",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.DriveStoresTest.xml",
+      "sha256": "96408f3944b44756b63c7d985ea6543c1be6e9db8e626f288969be3b39d31782",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.GuardedSyncStoreTest.xml",
+      "sha256": "c55fac1d6ddeffa055e174c470f7a366b6c76e86eff7e4a06223672fdffd5aa2",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.ImmutableMediaProofTest.xml",
+      "sha256": "7bcc9cfb54bb21a40d8918911bc0ba5a38cdbfba08b307e526704218e92bb31c",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.MainCloudSelectionTest.xml",
+      "sha256": "7f71fe656e14b4e4a820bedff3ad86ff7b9ec402d9f6ef8580dbcdc19ed0a698",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.MediaImportOwnershipTest.xml",
+      "sha256": "5155a6c1d782cbcb8f3f43ba21cb78d165b6cc71b0c344eec73a2cb4ea4dfc94",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.MediaIngestTest.xml",
+      "sha256": "b6dc0fa27bf876cf0bb351c87a4001f68bb720a65668ea61b80237616adaf269",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.PeerDiscoveryTest.xml",
+      "sha256": "916274dd635bfb5a9504b2dc46d212a96441f8665ac9489c237fa8fbd3f1004f",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.PeerLargeTlsTest.xml",
+      "sha256": "284f3daff412018cd289d3d226958a6b6c81ed6969e0be6696592605811e24c1",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.PeerLegacyCompatibilityTest.xml",
+      "sha256": "af26005543d73c21b6f0376d329ca21f39474397c0fdf749ac7cda25a1c2d476",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.PeerMediaCheckpointTest.xml",
+      "sha256": "98611e77dfadf61503ddd8bd9caea739d2a11848b76947bfa5a4da83a28261ef",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.PeerMediaLargeTest.xml",
+      "sha256": "dc599a37918d09a84c0583998a72376956c089bdc87fe7aaf77407aba7930fde",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.PeerSessionsTest.xml",
+      "sha256": "671a20ed3db80db4fcc2d1a75cdf4c78980c3e5e99b8feddf1242514a1e2dbdc",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.PeerTlsTest.xml",
+      "sha256": "6bdff793a962acbcaba308f3cf7fa4a51eead6ae4ad197c17ef9857cd0084326",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.PeerTransferTest.xml",
+      "sha256": "3ddebebeb8dc044e1704890392fe4a7577a7a29945f17186d860e30252efa67c",
+      "tests": "14",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.PeerWifiDirectTest.xml",
+      "sha256": "83abd7db510ded0d2057be2b25dc20c9368c5db3787d99c7199ccb845f59501e",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.PendingAudioTest.xml",
+      "sha256": "f0dbc0440f0bce815c12362042febcceecab1bc7e05788fe809719d44eb35e2b",
+      "tests": "15",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.PhotoThumbnailsTest.xml",
+      "sha256": "d5448d49bdc34e77ae4c5e288cb28d739c022037ff2c9318e486b1d73bb69e40",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.Post147DataTest.xml",
+      "sha256": "49ed561d326ab123d1605784cf04bd5aa4e9222f32f0485345b39da1fe85e384",
+      "tests": "6",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.Post149NativeTest.xml",
+      "sha256": "ec55f3a6def07084b9fb8589f4e35b959c55421770e4e6f80ff5618ba28eee42",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.ProtectedArchiveCoverageTest.xml",
+      "sha256": "a8845b138761cebbe6fdfa0a9013d531e71ba159ad90ac40c965a7d89fb48ca0",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.ProtectedRevisionsTest.xml",
+      "sha256": "3f2fd3707892c4f0cbf931ea5cf00402f25ec6c72f19484d62678da45ca94430",
+      "tests": "21",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.ProviderIoTest.xml",
+      "sha256": "b3d7383db02bcf14a0fee6b64b95f7738f877530de38d872df27491eee7a539a",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.RecoveryCandidateReviewTest.xml",
+      "sha256": "bcb4a97b833a3bf51e26ea700493dc0a9190d6388a1f4b4f8fdef0d797c48675",
+      "tests": "20",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.RecoveryInventoryTest.xml",
+      "sha256": "49c7c32586d23fc1d4901767b88169b891baefa39008f29b0b73d9e473d5cc73",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.RecoveryProtectionArchiveTest.xml",
+      "sha256": "6f0d0bdf4bcd3046da9f2aa7ddb1497b371a49b50ef4839e8886c2e87344adf7",
+      "tests": "40",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.SafSyncV2Test.xml",
+      "sha256": "5fcfe9ed8aff1525dbecdad9679f21a107dd26372da3e89cf8c3b2503b302902",
+      "tests": "36",
+      "failures": "2",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.StorageLifecycleTest.xml",
+      "sha256": "927398739cd43171b0e21a5c7d93d6349f00745310f9062657652bd10f898689",
+      "tests": "25",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.SyncAckReconciliationTest.xml",
+      "sha256": "9e40d1dcd021d5c9708a818da8e01145d2e1a1fb511c98f820bbb284530fe273",
+      "tests": "2",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.SyncAdapterFaultTest.xml",
+      "sha256": "0584ba20b0bd083dc42f92dc0764e766fc7490666b26bd1b52efb588a9fc105d",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.SyncCadenceTest.xml",
+      "sha256": "1e0ddbbcf0d57584c39851c779a95ebe26a202b3b1e9b32cf03eef204b43fc8a",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.SyncCanonicalTest.xml",
+      "sha256": "5feac2848bca27a023151f29a372a34e71165ae4cbb1a39f28f98130a7d243a2",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.SyncConsistencyTest.xml",
+      "sha256": "13f2ae0ac8e96de23da86e5f6e83ab21f8157c0b3b8976bb16e9c88c4e7fe621",
+      "tests": "7",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.SyncContentTest.xml",
+      "sha256": "13156b60983e28d15f3ebff6d39160e03e4605dcbd197830839c9fc1ac14f4e5",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.SyncJobTest.xml",
+      "sha256": "55af05cf9ab86c3c83ec9184269157c34c5fa553185b6c27c5157e3e2f4262fb",
+      "tests": "4",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.SyncLedgerTest.xml",
+      "sha256": "7429191fc338819571c62723ed9581e42cfbd54f08749b7df5cd54c632b2d1ad",
+      "tests": "9",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.SyncReceiptSafetyTest.xml",
+      "sha256": "63d9dffed3582b9675db7ee6f88d18f4170f0288e31a64a0100ae00ba65ee1e3",
+      "tests": "24",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.SyncSafetyTest.xml",
+      "sha256": "528727c0757b4577b087eef442283ad58980f291561dd729cc864d3eec277fa4",
+      "tests": "13",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.SyncTlsIdentityTest.xml",
+      "sha256": "a8fa05c8fac70a464ac6e1a584b1025cf553cf01c25d05a44e78c88ef26abdef",
+      "tests": "1",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.TrashPurgerTest.xml",
+      "sha256": "8cc44c90b72624d50fe2d06b7875de6af767d7b9e7a5694a9c4416cbb3ce54f4",
+      "tests": "17",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.VideoReviewTest.xml",
+      "sha256": "f821f48d7500355266877310642b76200e2050ef900d7bc35aa846229c8b455c",
+      "tests": "8",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    },
+    {
+      "file": "TEST-cz.zamerovac.app.WebContentPolicyTest.xml",
+      "sha256": "2d944e83f754bba8717eacf8d153f34b73ab50f95c8af69d1ba994fe32793105",
+      "tests": "3",
+      "failures": "0",
+      "errors": "0",
+      "skipped": "0"
+    }
+  ],
+  "cases": [
+    {
+      "class": "cz.zamerovac.app.AudioCaptureTest",
+      "method": "unconfirmedMetadataKeepsCompletedOriginal",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.AudioCaptureTest",
+      "method": "existingAndLateCollidingOriginalsAndMetadataStayUnchanged",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.AudioCaptureTest",
+      "method": "onlySuccessfulStopPublishesCompleteFileAndConfirmedMetadata",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.AudioCaptureTest",
+      "method": "startStopEmptyAndCancelFailuresNeverPublishPartialRecording",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.AudioCaptureTest",
+      "method": "slowRecorderStartNeverOwnsGlobalDatabaseLock",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.AudioCompletedKeepTest",
+      "method": "completedOriginalSurvivesMetadataCommitFalse",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.AudioRecoveryIsolationTest",
+      "method": "nativeOriginalExportMustUseVerifiedFinalRatherThanSameSizeOtherInode",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.AudioRecoveryIsolationTest",
+      "method": "duplicateAudioIdsInTwoJournalsRemainSeparateExportableOriginals",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.AudioRecoveryIsolationTest",
+      "method": "aFailedBindingWriteDoesNotRollBackProjectOrHideOtherHealthyAudio",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.AudioRecoveryIsolationTest",
+      "method": "outputFailureDoesNotChangeSourceAndRetryChecksLengthAndDigest",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.AudioRecoveryIsolationTest",
+      "method": "reverseSplitRetainsVerifiedReservationAndIndependentUncertainFinal",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.AudioRecoveryIsolationTest",
+      "method": "validFinalOriginalIsExportableWhenItsReservationLinkIsMissing",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.AudioRecoveryIsolationTest",
+      "method": "combinedUnknownCorruptEvidenceAndWriteFailureKeepHealthyExportsAndTrashRetention",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.AudioRecoveryIsolationTest",
+      "method": "oneChangedAudioHashDoesNotHideTheTwoUnchangedOriginals",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.AudioRecoveryIsolationTest",
+      "method": "duplicateReservationTokenExposesBothOriginalsWithoutChoosingAnArbitraryOne",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.AudioRecoveryIsolationTest",
+      "method": "malformedProjectHistoryCannotHideHealthyAudioOrRewriteProject",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.AudioRecoveryIsolationTest",
+      "method": "knownOriginalTokenMustExportJournalBytesInsteadOfDifferentRegularReservation",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.AudioRecoveryIsolationTest",
+      "method": "verifiedCopyChecksStreamSHAEvenWhenChangedFileRetainsSizeInodeAndTimestamp",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.AudioRecoveryIsolationTest",
+      "method": "malformedHistoryCannotReconfirmAnOldBoundFlag",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.AudioRecoveryIsolationTest",
+      "method": "invalidSourceCannotOpenOrTruncateTheChosenCopyDestination",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.AudioRecoveryIsolationTest",
+      "method": "confirmationHashesOnlySelectedAudioAndReportsMultiFileRecoveryCost",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.AudioRecoveryIsolationTest",
+      "method": "splitUnknownEvidenceFailedSaveAndStaleCASKeepBothCopiesAndHealthyNeighbour",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.AudioRecoveryIsolationTest",
+      "method": "unknownJournalMustNotHideTwoValidRecordingsOrTheirNativeExports",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.AudioRecoveryIsolationTest",
+      "method": "unsafeReservationCannotHideTheLastVerifiedFinalCopy",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.AudioRecoveryIsolationTest",
+      "method": "noMatchingCopyCannotClaimOriginalOrOpenDestinationButBothRawFilesRemainExportable",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.AudioRecoveryIsolationTest",
+      "method": "unreadableJournalDirectoryDoesNotPreventRawExportOfBothReservations",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.AudioRecoveryIsolationTest",
+      "method": "splitRecoveryMustExposeVerifiedFinalAndUncertainReservationSeparately",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Audit39FindingsTest",
+      "method": "successfulZipExportMustFitImporterEntryLimit",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Audit39FindingsTest",
+      "method": "independentOfflineFolderMovesMustNotCreateUnreachableCycle",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Audit39FindingsTest",
+      "method": "purgeMustRemoveExclusiveVoiceAndHistoricalMedia",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Audit39FindingsTest",
+      "method": "stalledZipProviderMustNotBlockLocalSave",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Audit39FindingsTest",
+      "method": "acknowledgedUnicodeDatabaseMustBeReadableImmediately",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Audit39HandshakeTest",
+      "method": "revocationBetweenCommitAndFinalPeerConfirmationAbortsHandshake",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Audit39HandshakeTest",
+      "method": "forgetInvalidatesNewPairingAndFreshExplicitPairingStillWorks",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Audit39HandshakeTest",
+      "method": "forgetIsNotDroppedWhenAllTransferWorkersAreBusy",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Audit39HandshakeTest",
+      "method": "revokedDuringKnownHandshakeMustNotBeReapproved",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Audit39HandshakeTest",
+      "method": "mutualApprovalBindsCertificatesBeforeExactEncryptedPayload",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Audit39HandshakeTest",
+      "method": "rememberedRouteMustAnswerWithExpectedPinnedIdentityBeforeAnyPayload",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Audit39HandshakeTest",
+      "method": "oneSidedDurablePairingRequiresFreshComparisonOnBothScreens",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Audit39HandshakeTest",
+      "method": "pinnedReconnectDoesNotNeedAnotherApprovalAndUnknownCertificateIsDenied",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Audit39HandshakeTest",
+      "method": "certificateCannotClaimAnotherInstallIdentityEvenDuringPairing",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Audit39HandshakeTest",
+      "method": "revokedBindingAndOversizeFramesAreRejected",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Audit39HandshakeTest",
+      "method": "rejectedPairingSavesNeitherTrustBinding",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Audit39SafetyTest",
+      "method": "streamingBudgetRejectsGrowthAndOversizedJsonWithoutWritingExcessByte",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Audit39SafetyTest",
+      "method": "stalledProviderTimesOutWithoutPublishingOrLeakingMedia",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Audit39SafetyTest",
+      "method": "purgeProtectsLiveAudioHistoryAndSeparateImmutableBackup",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Audit39SafetyTest",
+      "method": "maximumEntryArchiveRoundTripsWithAllThreeMetadataEntries",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Audit39SafetyTest",
+      "method": "sharedHierarchyFixturesConvergeAndPreserveAllPayloadsAndInputs",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Audit39SafetyTest",
+      "method": "utf8LimitBelowAtAndAbovePreservesBothConfirmedCopies",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Audit39SafetyTest",
+      "method": "slowRestoreCommitsLatestLocalEditAndRollsBackFailedCommit",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Audit39SafetyTest",
+      "method": "exportStreamsThreeGiBAndBudgetIncludesMetadata",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.BackupHistoryTest",
+      "method": "historyRestoreRefusesStaleBackupAndKeepsAllExistingMedia",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.BackupHistoryTest",
+      "method": "storageFailureAndDamagedBlobKeepPreviousPointAndCurrentData",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.BackupHistoryTest",
+      "method": "zeroProgressAndOversizedBackupStreamsFailWithoutPublishingOrChangingDatabase",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.BackupHistoryTest",
+      "method": "latestLocalEditSurvivesSlowRestoreAndCommitFailureRollsBackNewMedia",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.BackupHistoryTest",
+      "method": "historyRestoreIntoCleanReceiverKeepsExactDimensionAndOriginalBytes",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.BackupHistoryTest",
+      "method": "providerReadFailureIsNotTreatedAsCorruptionOrPermissionToPublishRepair",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.BackupHistoryTest",
+      "method": "interruptedCanonicalBlockCanRetryAfterRestartWithoutOverwritingPartialFile",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.BackupHistoryTest",
+      "method": "corruptedCanonicalGetsVerifiedImmutableRepairAndBothHistoricalManifestsStayUnchanged",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.BackupHistoryTest",
+      "method": "nestedNotesAudioAndSerializedHistoryGetIndependentMediaIds",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.BackupHistoryTest",
+      "method": "twoHistoriesShareOneHundredOriginalsAndOldAndNewRestoreExactBytes",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.BackupHistoryTest",
+      "method": "unsafePathAndMissingBlobCannotBeReportedComplete",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.CloudFilesReadTest",
+      "method": "oversizedBlobCannotCopyTrailingBytesOrReadOneWholeExtraBlock",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.CloudFilesReadTest",
+      "method": "oversizedControlFrameReadsOnlyDeclaredLimitPlusOneAndCloses",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.CloudFilesReadTest",
+      "method": "exactMessageAndBlobKeepEveryByteAndHash",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.CloudFilesReadTest",
+      "method": "zeroProgressInvalidLimitsAndInterruptNeverSpinOrAcknowledge",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.CloudInboxTest",
+      "method": "committedReceiptSurvivesReopenAndIsScopedToInstallationAndStore",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.CloudInboxTest",
+      "method": "cachedAndReopenedInboxInvalidateEveryReceiptAfterDatabaseFallback",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.CloudInboxTest",
+      "method": "supersededLocalIntentCannotBecomeRemoteAcknowledgementAndRecoveryInvalidatesIt",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.CloudInboxTest",
+      "method": "failedReceiptWriteCannotTurnUnacknowledgedCommitIntoCachedSuccess",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.CloudInboxTest",
+      "method": "missingCommitAndChangedImmutableMessageCannotBeAcknowledged",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.CloudPublicationsTest",
+      "method": "repairRequestUsesDurableCounterBackoffAndNeverTreatsPublicationAsDataAck",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.CloudPublicationsTest",
+      "method": "failedAtomicReceiptCannotEnterCacheOrAdvanceRepair",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.CloudPublicationsTest",
+      "method": "verifiedReceiptSurvivesRestartButMissingChangedExpiredOrForeignStoreCannotReuseIt",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.CloudPublicationsTest",
+      "method": "completeSnapshotPublicationIsScopedDurableExpiringAndStillNotADataAck",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.CloudScanTest",
+      "method": "failedCursorWriteDoesNotAdvanceCachedStateOrAcceptUnsafePosition",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.CloudScanTest",
+      "method": "roundRobinSurvivesRestartWithoutTrustingOrDiscardingMessage",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.CloudStorageTest",
+      "method": "independentBackendsAndDisconnectNeverSilentlyFallBackToOldFolder",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.CloudStorageTest",
+      "method": "accountProjectAndCancellationScopeCannotReuseOldStoreOrNamespace",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.CloudStorageTest",
+      "method": "invalidProjectConfigurationNeverCallsDriveApiOrChangesSelectedAccount",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.CloudStorageTest",
+      "method": "offlineMeteredWifiOnlyAndExplicitExceptionUseCurrentNetwork",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.CloudStorageTest",
+      "method": "missingProjectDoesNotBecomeASafFallbackOrAuthorizeAnAccount",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DatabaseInstallEvidenceTest",
+      "method": "corruptedPrimaryWithValidOldBackupLeavesBytesAndRequiresRecoveryEpoch",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DatabaseInstallEvidenceTest",
+      "method": "lostTextOnlyDatabaseAndJournalNeverBecomesFreshInstall",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DatabaseInstallEvidenceTest",
+      "method": "approvedPairingWithoutAnyProjectCanInitializeButNeverResetAfterFirstSave",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DatabaseInstallEvidenceTest",
+      "method": "interruptedOrCorruptEvidenceMustNotAuthorizeReset",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DatabaseInstallEvidenceTest",
+      "method": "temporaryUnreadablePrimaryRetriesWithoutRotatingEpoch",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DatabaseInstallEvidenceTest",
+      "method": "redundantNoBackupEvidenceSurvivesSelectiveFilesLossAndRestart",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DatabaseInstallEvidenceTest",
+      "method": "recoveredSnapshotUsesNewHashAndRejectsOldCloudAckIdentity",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DatabaseInstallEvidenceTest",
+      "method": "oversizedBaseBackupAndNewMarkersAreAlwaysRejected",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DatabaseInstallEvidenceTest",
+      "method": "firstInstallWithIdentityAloneIsStillClean",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DatabaseInstallEvidenceTest",
+      "method": "interruptedAtomicWriteIsDetectedWithoutDestroyingValidPrimary",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DatabaseInstallEvidenceTest",
+      "method": "r9MissingRecoveryJournalCannotReacceptPreRecoveryAckOrOverwritePhoto",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DatabaseInstallEvidenceTest",
+      "method": "staleOutboxIsRetainedButCannotBeReacknowledged",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DatabaseInstallEvidenceTest",
+      "method": "migratedLegacyPrimarySurvivesLaterLossAsEvidence",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DatabaseInstallEvidenceTest",
+      "method": "delayedBlobAckKeepsExactOriginalAndArchivedSnapshot",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DatabaseInstallEvidenceTest",
+      "method": "r10TemporaryQueuedSnapshotReadErrorRecoversAfterRestartWithoutFalseAck",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DatabaseInstallEvidenceTest",
+      "method": "unreadableMarkerNeverGetsSilentlyReplaced",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DatabaseInstallEvidenceTest",
+      "method": "r9MismatchedRecoveryJournalIsRejectedWithoutMutatingOriginal",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DatabaseInstallEvidenceTest",
+      "method": "legacyPrimaryMigratesToBothLocationsWithoutChangingExactData",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DatabaseInstallEvidenceTest",
+      "method": "unmarkedLegacyPairingRemainsFailClosedWithoutPrimary",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DatabaseInstallEvidenceTest",
+      "method": "legacySyncReceiptsAlonePreventNewBlankDatabaseAndRetireOldAck",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DatabaseInstallEvidenceTest",
+      "method": "firstCleanTextOnlySaveCreatesDurableEvidence",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DatabaseInstallEvidenceTest",
+      "method": "malformedSurvivorOrUnusableMarkerCannotBeSilentlyRepaired",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DatabaseInstallEvidenceTest",
+      "method": "symlinkEvidenceIsNeverInterpretedAsAbsent",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DatabaseRecoveryTest",
+      "method": "partialAndCompleteUnconfirmedTemporaryFilesNeverReplaceConfirmedDatabaseOnRead",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DatabaseRecoveryTest",
+      "method": "restartResidueAfterBackupPublicationKeepsPrimaryAndFallbackDoesNotPromotePendingData",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DatabaseRecoveryTest",
+      "method": "deletedDatabaseInvalidatesReceiptsAndMalformedJournalFailsClosed",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DatabaseRecoveryTest",
+      "method": "fallbackRotatesDurablyOnceAndNeverOverwritesEitherOriginal",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DatabaseRecoveryTest",
+      "method": "orphanOriginalNeverAuthorizesImplicitFreshDatabase",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DatabaseRecoveryTest",
+      "method": "failedDatabaseStagingPreservesConfirmedPrimaryAndRecoveryCopy",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DatabaseRecoveryTest",
+      "method": "failedRecoveryJournalCannotReturnOlderDataAsConfirmed",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DirectSyncServiceTest",
+      "method": "activityStopDetachesUiCancelsPairingAndPreservesServiceCoordinator",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DirectSyncServiceTest",
+      "method": "serviceOwnsOneCoordinatorAndPrivateNotificationWithExplicitStop",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DirectSyncServiceTest",
+      "method": "resumeReadsConfirmedBackgroundDataWithoutReplayingStaleScreen",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DirectSyncServiceTest",
+      "method": "disabledOrDeniedServiceNeverPretendsTransferStartedAndKeepsData",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DirectSyncServiceTest",
+      "method": "transferWakeLockIsBoundedReleasedAndCannotRestartAfterClose",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DirectSyncServiceTest",
+      "method": "failedOrDetachedUiDoesNotPreventOtherObserverOrDurableCommit",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DocumentBackupStoreTest",
+      "method": "cloudProviderNeedsUnmeteredNetworkOrOneExplicitException",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DocumentBackupStoreTest",
+      "method": "duplicateProviderNamesAndUnsafeNamespaceCannotSelectAnOverwriteTarget",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DocumentBackupStoreTest",
+      "method": "nullOrDeniedProviderIsNeverConsideredAnEmptySuccessfulHistory",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveAccountFlowTest",
+      "method": "oldConsentCannotOverwriteNewerAccountEvenAfterSwitchingBack",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveAccountFlowTest",
+      "method": "failedAccountCommitAndInvalidRestoredFlowCannotActivateASelection",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveAccountFlowTest",
+      "method": "stoppedAuthorizationIgnoresLateCallbackAndResumesOnlyOnce",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveAccountFlowTest",
+      "method": "explicitPickerAndVerifiedGrantOnlySelectTheTargetFeature",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveAccountFlowTest",
+      "method": "cancelOrMissingScopePreserveExistingAccountAndNeverSaveAToken",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveAccountFlowTest",
+      "method": "consentSurvivesRecreationWithNoTokenInSavedState",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveAccountsTest",
+      "method": "featuresKeepIndependentExplicitBindingsAndDisconnectDoesNotTouchTheOther",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveAccountsTest",
+      "method": "bindingStopsOldAccountAndInvalidInputOrCorruptStateDoesNotResetToEmpty",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveAccountsTest",
+      "method": "failedAtomicWriteCannotSelectAnUnconfirmedAccountEvenInLiveInstance",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveApiTest",
+      "method": "openStreamsOnlyDeclaredObjectBytesAndNeverUsesArbitraryIds",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveApiTest",
+      "method": "incompleteCyclicMalformedAndFailedListingsCannotLookLikeEmptyStorage",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveApiTest",
+      "method": "createOnlyUploadUsesExact256KiBChunksAndChecksServerProgress",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveApiTest",
+      "method": "completePaginationIncludesEmptyPagesAndCarriesOpaqueTokens",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveApiTest",
+      "method": "hostileSessionPartialSourceWrongRangeAndPrematureFinalDoNotComplete",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveAuthorizationTest",
+      "method": "memoryCacheExpiresAnd401InvalidatesOnlyTheRejectedToken",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveAuthorizationTest",
+      "method": "accountChangeDuringAuthorizationPreventsCachingAndMainThreadCannotBlock",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveAuthorizationTest",
+      "method": "sdkRequestPinsSelectedAccountAndOnlyAppDataScope",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveAuthorizationTest",
+      "method": "interruptionAbandonsAuthorizationWithoutReturningAResult",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveAuthorizationTest",
+      "method": "consentMissingScopeAndDeveloperFailureNeverReturnATokenOrExposeServerText",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveAuthorizationTest",
+      "method": "sdkIntegrationDoesNotRequestBroadAccountsContactsPhoneOrSmsPermissions",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveHttpTest",
+      "method": "restrictedEndpointsHeadersAndDeniedPolicyNeverOpenAConnection",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveHttpTest",
+      "method": "unknownLengthReadsOnlyLimitPlusOneAndDynamicPolicyStopsBeforeNextRead",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveHttpTest",
+      "method": "tokenIsOnlyAHeaderAndRedirectsCannotForwardIt",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveHttpTest",
+      "method": "uploadPolicyIsCheckedBetween64KiBBlocksAnd401InvalidatesTokenOnce",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveRegistrationTest",
+      "method": "invalidPublicProjectIdsCannotActivateAuthorization",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveRegistrationTest",
+      "method": "nativeUiRecognizesRegistrationWithoutPretendingAnAccountOrChangingDatabase",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveRegistrationTest",
+      "method": "generatedPreviewMatchesPublicRegistrationAndKeepsAuthorizationScopeNarrow",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveResumableUploadTest",
+      "method": "expiryRestartsAndQuotaAuthAndRateErrorsPreserveOriginalAndSession",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveResumableUploadTest",
+      "method": "processRestartQueriesServerAndSendsOnlyVerifiedSuffix",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveResumableUploadTest",
+      "method": "impossibleServerRangeOrEndpointCannotSendContent",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveResumableUploadTest",
+      "method": "successWithoutServerBytesDoesNotFinishAndLostFinalResponseIsReconciled",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveStoresTest",
+      "method": "duplicateAddressedBlobsAreVerifiedAndOrphanCleanupNeverTouchesActiveStage",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveStoresTest",
+      "method": "corruptedDriveBackupUsesNewPhysicalCopyAndRestoresOldHistoryWithoutReplacingObjects",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveStoresTest",
+      "method": "fullSignedNativeSyncThroughDriveRestPreservesExactValuesAndOriginals",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveStoresTest",
+      "method": "twoDriveHistoriesDeduplicate100OriginalsAndRestoreDespiteSyncIndependence",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveStoresTest",
+      "method": "deniedOrExpiredApiDoesNotCreateABackupPointOrHideExistingHistory",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveStoresTest",
+      "method": "cancellationDuringPublishStopsBeforeNextChunkAndCleansStagingWithoutAck",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveStoresTest",
+      "method": "interruptedDriveMediaKeepsReceiverDatabaseAndOutboxUntilVerifiedRetry",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.DriveStoresTest",
+      "method": "stagedCloseAbortsAndVerifiedPublishRetainsNamespaceAndCapabilities",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.GuardedSyncStoreTest",
+      "method": "cancelledRouteStopsNextChunkButAlwaysClosesOwnedResources",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ImmutableMediaProofTest",
+      "method": "sameSizeAndRestoredMtimeCannotReuseAChangedOriginalProof",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.MainCloudSelectionTest",
+      "method": "failedNativeFrequencyChangeCannotReplaceConfirmedJobOrPreferences",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.MainCloudSelectionTest",
+      "method": "nativeDisconnectStopsOnlyItsFeatureAndSnapshotNeverExposesTokens",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.MainCloudSelectionTest",
+      "method": "confirmedFrequencyControlsActualJobAndManualCancelsItWithoutChangingRecords",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.MainCloudSelectionTest",
+      "method": "staleSystemPickerCannotOverwriteARecentlySelectedDriveAccount",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.MediaImportOwnershipTest",
+      "method": "abandonedRequestRemainsTrackedWithoutDeletingMedia",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.MediaImportOwnershipTest",
+      "method": "receiptSurvivesRestartAndRejectsReassignment",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.MediaImportOwnershipTest",
+      "method": "invalidIdsOrFailedCommitCannotAuthorizeUnownedMedia",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.MediaIngestTest",
+      "method": "actualActivityResultUsesWorkerLeavesUiAndConfirmedSavingAvailable",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.MediaIngestTest",
+      "method": "providerTimeoutAndCancellationKeepDatabaseAndOriginalAndDiscardStaging",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.MediaIngestTest",
+      "method": "metadataDeadlineAndUnsafeSourcesFailBeforePublishing",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerDiscoveryTest",
+      "method": "missingRadioSupportAndPermissionDoNotInventConnectedDevices",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerDiscoveryTest",
+      "method": "localRoutesRejectInternetLoopbackMulticastAndWildcard",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerLargeTlsTest",
+      "method": "threeGiBActualTlsDropsHalfwayAndRetryPreservesExactGeometryAndOriginals",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerLegacyCompatibilityTest",
+      "method": "legacyCapabilityTransfersCurrentV2AndKeepsUnsupportedHistoryPending",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerMediaCheckpointTest",
+      "method": "cancelledTransferAndZeroProgressLeaveNoPartialDestination",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerMediaCheckpointTest",
+      "method": "localHashYieldsBetweenBlocksAndNeverChangesOriginal",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerMediaCheckpointTest",
+      "method": "simultaneousDifferentOriginalIsNeverReplacedByVerifiedTemporaryFile",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerMediaCheckpointTest",
+      "method": "duplicateVerificationRunsOutsideDatabaseLockAndRetainsExactOriginal",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerMediaLargeTest",
+      "method": "threeGiBInterruptedHalfwayRestartsWholeFileAndPreservesHealthyNeighbour",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerSessionsTest",
+      "method": "authenticatedNearbySupersedesEitherLanDirectionButLanCannotDisplaceNearby",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerSessionsTest",
+      "method": "sameRouteTieUsesInitiatorPreferenceAndDifferentPeersStayIndependent",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerSessionsTest",
+      "method": "simultaneousRoutesConvergeOnOneNearbyLeaseWithoutStaleRemoval",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerTlsTest",
+      "method": "mutualApprovalBindsCertificatesBeforeExactEncryptedPayload",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerTlsTest",
+      "method": "rememberedRouteMustAnswerWithExpectedPinnedIdentityBeforeAnyPayload",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerTlsTest",
+      "method": "oneSidedDurablePairingRequiresFreshComparisonOnBothScreens",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerTlsTest",
+      "method": "pinnedReconnectDoesNotNeedAnotherApprovalAndUnknownCertificateIsDenied",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerTlsTest",
+      "method": "certificateCannotClaimAnotherInstallIdentityEvenDuringPairing",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerTlsTest",
+      "method": "revokedBindingAndOversizeFramesAreRejected",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerTlsTest",
+      "method": "rejectedPairingSavesNeitherTrustBinding",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerTransferTest",
+      "method": "fallbackOnResponderInvalidatesRemoteAckAndRestoresExactDataWithoutNewUserEdit",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerTransferTest",
+      "method": "recoveryOnInitiatorInvalidatesRemoteAckBeforeResponderPreparesSnapshot",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerTransferTest",
+      "method": "diskFailureBeforePeerDatabaseCommitLeavesMetadataAndExactDataUntouched",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerTransferTest",
+      "method": "corruptAndPartialStreamsDoNotPublishMedia",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerTransferTest",
+      "method": "disconnectNineteenthOfThirtyKeepsDatabaseAndResumesAfterReopen",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerTransferTest",
+      "method": "firstSyncIntoCleanReceiverKeepsExactPhotoAndNoDuplicateOnRetry",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerTransferTest",
+      "method": "receiverFailureBeforeFirstPhotoBaselineIsNotDatabaseLoss",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerTransferTest",
+      "method": "editDuringMediaTransferIsMergedFromLatestDatabase",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerTransferTest",
+      "method": "coalescesOnlyObservedRevisionsAndRejectsUnsafeMetadata",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerTransferTest",
+      "method": "corruptReceiverCannotAcceptOldBackupOrAckPeerSnapshot",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerTransferTest",
+      "method": "completeBidirectionalMediaAndExactAnnotationsRemainIdempotent",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerTransferTest",
+      "method": "recoveryQuarantineWithMoreThanSixteenOldJobsDoesNotBlockDirectTls",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerTransferTest",
+      "method": "sameMediaIdDifferentBytesRefusesWithoutOverwritingOrFalseAck",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerTransferTest",
+      "method": "interruptedFirstPhotoTransferKeepsCleanBaselineAndResumesSafely",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerWifiDirectTest",
+      "method": "lostGroupRetriesAreBoundedAndBusyRadioRetainsPendingState",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerWifiDirectTest",
+      "method": "lateGroupReplyAfterDisconnectAndCloseCannotPublishEndpoint",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerWifiDirectTest",
+      "method": "noUnknownPermissionlessDisabledOrRevokedAutoConnections",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerWifiDirectTest",
+      "method": "channelLossReinitializesAndOldPeerCallbackCannotConnect",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerWifiDirectTest",
+      "method": "automaticRecreatesKnownRouteAndKeepsExpectedIdentityOutOfUi",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerWifiDirectTest",
+      "method": "incomingRouteUsesActualGroupInterfaceForOwnerAndClearsAfterDisconnect",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PeerWifiDirectTest",
+      "method": "onlyAuthenticatedRouteIsDurableAndForgettingRemovesIt",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PendingAudioTest",
+      "method": "faultsAtEveryDurabilityBoundaryKeepOriginalAndRecoveryIsRepeatable",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PendingAudioTest",
+      "method": "ledgerPathAndAudioSymlinksAreRejectedWithoutTouchingTargets",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PendingAudioTest",
+      "method": "collisionsConcurrentReservationsAndPublicationCannotOverwriteEitherCopy",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PendingAudioTest",
+      "method": "restartBetweenJournalAndPublicationRecoversCompletedBytes",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PendingAudioTest",
+      "method": "trashPurgeRetainsPendingBoundAndUnknownAudioWhileOtherMediaStillDeletes",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PendingAudioTest",
+      "method": "realUnwritableJournalLocationAndActiveRecoveryKeepCapture",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PendingAudioTest",
+      "method": "prefsMemoryValuesAfterFailedCommitAreNeverTreatedAsDurableMetadata",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PendingAudioTest",
+      "method": "completedMetadataFailurePreservesExactBytes",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PendingAudioTest",
+      "method": "historyUndoTrashBackupAndOldRestoreDoNotAuthorizeDeletionOrBinding",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PendingAudioTest",
+      "method": "failedLedgerAfterProjectCommitDoesNotUndoDurableProject",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PendingAudioTest",
+      "method": "unconfirmedNewJournalAndExportOfCorruptEvidencePreserveExactOriginal",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PendingAudioTest",
+      "method": "corruptMissingAndAtomicBackupJournalNeverHideOrDeleteOriginals",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PendingAudioTest",
+      "method": "legacyUnknownAndInterruptedCaptureRemainVisibleAndExportable",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PendingAudioTest",
+      "method": "boundRequiresExactDurableSnapshotAndNoteIdentityAndIsIdempotent",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PendingAudioTest",
+      "method": "emptyLargeAndChangedOriginalsNeverAcquireFalseCompletedProof",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PhotoThumbnailsTest",
+      "method": "mirroredExifThumbnailAndReusePreserveEveryOriginalByte",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PhotoThumbnailsTest",
+      "method": "coldDecoderDoesNotBlockDatabaseAndPurgedSourceCannotPublishLateCache",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.PhotoThumbnailsTest",
+      "method": "malformedImageAndCacheWriteFailureDoNotTouchOriginal",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Post147DataTest",
+      "method": "unreadableDatabaseNeverBecomesWritableEmptyState",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Post147DataTest",
+      "method": "originalBackupExporterRoundTripsEditableDataAndOriginalMedia",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Post147DataTest",
+      "method": "emptyExportAndInvalidImagesFailWithoutDatabaseWrites",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Post147DataTest",
+      "method": "invalidOrIncompleteBackupCannotReplaceExistingRecords",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Post147DataTest",
+      "method": "customerZipContainsOnlyRasterPdfForOneAndMultiplePhotos",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Post147DataTest",
+      "method": "importAddsCopyAndPreservesLegacyPrecisionAndUnknownFields",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Post149NativeTest",
+      "method": "videoTimeoutAndErrorsPreserveOriginalAndPauseReleasesPlayback",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Post149NativeTest",
+      "method": "earlyGattCallbackIsQueuedAndTimeoutClosesOnlyItsOwnSession",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Post149NativeTest",
+      "method": "permissionReplyAfterCancelDoesNotRestartScan",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Post149NativeTest",
+      "method": "videoRejectsMissingAndTraversalIds",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Post149NativeTest",
+      "method": "blockedThumbnailCannotHoldDataLockOrLoadForever",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Post149NativeTest",
+      "method": "rotationKeepsActivityWebViewAndSavedProject",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Post149NativeTest",
+      "method": "videoUsesInternalPlayerAndReadOnlyLargeFileDescriptor",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Post149NativeTest",
+      "method": "pagesStayTogetherAndIncompletePdfCannotBeSaved",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.Post149NativeTest",
+      "method": "videoThumbnailCacheAndUnsupportedFormatNeverChangeOriginal",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ProtectedArchiveCoverageTest",
+      "method": "changedHoldDuringCopyCannotPublishCompleteArchive",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ProtectedArchiveCoverageTest",
+      "method": "unconfirmedAtomicSidecarsAreCopiedByteExactlyButNotSourceComplete",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ProtectedArchiveCoverageTest",
+      "method": "pinnedPhotoAndVideoMatchHashesAndCannotBeReplacedBySameLengthContent",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ProtectedArchiveCoverageTest",
+      "method": "tamperedArchivedHistoricalHoldCannotPassVerification",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ProtectedArchiveCoverageTest",
+      "method": "interruptedProtectedArchiveLeavesNoCompleteMarkerAndCanRetry",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ProtectedArchiveCoverageTest",
+      "method": "exactOldRevisionAndBothCatalogsSurviveRotationVerifyAndSeparateRecoveryCopy",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ProtectedArchiveCoverageTest",
+      "method": "missingWitnessOrCorruptCatalogCannotClaimCompleteP1Archive",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ProtectedArchiveCoverageTest",
+      "method": "missingEntireP1RegistryNeverClaimsHistoricalSourceCompleteness",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ProtectedArchiveCoverageTest",
+      "method": "brokenOrMissingImmutableHoldMustNotBeCertified",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ProtectedRevisionsTest",
+      "method": "purgeAndPendingCleanupRetainPhotoVideoAndExactPreimage",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ProtectedRevisionsTest",
+      "method": "rollbackKeepsPinnedAndLiveButRemovesUnreferencedNewFile",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ProtectedRevisionsTest",
+      "method": "jsonLookingNoteTextAndEmbeddedLegacyHistoryRemainExact",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ProtectedRevisionsTest",
+      "method": "retainedExactStateRestoresAsSeparateCopyThroughExistingImporter",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ProtectedRevisionsTest",
+      "method": "atomicBackupAndCompleteUnpublishedHoldRepairAfterRestart",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ProtectedRevisionsTest",
+      "method": "severalExactMetadataRevisionsShareOneSetOfOriginalBytes",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ProtectedRevisionsTest",
+      "method": "ackSupersessionForgetAndRestartNeverReleaseOriginals",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ProtectedRevisionsTest",
+      "method": "alreadyLostOriginalIsTruthfulEvidenceAndCannotPublishACompleteSnapshot",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ProtectedRevisionsTest",
+      "method": "validOrphanRepairsCatalogUnionAfterRestart",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ProtectedRevisionsTest",
+      "method": "losingBothCatalogsCannotAuthorizeCleanupFromAnAssumedEmptyRegistry",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ProtectedRevisionsTest",
+      "method": "unreadableBackupCannotBeSilentlyOverwrittenByRotation",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ProtectedRevisionsTest",
+      "method": "catalogWriteFailureBlocksPublicationAndRepairsOnRetry",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ProtectedRevisionsTest",
+      "method": "safLateAckCannotReleaseRecoverableSnapshot",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ProtectedRevisionsTest",
+      "method": "missingRegistryAndCorruptManifestFailClosed",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ProtectedRevisionsTest",
+      "method": "preUpgradeBackupRevisionSurvivesRotationByteExactly",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ProtectedRevisionsTest",
+      "method": "missingPinnedIdRejectsReuseAndAcceptsOnlyByteExactPeerRestoration",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ProtectedRevisionsTest",
+      "method": "driveLateAckCannotReleaseRecoverableSnapshot",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ProtectedRevisionsTest",
+      "method": "recoveryAuthorityLossCannotReleasePinsOrAuthorizeRestore",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ProtectedRevisionsTest",
+      "method": "changedOriginalCannotBeBlessedAsANewProtectedVersion",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ProtectedRevisionsTest",
+      "method": "retentionAloneCannotMasqueradeAsFreshDatabaseAuthority",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ProtectedRevisionsTest",
+      "method": "lowSpaceRejectsReplacementWithoutTouchingConfirmedBytes",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ProviderIoTest",
+      "method": "timeoutReleasesCallerEvenWhenReadIgnoresInterruptAndCancellationBlocks",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ProviderIoTest",
+      "method": "timedOutWriterOwnsItsBytesAndCannotUseMutatedCallerBuffer",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.ProviderIoTest",
+      "method": "successfulStreamsAndLateResourceCleanupRespectByteAndCloseContracts",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryCandidateReviewTest",
+      "method": "verifiedExistingArchiveIsReadOnlyEvidenceNotPromotion",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryCandidateReviewTest",
+      "method": "invalidTombstoneClockWithSameIdIsBlockedWithoutRepair",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryCandidateReviewTest",
+      "method": "healthyCurrentCandidateWithExactMediaHistoryAndTombstonesIsOnlyChecked",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryCandidateReviewTest",
+      "method": "concurrentTombstoneClockWithSameIdIsBlockedAndPreservesEverything",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryCandidateReviewTest",
+      "method": "sameSizeChangedMediaCannotUseOldArchive",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryCandidateReviewTest",
+      "method": "olderHigherTombstoneClockBlocksLowerNewerValue",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryCandidateReviewTest",
+      "method": "invalidJournalWithoutSideEffectsMustBeBlocked",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryCandidateReviewTest",
+      "method": "missingOriginalMediaIsBlockedNotInvented",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryCandidateReviewTest",
+      "method": "olderBackupCannotOverrideNewerDimensionAndTombstone",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryCandidateReviewTest",
+      "method": "newerDominatingTombstoneClockStillAllowsReadOnlyCheck",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryCandidateReviewTest",
+      "method": "archivedOldDatabaseNeverCertifiesNewerMeasurements",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryCandidateReviewTest",
+      "method": "legacyJournalBakAloneMustRemainByteExactAndUnknown",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryCandidateReviewTest",
+      "method": "journalBaseAndNewMustNotDiscardUnfinishedBytes",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryCandidateReviewTest",
+      "method": "secondReadAndRestartDoNotChangeAnyEvidenceOrPeerQueue",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryCandidateReviewTest",
+      "method": "damagedPrimaryCannotImplicitlyAuthorizeHealthyBackup",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryCandidateReviewTest",
+      "method": "byteIdenticalUnconfirmedTmpNeverReceivesCheckedReadOnly",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryCandidateReviewTest",
+      "method": "sourceChangedDuringScanIsBlockedWithoutFurtherWrites",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryCandidateReviewTest",
+      "method": "malformedSchemaIsBlockedWithoutRepair",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryCandidateReviewTest",
+      "method": "validJournalReadsEpochWithoutMutatingAnyEvidence",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryCandidateReviewTest",
+      "method": "sameSizeMediaModifiedDuringScanIsBlocked",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryInventoryTest",
+      "method": "malformedJournalAndPendingTrashAreReportedWithoutRepair",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryInventoryTest",
+      "method": "symlinkCannotEscapePrivateMediaDirectory",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryInventoryTest",
+      "method": "textOnlyProjectsDoNotRequireInventedMediaOrLostUndoHistory",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryInventoryTest",
+      "method": "corruptedPrimaryIsFlaggedWhileOldBackupIsNeverPromoted",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryInventoryTest",
+      "method": "missingReferencedPhotoIsIncompleteNotAValidRestorableSnapshot",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryInventoryTest",
+      "method": "orphanedOriginalMediaAreListedWithoutCreatingAnyDatabase",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryInventoryTest",
+      "method": "validPrimaryBackupDeletedRecordsHistoryAndExactMediaAreReadOnly",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "existingConfirmedArchiveRejectsChangedPrefsOnly",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "unreadableLivePhotoDuringSecondInventoryFailsClosedWithoutSourceMutation",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "existingConfirmedArchiveRejectsDisappearingOriginalPhoto",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "oversizedCompleteMarkerIsRejectedBeforeOpenAndPreservesSources",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "interruptedStageIsNeverCompleteAndRetryAfterRestartIsIdempotent",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "androidFallbackStillRejectsSymlinkAncestorOnVerifyAndReuse",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "forgedSecondManifestCannotFinalizeInterruptedArchive",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "boundedManifestAcceptsValidVerifyReuseAndInterruptedFinish",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "storageExhaustedMidWriteLeavesOnlyUncommittedStagingEvidence",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "androidFallbackWithoutFileKeyRemainsFailClosed",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "symbolicLinkInAtomicFileSidecarCannotBeCertified",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "archivedMediaDirectorySymlinkToIdenticalLiveOriginalIsRejected",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "changingSourceDuringCopyFailsWithoutPublishingArchive",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "androidCreationTimeFallbackAllowsExactArchiveVerifyAndReuse",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "validManifestMetadataSurvivesVerifyReuseAndInterruptedFinalization",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "corruptedCompleteMarkerWithCorrectLengthIsRejected",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "forgedSecondManifestCannotChangeConfirmedArchiveMetadata",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "unmodifiedSourcesReuseConfirmedAndSafelyFinishUnconfirmed",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "existingConfirmedArchiveRejectsUnsafeNewSidecarSymlink",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "existingConfirmedArchiveRejectsPreciseDimensionChangedDuringReuse",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "completeGrowingAfterFirstReadIsBoundedToOneExtraByte",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "damagedPrimaryIsPreservedAsEvidenceNeverReplacedByOldBackup",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "symlinkOutsideAppIsNeverCopiedAndTamperedArchiveCannotVerify",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "expandingManifestDuringSecondReadCannotFinalizeInterruptedCopy",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "crashAfterAtomicArchiveRenameBeforeMarkerCanBeSafelyFinalized",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "snapshotKeepsExactDimensionsOldBackupTrashJournalMediaPrefsAndOutbox",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "expandingManifestDuringFirstReadIsBoundedAndRejected",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "atomicFileSidecarsAreArchivedByteForByteWithoutPromotingThem",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "lowStorageFailsBeforeStagingAndNeverChangesPrimary",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "existingConfirmedArchiveRejectsNewAtomicSidecarOnly",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "interruptedArchiveRejectsDriftAfterMarkerButKeepsArchivedEvidence",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "androidFallbackStillRejectsRealDirectoryReplacementDuringCopy",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "existingConfirmedArchiveRejectsSameLengthPhotoMutationDuringReuse",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "sameSizeManifestRewrittenDuringReadFailsIdentityCheck",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "disappearingOriginalFailsInsteadOfInventingIt",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "mediaDirectorySwappedToSymlinkDuringCopyIsNeverConfirmed",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "existingArchiveRejectsPhotoMutationInsideMarkerVerification",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "androidFallbackStillRejectsSymlinkSwapDuringCopy",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "interruptedBeforeCompleteRejectsSourceChangeWithoutPublishingMarker",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.RecoveryProtectionArchiveTest",
+      "method": "absentPhotoAndTextOnlyOrOrphanMediaHaveTruthfulCompleteness",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "quarantinedHistoricalOutboxDoesNotBlockFreshSignedCloudSync",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "signedRepairFixesSameSizeCorruptBlobAndReplayedRequestDoesNotRedownloadIt",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "repairAfterFinalAckRestoresFallbackReceiverAndNeverOverwritesCorruptRemoteCopy",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "authenticatedDirectArrivalDuringLocalHashReleasesCloudGateBeforePublication",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "interruptedBlobAndRestartResumeWithoutPublishingPartialDatabase",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "meteredMetadataUsesExistingOriginalButMissingLargePhotoWaits",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "committedInboxSurvivesLostAckAndAvoidsReadingOldMessagesAfterRestart",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "largeRepairWaitsForUnmeteredPolicy",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "missingFileStillRequiredByNewerLocalVersionCannotBeRetired",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "fallbackAfterFinalCloudAckReappliesHistoricalMessageDespiteCachedInbox",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "deletedCloudCopyIsRepublishedWithoutOverwritingLocalOriginal",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "driveLateAckKeepsOriginalsAndRejectsUnapprovedRecoveryOnRestart",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "newCloudNamespacePublishesCompleteCopyDespitePriorConfirmedPeerAck",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "concurrentLocalVersionCannotRetireAnUnfinishedRemoteSnapshot",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "forgedAcknowledgementCannotClearQueueAndRevokedAuthorCannotWrite",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "observedReceiverRecoveryCannotReuseHistoricalSignedCloudAck",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "signedImmutableMessagesConvergeAndNoMutableProjectsFileExists",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "newlyAvailableDirectRouteYieldsCloudBetweenChunksWithoutClearingQueue",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "rejectedNetworkPolicyDoesNotEvenListOrReadProvider",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "pendingSourceReopenDoesNotReadAlreadyVerifiedLargeOriginalAgain",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "recoveredPeerCannotClearCloudAckBarrierByUnpairAndRepair",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "coordinatorRevocationDuringCloudAckProofCannotCompleteStaleOutbox",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "signedBodyCannotBeChangedReaddressedOrUsedAsAnotherProofKind",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "corruptionAfterAckOutputCreateCannotPublishValidCloudAck",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "purgedPendingPhotoDoesNotBlockNewerTombstoneOrFalselyAckMissingOldMedia",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "missingSnapshotRequestsVerifiedMetadataAndLegacyStateStillConverges",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "manyInvalidMessagesUseBoundedBatchesResumeAfterRestartAndCannotClearOutbox",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "legacyRemoteRecoveryHoldSurvivesCoordinatorForgetNewCertificateAndRestart",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "driveStagedAckMustNotPublishAfterLocalAuthorityLostInsideProviderCommit",
+      "status": "FAIL",
+      "message": "java.lang.AssertionError: Provider completed signed ACK after recovery epoch loss: Drive staged expected:<0> but was:<1>"
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "networkPolicyChangeDuringLargeUploadStopsAtNextChunkAndRecovers",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "unavailableOldMetadataDoesNotBlockNewerIncomingOrOwnOutgoingAndNeverGetsAcked",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "safDirectAckMustNotPublishAfterLocalAuthorityLostInsideProviderWrite",
+      "status": "FAIL",
+      "message": "java.lang.AssertionError: Provider completed signed ACK after recovery epoch loss: SAF direct expected:<0> but was:<1>"
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "forgedOrUnreferencedRepairCannotTriggerLargeReadsOrClearOutbox",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "historicalSignedAckCannotHideIncompleteNewNamespaceOnMeteredNetwork",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "rejectedNetworkPolicyCannotExposeStaleFallbackAsConfirmed",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SafSyncV2Test",
+      "method": "safLateAckKeepsOriginalsAndRejectsUnapprovedRecoveryOnRestart",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.StorageLifecycleTest",
+      "method": "compareAndSaveRejectsStaleSnapshotAndReportsDiskFailure",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.StorageLifecycleTest",
+      "method": "archiveRestoreCannotTouchCorruptPrimaryOrResurrectOldBackup",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.StorageLifecycleTest",
+      "method": "firstLaunchInitializesDatabaseBeforeFirstPhotoAndExactMeasurement",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.StorageLifecycleTest",
+      "method": "mediaUploadCannotAcknowledgeFailedMetadataOrUnsafeInputs",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.StorageLifecycleTest",
+      "method": "failedAudioStopReleasesRecorderAndDoesNotAttachAnEmptyFile",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.StorageLifecycleTest",
+      "method": "unsafeZipPathsCannotEscapeAndInvalidMediaReferencesFailSafely",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.StorageLifecycleTest",
+      "method": "annotationHistoryProtectsSharedMediaDuringAnotherRecordsPurge",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.StorageLifecycleTest",
+      "method": "corruptedPrimaryWithOlderValidBackupNeverAcknowledgesCAS",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.StorageLifecycleTest",
+      "method": "pendingAudioBridgeBindsOnlyAfterDurableCompareSaveAndNeverRevertsNewerData",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.StorageLifecycleTest",
+      "method": "mediaUploadStagesAndAcknowledgesOnlyCompleteFilesWithoutOverwritingOriginals",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.StorageLifecycleTest",
+      "method": "duplicateIncomingRecordIdsAreRejectedBeforeAnyMediaWrites",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.StorageLifecycleTest",
+      "method": "missingAndEmptyNestedMediaAbortBeforeAnyArchiveBytes",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.StorageLifecycleTest",
+      "method": "lostDatabaseAfterReopenCannotLookLikeFreshInstallation",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.StorageLifecycleTest",
+      "method": "missingDatabaseCannotMasqueradeAsEmptyCASAndCanRecover",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.StorageLifecycleTest",
+      "method": "archiveRestoreOnCleanInstallationBootstrapsBeforeFirstOriginal",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.StorageLifecycleTest",
+      "method": "cleanFirstInstallAndLegacyMediaAreDistinctWithoutChangingSchema",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.StorageLifecycleTest",
+      "method": "retainedAudioExportRejectsFileUriBeforeOpeningOrTruncatingOriginal",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.StorageLifecycleTest",
+      "method": "exportWriteFailurePropagatesAndPreservesDatabaseAndOriginals",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.StorageLifecycleTest",
+      "method": "repeatedRestoreCreatesIntentionalIsolatedCopiesAndPreservesAllLinks",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.StorageLifecycleTest",
+      "method": "parallelSaveAndFiftyExportsHaveCompleteSnapshotsAndUnchangedOriginals",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.StorageLifecycleTest",
+      "method": "rotatedExifThumbnailAndCacheLeaveJpegBytesMetadataAndDimensionsUntouched",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.StorageLifecycleTest",
+      "method": "uriCopyStagesPartialDataAndDoesNotOverwriteExistingOriginal",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.StorageLifecycleTest",
+      "method": "v2ArchiveRoundtripAndTamperOrMissingManifestFailBeforeWrites",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.StorageLifecycleTest",
+      "method": "cancelledPickersSettleOnceWithoutChangingConfirmedDataOrOriginals",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.StorageLifecycleTest",
+      "method": "confirmedDatabaseSurvivesActivityPauseStopAndNewInstance",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncAckReconciliationTest",
+      "method": "driveLateDuplicateAckRestartBothAndRetryMustNotFalselyFinish",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncAckReconciliationTest",
+      "method": "safLateDuplicateAckRestartBothAndRetryMustNotFalselyFinish",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncAdapterFaultTest",
+      "method": "successfulOrTruncatedWriteCannotBecomeVerifiedReceipt",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncAdapterFaultTest",
+      "method": "staleListingAndDuplicatePhysicalObjectsNeverAuthorizeDeletionOrFalseSuccess",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncAdapterFaultTest",
+      "method": "lostAcknowledgementRetriesWithoutLosingOrDuplicatingLogicalContent",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncAdapterFaultTest",
+      "method": "networkBudgetTreatsMeteredHotspotAndUnknownNetworkConservatively",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncCadenceTest",
+      "method": "twoEnginesCannotBothClaimTheSameAutomaticAttempt",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncCadenceTest",
+      "method": "manualAndDisabledModesNeverClaimAutomaticallyButExplicitRetryWorks",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncCadenceTest",
+      "method": "failedWriteCannotActivateUnconfirmedModeOrConsumeAttempt",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncCadenceTest",
+      "method": "defaultAndLegacySettingsKeepTheirMeaning",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncCadenceTest",
+      "method": "explicitIntervalsAreExactInForegroundAndJobAndSurviveReopen",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncCadenceTest",
+      "method": "clockRollbackRebootAndLongWaitCannotStrandQueue",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncCadenceTest",
+      "method": "foregroundAndJobShareDurableAttemptAndAccountSwitchDoesNotWaitForOldStore",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncCadenceTest",
+      "method": "invalidInputAndCorruptJournalFailClosedWithoutChangingDatabase",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncCanonicalTest",
+      "method": "javaAndEcmaScriptHaveIdenticalCanonicalBytesAndJobIds",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncCanonicalTest",
+      "method": "conflictCopyMatchesEcmaScriptAndDoesNotDependOnMergeOrder",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncCanonicalTest",
+      "method": "invalidUnicodeIsRejectedInsteadOfSilentlyChangingBytes",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncConsistencyTest",
+      "method": "directPrimaryChangeCannotBypassTheProcessGenerationCheck",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncConsistencyTest",
+      "method": "concurrentCommitCannotBeHiddenInsideSnapshotCapture",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncConsistencyTest",
+      "method": "changedInventoryBytesCannotFalselyRemoveTheContentRequirement",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncConsistencyTest",
+      "method": "lazyDocumentCutoverAlsoChecksAbsentSourcesAndKeepsSqlAuthorityOnRetry",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncConsistencyTest",
+      "method": "newlyAppearingLegacyQueueMustAbortCutoverAndSurviveRestart",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncConsistencyTest",
+      "method": "newlyAppearingBackupMustAbortCutoverWithoutLosingEitherVersion",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncConsistencyTest",
+      "method": "preRecoveryJsonCannotAcquireTheNewEpochDuringCapture",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncContentTest",
+      "method": "olderExactHistoryAndDetachedCompletedAudioEnterVersionedManifestButActiveRecordingDoesNot",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncContentTest",
+      "method": "revisionMetadataIsASeparateVerifiedBlobInsteadOfInflatingTheManifest",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncContentTest",
+      "method": "unverifiedCompletedAudioDoesNotHideHealthyProjectOrClaimContentComplete",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncContentTest",
+      "method": "recoveryArchiveIncludesPortableLedgerButNeverPrivateUploadSession",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncJobTest",
+      "method": "disabledAutoSyncNeverCallsEngine",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncJobTest",
+      "method": "oldCancelledWorkerCannotClearOrCompleteNewAttempt",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncJobTest",
+      "method": "successfulAndFailedUncancelledAttemptsReportCorrectRetry",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncJobTest",
+      "method": "manualFrequencyNeverCallsEngineEvenIfLegacyAutoFlagIsTrue",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncLedgerTest",
+      "method": "lostLedgerCannotRemoveOrBlockReadingTheLastExactRecoverablePreimage",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncLedgerTest",
+      "method": "independentTargetsNeverInheritReceiptsOrExportSessions",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncLedgerTest",
+      "method": "shortWriteOrEnospcRollsBackOnlyLedgerTransaction",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncLedgerTest",
+      "method": "corruptLedgerIsKeptForRecoveryAndCannotReadOldJson",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncLedgerTest",
+      "method": "largeQueueUsesBoundedCursorRowsAndPortableFilesKeepExactBytes",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncLedgerTest",
+      "method": "copyVerifyCutoverPreservesLegacyBytesAndCasSurvivesRestart",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncLedgerTest",
+      "method": "everyMigrationCrashIsRestartableWithoutPromotingOldQueue",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncLedgerTest",
+      "method": "databaseLossNeverReimportsOlderJsonOrResetsEvidence",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncLedgerTest",
+      "method": "backupAndNewSidecarsArePreservedWithoutReadSideRename",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncReceiptSafetyTest",
+      "method": "actualSqlDiskFullCannotQuietTheActiveIntent",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncReceiptSafetyTest",
+      "method": "registryFailureAfterSqlCommitCannotStrandHistoryOrLoseTheIntent",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncReceiptSafetyTest",
+      "method": "everyReceiptTransactionFaultRollsBackQuietingAndSurvivesReopen",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncReceiptSafetyTest",
+      "method": "missingOrChangedMediaCannotProduceOrReuseVerifiedInventory",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncReceiptSafetyTest",
+      "method": "corruptedSourceCannotBeOverwrittenOrAcknowledged",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncReceiptSafetyTest",
+      "method": "cachedCurrentSnapshotCannotAdvertiseOldJsonAfterValidExternalReplacement",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncReceiptSafetyTest",
+      "method": "changedPairingOrRecoveryEpochCannotCompleteTheOriginalJob",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncReceiptSafetyTest",
+      "method": "incomparableCausalRevisionDoesNotVerifyTheReceipt",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncReceiptSafetyTest",
+      "method": "localAuthorityLossCannotRetireTheIntentAfterRestart",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncReceiptSafetyTest",
+      "method": "actualNewerInventoryVerifiesCoverageWithoutRollingBackAndStillReportsUnknownNow",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncReceiptSafetyTest",
+      "method": "accountAndSafUriChangesCannotConsumeAnOldTargetAck",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncReceiptSafetyTest",
+      "method": "corruptedSqlSnapshotBytesCannotBeReplacedSilentlyDuringReceipt",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncReceiptSafetyTest",
+      "method": "aMissingNewReceiptSourceCannotBeSilentlyReplacedByItsSqlEvidence",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncReceiptSafetyTest",
+      "method": "corruptedTargetIdentityIsRejectedBeforeUsingItsReceipt",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncReceiptSafetyTest",
+      "method": "orphanedSqlDeliveryCannotPassQuickCheckOrRecreateLostEvidenceSilently",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncReceiptSafetyTest",
+      "method": "knownReceiverEpochCannotBeVerifiedByAnOlderAuthenticatedInventory",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncReceiptSafetyTest",
+      "method": "verifiedInventoryCannotBeMutatedIntoDifferentCausalCoverage",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncReceiptSafetyTest",
+      "method": "corruptedSqlSourceAndManifestNeverBecomeReceiptEvidence",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncReceiptSafetyTest",
+      "method": "onlyVerifiedLegacyQuietReceiptsCanReadSqlSourceAndNeverConsumeSidecars",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncReceiptSafetyTest",
+      "method": "wrongEpochCannotReuseAnOtherwiseVerifiedInventory",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncReceiptSafetyTest",
+      "method": "liveInventoryCannotReuseTheQuietMetadataCacheAsProofOfCurrentMedia",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncReceiptSafetyTest",
+      "method": "legacyReceiptCannotBePromotedToAnInventoryCheckpoint",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncReceiptSafetyTest",
+      "method": "quietReceiptRestartAndDuplicateKeepExactPerTargetSourceAndUnknownHealth",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncReceiptSafetyTest",
+      "method": "restoringOlderWorkingBytesDoesNotRearmTheOldLocalEpoch",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncSafetyTest",
+      "method": "purgedConflictDoesNotReviveAndLegacyCopyDoesNotMultiply",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncSafetyTest",
+      "method": "transferFailurePreservesConfirmedDatabaseAndPersistsPendingState",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncSafetyTest",
+      "method": "sharedWriterRejectsInvalidDataBeforeTouchingConfirmedCopies",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncSafetyTest",
+      "method": "slowRemoteDoesNotBlockSaveAndFinalCommitKeepsBothExactValues",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncSafetyTest",
+      "method": "deeplyNestedOrMalformedUtf8DataIsRejectedWithoutReplacingTheDatabase",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncSafetyTest",
+      "method": "concurrentPurgeKeepsIndependentEditAsOneStableCopyAndNeverRevivesOriginal",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncSafetyTest",
+      "method": "durableQueueSurvivesReopenAndRejectsStaleOrInvalidRevision",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncSafetyTest",
+      "method": "causalRevisionBeatsWallClockWithoutChangingMeasurement",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncSafetyTest",
+      "method": "retryCannotDuplicateConflictEvenWhenExternalRevisionsAreEqual",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncSafetyTest",
+      "method": "installationIdentityIsStableAndVectorsValidateExactCounters",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncSafetyTest",
+      "method": "corruptFirstCloudPrimaryNeverPublishesOlderRecoveryCopy",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncSafetyTest",
+      "method": "firstCloudMediaInterruptedCanResumeWithoutLosingExactData",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncSafetyTest",
+      "method": "webBridgeCannotInvokeLegacyUnconditionalDatabaseWriter",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.SyncTlsIdentityTest",
+      "method": "simultaneousStartupCannotRegenerateOrMixTheInstallationKey",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.TrashPurgerTest",
+      "method": "nativeBridgeChecksDiskSnapshotAndKeepsLegacyUnsavedDefaults",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.TrashPurgerTest",
+      "method": "malformedBalancedJsonStringAlsoBlocksMediaDeletion",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.TrashPurgerTest",
+      "method": "purgeKeepsSharedOriginalsReferencedInsideSerializedJsonObjects",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.TrashPurgerTest",
+      "method": "knownP1PinnedPendingCanFinishCleanupWithoutDeletingOriginal",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.TrashPurgerTest",
+      "method": "legacyPendingWithoutPinFailsClosedBeforeAnyCommitAfterRestart",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.TrashPurgerTest",
+      "method": "failedBackupWriteNeverUnlinksMedia",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.TrashPurgerTest",
+      "method": "staleSnapshotOrRestoredRecordCannotDeleteAnything",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.TrashPurgerTest",
+      "method": "pendingCleanupCannotDeleteMediaReusedByActiveRecord",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.TrashPurgerTest",
+      "method": "syncDoesNotResurrectPurgedTrashButPreservesRemoteActiveRecord",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.TrashPurgerTest",
+      "method": "invalidStructuredHistoryAbortsPurgeInsteadOfDiscardingPossibleReference",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.TrashPurgerTest",
+      "method": "excessiveCombinedDepthAbortsPurgeWithoutDeletingOriginals",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.TrashPurgerTest",
+      "method": "failedDatabaseWriteLeavesAllMediaAndRecordsRecoverable",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.TrashPurgerTest",
+      "method": "failedUnlinkIsReportedAndRetryableAfterRestart",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.TrashPurgerTest",
+      "method": "purgeRemovesOnlyDeletedRecordsAndExclusiveNestedMediaAndSurvivesRestart",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.TrashPurgerTest",
+      "method": "restartedCleanupKeepsExactBytesReusedByNoteHistory",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.TrashPurgerTest",
+      "method": "backupExportAndRestoreAfterPurgeKeepActivePrecisionAndSharedMedia",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.TrashPurgerTest",
+      "method": "pendingCleanupMustRecheckSerializedObjectReferencesAfterRestart",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.VideoReviewTest",
+      "method": "recreationPreservesFullscreenSeekAndPlayPauseState",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.VideoReviewTest",
+      "method": "explicitVideoEntryRejectsInvalidMissingAndEscapingFiles",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.VideoReviewTest",
+      "method": "legacyAndRestoredVideoWithoutMimeUseInternalPlayer",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.VideoReviewTest",
+      "method": "fullscreenAndBackReusePlayerAndPreservePosition",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.VideoReviewTest",
+      "method": "rotatingBothWaysRecreatesFullscreenWithExactPosition",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.VideoReviewTest",
+      "method": "rotationBeforePreparationDoesNotLosePendingSeek",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.VideoReviewTest",
+      "method": "fullscreenErrorKeepsVisibleMessageAndEscape",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.VideoReviewTest",
+      "method": "legacyFullscreenHidesNavigationAndRestoresSystemBars",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.WebContentPolicyTest",
+      "method": "requestsCannotFallThroughToRemoteNetworkOrExecutableMedia",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.WebContentPolicyTest",
+      "method": "exactPackagedDocumentIsTheOnlyAllowedInPlaceNavigation",
+      "status": "PASS",
+      "message": null
+    },
+    {
+      "class": "cz.zamerovac.app.WebContentPolicyTest",
+      "method": "clickedExternalUrlOpensBrowserAndPopupNeverReceivesNativeBridge",
+      "status": "PASS",
+      "message": null
+    }
+  ]
+}

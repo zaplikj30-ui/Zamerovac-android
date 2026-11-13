@@ -1,0 +1,750 @@
+{
+  "suite": "drawing",
+  "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+  "startedAt": "2026-11-13T12:09:51.998Z",
+  "syntheticOnly": true,
+  "cases": [
+    {
+      "name": "dimension",
+      "status": "passed",
+      "steps": [
+        "Create canvas through UI",
+        "Draw using real pointer gestures",
+        "Pixel oracle + fault injection",
+        "Edit exact measurements and text via dialog",
+        "Move + Undo/Redo using controls",
+        "Endpoint/corner edit preserves measurements",
+        "Close/reopen/reload retain exact object and rendered outline"
+      ],
+      "evidence": [
+        {
+          "faultInjectionRejected": true,
+          "hiddenHits": [
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "outline": [
+            true,
+            true,
+            true,
+            true
+          ],
+          "colorPixels": 1099
+        }
+      ]
+    },
+    {
+      "name": "line",
+      "status": "passed",
+      "steps": [
+        "Create canvas through UI",
+        "Draw using real pointer gestures",
+        "Pixel oracle + fault injection",
+        "Edit exact measurements and text via dialog",
+        "Move + Undo/Redo using controls",
+        "Endpoint/corner edit preserves measurements",
+        "Close/reopen/reload retain exact object and rendered outline"
+      ],
+      "evidence": [
+        {
+          "faultInjectionRejected": true,
+          "hiddenHits": [
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "outline": [
+            true,
+            true,
+            true,
+            true
+          ],
+          "colorPixels": 755
+        }
+      ]
+    },
+    {
+      "name": "arrow",
+      "status": "passed",
+      "steps": [
+        "Create canvas through UI",
+        "Draw using real pointer gestures",
+        "Pixel oracle + fault injection",
+        "Edit exact measurements and text via dialog",
+        "Move + Undo/Redo using controls",
+        "Endpoint/corner edit preserves measurements",
+        "Close/reopen/reload retain exact object and rendered outline"
+      ],
+      "evidence": [
+        {
+          "faultInjectionRejected": true,
+          "hiddenHits": [
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "outline": [
+            true,
+            true,
+            true,
+            true
+          ],
+          "colorPixels": 801
+        }
+      ]
+    },
+    {
+      "name": "circle",
+      "status": "passed",
+      "steps": [
+        "Create canvas through UI",
+        "Draw using real pointer gestures",
+        "Pixel oracle + fault injection",
+        "Edit exact measurements and text via dialog",
+        "Move + Undo/Redo using controls",
+        "Endpoint/corner edit preserves measurements",
+        "Close/reopen/reload retain exact object and rendered outline"
+      ],
+      "evidence": [
+        {
+          "faultInjectionRejected": true,
+          "hiddenHits": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "outline": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ],
+          "colorPixels": 2187
+        }
+      ]
+    },
+    {
+      "name": "ellipse",
+      "status": "passed",
+      "steps": [
+        "Create canvas through UI",
+        "Draw using real pointer gestures",
+        "Pixel oracle + fault injection",
+        "Edit exact measurements and text via dialog",
+        "Move + Undo/Redo using controls",
+        "Endpoint/corner edit preserves measurements",
+        "Close/reopen/reload retain exact object and rendered outline"
+      ],
+      "evidence": [
+        {
+          "faultInjectionRejected": true,
+          "hiddenHits": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "outline": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ],
+          "colorPixels": 1674
+        }
+      ]
+    },
+    {
+      "name": "rect",
+      "status": "passed",
+      "steps": [
+        "Create canvas through UI",
+        "Draw using real pointer gestures",
+        "Pixel oracle + fault injection",
+        "Edit exact measurements and text via dialog",
+        "Move + Undo/Redo using controls",
+        "Endpoint/corner edit preserves measurements",
+        "Close/reopen/reload retain exact object and rendered outline"
+      ],
+      "evidence": [
+        {
+          "faultInjectionRejected": true,
+          "hiddenHits": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "outline": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ],
+          "colorPixels": 2254
+        }
+      ]
+    },
+    {
+      "name": "area",
+      "status": "passed",
+      "steps": [
+        "Create canvas through UI",
+        "Draw using real pointer gestures",
+        "Pixel oracle + fault injection",
+        "Edit exact measurements and text via dialog",
+        "Move + Undo/Redo using controls",
+        "Endpoint/corner edit preserves measurements",
+        "Close/reopen/reload retain exact object and rendered outline"
+      ],
+      "evidence": [
+        {
+          "faultInjectionRejected": true,
+          "hiddenHits": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "outline": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ],
+          "colorPixels": 2254
+        }
+      ]
+    },
+    {
+      "name": "polyline",
+      "status": "passed",
+      "steps": [
+        "Create canvas through UI",
+        "Draw using real pointer gestures",
+        "Pixel oracle + fault injection",
+        "Edit exact measurements and text via dialog",
+        "Move + Undo/Redo using controls",
+        "Endpoint/corner edit preserves measurements",
+        "Close/reopen/reload retain exact object and rendered outline"
+      ],
+      "evidence": [
+        {
+          "faultInjectionRejected": true,
+          "hiddenHits": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "outline": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ],
+          "colorPixels": 883
+        }
+      ]
+    },
+    {
+      "name": "chain",
+      "status": "passed",
+      "steps": [
+        "Create canvas through UI",
+        "Draw using real pointer gestures",
+        "Pixel oracle + fault injection",
+        "Edit exact measurements and text via dialog",
+        "Move + Undo/Redo using controls",
+        "Endpoint/corner edit preserves measurements",
+        "Close/reopen/reload retain exact object and rendered outline"
+      ],
+      "evidence": [
+        {
+          "faultInjectionRejected": true,
+          "hiddenHits": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "outline": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ],
+          "colorPixels": 1119
+        }
+      ]
+    },
+    {
+      "name": "cumulative",
+      "status": "passed",
+      "steps": [
+        "Create canvas through UI",
+        "Draw using real pointer gestures",
+        "Pixel oracle + fault injection",
+        "Edit exact measurements and text via dialog",
+        "Move + Undo/Redo using controls",
+        "Endpoint/corner edit preserves measurements",
+        "Close/reopen/reload retain exact object and rendered outline"
+      ],
+      "evidence": [
+        {
+          "faultInjectionRejected": true,
+          "hiddenHits": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "outline": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ],
+          "colorPixels": 1545
+        }
+      ]
+    },
+    {
+      "name": "angle",
+      "status": "passed",
+      "steps": [
+        "Create canvas through UI",
+        "Draw using real pointer gestures",
+        "Pixel oracle + fault injection",
+        "Edit exact measurements and text via dialog",
+        "Move + Undo/Redo using controls",
+        "Endpoint/corner edit preserves measurements",
+        "Close/reopen/reload retain exact object and rendered outline"
+      ],
+      "evidence": [
+        {
+          "faultInjectionRejected": true,
+          "hiddenHits": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "outline": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ],
+          "colorPixels": 1250
+        }
+      ]
+    },
+    {
+      "name": "freehand",
+      "status": "passed",
+      "steps": [
+        "Create canvas through UI",
+        "Draw using real pointer gestures",
+        "Pixel oracle + fault injection",
+        "Edit exact measurements and text via dialog",
+        "Move + Undo/Redo using controls",
+        "Close/reopen/reload retain exact object and rendered outline"
+      ],
+      "evidence": [
+        {
+          "faultInjectionRejected": true,
+          "hiddenHits": [
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "outline": [
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true,
+            true
+          ],
+          "colorPixels": 854
+        }
+      ]
+    },
+    {
+      "name": "target",
+      "status": "passed",
+      "steps": [
+        "Create canvas through UI",
+        "Draw using real pointer gestures",
+        "Pixel oracle + fault injection",
+        "Edit exact measurements and text via dialog",
+        "Move + Undo/Redo using controls",
+        "Endpoint/corner edit preserves measurements",
+        "Close/reopen/reload retain exact object and rendered outline"
+      ],
+      "evidence": [
+        {
+          "faultInjectionRejected": true,
+          "hiddenHits": [
+            false,
+            false,
+            false,
+            false
+          ]
+        },
+        {
+          "outline": [
+            true,
+            true,
+            true,
+            true
+          ],
+          "colorPixels": 213
+        }
+      ]
+    },
+    {
+      "name": "note",
+      "status": "passed",
+      "steps": [
+        "Create canvas through UI",
+        "Draw using real pointer gestures",
+        "Pixel oracle + fault injection",
+        "Edit exact measurements and text via dialog",
+        "Move + Undo/Redo using controls",
+        "Close/reopen/reload retain exact object and rendered outline"
+      ],
+      "evidence": [
+        {
+          "outline": [],
+          "colorPixels": 1621
+        }
+      ]
+    },
+    {
+      "name": "symbol",
+      "status": "passed",
+      "steps": [
+        "Create canvas through UI",
+        "Draw using real pointer gestures",
+        "Pixel oracle + fault injection",
+        "Edit exact measurements and text via dialog",
+        "Move + Undo/Redo using controls",
+        "Close/reopen/reload retain exact object and rendered outline"
+      ],
+      "evidence": [
+        {
+          "outline": [],
+          "colorPixels": 535
+        }
+      ]
+    },
+    {
+      "name": "two_finger_pinch_keeps_undo_redo_and_exact_measure",
+      "status": "passed",
+      "steps": [
+        "Create and measure dimension",
+        "Redo, close and reload preserve exact original measurement"
+      ],
+      "evidence": [
+        {
+          "scenario": "real two-pointer CDP input, unchanged Undo/Redo and exact saved value",
+          "before": {
+            "zoom": 0.4764285714285714,
+            "undo": 1,
+            "redo": 1
+          },
+          "after": {
+            "zoom": 0.8662337662337661,
+            "undo": 1,
+            "redo": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "pan_then_pinch_does_not_resume_stale_drag",
+      "status": "passed",
+      "steps": [
+        "Create a real editable measurement through UI",
+        "Pan one finger, then start a pinch with a second finger",
+        "Lift second finger; remaining finger must not revive old pan",
+        "A new contact must permit a fresh pan",
+        "Reopen and verify the exact value remains editable"
+      ],
+      "evidence": [
+        {
+          "kind": "CDP pan-pinch-pan lifecycle; exact stored dimension, Undo/Redo intact",
+          "zoomBefore": 0.4764285714285714,
+          "zoomAfter": 0.6875894205830821,
+          "panAfter": {
+            "zoom": 0.6875894205830821,
+            "dx": -173.15783247540742,
+            "dy": 104.60984486104257
+          }
+        }
+      ]
+    }
+  ]
+}

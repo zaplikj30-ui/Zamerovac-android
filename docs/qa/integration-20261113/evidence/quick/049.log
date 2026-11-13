@@ -1,0 +1,1 @@
+PASS: git ENOENT fails before Chromium launch; no 8-minute timeout

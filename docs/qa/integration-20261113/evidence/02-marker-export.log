@@ -1,0 +1,5 @@
+PASS: #47 18 inset geometry, stacks, orientation, zoom/pan, clip and nonmutation fixtures
+PASS: #47 11 customer PDF/ZIP synthetic render and bounds scenarios
+OK: move outside photo, independent arrow anchor, caption, resize, persistence
+PASS full offline help: 25 chapters, Czech search, offline scripts, safe menus and Back
+PASS rich note: media drafts, races, cleanup, retry, lock, rejected delete/save rollback and newer-data protection

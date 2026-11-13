@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.StorageLifecycleTest" tests="25" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:18:02" hostname="4b8cafdccf99" time="8.778">
+  <properties/>
+  <testcase name="compareAndSaveRejectsStaleSnapshotAndReportsDiskFailure" classname="cz.zamerovac.app.StorageLifecycleTest" time="1.166"/>
+  <testcase name="archiveRestoreCannotTouchCorruptPrimaryOrResurrectOldBackup" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.038"/>
+  <testcase name="firstLaunchInitializesDatabaseBeforeFirstPhotoAndExactMeasurement" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.045"/>
+  <testcase name="mediaUploadCannotAcknowledgeFailedMetadataOrUnsafeInputs" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.276"/>
+  <testcase name="failedAudioStopReleasesRecorderAndDoesNotAttachAnEmptyFile" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.122"/>
+  <testcase name="unsafeZipPathsCannotEscapeAndInvalidMediaReferencesFailSafely" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.046"/>
+  <testcase name="annotationHistoryProtectsSharedMediaDuringAnotherRecordsPurge" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.06"/>
+  <testcase name="corruptedPrimaryWithOlderValidBackupNeverAcknowledgesCAS" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.05"/>
+  <testcase name="pendingAudioBridgeBindsOnlyAfterDurableCompareSaveAndNeverRevertsNewerData" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.075"/>
+  <testcase name="mediaUploadStagesAndAcknowledgesOnlyCompleteFilesWithoutOverwritingOriginals" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.029"/>
+  <testcase name="duplicateIncomingRecordIdsAreRejectedBeforeAnyMediaWrites" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.049"/>
+  <testcase name="missingAndEmptyNestedMediaAbortBeforeAnyArchiveBytes" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.039"/>
+  <testcase name="lostDatabaseAfterReopenCannotLookLikeFreshInstallation" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.533"/>
+  <testcase name="missingDatabaseCannotMasqueradeAsEmptyCASAndCanRecover" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.039"/>
+  <testcase name="archiveRestoreOnCleanInstallationBootstrapsBeforeFirstOriginal" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.043"/>
+  <testcase name="cleanFirstInstallAndLegacyMediaAreDistinctWithoutChangingSchema" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.035"/>
+  <testcase name="retainedAudioExportRejectsFileUriBeforeOpeningOrTruncatingOriginal" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.029"/>
+  <testcase name="exportWriteFailurePropagatesAndPreservesDatabaseAndOriginals" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.048"/>
+  <testcase name="repeatedRestoreCreatesIntentionalIsolatedCopiesAndPreservesAllLinks" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.061"/>
+  <testcase name="parallelSaveAndFiftyExportsHaveCompleteSnapshotsAndUnchangedOriginals" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.908"/>
+  <testcase name="rotatedExifThumbnailAndCacheLeaveJpegBytesMetadataAndDimensionsUntouched" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.031"/>
+  <testcase name="uriCopyStagesPartialDataAndDoesNotOverwriteExistingOriginal" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.028"/>
+  <testcase name="v2ArchiveRoundtripAndTamperOrMissingManifestFailBeforeWrites" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.052"/>
+  <testcase name="cancelledPickersSettleOnceWithoutChangingConfirmedDataOrOriginals" classname="cz.zamerovac.app.StorageLifecycleTest" time="0.045"/>
+  <testcase name="confirmedDatabaseSurvivesActivityPauseStopAndNewInstance" classname="cz.zamerovac.app.StorageLifecycleTest" time="4.912"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

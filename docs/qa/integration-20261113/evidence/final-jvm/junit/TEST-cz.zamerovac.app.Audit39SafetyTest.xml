@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.Audit39SafetyTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:10:34" hostname="4b8cafdccf99" time="114.253">
+  <properties/>
+  <testcase name="streamingBudgetRejectsGrowthAndOversizedJsonWithoutWritingExcessByte" classname="cz.zamerovac.app.Audit39SafetyTest" time="0.028"/>
+  <testcase name="stalledProviderTimesOutWithoutPublishingOrLeakingMedia" classname="cz.zamerovac.app.Audit39SafetyTest" time="0.149"/>
+  <testcase name="purgeProtectsLiveAudioHistoryAndSeparateImmutableBackup" classname="cz.zamerovac.app.Audit39SafetyTest" time="0.065"/>
+  <testcase name="maximumEntryArchiveRoundTripsWithAllThreeMetadataEntries" classname="cz.zamerovac.app.Audit39SafetyTest" time="43.971"/>
+  <testcase name="sharedHierarchyFixturesConvergeAndPreserveAllPayloadsAndInputs" classname="cz.zamerovac.app.Audit39SafetyTest" time="0.052"/>
+  <testcase name="utf8LimitBelowAtAndAbovePreservesBothConfirmedCopies" classname="cz.zamerovac.app.Audit39SafetyTest" time="3.838"/>
+  <testcase name="slowRestoreCommitsLatestLocalEditAndRollsBackFailedCommit" classname="cz.zamerovac.app.Audit39SafetyTest" time="0.078"/>
+  <testcase name="exportStreamsThreeGiBAndBudgetIncludesMetadata" classname="cz.zamerovac.app.Audit39SafetyTest" time="66.071"/>
+  <system-out><![CDATA[THREE_GIB_ZIP_EXACT_BYTES=3221225472 HEAP_LIMIT=536870912
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,70 @@
+{
+  "suite": "pending-audio",
+  "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+  "startedAt": "2026-11-13T12:13:01.493Z",
+  "syntheticOnly": true,
+  "cases": [
+    {
+      "name": "verified-original-and-suspect-reservation-have-separate-actions-and-acknowledgements",
+      "status": "passed",
+      "steps": [],
+      "evidence": [
+        {
+          "nativeModel": true,
+          "originalToken": "verified-one",
+          "uncertainToken": "suspect-other",
+          "nativeByteProof": "Robolectric split-inode tests"
+        }
+      ]
+    },
+    {
+      "name": "ordinary-save-uses-native-summary-without-requesting-another-full-media-scan",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    },
+    {
+      "name": "stop-is-only-a-draft-before-cancel-and-failed-save",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    },
+    {
+      "name": "unknown-journal-warning-preserves-two-independent-copy-actions",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    },
+    {
+      "name": "stop-cancel-restart-reattach-save-preserves-exact-values",
+      "status": "passed",
+      "steps": [],
+      "evidence": [
+        {
+          "nativeModel": true,
+          "originalBytes": "Covered by Robolectric, not this browser test",
+          "measure": "1250,123456789",
+          "unit": "in"
+        }
+      ]
+    },
+    {
+      "name": "failed-save-cancel-keeps-pending-across-reload",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    },
+    {
+      "name": "android-back-and-bind-failure-do-not-undo-saved-note",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    },
+    {
+      "name": "failed-stop-retains-recovery-and-uncertain-export-never-attaches",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    }
+  ]
+}

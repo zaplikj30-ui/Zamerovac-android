@@ -1,0 +1,4 @@
+PASS gallery-readability/pixels_1200x800_412
+PASS gallery-readability/pixels_6000x4000_412
+PASS gallery-readability/pixels_1600x4800_1100
+PASS gallery-readability/pixels_6000x4000_412_dpr2

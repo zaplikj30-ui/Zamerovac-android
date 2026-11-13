@@ -1,0 +1,17 @@
+PASS drawing/dimension
+PASS drawing/line
+PASS drawing/arrow
+PASS drawing/circle
+PASS drawing/ellipse
+PASS drawing/rect
+PASS drawing/area
+PASS drawing/polyline
+PASS drawing/chain
+PASS drawing/cumulative
+PASS drawing/angle
+PASS drawing/freehand
+PASS drawing/target
+PASS drawing/note
+PASS drawing/symbol
+PASS drawing/two_finger_pinch_keeps_undo_redo_and_exact_measure
+PASS drawing/pan_then_pinch_does_not_resume_stale_drag

@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.DatabaseRecoveryTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:12:38" hostname="4b8cafdccf99" time="0.367">
+  <properties/>
+  <testcase name="partialAndCompleteUnconfirmedTemporaryFilesNeverReplaceConfirmedDatabaseOnRead" classname="cz.zamerovac.app.DatabaseRecoveryTest" time="0.066"/>
+  <testcase name="restartResidueAfterBackupPublicationKeepsPrimaryAndFallbackDoesNotPromotePendingData" classname="cz.zamerovac.app.DatabaseRecoveryTest" time="0.053"/>
+  <testcase name="deletedDatabaseInvalidatesReceiptsAndMalformedJournalFailsClosed" classname="cz.zamerovac.app.DatabaseRecoveryTest" time="0.047"/>
+  <testcase name="fallbackRotatesDurablyOnceAndNeverOverwritesEitherOriginal" classname="cz.zamerovac.app.DatabaseRecoveryTest" time="0.06"/>
+  <testcase name="orphanOriginalNeverAuthorizesImplicitFreshDatabase" classname="cz.zamerovac.app.DatabaseRecoveryTest" time="0.033"/>
+  <testcase name="failedDatabaseStagingPreservesConfirmedPrimaryAndRecoveryCopy" classname="cz.zamerovac.app.DatabaseRecoveryTest" time="0.06"/>
+  <testcase name="failedRecoveryJournalCannotReturnOlderDataAsConfirmed" classname="cz.zamerovac.app.DatabaseRecoveryTest" time="0.047"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

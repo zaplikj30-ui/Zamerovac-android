@@ -1,0 +1,37 @@
+{
+  "suite": "legacy-conflict-persistence",
+  "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+  "startedAt": "2026-11-13T12:09:46.305Z",
+  "syntheticOnly": true,
+  "cases": [
+    {
+      "name": "clockless-legacy-copy-persists-reopen-media-editor-and-repeat-callback",
+      "status": "passed",
+      "steps": [
+        "seed genuine browser persistent media and legacy photo",
+        "open legacy photo using actual app UI before callback",
+        "reconcile real callback and persist marked conflict",
+        "reload actual browser page and reopen persisted copy via UI",
+        "replay callback twice against reopened editor",
+        "verify both original media blobs remain byte-exact in IndexedDB",
+        "final durable restart verifies no resurrection or duplicate",
+        "explicit tombstone for the conflict copy still removes it"
+      ],
+      "evidence": [
+        {
+          "source": "actual app.js in Chromium browser-only synthetic callback",
+          "oldIdNeverRevived": true,
+          "copyId": "4690d45c-d4e1-4709-aec9-b1abd4b2b3fa",
+          "editorRebound": true,
+          "persistAndReopen": true,
+          "repeatedCallbacks": 2,
+          "mediaSHA256Unchanged": {
+            "photo": "02e888f0fac5b9bc310f63a11552396e2705ad6ba8a0afb1a040eaee931ef72e",
+            "video": "cb81679d2a02673481f9e2f820858aaf7e11870deb9a85261adec26615db7bb7"
+          },
+          "androidCas": "NOT RUN"
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,37 @@
+{
+  "suite": "update39",
+  "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+  "startedAt": "2026-11-13T12:11:38.637Z",
+  "syntheticOnly": true,
+  "cases": [
+    {
+      "name": "gallery_bounded_pan_and_caption_pixels",
+      "status": "passed",
+      "steps": [],
+      "evidence": [
+        {
+          "yellowCaptionPixels": 1080,
+          "originalDataUnchanged": true
+        }
+      ]
+    },
+    {
+      "name": "default_selection_corner_loupe_and_landscape_tools",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    },
+    {
+      "name": "real_save_failure_and_photo_loading_errors",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    },
+    {
+      "name": "help_occurrences_and_neutral_bluetooth",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    }
+  ]
+}

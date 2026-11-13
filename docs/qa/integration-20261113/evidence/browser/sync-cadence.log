@@ -1,0 +1,2 @@
+PASS sync-cadence/frequency-selection-persists-without-changing-records-and-old-switch-can-reenable
+PASS sync-cadence/failed-persistence-does-not-activate-new-frequency

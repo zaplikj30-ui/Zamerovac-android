@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.AudioCompletedKeepTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:10:02" hostname="4b8cafdccf99" time="0.135">
+  <properties/>
+  <testcase name="completedOriginalSurvivesMetadataCommitFalse" classname="cz.zamerovac.app.AudioCompletedKeepTest" time="0.135"/>
+  <system-out><![CDATA[EXACT_ORIGINAL_AND_RETAINED_SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a bytes=10
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

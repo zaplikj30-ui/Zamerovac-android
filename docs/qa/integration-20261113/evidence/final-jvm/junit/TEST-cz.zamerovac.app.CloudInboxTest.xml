@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.CloudInboxTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:12:32" hostname="4b8cafdccf99" time="1.073">
+  <properties/>
+  <testcase name="committedReceiptSurvivesReopenAndIsScopedToInstallationAndStore" classname="cz.zamerovac.app.CloudInboxTest" time="0.135"/>
+  <testcase name="cachedAndReopenedInboxInvalidateEveryReceiptAfterDatabaseFallback" classname="cz.zamerovac.app.CloudInboxTest" time="0.307"/>
+  <testcase name="supersededLocalIntentCannotBecomeRemoteAcknowledgementAndRecoveryInvalidatesIt" classname="cz.zamerovac.app.CloudInboxTest" time="0.242"/>
+  <testcase name="failedReceiptWriteCannotTurnUnacknowledgedCommitIntoCachedSuccess" classname="cz.zamerovac.app.CloudInboxTest" time="0.267"/>
+  <testcase name="missingCommitAndChangedImmutableMessageCannotBeAcknowledged" classname="cz.zamerovac.app.CloudInboxTest" time="0.121"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.PeerSessionsTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:16:25" hostname="4b8cafdccf99" time="0.867">
+  <properties/>
+  <testcase name="authenticatedNearbySupersedesEitherLanDirectionButLanCannotDisplaceNearby" classname="cz.zamerovac.app.PeerSessionsTest" time="0.861"/>
+  <testcase name="sameRouteTieUsesInitiatorPreferenceAndDifferentPeersStayIndependent" classname="cz.zamerovac.app.PeerSessionsTest" time="0.001"/>
+  <testcase name="simultaneousRoutesConvergeOnOneNearbyLeaseWithoutStaleRemoval" classname="cz.zamerovac.app.PeerSessionsTest" time="0.005"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

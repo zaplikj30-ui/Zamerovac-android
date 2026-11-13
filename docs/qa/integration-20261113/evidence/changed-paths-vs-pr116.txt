@@ -1,0 +1,15 @@
+AGENTS.md
+START_ZDE.md
+app/src/main/assets/customer-export.js
+app/src/main/assets/help.js
+app/src/main/assets/inset-workspace.js
+docs/qa/integration-20261113/HOME_GATE_PROPOSAL.md
+tests/help_guide.js
+tests/inset_audio_customer_export.js
+tests/inset_audio_marker_geometry.js
+tests/inset_workspace_interaction.js
+tests/media_import_real_chromium.py
+tests/media_import_transaction_faults.js
+tests/test_imagemeter_inset.py
+tools/e2e/gallery-state.cjs
+tools/e2e/media-import.cjs

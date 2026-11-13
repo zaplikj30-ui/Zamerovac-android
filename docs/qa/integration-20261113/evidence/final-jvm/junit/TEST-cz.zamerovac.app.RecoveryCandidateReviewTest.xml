@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.RecoveryCandidateReviewTest" tests="20" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:17:17" hostname="4b8cafdccf99" time="0.98">
+  <properties/>
+  <testcase name="verifiedExistingArchiveIsReadOnlyEvidenceNotPromotion" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.07"/>
+  <testcase name="invalidTombstoneClockWithSameIdIsBlockedWithoutRepair" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.047"/>
+  <testcase name="healthyCurrentCandidateWithExactMediaHistoryAndTombstonesIsOnlyChecked" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.055"/>
+  <testcase name="concurrentTombstoneClockWithSameIdIsBlockedAndPreservesEverything" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.043"/>
+  <testcase name="sameSizeChangedMediaCannotUseOldArchive" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.064"/>
+  <testcase name="olderHigherTombstoneClockBlocksLowerNewerValue" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.032"/>
+  <testcase name="invalidJournalWithoutSideEffectsMustBeBlocked" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.027"/>
+  <testcase name="missingOriginalMediaIsBlockedNotInvented" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.026"/>
+  <testcase name="olderBackupCannotOverrideNewerDimensionAndTombstone" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.039"/>
+  <testcase name="newerDominatingTombstoneClockStillAllowsReadOnlyCheck" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.032"/>
+  <testcase name="archivedOldDatabaseNeverCertifiesNewerMeasurements" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.092"/>
+  <testcase name="legacyJournalBakAloneMustRemainByteExactAndUnknown" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.057"/>
+  <testcase name="journalBaseAndNewMustNotDiscardUnfinishedBytes" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.118"/>
+  <testcase name="secondReadAndRestartDoNotChangeAnyEvidenceOrPeerQueue" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.091"/>
+  <testcase name="damagedPrimaryCannotImplicitlyAuthorizeHealthyBackup" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.032"/>
+  <testcase name="byteIdenticalUnconfirmedTmpNeverReceivesCheckedReadOnly" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.039"/>
+  <testcase name="sourceChangedDuringScanIsBlockedWithoutFurtherWrites" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.028"/>
+  <testcase name="malformedSchemaIsBlockedWithoutRepair" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.026"/>
+  <testcase name="validJournalReadsEpochWithoutMutatingAnyEvidence" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.024"/>
+  <testcase name="sameSizeMediaModifiedDuringScanIsBlocked" classname="cz.zamerovac.app.RecoveryCandidateReviewTest" time="0.034"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

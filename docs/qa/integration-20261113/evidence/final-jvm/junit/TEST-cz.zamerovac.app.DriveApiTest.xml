@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.DriveApiTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:12:44" hostname="4b8cafdccf99" time="3.596">
+  <properties/>
+  <testcase name="openStreamsOnlyDeclaredObjectBytesAndNeverUsesArbitraryIds" classname="cz.zamerovac.app.DriveApiTest" time="3.142"/>
+  <testcase name="incompleteCyclicMalformedAndFailedListingsCannotLookLikeEmptyStorage" classname="cz.zamerovac.app.DriveApiTest" time="0.062"/>
+  <testcase name="createOnlyUploadUsesExact256KiBChunksAndChecksServerProgress" classname="cz.zamerovac.app.DriveApiTest" time="0.093"/>
+  <testcase name="completePaginationIncludesEmptyPagesAndCarriesOpaqueTokens" classname="cz.zamerovac.app.DriveApiTest" time="0.229"/>
+  <testcase name="hostileSessionPartialSourceWrongRangeAndPrematureFinalDoNotComplete" classname="cz.zamerovac.app.DriveApiTest" time="0.07"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

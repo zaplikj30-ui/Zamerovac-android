@@ -1,0 +1,8 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.10.2/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+
+> Task :verify
+PASS Drive Gradle registration: valid/disabled inputs, 19 rejected configurations, actual preview certificate; no APK or account access
+
+BUILD SUCCESSFUL in 5s
+1 actionable task: 1 executed

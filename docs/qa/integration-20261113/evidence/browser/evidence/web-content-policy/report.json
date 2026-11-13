@@ -1,0 +1,14 @@
+{
+  "suite": "web-content-policy",
+  "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+  "startedAt": "2026-11-13T12:12:40.272Z",
+  "syntheticOnly": true,
+  "cases": [
+    {
+      "name": "native-csp-blocks-injected-scripts-media-and-frames-keeps-real-drawing",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    }
+  ]
+}

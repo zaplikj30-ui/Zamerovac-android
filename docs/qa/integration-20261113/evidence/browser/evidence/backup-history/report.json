@@ -1,0 +1,14 @@
+{
+  "suite": "backup-history",
+  "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+  "startedAt": "2026-11-13T12:12:13.908Z",
+  "syntheticOnly": true,
+  "cases": [
+    {
+      "name": "offline-ui-two-histories-confirmation-and-network-exception",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    }
+  ]
+}

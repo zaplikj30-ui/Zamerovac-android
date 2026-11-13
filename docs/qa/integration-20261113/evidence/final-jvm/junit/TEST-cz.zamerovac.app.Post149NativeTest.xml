@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.Post149NativeTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:17:12" hostname="4b8cafdccf99" time="1.932">
+  <properties/>
+  <testcase name="videoTimeoutAndErrorsPreserveOriginalAndPauseReleasesPlayback" classname="cz.zamerovac.app.Post149NativeTest" time="0.565"/>
+  <testcase name="earlyGattCallbackIsQueuedAndTimeoutClosesOnlyItsOwnSession" classname="cz.zamerovac.app.Post149NativeTest" time="0.332"/>
+  <testcase name="permissionReplyAfterCancelDoesNotRestartScan" classname="cz.zamerovac.app.Post149NativeTest" time="0.039"/>
+  <testcase name="videoRejectsMissingAndTraversalIds" classname="cz.zamerovac.app.Post149NativeTest" time="0.051"/>
+  <testcase name="blockedThumbnailCannotHoldDataLockOrLoadForever" classname="cz.zamerovac.app.Post149NativeTest" time="0.171"/>
+  <testcase name="rotationKeepsActivityWebViewAndSavedProject" classname="cz.zamerovac.app.Post149NativeTest" time="0.071"/>
+  <testcase name="videoUsesInternalPlayerAndReadOnlyLargeFileDescriptor" classname="cz.zamerovac.app.Post149NativeTest" time="0.112"/>
+  <testcase name="pagesStayTogetherAndIncompletePdfCannotBeSaved" classname="cz.zamerovac.app.Post149NativeTest" time="0.047"/>
+  <testcase name="videoThumbnailCacheAndUnsupportedFormatNeverChangeOriginal" classname="cz.zamerovac.app.Post149NativeTest" time="0.54"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[Invalid ID 0x00000000.
+]]></system-err>
+</testsuite>

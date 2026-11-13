@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.BackupHistoryTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:12:29" hostname="4b8cafdccf99" time="3.68">
+  <properties/>
+  <testcase name="historyRestoreRefusesStaleBackupAndKeepsAllExistingMedia" classname="cz.zamerovac.app.BackupHistoryTest" time="0.124"/>
+  <testcase name="storageFailureAndDamagedBlobKeepPreviousPointAndCurrentData" classname="cz.zamerovac.app.BackupHistoryTest" time="0.081"/>
+  <testcase name="zeroProgressAndOversizedBackupStreamsFailWithoutPublishingOrChangingDatabase" classname="cz.zamerovac.app.BackupHistoryTest" time="0.158"/>
+  <testcase name="latestLocalEditSurvivesSlowRestoreAndCommitFailureRollsBackNewMedia" classname="cz.zamerovac.app.BackupHistoryTest" time="0.515"/>
+  <testcase name="historyRestoreIntoCleanReceiverKeepsExactDimensionAndOriginalBytes" classname="cz.zamerovac.app.BackupHistoryTest" time="0.297"/>
+  <testcase name="providerReadFailureIsNotTreatedAsCorruptionOrPermissionToPublishRepair" classname="cz.zamerovac.app.BackupHistoryTest" time="0.246"/>
+  <testcase name="interruptedCanonicalBlockCanRetryAfterRestartWithoutOverwritingPartialFile" classname="cz.zamerovac.app.BackupHistoryTest" time="0.132"/>
+  <testcase name="corruptedCanonicalGetsVerifiedImmutableRepairAndBothHistoricalManifestsStayUnchanged" classname="cz.zamerovac.app.BackupHistoryTest" time="0.119"/>
+  <testcase name="nestedNotesAudioAndSerializedHistoryGetIndependentMediaIds" classname="cz.zamerovac.app.BackupHistoryTest" time="0.098"/>
+  <testcase name="twoHistoriesShareOneHundredOriginalsAndOldAndNewRestoreExactBytes" classname="cz.zamerovac.app.BackupHistoryTest" time="1.837"/>
+  <testcase name="unsafePathAndMissingBlobCannotBeReportedComplete" classname="cz.zamerovac.app.BackupHistoryTest" time="0.069"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

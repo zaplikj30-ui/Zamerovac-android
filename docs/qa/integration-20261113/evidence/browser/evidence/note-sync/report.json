@@ -1,0 +1,44 @@
+{
+  "suite": "note-sync",
+  "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+  "startedAt": "2026-11-13T12:12:25.984Z",
+  "syntheticOnly": true,
+  "cases": [
+    {
+      "name": "read-only-note-and-checklist-attachment-causal-autosave",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    },
+    {
+      "name": "incoming-note-data-waits-and-read-only-close-does-not-create-conflict",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    },
+    {
+      "name": "sketch-stroke-keeps-live-points-through-debounced-note-cas",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    },
+    {
+      "name": "failed-note-write-keeps-form-and-retry-and-lock-protects-checks",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    },
+    {
+      "name": "voice-keeps-owner-finishes-on-save-and-failed-stop-keeps-form",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    },
+    {
+      "name": "rich-voice-failed-stop-and-disk-keep-modal-back-retry-and-cancel",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    }
+  ]
+}

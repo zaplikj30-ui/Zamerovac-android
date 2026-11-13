@@ -1,0 +1,18 @@
+{
+  "sourceSHA": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+  "platform": "Linux-6.18.57-x86_64-with-glibc2.41",
+  "osRelease": "PRETTY_NAME=\"Debian GNU/Linux 13 (trixie)\"\nNAME=\"Debian GNU/Linux\"\nVERSION_ID=\"13\"\nVERSION=\"13 (trixie)\"\nVERSION_CODENAME=trixie\nDEBIAN_VERSION_FULL=13.6\nID=debian\nHOME_URL=\"https://www.debian.org/\"\nSUPPORT_URL=\"https://www.debian.org/support\"\nBUG_REPORT_URL=\"https://bugs.debian.org/\"\n",
+  "Node": "24.22.1",
+  "Python": "3.12.14",
+  "Chromium": "156.0.8078.79 Debian13",
+  "Playwright": "1.62.1",
+  "JDK": "Temurin17.0.17+10",
+  "Gradle": "8.10.2",
+  "AndroidSDK": 35,
+  "AndroidBuildTools": "34.0.0",
+  "Robolectric": "4.16.1",
+  "pypdf": "6.21.4",
+  "PyMuPDF": "1.28.2",
+  "isHOME": false,
+  "syntheticDataOnly": true
+}

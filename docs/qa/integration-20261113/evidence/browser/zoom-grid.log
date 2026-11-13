@@ -1,0 +1,2 @@
+PASS zoom-grid/buttons_grid_pixels_and_snap_independence
+PASS zoom-grid/trusted_two_finger_pinch_and_limits

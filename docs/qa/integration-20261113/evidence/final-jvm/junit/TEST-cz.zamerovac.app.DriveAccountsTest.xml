@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.DriveAccountsTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:12:44" hostname="4b8cafdccf99" time="0.105">
+  <properties/>
+  <testcase name="featuresKeepIndependentExplicitBindingsAndDisconnectDoesNotTouchTheOther" classname="cz.zamerovac.app.DriveAccountsTest" time="0.027"/>
+  <testcase name="bindingStopsOldAccountAndInvalidInputOrCorruptStateDoesNotResetToEmpty" classname="cz.zamerovac.app.DriveAccountsTest" time="0.054"/>
+  <testcase name="failedAtomicWriteCannotSelectAnUnconfirmedAccountEvenInLiveInstance" classname="cz.zamerovac.app.DriveAccountsTest" time="0.024"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

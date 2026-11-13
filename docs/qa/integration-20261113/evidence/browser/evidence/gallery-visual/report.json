@@ -1,0 +1,18 @@
+{
+  "suite": "gallery-visual",
+  "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+  "startedAt": "2026-11-13T12:10:53.277Z",
+  "syntheticOnly": true,
+  "cases": [
+    {
+      "name": "gallery_text_and_lines_remain_sharp_at_real_screen_scale",
+      "status": "passed",
+      "steps": [
+        "Upload high-resolution image and draw a precise measurement through UI",
+        "Capture real rasterized line width and text height at 1x",
+        "Zoom changes geometry, not line thickness or font pixels, and must never modify the record"
+      ],
+      "evidence": []
+    }
+  ]
+}

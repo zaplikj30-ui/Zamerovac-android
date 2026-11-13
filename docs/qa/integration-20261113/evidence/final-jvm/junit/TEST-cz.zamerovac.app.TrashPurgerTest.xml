@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.TrashPurgerTest" tests="17" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:18:23" hostname="4b8cafdccf99" time="0.606">
+  <properties/>
+  <testcase name="nativeBridgeChecksDiskSnapshotAndKeepsLegacyUnsavedDefaults" classname="cz.zamerovac.app.TrashPurgerTest" time="0.044"/>
+  <testcase name="malformedBalancedJsonStringAlsoBlocksMediaDeletion" classname="cz.zamerovac.app.TrashPurgerTest" time="0.019"/>
+  <testcase name="purgeKeepsSharedOriginalsReferencedInsideSerializedJsonObjects" classname="cz.zamerovac.app.TrashPurgerTest" time="0.046"/>
+  <testcase name="knownP1PinnedPendingCanFinishCleanupWithoutDeletingOriginal" classname="cz.zamerovac.app.TrashPurgerTest" time="0.041"/>
+  <testcase name="legacyPendingWithoutPinFailsClosedBeforeAnyCommitAfterRestart" classname="cz.zamerovac.app.TrashPurgerTest" time="0.029"/>
+  <testcase name="failedBackupWriteNeverUnlinksMedia" classname="cz.zamerovac.app.TrashPurgerTest" time="0.026"/>
+  <testcase name="staleSnapshotOrRestoredRecordCannotDeleteAnything" classname="cz.zamerovac.app.TrashPurgerTest" time="0.018"/>
+  <testcase name="pendingCleanupCannotDeleteMediaReusedByActiveRecord" classname="cz.zamerovac.app.TrashPurgerTest" time="0.059"/>
+  <testcase name="syncDoesNotResurrectPurgedTrashButPreservesRemoteActiveRecord" classname="cz.zamerovac.app.TrashPurgerTest" time="0.03"/>
+  <testcase name="invalidStructuredHistoryAbortsPurgeInsteadOfDiscardingPossibleReference" classname="cz.zamerovac.app.TrashPurgerTest" time="0.021"/>
+  <testcase name="excessiveCombinedDepthAbortsPurgeWithoutDeletingOriginals" classname="cz.zamerovac.app.TrashPurgerTest" time="0.025"/>
+  <testcase name="failedDatabaseWriteLeavesAllMediaAndRecordsRecoverable" classname="cz.zamerovac.app.TrashPurgerTest" time="0.034"/>
+  <testcase name="failedUnlinkIsReportedAndRetryableAfterRestart" classname="cz.zamerovac.app.TrashPurgerTest" time="0.03"/>
+  <testcase name="purgeRemovesOnlyDeletedRecordsAndExclusiveNestedMediaAndSurvivesRestart" classname="cz.zamerovac.app.TrashPurgerTest" time="0.049"/>
+  <testcase name="restartedCleanupKeepsExactBytesReusedByNoteHistory" classname="cz.zamerovac.app.TrashPurgerTest" time="0.036"/>
+  <testcase name="backupExportAndRestoreAfterPurgeKeepActivePrecisionAndSharedMedia" classname="cz.zamerovac.app.TrashPurgerTest" time="0.063"/>
+  <testcase name="pendingCleanupMustRecheckSerializedObjectReferencesAfterRestart" classname="cz.zamerovac.app.TrashPurgerTest" time="0.035"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

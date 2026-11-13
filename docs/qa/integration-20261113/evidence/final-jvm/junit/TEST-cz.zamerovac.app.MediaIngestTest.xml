@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.MediaIngestTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:12:57" hostname="4b8cafdccf99" time="0.657">
+  <properties/>
+  <testcase name="actualActivityResultUsesWorkerLeavesUiAndConfirmedSavingAvailable" classname="cz.zamerovac.app.MediaIngestTest" time="0.154"/>
+  <testcase name="providerTimeoutAndCancellationKeepDatabaseAndOriginalAndDiscardStaging" classname="cz.zamerovac.app.MediaIngestTest" time="0.292"/>
+  <testcase name="metadataDeadlineAndUnsafeSourcesFailBeforePublishing" classname="cz.zamerovac.app.MediaIngestTest" time="0.211"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

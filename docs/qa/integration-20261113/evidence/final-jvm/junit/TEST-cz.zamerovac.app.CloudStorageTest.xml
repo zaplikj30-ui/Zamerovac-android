@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.CloudStorageTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:12:34" hostname="4b8cafdccf99" time="0.246">
+  <properties/>
+  <testcase name="independentBackendsAndDisconnectNeverSilentlyFallBackToOldFolder" classname="cz.zamerovac.app.CloudStorageTest" time="0.088"/>
+  <testcase name="accountProjectAndCancellationScopeCannotReuseOldStoreOrNamespace" classname="cz.zamerovac.app.CloudStorageTest" time="0.03"/>
+  <testcase name="invalidProjectConfigurationNeverCallsDriveApiOrChangesSelectedAccount" classname="cz.zamerovac.app.CloudStorageTest" time="0.034"/>
+  <testcase name="offlineMeteredWifiOnlyAndExplicitExceptionUseCurrentNetwork" classname="cz.zamerovac.app.CloudStorageTest" time="0.029"/>
+  <testcase name="missingProjectDoesNotBecomeASafFallbackOrAuthorizeAnAccount" classname="cz.zamerovac.app.CloudStorageTest" time="0.063"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

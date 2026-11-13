@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.PeerMediaLargeTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:15:45" hostname="4b8cafdccf99" time="40.573">
+  <properties/>
+  <testcase name="threeGiBInterruptedHalfwayRestartsWholeFileAndPreservesHealthyNeighbour" classname="cz.zamerovac.app.PeerMediaLargeTest" time="40.573"/>
+  <system-out><![CDATA[PEER_MEDIA_3GIB_RETRY_FROM_ZERO SHA256=4a2980f6530cf815661776d5aff5807f7bb38ed6fb034aeae1f26edea33b95ec HEAP_LIMIT=536870912
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

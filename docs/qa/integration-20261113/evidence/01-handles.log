@@ -1,0 +1,13 @@
+OK: move outside photo, independent arrow anchor, caption, resize, persistence
+PASS full offline help: 25 chapters, Czech search, offline scripts, safe menus and Back
+test_detail_can_leave_photo_without_moving_note_anchor (test_imagemeter_inset.ImageMeterInsetTests.test_detail_can_leave_photo_without_moving_note_anchor) ... ok
+test_grips_show_resize_and_rotation_without_changing_hit_targets (test_imagemeter_inset.ImageMeterInsetTests.test_grips_show_resize_and_rotation_without_changing_hit_targets) ... ok
+test_image_border_stays_yellow_when_selected (test_imagemeter_inset.ImageMeterInsetTests.test_image_border_stays_yellow_when_selected) ... ok
+test_new_inset_is_large_enough_and_existing_size_survives (test_imagemeter_inset.ImageMeterInsetTests.test_new_inset_is_large_enough_and_existing_size_survives) ... ok
+test_original_image_remains_editable (test_imagemeter_inset.ImageMeterInsetTests.test_original_image_remains_editable) ... ok
+
+----------------------------------------------------------------------
+Ran 5 tests in 0.000s
+
+OK
+PASS rich note: media drafts, races, cleanup, retry, lock, rejected delete/save rollback and newer-data protection

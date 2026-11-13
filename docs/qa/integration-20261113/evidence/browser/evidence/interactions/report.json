@@ -1,0 +1,82 @@
+{
+  "suite": "interactions",
+  "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+  "startedAt": "2026-11-13T12:11:17.329Z",
+  "syntheticOnly": true,
+  "cases": [
+    {
+      "name": "rapid_grips_jitter_cancel",
+      "status": "passed",
+      "steps": [
+        "One/two/three taps and one-pixel jitter do not collapse or delete measurement",
+        "Trusted touch cancel leaves committed geometry and exact dimensions intact"
+      ],
+      "evidence": [
+        {
+          "events": [
+            {
+              "type": "pointerdown",
+              "id": 2,
+              "trusted": true
+            },
+            {
+              "type": "touchstart",
+              "trusted": true
+            },
+            {
+              "type": "pointercancel",
+              "id": 2,
+              "trusted": true
+            },
+            {
+              "type": "touchcancel",
+              "trusted": true
+            }
+          ],
+          "pointers": [],
+          "magnifierPoint": null,
+          "hidden": true
+        },
+        {
+          "taps": [
+            1,
+            2,
+            3
+          ],
+          "endpoints": 2,
+          "jitterPx": 0.5,
+          "touchCancel": true
+        }
+      ]
+    },
+    {
+      "name": "pan_zoom_fit_and_repeated_reopen",
+      "status": "passed",
+      "steps": [
+        "Ten rapid save/exit/reopen cycles retain one record and exact annotation"
+      ],
+      "evidence": [
+        {
+          "reopenCycles": 10,
+          "pan": true,
+          "wheelZoom": true,
+          "fit": true
+        }
+      ]
+    },
+    {
+      "name": "chain_finish_insert_remove_history",
+      "status": "passed",
+      "steps": [
+        "Insert/remove middle point through dialog, unaffected segment stays exact"
+      ],
+      "evidence": [
+        {
+          "finishByToolSwitch": true,
+          "insert": true,
+          "remove": true
+        }
+      ]
+    }
+  ]
+}

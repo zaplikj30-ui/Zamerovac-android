@@ -1,0 +1,6 @@
+PASS latency/project_1_10_50_editable_documents
+PASS latency/photo_and_gallery_1200x800
+PASS latency/photo_and_gallery_6000x4000
+PASS latency/existing_feedback_320x240
+PASS latency/existing_feedback_1440x2800
+PASS latency/feedback_slow_save_blocks_close_list_and_android_back

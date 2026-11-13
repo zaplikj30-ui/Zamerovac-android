@@ -1,0 +1,44 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.10.2/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+
+> Configure project :app
+Unable to initialize metrics, ensure /home/agent/.android is writable, details: /home/agent/.android/analytics.settings (No such file or directory)
+
+> Task :app:preBuild UP-TO-DATE
+> Task :app:prePreviewBuild UP-TO-DATE
+
+> Task :app:verifyDriveRegistration
+PASS registered Drive preview project/package/signing certificate; no OAuth account was contacted
+
+> Task :app:generatePreviewBuildConfig UP-TO-DATE
+> Task :app:javaPreCompilePreview UP-TO-DATE
+> Task :app:checkPreviewAarMetadata UP-TO-DATE
+> Task :app:generatePreviewResValues UP-TO-DATE
+> Task :app:mapPreviewSourceSetPaths
+> Task :app:generatePreviewResources
+> Task :app:packagePreviewResources
+> Task :app:parsePreviewLocalResources
+> Task :app:createPreviewCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksPreview UP-TO-DATE
+> Task :app:mergePreviewResources
+> Task :app:processPreviewMainManifest UP-TO-DATE
+> Task :app:processPreviewManifest UP-TO-DATE
+> Task :app:processPreviewManifestForPackage UP-TO-DATE
+> Task :app:prePreviewUnitTestBuild UP-TO-DATE
+> Task :app:javaPreCompilePreviewUnitTest UP-TO-DATE
+> Task :app:processPreviewResources
+
+> Task :app:compilePreviewJavaWithJavac
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+
+> Task :app:bundlePreviewClassesToCompileJar
+
+> Task :app:compilePreviewUnitTestJavaWithJavac
+Note: Some input files use or override a deprecated API.
+Note: Recompile with -Xlint:deprecation for details.
+Note: /workspace/Zamerovac-android/app/src/test/java/cz/zamerovac/app/DriveAuthorizationTest.java uses unchecked or unsafe operations.
+Note: Recompile with -Xlint:unchecked for details.
+
+BUILD SUCCESSFUL in 22s
+20 actionable tasks: 10 executed, 10 up-to-date

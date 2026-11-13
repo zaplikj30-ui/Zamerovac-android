@@ -1,0 +1,6 @@
+RAW GRADLE: FAIL {'PASS': 511, 'FAIL': 2, 'ERROR': 0, 'SKIP': 0}
+EXPECTED FAIL (actual FAIL): cz.zamerovac.app.SafSyncV2Test.driveStagedAckMustNotPublishAfterLocalAuthorityLostInsideProviderCommit
+EXPECTED FAIL (actual FAIL): cz.zamerovac.app.SafSyncV2Test.safDirectAckMustNotPublishAfterLocalAuthorityLostInsideProviderWrite
+PRODUCT ACCEPTANCE: PASS {'PASS': 511, 'FAIL': 0, 'ERROR': 0, 'SKIP': 0}
+SHA: ae3b4df53c25557f28b4a25ccb65adc2abdff639
+Evidence: /workspace/integration-evidence/final-jvm

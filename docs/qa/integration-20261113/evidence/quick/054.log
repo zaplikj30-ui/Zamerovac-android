@@ -1,0 +1,1 @@
+PASS: feedback raster reuse, transactional localStorage save/readback, failed writes, draft retention and safe deletion

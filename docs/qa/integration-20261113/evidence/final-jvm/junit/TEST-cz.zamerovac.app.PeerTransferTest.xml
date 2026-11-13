@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.PeerTransferTest" tests="14" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:16:27" hostname="4b8cafdccf99" time="38.604">
+  <properties/>
+  <testcase name="fallbackOnResponderInvalidatesRemoteAckAndRestoresExactDataWithoutNewUserEdit" classname="cz.zamerovac.app.PeerTransferTest" time="1.211"/>
+  <testcase name="recoveryOnInitiatorInvalidatesRemoteAckBeforeResponderPreparesSnapshot" classname="cz.zamerovac.app.PeerTransferTest" time="1.052"/>
+  <testcase name="diskFailureBeforePeerDatabaseCommitLeavesMetadataAndExactDataUntouched" classname="cz.zamerovac.app.PeerTransferTest" time="0.102"/>
+  <testcase name="corruptAndPartialStreamsDoNotPublishMedia" classname="cz.zamerovac.app.PeerTransferTest" time="0.059"/>
+  <testcase name="disconnectNineteenthOfThirtyKeepsDatabaseAndResumesAfterReopen" classname="cz.zamerovac.app.PeerTransferTest" time="5.513"/>
+  <testcase name="firstSyncIntoCleanReceiverKeepsExactPhotoAndNoDuplicateOnRetry" classname="cz.zamerovac.app.PeerTransferTest" time="1.1"/>
+  <testcase name="receiverFailureBeforeFirstPhotoBaselineIsNotDatabaseLoss" classname="cz.zamerovac.app.PeerTransferTest" time="0.09"/>
+  <testcase name="editDuringMediaTransferIsMergedFromLatestDatabase" classname="cz.zamerovac.app.PeerTransferTest" time="0.614"/>
+  <testcase name="coalescesOnlyObservedRevisionsAndRejectsUnsafeMetadata" classname="cz.zamerovac.app.PeerTransferTest" time="0.159"/>
+  <testcase name="corruptReceiverCannotAcceptOldBackupOrAckPeerSnapshot" classname="cz.zamerovac.app.PeerTransferTest" time="0.062"/>
+  <testcase name="completeBidirectionalMediaAndExactAnnotationsRemainIdempotent" classname="cz.zamerovac.app.PeerTransferTest" time="1.039"/>
+  <testcase name="recoveryQuarantineWithMoreThanSixteenOldJobsDoesNotBlockDirectTls" classname="cz.zamerovac.app.PeerTransferTest" time="26.634"/>
+  <testcase name="sameMediaIdDifferentBytesRefusesWithoutOverwritingOrFalseAck" classname="cz.zamerovac.app.PeerTransferTest" time="0.144"/>
+  <testcase name="interruptedFirstPhotoTransferKeepsCleanBaselineAndResumesSafely" classname="cz.zamerovac.app.PeerTransferTest" time="0.822"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

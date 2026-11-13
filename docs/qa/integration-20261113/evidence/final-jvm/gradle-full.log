@@ -1,0 +1,84 @@
+To honour the JVM settings for this build a single-use Daemon process will be forked. For more on this, please refer to https://docs.gradle.org/8.10.2/userguide/gradle_daemon.html#sec:disabling_the_daemon in the Gradle documentation.
+Daemon will be stopped at the end of the build 
+
+> Configure project :app
+Unable to initialize metrics, ensure /home/agent/.android is writable, details: /home/agent/.android/analytics.settings (No such file or directory)
+
+> Task :app:preBuild UP-TO-DATE
+> Task :app:prePreviewBuild UP-TO-DATE
+
+> Task :app:verifyDriveRegistration
+PASS registered Drive preview project/package/signing certificate; no OAuth account was contacted
+
+> Task :app:generatePreviewBuildConfig UP-TO-DATE
+> Task :app:javaPreCompilePreview UP-TO-DATE
+> Task :app:checkPreviewAarMetadata UP-TO-DATE
+> Task :app:generatePreviewResValues UP-TO-DATE
+> Task :app:mapPreviewSourceSetPaths UP-TO-DATE
+> Task :app:generatePreviewResources UP-TO-DATE
+> Task :app:mergePreviewResources UP-TO-DATE
+> Task :app:packagePreviewResources UP-TO-DATE
+> Task :app:parsePreviewLocalResources UP-TO-DATE
+> Task :app:createPreviewCompatibleScreenManifests UP-TO-DATE
+> Task :app:extractDeepLinksPreview UP-TO-DATE
+> Task :app:processPreviewMainManifest UP-TO-DATE
+> Task :app:processPreviewManifest UP-TO-DATE
+> Task :app:processPreviewManifestForPackage UP-TO-DATE
+> Task :app:processPreviewResources UP-TO-DATE
+> Task :app:compilePreviewJavaWithJavac UP-TO-DATE
+> Task :app:bundlePreviewClassesToCompileJar UP-TO-DATE
+> Task :app:prePreviewUnitTestBuild UP-TO-DATE
+> Task :app:javaPreCompilePreviewUnitTest UP-TO-DATE
+> Task :app:bundlePreviewClassesToRuntimeJar
+> Task :app:compilePreviewUnitTestJavaWithJavac UP-TO-DATE
+> Task :app:mergePreviewShaders UP-TO-DATE
+> Task :app:compilePreviewShaders NO-SOURCE
+> Task :app:generatePreviewAssets UP-TO-DATE
+> Task :app:mergePreviewAssets
+> Task :app:packagePreviewUnitTestForUnitTest
+> Task :app:generatePreviewUnitTestConfig
+> Task :app:processPreviewJavaRes NO-SOURCE
+> Task :app:processPreviewUnitTestJavaRes UP-TO-DATE
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+> Task :app:testPreviewUnitTest
+
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+
+> Task :app:testPreviewUnitTest
+
+SafSyncV2Test > driveStagedAckMustNotPublishAfterLocalAuthorityLostInsideProviderCommit FAILED
+    java.lang.AssertionError: Provider completed signed ACK after recovery epoch loss: Drive staged expected:<0> but was:<1>
+        at org.junit.Assert.fail(Assert.java:89)
+        at org.junit.Assert.failNotEquals(Assert.java:835)
+        at org.junit.Assert.assertEquals(Assert.java:647)
+        at cz.zamerovac.app.SafSyncV2Test.ackProviderBoundary(SafSyncV2Test.java:303)
+        at cz.zamerovac.app.SafSyncV2Test.driveStagedAckMustNotPublishAfterLocalAuthorityLostInsideProviderCommit(SafSyncV2Test.java:307)
+
+SafSyncV2Test > safDirectAckMustNotPublishAfterLocalAuthorityLostInsideProviderWrite FAILED
+    java.lang.AssertionError: Provider completed signed ACK after recovery epoch loss: SAF direct expected:<0> but was:<1>
+        at org.junit.Assert.fail(Assert.java:89)
+        at org.junit.Assert.failNotEquals(Assert.java:835)
+        at org.junit.Assert.assertEquals(Assert.java:647)
+        at cz.zamerovac.app.SafSyncV2Test.ackProviderBoundary(SafSyncV2Test.java:303)
+        at cz.zamerovac.app.SafSyncV2Test.safDirectAckMustNotPublishAfterLocalAuthorityLostInsideProviderWrite(SafSyncV2Test.java:310)
+
+OpenJDK 64-Bit Server VM warning: Sharing is only supported for boot loader classes because bootstrap classpath has been appended
+
+> Task :app:testPreviewUnitTest
+
+513 tests completed, 2 failed
+
+> Task :app:testPreviewUnitTest FAILED
+
+FAILURE: Build failed with an exception.
+
+* What went wrong:
+Execution failed for task ':app:testPreviewUnitTest'.
+> There were failing tests. See the report at: file:///workspace/Zamerovac-android/app/build/reports/tests/testPreviewUnitTest/index.html
+
+* Try:
+> Run with --scan to get full insights.
+
+BUILD FAILED in 8m 57s
+27 actionable tasks: 6 executed, 21 up-to-date

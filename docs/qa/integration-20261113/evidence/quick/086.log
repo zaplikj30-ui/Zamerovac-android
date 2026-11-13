@@ -1,0 +1,1 @@
+PASS isolated v2 core: 30 synthetic file tasks/simulated failover, persistent queue/restart, idempotent ack, metered policy, exact conflicts, 2 device histories/100 deduplicated blobs, old/new restore and storage faults

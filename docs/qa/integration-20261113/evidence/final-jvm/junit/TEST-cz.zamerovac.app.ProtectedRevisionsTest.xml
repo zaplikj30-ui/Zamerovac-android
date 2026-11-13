@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.ProtectedRevisionsTest" tests="21" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:17:15" hostname="4b8cafdccf99" time="2.076">
+  <properties/>
+  <testcase name="purgeAndPendingCleanupRetainPhotoVideoAndExactPreimage" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.085"/>
+  <testcase name="rollbackKeepsPinnedAndLiveButRemovesUnreferencedNewFile" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.061"/>
+  <testcase name="jsonLookingNoteTextAndEmbeddedLegacyHistoryRemainExact" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.052"/>
+  <testcase name="retainedExactStateRestoresAsSeparateCopyThroughExistingImporter" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.076"/>
+  <testcase name="atomicBackupAndCompleteUnpublishedHoldRepairAfterRestart" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.058"/>
+  <testcase name="severalExactMetadataRevisionsShareOneSetOfOriginalBytes" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.083"/>
+  <testcase name="ackSupersessionForgetAndRestartNeverReleaseOriginals" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.234"/>
+  <testcase name="alreadyLostOriginalIsTruthfulEvidenceAndCannotPublishACompleteSnapshot" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.06"/>
+  <testcase name="validOrphanRepairsCatalogUnionAfterRestart" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.043"/>
+  <testcase name="losingBothCatalogsCannotAuthorizeCleanupFromAnAssumedEmptyRegistry" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.042"/>
+  <testcase name="unreadableBackupCannotBeSilentlyOverwrittenByRotation" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.043"/>
+  <testcase name="catalogWriteFailureBlocksPublicationAndRepairsOnRetry" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.088"/>
+  <testcase name="safLateAckCannotReleaseRecoverableSnapshot" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.439"/>
+  <testcase name="missingRegistryAndCorruptManifestFailClosed" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.044"/>
+  <testcase name="preUpgradeBackupRevisionSurvivesRotationByteExactly" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.049"/>
+  <testcase name="missingPinnedIdRejectsReuseAndAcceptsOnlyByteExactPeerRestoration" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.044"/>
+  <testcase name="driveLateAckCannotReleaseRecoverableSnapshot" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.385"/>
+  <testcase name="recoveryAuthorityLossCannotReleasePinsOrAuthorizeRestore" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.044"/>
+  <testcase name="changedOriginalCannotBeBlessedAsANewProtectedVersion" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.045"/>
+  <testcase name="retentionAloneCannotMasqueradeAsFreshDatabaseAuthority" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.042"/>
+  <testcase name="lowSpaceRejectsReplacementWithoutTouchingConfirmedBytes" classname="cz.zamerovac.app.ProtectedRevisionsTest" time="0.057"/>
+  <system-out><![CDATA[HYBRID_DISK_GROWTH {"revisionsAdded":5,"originalBytes":12,"originalFileCount":2,"metadataBytesBefore":1193,"metadataBytesAfter":5963}
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

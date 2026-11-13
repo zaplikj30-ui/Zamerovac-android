@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.CloudFilesReadTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:12:32" hostname="4b8cafdccf99" time="0.093">
+  <properties/>
+  <testcase name="oversizedBlobCannotCopyTrailingBytesOrReadOneWholeExtraBlock" classname="cz.zamerovac.app.CloudFilesReadTest" time="0.029"/>
+  <testcase name="oversizedControlFrameReadsOnlyDeclaredLimitPlusOneAndCloses" classname="cz.zamerovac.app.CloudFilesReadTest" time="0.023"/>
+  <testcase name="exactMessageAndBlobKeepEveryByteAndHash" classname="cz.zamerovac.app.CloudFilesReadTest" time="0.021"/>
+  <testcase name="zeroProgressInvalidLimitsAndInterruptNeverSpinOrAcknowledge" classname="cz.zamerovac.app.CloudFilesReadTest" time="0.02"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

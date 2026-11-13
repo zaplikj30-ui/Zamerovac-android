@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.AudioRecoveryIsolationTest" tests="21" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:10:02" hostname="4b8cafdccf99" time="10.915">
+  <properties/>
+  <testcase name="nativeOriginalExportMustUseVerifiedFinalRatherThanSameSizeOtherInode" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="6.004"/>
+  <testcase name="duplicateAudioIdsInTwoJournalsRemainSeparateExportableOriginals" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.147"/>
+  <testcase name="aFailedBindingWriteDoesNotRollBackProjectOrHideOtherHealthyAudio" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.326"/>
+  <testcase name="outputFailureDoesNotChangeSourceAndRetryChecksLengthAndDigest" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.103"/>
+  <testcase name="reverseSplitRetainsVerifiedReservationAndIndependentUncertainFinal" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.26"/>
+  <testcase name="validFinalOriginalIsExportableWhenItsReservationLinkIsMissing" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.079"/>
+  <testcase name="combinedUnknownCorruptEvidenceAndWriteFailureKeepHealthyExportsAndTrashRetention" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.422"/>
+  <testcase name="oneChangedAudioHashDoesNotHideTheTwoUnchangedOriginals" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.359"/>
+  <testcase name="duplicateReservationTokenExposesBothOriginalsWithoutChoosingAnArbitraryOne" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.201"/>
+  <testcase name="malformedProjectHistoryCannotHideHealthyAudioOrRewriteProject" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.384"/>
+  <testcase name="knownOriginalTokenMustExportJournalBytesInsteadOfDifferentRegularReservation" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.088"/>
+  <testcase name="verifiedCopyChecksStreamSHAEvenWhenChangedFileRetainsSizeInodeAndTimestamp" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.128"/>
+  <testcase name="malformedHistoryCannotReconfirmAnOldBoundFlag" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.169"/>
+  <testcase name="invalidSourceCannotOpenOrTruncateTheChosenCopyDestination" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.112"/>
+  <testcase name="confirmationHashesOnlySelectedAudioAndReportsMultiFileRecoveryCost" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.996"/>
+  <testcase name="splitUnknownEvidenceFailedSaveAndStaleCASKeepBothCopiesAndHealthyNeighbour" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.285"/>
+  <testcase name="unknownJournalMustNotHideTwoValidRecordingsOrTheirNativeExports" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.207"/>
+  <testcase name="unsafeReservationCannotHideTheLastVerifiedFinalCopy" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.177"/>
+  <testcase name="noMatchingCopyCannotClaimOriginalOrOpenDestinationButBothRawFilesRemainExportable" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.103"/>
+  <testcase name="unreadableJournalDirectoryDoesNotPreventRawExportOfBothReservations" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.158"/>
+  <testcase name="splitRecoveryMustExposeVerifiedFinalAndUncertainReservationSeparately" classname="cz.zamerovac.app.AudioRecoveryIsolationTest" time="0.166"/>
+  <system-out><![CDATA[voice-split-native SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-split-native--99671c1a-5daf-4f6b-86d1-edd7882f1b41.tmp SIZE=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+voice-split-native SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-split-native--99671c1a-5daf-4f6b-86d1-edd7882f1b41.tmp SIZE=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+.audio-voice-duplicate--93ed18cb-5abc-4444-98aa-c4dcfba322d3.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-duplicate--d0e36378-cc81-4e4e-afb6-705135dea8ed.tmp SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-write-one--17764bbe-8cdb-4c24-b8a2-5585d2a20200.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-write-two--ed21b42d-719d-4b4e-a641-e7bcc42891dc.tmp SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+.audio-voice-copy--90a489d5-3663-4fe5-ae13-92bd71894414.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec
+.audio-voice-reverse--5d4f7dc1-fa61-4ade-8fc2-87b7ad95b9f5.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+voice-reverse SIZE=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec
+voice-final-only SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-combo-one--5817d8ed-caf1-46f1-bbb3-fd9428125c71.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-combo-two--a3747a04-14b7-4e88-80a1-54378630f855.tmp SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+.audio-voice-combo-bad--60368309-516c-45bd-bf28-c072c23c91f7.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+NATIVE_EXPORTED bytes=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+.audio-voice-hash-one--957a221f-89f5-416b-ae1c-50e0ab1e2b26.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-hash-two--7327a236-9ee8-4869-bc45-79dda99afb1c.tmp SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+.audio-voice-token-two--fc2f36c7-3900-437f-9ebc-c42887116f65.tmp SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+.audio-voice-token-one--fc2f36c7-3900-437f-9ebc-c42887116f65.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+voice-split-direct SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-split-direct--02df1f56-0879-4ac9-bb92-5a5c95f1ec3d.tmp SIZE=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec
+SPLIT_EXPORT actual_sha=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a expected_sha=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-bound-history--c5d6a9e1-a75c-4fbd-a3c8-dbeca2587688.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-close-failure--790946f7-b0f0-49cc-8285-2a23e02fa554.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+voice-close-failure SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+HOST_ONLY_PERFORMANCE bytes=25165824 recovery_ms=96 selected_confirm_ms=24 recovery_hashes=3 confirm_hashes=1 Android_performance=NOT_RUN
+voice-split-combined SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-split-combined--d1c28806-b82c-4d10-b4bd-e3f769ca653d.tmp SIZE=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec
+NATIVE_EXPORTED bytes=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+voice-split-combined SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-split-combined--d1c28806-b82c-4d10-b4bd-e3f769ca653d.tmp SIZE=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec
+.audio-voice-healthy--c08f5cc2-626b-4fdc-9694-bd4c9755c730.tmp SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec
+NATIVE_EXPORTED bytes=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+voice-split-combined SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-split-combined--d1c28806-b82c-4d10-b4bd-e3f769ca653d.tmp SIZE=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec
+.audio-voice-healthy--c08f5cc2-626b-4fdc-9694-bd4c9755c730.tmp SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+voice-one SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+voice-two SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+.audio-voice-one--aa621ea5-893a-4eb0-b168-bb61d4e05787.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-two--fca8f5f2-9616-4937-8c92-c2477c53377c.tmp SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+.audio-voice-one--aa621ea5-893a-4eb0-b168-bb61d4e05787.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-two--fca8f5f2-9616-4937-8c92-c2477c53377c.tmp SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+outside SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+voice-safe-final SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+voice-no-match SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-no-match--1d2d09cd-3b6a-4cd2-9e61-09dbd93f0a3a.tmp SIZE=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec
+.audio-voice-no-match--1d2d09cd-3b6a-4cd2-9e61-09dbd93f0a3a.tmp SIZE=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec
+voice-no-match SIZE=10 SHA256=4001ba71acef633247a0806147b959216c7013b82c0d88630e72e4d6bee6efed
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+.audio-voice-dir-one--f06af4e7-e05a-4dd1-964f-80b1eba6307f.tmp SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-dir-two--421fc306-dc03-4c42-ac31-56d0d7170c0c.tmp SIZE=7 SHA256=644cffc9cfe142796df07a9831e8c033a5349bd5edfbb78b3862af6593a1c3fc
+voice-split-rows SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-split-rows--10b20c22-4a96-466f-8229-57f0e9b3395e.tmp SIZE=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec
+NATIVE_EXPORTED bytes=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+NATIVE_EXPORTED bytes=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec
+voice-split-rows SIZE=10 SHA256=86d5b35cddd2c4be8c0ba478afe72ab809717878b5bce1d8e9865f5cb3f7d50a
+.audio-voice-split-rows--10b20c22-4a96-466f-8229-57f0e9b3395e.tmp SIZE=10 SHA256=1959a09799845921af3fe113de1463718c32f451d9641b8b92c2bfdd687e59ec
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

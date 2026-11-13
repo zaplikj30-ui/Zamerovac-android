@@ -1,0 +1,25 @@
+FAIL media-import/issue46-two-notes-back-focus-cancel-and-delayed-picker-callback at undefined: page.evaluate: TypeError: Cannot read properties of undefined (reading 'items')
+    at eval (eval at evaluate (:311:30), <anonymous>:1:56)
+    at UtilityScript.evaluate (<anonymous>:313:16)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+PASS media-import/delayed-native-results-stay-in-original-folder-and-stale-token-cannot-complete-new-picker
+PASS media-import/deleted-or-locked-destination-and-closed-owner-dialog-do-not-redirect-file
+PASS media-import/picker-cancel-and-rejected-write-keep-data-without-ghost-record
+node:internal/process/promises:394
+    triggerUncaughtException(err, true /* fromPromise */);
+    ^
+
+AssertionError [ERR_ASSERTION]: media-import: failed 1 cases; see /workspace/Zamerovac-android/test-artifacts/media-import
+
+1 !== 0
+
+    at suite (/workspace/Zamerovac-android/tools/e2e/harness.cjs:34:9) {
+  generatedMessage: false,
+  code: 'ERR_ASSERTION',
+  actual: 1,
+  expected: 0,
+  operator: 'strictEqual',
+  diff: 'simple'
+}
+
+Node.js v24.22.1

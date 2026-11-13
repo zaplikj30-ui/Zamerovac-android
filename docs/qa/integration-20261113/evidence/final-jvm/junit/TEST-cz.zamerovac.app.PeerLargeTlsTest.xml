@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.PeerLargeTlsTest" tests="1" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:12:58" hostname="4b8cafdccf99" time="165.677">
+  <properties/>
+  <testcase name="threeGiBActualTlsDropsHalfwayAndRetryPreservesExactGeometryAndOriginals" classname="cz.zamerovac.app.PeerLargeTlsTest" time="165.677"/>
+  <system-out><![CDATA[ACTUAL_TLS_3GIB_RETRY_FROM_ZERO SHA256=3474c4187dcbba2df7538da8a9377a0272da698a0048328a54451b80734742d5 RECEIVED=3221228055 HEAP_LIMIT=536870912
+]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

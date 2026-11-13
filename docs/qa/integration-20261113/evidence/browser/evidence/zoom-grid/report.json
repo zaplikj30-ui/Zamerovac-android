@@ -1,0 +1,41 @@
+{
+  "suite": "zoom-grid",
+  "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+  "startedAt": "2026-11-13T12:11:29.874Z",
+  "syntheticOnly": true,
+  "cases": [
+    {
+      "name": "buttons_grid_pixels_and_snap_independence",
+      "status": "passed",
+      "steps": [
+        "Zoom + then - uses actual buttons, without changing saved measurements",
+        "Visual raster is controlled by showGrid, not magnetic snapGrid"
+      ],
+      "evidence": [
+        {
+          "magnetOnly": 0,
+          "visibleGrid": 70984,
+          "totalPixels": 496800,
+          "gridStep": 40,
+          "zoom": 0.4764285714285714
+        }
+      ]
+    },
+    {
+      "name": "trusted_two_finger_pinch_and_limits",
+      "status": "passed",
+      "steps": [
+        "Two real touch points pinch out and preserve exact annotation",
+        "Zoom extremes clamp safely and fit restores finite canvas geometry"
+      ],
+      "evidence": [
+        {
+          "zoom": 0.4142857142857143,
+          "dx": 10,
+          "dy": 134.07142857142856,
+          "items": 1
+        }
+      ]
+    }
+  ]
+}

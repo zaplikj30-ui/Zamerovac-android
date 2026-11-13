@@ -1,0 +1,71 @@
+{
+  "status": "PASS",
+  "tested_sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+  "sourcePNG_SHA256": "aa1c27e577ed4dbfe027829ca2a8833ac3282ab9220375a35acaedf3e590632a",
+  "zipSHA256": "febfee5b947373b3645b8d04a987ab351eec82cf1407579e844db52ecefece30",
+  "pages": [
+    {
+      "glyphChecks": [
+        {
+          "name": "measure1585,800001",
+          "yellowPixels": 801,
+          "meanError": 14.754473574698295
+        },
+        {
+          "name": "nested987,000001",
+          "yellowPixels": 971,
+          "meanError": 13.53450051493306
+        },
+        {
+          "name": "caption",
+          "yellowPixels": 942,
+          "meanError": 24.404458598726116
+        }
+      ],
+      "page": 1,
+      "size": [
+        1250,
+        1070
+      ],
+      "meanRGBError": [
+        0.22311401869158878,
+        0.12454953271028038,
+        0.668403738317757
+      ],
+      "yellowAnnotationPixels": 7759,
+      "darkGlyphPixels": 343763
+    },
+    {
+      "glyphChecks": [
+        {
+          "name": "measure1585,800001",
+          "yellowPixels": 801,
+          "meanError": 14.754473574698295
+        },
+        {
+          "name": "nested987,000001",
+          "yellowPixels": 971,
+          "meanError": 13.53450051493306
+        },
+        {
+          "name": "caption",
+          "yellowPixels": 942,
+          "meanError": 24.404458598726116
+        }
+      ],
+      "page": 2,
+      "size": [
+        1250,
+        1070
+      ],
+      "meanRGBError": [
+        0.22311401869158878,
+        0.12454953271028038,
+        0.668403738317757
+      ],
+      "yellowAnnotationPixels": 7759,
+      "darkGlyphPixels": 343763
+    }
+  ],
+  "scope": "Actual synthetic browser PNG with dimension 1585,800001 and rotated inset -> production CustomerPdfExport/RasterPdfWriter -> independent pypdf/PyMuPDF; JPEG94 is intentionally lossy. Original media byte integrity is separately checked in browser/native suites."
+}

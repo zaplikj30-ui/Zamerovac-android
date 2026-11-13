@@ -1,0 +1,20 @@
+{
+  "suite": "sync-cadence",
+  "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+  "startedAt": "2026-11-13T12:12:10.492Z",
+  "syntheticOnly": true,
+  "cases": [
+    {
+      "name": "frequency-selection-persists-without-changing-records-and-old-switch-can-reenable",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    },
+    {
+      "name": "failed-persistence-does-not-activate-new-frequency",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    }
+  ]
+}

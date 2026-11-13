@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.Post147DataTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:17:11" hostname="4b8cafdccf99" time="0.396">
+  <properties/>
+  <testcase name="unreadableDatabaseNeverBecomesWritableEmptyState" classname="cz.zamerovac.app.Post147DataTest" time="0.156"/>
+  <testcase name="originalBackupExporterRoundTripsEditableDataAndOriginalMedia" classname="cz.zamerovac.app.Post147DataTest" time="0.07"/>
+  <testcase name="emptyExportAndInvalidImagesFailWithoutDatabaseWrites" classname="cz.zamerovac.app.Post147DataTest" time="0.027"/>
+  <testcase name="invalidOrIncompleteBackupCannotReplaceExistingRecords" classname="cz.zamerovac.app.Post147DataTest" time="0.048"/>
+  <testcase name="customerZipContainsOnlyRasterPdfForOneAndMultiplePhotos" classname="cz.zamerovac.app.Post147DataTest" time="0.033"/>
+  <testcase name="importAddsCopyAndPreservesLegacyPrecisionAndUnknownFields" classname="cz.zamerovac.app.Post147DataTest" time="0.061"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

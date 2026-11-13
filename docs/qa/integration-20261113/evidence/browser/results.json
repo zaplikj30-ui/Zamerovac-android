@@ -1,0 +1,245 @@
+{
+  "schema": 1,
+  "mode": "--all",
+  "createdAt": "2026-11-13T12:14:57.481Z",
+  "counts": {
+    "PASS": 23,
+    "FAIL": 0,
+    "SKIP": 0,
+    "NOT RUN": 0
+  },
+  "records": [
+    {
+      "suite": "legacy-conflict-persistence",
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 5869,
+      "error": null,
+      "timedOut": false,
+      "log": "/workspace/qa-results/Zamerovac-QA/browser/run-2026-11-13T12-09-45-020Z-3549/legacy-conflict-persistence.log"
+    },
+    {
+      "suite": "drawing",
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 61696,
+      "error": null,
+      "timedOut": false,
+      "log": "/workspace/qa-results/Zamerovac-QA/browser/run-2026-11-13T12-09-45-020Z-3549/drawing.log"
+    },
+    {
+      "suite": "gallery-visual",
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 3531,
+      "error": null,
+      "timedOut": false,
+      "log": "/workspace/qa-results/Zamerovac-QA/browser/run-2026-11-13T12-09-45-020Z-3549/gallery-visual.log"
+    },
+    {
+      "suite": "workflows",
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 20680,
+      "error": null,
+      "timedOut": false,
+      "log": "/workspace/qa-results/Zamerovac-QA/browser/run-2026-11-13T12-09-45-020Z-3549/workflows.log"
+    },
+    {
+      "suite": "interactions",
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 12479,
+      "error": null,
+      "timedOut": false,
+      "log": "/workspace/qa-results/Zamerovac-QA/browser/run-2026-11-13T12-09-45-020Z-3549/interactions.log"
+    },
+    {
+      "suite": "zoom-grid",
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 8853,
+      "error": null,
+      "timedOut": false,
+      "log": "/workspace/qa-results/Zamerovac-QA/browser/run-2026-11-13T12-09-45-020Z-3549/zoom-grid.log"
+    },
+    {
+      "suite": "update39",
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 7218,
+      "error": null,
+      "timedOut": false,
+      "log": "/workspace/qa-results/Zamerovac-QA/browser/run-2026-11-13T12-09-45-020Z-3549/update39.log"
+    },
+    {
+      "suite": "gallery-state",
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 12903,
+      "error": null,
+      "timedOut": false,
+      "log": "/workspace/qa-results/Zamerovac-QA/browser/run-2026-11-13T12-09-45-020Z-3549/gallery-state.log"
+    },
+    {
+      "suite": "peer-sync",
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 5630,
+      "error": null,
+      "timedOut": false,
+      "log": "/workspace/qa-results/Zamerovac-QA/browser/run-2026-11-13T12-09-45-020Z-3549/peer-sync.log"
+    },
+    {
+      "suite": "drive-accounts",
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 6064,
+      "error": null,
+      "timedOut": false,
+      "log": "/workspace/qa-results/Zamerovac-QA/browser/run-2026-11-13T12-09-45-020Z-3549/drive-accounts.log"
+    },
+    {
+      "suite": "sync-cadence",
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 3311,
+      "error": null,
+      "timedOut": false,
+      "log": "/workspace/qa-results/Zamerovac-QA/browser/run-2026-11-13T12-09-45-020Z-3549/sync-cadence.log"
+    },
+    {
+      "suite": "backup-history",
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 2400,
+      "error": null,
+      "timedOut": false,
+      "log": "/workspace/qa-results/Zamerovac-QA/browser/run-2026-11-13T12-09-45-020Z-3549/backup-history.log"
+    },
+    {
+      "suite": "read-only-sync",
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 2876,
+      "error": null,
+      "timedOut": false,
+      "log": "/workspace/qa-results/Zamerovac-QA/browser/run-2026-11-13T12-09-45-020Z-3549/read-only-sync.log"
+    },
+    {
+      "suite": "sync-edit-guard",
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 6910,
+      "error": null,
+      "timedOut": false,
+      "log": "/workspace/qa-results/Zamerovac-QA/browser/run-2026-11-13T12-09-45-020Z-3549/sync-edit-guard.log"
+    },
+    {
+      "suite": "note-sync",
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 13755,
+      "error": null,
+      "timedOut": false,
+      "log": "/workspace/qa-results/Zamerovac-QA/browser/run-2026-11-13T12-09-45-020Z-3549/note-sync.log"
+    },
+    {
+      "suite": "web-content-policy",
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 4986,
+      "error": null,
+      "timedOut": false,
+      "log": "/workspace/qa-results/Zamerovac-QA/browser/run-2026-11-13T12-09-45-020Z-3549/web-content-policy.log"
+    },
+    {
+      "suite": "media-import",
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 16721,
+      "error": null,
+      "timedOut": false,
+      "log": "/workspace/qa-results/Zamerovac-QA/browser/run-2026-11-13T12-09-45-020Z-3549/media-import.log"
+    },
+    {
+      "suite": "pending-audio",
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 23600,
+      "error": null,
+      "timedOut": false,
+      "log": "/workspace/qa-results/Zamerovac-QA/browser/run-2026-11-13T12-09-45-020Z-3549/pending-audio.log"
+    },
+    {
+      "suite": "help",
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 6277,
+      "error": null,
+      "timedOut": false,
+      "log": "/workspace/qa-results/Zamerovac-QA/browser/run-2026-11-13T12-09-45-020Z-3549/help.log"
+    },
+    {
+      "suite": "release-history",
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 5552,
+      "error": null,
+      "timedOut": false,
+      "log": "/workspace/qa-results/Zamerovac-QA/browser/run-2026-11-13T12-09-45-020Z-3549/release-history.log"
+    },
+    {
+      "suite": "latency",
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 36617,
+      "error": null,
+      "timedOut": false,
+      "log": "/workspace/qa-results/Zamerovac-QA/browser/run-2026-11-13T12-09-45-020Z-3549/latency.log"
+    },
+    {
+      "suite": "quality-regressions",
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 31266,
+      "error": null,
+      "timedOut": false,
+      "log": "/workspace/qa-results/Zamerovac-QA/browser/run-2026-11-13T12-09-45-020Z-3549/quality-regressions.log"
+    },
+    {
+      "suite": "gallery-readability",
+      "status": "PASS",
+      "exitCode": 0,
+      "signal": null,
+      "elapsedMs": 13242,
+      "error": null,
+      "timedOut": false,
+      "log": "/workspace/qa-results/Zamerovac-QA/browser/run-2026-11-13T12-09-45-020Z-3549/gallery-readability.log"
+    }
+  ],
+  "evidencePath": "/workspace/qa-results/Zamerovac-QA/browser/run-2026-11-13T12-09-45-020Z-3549",
+  "scope": "Local Chromium synthetic-data tests, not Android/WebView/device acceptance"
+}

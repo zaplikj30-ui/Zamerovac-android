@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.Audit39HandshakeTest" tests="11" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:10:32" hostname="4b8cafdccf99" time="2.586">
+  <properties/>
+  <testcase name="revocationBetweenCommitAndFinalPeerConfirmationAbortsHandshake" classname="cz.zamerovac.app.Audit39HandshakeTest" time="0.547"/>
+  <testcase name="forgetInvalidatesNewPairingAndFreshExplicitPairingStillWorks" classname="cz.zamerovac.app.Audit39HandshakeTest" time="0.198"/>
+  <testcase name="forgetIsNotDroppedWhenAllTransferWorkersAreBusy" classname="cz.zamerovac.app.Audit39HandshakeTest" time="0.61"/>
+  <testcase name="revokedDuringKnownHandshakeMustNotBeReapproved" classname="cz.zamerovac.app.Audit39HandshakeTest" time="0.436"/>
+  <testcase name="mutualApprovalBindsCertificatesBeforeExactEncryptedPayload" classname="cz.zamerovac.app.Audit39HandshakeTest" time="0.189"/>
+  <testcase name="rememberedRouteMustAnswerWithExpectedPinnedIdentityBeforeAnyPayload" classname="cz.zamerovac.app.Audit39HandshakeTest" time="0.195"/>
+  <testcase name="oneSidedDurablePairingRequiresFreshComparisonOnBothScreens" classname="cz.zamerovac.app.Audit39HandshakeTest" time="0.114"/>
+  <testcase name="pinnedReconnectDoesNotNeedAnotherApprovalAndUnknownCertificateIsDenied" classname="cz.zamerovac.app.Audit39HandshakeTest" time="0.075"/>
+  <testcase name="certificateCannotClaimAnotherInstallIdentityEvenDuringPairing" classname="cz.zamerovac.app.Audit39HandshakeTest" time="0.079"/>
+  <testcase name="revokedBindingAndOversizeFramesAreRejected" classname="cz.zamerovac.app.Audit39HandshakeTest" time="0.084"/>
+  <testcase name="rejectedPairingSavesNeitherTrustBinding" classname="cz.zamerovac.app.Audit39HandshakeTest" time="0.053"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

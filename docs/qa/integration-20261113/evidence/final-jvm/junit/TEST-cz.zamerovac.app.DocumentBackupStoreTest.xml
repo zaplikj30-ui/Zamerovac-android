@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.DocumentBackupStoreTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:12:41" hostname="4b8cafdccf99" time="1.332">
+  <properties/>
+  <testcase name="cloudProviderNeedsUnmeteredNetworkOrOneExplicitException" classname="cz.zamerovac.app.DocumentBackupStoreTest" time="0.756"/>
+  <testcase name="duplicateProviderNamesAndUnsafeNamespaceCannotSelectAnOverwriteTarget" classname="cz.zamerovac.app.DocumentBackupStoreTest" time="0.502"/>
+  <testcase name="nullOrDeniedProviderIsNeverConsideredAnEmptySuccessfulHistory" classname="cz.zamerovac.app.DocumentBackupStoreTest" time="0.069"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

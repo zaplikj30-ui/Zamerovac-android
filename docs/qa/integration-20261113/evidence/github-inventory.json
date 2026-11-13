@@ -1,0 +1,76 @@
+{
+  "date": "2026-11-13",
+  "repo": "zaplikj30-ui/Zamerovac-android",
+  "main": "8d05d2dd77c4a99f8ad64191c97d37ee3c151e3b",
+  "mainProtected": false,
+  "rulesets": "GitHub API 403: repository plan feature unavailable; no claim of full administration policy visibility",
+  "sources": [
+    {
+      "pr": 116,
+      "state": "open",
+      "draft": true,
+      "head": "implement/sync-core-b-20261112",
+      "sha": "1527e3377609633c554195b0641e02e3cfb5fb5e"
+    },
+    {
+      "pr": 114,
+      "state": "open",
+      "draft": true,
+      "head": "fix/inset-audio-marker-bounds-20261112",
+      "sha": "c84a4d616073cb160ab9b019cf264e1f45f4eb53"
+    },
+    {
+      "pr": 49,
+      "state": "open",
+      "draft": true,
+      "head": "ui/note-inset-arrows-20261106",
+      "sha": "a408d4bb4b372813d972fa6b4957af4d738c8f65"
+    },
+    {
+      "pr": 105,
+      "state": "open",
+      "draft": true,
+      "head": "test/media-import-fake-serial-chat35-20261110",
+      "sha": "3f2779ec9b5c432296f9db2bad8502cc4ff63588"
+    },
+    {
+      "pr": 110,
+      "state": "open",
+      "draft": true,
+      "head": "test/media-audio-first-stage-chat37-20261111",
+      "sha": "5f325736463a0ca024e04c0a4f7609a518917adc"
+    },
+    {
+      "pr": 107,
+      "state": "open",
+      "draft": true,
+      "head": "fix/rich-note-audio-preview-session-coord10-20261111",
+      "sha": "46cd4afe07af9a7cf731552e658c021d4726103a"
+    },
+    {
+      "pr": 102,
+      "state": "open",
+      "draft": true,
+      "head": "fix/p1-34-b-protected-archive-chat33-20261110",
+      "sha": "144bb5573932be032411c11451aa560a10f623ee"
+    },
+    {
+      "pr": 117,
+      "state": "open",
+      "draft": true,
+      "head": "infra/chat39-sync116-qa-20261113",
+      "sha": "2997cd46000a038497e14497a0fba6b8d2d29a2b"
+    }
+  ],
+  "latestRelease": {
+    "tag": "test-v1.3.0",
+    "source": "2d1e4a45d4e35e8dd7e9c7109c92a8a62344b12e",
+    "runId": 42184626126,
+    "jobId": 127781927448,
+    "versionCode": 1154,
+    "versionName": "1.3.0-test",
+    "signerSHA256": "c828c96739e554e8da4f5851913356134f1359a98d5013772ad5587e74a2d229"
+  },
+  "sourceSHA": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+  "sourceCI": "No new Actions or check runs; local author tests only"
+}

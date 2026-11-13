@@ -1,0 +1,16 @@
+.github/workflows/build-apk.yml:5:on:
+.github/workflows/build-apk.yml:6:  workflow_dispatch:
+.github/workflows/export-audit-sources.yml:2:on:
+.github/workflows/export-audit-sources.yml:3:  workflow_dispatch:
+.github/workflows/verify-native.yml:4:on:
+.github/workflows/verify-native.yml:5:  workflow_dispatch:
+.github/workflows/windows-self-hosted-qa.yml:5:on:
+.github/workflows/windows-self-hosted-qa.yml:6:  workflow_dispatch:
+.github/workflows/windows-self-hosted-qa.yml:7:  push:
+.github/workflows/windows-self-hosted-qa.yml:8:    branches: [main]
+.github/workflows/quick-check.yml:5:on:
+.github/workflows/quick-check.yml:6:  workflow_dispatch:
+.github/workflows/windows-home-apk-release.yml:6:on:
+.github/workflows/windows-home-apk-release.yml:7:  workflow_dispatch:
+.github/workflows/emulator-smoke.yml:4:on:
+.github/workflows/emulator-smoke.yml:5:  workflow_dispatch:

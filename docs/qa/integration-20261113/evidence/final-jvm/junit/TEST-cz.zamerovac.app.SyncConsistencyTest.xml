@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.SyncConsistencyTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:18:18" hostname="4b8cafdccf99" time="0.238">
+  <properties/>
+  <testcase name="directPrimaryChangeCannotBypassTheProcessGenerationCheck" classname="cz.zamerovac.app.SyncConsistencyTest" time="0.032"/>
+  <testcase name="concurrentCommitCannotBeHiddenInsideSnapshotCapture" classname="cz.zamerovac.app.SyncConsistencyTest" time="0.032"/>
+  <testcase name="changedInventoryBytesCannotFalselyRemoveTheContentRequirement" classname="cz.zamerovac.app.SyncConsistencyTest" time="0.036"/>
+  <testcase name="lazyDocumentCutoverAlsoChecksAbsentSourcesAndKeepsSqlAuthorityOnRetry" classname="cz.zamerovac.app.SyncConsistencyTest" time="0.043"/>
+  <testcase name="newlyAppearingLegacyQueueMustAbortCutoverAndSurviveRestart" classname="cz.zamerovac.app.SyncConsistencyTest" time="0.025"/>
+  <testcase name="newlyAppearingBackupMustAbortCutoverWithoutLosingEitherVersion" classname="cz.zamerovac.app.SyncConsistencyTest" time="0.024"/>
+  <testcase name="preRecoveryJsonCannotAcquireTheNewEpochDuringCapture" classname="cz.zamerovac.app.SyncConsistencyTest" time="0.045"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

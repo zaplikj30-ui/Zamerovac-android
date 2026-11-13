@@ -1,0 +1,8 @@
+PASS pending-audio/verified-original-and-suspect-reservation-have-separate-actions-and-acknowledgements
+PASS pending-audio/ordinary-save-uses-native-summary-without-requesting-another-full-media-scan
+PASS pending-audio/stop-is-only-a-draft-before-cancel-and-failed-save
+PASS pending-audio/unknown-journal-warning-preserves-two-independent-copy-actions
+PASS pending-audio/stop-cancel-restart-reattach-save-preserves-exact-values
+PASS pending-audio/failed-save-cancel-keeps-pending-across-reload
+PASS pending-audio/android-back-and-bind-failure-do-not-undo-saved-note
+PASS pending-audio/failed-stop-retains-recovery-and-uncertain-export-never-attaches

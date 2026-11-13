@@ -1,0 +1,4 @@
+PASS update39/gallery_bounded_pan_and_caption_pixels
+PASS update39/default_selection_corner_loupe_and_landscape_tools
+PASS update39/real_save_failure_and_photo_loading_errors
+PASS update39/help_occurrences_and_neutral_bluetooth

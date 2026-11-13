@@ -1,0 +1,26 @@
+{
+  "suite": "sync-edit-guard",
+  "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+  "startedAt": "2026-11-13T12:12:19.104Z",
+  "syntheticOnly": true,
+  "cases": [
+    {
+      "name": "native-callback-during-grip-and-measure-form-preserves-both-edits",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    },
+    {
+      "name": "status-message-cannot-drop-deferred-data-when-form-is-cancelled",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    },
+    {
+      "name": "detail-parent-cas-keeps-live-item-references-after-conflict",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    }
+  ]
+}

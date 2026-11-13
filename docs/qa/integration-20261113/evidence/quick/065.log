@@ -1,0 +1,1 @@
+PASS: local Chromium server isolates assets/symlinks, correct HTTP/MIME, strict statuses, exact suite allowlist

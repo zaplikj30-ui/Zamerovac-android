@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.PeerMediaCheckpointTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:15:44" hostname="4b8cafdccf99" time="0.236">
+  <properties/>
+  <testcase name="cancelledTransferAndZeroProgressLeaveNoPartialDestination" classname="cz.zamerovac.app.PeerMediaCheckpointTest" time="0.038"/>
+  <testcase name="localHashYieldsBetweenBlocksAndNeverChangesOriginal" classname="cz.zamerovac.app.PeerMediaCheckpointTest" time="0.055"/>
+  <testcase name="simultaneousDifferentOriginalIsNeverReplacedByVerifiedTemporaryFile" classname="cz.zamerovac.app.PeerMediaCheckpointTest" time="0.096"/>
+  <testcase name="duplicateVerificationRunsOutsideDatabaseLockAndRetainsExactOriginal" classname="cz.zamerovac.app.PeerMediaCheckpointTest" time="0.044"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

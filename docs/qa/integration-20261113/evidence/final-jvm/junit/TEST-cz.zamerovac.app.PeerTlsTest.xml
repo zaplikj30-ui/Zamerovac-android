@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.PeerTlsTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:16:26" hostname="4b8cafdccf99" time="0.806">
+  <properties/>
+  <testcase name="mutualApprovalBindsCertificatesBeforeExactEncryptedPayload" classname="cz.zamerovac.app.PeerTlsTest" time="0.156"/>
+  <testcase name="rememberedRouteMustAnswerWithExpectedPinnedIdentityBeforeAnyPayload" classname="cz.zamerovac.app.PeerTlsTest" time="0.075"/>
+  <testcase name="oneSidedDurablePairingRequiresFreshComparisonOnBothScreens" classname="cz.zamerovac.app.PeerTlsTest" time="0.092"/>
+  <testcase name="pinnedReconnectDoesNotNeedAnotherApprovalAndUnknownCertificateIsDenied" classname="cz.zamerovac.app.PeerTlsTest" time="0.093"/>
+  <testcase name="certificateCannotClaimAnotherInstallIdentityEvenDuringPairing" classname="cz.zamerovac.app.PeerTlsTest" time="0.09"/>
+  <testcase name="revokedBindingAndOversizeFramesAreRejected" classname="cz.zamerovac.app.PeerTlsTest" time="0.203"/>
+  <testcase name="rejectedPairingSavesNeitherTrustBinding" classname="cz.zamerovac.app.PeerTlsTest" time="0.091"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

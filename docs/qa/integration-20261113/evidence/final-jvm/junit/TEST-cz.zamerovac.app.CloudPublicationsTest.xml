@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.CloudPublicationsTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:12:33" hostname="4b8cafdccf99" time="0.681">
+  <properties/>
+  <testcase name="repairRequestUsesDurableCounterBackoffAndNeverTreatsPublicationAsDataAck" classname="cz.zamerovac.app.CloudPublicationsTest" time="0.271"/>
+  <testcase name="failedAtomicReceiptCannotEnterCacheOrAdvanceRepair" classname="cz.zamerovac.app.CloudPublicationsTest" time="0.104"/>
+  <testcase name="verifiedReceiptSurvivesRestartButMissingChangedExpiredOrForeignStoreCannotReuseIt" classname="cz.zamerovac.app.CloudPublicationsTest" time="0.18"/>
+  <testcase name="completeSnapshotPublicationIsScopedDurableExpiringAndStillNotADataAck" classname="cz.zamerovac.app.CloudPublicationsTest" time="0.125"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

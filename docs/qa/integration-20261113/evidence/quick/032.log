@@ -1,0 +1,1 @@
+PASS coverage map: 44 areas, real file references, positive/negative criteria and explicit gaps. This audit does not run those tests or verify devices.

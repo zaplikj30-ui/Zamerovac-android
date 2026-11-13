@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.DriveAccountFlowTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:12:42" hostname="4b8cafdccf99" time="1.384">
+  <properties/>
+  <testcase name="oldConsentCannotOverwriteNewerAccountEvenAfterSwitchingBack" classname="cz.zamerovac.app.DriveAccountFlowTest" time="0.793"/>
+  <testcase name="failedAccountCommitAndInvalidRestoredFlowCannotActivateASelection" classname="cz.zamerovac.app.DriveAccountFlowTest" time="0.107"/>
+  <testcase name="stoppedAuthorizationIgnoresLateCallbackAndResumesOnlyOnce" classname="cz.zamerovac.app.DriveAccountFlowTest" time="0.103"/>
+  <testcase name="explicitPickerAndVerifiedGrantOnlySelectTheTargetFeature" classname="cz.zamerovac.app.DriveAccountFlowTest" time="0.157"/>
+  <testcase name="cancelOrMissingScopePreserveExistingAccountAndNeverSaveAToken" classname="cz.zamerovac.app.DriveAccountFlowTest" time="0.061"/>
+  <testcase name="consentSurvivesRecreationWithNoTokenInSavedState" classname="cz.zamerovac.app.DriveAccountFlowTest" time="0.163"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

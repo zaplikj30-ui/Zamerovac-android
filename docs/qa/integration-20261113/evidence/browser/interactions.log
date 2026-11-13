@@ -1,0 +1,3 @@
+PASS interactions/rapid_grips_jitter_cancel
+PASS interactions/pan_zoom_fit_and_repeated_reopen
+PASS interactions/chain_finish_insert_remove_history

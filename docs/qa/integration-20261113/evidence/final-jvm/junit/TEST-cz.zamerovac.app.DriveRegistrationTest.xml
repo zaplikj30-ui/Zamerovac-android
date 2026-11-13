@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.DriveRegistrationTest" tests="3" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:12:49" hostname="4b8cafdccf99" time="0.19">
+  <properties/>
+  <testcase name="invalidPublicProjectIdsCannotActivateAuthorization" classname="cz.zamerovac.app.DriveRegistrationTest" time="0.044"/>
+  <testcase name="nativeUiRecognizesRegistrationWithoutPretendingAnAccountOrChangingDatabase" classname="cz.zamerovac.app.DriveRegistrationTest" time="0.099"/>
+  <testcase name="generatedPreviewMatchesPublicRegistrationAndKeepsAuthorizationScopeNarrow" classname="cz.zamerovac.app.DriveRegistrationTest" time="0.047"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

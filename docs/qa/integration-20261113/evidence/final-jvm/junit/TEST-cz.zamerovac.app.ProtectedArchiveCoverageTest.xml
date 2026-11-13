@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.ProtectedArchiveCoverageTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:17:14" hostname="4b8cafdccf99" time="0.854">
+  <properties/>
+  <testcase name="changedHoldDuringCopyCannotPublishCompleteArchive" classname="cz.zamerovac.app.ProtectedArchiveCoverageTest" time="0.117"/>
+  <testcase name="unconfirmedAtomicSidecarsAreCopiedByteExactlyButNotSourceComplete" classname="cz.zamerovac.app.ProtectedArchiveCoverageTest" time="0.117"/>
+  <testcase name="pinnedPhotoAndVideoMatchHashesAndCannotBeReplacedBySameLengthContent" classname="cz.zamerovac.app.ProtectedArchiveCoverageTest" time="0.128"/>
+  <testcase name="tamperedArchivedHistoricalHoldCannotPassVerification" classname="cz.zamerovac.app.ProtectedArchiveCoverageTest" time="0.081"/>
+  <testcase name="interruptedProtectedArchiveLeavesNoCompleteMarkerAndCanRetry" classname="cz.zamerovac.app.ProtectedArchiveCoverageTest" time="0.095"/>
+  <testcase name="exactOldRevisionAndBothCatalogsSurviveRotationVerifyAndSeparateRecoveryCopy" classname="cz.zamerovac.app.ProtectedArchiveCoverageTest" time="0.129"/>
+  <testcase name="missingWitnessOrCorruptCatalogCannotClaimCompleteP1Archive" classname="cz.zamerovac.app.ProtectedArchiveCoverageTest" time="0.082"/>
+  <testcase name="missingEntireP1RegistryNeverClaimsHistoricalSourceCompleteness" classname="cz.zamerovac.app.ProtectedArchiveCoverageTest" time="0.053"/>
+  <testcase name="brokenOrMissingImmutableHoldMustNotBeCertified" classname="cz.zamerovac.app.ProtectedArchiveCoverageTest" time="0.051"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

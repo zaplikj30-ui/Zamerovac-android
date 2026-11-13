@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.SyncCadenceTest" tests="8" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:18:17" hostname="4b8cafdccf99" time="0.201">
+  <properties/>
+  <testcase name="twoEnginesCannotBothClaimTheSameAutomaticAttempt" classname="cz.zamerovac.app.SyncCadenceTest" time="0.03"/>
+  <testcase name="manualAndDisabledModesNeverClaimAutomaticallyButExplicitRetryWorks" classname="cz.zamerovac.app.SyncCadenceTest" time="0.025"/>
+  <testcase name="failedWriteCannotActivateUnconfirmedModeOrConsumeAttempt" classname="cz.zamerovac.app.SyncCadenceTest" time="0.036"/>
+  <testcase name="defaultAndLegacySettingsKeepTheirMeaning" classname="cz.zamerovac.app.SyncCadenceTest" time="0.018"/>
+  <testcase name="explicitIntervalsAreExactInForegroundAndJobAndSurviveReopen" classname="cz.zamerovac.app.SyncCadenceTest" time="0.024"/>
+  <testcase name="clockRollbackRebootAndLongWaitCannotStrandQueue" classname="cz.zamerovac.app.SyncCadenceTest" time="0.021"/>
+  <testcase name="foregroundAndJobShareDurableAttemptAndAccountSwitchDoesNotWaitForOldStore" classname="cz.zamerovac.app.SyncCadenceTest" time="0.028"/>
+  <testcase name="invalidInputAndCorruptJournalFailClosedWithoutChangingDatabase" classname="cz.zamerovac.app.SyncCadenceTest" time="0.019"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

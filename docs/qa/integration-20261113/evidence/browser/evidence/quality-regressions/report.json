@@ -1,0 +1,212 @@
+{
+  "suite": "quality-regressions",
+  "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+  "startedAt": "2026-11-13T12:14:13.921Z",
+  "syntheticOnly": true,
+  "cases": [
+    {
+      "name": "existing_note_undo_redo_save",
+      "status": "passed",
+      "steps": [
+        "Undo restores the entire existing note; Redo restores the edit"
+      ],
+      "evidence": [
+        {
+          "close": "save",
+          "undoRestoredWholeObject": true
+        }
+      ]
+    },
+    {
+      "name": "existing_note_undo_redo_back",
+      "status": "passed",
+      "steps": [
+        "Undo restores the entire existing note; Redo restores the edit"
+      ],
+      "evidence": [
+        {
+          "close": "back",
+          "undoRestoredWholeObject": true
+        }
+      ]
+    },
+    {
+      "name": "audio_play_pause_must_not_focus_text",
+      "status": "passed",
+      "steps": [
+        "Allow modal focus timer to run; text is focused only after explicit text action"
+      ],
+      "evidence": [
+        {
+          "realWavPlayback": true,
+          "androidIME": "NOT RUN; Chromium focus assertion only"
+        }
+      ]
+    },
+    {
+      "name": "two_notes_explicit_picker_double_click_cancel_back_and_late_result",
+      "status": "passed",
+      "steps": [],
+      "evidence": [
+        {
+          "nativePicker": "model only",
+          "lateCallbacksRejected": true,
+          "explicitRequests": 2
+        }
+      ]
+    },
+    {
+      "name": "cancelled_attachment_has_no_unprotected_orphan",
+      "status": "passed",
+      "steps": [
+        "Cancelled bytes remain protected by durable ownership across reload"
+      ],
+      "evidence": [
+        {
+          "before": [],
+          "after": [
+            "16ecdaa0-d6d7-4926-b8c8-352f8d566393"
+          ],
+          "owner": "43054c1e-bf40-4f8f-8f6e-79be8cf131ac",
+          "phase": "published"
+        }
+      ]
+    },
+    {
+      "name": "note_controls_reachable_412",
+      "status": "passed",
+      "steps": [],
+      "evidence": [
+        {
+          "viewport": {
+            "width": 412,
+            "height": 850
+          },
+          "controls": [
+            {
+              "id": "richPhotoCamera",
+              "x": 16,
+              "y": 200,
+              "w": 132.046875,
+              "h": 42,
+              "font": 15,
+              "target": "richPhotoCamera"
+            },
+            {
+              "id": "richPhotoPick",
+              "x": 156.046875,
+              "y": 200,
+              "w": 155.390625,
+              "h": 42,
+              "font": 15,
+              "target": "richPhotoPick"
+            },
+            {
+              "id": "richVoice",
+              "x": 16,
+              "y": 250,
+              "w": 127.59375,
+              "h": 42,
+              "font": 15,
+              "target": "richVoice"
+            },
+            {
+              "id": "okModal",
+              "x": 343.484375,
+              "y": 8.5,
+              "w": 61.515625,
+              "h": 38,
+              "font": 15,
+              "target": "okModal"
+            },
+            {
+              "id": "cancelModal",
+              "x": 277.984375,
+              "y": 8.5,
+              "w": 61.5,
+              "h": 38,
+              "font": 15,
+              "target": "cancelModal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "note_controls_reachable_1100",
+      "status": "passed",
+      "steps": [],
+      "evidence": [
+        {
+          "viewport": {
+            "width": 1100,
+            "height": 700
+          },
+          "controls": [
+            {
+              "id": "richPhotoCamera",
+              "x": 150,
+              "y": 200,
+              "w": 132.046875,
+              "h": 42,
+              "font": 15,
+              "target": "richPhotoCamera"
+            },
+            {
+              "id": "richPhotoPick",
+              "x": 290.046875,
+              "y": 200,
+              "w": 155.390625,
+              "h": 42,
+              "font": 15,
+              "target": "richPhotoPick"
+            },
+            {
+              "id": "richVoice",
+              "x": 453.4375,
+              "y": 200,
+              "w": 127.59375,
+              "h": 42,
+              "font": 15,
+              "target": "richVoice"
+            },
+            {
+              "id": "okModal",
+              "x": 1031.484375,
+              "y": 8.5,
+              "w": 61.515625,
+              "h": 38,
+              "font": 15,
+              "target": "okModal"
+            },
+            {
+              "id": "cancelModal",
+              "x": 965.984375,
+              "y": 8.5,
+              "w": 61.5,
+              "h": 38,
+              "font": 15,
+              "target": "cancelModal"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "project_photo_dimension_note_reopen_and_export",
+      "status": "passed",
+      "steps": [
+        "Reopened note and measurement remain editable; exported PNG contains real yellow pixels"
+      ],
+      "evidence": [
+        {
+          "exportYellowPixels": 2713,
+          "originalSHA256": {
+            "ee29b7e8-4b88-4d1c-88e3-60bf8f542f7b": "adc900e546643c8024e0928b098cd0275d3de0a2ab9332de87ae3bb55023281d"
+          },
+          "exactMeasure": "1585,800001"
+        }
+      ]
+    }
+  ]
+}

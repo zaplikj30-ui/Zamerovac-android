@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.SyncSafetyTest" tests="13" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:18:22" hostname="4b8cafdccf99" time="0.405">
+  <properties/>
+  <testcase name="purgedConflictDoesNotReviveAndLegacyCopyDoesNotMultiply" classname="cz.zamerovac.app.SyncSafetyTest" time="0.016"/>
+  <testcase name="transferFailurePreservesConfirmedDatabaseAndPersistsPendingState" classname="cz.zamerovac.app.SyncSafetyTest" time="0.023"/>
+  <testcase name="sharedWriterRejectsInvalidDataBeforeTouchingConfirmedCopies" classname="cz.zamerovac.app.SyncSafetyTest" time="0.021"/>
+  <testcase name="slowRemoteDoesNotBlockSaveAndFinalCommitKeepsBothExactValues" classname="cz.zamerovac.app.SyncSafetyTest" time="0.037"/>
+  <testcase name="deeplyNestedOrMalformedUtf8DataIsRejectedWithoutReplacingTheDatabase" classname="cz.zamerovac.app.SyncSafetyTest" time="0.048"/>
+  <testcase name="concurrentPurgeKeepsIndependentEditAsOneStableCopyAndNeverRevivesOriginal" classname="cz.zamerovac.app.SyncSafetyTest" time="0.042"/>
+  <testcase name="durableQueueSurvivesReopenAndRejectsStaleOrInvalidRevision" classname="cz.zamerovac.app.SyncSafetyTest" time="0.027"/>
+  <testcase name="causalRevisionBeatsWallClockWithoutChangingMeasurement" classname="cz.zamerovac.app.SyncSafetyTest" time="0.038"/>
+  <testcase name="retryCannotDuplicateConflictEvenWhenExternalRevisionsAreEqual" classname="cz.zamerovac.app.SyncSafetyTest" time="0.043"/>
+  <testcase name="installationIdentityIsStableAndVectorsValidateExactCounters" classname="cz.zamerovac.app.SyncSafetyTest" time="0.016"/>
+  <testcase name="corruptFirstCloudPrimaryNeverPublishesOlderRecoveryCopy" classname="cz.zamerovac.app.SyncSafetyTest" time="0.037"/>
+  <testcase name="firstCloudMediaInterruptedCanResumeWithoutLosingExactData" classname="cz.zamerovac.app.SyncSafetyTest" time="0.038"/>
+  <testcase name="webBridgeCannotInvokeLegacyUnconditionalDatabaseWriter" classname="cz.zamerovac.app.SyncSafetyTest" time="0.016"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

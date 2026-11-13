@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.CloudScanTest" tests="2" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:12:34" hostname="4b8cafdccf99" time="0.192">
+  <properties/>
+  <testcase name="failedCursorWriteDoesNotAdvanceCachedStateOrAcceptUnsafePosition" classname="cz.zamerovac.app.CloudScanTest" time="0.091"/>
+  <testcase name="roundRobinSurvivesRestartWithoutTrustingOrDiscardingMessage" classname="cz.zamerovac.app.CloudScanTest" time="0.101"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

@@ -1,0 +1,483 @@
+{
+  "schema": 1,
+  "mode": "--quick",
+  "created": "2026-11-13T12:10:06.788Z",
+  "results": [
+    {
+      "name": "syntax app/src/main/assets/address-correction.js",
+      "status": "PASS",
+      "detail": "001.log (0 s)"
+    },
+    {
+      "name": "syntax app/src/main/assets/annotation-geometry.js",
+      "status": "PASS",
+      "detail": "002.log (0 s)"
+    },
+    {
+      "name": "syntax app/src/main/assets/annotation-history.js",
+      "status": "PASS",
+      "detail": "003.log (0 s)"
+    },
+    {
+      "name": "syntax app/src/main/assets/annotation-resize.js",
+      "status": "PASS",
+      "detail": "004.log (0 s)"
+    },
+    {
+      "name": "syntax app/src/main/assets/annotation-selection.js",
+      "status": "PASS",
+      "detail": "005.log (0 s)"
+    },
+    {
+      "name": "syntax app/src/main/assets/annotation-translation.js",
+      "status": "PASS",
+      "detail": "006.log (0 s)"
+    },
+    {
+      "name": "syntax app/src/main/assets/app.js",
+      "status": "PASS",
+      "detail": "007.log (0 s)"
+    },
+    {
+      "name": "syntax app/src/main/assets/backup-history.js",
+      "status": "PASS",
+      "detail": "008.log (0 s)"
+    },
+    {
+      "name": "syntax app/src/main/assets/bulk-actions.js",
+      "status": "PASS",
+      "detail": "009.log (0 s)"
+    },
+    {
+      "name": "syntax app/src/main/assets/customer-export.js",
+      "status": "PASS",
+      "detail": "010.log (0 s)"
+    },
+    {
+      "name": "syntax app/src/main/assets/drive-accounts.js",
+      "status": "PASS",
+      "detail": "011.log (0 s)"
+    },
+    {
+      "name": "syntax app/src/main/assets/editor-extra-toolbar.js",
+      "status": "PASS",
+      "detail": "012.log (0 s)"
+    },
+    {
+      "name": "syntax app/src/main/assets/editor.js",
+      "status": "PASS",
+      "detail": "013.log (0 s)"
+    },
+    {
+      "name": "syntax app/src/main/assets/feedback-reports.js",
+      "status": "PASS",
+      "detail": "014.log (0 s)"
+    },
+    {
+      "name": "syntax app/src/main/assets/help.js",
+      "status": "PASS",
+      "detail": "015.log (0 s)"
+    },
+    {
+      "name": "syntax app/src/main/assets/i18n.js",
+      "status": "PASS",
+      "detail": "016.log (0 s)"
+    },
+    {
+      "name": "syntax app/src/main/assets/inset-workspace.js",
+      "status": "PASS",
+      "detail": "017.log (0 s)"
+    },
+    {
+      "name": "syntax app/src/main/assets/laser-autofill.js",
+      "status": "PASS",
+      "detail": "018.log (0 s)"
+    },
+    {
+      "name": "syntax app/src/main/assets/media-import-ownership.js",
+      "status": "PASS",
+      "detail": "019.log (0 s)"
+    },
+    {
+      "name": "syntax app/src/main/assets/menu-dismiss.js",
+      "status": "PASS",
+      "detail": "020.log (0 s)"
+    },
+    {
+      "name": "syntax app/src/main/assets/peer-sync.js",
+      "status": "PASS",
+      "detail": "021.log (0 s)"
+    },
+    {
+      "name": "syntax app/src/main/assets/pending-audio.js",
+      "status": "PASS",
+      "detail": "022.log (0 s)"
+    },
+    {
+      "name": "syntax app/src/main/assets/release-history.js",
+      "status": "PASS",
+      "detail": "023.log (0 s)"
+    },
+    {
+      "name": "syntax app/src/main/assets/rich-notes.js",
+      "status": "PASS",
+      "detail": "024.log (0 s)"
+    },
+    {
+      "name": "syntax app/src/main/assets/sketch.js",
+      "status": "PASS",
+      "detail": "025.log (0 s)"
+    },
+    {
+      "name": "syntax app/src/main/assets/sync-cadence.js",
+      "status": "PASS",
+      "detail": "026.log (0 s)"
+    },
+    {
+      "name": "syntax app/src/main/assets/sync-edit-guard.js",
+      "status": "PASS",
+      "detail": "027.log (0 s)"
+    },
+    {
+      "name": "syntax app/src/main/assets/toolbar-customize.js",
+      "status": "PASS",
+      "detail": "028.log (0 s)"
+    },
+    {
+      "name": "syntax app/src/main/assets/upgrade.js",
+      "status": "PASS",
+      "detail": "029.log (0 s)"
+    },
+    {
+      "name": "syntax sync/protocol-v2.js",
+      "status": "PASS",
+      "detail": "030.log (0 s)"
+    },
+    {
+      "name": "syntax sync/revision-vector.js",
+      "status": "PASS",
+      "detail": "031.log (0 s)"
+    },
+    {
+      "name": "registr QA",
+      "status": "PASS",
+      "detail": "032.log (0 s)"
+    },
+    {
+      "name": "Android focus/ANR model",
+      "status": "PASS",
+      "detail": "033.log (0 s)"
+    },
+    {
+      "name": "test tests/annotation_geometry_contract.js",
+      "status": "PASS",
+      "detail": "034.log (0 s)"
+    },
+    {
+      "name": "test tests/annotation_grip_geometry.js",
+      "status": "PASS",
+      "detail": "035.log (0 s)"
+    },
+    {
+      "name": "test tests/annotation_history_contract.js",
+      "status": "PASS",
+      "detail": "036.log (4 s)"
+    },
+    {
+      "name": "test tests/annotation_history_save_failure.js",
+      "status": "PASS",
+      "detail": "037.log (0 s)"
+    },
+    {
+      "name": "test tests/annotation_hit_geometry.js",
+      "status": "PASS",
+      "detail": "038.log (0 s)"
+    },
+    {
+      "name": "test tests/annotation_pinch_contract.js",
+      "status": "PASS",
+      "detail": "039.log (1 s)"
+    },
+    {
+      "name": "test tests/annotation_resize_contract.js",
+      "status": "PASS",
+      "detail": "040.log (1 s)"
+    },
+    {
+      "name": "test tests/annotation_selection_contract.js",
+      "status": "PASS",
+      "detail": "041.log (0 s)"
+    },
+    {
+      "name": "test tests/annotation_snap_contract.js",
+      "status": "PASS",
+      "detail": "042.log (2 s)"
+    },
+    {
+      "name": "test tests/annotation_translation_contract.js",
+      "status": "PASS",
+      "detail": "043.log (0 s)"
+    },
+    {
+      "name": "test tests/annotation_viewport_contract.js",
+      "status": "PASS",
+      "detail": "044.log (0 s)"
+    },
+    {
+      "name": "test tests/audit39_hierarchy.js",
+      "status": "PASS",
+      "detail": "045.log (0 s)"
+    },
+    {
+      "name": "test tests/bosch_history_devices.js",
+      "status": "PASS",
+      "detail": "046.log (0 s)"
+    },
+    {
+      "name": "test tests/causal_app_clock.js",
+      "status": "PASS",
+      "detail": "047.log (0 s)"
+    },
+    {
+      "name": "test tests/dimension_drag_interaction.js",
+      "status": "PASS",
+      "detail": "048.log (0 s)"
+    },
+    {
+      "name": "test tests/e2e_harness_git_preflight.js",
+      "status": "PASS",
+      "detail": "049.log (0 s)"
+    },
+    {
+      "name": "test tests/editor_full_tools.js",
+      "status": "PASS",
+      "detail": "050.log (0 s)"
+    },
+    {
+      "name": "test tests/experimental_and_precision.js",
+      "status": "PASS",
+      "detail": "051.log (0 s)"
+    },
+    {
+      "name": "test tests/extra_toolbar_interaction.js",
+      "status": "PASS",
+      "detail": "052.log (0 s)"
+    },
+    {
+      "name": "test tests/feedback_inflight_save.js",
+      "status": "PASS",
+      "detail": "053.log (0 s)"
+    },
+    {
+      "name": "test tests/feedback_raster_reuse.js",
+      "status": "PASS",
+      "detail": "054.log (0 s)"
+    },
+    {
+      "name": "test tests/feedback_report_structure.js",
+      "status": "PASS",
+      "detail": "055.log (0 s)"
+    },
+    {
+      "name": "test tests/geometry_drag_28.js",
+      "status": "PASS",
+      "detail": "056.log (0 s)"
+    },
+    {
+      "name": "test tests/gesture_history_undo_redo.js",
+      "status": "PASS",
+      "detail": "057.log (0 s)"
+    },
+    {
+      "name": "test tests/help_guide.js",
+      "status": "PASS",
+      "detail": "058.log (0 s)"
+    },
+    {
+      "name": "test tests/inset_audio_customer_export.js",
+      "status": "PASS",
+      "detail": "059.log (0 s)"
+    },
+    {
+      "name": "test tests/inset_audio_marker_geometry.js",
+      "status": "PASS",
+      "detail": "060.log (0 s)"
+    },
+    {
+      "name": "test tests/inset_workspace_interaction.js",
+      "status": "PASS",
+      "detail": "061.log (0 s)"
+    },
+    {
+      "name": "test tests/laser_auto_interaction.js",
+      "status": "PASS",
+      "detail": "062.log (0 s)"
+    },
+    {
+      "name": "test tests/laser_precision_regression.js",
+      "status": "PASS",
+      "detail": "063.log (0 s)"
+    },
+    {
+      "name": "test tests/laser_tap_interaction.js",
+      "status": "PASS",
+      "detail": "064.log (0 s)"
+    },
+    {
+      "name": "test tests/local_browser_qa_contract.js",
+      "status": "PASS",
+      "detail": "065.log (0 s)"
+    },
+    {
+      "name": "test tests/media_import_ownership.js",
+      "status": "PASS",
+      "detail": "066.log (0 s)"
+    },
+    {
+      "name": "test tests/media_import_transaction_faults.js",
+      "status": "PASS",
+      "detail": "067.log (0 s)"
+    },
+    {
+      "name": "test tests/menu_dismiss_interaction.js",
+      "status": "PASS",
+      "detail": "068.log (0 s)"
+    },
+    {
+      "name": "test tests/new_28_regressions.js",
+      "status": "PASS",
+      "detail": "069.log (0 s)"
+    },
+    {
+      "name": "test tests/new_record_save_failure.js",
+      "status": "PASS",
+      "detail": "070.log (0 s)"
+    },
+    {
+      "name": "test tests/note_leader_interaction.js",
+      "status": "PASS",
+      "detail": "071.log (0 s)"
+    },
+    {
+      "name": "test tests/post17_regressions.js",
+      "status": "PASS",
+      "detail": "072.log (0 s)"
+    },
+    {
+      "name": "test tests/refactor_end_to_end_undo.js",
+      "status": "PASS",
+      "detail": "073.log (0 s)"
+    },
+    {
+      "name": "test tests/refactor_shape_resize_undo.js",
+      "status": "PASS",
+      "detail": "074.log (0 s)"
+    },
+    {
+      "name": "test tests/release_history.js",
+      "status": "PASS",
+      "detail": "075.log (0 s)"
+    },
+    {
+      "name": "test tests/revision_vector.js",
+      "status": "PASS",
+      "detail": "076.log (0 s)"
+    },
+    {
+      "name": "test tests/rich_note_attachment_state.js",
+      "status": "PASS",
+      "detail": "077.log (0 s)"
+    },
+    {
+      "name": "test tests/save_acknowledgement.js",
+      "status": "PASS",
+      "detail": "078.log (0 s)"
+    },
+    {
+      "name": "test tests/save_blocked_load_regression.js",
+      "status": "PASS",
+      "detail": "079.log (0 s)"
+    },
+    {
+      "name": "test tests/save_cas_conflict_guard.js",
+      "status": "PASS",
+      "detail": "080.log (0 s)"
+    },
+    {
+      "name": "test tests/save_cas_missing_database.js",
+      "status": "PASS",
+      "detail": "081.log (0 s)"
+    },
+    {
+      "name": "test tests/save_cas_recovery_integrity.js",
+      "status": "PASS",
+      "detail": "082.log (0 s)"
+    },
+    {
+      "name": "test tests/symbol_search_interaction.js",
+      "status": "PASS",
+      "detail": "083.log (0 s)"
+    },
+    {
+      "name": "test tests/sync_canonical.js",
+      "status": "PASS",
+      "detail": "084.log (0 s)"
+    },
+    {
+      "name": "test tests/sync_conflict_bridge.js",
+      "status": "PASS",
+      "detail": "085.log (0 s)"
+    },
+    {
+      "name": "test tests/sync_protocol_v2.js",
+      "status": "PASS",
+      "detail": "086.log (2 s)"
+    },
+    {
+      "name": "test tests/trash_restore_save_confirmation.js",
+      "status": "PASS",
+      "detail": "087.log (0 s)"
+    },
+    {
+      "name": "test tests/trash_ui_interaction.js",
+      "status": "PASS",
+      "detail": "088.log (0 s)"
+    },
+    {
+      "name": "test tests/versioning.js",
+      "status": "PASS",
+      "detail": "089.log (0 s)"
+    },
+    {
+      "name": "Python unittest",
+      "status": "PASS",
+      "detail": "090.log (6 s)"
+    },
+    {
+      "name": "Gradle JVM",
+      "status": "NOT RUN",
+      "detail": "jen v režimu --native"
+    },
+    {
+      "name": "Chromium E2E",
+      "status": "NOT RUN",
+      "detail": "zatím nepřipojené"
+    },
+    {
+      "name": "Fyzický Samsung",
+      "status": "NOT RUN",
+      "detail": "vyžaduje samostatnou Android/ADB etapu"
+    },
+    {
+      "name": "APK",
+      "status": "NOT RUN",
+      "detail": "žádné sestavení ani instalace"
+    }
+  ],
+  "counts": {
+    "PASS": 90,
+    "FAIL": 0,
+    "SKIP": 0,
+    "NOT RUN": 4
+  }
+}

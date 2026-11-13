@@ -1,0 +1,3 @@
+PASS sync-edit-guard/native-callback-during-grip-and-measure-form-preserves-both-edits
+PASS sync-edit-guard/status-message-cannot-drop-deferred-data-when-form-is-cancelled
+PASS sync-edit-guard/detail-parent-cas-keeps-live-item-references-after-conflict

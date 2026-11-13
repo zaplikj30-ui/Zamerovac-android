@@ -1,0 +1,40 @@
+{
+  "suite": "media-import",
+  "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+  "startedAt": "2026-11-13T12:12:45.714Z",
+  "syntheticOnly": true,
+  "cases": [
+    {
+      "name": "issue46-two-notes-back-focus-cancel-and-delayed-picker-callback",
+      "status": "passed",
+      "steps": [],
+      "evidence": [
+        {
+          "unrequestedPicker": "NOT REPRODUCED in Chromium Native model",
+          "explicitRequests": 2,
+          "staleCallbackRejected": true,
+          "restartPreservedTexts": true,
+          "physicalAndroid": "NOT RUN"
+        }
+      ]
+    },
+    {
+      "name": "delayed-native-results-stay-in-original-folder-and-stale-token-cannot-complete-new-picker",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    },
+    {
+      "name": "deleted-or-locked-destination-and-closed-owner-dialog-do-not-redirect-file",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    },
+    {
+      "name": "picker-cancel-and-rejected-write-keep-data-without-ghost-record",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    }
+  ]
+}

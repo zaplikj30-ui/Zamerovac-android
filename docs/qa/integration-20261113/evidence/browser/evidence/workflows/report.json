@@ -1,0 +1,90 @@
+{
+  "suite": "workflows",
+  "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+  "startedAt": "2026-11-13T12:10:56.678Z",
+  "syntheticOnly": true,
+  "cases": [
+    {
+      "name": "folders_move_rename_trash_restore",
+      "status": "passed",
+      "steps": [
+        "Create project/room/canvas through UI",
+        "Rename and move preserve exact annotations",
+        "Delete/restore folder descendants without restart"
+      ],
+      "evidence": [
+        {
+          "records": 3,
+          "referencedMedia": 0
+        }
+      ]
+    },
+    {
+      "name": "bulk_copy_move_lock",
+      "status": "passed",
+      "steps": [
+        "Long press/copy preserves values with new record and item IDs",
+        "Move copy, inherited lock blocks writing"
+      ],
+      "evidence": [
+        {
+          "records": 3,
+          "referencedMedia": 0
+        }
+      ]
+    },
+    {
+      "name": "note_checklist_sketch_attachment",
+      "status": "passed",
+      "steps": [
+        "Actual sketch, undo, draw again",
+        "Attach image and save/reload exact note"
+      ],
+      "evidence": [
+        {
+          "records": 1,
+          "referencedMedia": 1
+        }
+      ]
+    },
+    {
+      "name": "photo_details_nested_gallery_png_hashes",
+      "status": "passed",
+      "steps": [
+        "Note with two real uploaded images and nested dimension",
+        "Actual PNG output, not just clicking export"
+      ],
+      "evidence": [
+        {
+          "records": 2,
+          "referencedMedia": 3
+        }
+      ]
+    },
+    {
+      "name": "trash_restore_purge_and_live_media",
+      "status": "passed",
+      "steps": [],
+      "evidence": [
+        {
+          "records": 1,
+          "referencedMedia": 1
+        }
+      ]
+    },
+    {
+      "name": "focus_cancel_layers_history_search",
+      "status": "passed",
+      "steps": [
+        "Delayed autofocus must not steal another field",
+        "Layer hide does not delete; choosing tool restores its layer"
+      ],
+      "evidence": [
+        {
+          "records": 1,
+          "referencedMedia": 0
+        }
+      ]
+    }
+  ]
+}

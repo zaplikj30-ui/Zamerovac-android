@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.AudioCaptureTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:09:45" hostname="4b8cafdccf99" time="17.202">
+  <properties/>
+  <testcase name="unconfirmedMetadataKeepsCompletedOriginal" classname="cz.zamerovac.app.AudioCaptureTest" time="16.462"/>
+  <testcase name="existingAndLateCollidingOriginalsAndMetadataStayUnchanged" classname="cz.zamerovac.app.AudioCaptureTest" time="0.282"/>
+  <testcase name="onlySuccessfulStopPublishesCompleteFileAndConfirmedMetadata" classname="cz.zamerovac.app.AudioCaptureTest" time="0.139"/>
+  <testcase name="startStopEmptyAndCancelFailuresNeverPublishPartialRecording" classname="cz.zamerovac.app.AudioCaptureTest" time="0.109"/>
+  <testcase name="slowRecorderStartNeverOwnsGlobalDatabaseLock" classname="cz.zamerovac.app.AudioCaptureTest" time="0.21"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[[Robolectric] WARN: Android SDK 36 requires Java 21 (have Java 17). Tests won't be run on SDK 36 unless explicitly requested.
+]]></system-err>
+</testsuite>

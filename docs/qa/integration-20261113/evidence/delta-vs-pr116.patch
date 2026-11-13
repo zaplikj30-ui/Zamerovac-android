@@ -1,0 +1,1401 @@
+diff --git a/AGENTS.md b/AGENTS.md
+index 6f0d5ee..842bb0d 100644
+--- a/AGENTS.md
++++ b/AGENTS.md
+@@ -26,6 +26,12 @@ Pro každý nový důvěryhodný owner-only test na větvi `qa/*` používej **j
+ 
+ Před zadáním využij existující důkazy, issue, PR a přesný SHA; pokud něco chybí, proveď nutnou diagnostiku. Reprodukuj skutečnou chybu a relevantní testy; **širší relevantní regresi podle rizika proveď před merge i před jedinou společnou APK**, při dokončení schváleného balíku také společnou regresi. **Nikdy nešetři na testech dat, přesnosti či bezpečnosti**, ale neopakuj bezdůvodně nezměněné obecné audity. Jeden úkol má být dokončitelný, avšak bezpečnostně neoddělitelné změny se nerozdělují uměle. Při blokéru ulož konkrétní checkpoint (HEAD, změny, PASS/FAIL/SKIP/NOT RUN, prostředí, rizika, další krok) do existujícího PR/issue. Model, úroveň a náklady doporučuj podle skutečné dostupnosti; neslibuj neověřenou úsporu kreditů. **Tento odstavec sám neschvaluje přepis, merge, APK ani další výdaje.**
+ 
++## Autorské testy před závěrečným review (13. 11. 2026)
++
++**Závazné pořadí:** Programátor samostatně dokončí celý schválený související balík. **Průběžně** při implementaci spouští dostupné pozitivní, negativní a návazné testy, nalezené chyby opravuje a dotčené testy opakuje. **Po dokončení** provede relevantní společnou regresi a předá konkrétní HEAD/SHA, skutečné PASS/FAIL/SKIP/NOT RUN včetně prostředí, důkazů, zbylých rizik a blokérů. Neprovedený test není PASS ani „hotovo a otestováno“; chybějící bezpečné testovací prostředí je důvod k přesně popsanému **BLOCKED** a návrhu ověření, ne k předstírání úspěchu.
++
++**Pracovní checkpoint není závěrečné předání.** Průběžné commity a zápisy do issue/PR se dělají dál kvůli dohledatelnosti, ale nevyvolávají opakované mezikontroly. Nezávislý kontrolor přezkoumává až autorem dokončený, v dostupném prostředí otestovaný balík a hledá přehlédnuté chyby; **nenahrazuje autorské testování**. Při významném nálezu autor uceleně opraví příčinu, zopakuje relevantní testy a teprve pak znovu předává k finální revizi. **Výjimka:** předběžné posouzení zásadní architektury a bezpečnostních rozhodnutí musí nastat ještě před nevratným zásahem. Žádná tato změna neposkytuje souhlas ke spuštění HOME, cloudu, merge ani APK/release.
++
+ ## NEPŘEHLÉDNOUT – aplikace je dosud pouze testovací (uživatel opakovaně potvrdil 7. 11. 2026)
+ 
+ **FAKT:** Uživatel dosud **nemá v Zaměřovači žádné skutečné zákaznické/pracovní zakázky**; aplikaci jen testuje. Neodůvodňuj odmítání nové architektury/případného čistšího přepisu tvrzením, že bychom ohrozili jeho existující ostré zakázky. Uvažuj realisticky i o znovupoužití funkčního kódu a existujících testů. Zachování bezpečného ukládání, přesnosti a editovatelnosti je stále požadavek na **budoucí profesionální kvalitu** a na regresní testy, nikoli tvrzení o dnešních reálných datech. Při rozhodování o pokračování varianty B vs. čistším jádru odděluj skutečné dnešní náklady/limity od hypotetické migrace reálných zákaznických dat. Podrobné dřívější upřesnění a výjimka ze zálohování testovacích dat jsou níže v části [Současný testovací režim](#současný-testovací-režim--zálohy-nejsou-podmínkou-výslovné-upřesnění-uživatele-4-11-2026) a v [issue #42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42#issuecomment-6700933092). **Toto není automatický souhlas se změnou rozpracovaného PR, přepisem ani novou APK.**
+diff --git a/START_ZDE.md b/START_ZDE.md
+index 2af6bb9..dcedc6d 100644
+--- a/START_ZDE.md
++++ b/START_ZDE.md
+@@ -10,6 +10,10 @@
+ 
+ Vlastní větev `implement/sync-core-b-20261112`, base main `cf7807905f77f6fd8478c137b1b41aca6ebc3275`. Převzaty ochrany #100–#102 a návaznosti audia #107 bez změn workflow. [Implementace, příčiny, průběžné testy a povinné brány](docs/sync-core-b.md). Stav [DRAFT PR #116](https://github.com/zaplikj30-ui/Zamerovac-android/pull/116); závěrečný HEAD a přesné testy jsou v PR a checkpointu #42. Nejde o merge ani APK. Důkazy: [finální report](docs/qa/sync-core-b/results.json). Úplná Preview JVM regrese 476 PASS / 2 zachované diagnostické FAIL #88; rychlé kontroly 87 PASS; Chromium 23 sad/90 scénářů PASS; skutečný 3GiB TLS výpadek/retry a simulovaná legacy schopnost PASS. HOME/fyzický Android/živý Drive NOT RUN. Historický stav před REQUEST FIX; aktuální blokér a další krok jsou uvedeny výše.
+ 
++## Rozpracovaná integrace 13. 11. 2026
++
++[Draft PR #121](https://github.com/zaplikj30-ui/Zamerovac-android/pull/121), vlastní větev `integration/approved-fixes-20261113`: produkt #116 + dokumentační main #118 + cílené úchopy #49 a marker/galerie/export #114. [Závazný plán](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42#issuecomment-6852058679). Aktuální přesný testovaný SHA, úplné výsledky/logy a rizika budou v PR a #42; staré důkazy nejsou výsledkem integrace. Importní testy #105/#110 doplněny; #46 má reprodukční Chromium scénář, fyzický Samsung picker/IME zůstává NOT RUN. [Přesný návrh HOME QA/release brány k rozhodnutí](docs/qa/integration-20261113/HOME_GATE_PROPOSAL.md); guardy se nemění. Další krok: dokončit dostupnou společnou autorskou regresi a teprve pak nezávislá kontrola. Bez merge a vydání APK.
++
+ ## Poslední ověřený přehled (11. 11. 2026, historický snapshot)
+ 
+ - `main` při této revizi: `c604860db4fddeefc077e27411bc1941815f7d94`. **Není zaručeno, že je to dnešní nejnovější HEAD.**
+@@ -27,6 +31,8 @@ Vlastní větev `implement/sync-core-b-20261112`, base main `cf7807905f77f6fd847
+ 4. **ImageMeter je funkční reference, ne vizuální předloha.** Vlastní moderní profesionální design Zaměřovače je priorita; schválená podoba kót/úchopů/lupy se mění jen se souhlasem. Angličtina je první další jazyk před budoucím mezinárodním vydáním; nyní připravovat texty pro lokalizaci bez plošného překladu ([#14](https://github.com/zaplikj30-ui/Zamerovac-android/issues/14)).
+ 5. **Nespouštěj sestavení změnou `.github/apk-build-request.txt`.** Tento soubor je historický; aktuální `build-apk.yml` je ruční, s vlastníkovým schválením. Před jakýmkoli workflow ověř živé podmínky, triggery, skutečný stav QA a poslední publikovanou verzi.
+ 
++**Pořadí práce a kontrol:** Autor během vývoje sám testuje a opravuje, po dokončení otestuje související celek; teprve potom následuje závěrečná nezávislá kontrola. Pracovní checkpoint není předání k revizi. [Závazné podrobnosti v AGENTS.md](AGENTS.md#autorské-testy-před-závěrečným-review-13-11-2026).
++
+ **Dlouhodobá návaznost na výrobu:** Zaměřování zakázkového nábytku je významný výchozí obor; Zaměřovač je však použitelný i pro další řemesla. [Konfigurátor–Nářezák](https://github.com/zaplikj30-ui/Konfigurator-Narezak-Android) zůstává **samostatnou aplikací a repozitářem**. Budoucí propojení je dlouhodobý cíl, nikoli nynější implementace: chránit možnost verzovaného předání přesných hodnot, jednotek a identit; nikdy tiše nepřepočítávat schválené výrobní podklady. Podrobnosti: [projektový plán](PROJEKTOVY_PLAN_ZAMEROVACE.md) a [vize](VIZE_A_PLAN.md).
+ 
+ ## Historie bez ztráty podkladů
+diff --git a/app/src/main/assets/customer-export.js b/app/src/main/assets/customer-export.js
+index 9c81cca..6a545f5 100644
+--- a/app/src/main/assets/customer-export.js
++++ b/app/src/main/assets/customer-export.js
+@@ -47,15 +47,76 @@
+   const image=await loadImage(record.media[0]);
+   const items=selectedItems(record,options);
+   if(options.notes)await preloadNotes(items);
++  // A customer PDF/ZIP may contain a detail outside the original photo.
++  // Expand only the rendered copy; never change project coordinates or media.
++  const visiblePrefs={...prefs,layerVisible:{dimensions:true,drawing:true,notes:options.notes}};
++  let minX=0,minY=0,maxX=image.naturalWidth,maxY=image.naturalHeight;
++  const insets=options.notes&&typeof window.insetAnnotationBounds==='function'
++   ?items.filter(item=>item.type==='note'&&item.media?.length):[];
++  let measure=null;
++  if(insets.length){
++   measure=document.createElement('canvas').getContext('2d');
++   // The voice icon, caption and outlines use fixed screen pixels: measuring
++   // only at zoom=1 and scaling the resulting box clips high-resolution PDFs.
++   // Solve for source-space extents at the ACTUAL output scale (max 2400px).
++   const margin=32,limit=2400;
++   let settled=false;
++   for(let pass=0;pass<12;pass++){
++    const scale=Math.min(1,limit/Math.max(maxX-minX,maxY-minY));
++    const dx=-minX*scale,dy=-minY*scale;
++    const boundsRender=annotationRenderContext(measure,{
++     view:{zoom:scale,dx,dy},
++     photoSize:{w:image.naturalWidth,h:image.naturalHeight},
++     viewport:{w:image.naturalWidth*scale,h:image.naturalHeight*scale},
++     selected:null,exporting:true,prefs:visiblePrefs
++    });
++    let left=0,top=0,right=image.naturalWidth,bottom=image.naturalHeight;
++    for(const item of insets){
++     const box=window.insetAnnotationBounds(measure,item,boundsRender);
++     if(!box)continue;
++     if(![box.minX,box.minY,box.maxX,box.maxY].every(Number.isFinite))
++      throw new Error('Nelze určit bezpečné meze zákaznického exportu');
++     // Convert the measured pixel bounds back into photo coordinates.
++     const x0=(box.minX-dx)/scale,y0=(box.minY-dy)/scale;
++     const x1=(box.maxX-dx)/scale,y1=(box.maxY-dy)/scale;
++     if(x0<0)left=Math.min(left,x0-margin/scale);
++     if(y0<0)top=Math.min(top,y0-margin/scale);
++     if(x1>image.naturalWidth)right=Math.max(right,x1+margin/scale);
++     if(y1>image.naturalHeight)bottom=Math.max(bottom,y1+margin/scale);
++    }
++    const change=Math.max(Math.abs(left-minX),Math.abs(top-minY),
++     Math.abs(right-maxX),Math.abs(bottom-maxY))*scale;
++    minX=left;minY=top;maxX=right;maxY=bottom;
++    if(change<0.1){settled=true;break}
++   }
++   if(!settled)throw new Error('Nelze bezpečně umístit detaily zákaznického exportu');
++  }
++  const extentW=maxX-minX,extentH=maxY-minY;
+   const canvas=document.createElement('canvas');
+-  const scale=Math.min(1,2400/Math.max(image.naturalWidth,image.naturalHeight));
+-  canvas.width=Math.max(1,Math.round(image.naturalWidth*scale));
+-  canvas.height=Math.max(1,Math.round(image.naturalHeight*scale));
+-  const c=canvas.getContext('2d');
+-  c.fillStyle='#fff';c.fillRect(0,0,canvas.width,canvas.height);c.drawImage(image,0,0,canvas.width,canvas.height);
+-  const render=annotationRenderContext(c,{view:{zoom:scale,dx:0,dy:0},
+-   photoSize:{w:image.naturalWidth,h:image.naturalHeight},viewport:{w:canvas.width,h:canvas.height},
+-   selected:null,exporting:true,prefs:{...prefs,layerVisible:{dimensions:true,drawing:true,notes:options.notes}}});
++  const scale=Math.min(1,2400/Math.max(extentW,extentH));
++  canvas.width=Math.max(1,Math.round(extentW*scale));
++  canvas.height=Math.max(1,Math.round(extentH*scale));
++  const c=canvas.getContext('2d'),dx=-minX*scale,dy=-minY*scale;
++  c.fillStyle='#fff';c.fillRect(0,0,canvas.width,canvas.height);
++  c.drawImage(image,dx,dy,image.naturalWidth*scale,image.naturalHeight*scale);
++  const render=annotationRenderContext(c,{view:{zoom:scale,dx,dy},
++   photoSize:{w:image.naturalWidth,h:image.naturalHeight},
++   // Caption width depends on the source photo, not on extra outer margins.
++   viewport:{w:image.naturalWidth*scale,h:image.naturalHeight*scale},
++   selected:null,exporting:true,prefs:visiblePrefs});
++  // Fail safely rather than silently cropping a voice marker or caption.
++  if(measure){
++   const finalBounds=annotationRenderContext(measure,{
++    view:{zoom:scale,dx,dy},
++    photoSize:render.photoSize,viewport:render.viewport,
++    selected:null,exporting:true,prefs:visiblePrefs
++   });
++   for(const item of insets){
++    const box=window.insetAnnotationBounds(measure,item,finalBounds);
++    if(box&&(box.minX<0||box.minY<0||box.maxX>canvas.width||box.maxY>canvas.height))
++     throw new Error('Detail nebo hlasová ikona přesahuje zákaznický export');
++   }
++  }
+   // Geometry scales with the photo; captions/strokes stay readable in output pixels.
+   for(const item of items)drawItem(c,item,render);
+   return canvas;
+diff --git a/app/src/main/assets/help.js b/app/src/main/assets/help.js
+index 059f0a0..dffcc17 100644
+--- a/app/src/main/assets/help.js
++++ b/app/src/main/assets/help.js
+@@ -331,11 +331,12 @@ const chapters=[
+     "intro": "Poznámky ve fotografii mohou obsahovat další obrázky nebo vlastní detailní kótování.",
+     "steps": [
+       "U bodové poznámky otevři její podrobnosti a vlož potřebné fotografie.",
+-      "Vložený obrázek umísti do pracovní fotografie a podle dostupných úchopů nastav jeho polohu, velikost a natočení.",
++      "Po označení vložené fotografie ji přesuň tažením za středové čtyřsměrné šipky. Obousměrné šipky na levé i pravé straně mění velikost a dvě otevřené obloukové šipky nad fotografií slouží k otáčení.",
+       "Do detailu obrázku lze přidávat vlastní kóty. Po návratu do hlavní fotografie ověř, že poznámka i její detail zůstaly uloženy.",
+       "Při více přílohách se orientuj podle jejich seznamu nebo galerie."
+     ],
+     "notes": [
++      "Je-li vedle vložené detailní fotografie dost místa, značka hlasové přílohy se zobrazuje mimo její rámeček a textový popisek. Jde jen o označení nahrávky; posun, otočení ani přiblížení detailu nemění zvukový soubor.",
+       "Příloha a její detail jsou součástí projektu; zálohovací ZIP má zachovat jejich vazby.",
+       "Zákaznické PDF může tyto přílohy obsahovat pouze po povolení soukromých poznámek."
+     ],
+@@ -343,6 +344,9 @@ const chapters=[
+       "detail",
+       "vložená fotografie",
+       "fotka do fotky",
++      "zvětšení detailu",
++      "obloukové šipky",
++      "otáčení fotografie",
+       "stoh",
+       "náhled"
+     ]
+diff --git a/app/src/main/assets/inset-workspace.js b/app/src/main/assets/inset-workspace.js
+index 1ede93a..c047ff6 100644
+--- a/app/src/main/assets/inset-workspace.js
++++ b/app/src/main/assets/inset-workspace.js
+@@ -71,16 +71,21 @@
+     ctx.fillStyle='#231a30';ctx.fillText(label,p.x,p.y+1)}
+   ctx.restore();
+  }
+- // Rotace zobrazená jako dvě lehké šipky nad obrázkem, ne nové tlačítko v kolečku.
++ // Pouze vizuální změna: dvě samostatné otevřené klenuté šipky, nikoliv kruh.
++ // Dotykový bod pro otáčení zůstává beze změny v hitTest().
+  function rotationHandle(c,p,g){
+   c.save();c.translate(p.x,p.y);c.rotate(g.angle);
+   c.lineCap='round';c.lineJoin='round';
+-  c.strokeStyle='rgba(255,255,255,.88)';c.fillStyle='rgba(255,255,255,.88)';
++  c.strokeStyle='rgba(255,255,255,.92)';c.fillStyle='rgba(255,255,255,.92)';
+   c.shadowColor='rgba(0,0,0,.7)';c.shadowBlur=4;c.lineWidth=2.7;
+   for(const side of [-1,1]){
+-   const a=side*3,b=side*17;
+-   c.beginPath();c.moveTo(a,0);c.lineTo(b,0);c.stroke();
+-   c.beginPath();c.moveTo(b,0);c.lineTo(b-side*7,-6);c.lineTo(b-side*7,6);c.closePath();c.fill();
++   const tipX=side*19;
++   c.beginPath();c.moveTo(side*3,5);
++   c.quadraticCurveTo(side*11,-18,tipX,3);
++   c.stroke();
++   c.beginPath();c.moveTo(tipX,3);
++   c.lineTo(side*11,-1);c.lineTo(side*16,-6);
++   c.closePath();c.fill();
+   }
+   c.restore();
+  }
+@@ -98,12 +103,69 @@
+   const width=clamp(c.measureText(text).width+18,88,Math.max(88,(render?.viewport.w??stageCanvas.clientWidth)-20));
+   return {x:p.x-width/2,y:p.y-fs/2-7,w:width,h:fs+15,p,text,fs};
+  }
++ // All visible sheets rotate around the front photograph's centre.
++ // Reuse these screen-space bounds for the icon AND export/gallery extents.
++ function insetVisibleBlocks(it,g,render){
++  const count=(it.media||[]).filter(id=>!(it.audioMedia||[]).includes(id)).length;
++  const step=Math.min(10,72/Math.max(1,count-1));
++  const blocks=[];
++  for(let layer=0;layer<Math.max(1,count);layer++){
++   const offset=layer*step;
++   const corners=[
++    {x:-g.w/2+offset,y:-g.h/2-offset},
++    {x:g.w/2+offset,y:-g.h/2-offset},
++    {x:g.w/2+offset,y:g.h/2-offset},
++    {x:-g.w/2+offset,y:g.h/2-offset}
++   ].map(p=>turn(p,g));
++   const xs=corners.map(p=>p.x),ys=corners.map(p=>p.y);
++   blocks.push({x:Math.min(...xs),y:Math.min(...ys),
++    w:Math.max(...xs)-Math.min(...xs),h:Math.max(...ys)-Math.min(...ys)});
++  }
++  // The stack's numeric counter is visible only in the editor/gallery.
++  if(count>1&&!render?.exporting){
++   const offset=step*(count-1);
++   const centre=turn({x:g.w/2+offset+15,y:-g.h/2-offset-11},g);
++   blocks.push({x:centre.x-13,y:centre.y-13,w:26,h:26});
++  }
++  return blocks;
++ }
++ // Place the audio indicator next to the inset rather than over text or photo.
++ // Only screen-space drawing is affected; the stored note and hit areas stay intact.
++ function audioMarkerPosition(c,it,g,render){
++  if(!Array.isArray(it.audioMedia)||!it.audioMedia.length)return null;
++  const blocks=insetVisibleBlocks(it,g,render);
++  const left=Math.min(...blocks.map(p=>p.x)),right=Math.max(...blocks.map(p=>p.x+p.w));
++  const top=Math.min(...blocks.map(p=>p.y)),bottom=Math.max(...blocks.map(p=>p.y+p.h));
++  let caption;c.save();try{caption=labelRect(c,it,g,render)}finally{c.restore()}
++  const radius=13,gap=7;
++  const viewport=render?.viewport||{w:stageCanvas.clientWidth,h:stageCanvas.clientHeight};
++  const collides=(a,b)=>b&&a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
++  const options=[
++   {x:right+gap+radius,y:bottom-radius}, // right/bottom, outside the inset
++   {x:right-radius,y:Math.max(bottom,caption?caption.y+caption.h:bottom)+gap+radius},
++   {x:left-gap-radius,y:bottom-radius},
++   {x:right-radius,y:top-gap-radius},
++   {x:left-gap-radius,y:top+radius}
++  ];
++  for(const p of options){
++   const marker={x:p.x-radius,y:p.y-radius,w:radius*2,h:radius*2};
++   // Export/gallery expands the output bounds; editor stays in the viewport.
++   if(!render?.exporting&&(marker.x<2||marker.y<2||
++    marker.x+marker.w>viewport.w-2||marker.y+marker.h>viewport.h-2))continue;
++   if(blocks.every(block=>!collides(marker,block))&&!collides(marker,caption))return p;
++  }
++  return null; // no safe place: never obscure the inset, its stack or caption
++ }
+  // Shared bounds use the same geometry and default caption placement as rendering.
+  window.insetAnnotationBounds=function(c,it,render){
+   const image=window.__detailPhotoCache?.[it.media?.[0]];if(!image?.naturalWidth)return null;
+-  const g=layout(it,image,render),corners=[turn({x:-g.w/2,y:-g.h/2},g),turn({x:g.w/2,y:-g.h/2},g),turn({x:g.w/2,y:g.h/2},g),turn({x:-g.w/2,y:g.h/2},g)];
++  const g=layout(it,image,render);
++  const corners=insetVisibleBlocks(it,g,render).flatMap(box=>
++   [{x:box.x,y:box.y},{x:box.x+box.w,y:box.y+box.h}]);
+   const label=labelRect(c,it,g,render);
+   if(label)corners.push({x:label.x,y:label.y},{x:label.x+label.w,y:label.y+label.h});
++  const marker=audioMarkerPosition(c,it,g,render);
++  if(marker)corners.push({x:marker.x-13,y:marker.y-13},{x:marker.x+13,y:marker.y+13});
+   return {minX:Math.min(...corners.map(p=>p.x))-18,minY:Math.min(...corners.map(p=>p.y))-18,maxX:Math.max(...corners.map(p=>p.x))+18,maxY:Math.max(...corners.map(p=>p.y))+18};
+  };
+  function renderLabel(c,it,g,render){
+@@ -173,30 +235,54 @@
+   }finally{c.restore();}
+   // ImageMeter zachovává textovou část poznámky i po vložení detailu.
+   renderLabel(c,it,g,render);
+-  // Přítomnost hlasu vyznačujeme ikonou, i když není vyplněný text.
+-  if(Array.isArray(it.audioMedia)&&it.audioMedia.length){
+-   const p=labelPosition(it,g,render);
+-   c.save();c.font='bold 22px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillStyle='#f7dc27';
+-   c.fillText('🎙',p.x+(it.text?Math.min(140,g.w/2):0),p.y+(it.text?0:3));c.restore();
++  // Recalculate the marker on zoom, rotation, drag and in the export renderer.
++  const audioMarker=audioMarkerPosition(c,it,g,render);
++  if(audioMarker){
++   c.save();try{
++    c.font='bold 22px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillStyle='#f7dc27';
++    c.fillText('🎙',audioMarker.x,audioMarker.y);
++   }finally{c.restore();}
+   }
+   // Bílý úchopový bod na konci šipky pouze při skutečném přetahování.
+   if(show&&active?.item===it&&active.kind==='anchor'&&active.changed&&!render.exporting)
+    handle(c,g.anchor,'',true);
+   if(isSelected){
+-   // Referenční ImageMeter: poloprůhledný středový úchop pro tažení fotografie.
++   // Zachováme původní poloprůhledný kruh a dovnitř pouze dokreslíme
++   // čtyři malé šipky: tažením za střed se detail přesouvá.
+    c.save();c.fillStyle='rgba(255,255,255,.46)';
+    c.strokeStyle='rgba(38,38,38,.55)';c.lineWidth=1.4;
+    c.setLineDash([3,3]);
+-   c.beginPath();c.arc(g.cx,g.cy,11,0,Math.PI*2);c.fill();c.stroke();c.restore();
+-   // Jemné bílé trojúhelníkové úchopy u obou stran a otáčení nahoře.
++   c.beginPath();c.arc(g.cx,g.cy,11,0,Math.PI*2);c.fill();c.stroke();
++   c.setLineDash([]);
++   c.strokeStyle='rgba(35,35,35,.9)';c.fillStyle='rgba(35,35,35,.9)';
++   c.lineWidth=1.5;
++   c.beginPath();
++   c.moveTo(g.cx-5,g.cy);c.lineTo(g.cx+5,g.cy);
++   c.moveTo(g.cx,g.cy-5);c.lineTo(g.cx,g.cy+5);c.stroke();
++   for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
++    const tipX=g.cx+dx*8,tipY=g.cy+dy*8;
++    const baseX=g.cx+dx*4,baseY=g.cy+dy*4;
++    c.beginPath();c.moveTo(tipX,tipY);
++    c.lineTo(baseX-dy*2.4,baseY+dx*2.4);
++    c.lineTo(baseX+dy*2.4,baseY-dx*2.4);
++    c.closePath();c.fill();
++   }
++   c.restore();
++   // Na obou původních postranních úchopech obousměrné šipky pro změnu velikosti.
++   // Souřadnice i dotykové oblasti v hitTest() zůstávají beze změny.
+    for(const side of [-1,1]){
+     const p=turn({x:side*(g.w/2+15),y:0},g);
+     c.save();c.translate(p.x,p.y);c.rotate(g.angle);
+-    c.fillStyle='rgba(255,255,255,.72)';
+-    c.strokeStyle='rgba(55,55,55,.65)';c.lineWidth=1.3;c.setLineDash([4,3]);
+-    c.beginPath();
+-    c.moveTo(side*17,0);c.lineTo(-side*7,-16);c.lineTo(-side*7,16);c.closePath();
+-    c.fill();c.stroke();c.restore();
++    c.strokeStyle='rgba(255,255,255,.92)';c.fillStyle='rgba(255,255,255,.92)';
++    c.shadowColor='rgba(0,0,0,.7)';c.shadowBlur=4;c.lineWidth=2.7;
++    c.lineCap='round';c.lineJoin='round';
++    c.beginPath();c.moveTo(-12,0);c.lineTo(12,0);c.stroke();
++    for(const direction of [-1,1]){
++     const x=direction*13;
++     c.beginPath();c.moveTo(x,0);c.lineTo(x-direction*7,-6);
++     c.lineTo(x-direction*7,6);c.closePath();c.fill();
++    }
++    c.restore();
+    }
+    rotationHandle(c,turn({x:0,y:-g.h/2-33},g),g);
+   }
+diff --git a/docs/qa/integration-20261113/HOME_GATE_PROPOSAL.md b/docs/qa/integration-20261113/HOME_GATE_PROPOSAL.md
+new file mode 100644
+index 0000000..7f1bba1
+--- /dev/null
++++ b/docs/qa/integration-20261113/HOME_GATE_PROPOSAL.md
+@@ -0,0 +1,27 @@
++# Návrh HOME QA a release brány – čeká na rozhodnutí
++
++Toto je návrh, nikoli implementace nebo souhlas se spuštěním. Zadání: [Koordinátor 22](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42#issuecomment-6852058679). Integrační kandidát: [PR #121](https://github.com/zaplikj30-ui/Zamerovac-android/pull/121). Žádné workflow, bezpečnostní validátory ani Windows práva se tímto PR nemění. Původní diagnostiky #88 a jejich helpery jsou nezměněné.
++
++## Prokázaný nesoulad
++
++`windows-self-hosted-qa.yml` v jobu `native-jvm` nyní spouští Gradle v `set -e`, a proto skončí před kontrolou XML při dvou očekávaných skutečných FAIL. Následný XML blok navíc vyžaduje nulu FAIL a jen minimum 265 metod. Release vyžaduje čtyři úspěšné HOME joby na jednom main SHA. Produkt #116 má jiný, výslovně schválený kontrakt: 64 tříd / 513 metod, 511 PASS + 2 původní actual FAIL. Samotné snížení počtu povolených chyb nebo `continue-on-error` není bezpečné řešení.
++
++## Přesný rozsah budoucí změny
++
++1. `windows-self-hosted-qa.yml`: zachovat všechny čtyři joby a jejich závislosti, main-only push/dispatch, owner/repository, pinned checkout SHA a zákaz PR/forků. Přidat kontrolu `triggering_actor`, `run_attempt == 1` a přesné shody HEAD před i po testech. Žádný nový cloud trigger ani volný target_ref.
++2. `native-jvm`: před zdrojovým checkoutem načíst samostatný důvěryhodný validátor z plného, nezávisle schváleného SHA. Adaptovat prověřenou recipe #117 na finální integrační SHA, nikoli kopírovat starý #61. Použít již existující schválený nonroot WSL účet, izolovaný ext4 adresář, read-only offline cache, privátní pracovní kopii, timeout/heartbeat a omezené workery/paměť. Pokud účet či cache nejsou bezpečně k dispozici, výsledek BLOCKED; žádné vytváření uživatele, sudo, chmod ani změna Windows práv. Nespouštět současný root WSL blok jako náhradní řešení.
++3. Nahradit současný raw Gradle/`0 failures` blok odděleným transparentním běžícím kontraktem `tools/sync-ack-acceptance.py` doplněným nezávislým striktním XML validátorem z #117. Vždy vykonat úplný `:app:testPreviewUnitTest --rerun`; staré výstupy předem odstranit. Výstup musí být přesně 64 čerstvých XML / 513 unikátních jmenovitých metod, 511 PASS / 2 FAIL / 0 ERROR / 0 SKIP. Minimum počtu nestačí; povinný je úplný manifest a 49 zvlášť chráněných metod (2 reconciliation, 24 safety, 23 DB evidence). Zachovat SHA256 původních diagnostik/helperů a celého reconciliation E2E souboru.
++4. Povolit jen tyto dvě přesné diagnostiky a původní očekávání:
++   - `cz.zamerovac.app.SafSyncV2Test.driveStagedAckMustNotPublishAfterLocalAuthorityLostInsideProviderCommit`: `Provider completed signed ACK after recovery epoch loss: Drive staged expected:<0> but was:<1>`.
++   - `cz.zamerovac.app.SafSyncV2Test.safDirectAckMustNotPublishAfterLocalAuthorityLostInsideProviderWrite`: `Provider completed signed ACK after recovery epoch loss: SAF direct expected:<0> but was:<1>`.
++   Raw Gradle musí být výslovně `FAIL / exit 1`; jiný exit, chybějící XML, PASS diagnostiky, jiná zpráva/typ aserce, třetí FAIL, ERROR či SKIP blokuje acceptance. Samostatný stav `product_acceptance=PASS` smí odblokovat PDF a technický smoke až po rozhodnutí vlastníka a nezávislém SOURCE review. Raw Gradle se nesmí prezentovat jako PASS.
++5. `browser-smoke`: plný `--all` pro tento kandidát zahrnuje 23 suite / 96 jmenovaných případů (92 z #116 + 2 gallery #114 + pixelové úchopy + #46). Úplný manifest jmen a hashů odvodit z finálního skutečného běhu, který bude v důkazech PR #121. Původní #117 manifest 23/92 není pro tuto integraci úplný. Nepovolovat filtr `ZAMEROVAC_CASES` ve finální bráně. Odmítnout chybějící/duplicitní/přebytečné případy, FAIL/SKIP, runtime chyby, staré reporty a jiný zdrojový SHA. Reálný IndexedDB test #110 je samostatná povinná opt-in kontrola s novým privátním profilem, nikoli započítaný browser případ.
++6. `windows-home-apk-release.yml`: ponechat všechny čtyři úspěšné HOME joby na témže main SHA, explicitní schválení vydání, kontrolu podpisu/package/versionCode/versionName a bezpečné stahování assetů. Aktualizovat jen přesný název JVM jobu, pokud se kvůli pravdivému popisu změní. Navíc ověřit archivovaný acceptance report proti témuž run ID, attempt, source SHA a trusted validator SHA. Zelená conclusion samotná nesmí skrýt raw FAIL ani nahradit obsahové ověření.
++
++## Test-first podmínky před implementací guardů
++
++Samostatná sada musí odmítnout: cizí owner/triggering_actor, fork/PR, ref či SHA mismatch, rerun, volný source/validator ref, stale XML/JSON, chybějící/duplicitní/přejmenovanou metodu, jiný počet suite/case, chybějící E2E, oslabenou aserci/helper, diagnostiku PASS/SKIP/ERROR, jiný expected/actual nebo třetí FAIL, raw exit 0/2, kompilaci bez nových XML, nesoulad run ID/attempt, změnu zdrojů během běhu, browser filter/skip, chybějící PDF a neúspěšný signer/version preflight. Ověřit pozitivní fixture pouze pro přesně schválený kontrakt. Nejdřív skutečné negativní RED, potom GREEN opravy a nezávislé bezpečnostní SOURCE review.
++
++## Rozhodnutí požadované od vlastníka
++
++Schválit či odmítnout výše vymezenou adaptaci HOME brány pro viditelné `raw Gradle FAIL` a oddělenou produktovou acceptance. Rozhodnutí musí určit konkrétní trusted validator SHA a schválenou owner větev/SHA pro případný one-shot. Do té doby: HOME 4/4 a release **BLOCKED / NOT RUN**, žádné předstírání PASS. Tato žádost neblokuje lokální dostupné autorské testy ani technický APK build bez publikace, který uživatel výslovně zadal.
+diff --git a/tests/help_guide.js b/tests/help_guide.js
+index c079b92..11fdeb6 100644
+--- a/tests/help_guide.js
++++ b/tests/help_guide.js
+@@ -39,6 +39,7 @@ finds('ZALOHA','backup');
+ finds('Bosch','bosch');
+ finds('soukromí','customer');
+ finds('s pen','handles');
++finds('obloukové šipky','insets');
+ finds('video','video');
+ finds('ruian','search');
+ finds('mapa','search');
+diff --git a/tests/inset_audio_customer_export.js b/tests/inset_audio_customer_export.js
+new file mode 100644
+index 0000000..0c0554c
+--- /dev/null
++++ b/tests/inset_audio_customer_export.js
+@@ -0,0 +1,117 @@
++'use strict';
++// #47 customer PDF/ZIP: execute the real export renderer with synthetic canvas/media.
++// This asserts exported canvas coordinates, not final raster pixels or native PDF.
++const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
++const insetSource=fs.readFileSync('app/src/main/assets/inset-workspace.js','utf8');
++const customerSource=fs.readFileSync('app/src/main/assets/customer-export.js','utf8');
++module.exports=async function run(){
++ const cases=[
++  {name:'unchanged-photo-no-note',notes:false,expectWidth:800,expectHeight:600},
++  {name:'note-without-photo-is-not-inset',noDetail:true,expectWidth:800,expectHeight:600},
++  {name:'detail-at-right-extends-customer-page',x:700,y:200},
++  {name:'detail-below-extends-customer-page',x:400,y:570},
++  {name:'detail-at-left-extends-customer-page',x:-75,y:190},
++  {name:'stacked-rotated-rectangular-detail',x:710,y:480,count:3,rotation:34},
++  // Source review QA-114-02: a fixed 13+7px icon is NOT scaled with an 8000px photograph.
++  {name:'hires-8000x6000-right-edge',mainW:8000,mainH:6000,x:7900,y:200,text:''},
++  {name:'hires-8000x6000-left-edge',mainW:8000,mainH:6000,x:-145,y:220,text:''},
++  {name:'hires-12000x9000-top-edge',mainW:12000,mainH:9000,x:370,y:-135,text:''},
++  {name:'hires-8000x6000-rotated-stack',mainW:8000,mainH:6000,x:7710,y:5570,count:3,rotation:32},
++  {name:'notes-disabled-really-hides-existing-inset',notes:false,expectWidth:800,expectHeight:600},
++  {name:'nonfinite-bounds-rejected',boundsFault:true,reject:/bezpečné meze/},
++  {name:'unsettled-bounds-rejected',unsettled:true,reject:/bezpečně umístit/},
++  {name:'extreme-inset-is-clamped-without-mutating-data',width:1e12},
++ ];
++ for(const t of cases){
++  const mainW=t.mainW||800,mainH=t.mainH||600;
++  const created=[],imageSize={main:[mainW,mainH],detail:[200,75]};
++  class FakeImage{
++   constructor(){this.naturalWidth=0;this.naturalHeight=0;this.complete=false}
++   set src(url){
++    const id=String(url).split(':').pop();
++    [this.naturalWidth,this.naturalHeight]=imageSize[id==='main'?'main':'detail'];
++    this.complete=true;this.onload?.();
++   }
++  }
++  function canvas(){
++   const result={width:1,height:1,ctx:null,toDataURL(){return 'data:image/png;base64,ZmFrZQ=='}};
++   result.ctx={canvas:result,markers:[],captions:[],draws:[],
++    save(){},restore(){},translate(){},rotate(){},beginPath(){},moveTo(){},
++    lineTo(){},closePath(){},fill(){},stroke(){},arc(){},setLineDash(){},
++    strokeRect(){},fillRect(x,y,w,h){if(this.fillStyle==='rgba(23,24,27,.8)')this.captions.push({x,y,w,h})},
++    drawImage(image,...args){this.draws.push({image,args})},
++    fillText(value,x,y){if(value==='🎙')this.markers.push({x,y})},
++    measureText(value){return {width:String(value).length*9}}
++   };
++   result.getContext=()=>result.ctx;created.push(result);return result;
++  }
++  const note={id:'n',type:'note',a:{x:30,y:30},text:t.text??'Detail s hlasem',
++   media:t.noDetail?[]:Array.from({length:t.count||1},(_,i)=>'detail-'+(i+1)),
++   audioMedia:['voice-unchanged'],insetX:t.x??100,insetY:t.y??130,
++   insetWidth:t.width??130,insetRotation:t.rotation||0};
++  const record={id:'p',kind:'photo',media:['main'],items:[note]};
++  const before=JSON.stringify(record);
++  const window={__detailPhotoCache:{},isRecordLocked:()=>false};
++  const s={
++   window,Image:FakeImage,document:{createElement:type=>{assert.equal(type,'canvas');return canvas()}},
++   URL:{revokeObjectURL(){}},setTimeout:()=>1,clearTimeout(){},
++   assetUrl:async id=>'fixture:'+id,native:true,Native:{getMediaMime:()=> 'image/png'},
++   state:{records:[record]},prefs:{fontSize:17,layerVisible:{dimensions:true,drawing:true,notes:true}},
++   photoSize:{w:mainW,h:mainH},view:{zoom:1,dx:0,dy:0},
++   stageCanvas:{clientWidth:420,clientHeight:700,addEventListener(){}},
++   current:record,screen:'editor',mode:'select',selected:null,
++   fitImage(){},exportPng(){},paint(){},notify(){},
++   worldToScreen:p=>({...p}),
++   annotationProjectPoint:(p,v)=>({x:p.x*v.zoom+v.dx,y:p.y*v.zoom+v.dy}),
++   annotationRenderContext:(c,opts)=>opts,
++   drawItem(c,item,render){
++    const image=window.__detailPhotoCache?.[item.media?.[0]];
++    if(image?.complete&&image.naturalWidth)window.renderPhotoInset(c,item,image,()=>{},render);
++   },
++   folderContains:()=>false,recordActions(){},showEditorOverflow(){},closeMenus(){},
++   finishPendingPath(){},recById(){return record},modal(){},escapeHtml:x=>x,
++   $(){return {}}
++  };
++  vm.createContext(s);
++  vm.runInContext(insetSource,s,{filename:'inset-workspace.js'});
++  vm.runInContext(customerSource,s,{filename:'customer-export.js'});
++  if(t.boundsFault)window.insetAnnotationBounds=()=>({minX:NaN,minY:0,maxX:800,maxY:600});
++  if(t.unsettled){let n=0;window.insetAnnotationBounds=()=>({minX:0,minY:0,maxX:800+(++n)*1000,maxY:600})}
++  const options={notes:t.notes!==false,dimensions:true,drawing:true};
++  if(t.reject){
++   await assert.rejects(window.__customerExport.render(record,options),t.reject,t.name);
++   assert.equal(JSON.stringify(record),before,t.name+': rejected export mutated source');
++   continue;
++  }
++  await window.__customerExport.render(record,options);
++  const page=created.find(c=>c.ctx.draws.some(d=>d.image.naturalWidth===mainW&&d.image.naturalHeight===mainH));
++  assert(page,t.name+': customer page not rendered');
++  assert.equal(JSON.stringify(record),before,t.name+': project record mutated');
++  if(mainW>2400||mainH>2400)assert(Math.max(page.width,page.height)<=2400,
++   t.name+': 2400px export cap must remain enforced');
++  if(t.expectWidth)assert.equal(page.width,t.expectWidth,t.name+': unexpected width');
++  if(t.expectHeight)assert.equal(page.height,t.expectHeight,t.name+': unexpected height');
++  if(!t.expectWidth){
++   if(mainW<=2400&&mainH<=2400)assert(page.width>mainW||page.height>mainH,
++    t.name+': out-of-image inset still cropped');
++   assert.equal(page.ctx.markers.length,1,t.name+': voice marker missing');
++   const marker=page.ctx.markers[0];
++   assert(marker.x>=13&&marker.y>=13&&marker.x+13<page.width&&marker.y+13<page.height,
++    t.name+': customer PDF/ZIP canvas clips the marker');
++   for(const box of page.ctx.captions)
++    assert(box.x>=0&&box.y>=0&&box.x+box.w<=page.width&&box.y+box.h<=page.height,
++     t.name+': customer export clips the caption');
++  }
++  if(t.notes===false)assert.equal(page.ctx.markers.length,0,
++   'Unselected private notes must not render voice markers');
++  // Actual PDF page-generation path shares the same renderCanvas.
++  if(t.name==='detail-at-right-extends-customer-page'){
++   const pages=window.__customerExport.pages(record,options);
++   const first=await pages.next();
++   assert.equal(first.done,false,'customer PDF appendix did not yield a page');
++   assert.equal(typeof first.value,'string','customer PDF page must be encoded');
++  }
++ }
++ console.log('PASS: #47 '+cases.length+' customer PDF/ZIP synthetic render and bounds scenarios');
++};
++if(require.main===module)module.exports().catch(e=>{console.error(e);process.exitCode=1});
+diff --git a/tests/inset_audio_marker_geometry.js b/tests/inset_audio_marker_geometry.js
+new file mode 100644
+index 0000000..16c0e5c
+--- /dev/null
++++ b/tests/inset_audio_marker_geometry.js
+@@ -0,0 +1,96 @@
++'use strict';
++// #47: real inset renderer, synthetic geometry; no private media or Android.
++const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
++const source=fs.readFileSync('app/src/main/assets/inset-workspace.js','utf8');
++function intersects(a,b){return !!b&&a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y}
++function scenario(t){
++ const image={naturalWidth:t.imageWidth||100,naturalHeight:t.imageHeight||100};
++ const item={id:'inset',type:'note',a:{x:40,y:60},
++  media:t.noDetail?[]:Array.from({length:t.count||1},(_,i)=>'detail-'+(i+1)),
++  audioMedia:t.audio===false?[]:['voice-original-1','voice-original-2'],
++  text:t.text||'',insetX:t.x??90,insetY:t.y??160,
++  insetWidth:t.w??130,insetRotation:t.rotation||0,
++  captionMoved:!!t.captionMoved,b:t.b};
++ const before=JSON.stringify(item),icons=[],captions=[];
++ const c={save(){},restore(){},translate(){},rotate(){},beginPath(){},moveTo(){},
++  lineTo(){},closePath(){},fill(){},stroke(){},arc(){},setLineDash(){},
++  strokeRect(){},drawImage(){},
++  fillRect(x,y,w,h){if(this.fillStyle==='rgba(23,24,27,.8)')captions.push({x,y,w,h})},
++  fillText(text,x,y){if(text==='🎙')icons.push({x,y})},
++  measureText(text){return {width:String(text).length*9}}
++ };
++ const window={__detailPhotoCache:{'detail-1':image},isRecordLocked:()=>false};
++ const s={window,stageCanvas:{clientWidth:420,clientHeight:700,addEventListener(){}},
++  current:{kind:'photo',items:[item]},photoSize:{w:800,h:600},
++  view:{zoom:1,dx:0,dy:0},prefs:{fontSize:17},
++  screen:'editor',mode:'select',selected:null,fitImage(){},exportPng(){},paint(){},
++  worldToScreen:p=>({...p}),
++  annotationProjectPoint:(p,v)=>({x:p.x*v.zoom+v.dx,y:p.y*v.zoom+v.dy})};
++ vm.createContext(s);vm.runInContext(source,s,{filename:'inset-workspace.js'});
++ const zoom=t.zoom||1,dx=t.panX||0,dy=t.panY||0;
++ const render={view:{zoom,dx,dy},photoSize:{w:800,h:600},
++  viewport:{w:420,h:700},selected:null,exporting:!!t.exporting,prefs:{fontSize:17}};
++ if(t.noDetail){
++  assert.equal(window.insetAnnotationBounds(c,item,render),null,t.name+': no inset bounds');
++  assert.equal(JSON.stringify(item),before,t.name+': original note unchanged');
++  return;
++ }
++ window.renderPhotoInset(c,item,image,()=>{},render);
++ assert.equal(JSON.stringify(item),before,t.name+': no mutation of stored note geometry/voice IDs');
++ if(t.audio===false||t.expectHidden){
++  assert.equal(icons.length,0,t.name+': marker must stay hidden');
++  return;
++ }
++ assert.equal(icons.length,1,t.name+': one marker required');
++ const marker={x:icons[0].x-13,y:icons[0].y-13,w:26,h:26};
++ const w=item.insetWidth*zoom,h=w*image.naturalHeight/image.naturalWidth;
++ const ox=item.insetX*zoom+dx,oy=item.insetY*zoom+dy;
++ const cx=ox+w/2,cy=oy+h/2,angle=item.insetRotation*Math.PI/180;
++ const turn=(x,y)=>({x:cx+(x-cx)*Math.cos(angle)-(y-cy)*Math.sin(angle),
++  y:cy+(x-cx)*Math.sin(angle)+(y-cy)*Math.cos(angle)});
++ const box=(x,y,width,height)=>{
++  const pts=[turn(x,y),turn(x+width,y),turn(x+width,y+height),turn(x,y+height)];
++  const xs=pts.map(p=>p.x),ys=pts.map(p=>p.y);
++  return {x:Math.min(...xs),y:Math.min(...ys),
++   w:Math.max(...xs)-Math.min(...xs),h:Math.max(...ys)-Math.min(...ys)}
++ };
++ const count=item.media.length,step=Math.min(10,72/Math.max(1,count-1));
++ for(let layer=0;layer<count;layer++){
++  const sheet=box(ox+step*layer,oy-step*layer,w,h);
++  assert(!intersects(marker,sheet),t.name+': marker overlaps sheet layer '+layer);
++ }
++ if(count>1&&!t.exporting){
++  const off=step*(count-1),p=turn(ox+w+off+15,oy-off-11);
++  assert(!intersects(marker,{x:p.x-13,y:p.y-13,w:26,h:26}),
++   t.name+': marker covers sheet-count badge');
++ }
++ assert(captions.every(b=>!intersects(marker,b)),t.name+': marker covers caption');
++ if(!t.exporting)assert(marker.x>=2&&marker.y>=2&&
++   marker.x+marker.w<=418&&marker.y+marker.h<=698,t.name+': marker clipped');
++ const bounds=window.insetAnnotationBounds(c,item,render);
++ assert(bounds.minX<=marker.x&&bounds.minY<=marker.y&&
++  bounds.maxX>=marker.x+marker.w&&bounds.maxY>=marker.y+marker.h,
++  t.name+': full rendered bounds must include marker');
++}
++const cases=[
++ {name:'single-no-caption'},
++ {name:'short-caption',text:'Detail zásuvky'},
++ {name:'long-caption',text:'Připojení vody a elektřiny s dlouhým popiskem'},
++ {name:'moved-caption',text:'Text u ikony',captionMoved:true,b:{x:239,y:278}},
++ {name:'two-photo-stack-P2-regression',count:2},
++ {name:'four-photo-stack',count:4,text:'Více snímků'},
++ {name:'seven-photo-stack',count:7,text:'7 příloh'},
++ {name:'rectangular-rotated-stack',count:3,imageWidth:200,imageHeight:75,rotation:43},
++ {name:'counterclockwise-stacked-photo',count:2,imageWidth:150,imageHeight:90,rotation:-35},
++ {name:'photo-counter-and-caption',count:3,text:'Popisek a počet'},
++ {name:'zoom-pan-and-rotation',count:2,rotation:25,zoom:1.25,panX:38,panY:-22},
++ {name:'bottom-right-fallback',x:295,text:'U okraje'},
++ {name:'bottom-edge-fallback',y:640,text:'Dole u okraje'},
++ {name:'export-bounds-multiple-images',count:4,exporting:true,text:'PDF a PNG'},
++ {name:'export-rectangular',imageWidth:200,imageHeight:75,rotation:55,exporting:true},
++ {name:'no-safe-viewport-must-not-cover-photo',x:500,y:790,expectHidden:true},
++ {name:'no-voice-no-marker',audio:false,text:'Jen text'},
++ {name:'voice-without-detail-has-no-inset',noDetail:true,text:'Samostatný hlas'}
++];
++for(const c of cases)scenario(c);
++console.log('PASS: #47 '+cases.length+' inset geometry, stacks, orientation, zoom/pan, clip and nonmutation fixtures');
+diff --git a/tests/inset_workspace_interaction.js b/tests/inset_workspace_interaction.js
+index c9f7b75..b9708b0 100644
+--- a/tests/inset_workspace_interaction.js
++++ b/tests/inset_workspace_interaction.js
+@@ -99,4 +99,39 @@ assert.deepEqual(sandbox.opens,['note:note-1'],'Second separate tap opens full n
+  note.media=['detail-1'];
+  note.text='Detail zásuvky';
+ }
++// New drawings must stay on the existing handle positions: left/right resize, top rotate.
++{
++ const seen={bows:0,resizeLines:0,centerArrows:0,translations:[]};
++ const c={
++  save(){},restore(){},translate(x,y){seen.translations.push({x,y})},rotate(){},
++  beginPath(){},moveTo(x,y){
++   if(x===-12&&y===0)seen.resizeLines++;
++   const cx=note.insetX+note.insetWidth/2,cy=note.insetY+note.insetWidth/2;
++   if((Math.abs(x-cx)===8&&y===cy)||(Math.abs(y-cy)===8&&x===cx))seen.centerArrows++;
++  },lineTo(){},quadraticCurveTo(){seen.bows++},
++  closePath(){},fill(){},stroke(){},arc(){},
++  setLineDash(){},strokeRect(){},drawImage(){},fillText(){},
++  measureText(t){return {width:String(t).length*9}},fillRect(){}
++ };
++ sandbox.selected=note.id;
++ sandbox.window.renderPhotoInset(c,note,sandbox.window.__detailPhotoCache['detail-1'],()=>{});
++ assert.equal(seen.resizeLines,2,'Both original side handles must show a two-way resize arrow');
++ assert.equal(seen.bows,2,'Top rotation handle shows two open bowed arrows, not a circular ring');
++ assert.equal(seen.centerArrows,4,'Center handle shows four directional arrowheads for moving the inset');
++ const width=note.insetWidth;
++ const centerX=note.insetX+width/2,centerY=note.insetY+width/2;
++ const initialAnchor={...note.a};
++ drag([note.insetX-15,centerY],[note.insetX-35,centerY]);
++ assert.ok(note.insetWidth>width,'Left-side handle must still enlarge photo');
++ assert.ok(Math.abs(note.insetX+note.insetWidth/2-centerX)<1e-8,'Left-side resize keeps center X');
++ assert.ok(Math.abs(note.insetY+note.insetWidth/2-centerY)<1e-8,'Left-side resize keeps center Y');
++ assert.equal(note.a.x,initialAnchor.x,'Resize must not move arrow anchor X');
++ assert.equal(note.a.y,initialAnchor.y,'Resize must not move arrow anchor Y');
++ const resized=note.insetWidth;
++ drag([centerX,note.insetY-33],[centerX+25,note.insetY-20]);
++ assert.notEqual(note.insetRotation,0,'Original top handle must still rotate photo');
++ assert.equal(note.insetWidth,resized,'Rotation must not resize photo');
++ assert.equal(note.a.x,initialAnchor.x,'Rotation must not move arrow anchor X');
++ assert.equal(note.a.y,initialAnchor.y,'Rotation must not move arrow anchor Y');
++}
+ console.log('OK: move outside photo, independent arrow anchor, caption, resize, persistence');
+diff --git a/tests/media_import_real_chromium.py b/tests/media_import_real_chromium.py
+new file mode 100644
+index 0000000..ea942a6
+--- /dev/null
++++ b/tests/media_import_real_chromium.py
+@@ -0,0 +1,130 @@
++#!/usr/bin/env python3
++"""Opt-in browser regression: real Chromium IndexedDB transactions & restart.
++
++Run on a trusted checkout only. Uses a fresh temporary localhost origin and a
++throw-away browser profile. NEVER uses the user's production browser profile.
++Not an Android file picker, power-loss, or source-byte preservation test.
++"""
++from __future__ import annotations
++
++from functools import partial
++from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
++from pathlib import Path
++from tempfile import TemporaryDirectory
++from threading import Thread
++import os
++import sys
++
++from playwright.sync_api import sync_playwright
++
++ROOT = Path(__file__).resolve().parents[1]
++OWNER = ROOT / 'app/src/main/assets/media-import-ownership.js'
++
++
++class QuietHandler(SimpleHTTPRequestHandler):
++    def log_message(self, *_):
++        pass
++
++
++def main() -> int:
++    if not OWNER.is_file():
++        print('BLOCKED: real production media-import-ownership.js missing', file=sys.stderr)
++        return 2
++    # Browsers need a normal secure-enough origin for IndexedDB, never file://.
++    with TemporaryDirectory(prefix='qa-media-browser-') as profile:
++        server = ThreadingHTTPServer(('127.0.0.1', 0), partial(QuietHandler, directory=str(ROOT / 'app/src/main/assets')))
++        Thread(target=server.serve_forever, daemon=True).start()
++        url = f'http://127.0.0.1:{server.server_port}/media-import-ownership.js'
++        home = f'http://127.0.0.1:{server.server_port}/'
++        try:
++            with sync_playwright() as p:
++                for session in range(2):
++                    context = p.chromium.launch_persistent_context(
++                        user_data_dir=profile, headless=True,
++                        executable_path=os.environ.get('CHROMIUM_BIN', '/usr/bin/chromium'),
++                        args=['--disable-dev-shm-usage'],
++                    )
++                    page = context.new_page()
++                    page.goto(home)
++                    page.add_script_tag(url=url)
++                    if session == 0:
++                        results = page.evaluate(r'''async () => {
++                          const api = MediaImportOwnership;
++                          const same = (a,b) => JSON.stringify(a)===JSON.stringify(b);
++                          function check(x,message){if(!x)throw Error(message)}
++                          const was = await api.inspect('image_100');
++                          check(was === null, 'fresh private profile already has photo');
++                          await api.reserve('image_100','request_100');
++                          check((await api.inspect('image_100')).phase==='reserved','not reserved');
++                          await api.published('image_100','request_100');
++                          check(same(await api.inspect('image_100'),{owner:'request_100',phase:'published'}),'published mismatch');
++                          const both=await Promise.allSettled([
++                            api.reserve('photo_201','request_201'),api.reserve('photo_202','request_202')]);
++                          check(both.every(r=>r.status==='fulfilled'),'concurrent distinct commits failed');
++                          check((await api.inspect('photo_201')).owner==='request_201','lost receipt 201');
++                          check((await api.inspect('photo_202')).owner==='request_202','lost receipt 202');
++                          const compete=await Promise.allSettled([
++                            api.reserve('photo_203','request_203'),api.reserve('photo_203','request_204')]);
++                          check(compete.filter(r=>r.status==='fulfilled').length===1,'duplicate ownership');
++                          check((await api.inspect('photo_203')).owner==='request_203','first owner not preserved');
++                          try {await api.published('image_100','foreign_owner');throw Error('stolen publish succeeded');}
++                          catch(e){check(!/stolen publish succeeded/.test(String(e)),String(e));}
++                          try {await api.reserve('../bad','request_100');throw Error('traversal accepted');}
++                          catch(e){check(!/traversal accepted/.test(String(e)),String(e));}
++                          // Intercept REAL IndexedDB add success and synchronously abort the actual tx.
++                          // This is a real browser rollback, not an in-memory fake store.
++                          let abortAdd = true;
++                          const origAdd=IDBObjectStore.prototype.add;
++                          IDBObjectStore.prototype.add=function(...args){
++                            const req=origAdd.apply(this,args);
++                            if(abortAdd){abortAdd=false;const tx=this.transaction;
++                              req.addEventListener('success',()=>tx.abort(),{once:true});}
++                            return req;
++                          };
++                          let rejected = false;
++                          try {await api.reserve('photo_abort_01','request_205');}
++                          catch(e){rejected=true;}
++                          IDBObjectStore.prototype.add=origAdd;
++                          check(rejected,'aborted reserve falsely reported success');
++                          check(await api.inspect('photo_abort_01')===null,'aborted receipt on disk');
++                          await api.reserve('photo_pending_01','request_206');
++                          let abortPut=true;
++                          const origPut=IDBObjectStore.prototype.put;
++                          IDBObjectStore.prototype.put=function(...args){
++                            const req=origPut.apply(this,args);
++                            if(abortPut){abortPut=false;const tx=this.transaction;
++                              req.addEventListener('success',()=>tx.abort(),{once:true});}
++                            return req;
++                          };
++                          rejected=false;
++                          try {await api.published('photo_pending_01','request_206');}
++                          catch(e){rejected=true;}
++                          IDBObjectStore.prototype.put=origPut;
++                          check(rejected,'aborted publish falsely succeeded');
++                          check((await api.inspect('photo_pending_01')).phase==='reserved',
++                                'abort published a reserved receipt');
++                          return ['real commit', '2 concurrent', 'contested owner',
++                                  'invalid owner/path', 'abort add', 'abort put'];
++                        }''')
++                        print('PASS real IndexedDB Chromium:', ', '.join(results))
++                    else:
++                        result = page.evaluate(r'''async () => {
++                          const a=await MediaImportOwnership.inspect('image_100');
++                          const b=await MediaImportOwnership.inspect('photo_201');
++                          const c=await MediaImportOwnership.inspect('photo_202');
++                          const d=await MediaImportOwnership.inspect('photo_abort_01');
++                          const e=await MediaImportOwnership.inspect('photo_pending_01');
++                          if(a?.phase!=='published'||b?.phase!=='reserved'||c?.phase!=='reserved'||
++                             d!==null||e?.phase!=='reserved') throw Error('Disk persistence / aborted transaction changed on Chromium restart');
++                          return 'disk-backed receipts survived whole Chromium process restart';
++                        }''')
++                        print('PASS browser-process restart:', result)
++                    context.close()
++        finally:
++            server.shutdown()
++            server.server_close()
++    return 0
++
++
++if __name__ == '__main__':
++    sys.exit(main())
+diff --git a/tests/media_import_transaction_faults.js b/tests/media_import_transaction_faults.js
+new file mode 100644
+index 0000000..5424b54
+--- /dev/null
++++ b/tests/media_import_transaction_faults.js
+@@ -0,0 +1,344 @@
++/* N4-A deterministic fault-injection model for MediaImportOwnership.
++ * Models staged writes, atomic COMMIT/abort and serialized transactions on
++ * the same IndexedDB object store; NOT a real browser or disk persistence test.
++ */
++'use strict';
++const assert = require('node:assert/strict');
++const fs = require('node:fs');
++const vm = require('node:vm');
++
++const source = fs.readFileSync('app/src/main/assets/media-import-ownership.js', 'utf8');
++
++function transactionalIndexedDB() {
++  const committed = new Map();
++  const waiting = [];
++  let active = null, openFault = false, commitFault = null, opened = 0;
++  let heldError = null;
++  function startNext() {
++    if (active || !waiting.length) return;
++    const next = waiting.shift();
++    active = next;
++    // The selected slot may be cancelled before this microtask runs.
++    queueMicrotask(() => { if (active === next) next.start(); });
++  }
++  const database = {
++    objectStoreNames: {contains: name => name === 'imports'},
++    createObjectStore() { throw Error('Unnecessary schema migration'); },
++    close() {},
++    transaction(name, mode) {
++      assert.equal(name, 'imports');
++      assert.ok(mode === 'readwrite' || mode === 'readonly');
++      // A queued write MUST read committed state when it starts, not when
++      // transaction() is called. This model conservatively queues reads too.
++      let staged, started = false, finished = false, scheduled = false;
++      let operation = 'inspect';
++      const requests = [];
++      const slot = {start() {
++        if (finished) return; // Cancelled after selection, before activation.
++        started = true;
++        staged = new Map(committed);
++        pump();
++      }};
++      function release() {
++        assert.equal(active, slot, 'A transaction released someone else\'s lock');
++        active = null;
++        startNext();
++      }
++      const tx = {
++        error: null, oncomplete: null, onabort: null, onerror: null,
++        abort() {
++          if (finished) return;
++          finished = true;
++          const ownsLock = active === slot;
++          if (!ownsLock) {
++            // A queued transaction has no lock to release. Remove only its
++            // own entry so it cannot later overwrite a committed receipt.
++            const index = waiting.indexOf(slot);
++            assert.ok(index >= 0, 'Cancelled transaction is neither active nor queued');
++            waiting.splice(index, 1);
++          }
++          queueMicrotask(() => {
++            try { tx.onabort?.(); }
++            finally { if (ownsLock) release(); }
++          });
++        },
++        objectStore(key) {
++          assert.equal(key, 'imports');
++          function request(fn) {
++            const req = {result: undefined, error: null, onsuccess: null, onerror: null};
++            requests.push({req, fn});
++            pump();
++            return req;
++          }
++          return {
++            add(value, id) {
++              assert.equal(mode, 'readwrite');
++              operation = 'reserve';
++              return request(() => {
++                if (staged.has(id)) throw Error('ConstraintError: duplicate owner');
++                staged.set(id, {...value});
++                return id;
++              });
++            },
++            get(id) { return request(() => staged.get(id) && {...staged.get(id)}); },
++            put(value, id) {
++              assert.equal(mode, 'readwrite');
++              operation = 'published';
++              return request(() => { staged.set(id, {...value}); return id; });
++            }
++          };
++        }
++      };
++      function requestError(req, error) {
++        req.error = error;
++        tx.error = error;
++        const event = {type: 'error', target: req, bubbles: true};
++        // IndexedDB request errors bubble to the transaction before auto-abort.
++        try { req.onerror?.(event); tx.onerror?.(event); }
++        finally {
++          const pause = heldError;
++          heldError = null;
++          if (pause) {
++            pause.observed();
++            pause.resume.then(() => queueMicrotask(() => tx.abort()));
++          } else queueMicrotask(() => tx.abort());
++        }
++      }
++      function pump() {
++        if (!started || finished || scheduled) return;
++        scheduled = true;
++        queueMicrotask(() => {
++          scheduled = false;
++          if (finished) return;
++          const item = requests.shift();
++          if (!item) { finish(); return; }
++          try { item.req.result = item.fn(); }
++          catch (error) { requestError(item.req, error); return; }
++          try { item.req.onsuccess?.(); }
++          catch (error) { tx.error = error; tx.abort(); return; }
++          pump(); // Includes requests queued by onsuccess (get -> put).
++        });
++      }
++      function finish() {
++        if (finished || requests.length) return;
++        if (mode === 'readwrite' && commitFault === operation) {
++          commitFault = null;
++          tx.error = Error('QuotaExceededError: commit interrupted');
++          tx.abort();
++          return;
++        }
++        finished = true;
++        if (mode === 'readwrite') {
++          committed.clear();
++          for (const [id, value] of staged) committed.set(id, {...value});
++        }
++        try { tx.oncomplete?.(); } finally { release(); }
++      }
++      waiting.push(slot);
++      startNext();
++      return tx;
++    }
++  };
++  return {
++    committed,
++    failNextOpen() { openFault = true; },
++    failNextCommit(phase) {assert.ok(['reserve', 'published'].includes(phase)); commitFault = phase;},
++    holdNextRequestErrorAbort() {
++      assert.equal(heldError, null);
++      let observed, resumeAbort;
++      const whenError = new Promise(resolve => { observed = resolve; });
++      const resume = new Promise(resolve => { resumeAbort = resolve; });
++      heldError = {observed, resume};
++      return {whenError, resumeAbort};
++    },
++    get openCount() { return opened; },
++    get pendingCount() { return waiting.length; },
++    get hasActiveTransaction() { return active !== null; },
++    open(name, version) {
++      assert.equal(name, 'zamerovac-import-ownership');
++      assert.equal(version, 1);
++      ++opened;
++      const req = {result: database, onupgradeneeded: null, onsuccess: null, onblocked: null};
++      queueMicrotask(() => {
++        if (openFault) { openFault = false; req.onblocked?.(); }
++        else { req.onupgradeneeded?.(); req.onsuccess?.(); }
++      });
++      return req;
++    }
++  };
++}
++
++function withDeadline(promise, label) {
++  let timer;
++  const deadline = new Promise((_, reject) => {
++    timer = setTimeout(() => reject(Error(label)), 1500);
++  });
++  return Promise.race([promise, deadline]).finally(() => clearTimeout(timer));
++}
++
++function browserSession(indexedDB) {
++  const sandbox = {indexedDB, queueMicrotask};
++  vm.createContext(sandbox);
++  vm.runInContext(source, sandbox, {filename: 'media-import-ownership.js'});
++  assert.ok(Object.isFrozen(sandbox.MediaImportOwnership));
++  return sandbox.MediaImportOwnership;
++}
++
++(async () => {
++  const indexedDB = transactionalIndexedDB();
++  const importer = browserSession(indexedDB);
++  const id = 'original_photo_01', owner = 'request_001';
++
++  indexedDB.failNextOpen();
++  await assert.rejects(importer.reserve(id, owner), /blokována/);
++  assert.equal(indexedDB.committed.size, 0, 'Blocked open wrote a receipt');
++  await importer.reserve(id, owner);
++  assert.equal(indexedDB.openCount, 2, 'Blocked opening poisoned all retries');
++  assert.equal((await importer.inspect(id)).phase, 'reserved');
++
++  indexedDB.failNextCommit('reserve');
++  await assert.rejects(importer.reserve('original_photo_02', owner), /commit interrupted/);
++  assert.equal(await importer.inspect('original_photo_02'), null,
++    'Aborted reserve was reported as a durable receipt');
++  assert.equal(indexedDB.committed.size, 1);
++  await importer.reserve('original_photo_02', owner);
++  assert.equal((await importer.inspect('original_photo_02')).phase, 'reserved');
++
++  indexedDB.failNextCommit('published');
++  await assert.rejects(importer.published(id, owner), /commit interrupted/);
++  assert.equal((await importer.inspect(id)).phase, 'reserved',
++    'Abort incorrectly promoted an unconfirmed imported file');
++  await importer.published(id, owner);
++  assert.equal((await importer.inspect(id)).phase, 'published');
++
++  await assert.rejects(importer.reserve(id, 'request_999'));
++  await assert.rejects(importer.published('absent_photo_03', owner));
++  await assert.rejects(importer.published('original_photo_02', 'request_999'));
++  assert.equal((await importer.inspect('original_photo_02')).phase, 'reserved');
++  assert.equal((await importer.inspect(id)).owner, owner);
++
++  // Parallel readwrite on the same store must not lose either receipt.
++  const distinct = await Promise.allSettled([
++    importer.reserve('parallel_photo_01', 'parallel_owner_01'),
++    importer.reserve('parallel_photo_02', 'parallel_owner_02')
++  ]);
++  assert.deepEqual(distinct.map(result => result.status), ['fulfilled', 'fulfilled']);
++  assert.equal((await importer.inspect('parallel_photo_01')).owner, 'parallel_owner_01');
++  assert.equal((await importer.inspect('parallel_photo_02')).owner, 'parallel_owner_02');
++  assert.equal(indexedDB.committed.size, 4, 'Concurrent writes overwrote durable receipts');
++
++  // Competing owners on one photo: exactly one write can commit.
++  const same = await Promise.allSettled([
++    importer.reserve('contested_photo_01', 'competing_owner_01'),
++    importer.reserve('contested_photo_01', 'competing_owner_02')
++  ]);
++  assert.deepEqual(same.map(result => result.status), ['fulfilled', 'rejected']);
++  assert.equal((await importer.inspect('contested_photo_01')).owner, 'competing_owner_01');
++  assert.equal(indexedDB.committed.size, 5);
++
++  // A failed COMMIT must never erase an earlier successful writer.
++  indexedDB.failNextCommit('reserve');
++  const concurrentAbort = await Promise.allSettled([
++    importer.reserve('aborted_photo_01', 'parallel_owner_01'),
++    importer.reserve('surviving_photo_01', 'parallel_owner_02')
++  ]);
++  assert.deepEqual(concurrentAbort.map(result => result.status), ['rejected', 'fulfilled']);
++  assert.equal(await importer.inspect('aborted_photo_01'), null);
++  assert.equal((await importer.inspect('surviving_photo_01')).owner, 'parallel_owner_02');
++  assert.equal((await importer.inspect(id)).phase, 'published');
++  assert.equal(indexedDB.committed.size, 6);
++
++  // Request error -> transaction.onerror must reject BEFORE tx.onabort.
++  // Holding auto-abort exposes a missing onerror handler (rather than masking
++  // it with the eventual onabort rejection).
++  const gate = indexedDB.holdNextRequestErrorAbort();
++  const rejectedByError = importer.reserve('contested_photo_01', 'foreign_owner_01');
++  await gate.whenError;
++  let errorOutcome = 'pending';
++  rejectedByError.then(() => { errorOutcome = 'fulfilled'; },
++    () => { errorOutcome = 'rejected'; });
++  await Promise.resolve();
++  await Promise.resolve();
++  assert.equal(errorOutcome, 'rejected', 'tx.onerror did not reject before auto-abort');
++  gate.resumeAbort();
++  await assert.rejects(rejectedByError, /ConstraintError/);
++  assert.equal((await importer.inspect('contested_photo_01')).owner, 'competing_owner_01');
++
++  // QA-105-01: aborting the SECOND (queued) write must not release the
++  // FIRST writer's lock, and a THIRD queued write must still commit.
++  // The cancelled request is intentionally queued before tx.abort().
++  const abortFake = transactionalIndexedDB();
++  const openReq = abortFake.open('zamerovac-import-ownership', 1);
++  const rawDb = await new Promise(resolve => { openReq.onsuccess = () => resolve(openReq.result); });
++  const events = [];
++  const first = rawDb.transaction('imports', 'readwrite');
++  first.objectStore('imports').add({owner: 'first_owner', phase: 'reserved'}, 'first_receipt');
++  const firstDone = new Promise((resolve, reject) => {
++    first.oncomplete = () => { events.push('first COMMIT'); resolve(); };
++    first.onerror = () => reject(first.error || Error('First writer failed'));
++    first.onabort = () => reject(Error('First writer aborted'));
++  });
++  const cancelled = rawDb.transaction('imports', 'readwrite');
++  cancelled.objectStore('imports').add({owner: 'cancelled_owner', phase: 'reserved'}, 'cancelled_receipt');
++  const cancelledDone = new Promise((resolve, reject) => {
++    cancelled.onabort = () => { events.push('second ABORT'); resolve(); };
++    cancelled.oncomplete = () => reject(Error('Queued cancelled writer committed'));
++  });
++  const third = rawDb.transaction('imports', 'readwrite');
++  third.objectStore('imports').add({owner: 'third_owner', phase: 'reserved'}, 'third_receipt');
++  const thirdDone = new Promise((resolve, reject) => {
++    third.oncomplete = () => { events.push('third COMMIT'); resolve(); };
++    third.onerror = () => reject(third.error || Error('Third writer failed'));
++    third.onabort = () => reject(Error('Third writer aborted'));
++  });
++  assert.equal(abortFake.pendingCount, 2);
++  cancelled.abort(); // Still in waiting, with the first writer holding active.
++  assert.equal(abortFake.pendingCount, 1);
++  await withDeadline(Promise.all([firstDone, cancelledDone, thirdDone]),
++    'Queued-abort test hung');
++  assert.ok(events.indexOf('first COMMIT') < events.indexOf('third COMMIT'),
++    'Third writer committed before the first owner released the lock');
++  assert.equal(abortFake.committed.get('first_receipt').owner, 'first_owner');
++  assert.equal(abortFake.committed.has('cancelled_receipt'), false);
++  assert.equal(abortFake.committed.get('third_receipt').owner, 'third_owner');
++  assert.equal(abortFake.committed.size, 2);
++  assert.equal(abortFake.pendingCount, 0, 'Cancelled slot remained queued');
++  assert.equal(abortFake.hasActiveTransaction, false, 'Queue retained an active lock');
++
++  // Also abort after startNext() selected the active slot but before its
++  // queued slot.start(): it must skip that start and release exactly once.
++  const selectedFake = transactionalIndexedDB();
++  const selectedOpen = selectedFake.open('zamerovac-import-ownership', 1);
++  const selectedDb = await new Promise(resolve => {
++    selectedOpen.onsuccess = () => resolve(selectedOpen.result);
++  });
++  const selected = selectedDb.transaction('imports', 'readwrite');
++  selected.objectStore('imports').add({owner: 'aborted_owner', phase: 'reserved'}, 'before_start');
++  const selectedAbort = new Promise((resolve, reject) => {
++    selected.onabort = resolve;
++    selected.oncomplete = () => reject(Error('Selected aborted writer committed'));
++  });
++  const afterSelected = selectedDb.transaction('imports', 'readwrite');
++  afterSelected.objectStore('imports').add({owner: 'following_owner', phase: 'reserved'}, 'after_start');
++  const followingCommit = new Promise((resolve, reject) => {
++    afterSelected.oncomplete = resolve;
++    afterSelected.onabort = () => reject(Error('Following writer aborted'));
++    afterSelected.onerror = () => reject(afterSelected.error || Error('Following writer failed'));
++  });
++  selected.abort(); // Active lock is assigned, but selected.start() has not run.
++  await withDeadline(Promise.all([selectedAbort, followingCommit]),
++    'Selected-slot abort hung');
++  assert.equal(selectedFake.committed.has('before_start'), false);
++  assert.equal(selectedFake.committed.get('after_start').owner, 'following_owner');
++  assert.equal(selectedFake.pendingCount, 0);
++  assert.equal(selectedFake.hasActiveTransaction, false);
++
++  // A new JS VM shares the fake in-memory Map. This is NOT disk-persistent
++  // IndexedDB after a WebView/Android restart or device power loss.
++  const reopened = browserSession(indexedDB);
++  assert.equal((await reopened.inspect(id)).phase, 'published');
++  assert.equal((await reopened.inspect('original_photo_02')).phase, 'reserved');
++  assert.equal((await reopened.inspect('surviving_photo_01')).phase, 'reserved');
++  assert.equal(indexedDB.committed.size, 6, 'VM restart duplicated a media receipt');
++  console.log('PASS media import model: blocked/retry, commit abort, parallel receipts, owner, tx.onerror, VM restart');
++})().catch(error => { console.error(error); process.exitCode = 1; });
+diff --git a/tests/test_imagemeter_inset.py b/tests/test_imagemeter_inset.py
+index 5d7187f..6e2aece 100644
+--- a/tests/test_imagemeter_inset.py
++++ b/tests/test_imagemeter_inset.py
+@@ -24,10 +24,14 @@ class ImageMeterInsetTests(unittest.TestCase):
+         self.assertIn("c.strokeStyle='#f7dc27';c.lineWidth=isSelected?2.4:2", INSET)
+         self.assertNotIn("isSelected?'#e3c4ff'", INSET)
+ 
+-    def test_grips_match_video_without_changing_hit_targets(self):
++    def test_grips_show_resize_and_rotation_without_changing_hit_targets(self):
+         self.assertIn("c.arc(g.cx,g.cy,11", INSET)
+         self.assertIn("rgba(255,255,255,.46)", INSET)
+-        self.assertIn("rgba(255,255,255,.72)", INSET)
++        self.assertIn("c.beginPath();c.moveTo(-12,0);c.lineTo(12,0);c.stroke();", INSET)
++        self.assertIn("c.quadraticCurveTo(side*11,-18,tipX,3)", INSET)
++        self.assertNotIn("c.arc(0,0,r,start,end)", INSET)
++        self.assertIn("const tipX=g.cx+dx*8", INSET)
++        self.assertIn("rgba(255,255,255,.92)", INSET)
+         self.assertIn("rotationHandle(c,turn(", INSET)
+         self.assertIn("const near=position=>pointerDistance(point,position)<=24", INSET)
+         self.assertIn("kind:'resize-right'", INSET)
+diff --git a/tools/e2e/gallery-state.cjs b/tools/e2e/gallery-state.cjs
+index d480dc4..35e497f 100644
+--- a/tools/e2e/gallery-state.cjs
++++ b/tools/e2e/gallery-state.cjs
+@@ -12,6 +12,36 @@ async function photo(page){
+  await page.fill('#measureInput','1585,800001');await page.click('#okModal');
+ }
+ suite('gallery-state',async test=>{
++ await test('approved_inset_handles_have_real_pixels_and_stay_out_of_export',async({page,evidence})=>{
++  await photo(page);
++  const pixels=await page.evaluate(async()=>{
++   const id=current.media[0],image=new Image();image.src=await assetUrl(id);await image.decode();
++   window.__detailPhotoCache[id]=image;
++   const item={id:'handles',type:'note',a:{x:80,y:80},media:[id],insetX:180,insetY:180,insetWidth:240};
++   const render=(selected,exporting)=>{
++    const canvas=document.createElement('canvas');canvas.width=600;canvas.height=500;
++    const c=canvas.getContext('2d');c.fillStyle='#666';c.fillRect(0,0,600,500);
++    const rc=annotationRenderContext(c,{view:{zoom:1,dx:0,dy:0},photoSize:{w:1200,h:800},viewport:{w:600,h:500},selected,exporting,prefs});
++    window.renderPhotoInset(c,item,image,()=>{},rc);return c;
++   };
++   const selected=render(item.id,false),plain=render(null,false);
++   const diff=(x,y,w,h)=>{
++    const a=selected.getImageData(x,y,w,h).data,b=plain.getImageData(x,y,w,h).data;
++    let changed=0;for(let i=0;i<a.length;i+=4)if(Math.abs(a[i]-b[i])+Math.abs(a[i+1]-b[i+1])+Math.abs(a[i+2]-b[i+2])>60)changed++;
++    return changed;
++   };
++   const upperBow=selected.getImageData(308,135,7,7).data;
++   let whiteBow=0;for(let i=0;i<upperBow.length;i+=4)if(upperBow[i]>180&&upperBow[i+1]>180&&upperBow[i+2]>180)whiteBow++;
++   const darkTip=selected.getImageData(306,259,3,3).data;
++   let dark=0;for(let i=0;i<darkTip.length;i+=4)if(darkTip[i]<80&&darkTip[i+1]<80&&darkTip[i+2]<80)dark++;
++   const a=render(item.id,true).getImageData(0,0,600,500).data,b=render(null,true).getImageData(0,0,600,500).data;
++   return {rotate:diff(275,130,50,32),left:diff(148,246,34,28),right:diff(418,246,34,28),center:diff(288,248,24,24),whiteBow,darkTip:dark,exportSame:a.every((n,i)=>n===b[i])};
++  });
++  assert(pixels.rotate>30&&pixels.left>30&&pixels.right>30&&pixels.center>30,'Each approved handle must have visible actual pixels');
++  assert(pixels.whiteBow>2,'Rotation must curve above the old straight arrow');
++  assert(pixels.darkTip>0,'Center must include directional dark arrow tips');
++  assert(pixels.exportSame,'Selection handles must not leak into customer export');evidence(pixels);
++ });
+  await test('render_is_read_only_even_during_nested_drawing_and_failure',async({page,evidence,directory})=>{
+   await photo(page);
+   await page.evaluate(()=>{
+@@ -132,4 +162,160 @@ suite('gallery-state',async test=>{
+   });assert.equal(hash,await page.evaluate(()=>originalHash));
+   evidence({fitInk,zoomInk,originalSHA256:hash,lateLoadCannotReopenGallery:true});
+  });
++  await test('stacked_voice_marker_gallery_and_customer_export_pixels',async({page,evidence,directory})=>{
++   await page.setViewportSize({width:412,height:850});await photo(page);
++   const before=await page.evaluate(async()=>{
++    const id=current.media[0],url=await assetUrl(id),im=new Image();
++    await new Promise((resolve,reject)=>{im.onload=resolve;im.onerror=reject;im.src=url});
++    window.__detailPhotoCache[id]=im;
++    current.items.push({id:'voice-visual',type:'note',a:{x:1050,y:650},
++     media:[id,id],audioMedia:['synthetic-audio-reference'],text:'Popisek 1250,000001 mm',
++     insetX:1100,insetY:700,insetWidth:260,insetRotation:24});
++    save();paint();
++    const db=await mediaDb(),request=db.transaction('files').objectStore('files').get(id);
++    const blob=await new Promise(resolve=>request.onsuccess=()=>resolve(request.result));
++    const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await blob.arrayBuffer()))).join(',');
++    window.__voiceMarkers=[];
++    const original=CanvasRenderingContext2D.prototype.fillText;
++    CanvasRenderingContext2D.prototype.fillText=function(value,x,y,...rest){
++     if(value==='🎙'){const p=this.getTransform().transformPoint({x,y});
++      __voiceMarkers.push({x:p.x,y:p.y,width:this.canvas.width,height:this.canvas.height,
++       gallery:this.canvas.classList?.contains('gallery-img')||false})}
++     return original.call(this,value,x,y,...rest);
++    };
++    return {items:JSON.stringify(current.items),hash};
++   });
++   const exported=await page.evaluate(async()=>{
++    __voiceMarkers.length=0;
++    const encoded=await __customerExport.render(current,{notes:true,dimensions:true,drawing:true});
++    const image=new Image();image.src='data:image/png;base64,'+encoded;await image.decode();
++    const marker=__voiceMarkers.find(x=>!x.gallery&&x.width===image.naturalWidth);
++    if(!marker)return {error:'customer PDF/ZIP marker not rendered'};
++    const canvas=document.createElement('canvas');canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;
++    const c=canvas.getContext('2d');c.drawImage(image,0,0);
++    const x=Math.floor(marker.x)-15,y=Math.floor(marker.y)-15;
++    if(x<0||y<0||x+30>=canvas.width||y+30>=canvas.height)return {error:'customer marker clipped'};
++    const pixels=c.getImageData(x,y,30,30).data;let ink=0;
++    for(let i=0;i<pixels.length;i+=4)if(pixels[i]<245||pixels[i+1]<245||pixels[i+2]<245)ink++;
++    return {width:canvas.width,height:canvas.height,ink,marker};
++   });
++   assert(!exported.error,JSON.stringify(exported));
++   assert(exported.width>1200&&exported.height>800,'Customer export must include inset outside original');
++   assert(exported.ink>8,'Customer PNG embedded in PDF/ZIP must contain actual voice pixels');
++   await page.click('#galleryMode');await page.waitForFunction(()=>!!document.querySelector('.gallery-img')?.dataset.galleryView);
++   const gallery=await page.evaluate(()=>{
++    const c=document.querySelector('.gallery-img'),markers=__voiceMarkers.filter(m=>m.gallery);
++    const p=markers[markers.length-1];if(!p)return {error:'gallery voice icon not rendered'};
++    if(p.x<14||p.y<14||p.x+14>=c.width||p.y+14>=c.height)return {error:'gallery icon clipped'};
++    const b=c.getContext('2d').getImageData(Math.floor(p.x)-14,Math.floor(p.y)-14,28,28).data;
++    let colored=0;for(let i=0;i<b.length;i+=4)
++     if(Math.abs(b[i]-41)+Math.abs(b[i+1]-42)+Math.abs(b[i+2]-47)>135)colored++;
++    return {colored,marker:p};
++   });
++   assert(!gallery.error,JSON.stringify(gallery));assert(gallery.colored>8,'Gallery must contain visible voice glyph pixels');
++   // A positive raster alone can be a false PASS because of photo/text ink.
++   // Compare real browser pixels with the SAME photo, caption and transform,
++   // changing only audioMedia on a throwaway cloned item.
++   const voiceDifference=await page.evaluate(()=>{
++    const item=current.items.find(x=>x.id==='voice-visual');
++    const image=__detailPhotoCache[item.media[0]];
++    const render=canvas=>annotationRenderContext(canvas.getContext('2d'),{
++     view:{zoom:1,dx:0,dy:0},photoSize:{w:1200,h:800},
++     viewport:{w:1700,h:1250},selected:null,exporting:true,prefs});
++    function draw(audio){
++     const canvas=document.createElement('canvas');
++     canvas.width=1700;canvas.height=1250;
++     const c=canvas.getContext('2d'),orig=c.fillText.bind(c);
++     let center=null;
++     c.fillText=(text,x,y,...rest)=>{
++      if(text==='🎙')center=c.getTransform().transformPoint({x,y});
++      return orig(text,x,y,...rest);
++     };
++     renderPhotoInset(c,{...item,audioMedia:audio?item.audioMedia:[]},image,()=>{},render(canvas));
++     return {canvas,center};
++    }
++    const on=draw(true),off=draw(false);
++    if(!on.center||off.center)return {error:'missing positive or unexpected negative marker'};
++    const x=Math.round(on.center.x)-15,y=Math.round(on.center.y)-15;
++    if(x<0||y<0||x+30>1700||y+30>1250)return {error:'marker outside shared raster'};
++    const a=on.canvas.getContext('2d').getImageData(x,y,30,30).data;
++    const b=off.canvas.getContext('2d').getImageData(x,y,30,30).data;
++    let changed=0;
++    for(let i=0;i<a.length;i+=4){
++     if(Math.abs(a[i]-b[i])+Math.abs(a[i+1]-b[i+1])+Math.abs(a[i+2]-b[i+2])>50)changed++;
++    }
++    return {changed,positiveMarker:on.center,negativeMarkerAbsent:!off.center};
++   });
++   assert(!voiceDifference.error,JSON.stringify(voiceDifference));
++   assert(voiceDifference.changed>8,'Voice glyph must change real pixels versus no-voice negative control');
++   await page.screenshot({path:path.join(directory,'stacked-voice-gallery.png')});
++   await page.click('.gallery-top [data-action="close"]');
++   const after=await page.evaluate(async()=>{
++    const db=await mediaDb(),r=db.transaction('files').objectStore('files').get(current.media[0]);
++    const blob=await new Promise(resolve=>r.onsuccess=()=>resolve(r.result));
++    const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await blob.arrayBuffer()))).join(',');
++    return {items:JSON.stringify(current.items),hash};
++   });
++   assert.deepEqual(after,before,'Read-only gallery/export must not modify originals or exact values');
++   await page.click('#editorBack');await page.reload();await page.locator('.entry-title').click();
++   assert.equal(await page.evaluate(()=>JSON.stringify(current.items)),before.items,'Exact values survive restart');
++   evidence({exported,gallery,voiceDifference,originalSHA256:before.hash,nativePdf:'NOT RUN'});
++  });
++  await test('customer_export_high_resolution_voice_marker_2400px',async({page,evidence})=>{
++   // Compression-friendly 8k image; run only this targeted test on a trusted
++   // serial HOME runner, not concurrently with heavy Java/Gradle jobs.
++   const buffer=Buffer.from(await page.evaluate(()=>{
++    const canvas=document.createElement('canvas');canvas.width=8000;canvas.height=6000;
++    const c=canvas.getContext('2d');c.fillStyle='#596169';c.fillRect(0,0,8000,6000);
++    return canvas.toDataURL('image/png').split(',')[1];
++   }),'base64');
++   await chooseFiles(page,'#galleryBtn',{name:'high-resolution-inset.png',mimeType:'image/png',buffer});
++   await page.waitForFunction(()=>!!stageImg&&stageImg.complete&&stageImg.naturalWidth===8000);
++   const outcome=await page.evaluate(async()=>{
++    const id=current.media[0],source=stageImg;
++    window.__detailPhotoCache[id]=source;
++    const item={id:'highres-marker',type:'note',a:{x:7950,y:220},
++     media:[id],audioMedia:['synthetic-reference-do-not-play'],text:'',
++     insetX:7900,insetY:200,insetWidth:130,insetRotation:0};
++    current.items.push(item);save();
++    const original=JSON.stringify(current.items);
++    const readHash=async()=>{
++     const db=await mediaDb(),request=db.transaction('files').objectStore('files').get(id);
++     const blob=await new Promise(resolve=>request.onsuccess=()=>resolve(request.result));
++     return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await blob.arrayBuffer()))).join(',');
++    };
++    const beforeHash=await readHash();
++    const markers=[],fill=CanvasRenderingContext2D.prototype.fillText;
++    CanvasRenderingContext2D.prototype.fillText=function(value,x,y,...rest){
++     if(value==='🎙'){
++      const p=this.getTransform().transformPoint({x,y});
++      markers.push({x:p.x,y:p.y,width:this.canvas.width,height:this.canvas.height});
++     }
++     return fill.call(this,value,x,y,...rest);
++    };
++    const encoded=await __customerExport.render(current,{notes:true,dimensions:true,drawing:true});
++    const out=new Image();out.src='data:image/png;base64,'+encoded;await out.decode();
++    const marker=markers.find(m=>m.width===out.naturalWidth&&m.height===out.naturalHeight);
++    const result={width:out.naturalWidth,height:out.naturalHeight,marker,
++     originalUnchanged:original===JSON.stringify(current.items),
++     mediaUnchanged:beforeHash===await readHash()};
++    if(!marker)return {...result,error:'no visible high-res voice marker'};
++    if(marker.x<13||marker.y<13||marker.x+13>out.naturalWidth||
++       marker.y+13>out.naturalHeight)return {...result,error:'high-resolution voice glyph clipped'};
++    const tile=document.createElement('canvas');tile.width=30;tile.height=30;
++    tile.getContext('2d').drawImage(out,
++      Math.floor(marker.x)-15,Math.floor(marker.y)-15,30,30,0,0,30,30);
++    const b=tile.getContext('2d').getImageData(0,0,30,30).data;
++    let ink=0;for(let i=0;i<b.length;i+=4){
++     if(b[i]<235||b[i+1]<235||b[i+2]<235)ink++;
++    }
++    return {...result,ink};
++   });
++   assert(!outcome.error,JSON.stringify(outcome));
++   assert.equal(Math.max(outcome.width,outcome.height),2400,'Export must keep 2400px limit');
++   assert(outcome.ink>8,'High-resolution customer PDF/ZIP must contain glyph pixels');
++   assert(outcome.mediaUnchanged&&outcome.originalUnchanged,
++    'High-resolution export must preserve media SHA-256 and original annotation');
++   evidence({highRes:outcome,sourceResolution:'8000×6000',pdfNative:'NOT RUN'});
++  });
+ }).catch(e=>{console.error(e);process.exitCode=1});
+diff --git a/tools/e2e/media-import.cjs b/tools/e2e/media-import.cjs
+index d940d51..1db8b9a 100644
+--- a/tools/e2e/media-import.cjs
++++ b/tools/e2e/media-import.cjs
+@@ -1,7 +1,44 @@
+ 'use strict';
+-const {suite,assert}=require('./harness.cjs'),nativeStorage=require('./native-storage-fixture.cjs');
++const {suite,assert,createCanvas,tool,drag,editSelected}=require('./harness.cjs'),nativeStorage=require('./native-storage-fixture.cjs');
+ async function setup(page){await nativeStorage(page);await page.evaluate(()=>{window.pickCalls=[];Native.selectFilesForRequest=(type,id)=>pickCalls.push({type,id});Native.takePhotoForRequest=id=>pickCalls.push({type:'camera',id});const a=newRecord('folder','Složka A',null),b=newRecord('folder','Složka B',null);state.records=[a,b];window.folderA=a.id;window.folderB=b.id;currentFolder=folderA;save();showFolder();});}
+ suite('media-import',async run=>{
++ await run('issue46-two-notes-back-focus-cancel-and-delayed-picker-callback',async({page,evidence})=>{
++  await setup(page);await createCanvas(page,'Dvě poznámky #46');
++  for(const [index,text] of ['První přesný text','Druhý přesný text'].entries()){
++   await tool(page,'note');await drag(page,{x:100,y:210+index*180},{x:210,y:250+index*180});
++   await editSelected(page);await page.fill('#richText',text);await page.click('#okModal');
++  }
++  const open=async(index)=>{
++   await page.evaluate(index=>{setTool('select');selected=current.items[index].id;paint()},index);
++   await editSelected(page);await page.waitForTimeout(140);
++   assert.notEqual(await page.evaluate(()=>document.activeElement.id),'richText','Opening a note must leave keyboard focus closed');
++  };
++  for(let i=0;i<6;i++){
++   await open(i%2);await page.locator('#richText').click();
++   if(i%3===0)await page.keyboard.press('Escape');
++   else await page.click(i%3===1?'#cancelModal':'#okModal');
++   await page.waitForTimeout(140);
++   assert.equal(await page.evaluate(()=>pickCalls.length),0,'Open, focus, Back, Save or Cancel must never launch picker');
++  }
++  await open(0);await page.locator('#richPhotoPick').dblclick();
++  assert.equal(await page.evaluate(()=>pickCalls.length),1,'Double tap may create only one request');
++  const old=await page.evaluate(()=>pickCalls[0]);assert.equal(old.type,'media');
++  await page.keyboard.press('Escape');await open(1);
++  assert.equal(await page.evaluate(id=>onNativeMedia('late-photo','image/png','Late',null,id),old.id),false);
++  await page.evaluate(id=>onNativeMediaDone(id),old.id);
++  assert.equal(await page.locator('#richAttachments [data-attachment]').count(),0);
++  await page.click('#richPhotoCamera');const camera=await page.evaluate(()=>pickCalls.at(-1));
++  assert.equal(camera.type,'camera');await page.evaluate(id=>onNativeMediaDone(id),camera.id);
++  await page.click('#okModal');
++  const expected=['První přesný text','Druhý přesný text'];
++  assert.deepEqual(await page.evaluate(()=>current.items.map(n=>n.text)),expected);
++  assert(await page.evaluate(()=>current.items.every(n=>!n.media?.length)));
++  // Preserve the model disk across JS restart; the base Native fixture resets it.
++  await page.addInitScript(disk=>{window.syntheticDisk=disk},await page.evaluate(()=>syntheticDisk));
++  await page.reload();
++  assert.deepEqual(await page.evaluate(()=>state.records.find(r=>r.title==='Dvě poznámky #46').items.map(n=>n.text)),expected);
++  evidence({unrequestedPicker:'NOT REPRODUCED in Chromium Native model',explicitRequests:2,staleCallbackRejected:true,restartPreservedTexts:true,physicalAndroid:'NOT RUN'});
++ });
+  await run('delayed-native-results-stay-in-original-folder-and-stale-token-cannot-complete-new-picker',async({page})=>{
+   await setup(page);await page.click('#galleryBtn');let first=await page.evaluate(()=>pickCalls.at(-1));await page.evaluate(()=>{currentFolder=folderB;showFolder()});await page.click('#galleryBtn');assert.equal(await page.evaluate(()=>pickCalls.length),1);await page.evaluate(token=>onNativeMedia('synthetic-first','application/pdf','Příloha A',null,token),first.id);assert.equal(await page.evaluate(()=>state.records.find(r=>r.media?.includes('synthetic-first')).parentId),await page.evaluate(()=>folderA));assert.equal(await page.evaluate(()=>currentFolder),await page.evaluate(()=>folderB));await page.evaluate(id=>onNativeMediaDone(id),first.id);await page.click('#galleryBtn');const next=await page.evaluate(()=>pickCalls.at(-1));assert.notEqual(next.id,first.id);await page.evaluate(id=>{onNativeMediaDone(id);onNativeMedia('synthetic-stale','application/pdf','Starý callback',null,id)},first.id);await page.click('#galleryBtn');assert.equal(await page.evaluate(()=>pickCalls.length),2);assert.equal(await page.evaluate(()=>state.records.some(r=>r.media?.includes('synthetic-stale'))),false);await page.evaluate(id=>onNativeMedia('synthetic-next','application/pdf','Příloha B',null,id),next.id);assert.equal(await page.evaluate(()=>state.records.find(r=>r.media?.includes('synthetic-next')).parentId),await page.evaluate(()=>folderB));
+  });

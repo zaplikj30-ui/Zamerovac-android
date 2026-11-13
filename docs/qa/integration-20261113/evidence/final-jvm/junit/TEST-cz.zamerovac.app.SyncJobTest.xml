@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.SyncJobTest" tests="4" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:18:18" hostname="4b8cafdccf99" time="0.239">
+  <properties/>
+  <testcase name="disabledAutoSyncNeverCallsEngine" classname="cz.zamerovac.app.SyncJobTest" time="0.169"/>
+  <testcase name="oldCancelledWorkerCannotClearOrCompleteNewAttempt" classname="cz.zamerovac.app.SyncJobTest" time="0.021"/>
+  <testcase name="successfulAndFailedUncancelledAttemptsReportCorrectRetry" classname="cz.zamerovac.app.SyncJobTest" time="0.018"/>
+  <testcase name="manualFrequencyNeverCallsEngineEvenIfLegacyAutoFlagIsTrue" classname="cz.zamerovac.app.SyncJobTest" time="0.031"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

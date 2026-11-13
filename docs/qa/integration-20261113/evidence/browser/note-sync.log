@@ -1,0 +1,6 @@
+PASS note-sync/read-only-note-and-checklist-attachment-causal-autosave
+PASS note-sync/incoming-note-data-waits-and-read-only-close-does-not-create-conflict
+PASS note-sync/sketch-stroke-keeps-live-points-through-debounced-note-cas
+PASS note-sync/failed-note-write-keeps-form-and-retry-and-lock-protects-checks
+PASS note-sync/voice-keeps-owner-finishes-on-save-and-failed-stop-keeps-form
+PASS note-sync/rich-voice-failed-stop-and-disk-keep-modal-back-retry-and-cancel

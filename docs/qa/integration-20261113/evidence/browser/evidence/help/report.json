@@ -1,0 +1,44 @@
+{
+  "suite": "help",
+  "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+  "startedAt": "2026-11-13T12:13:25.417Z",
+  "syntheticOnly": true,
+  "cases": [
+    {
+      "name": "main_menu_search_offline_and_android_back",
+      "status": "passed",
+      "steps": [
+        "Open directly from main hamburger menu",
+        "Search Czech text including diacritic-free query",
+        "Guide stays functional offline and Android Back closes it"
+      ],
+      "evidence": [
+        {
+          "topics": 25,
+          "offline": true,
+          "search": true,
+          "androidBack": true,
+          "dataUnchanged": true
+        }
+      ]
+    },
+    {
+      "name": "overflow_menu_and_small_large_screens",
+      "status": "passed",
+      "steps": [
+        "Global search finds records, not help articles",
+        "Help on 320px display",
+        "Help on 1000px display"
+      ],
+      "evidence": [
+        {
+          "viewports": [
+            "320x568",
+            "1000x750"
+          ],
+          "dataUnchanged": true
+        }
+      ]
+    }
+  ]
+}

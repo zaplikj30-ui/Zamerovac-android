@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="cz.zamerovac.app.DriveAuthorizationTest" tests="6" skipped="0" failures="0" errors="0" timestamp="2026-11-13T12:12:48" hostname="4b8cafdccf99" time="0.385">
+  <properties/>
+  <testcase name="memoryCacheExpiresAnd401InvalidatesOnlyTheRejectedToken" classname="cz.zamerovac.app.DriveAuthorizationTest" time="0.098"/>
+  <testcase name="accountChangeDuringAuthorizationPreventsCachingAndMainThreadCannotBlock" classname="cz.zamerovac.app.DriveAuthorizationTest" time="0.033"/>
+  <testcase name="sdkRequestPinsSelectedAccountAndOnlyAppDataScope" classname="cz.zamerovac.app.DriveAuthorizationTest" time="0.051"/>
+  <testcase name="interruptionAbandonsAuthorizationWithoutReturningAResult" classname="cz.zamerovac.app.DriveAuthorizationTest" time="0.031"/>
+  <testcase name="consentMissingScopeAndDeveloperFailureNeverReturnATokenOrExposeServerText" classname="cz.zamerovac.app.DriveAuthorizationTest" time="0.062"/>
+  <testcase name="sdkIntegrationDoesNotRequestBroadAccountsContactsPhoneOrSmsPermissions" classname="cz.zamerovac.app.DriveAuthorizationTest" time="0.11"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

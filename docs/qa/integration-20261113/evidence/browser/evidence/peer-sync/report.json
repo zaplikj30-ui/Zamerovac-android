@@ -1,0 +1,32 @@
+{
+  "suite": "peer-sync",
+  "sha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+  "startedAt": "2026-11-13T12:11:58.817Z",
+  "syntheticOnly": true,
+  "cases": [
+    {
+      "name": "offline-folder-cycle-repair-is-visible-reachable-and-exact",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    },
+    {
+      "name": "menu-settings-offline-and-data-preserved",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    },
+    {
+      "name": "explicit-approval-full-code-reject-back-and-stale-session",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    },
+    {
+      "name": "untrusted-names-pending-errors-and-cloud-isolation",
+      "status": "passed",
+      "steps": [],
+      "evidence": []
+    }
+  ]
+}

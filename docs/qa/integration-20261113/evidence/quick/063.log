@@ -1,0 +1,10 @@
+PASS laser-precision/dimension
+PASS laser-precision/line
+PASS laser-precision/arrow
+PASS laser-precision/circle
+PASS laser-precision/ellipse
+PASS laser-precision/target
+PASS laser-precision/chain
+PASS laser-precision/cumulative
+PASS laser-precision/polyline
+PASS laser-precision/angle
