@@ -1,6 +1,27 @@
 # QA-only: HOME Chromium – aktuální stav a historie (13. 11. 2026)
 
-## AKTUÁLNÍ: druhý HOME běh zodpovědně BLOCKED, nová neaktivní oprava
+## Aktuální: Windows příčina neprokázána, cílená diagnostika připravena, HOME BLOCKED
+
+Poslední skutečný Windows [run #43497273184](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/43497273184), QA `46f8051d8f1105a9b819f6f6db7455984e3ab5d7`, skončil **10 PASS / 1 FAIL / 0 SKIP**. FAIL je pozitivní TEMP fixture `verifyFile`, nikoli důkaz selhání instalované Chromium binárky. Přenos GITHUB_ENV a LF/CRLF fixture zde již **PASS**. Chromium, sandbox, CDP, JobObject a UI **NOT RUN**. Marker odstraněn, následný run #43497530293 **SKIPPED**, starý one-shot spotřebován. Žádná další aktivace není schválena.
+
+Linux stejnou TEMP fixture úspěšně ověří. Ani oba Windows logy neobsahují vstupní/native realpath dvojici. Namespace-only oprava poslední skutečný FAIL neodstranila. **TEMP alias/8.3, další namespace nebo rozdíl Node API zůstávají hypotézy. Definitivní oprava ani Windows PASS se netvrdí.** Fixture se nepřesouvá na jinou cestu a nezačíná automaticky schvalovat výsledek realpath.
+
+Při stejném odmítnutí nyní chyba obsahuje jediný kompaktní JSON `pathDiagnostic`:
+
+- `inputNamespace` / `nativeNamespace`: DOS, extended DOS/UNC, NT, device nebo jiný tvar; žádné skutečné názvy.
+- `comparison`: shoda kořene/listu, počty komponent, nulově číslované pozice rozdílu a pozice **kandidátů** krátkých názvů `~<číslo>`. Indexy jsou od komponenty za kořenem, nejvýše 16; `truncated` značí zkrácení rozdílů. Kandidát není důkaz 8.3 aliasu.
+- `portable`: zda další read-only `fs.realpathSync()` souhlasí se vstupem/native API. To odliší rozdíl pozorovaných API od samotné normalizace namespace/case.
+- `fileIdentity`: zda jsou dostupné nenulové file IDs a zda se dvojice dev/ino shoduje; také regular/single-link. Shoda identit je pouze diagnostický údaj, **nikdy povolení nekanonické cesty**. Při výměně během diagnostiky jde jen o okamžitý snímek, nikoli důkaz bezpečnosti.
+
+Diagnostika čte jen dvě metadata a jeden portable realpath, nic nespouští ani nezapisuje. Nevypisuje cesty, komponenty, jejich hashe, environment ani text OS chyb. Chyba či nedostupná/zero-ID diagnostika stále končí **HOME BLOCKED**, nikdy fallback/PASS. Původní přesná schválená vstupní cesta, canonicalPathMatches, lstat celého řetězce, hardlink/dev/ino, kompletní SHA256, kontroly výměny, file lock, sandbox a JobObject se nerozšiřují ani nevypínají.
+
+**Autorské ověření:** nejprve negativní test chybějící evidence FAIL, potom pozitivní/negativní Linux fixture a Windows API modely v `tests/home_qa_integrity.js`. Doplněna skutečná mutace při hashování, výměna pojmenovaného souboru, chybný očekávaný digest a native Windows junction test bez symlink privilege. Linux ji výslovně SKIP; na Windows musí proběhnout. Přesný finální SHA, společná regrese a logy jsou v aktuálním předání PR #124. Linux model není Windows runtime.
+
+**Další doporučený krok:** jediná cílená nezávislá kontrola Kontrolora 40 tohoto diffu a finálního SHA. Až po ní a samostatném výslovném souhlasu vlastníka nejprve fixture-only Windows `node --test tests/home_qa_integrity.js` na přesném čistém checkoutu; při FAIL zachovat pouze redigovaný `pathDiagnostic` a STOP před Chromium. Očekávání této revize: **15 PASS / 0 FAIL / 0 SKIP** na Windows. Z něj určit doložený rozdíl, teprve pak případnou minimální opravu. **Není to souhlas ke spuštění ani návod k reaktivaci spotřebovaného workflow.** Žádný nový workflow, RUN marker, Actions ani HOME nebyl v této etapě vytvořen/spuštěn. Záznamy níže jsou historie, jejich staré RUN/SHA/pokyny se nepoužívají.
+
+## Archiv předchozího stavu (před run #43497273184)
+
+### Historicky: druhý HOME běh BLOCKED, tehdy neaktivní oprava
 
 **Poslední skutečný HOME běh:** [#43491631712](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/43491631712), ověřený QA SHA `26ff139c48d05c6e2e676442b3b157906a3f11e3`, produkt `ae3b4df53c25557f28b4a25ccb65adc2abdff639`, Windows `ZamerovacQA`. Přesná SHA a clean checkout, offline balíčky Playwright/playwright-core1.62.1 a NODE_PATH **PASS**; skutečný Node `--test tests/home_qa_integrity.js` **8 PASS / 2 FAIL**; Chromium/sandbox/CDP/3 smoke **NOT RUN**. Artifact 0, workflow FAIL a bezpečné zastavení. RUN marker odstraněn v `5e8c7626c3ca6d3ab54658dc2d523f9c4bcc3971`, následný [#43491805763](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/43491805763) **SKIPPED**; starý workflow `.github/workflows/browser-smoke-offline-20261113.yml` spotřebován a odstraněn z REVIEW, RUN je inertní.
 

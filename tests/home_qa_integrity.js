@@ -136,6 +136,7 @@ test('pin verifier rejects changed bytes, wrong paths, symlinks and hardlinks',(
   const binary=path.join(dir,'fixture'),bytes=Buffer.from('7f454c4601020304','hex');fs.writeFileSync(binary,bytes);
   const profile={path:binary,sha256:crypto.createHash('sha256').update(bytes).digest('hex'),magic:'7f454c46'};
   assert.equal(verifyFile(binary,profile).sha256,profile.sha256);
+  assert.throws(()=>verifyFile(binary,{...profile,sha256:'0'.repeat(64)}),/hash/);
   assert.throws(()=>verifyFile(binary,{...profile,path:binary+'-other'}));
   fs.appendFileSync(binary,'changed');assert.throws(()=>verifyFile(binary,profile),/hash/);
   fs.writeFileSync(binary,bytes);
@@ -145,6 +146,119 @@ test('pin verifier rejects changed bytes, wrong paths, symlinks and hardlinks',(
    fs.symlinkSync(dir,path.join(dir,'parent-link'));const redirected=path.join(dir,'parent-link','fixture');
    assert.throws(()=>verifyFile(redirected,{...profile,path:redirected}),/redirected/);
   }
+ }finally{fs.rmSync(dir,{recursive:true,force:true})}
+});
+// Exercise the production module with deterministic filesystem observations. These
+// Windows API models are not a Windows runtime result; real fixtures remain above.
+function identityWithFs(overrides){
+ const module={exports:{}};
+ vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../tools/qa-browser-identity.cjs'),'utf8'),{
+  module,exports:module.exports,Buffer,process,require(id){
+   if(id==='node:fs')return new Proxy(fs,{get(target,key){return key in overrides?overrides[key]:target[key]}});
+   if(id==='./qa-browser-profiles.json')return profiles;
+   return require(id);
+  }
+ });
+ return module.exports;
+}
+function mismatchDiagnostic(file,canonical,{portable=canonical,same=true,probeError=false,zeroId=false}={}){
+ const stat={isSymbolicLink:()=>false,isFile:()=>true,dev:1n,ino:2n,nlink:1n};
+ const realpath=Object.assign(()=>{if(probeError)throw Object.assign(Error('PRIVATE ERROR '+file),{code:'EACCES'});return portable},{native:()=>canonical});
+ const model=identityWithFs({realpathSync:realpath,lstatSync(value){
+  if(probeError&&value===canonical)throw Error('PRIVATE ERROR '+value);
+  return {...stat,ino:zeroId?0n:!same&&value===canonical?3n:2n};
+ },openSync(){throw Error('must block before open')}});
+ let failure;
+ try{model.verifyFile(file,{path:file},'win32')}catch(e){failure=e}
+ assert.equal(failure?.code,'HOME_BLOCKED');
+ assert.match(failure.message,/Chromium path resolves elsewhere; pathDiagnostic=/);
+ const diagnostic=JSON.parse(failure.message.split('; pathDiagnostic=')[1]);
+ assert(failure.message.length<3000,'bounded diagnostic');
+ for(const secret of ['PrivateUser','SecretFolder','fixture.exe','PRIVATE ERROR'])assert(!failure.message.includes(secret));
+ return diagnostic;
+}
+test('canonical mismatch reports redacted alias, API and file-identity evidence without permitting it',()=>{
+ const file='C:\\Users\\PRIVAT~1\\SecretFolder\\fixture.exe';
+ const canonical='C:\\Users\\PrivateUser\\SecretFolder\\fixture.exe';
+ const d=mismatchDiagnostic(file,canonical,{portable:file});
+ assert.equal(d.schema,1);
+ assert.equal(d.inputNamespace,'dos');
+ assert.equal(d.nativeNamespace,'dos');
+ assert.equal(d.comparison.equivalent,false);
+ assert.deepEqual(Array.from(d.comparison.differentComponents),[1]);
+ assert.deepEqual(Array.from(d.comparison.shortNameInputComponents),[1]);
+ assert.equal(d.comparison.leafSame,true);
+ assert.equal(d.portable.inputEquivalent,true);
+ assert.equal(d.portable.nativeEquivalent,false);
+ assert.equal(d.fileIdentity.same,true);
+ // This proves a modelled same-file spelling mismatch, not the cause on HOME.
+ assert.equal(mismatchDiagnostic(file,canonical,{same:false}).fileIdentity.same,false);
+ const other=mismatchDiagnostic('C:\\SecretFolder\\fixture.exe','D:\\SecretFolder\\different.exe');
+ assert.equal(other.comparison.rootSame,false);assert.equal(other.comparison.leafSame,false);
+ const unavailable=mismatchDiagnostic(file,canonical,{probeError:true});
+ assert.equal(unavailable.portable.available,false);
+ assert.equal(unavailable.fileIdentity.available,false);
+ assert.equal(mismatchDiagnostic(file,canonical,{zeroId:true}).fileIdentity.available,false);
+ for(const [value,kind] of [
+  ['\\\\?\\C:\\Users\\PrivateUser\\SecretFolder\\fixture.exe','extended-dos'],
+  ['\\\\?\\UNC\\PrivateServer\\SecretFolder\\fixture.exe','extended-unc'],
+  ['\\??\\C:\\SecretFolder\\fixture.exe','nt'],
+  ['\\\\.\\C:\\SecretFolder\\fixture.exe','device'],
+  ['\\\\PrivateServer\\SecretFolder\\fixture.exe','unc']]){
+  assert.equal(mismatchDiagnostic(file,value).nativeNamespace,kind);
+ }
+});
+test('Windows equivalent canonical spellings pass all binary checks; changed target and reparse points block (API model)',()=>{
+ const file='C:\\qa\\fixture.exe',bytes=Buffer.from('4d5a010203040506','hex');
+ const stat={isSymbolicLink:()=>false,isFile:()=>true,nlink:1,dev:1,ino:2,size:bytes.length,mtimeMs:1};
+ const profile={path:file,magic:'4d5a',sha256:crypto.createHash('sha256').update(bytes).digest('hex')};
+ const readSync=(fd,buffer,offset,length,position)=>bytes.copy(buffer,offset,position,position+length);
+ function model(canonical,redirected,overrides={}){
+  const realpath=Object.assign(()=>canonical,{native:()=>canonical});
+  return identityWithFs({realpathSync:realpath,lstatSync:p=>({...stat,isSymbolicLink:()=>p===redirected}),
+   openSync:()=>7,fstatSync:()=>stat,readSync,closeSync:()=>{},...overrides});
+ }
+ for(const canonical of [file,'\\\\?\\C:\\qa\\fixture.exe','c:\\QA\\FIXTURE.EXE','C:/qa/fixture.exe'])
+  assert.equal(model(canonical).verifyFile(file,profile,'win32').sha256,profile.sha256);
+ for(const canonical of ['C:\\qa\\other.exe','D:\\qa\\fixture.exe'])
+  assert.throws(()=>model(canonical).verifyFile(file,profile,'win32'),/resolves elsewhere/);
+ for(const redirected of [file,'C:\\qa'])
+  assert.throws(()=>model(file,redirected).verifyFile(file,profile,'win32'),/redirected/);
+ for(const overrides of [{fstatSync:()=>({...stat,nlink:2})},{lstatSync:()=>({...stat,ino:3})}])
+  assert.throws(()=>model(file,undefined,overrides).verifyFile(file,profile,'win32'),/one regular non-linked file/);
+ // The approved input remains literal, even when an alternative spelling could
+ // identify the same file. Only realpath's equivalent output is normalized.
+ assert.throws(()=>model(file).verifyFile(file.toUpperCase(),profile,'win32'),/unapproved/);
+});
+test('real binary mutation during hashing and name replacement fail closed',()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'qa-identity-race-'));
+ try{
+  const file=path.join(dir,'fixture'),other=path.join(dir,'other');
+  const bytes=Buffer.from('7f454c4601020304','hex');fs.writeFileSync(file,bytes);
+  const profile={path:file,magic:'7f454c46',sha256:crypto.createHash('sha256').update(bytes).digest('hex')};
+  let changed=false;
+  const mutating=identityWithFs({readSync(...args){const count=fs.readSync(...args);
+   if(!changed&&args[3]>4){changed=true;fs.appendFileSync(file,'changed-during-read')}
+   return count;
+  }});
+  assert.throws(()=>mutating.verifyFile(file,profile),/bytes\/hash changed/);assert(changed);
+  fs.writeFileSync(file,bytes);fs.writeFileSync(other,bytes);
+  let stats=0;
+  const replacing=identityWithFs({fstatSync(fd){const stat=fs.fstatSync(fd);
+   if(++stats===2){fs.renameSync(file,path.join(dir,'retained'));fs.renameSync(other,file)}
+   return stat;
+  }});
+  assert.throws(()=>replacing.verifyFile(file,profile),/replaced during verification/);
+ }finally{fs.rmSync(dir,{recursive:true,force:true})}
+});
+test('junction fixture rejects directory redirection without Windows symlink privilege', {skip:process.platform!=='win32'?'native Windows junction requires Windows':false},()=>{
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'qa-junction-'));
+ try{
+  const target=path.join(dir,'target'),junction=path.join(dir,'junction');fs.mkdirSync(target);
+  const file=path.join(target,'fixture'),bytes=Buffer.from('4d5a01020304','hex');fs.writeFileSync(file,bytes);
+  fs.symlinkSync(target,junction,'junction');
+  const redirected=path.join(junction,'fixture');
+  assert.throws(()=>verifyFile(redirected,{path:redirected,magic:'4d5a',sha256:crypto.createHash('sha256').update(bytes).digest('hex')}),/redirected/);
  }finally{fs.rmSync(dir,{recursive:true,force:true})}
 });
 test('real product registration and bytes agree with all 96 pinned scenario identities',async()=>{
