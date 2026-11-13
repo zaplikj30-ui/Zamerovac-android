@@ -20,7 +20,7 @@ def env(run="43195207268"):
         GITHUB_RUN_ID=run, GITHUB_RUN_ATTEMPT="1")
 
 def browser():
-    return {"schema":4, "kind":"browser","status":"PASS",
+    return {"schema":4, "kind":"browser","mode":"--all","status":"PASS",
             "sourceSha":SHA,"validatorSha":GATE,"runId":"43195207268",
             "runAttempt":1,
             "counts":{"PASS":23,"FAIL":0,"SKIP":0,"NOT RUN":0},
@@ -40,7 +40,7 @@ def jvm():
     ids=[
         "cz.zamerovac.app.SafSyncV2Test.driveStagedAckMustNotPublishAfterLocalAuthorityLostInsideProviderCommit",
         "cz.zamerovac.app.SafSyncV2Test.safDirectAckMustNotPublishAfterLocalAuthorityLostInsideProviderWrite"]
-    return {"schema":4,"kind":"jvm","status":"PASS","sourceSha":SHA,
+    return {"schema":4,"kind":"jvm","mode":"sync116-home-jvm","status":"PASS","sourceSha":SHA,
             "validatorSha":GATE,"runId":"43195207268","runAttempt":1,
             "counts":{"PASS":511,"FAIL":2,"ERROR":0,"SKIP":0},
             "gradle":{"status":"FAIL","exit_code":1},
@@ -89,7 +89,7 @@ class CurrentRunEvidenceTests(unittest.TestCase):
     def test_browser_bad_counts_dirty_or_wrong_validation_identity_blocked(self):
         baseline=browser()
         for field,value in (
-            ("status","NOT RUN"),("status","FAIL"),
+            ("status","NOT RUN"),("status","FAIL"),("mode","--smoke"),
             ("sourceSha","c"*40),("validatorSha","d"*40),
             ("runAttempt",2),("runId","9"),
             ("coverage",{"status":"PASS","expectedCases":92,"actualCases":91}),
@@ -165,6 +165,7 @@ class CurrentRunEvidenceTests(unittest.TestCase):
         self.assertTrue(QA.validate_report(good,"jvm",env(),SHA,GATE))
         for change in (
             {"status":"NOT RUN"},
+            {"mode":"not-jvm"},
             {"gradle":{"status":"PASS","exit_code":0}},
             {"counts":{"PASS":510,"FAIL":3,"ERROR":0,"SKIP":0}},
             {"counts":{"PASS":510,"FAIL":2,"ERROR":0,"SKIP":1}},
