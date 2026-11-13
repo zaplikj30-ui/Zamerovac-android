@@ -43,6 +43,14 @@ Tento jediný Gradle běh vždy obsahuje **obě původní skutečně FAIL** fyzi
 
 Nové jednotkové testy: `tests/test_sync116_evidence.py`, rozšířené `tests/test_home_qa_gate.py`, `tests/test_sync116_home_qa.py` a `tests/browser_qa_runner.js`. Pokrývají cizího triggering actor, attempt 2/missing run ID, stale/poškozené/missing reporty, nesouhlas SHA/validator/counts, root/WSL fallback/cache, chybějící JVM 513/511+2, dirty tracked soubor a změnu SHA s neměnným HEAD. Výsledky mají status **NOT RUN**, dokud nejsou skutečně spuštěny na důvěryhodném checkoutu; syntaktická/V8 izolovaná kontrola není Python/Node runtime PASS.
 
+## QA117-SEC-05 – přesné identity povinných testů
+
+**Zdroj pravdy:** `tools/sync116_case_manifest.json` je QA-only schválený manifest odvozený výhradně od připnutého produktu PR #116 SHA `1527e3377609633c554195b0641e02e3cfb5fb5e`. Obsahuje doslovná jména všech **23 Chromium sad a 92 pojmenovaných scénářů** ve zdrojovém pořadí, včetně dynamicky tvořených názvů v drawing/latency/quality-regressions/gallery-readability, a schválená skutečná Java `@Test` jména pro **2 SyncAckReconciliationTest E2E, 24 SyncReceiptSafetyTest a 23 DatabaseInstallEvidenceTest**. Všechny tři Java soubory byly na přesném SHA při sestavení manifestu porovnány podle názvů a Git blob SHA.
+
+**Dvě vrstvy kontroly:** pinned `local-browser-qa.cjs` odmítne chybějící/přidanou/přejmenovanou či přeřazenou suite nebo scénář i při čísle 92; `sync116_evidence.py` nezávisle porovná celou uloženou 23×case identitu podle manifestu. `sync116_home_qa.py` ověřuje požadovaných 49 `PASS` JUnit IDs přímo z čerstvých XML, zatímco nezávislý `sync116_evidence.py` odmítne jejich chybějící/přejmenované identity v reportu. `suite0`…`suite22`, fake `p0`…`p510`, chybějící audio nebo vynechaný povinný E2E/24/23 při zachovaných počtech **musí skončit FAIL**.
+
+**Neměněno:** celkových 64 JUnit XML / 513 metod, 511 PASS + **přesně dvě skutečné očekávané FAIL**, raw Gradle FAIL/exit1, source/validator SHA, run/attempt evidence, strict lint, offline závislosti, owner/rerun a nonroot WSL. Zkušební negativní fixture používá syntetické doplňkové `FixtureOtherTest` pouze pro doplnění počtu 511 v izolovaném unittestu, nikoli jako důkaz reálných JUnit metod. `PASS` pro samotné Python/Node testy může být udělen pouze po spuštění v autentizovaném checkoutu (jinak **NOT RUN/BLOCKED**).
+
 ## Native/PDF a provozní omezení
 
 Samostatné native/SDK a PDF *skutečné* testy jsou v této etapě **NOT RUN**: nemáme ověřený živý stav WSL SDK, PDF parseru/rendereru ani offline artefaktů. Bez prokázaných schválených závislostí se nespouštějí, bez `pip install` nebo síťových stahování, bez sestavení APK. Fyzický Samsung/S Pen/Bosch/SAF, živý Drive, plný disk a restart jsou také **NOT RUN**.
