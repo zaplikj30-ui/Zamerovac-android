@@ -1,0 +1,100 @@
+name: Zaměřovač - canonical owner-only HOME QA, no APK
+on:
+  push:
+    branches: [qa/sync116-jvm-20261113]
+    paths: ['.github/workflows/home-qa-one-shot.yml']
+permissions:
+  contents: read
+concurrency:
+  group: canonical-home-qa-qa/sync116-jvm-20261113
+  cancel-in-progress: false
+jobs:
+  trusted-qa:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.run_attempt == 1 && github.ref == 'refs/heads/qa/sync116-jvm-20261113' && github.event_name == 'push' }}
+    runs-on: [self-hosted, Windows, X64, zamerovac-qa]
+    timeout-minutes: 50
+    env:
+      CI: '1'
+      PYTHONUTF8: '1'
+      TESTED_SHA: '1527e3377609633c554195b0641e02e3cfb5fb5e'
+    steps:
+      - name: Verify owner service and installed tools
+        shell: cmd
+        run: |
+          if /I not "%USERNAME%"=="ZamerovacQA" exit /b 1
+          if not exist "C:\actions-runner\tools\MinGit-2.56.0.4\cmd\git.exe" exit /b 1
+          if not exist "C:\actions-runner\tools\Python313\python.exe" exit /b 1
+          echo C:\actions-runner\tools\MinGit-2.56.0.4\cmd>>"%GITHUB_PATH%"
+          echo C:\actions-runner\tools\Python313>>"%GITHUB_PATH%"
+      - name: Read-only tested source at literal SHA
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: zaplikj30-ui/Zamerovac-android
+          ref: implement/sync-core-b-20261112
+          path: source
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+      - name: Read-only triggering workflow for self lint
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          path: recipe
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+      - name: Read-only trusted validator pinned to reviewed OWNER SHA
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: zaplikj30-ui/Zamerovac-android
+          ref: infra/chat39-sync116-qa-20261113
+          path: gate
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+      - name: Check owner branch SHA and separate validator BEFORE running source code
+        id: source_gate
+        shell: cmd
+        run: |
+          cd /d "%GITHUB_WORKSPACE%\source"
+          for /f %%H in ('git rev-parse HEAD') do set "ACTUAL_SOURCE=%%H"
+          if not defined ACTUAL_SOURCE exit /b 1
+          if /I not "%ACTUAL_SOURCE%"=="1527e3377609633c554195b0641e02e3cfb5fb5e" exit /b 1
+          cd /d "%GITHUB_WORKSPACE%\gate"
+          for /f %%H in ('git rev-parse HEAD') do set "ACTUAL_GATE=%%H"
+          if not defined ACTUAL_GATE exit /b 1
+          if /I not "%ACTUAL_GATE%"=="2997cd46000a038497e14497a0fba6b8d2d29a2b" exit /b 1
+          python tools\home_qa_gate.py lint-workflow "..\recipe\.github\workflows\home-qa-one-shot.yml" --strict
+          if errorlevel 1 exit /b 1
+          python -m unittest discover -s tests -p test_home_qa_gate.py -v
+          if errorlevel 1 exit /b 1
+          python -m unittest discover -s tests -p test_sync116_home_qa.py -v
+          if errorlevel 1 exit /b 1
+          python -m unittest discover -s tests -p test_sync116_evidence.py -v
+          if errorlevel 1 exit /b 1
+          python tools\sync116_evidence.py init --kind jvm --root "%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs" --source-sha 1527e3377609633c554195b0641e02e3cfb5fb5e --validator-sha 2997cd46000a038497e14497a0fba6b8d2d29a2b
+          if errorlevel 1 exit /b 1
+          echo TRUSTED_OWNER_SOURCE_BRANCH=implement/sync-core-b-20261112 TESTED_SOURCE_SHA=%ACTUAL_SOURCE% GATE_SHA=%ACTUAL_GATE%
+      - name: Offline WSL full JVM and ACK evidence; one Gradle worker, no APK
+        shell: cmd
+        run: |
+          cd /d "%GITHUB_WORKSPACE%\gate"
+          python tools\sync116_home_qa.py windows-wsl --source "%GITHUB_WORKSPACE%\source" --gate "%GITHUB_WORKSPACE%\gate" --expected-sha 1527e3377609633c554195b0641e02e3cfb5fb5e --validator-sha 2997cd46000a038497e14497a0fba6b8d2d29a2b --run-id "%GITHUB_RUN_ID%" --run-attempt "%GITHUB_RUN_ATTEMPT%" --output "%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs\%GITHUB_RUN_ID%-%GITHUB_RUN_ATTEMPT%\jvm"
+          if errorlevel 1 exit /b 1
+          python tools\sync116_evidence.py verify --kind jvm --root "%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs" --source-sha 1527e3377609633c554195b0641e02e3cfb5fb5e --validator-sha 2997cd46000a038497e14497a0fba6b8d2d29a2b
+          if errorlevel 1 exit /b 1
+      - name: Validate current-run evidence before possible upload
+        id: evidence_checked
+        if: always() && steps.source_gate.outcome == 'success'
+        shell: cmd
+        run: |
+          cd /d "%GITHUB_WORKSPACE%\gate"
+          python tools\sync116_evidence.py inspect --kind jvm --root "%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs" --source-sha 1527e3377609633c554195b0641e02e3cfb5fb5e --validator-sha 2997cd46000a038497e14497a0fba6b8d2d29a2b
+          if errorlevel 1 exit /b 1
+      - name: Upload synthetic PR116 JVM result only; raw Gradle remains FAIL
+        if: always() && steps.source_gate.outcome == 'success' && steps.evidence_checked.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: canonical-home-sync116-jvm-1527e3377609633c554195b0641e02e3cfb5fb5e-${{ github.run_id }}-${{ github.run_attempt }}
+          path: qa-evidence/Zamerovac-QA/runs/${{ github.run_id }}-${{ github.run_attempt }}/jvm/results.json
+          retention-days: 3
+          if-no-files-found: error
