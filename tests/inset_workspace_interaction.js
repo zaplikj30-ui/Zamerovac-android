@@ -99,4 +99,39 @@ assert.deepEqual(sandbox.opens,['note:note-1'],'Second separate tap opens full n
  note.media=['detail-1'];
  note.text='Detail zásuvky';
 }
+// New drawings must stay on the existing handle positions: left/right resize, top rotate.
+{
+ const seen={bows:0,resizeLines:0,centerArrows:0,translations:[]};
+ const c={
+  save(){},restore(){},translate(x,y){seen.translations.push({x,y})},rotate(){},
+  beginPath(){},moveTo(x,y){
+   if(x===-12&&y===0)seen.resizeLines++;
+   const cx=note.insetX+note.insetWidth/2,cy=note.insetY+note.insetWidth/2;
+   if((Math.abs(x-cx)===8&&y===cy)||(Math.abs(y-cy)===8&&x===cx))seen.centerArrows++;
+  },lineTo(){},quadraticCurveTo(){seen.bows++},
+  closePath(){},fill(){},stroke(){},arc(){},
+  setLineDash(){},strokeRect(){},drawImage(){},fillText(){},
+  measureText(t){return {width:String(t).length*9}},fillRect(){}
+ };
+ sandbox.selected=note.id;
+ sandbox.window.renderPhotoInset(c,note,sandbox.window.__detailPhotoCache['detail-1'],()=>{});
+ assert.equal(seen.resizeLines,2,'Both original side handles must show a two-way resize arrow');
+ assert.equal(seen.bows,2,'Top rotation handle shows two open bowed arrows, not a circular ring');
+ assert.equal(seen.centerArrows,4,'Center handle shows four directional arrowheads for moving the inset');
+ const width=note.insetWidth;
+ const centerX=note.insetX+width/2,centerY=note.insetY+width/2;
+ const initialAnchor={...note.a};
+ drag([note.insetX-15,centerY],[note.insetX-35,centerY]);
+ assert.ok(note.insetWidth>width,'Left-side handle must still enlarge photo');
+ assert.ok(Math.abs(note.insetX+note.insetWidth/2-centerX)<1e-8,'Left-side resize keeps center X');
+ assert.ok(Math.abs(note.insetY+note.insetWidth/2-centerY)<1e-8,'Left-side resize keeps center Y');
+ assert.equal(note.a.x,initialAnchor.x,'Resize must not move arrow anchor X');
+ assert.equal(note.a.y,initialAnchor.y,'Resize must not move arrow anchor Y');
+ const resized=note.insetWidth;
+ drag([centerX,note.insetY-33],[centerX+25,note.insetY-20]);
+ assert.notEqual(note.insetRotation,0,'Original top handle must still rotate photo');
+ assert.equal(note.insetWidth,resized,'Rotation must not resize photo');
+ assert.equal(note.a.x,initialAnchor.x,'Rotation must not move arrow anchor X');
+ assert.equal(note.a.y,initialAnchor.y,'Rotation must not move arrow anchor Y');
+}
 console.log('OK: move outside photo, independent arrow anchor, caption, resize, persistence');

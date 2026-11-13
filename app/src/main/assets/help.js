@@ -331,7 +331,7 @@ const chapters=[
     "intro": "Poznámky ve fotografii mohou obsahovat další obrázky nebo vlastní detailní kótování.",
     "steps": [
       "U bodové poznámky otevři její podrobnosti a vlož potřebné fotografie.",
-      "Vložený obrázek umísti do pracovní fotografie a podle dostupných úchopů nastav jeho polohu, velikost a natočení.",
+      "Po označení vložené fotografie ji přesuň tažením za středové čtyřsměrné šipky. Obousměrné šipky na levé i pravé straně mění velikost a dvě otevřené obloukové šipky nad fotografií slouží k otáčení.",
       "Do detailu obrázku lze přidávat vlastní kóty. Po návratu do hlavní fotografie ověř, že poznámka i její detail zůstaly uloženy.",
       "Při více přílohách se orientuj podle jejich seznamu nebo galerie."
     ],
@@ -343,6 +343,9 @@ const chapters=[
       "detail",
       "vložená fotografie",
       "fotka do fotky",
+      "zvětšení detailu",
+      "obloukové šipky",
+      "otáčení fotografie",
       "stoh",
       "náhled"
     ]

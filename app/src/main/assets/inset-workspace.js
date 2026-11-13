@@ -71,16 +71,21 @@
     ctx.fillStyle='#231a30';ctx.fillText(label,p.x,p.y+1)}
   ctx.restore();
  }
- // Rotace zobrazená jako dvě lehké šipky nad obrázkem, ne nové tlačítko v kolečku.
+ // Pouze vizuální změna: dvě samostatné otevřené klenuté šipky, nikoliv kruh.
+ // Dotykový bod pro otáčení zůstává beze změny v hitTest().
  function rotationHandle(c,p,g){
   c.save();c.translate(p.x,p.y);c.rotate(g.angle);
   c.lineCap='round';c.lineJoin='round';
-  c.strokeStyle='rgba(255,255,255,.88)';c.fillStyle='rgba(255,255,255,.88)';
+  c.strokeStyle='rgba(255,255,255,.92)';c.fillStyle='rgba(255,255,255,.92)';
   c.shadowColor='rgba(0,0,0,.7)';c.shadowBlur=4;c.lineWidth=2.7;
   for(const side of [-1,1]){
-   const a=side*3,b=side*17;
-   c.beginPath();c.moveTo(a,0);c.lineTo(b,0);c.stroke();
-   c.beginPath();c.moveTo(b,0);c.lineTo(b-side*7,-6);c.lineTo(b-side*7,6);c.closePath();c.fill();
+   const tipX=side*19;
+   c.beginPath();c.moveTo(side*3,5);
+   c.quadraticCurveTo(side*11,-18,tipX,3);
+   c.stroke();
+   c.beginPath();c.moveTo(tipX,3);
+   c.lineTo(side*11,-1);c.lineTo(side*16,-6);
+   c.closePath();c.fill();
   }
   c.restore();
  }
@@ -183,20 +188,42 @@
   if(show&&active?.item===it&&active.kind==='anchor'&&active.changed&&!render.exporting)
    handle(c,g.anchor,'',true);
   if(isSelected){
-   // Referenční ImageMeter: poloprůhledný středový úchop pro tažení fotografie.
+   // Zachováme původní poloprůhledný kruh a dovnitř pouze dokreslíme
+   // čtyři malé šipky: tažením za střed se detail přesouvá.
    c.save();c.fillStyle='rgba(255,255,255,.46)';
    c.strokeStyle='rgba(38,38,38,.55)';c.lineWidth=1.4;
    c.setLineDash([3,3]);
-   c.beginPath();c.arc(g.cx,g.cy,11,0,Math.PI*2);c.fill();c.stroke();c.restore();
-   // Jemné bílé trojúhelníkové úchopy u obou stran a otáčení nahoře.
+   c.beginPath();c.arc(g.cx,g.cy,11,0,Math.PI*2);c.fill();c.stroke();
+   c.setLineDash([]);
+   c.strokeStyle='rgba(35,35,35,.9)';c.fillStyle='rgba(35,35,35,.9)';
+   c.lineWidth=1.5;
+   c.beginPath();
+   c.moveTo(g.cx-5,g.cy);c.lineTo(g.cx+5,g.cy);
+   c.moveTo(g.cx,g.cy-5);c.lineTo(g.cx,g.cy+5);c.stroke();
+   for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+    const tipX=g.cx+dx*8,tipY=g.cy+dy*8;
+    const baseX=g.cx+dx*4,baseY=g.cy+dy*4;
+    c.beginPath();c.moveTo(tipX,tipY);
+    c.lineTo(baseX-dy*2.4,baseY+dx*2.4);
+    c.lineTo(baseX+dy*2.4,baseY-dx*2.4);
+    c.closePath();c.fill();
+   }
+   c.restore();
+   // Na obou původních postranních úchopech obousměrné šipky pro změnu velikosti.
+   // Souřadnice i dotykové oblasti v hitTest() zůstávají beze změny.
    for(const side of [-1,1]){
     const p=turn({x:side*(g.w/2+15),y:0},g);
     c.save();c.translate(p.x,p.y);c.rotate(g.angle);
-    c.fillStyle='rgba(255,255,255,.72)';
-    c.strokeStyle='rgba(55,55,55,.65)';c.lineWidth=1.3;c.setLineDash([4,3]);
-    c.beginPath();
-    c.moveTo(side*17,0);c.lineTo(-side*7,-16);c.lineTo(-side*7,16);c.closePath();
-    c.fill();c.stroke();c.restore();
+    c.strokeStyle='rgba(255,255,255,.92)';c.fillStyle='rgba(255,255,255,.92)';
+    c.shadowColor='rgba(0,0,0,.7)';c.shadowBlur=4;c.lineWidth=2.7;
+    c.lineCap='round';c.lineJoin='round';
+    c.beginPath();c.moveTo(-12,0);c.lineTo(12,0);c.stroke();
+    for(const direction of [-1,1]){
+     const x=direction*13;
+     c.beginPath();c.moveTo(x,0);c.lineTo(x-direction*7,-6);
+     c.lineTo(x-direction*7,6);c.closePath();c.fill();
+    }
+    c.restore();
    }
    rotationHandle(c,turn({x:0,y:-g.h/2-33},g),g);
   }
