@@ -195,42 +195,122 @@ def run_linux(source: Path, expected: str, output: Path,
     return 0 if result["product_acceptance"]["status"] == "PASS" else 1
 
 
-def launch_wsl(source: Path, gate: Path, expected: str, output: Path) -> int:
+def launch_wsl(source: Path, gate: Path, expected: str, output: Path,
+               validator_sha: str, run_id: str, attempt: str) -> int:
     require(platform.system() == "Windows", "WSL launch only from owner Windows host")
     require(expected == EXPECTED_SHA, "unsupported product SHA")
+    require(os.environ.get("GITHUB_RUN_ID") == run_id and
+            os.environ.get("GITHUB_RUN_ATTEMPT") == attempt, "run identity mismatch")
+    spec = importlib.util.spec_from_file_location("trusted_owner_gate",
+                                                  gate / "tools/home_qa_gate.py")
+    require(spec is not None and spec.loader is not None, "trusted validator missing")
+    home = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(home)
+    home.trusted_owner(os.environ)
+    pending_evidence(output, expected, validator_sha, run_id, attempt)
     source_guard(source, expected)
-    require(git(gate, "rev-parse", "HEAD") ==
-            git(ROOT, "rev-parse", "HEAD"), "validator checkout changed")
-    require(not output.exists(), "refuse previous report or evidence overwrite")
-    # Validate the Windows-side real checkout and gate BEFORE WSL. The generated
-    # workflow separately checks both full SHAs and strict-lints its own YAML.
+    require(git(gate, "rev-parse", "HEAD") == validator_sha and
+            not git(gate, "status", "--porcelain"), "validator checkout changed")
+
+    # Existing WSL default user only; fail closed if root/no offline cache.
+    # An independent stdin heartbeat watchdog kills the detached WSL process
+    # group on lost Windows client, including during a timed-out Gradle.
     linux = r'''
 set -Eeuo pipefail
+if [ "$(id -u)" -eq 0 ]; then echo 'BLOCKED root WSL account forbidden' >&2; exit 77; fi
+umask 077
 source_dir="$(wslpath -u "$1")"
 gate_dir="$(wslpath -u "$2")"
 output_dir="$(wslpath -u "$3")"
 expected="$4"
 gate_sha="$5"
+run_id="$6"
+attempt="$7"
+test "$attempt" = "1"
+test -r "$HOME/.gradle/caches/modules-2" && test -d "$HOME/.gradle/caches/modules-2" || {
+ echo 'BLOCKED nonroot Gradle offline cache unavailable' >&2; exit 78; }
+test -x /opt/gradle-8.10.2/bin/gradle || exit 79
 export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 export PATH="$JAVA_HOME/bin:$PATH" CI=1
 test "$(git -C "$source_dir" rev-parse HEAD)" = "$expected"
 test "$(git -C "$gate_dir" rev-parse HEAD)" = "$gate_sha"
-mkdir -p /root/zamerovac-qa-commits
-tmp="$(mktemp -d /root/zamerovac-qa-commits/sync116-XXXXXXXX)"
-trap 'rc=$?; rm -rf "$tmp"; exit "$rc"' EXIT
+tmp="$(mktemp -d "/tmp/zamerovac-sync116-$run_id-XXXXXXXX")"
+child="" 
+watch=""
+cleanup() {
+ rc="$?"
+ trap - EXIT HUP INT TERM
+ if [ -n "$watch" ]; then kill "$watch" 2>/dev/null || true; fi
+ if [ -n "$child" ]; then
+  kill -TERM -- "-$child" 2>/dev/null || true
+  sleep 2
+  kill -KILL -- "-$child" 2>/dev/null || true
+  wait "$child" 2>/dev/null || true
+ fi
+ rm -rf -- "$tmp"
+ exit "$rc"
+}
+trap cleanup EXIT HUP INT TERM
 cp -a "$source_dir/." "$tmp/"
 cd "$tmp"
 test "$(git rev-parse HEAD)" = "$expected"
-timeout -s TERM -k 15s 2700s python3 "$gate_dir/tools/sync116_home_qa.py" linux-run --source "$tmp" --expected-sha "$expected" --output "$output_dir"
+setsid timeout -s TERM -k 15s 2650s python3 "$gate_dir/tools/sync116_home_qa.py" linux-run \
+ --source "$tmp" --expected-sha "$expected" --validator-sha "$gate_sha" \
+ --run-id "$run_id" --run-attempt "$attempt" --output "$output_dir" &
+child="$!"
+(
+ while true; do
+  if IFS= read -r -t 20 heartbeat; then
+   [ "$heartbeat" = "QA117_ALIVE" ] || break
+  else
+   break
+  fi
+ done
+ kill -TERM -- "-$child" 2>/dev/null || true
+ sleep 2
+ kill -KILL -- "-$child" 2>/dev/null || true
+) &
+watch="$!"
+wait "$child"
 '''
-    args = ["wsl.exe", "--distribution", "Zamerovac-Ubuntu-QA", "--user",
-            "root", "--exec", "/bin/bash", "-lc", linux, "_", str(source),
-            str(gate), str(output), expected, git(gate, "rev-parse", "HEAD")]
-    proc = subprocess.run(args, stdin=subprocess.DEVNULL,
-                          check=False, timeout=2800)
-    require(proc.returncode == 0, "WSL JVM safety/acceptance failed: exit=" +
-            str(proc.returncode))
-    return 0
+    args = ["wsl.exe", "--distribution", "Zamerovac-Ubuntu-QA",
+            "--exec", "/bin/bash", "-lc", linux, "_", str(source),
+            str(gate), str(output), expected, validator_sha, run_id, attempt]
+    stop = threading.Event()
+    proc = subprocess.Popen(args, stdin=subprocess.PIPE)
+    def heartbeat():
+        while not stop.is_set():
+            try:
+                if proc.stdin is None:
+                    break
+                proc.stdin.write(b"QA117_ALIVE\n")
+                proc.stdin.flush()
+            except (OSError, ValueError):
+                break
+            if stop.wait(5):
+                break
+    sender = threading.Thread(target=heartbeat, name="sync116-wsl-heartbeat",
+                              daemon=True)
+    sender.start()
+    try:
+        try:
+            rc = proc.wait(timeout=2700)
+        except subprocess.TimeoutExpired as error:
+            if proc.stdin and not proc.stdin.closed:
+                proc.stdin.close()
+            try:
+                proc.wait(timeout=35)
+            except subprocess.TimeoutExpired:
+                proc.kill()
+                proc.wait(timeout=15)
+            raise Stop("WSL timeout: process-tree cleanup requested; QA HOLD") from error
+        require(rc == 0, "nonroot WSL JVM failed or dependency missing: " + str(rc))
+        return 0
+    finally:
+        stop.set()
+        if proc.stdin and not proc.stdin.closed:
+            proc.stdin.close()
+        sender.join(timeout=2)
 
 
 def main(argv=None) -> int:
