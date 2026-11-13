@@ -238,4 +238,4 @@ async function main(){
  await run(mode);
 }
 if(require.main===module)main().catch(error=>{console.error('FAIL local browser QA: '+String(error.stack||error));process.exitCode=1});
-module.exports={createStaticServer,statusReport,initialRecords,killTreeArgs,modes,sourceRoot:root};
+module.exports={createStaticServer,statusReport,initialRecords,killTreeArgs,checkedCases,modes,sourceRoot:root};
