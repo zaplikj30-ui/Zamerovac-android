@@ -1,0 +1,37 @@
+[
+  {
+    "path": ".github/workflows/build-apk.yml",
+    "sha256": "616e9cab9f7b7d40fd7ec9f515b52163b48ffff0f1aeafc269dd140046a94fdf",
+    "on": "workflow_dispatch:\n    inputs:\n      cloud_run_approved:\n        description: 'Placen\u00fd cloud jen s v\u00fdslovn\u00fdm souhlasem vlastn\u00edka (limit 12 USD/m\u011bs\u00edc)'\n        required: true\n        type: boolean\n        default: false\n      publish_release:\n        description: 'Explicitni souhlas se zverejnenim (vyzaduje predepsane kontroly)'\n        required: true\n        type: boolean\n        default: false"
+  },
+  {
+    "path": ".github/workflows/emulator-smoke.yml",
+    "sha256": "bc2487b881148fad35d093e3e91e3e58f02e33b1191977e007100dd0a43202d3",
+    "on": "workflow_dispatch:\n    inputs:\n      cloud_run_approved:\n        description: 'Placen\u00fd GitHub cloud jen s v\u00fdslovn\u00fdm souhlasem; limit 12 USD/m\u011bs\u00edc'\n        required: true\n        type: boolean\n        default: false"
+  },
+  {
+    "path": ".github/workflows/export-audit-sources.yml",
+    "sha256": "598245bd5c22bb5363d1623b12380c5c4aae04af4bbc8e0bf836f78c45f12445",
+    "on": "workflow_dispatch:\n    inputs:\n      release_commit:\n        description: '\u00dapln\u00fd commit SHA vydan\u00e9 APK pro zdrojov\u00fd audit'\n        required: false\n        default: '2d1e4a45d4e35e8dd7e9c7109c92a8a62344b12e'\n      cloud_run_approved:\n        description: 'Placen\u00fd GitHub cloud pouze s v\u00fdslovn\u00fdm souhlasem; m\u011bs\u00ed\u010dn\u00ed strop 12 USD'\n        required: true\n        type: boolean\n        default: false"
+  },
+  {
+    "path": ".github/workflows/quick-check.yml",
+    "sha256": "2a61de2a016bfd1ecbbe5a8cb3eb6be024c09ff7660273667b0702d383eb998c",
+    "on": "workflow_dispatch:\n    inputs:\n      cloud_run_approved:\n        description: 'Placen\u00fd GitHub cloud jen s v\u00fdslovn\u00fdm souhlasem; limit 12 USD/m\u011bs\u00edc'\n        required: true\n        type: boolean\n        default: false"
+  },
+  {
+    "path": ".github/workflows/verify-native.yml",
+    "sha256": "f7e8507bb49b88c2e850804d8f88be96e4a1dad96d6b393f6dcc4f56b9566048",
+    "on": "workflow_dispatch:\n    inputs:\n      cloud_run_approved:\n        description: 'Placen\u00fd cloud jen s v\u00fdslovn\u00fdm souhlasem vlastn\u00edka (limit 12 USD/m\u011bs\u00edc)'\n        required: true\n        type: boolean\n        default: false"
+  },
+  {
+    "path": ".github/workflows/windows-home-apk-release.yml",
+    "sha256": "672c76ae8f0ac3a8ce38cf98adf8661ec5631cca5b483e5c356a7dfad1f76911",
+    "on": "workflow_dispatch:\n    inputs:\n      qa_run_id:\n        description: 'ID dokon\u010den\u00e9ho dom\u00e1c\u00edho Windows QA b\u011bhu se 4 PASS jobs na STEJN\u00c9M main SHA'\n        type: string\n        required: true\n      publish_release:\n        description: 'V\u00fdslovn\u011b schvaluji vyd\u00e1n\u00ed jedin\u00e9 nov\u00e9 testovac\u00ed APK na GitHubu'\n        type: boolean\n        required: true\n        default: false"
+  },
+  {
+    "path": ".github/workflows/windows-self-hosted-qa.yml",
+    "sha256": "5619a1a787236a22eaed4f90671bc88b10791ab0af7e27996747d4a7443d26c4",
+    "on": "workflow_dispatch:\n  push:\n    branches: [main]\n    paths:\n      - 'app/src/main/assets/**'\n      - 'app/src/main/java/**'\n      - 'app/src/main/res/**'\n      - 'app/src/main/AndroidManifest.xml'\n      - 'app/build.gradle'\n      - 'config/**'\n      - 'gradle/**'\n      - 'app/src/test/**'\n      - 'app/src/androidTest/**'\n      - 'tests/**'\n      - 'sync/**'\n      - 'tools/**'\n      - '.github/workflows/windows-self-hosted-qa.yml'\n      - '.github/workflows/windows-home-apk-release.yml'"
+  }
+]

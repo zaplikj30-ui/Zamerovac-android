@@ -1,0 +1,77 @@
+test_cancel (test_home_process_tree.ProcessTreeTests.test_cancel) ... FAIL
+test_eof (test_home_process_tree.ProcessTreeTests.test_eof) ... FAIL
+test_invalid_communication (test_home_process_tree.ProcessTreeTests.test_invalid_communication) ... FAIL
+test_normal_completion_also_reaps_descendants (test_home_process_tree.ProcessTreeTests.test_normal_completion_also_reaps_descendants) ... FAIL
+test_silent_broken_communication (test_home_process_tree.ProcessTreeTests.test_silent_broken_communication) ... FAIL
+test_timeout_with_live_heartbeat (test_home_process_tree.ProcessTreeTests.test_timeout_with_live_heartbeat) ... FAIL
+
+======================================================================
+FAIL: test_cancel (test_home_process_tree.ProcessTreeTests.test_cancel)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/Zamerovac-android/tests/test_home_process_tree.py", line 104, in test_cancel
+    self.scenario('cancel')
+  File "/workspace/Zamerovac-android/tests/test_home_process_tree.py", line 38, in scenario
+    self.assertTrue(line, proc.stderr.read() if proc.poll() is not None else 'no READY')
+AssertionError: '' is not true : /opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3: can't open file '/workspace/Zamerovac-android/tools/home_process_tree_probe.py': [Errno 2] No such file or directory
+
+
+======================================================================
+FAIL: test_eof (test_home_process_tree.ProcessTreeTests.test_eof)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/Zamerovac-android/tests/test_home_process_tree.py", line 98, in test_eof
+    self.scenario('eof')
+  File "/workspace/Zamerovac-android/tests/test_home_process_tree.py", line 38, in scenario
+    self.assertTrue(line, proc.stderr.read() if proc.poll() is not None else 'no READY')
+AssertionError: '' is not true : /opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3: can't open file '/workspace/Zamerovac-android/tools/home_process_tree_probe.py': [Errno 2] No such file or directory
+
+
+======================================================================
+FAIL: test_invalid_communication (test_home_process_tree.ProcessTreeTests.test_invalid_communication)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/Zamerovac-android/tests/test_home_process_tree.py", line 107, in test_invalid_communication
+    self.scenario('invalid')
+  File "/workspace/Zamerovac-android/tests/test_home_process_tree.py", line 38, in scenario
+    self.assertTrue(line, proc.stderr.read() if proc.poll() is not None else 'no READY')
+AssertionError: '' is not true : /opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3: can't open file '/workspace/Zamerovac-android/tools/home_process_tree_probe.py': [Errno 2] No such file or directory
+
+
+======================================================================
+FAIL: test_normal_completion_also_reaps_descendants (test_home_process_tree.ProcessTreeTests.test_normal_completion_also_reaps_descendants)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/Zamerovac-android/tests/test_home_process_tree.py", line 95, in test_normal_completion_also_reaps_descendants
+    self.scenario('normal')
+  File "/workspace/Zamerovac-android/tests/test_home_process_tree.py", line 38, in scenario
+    self.assertTrue(line, proc.stderr.read() if proc.poll() is not None else 'no READY')
+AssertionError: '' is not true : /opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3: can't open file '/workspace/Zamerovac-android/tools/home_process_tree_probe.py': [Errno 2] No such file or directory
+
+
+======================================================================
+FAIL: test_silent_broken_communication (test_home_process_tree.ProcessTreeTests.test_silent_broken_communication)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/Zamerovac-android/tests/test_home_process_tree.py", line 110, in test_silent_broken_communication
+    self.scenario('heartbeat-loss')
+  File "/workspace/Zamerovac-android/tests/test_home_process_tree.py", line 38, in scenario
+    self.assertTrue(line, proc.stderr.read() if proc.poll() is not None else 'no READY')
+AssertionError: '' is not true : /opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3: can't open file '/workspace/Zamerovac-android/tools/home_process_tree_probe.py': [Errno 2] No such file or directory
+
+
+======================================================================
+FAIL: test_timeout_with_live_heartbeat (test_home_process_tree.ProcessTreeTests.test_timeout_with_live_heartbeat)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/Zamerovac-android/tests/test_home_process_tree.py", line 101, in test_timeout_with_live_heartbeat
+    self.scenario('timeout')
+  File "/workspace/Zamerovac-android/tests/test_home_process_tree.py", line 38, in scenario
+    self.assertTrue(line, proc.stderr.read() if proc.poll() is not None else 'no READY')
+AssertionError: '' is not true : /opt/codex/runtimes/codex-primary-runtime/dependencies/python/bin/python3: can't open file '/workspace/Zamerovac-android/tools/home_process_tree_probe.py': [Errno 2] No such file or directory
+
+
+----------------------------------------------------------------------
+Ran 6 tests in 0.082s
+
+FAILED (failures=6)

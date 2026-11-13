@@ -20,6 +20,12 @@ SHA = "5411eb04e174c54c6c649084872f31f0d1b421a0"
 CHECKOUT = "11d5960a326750d5838078e36cf38b85af677262"
 
 
+def executable_fixture(path):
+    # Set mode only at exclusive creation of our disposable file; no chmod.
+    with os.fdopen(os.open(path, os.O_WRONLY | os.O_CREAT | os.O_EXCL, 0o700), 'w') as output:
+        output.write('#!/bin/sh\nexit 0\n')
+
+
 def valid_workflow():
     return GATE.render_workflow("qa/example", SHA)
 
@@ -56,11 +62,9 @@ class GateUnitTest(unittest.TestCase):
             (home / "bin").mkdir(parents=True)
             for name in ("java", "javac"):
                 exe = home / "bin" / name
-                exe.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-                exe.chmod(0o755)
+                executable_fixture(exe)
             gradle = Path(t) / "gradle"
-            gradle.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-            gradle.chmod(0o755)
+            executable_fixture(gradle)
             env = {"JAVA_HOME": str(home), "WSL_DISTRO_NAME": "Zamerovac-Ubuntu-QA"}
             tools = {"git": "/usr/bin/git", "python3": "/usr/bin/python3"}
             with mock.patch.object(GATE, "read_version", side_effect=[
@@ -323,11 +327,9 @@ class GateUnitTest(unittest.TestCase):
             (java_home / "bin").mkdir(parents=True)
             for name in ("java", "javac"):
                 exe = java_home / "bin" / name
-                exe.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-                exe.chmod(0o755)
+                executable_fixture(exe)
             gradle = Path(temp) / "gradle"
-            gradle.write_text("#!/bin/sh\nexit 0\n", encoding="utf-8")
-            gradle.chmod(0o755)
+            executable_fixture(gradle)
             env = {"JAVA_HOME": str(java_home), "WSL_DISTRO_NAME": "Ubuntu"}
             resolve = {"git": "/usr/bin/git", "python3": "/usr/bin/python3"}.get
             for fake in (

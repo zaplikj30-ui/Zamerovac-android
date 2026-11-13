@@ -1,0 +1,45 @@
+test_cancel (test_home_process_tree.ProcessTreeTests.test_cancel) ... {"scenario": "cancel", "ready": {"event": "ready", "workspace": "/tmp/zamerovac-home-tree-tej5xyan", "members": [{"pid": 1424, "pgid": 1424, "sid": 1424, "start": 53170, "uid": 1000}, {"pid": 1425, "pgid": 1424, "sid": 1424, "start": 53176, "uid": 1000}, {"pid": 1426, "pgid": 1424, "sid": 1424, "start": 53181, "uid": 1000}]}, "result": {"status": "PASS", "reason": "cancel", "cleanupVerified": true, "platform": "Linux-6.18.57-x86_64-with-glibc2.41", "uid": 1000, "signals": ["TERM", "KILL"], "reaped": [1424, 1425, 1426]}, "outsideSentinel": "unchanged", "outsideProcess": "alive"}
+ok
+test_eof (test_home_process_tree.ProcessTreeTests.test_eof) ... {"scenario": "eof", "ready": {"event": "ready", "workspace": "/tmp/zamerovac-home-tree-aqvf49e2", "members": [{"pid": 1430, "pgid": 1430, "sid": 1430, "start": 53205, "uid": 1000}, {"pid": 1431, "pgid": 1430, "sid": 1430, "start": 53208, "uid": 1000}, {"pid": 1432, "pgid": 1430, "sid": 1430, "start": 53211, "uid": 1000}]}, "result": {"status": "PASS", "reason": "eof", "cleanupVerified": true, "platform": "Linux-6.18.57-x86_64-with-glibc2.41", "uid": 1000, "signals": ["TERM", "KILL"], "reaped": [1430, 1431, 1432]}, "outsideSentinel": "unchanged", "outsideProcess": "alive"}
+ok
+test_invalid_communication (test_home_process_tree.ProcessTreeTests.test_invalid_communication) ... {"scenario": "invalid", "ready": {"event": "ready", "workspace": "/tmp/zamerovac-home-tree-9eflqjwn", "members": [{"pid": 1436, "pgid": 1436, "sid": 1436, "start": 53236, "uid": 1000}, {"pid": 1437, "pgid": 1436, "sid": 1436, "start": 53239, "uid": 1000}, {"pid": 1438, "pgid": 1436, "sid": 1436, "start": 53242, "uid": 1000}]}, "result": {"status": "PASS", "reason": "invalid", "cleanupVerified": true, "platform": "Linux-6.18.57-x86_64-with-glibc2.41", "uid": 1000, "signals": ["TERM", "KILL"], "reaped": [1436, 1437, 1438]}, "outsideSentinel": "unchanged", "outsideProcess": "alive"}
+ok
+test_normal_completion_also_reaps_descendants (test_home_process_tree.ProcessTreeTests.test_normal_completion_also_reaps_descendants) ... {"scenario": "normal", "ready": {"event": "ready", "workspace": "/tmp/zamerovac-home-tree-o32i94wx", "members": [{"pid": 1442, "pgid": 1442, "sid": 1442, "start": 53266, "uid": 1000}, {"pid": 1443, "pgid": 1442, "sid": 1442, "start": 53269, "uid": 1000}, {"pid": 1444, "pgid": 1442, "sid": 1442, "start": 53273, "uid": 1000}]}, "result": {"status": "PASS", "reason": "normal", "cleanupVerified": true, "platform": "Linux-6.18.57-x86_64-with-glibc2.41", "uid": 1000, "signals": ["TERM", "KILL"], "reaped": [1442, 1443, 1444]}, "outsideSentinel": "unchanged", "outsideProcess": "alive"}
+ERROR
+test_silent_broken_communication (test_home_process_tree.ProcessTreeTests.test_silent_broken_communication) ... {"scenario": "heartbeat-loss", "ready": {"event": "ready", "workspace": "/tmp/zamerovac-home-tree-6wu1abnq", "members": [{"pid": 1449, "pgid": 1449, "sid": 1449, "start": 53325, "uid": 1000}, {"pid": 1450, "pgid": 1449, "sid": 1449, "start": 53328, "uid": 1000}, {"pid": 1451, "pgid": 1449, "sid": 1449, "start": 53331, "uid": 1000}]}, "result": {"status": "PASS", "reason": "heartbeat-timeout", "cleanupVerified": true, "platform": "Linux-6.18.57-x86_64-with-glibc2.41", "uid": 1000, "signals": ["TERM", "KILL"], "reaped": [1449, 1450, 1451]}, "outsideSentinel": "unchanged", "outsideProcess": "alive"}
+ok
+test_timeout_with_live_heartbeat (test_home_process_tree.ProcessTreeTests.test_timeout_with_live_heartbeat) ... {"scenario": "timeout", "ready": {"event": "ready", "workspace": "/tmp/zamerovac-home-tree-t6uefzmo", "members": [{"pid": 1455, "pgid": 1455, "sid": 1455, "start": 53400, "uid": 1000}, {"pid": 1456, "pgid": 1455, "sid": 1455, "start": 53403, "uid": 1000}, {"pid": 1457, "pgid": 1455, "sid": 1455, "start": 53406, "uid": 1000}]}, "result": {"status": "PASS", "reason": "timeout", "cleanupVerified": true, "platform": "Linux-6.18.57-x86_64-with-glibc2.41", "uid": 1000, "signals": ["TERM", "KILL"], "reaped": [1455, 1456, 1457]}, "outsideSentinel": "unchanged", "outsideProcess": "alive"}
+ERROR
+
+======================================================================
+ERROR: test_normal_completion_also_reaps_descendants (test_home_process_tree.ProcessTreeTests.test_normal_completion_also_reaps_descendants)
+----------------------------------------------------------------------
+BrokenPipeError: [Errno 32] Broken pipe
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/workspace/Zamerovac-android/tests/test_home_process_tree.py", line 95, in test_normal_completion_also_reaps_descendants
+    self.scenario('normal')
+  File "/workspace/Zamerovac-android/tests/test_home_process_tree.py", line 84, in scenario
+    proc.stdin.close()
+BrokenPipeError: [Errno 32] Broken pipe
+
+======================================================================
+ERROR: test_timeout_with_live_heartbeat (test_home_process_tree.ProcessTreeTests.test_timeout_with_live_heartbeat)
+----------------------------------------------------------------------
+BrokenPipeError: [Errno 32] Broken pipe
+
+During handling of the above exception, another exception occurred:
+
+Traceback (most recent call last):
+  File "/workspace/Zamerovac-android/tests/test_home_process_tree.py", line 101, in test_timeout_with_live_heartbeat
+    self.scenario('timeout')
+  File "/workspace/Zamerovac-android/tests/test_home_process_tree.py", line 84, in scenario
+    proc.stdin.close()
+BrokenPipeError: [Errno 32] Broken pipe
+
+----------------------------------------------------------------------
+Ran 6 tests in 3.802s
+
+FAILED (errors=2)

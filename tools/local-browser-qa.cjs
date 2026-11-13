@@ -6,6 +6,7 @@ const http = require('node:http');
 const path = require('node:path');
 const os = require('node:os');
 const {spawn} = require('node:child_process');
+const {launchSandboxed,launchOptions,checkEvidence,blocked}=require('./e2e/sandbox.cjs');
 const root = path.resolve(__dirname, '..');
 const assetRoot = path.join(root, 'app', 'src', 'main', 'assets');
 const modes = Object.freeze({
@@ -52,8 +53,14 @@ function createStaticServer(assets){
 }
 function statusReport(mode,records,dir){
  const counts={PASS:0,FAIL:0,SKIP:0,'NOT RUN':0};
- for(const record of records)counts[record.status]++;
- const report={schema:1,mode,createdAt:new Date().toISOString(),counts,records,
+ for(const record of records){
+  if(record.status==='BLOCKED'&&!Object.hasOwn(counts,'BLOCKED'))counts.BLOCKED=0;
+  if(!Object.hasOwn(counts,record.status))throw Error('Unknown QA status '+record.status);
+  counts[record.status]++;
+ }
+ const status=counts.BLOCKED?'BLOCKED':counts.FAIL?'FAIL':
+  counts.SKIP||counts['NOT RUN']||!records.length?'NOT RUN':'PASS';
+ const report={schema:2,status,mode,createdAt:new Date().toISOString(),counts,records,
   evidencePath:dir,scope:'Local Chromium synthetic-data tests, not Android/WebView/device acceptance'};
  fs.writeFileSync(path.join(dir,'results.json'),JSON.stringify(report,null,2)+'\n');
  return report;
@@ -62,11 +69,15 @@ function listen(server){return new Promise((resolve,reject)=>{server.once('error
 function close(server){return new Promise(resolve=>server.close(resolve))}
 function verifyBrowser(){
  let p;try{p=require.resolve('playwright',{paths:[root]})}
- catch(error){throw Error('Chybí Playwright. Ve složce Zaměřovače spusť: npm install --no-save --package-lock=false playwright@1.62.1')}
+ catch(error){throw Error('Playwright 1.62.1 unavailable; HOME BLOCKED, no runtime install')}
+ if(require(path.join(path.dirname(p),'package.json')).version!=='1.62.1')
+  throw Error('Playwright version mismatch; HOME BLOCKED');
  const chromium=require(p).chromium;
- const executable=process.env.CHROMIUM_PATH||chromium.executablePath();
- if(!fs.existsSync(executable))throw Error('Chromium není nainstalovaný: '+executable+'; spusť: npx playwright install chromium');
- return executable;
+ const executable=process.env.CHROMIUM_PATH;
+ if(typeof executable!=='string'||!path.isAbsolute(executable))
+  throw blocked('Explicit absolute CHROMIUM_PATH required; no automatic browser selection');
+ if(!fs.existsSync(executable))throw Error('Verified Chromium unavailable: '+executable+'; HOME BLOCKED, no runtime install');
+ return {chromium,executable};
 }
 async function execute(script,env,logFile){
  return new Promise(resolve=>{
@@ -76,17 +87,35 @@ async function execute(script,env,logFile){
   const timer=setTimeout(()=>{timedOut=true;child.kill()},8*60*1000);
   child.on('error',e=>{error=e;out.write(String(e)+'\n')});
   child.stdout?.on('data',data=>out.write(data));child.stderr?.on('data',data=>out.write(data));
-  child.on('close',(exitCode,signal)=>{clearTimeout(timer);out.end();resolve({status:!timedOut&&!error&&exitCode===0?'PASS':'FAIL',
-   exitCode,signal,elapsedMs:Date.now()-started,error:error?.message||null,timedOut})});
+  child.on('close',(exitCode,signal)=>{clearTimeout(timer);out.end(()=>{
+   let sandbox=null,sandboxError=null;
+   try{
+    const report=JSON.parse(fs.readFileSync(path.join(env.ZAMEROVAC_E2E_DIR,script,'report.json'),'utf8'));
+    if(report.status==='BLOCKED')throw Error(report.error);
+    sandbox=checkEvidence(report.sandbox,process.platform);
+   }catch(e){sandboxError=e.message}
+   resolve({status:sandboxError?'BLOCKED':!timedOut&&!error&&exitCode===0?'PASS':'FAIL',sandbox,
+    exitCode,signal,elapsedMs:Date.now()-started,error:sandboxError||error?.message||null,timedOut});
+  })});
  });
 }
 async function run(mode){
  if(!fs.existsSync(path.join(assetRoot,'index.html')))throw Error('Chybí pracovní kopie aplikace: '+assetRoot);
- const browser=verifyBrowser();
  const date=new Date().toISOString().replace(/[:.]/g,'-');
  const dir=path.join(process.env.LOCALAPPDATA||path.join(os.homedir(),'.local','share'),
   'Zamerovac-QA','browser','run-'+date+'-'+process.pid);
  fs.mkdirSync(dir,{recursive:true});
+ let browser;
+ try{
+  const verified=verifyBrowser();browser=verified.executable;
+  const check=await launchSandboxed(verified.chromium,launchOptions(browser));
+  await check.browser.close();
+ }catch(error){
+  statusReport(mode,modes[mode].map(suite=>({suite,status:'BLOCKED',error:error.message})),dir);
+  console.error('HOME BLOCKED: Chromium sandbox preflight: '+error.message);
+  console.log('Výsledky Chromium: '+path.join(dir,'results.json'));
+  process.exitCode=1;return;
+ }
  const server=createStaticServer(assetRoot);
  const records=[];
  let port;
@@ -100,7 +129,7 @@ async function run(mode){
    const outcome=await execute(name,env,file);
    records.push({suite:name,...outcome,log:file});
    console.log(outcome.status+' '+name+' ('+Math.round(outcome.elapsedMs/1000)+' s)');
-   if(outcome.status==='FAIL'){
+   if(outcome.status==='FAIL'||outcome.status==='BLOCKED'){
     const log=fs.readFileSync(file,'utf8');console.error(log.slice(-1500));
    }
   }
@@ -108,7 +137,7 @@ async function run(mode){
  const report=statusReport(mode,records,dir);
  console.log('Výsledky Chromium: '+path.join(dir,'results.json'));
  console.log('PASS '+report.counts.PASS+' / FAIL '+report.counts.FAIL);
- if(report.counts.FAIL)process.exitCode=1;
+ if(report.status!=='PASS')process.exitCode=1;
 }
 async function main(){
  const mode=process.argv[2]||'--smoke';
@@ -136,8 +165,8 @@ async function main(){
   }finally{await close(server)}
   return;
  }
- if(!modes[mode])throw Error('Neplatný režim; použij --smoke, --all, --self-test nebo --help');
+ if(!modes[mode])throw blocked('Neplatný režim; použij --smoke, --all, --self-test nebo --help');
  await run(mode);
 }
 if(require.main===module)main().catch(error=>{console.error('FAIL local browser QA: '+String(error.stack||error));process.exitCode=1});
-module.exports={createStaticServer,statusReport,modes};
+module.exports={createStaticServer,statusReport,modes,execute};

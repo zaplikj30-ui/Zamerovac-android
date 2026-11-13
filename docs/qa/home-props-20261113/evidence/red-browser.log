@@ -1,0 +1,134 @@
+✖ harness explicitly enables sandbox before any application case (6.576946ms)
+✖ launch policy rejects disabled sandbox, flags and malformed options before spawn (0.648782ms)
+✖ launch error blocks once, no retry or downgrade (1.346218ms)
+✖ unverifiable or disabled runtime sandbox closes browser and blocks (0.377341ms)
+✖ positive Linux verification is labelled Linux, never Windows HOME (0.289248ms)
+✖ runner reports sandbox failure as BLOCKED and cannot count it as PASS (3.343141ms)
+ℹ tests 6
+ℹ suites 0
+ℹ pass 0
+ℹ fail 6
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 20.291008
+
+✖ failing tests:
+
+test at tests/home_sandbox_security.js:19:1
+✖ harness explicitly enables sandbox before any application case (6.576946ms)
+  AssertionError [ERR_ASSERTION]: Playwright default false is unsafe
+  + actual - expected
+  
+  + undefined
+  - true
+  
+      at TestContext.<anonymous> (/workspace/Zamerovac-android/tests/home_sandbox_security.js:31:10)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: true,
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
+
+test at tests/home_sandbox_security.js:36:1
+✖ launch policy rejects disabled sandbox, flags and malformed options before spawn (0.648782ms)
+  Error: Cannot find module '../tools/e2e/sandbox.cjs'
+  Require stack:
+  - /workspace/Zamerovac-android/tests/home_sandbox_security.js
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1564:15)
+      at wrapResolveFilename (node:internal/modules/cjs/loader:1118:27)
+      at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1142:10)
+      at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1169:12)
+      at Module._load (node:internal/modules/cjs/loader:1341:5)
+      at wrapModuleLoad (node:internal/modules/cjs/loader:261:19)
+      at Module.require (node:internal/modules/cjs/loader:1674:12)
+      at require (node:internal/modules/helpers:157:16)
+      at TestContext.<anonymous> (/workspace/Zamerovac-android/tests/home_sandbox_security.js:37:26)
+      at Test.runInAsyncScope (node:async_hooks:227:14) {
+    code: 'MODULE_NOT_FOUND',
+    requireStack: [ '/workspace/Zamerovac-android/tests/home_sandbox_security.js' ]
+  }
+
+test at tests/home_sandbox_security.js:48:1
+✖ launch error blocks once, no retry or downgrade (1.346218ms)
+  Error: Cannot find module '../tools/e2e/sandbox.cjs'
+  Require stack:
+  - /workspace/Zamerovac-android/tests/home_sandbox_security.js
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1564:15)
+      at wrapResolveFilename (node:internal/modules/cjs/loader:1118:27)
+      at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1142:10)
+      at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1169:12)
+      at Module._load (node:internal/modules/cjs/loader:1341:5)
+      at wrapModuleLoad (node:internal/modules/cjs/loader:261:19)
+      at Module.require (node:internal/modules/cjs/loader:1674:12)
+      at require (node:internal/modules/helpers:157:16)
+      at TestContext.<anonymous> (/workspace/Zamerovac-android/tests/home_sandbox_security.js:49:26)
+      at Test.runInAsyncScope (node:async_hooks:227:14) {
+    code: 'MODULE_NOT_FOUND',
+    requireStack: [ '/workspace/Zamerovac-android/tests/home_sandbox_security.js' ]
+  }
+
+test at tests/home_sandbox_security.js:55:1
+✖ unverifiable or disabled runtime sandbox closes browser and blocks (0.377341ms)
+  Error: Cannot find module '../tools/e2e/sandbox.cjs'
+  Require stack:
+  - /workspace/Zamerovac-android/tests/home_sandbox_security.js
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1564:15)
+      at wrapResolveFilename (node:internal/modules/cjs/loader:1118:27)
+      at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1142:10)
+      at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1169:12)
+      at Module._load (node:internal/modules/cjs/loader:1341:5)
+      at wrapModuleLoad (node:internal/modules/cjs/loader:261:19)
+      at Module.require (node:internal/modules/cjs/loader:1674:12)
+      at require (node:internal/modules/helpers:157:16)
+      at TestContext.<anonymous> (/workspace/Zamerovac-android/tests/home_sandbox_security.js:56:26)
+      at Test.runInAsyncScope (node:async_hooks:227:14) {
+    code: 'MODULE_NOT_FOUND',
+    requireStack: [ '/workspace/Zamerovac-android/tests/home_sandbox_security.js' ]
+  }
+
+test at tests/home_sandbox_security.js:65:1
+✖ positive Linux verification is labelled Linux, never Windows HOME (0.289248ms)
+  Error: Cannot find module '../tools/e2e/sandbox.cjs'
+  Require stack:
+  - /workspace/Zamerovac-android/tests/home_sandbox_security.js
+      at Module._resolveFilename (node:internal/modules/cjs/loader:1564:15)
+      at wrapResolveFilename (node:internal/modules/cjs/loader:1118:27)
+      at defaultResolveImplForCJSLoading (node:internal/modules/cjs/loader:1142:10)
+      at resolveForCJSWithHooks (node:internal/modules/cjs/loader:1169:12)
+      at Module._load (node:internal/modules/cjs/loader:1341:5)
+      at wrapModuleLoad (node:internal/modules/cjs/loader:261:19)
+      at Module.require (node:internal/modules/cjs/loader:1674:12)
+      at require (node:internal/modules/helpers:157:16)
+      at TestContext.<anonymous> (/workspace/Zamerovac-android/tests/home_sandbox_security.js:66:26)
+      at Test.runInAsyncScope (node:async_hooks:227:14) {
+    code: 'MODULE_NOT_FOUND',
+    requireStack: [ '/workspace/Zamerovac-android/tests/home_sandbox_security.js' ]
+  }
+
+test at tests/home_sandbox_security.js:72:1
+✖ runner reports sandbox failure as BLOCKED and cannot count it as PASS (3.343141ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly equal:
+  + actual - expected
+  
+  + undefined
+  - 'BLOCKED'
+  
+      at TestContext.<anonymous> (/workspace/Zamerovac-android/tests/home_sandbox_security.js:77:10)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.processPendingSubtests (node:internal/test_runner/test:974:18)
+      at Test.postRun (node:internal/test_runner/test:1542:19)
+      at Test.run (node:internal/test_runner/test:1467:12)
+      at async Test.processPendingSubtests (node:internal/test_runner/test:974:7) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: undefined,
+    expected: 'BLOCKED',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }
