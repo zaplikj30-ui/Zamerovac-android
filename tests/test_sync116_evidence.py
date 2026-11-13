@@ -40,11 +40,9 @@ def jvm():
             "gradle":{"status":"FAIL","exit_code":1},
             "product_acceptance":{"status":"PASS","problems":[],"cases":cases},
             "physical_diagnostics":[{"id":name,"classification":"EXPECTED FAIL",
-                                     "status":"FAIL"} for name in ids],
+                                     "status":"FAIL", "message":QA.ORIGINAL_FAIL_MESSAGES[name]} for name in ids],
             "junit_class_files":64,"junit_methods":513,"fresh_junit":True,
-            "original_test_sha256":{"provider-and-helpers":"a"*64,
-                                    "original-two-diagnostics":"b"*64,
-                                    "unchanged-product-e2e":"c"*64}}
+            "original_test_sha256":QA.ORIGINAL_TEST_SHA256.copy()}
 
 class CurrentRunEvidenceTests(unittest.TestCase):
     def test_first_attempt_owner_passes_and_missing_reruns_stop(self):
@@ -114,6 +112,7 @@ class CurrentRunEvidenceTests(unittest.TestCase):
             {"junit_methods":512},
             {"product_acceptance":{"status":"PASS","problems":[],"cases":good["product_acceptance"]["cases"][:-1]}},
             {"physical_diagnostics":[]},
+            {"original_test_sha256":{"provider-and-helpers":"0"*64}},
             {"runId":"999"},
         ):
             with self.subTest(change=change),self.assertRaises(QA.EvidenceStop):
