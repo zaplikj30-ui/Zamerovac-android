@@ -204,6 +204,8 @@ class Sync116QaOnlyTests(unittest.TestCase):
         script = (ROOT / "tools/sync116_home_qa.py").read_text(encoding="utf-8")
         self.assertIn('"--max-workers=1"', script)
         self.assertIn('"--offline"', script)
+        self.assertIn("export ANDROID_HOME=/opt/android-sdk ANDROID_SDK_ROOT=/opt/android-sdk", script)
+        self.assertIn('test -f "$ANDROID_HOME/platforms/android-35/android.jar"', script)
         self.assertIn('"--no-parallel"', script)
         self.assertIn('":app:testPreviewUnitTest"', script)
         self.assertNotIn('"--max-workers=2"', script)
