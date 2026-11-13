@@ -130,6 +130,8 @@ class Sync116QaOnlyTests(unittest.TestCase):
         self.assertIn("proc.stdin.close()",script)
         self.assertIn("proc.kill()",script)
         self.assertIn("missing existing nonroot offline Gradle cache",script)
+        self.assertIn("require preexisting read-only cache",script)
+        self.assertIn("test ! -w",script)
 
     def test_pinned_offline_one_worker_and_no_auto_install_or_apk(self):
         script = (ROOT / "tools/sync116_home_qa.py").read_text(encoding="utf-8")
