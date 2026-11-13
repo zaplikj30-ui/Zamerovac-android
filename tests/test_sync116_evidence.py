@@ -68,6 +68,8 @@ class CurrentRunEvidenceTests(unittest.TestCase):
             self.assertTrue(item.exists())
             with self.assertRaises(QA.EvidenceStop):
                 QA.verify(root,"browser",env(),SHA,GATE)
+            self.assertEqual(item,QA.inspect(root,"browser",env(),SHA,GATE),
+                             "fresh NOT RUN report is safe to upload after a failed test")
             item.write_text(json.dumps(browser()),encoding="utf-8")
             self.assertEqual(item,QA.verify(root,"browser",env(),SHA,GATE))
             with self.assertRaises(QA.EvidenceStop):
@@ -77,6 +79,8 @@ class CurrentRunEvidenceTests(unittest.TestCase):
             item.unlink()
             with self.assertRaises(QA.EvidenceStop):
                 QA.verify(root,"browser",env(),SHA,GATE)
+            with self.assertRaises(QA.EvidenceStop):
+                QA.inspect(root,"browser",env(),SHA,GATE)
 
     def test_browser_bad_counts_dirty_or_wrong_validation_identity_blocked(self):
         baseline=browser()
