@@ -1,0 +1,27 @@
+# Návrh HOME QA a release brány – čeká na rozhodnutí
+
+Toto je návrh, nikoli implementace nebo souhlas se spuštěním. Zadání: [Koordinátor 22](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42#issuecomment-6852058679). Integrační kandidát: [PR #121](https://github.com/zaplikj30-ui/Zamerovac-android/pull/121). Žádné workflow, bezpečnostní validátory ani Windows práva se tímto PR nemění. Původní diagnostiky #88 a jejich helpery jsou nezměněné.
+
+## Prokázaný nesoulad
+
+`windows-self-hosted-qa.yml` v jobu `native-jvm` nyní spouští Gradle v `set -e`, a proto skončí před kontrolou XML při dvou očekávaných skutečných FAIL. Následný XML blok navíc vyžaduje nulu FAIL a jen minimum 265 metod. Release vyžaduje čtyři úspěšné HOME joby na jednom main SHA. Produkt #116 má jiný, výslovně schválený kontrakt: 64 tříd / 513 metod, 511 PASS + 2 původní actual FAIL. Samotné snížení počtu povolených chyb nebo `continue-on-error` není bezpečné řešení.
+
+## Přesný rozsah budoucí změny
+
+1. `windows-self-hosted-qa.yml`: zachovat všechny čtyři joby a jejich závislosti, main-only push/dispatch, owner/repository, pinned checkout SHA a zákaz PR/forků. Přidat kontrolu `triggering_actor`, `run_attempt == 1` a přesné shody HEAD před i po testech. Žádný nový cloud trigger ani volný target_ref.
+2. `native-jvm`: před zdrojovým checkoutem načíst samostatný důvěryhodný validátor z plného, nezávisle schváleného SHA. Adaptovat prověřenou recipe #117 na finální integrační SHA, nikoli kopírovat starý #61. Použít již existující schválený nonroot WSL účet, izolovaný ext4 adresář, read-only offline cache, privátní pracovní kopii, timeout/heartbeat a omezené workery/paměť. Pokud účet či cache nejsou bezpečně k dispozici, výsledek BLOCKED; žádné vytváření uživatele, sudo, chmod ani změna Windows práv. Nespouštět současný root WSL blok jako náhradní řešení.
+3. Nahradit současný raw Gradle/`0 failures` blok odděleným transparentním běžícím kontraktem `tools/sync-ack-acceptance.py` doplněným nezávislým striktním XML validátorem z #117. Vždy vykonat úplný `:app:testPreviewUnitTest --rerun`; staré výstupy předem odstranit. Výstup musí být přesně 64 čerstvých XML / 513 unikátních jmenovitých metod, 511 PASS / 2 FAIL / 0 ERROR / 0 SKIP. Minimum počtu nestačí; povinný je úplný manifest a 49 zvlášť chráněných metod (2 reconciliation, 24 safety, 23 DB evidence). Zachovat SHA256 původních diagnostik/helperů a celého reconciliation E2E souboru.
+4. Povolit jen tyto dvě přesné diagnostiky a původní očekávání:
+   - `cz.zamerovac.app.SafSyncV2Test.driveStagedAckMustNotPublishAfterLocalAuthorityLostInsideProviderCommit`: `Provider completed signed ACK after recovery epoch loss: Drive staged expected:<0> but was:<1>`.
+   - `cz.zamerovac.app.SafSyncV2Test.safDirectAckMustNotPublishAfterLocalAuthorityLostInsideProviderWrite`: `Provider completed signed ACK after recovery epoch loss: SAF direct expected:<0> but was:<1>`.
+   Raw Gradle musí být výslovně `FAIL / exit 1`; jiný exit, chybějící XML, PASS diagnostiky, jiná zpráva/typ aserce, třetí FAIL, ERROR či SKIP blokuje acceptance. Samostatný stav `product_acceptance=PASS` smí odblokovat PDF a technický smoke až po rozhodnutí vlastníka a nezávislém SOURCE review. Raw Gradle se nesmí prezentovat jako PASS.
+5. `browser-smoke`: plný `--all` pro tento kandidát zahrnuje 23 suite / 96 jmenovaných případů (92 z #116 + 2 gallery #114 + pixelové úchopy + #46). Úplný manifest jmen a hashů odvodit z finálního skutečného běhu, který bude v důkazech PR #121. Původní #117 manifest 23/92 není pro tuto integraci úplný. Nepovolovat filtr `ZAMEROVAC_CASES` ve finální bráně. Odmítnout chybějící/duplicitní/přebytečné případy, FAIL/SKIP, runtime chyby, staré reporty a jiný zdrojový SHA. Reálný IndexedDB test #110 je samostatná povinná opt-in kontrola s novým privátním profilem, nikoli započítaný browser případ.
+6. `windows-home-apk-release.yml`: ponechat všechny čtyři úspěšné HOME joby na témže main SHA, explicitní schválení vydání, kontrolu podpisu/package/versionCode/versionName a bezpečné stahování assetů. Aktualizovat jen přesný název JVM jobu, pokud se kvůli pravdivému popisu změní. Navíc ověřit archivovaný acceptance report proti témuž run ID, attempt, source SHA a trusted validator SHA. Zelená conclusion samotná nesmí skrýt raw FAIL ani nahradit obsahové ověření.
+
+## Test-first podmínky před implementací guardů
+
+Samostatná sada musí odmítnout: cizí owner/triggering_actor, fork/PR, ref či SHA mismatch, rerun, volný source/validator ref, stale XML/JSON, chybějící/duplicitní/přejmenovanou metodu, jiný počet suite/case, chybějící E2E, oslabenou aserci/helper, diagnostiku PASS/SKIP/ERROR, jiný expected/actual nebo třetí FAIL, raw exit 0/2, kompilaci bez nových XML, nesoulad run ID/attempt, změnu zdrojů během běhu, browser filter/skip, chybějící PDF a neúspěšný signer/version preflight. Ověřit pozitivní fixture pouze pro přesně schválený kontrakt. Nejdřív skutečné negativní RED, potom GREEN opravy a nezávislé bezpečnostní SOURCE review.
+
+## Rozhodnutí požadované od vlastníka
+
+Schválit či odmítnout výše vymezenou adaptaci HOME brány pro viditelné `raw Gradle FAIL` a oddělenou produktovou acceptance. Rozhodnutí musí určit konkrétní trusted validator SHA a schválenou owner větev/SHA pro případný one-shot. Do té doby: HOME 4/4 a release **BLOCKED / NOT RUN**, žádné předstírání PASS. Tato žádost neblokuje lokální dostupné autorské testy ani technický APK build bez publikace, který uživatel výslovně zadal.

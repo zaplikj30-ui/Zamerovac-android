@@ -10,6 +10,10 @@
 
 Vlastní větev `implement/sync-core-b-20261112`, base main `cf7807905f77f6fd8478c137b1b41aca6ebc3275`. Převzaty ochrany #100–#102 a návaznosti audia #107 bez změn workflow. [Implementace, příčiny, průběžné testy a povinné brány](docs/sync-core-b.md). Stav [DRAFT PR #116](https://github.com/zaplikj30-ui/Zamerovac-android/pull/116); závěrečný HEAD a přesné testy jsou v PR a checkpointu #42. Nejde o merge ani APK. Důkazy: [finální report](docs/qa/sync-core-b/results.json). Úplná Preview JVM regrese 476 PASS / 2 zachované diagnostické FAIL #88; rychlé kontroly 87 PASS; Chromium 23 sad/90 scénářů PASS; skutečný 3GiB TLS výpadek/retry a simulovaná legacy schopnost PASS. HOME/fyzický Android/živý Drive NOT RUN. Historický stav před REQUEST FIX; aktuální blokér a další krok jsou uvedeny výše.
 
+## Rozpracovaná integrace 13. 11. 2026
+
+[Draft PR #121](https://github.com/zaplikj30-ui/Zamerovac-android/pull/121), vlastní větev `integration/approved-fixes-20261113`: produkt #116 + dokumentační main #118 + cílené úchopy #49 a marker/galerie/export #114. [Závazný plán](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42#issuecomment-6852058679). Aktuální přesný testovaný SHA, úplné výsledky/logy a rizika budou v PR a #42; staré důkazy nejsou výsledkem integrace. Importní testy #105/#110 doplněny; #46 má reprodukční Chromium scénář, fyzický Samsung picker/IME zůstává NOT RUN. [Přesný návrh HOME QA/release brány k rozhodnutí](docs/qa/integration-20261113/HOME_GATE_PROPOSAL.md); guardy se nemění. Další krok: dokončit dostupnou společnou autorskou regresi a teprve pak nezávislá kontrola. Bez merge a vydání APK.
+
 ## Poslední ověřený přehled (11. 11. 2026, historický snapshot)
 
 - `main` při této revizi: `c604860db4fddeefc077e27411bc1941815f7d94`. **Není zaručeno, že je to dnešní nejnovější HEAD.**

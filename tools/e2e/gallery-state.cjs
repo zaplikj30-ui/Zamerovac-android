@@ -12,6 +12,36 @@ async function photo(page){
  await page.fill('#measureInput','1585,800001');await page.click('#okModal');
 }
 suite('gallery-state',async test=>{
+ await test('approved_inset_handles_have_real_pixels_and_stay_out_of_export',async({page,evidence})=>{
+  await photo(page);
+  const pixels=await page.evaluate(async()=>{
+   const id=current.media[0],image=new Image();image.src=await assetUrl(id);await image.decode();
+   window.__detailPhotoCache[id]=image;
+   const item={id:'handles',type:'note',a:{x:80,y:80},media:[id],insetX:180,insetY:180,insetWidth:240};
+   const render=(selected,exporting)=>{
+    const canvas=document.createElement('canvas');canvas.width=600;canvas.height=500;
+    const c=canvas.getContext('2d');c.fillStyle='#666';c.fillRect(0,0,600,500);
+    const rc=annotationRenderContext(c,{view:{zoom:1,dx:0,dy:0},photoSize:{w:1200,h:800},viewport:{w:600,h:500},selected,exporting,prefs});
+    window.renderPhotoInset(c,item,image,()=>{},rc);return c;
+   };
+   const selected=render(item.id,false),plain=render(null,false);
+   const diff=(x,y,w,h)=>{
+    const a=selected.getImageData(x,y,w,h).data,b=plain.getImageData(x,y,w,h).data;
+    let changed=0;for(let i=0;i<a.length;i+=4)if(Math.abs(a[i]-b[i])+Math.abs(a[i+1]-b[i+1])+Math.abs(a[i+2]-b[i+2])>60)changed++;
+    return changed;
+   };
+   const upperBow=selected.getImageData(308,135,7,7).data;
+   let whiteBow=0;for(let i=0;i<upperBow.length;i+=4)if(upperBow[i]>180&&upperBow[i+1]>180&&upperBow[i+2]>180)whiteBow++;
+   const darkTip=selected.getImageData(306,259,3,3).data;
+   let dark=0;for(let i=0;i<darkTip.length;i+=4)if(darkTip[i]<80&&darkTip[i+1]<80&&darkTip[i+2]<80)dark++;
+   const a=render(item.id,true).getImageData(0,0,600,500).data,b=render(null,true).getImageData(0,0,600,500).data;
+   return {rotate:diff(275,130,50,32),left:diff(148,246,34,28),right:diff(418,246,34,28),center:diff(288,248,24,24),whiteBow,darkTip:dark,exportSame:a.every((n,i)=>n===b[i])};
+  });
+  assert(pixels.rotate>30&&pixels.left>30&&pixels.right>30&&pixels.center>30,'Each approved handle must have visible actual pixels');
+  assert(pixels.whiteBow>2,'Rotation must curve above the old straight arrow');
+  assert(pixels.darkTip>0,'Center must include directional dark arrow tips');
+  assert(pixels.exportSame,'Selection handles must not leak into customer export');evidence(pixels);
+ });
  await test('render_is_read_only_even_during_nested_drawing_and_failure',async({page,evidence,directory})=>{
   await photo(page);
   await page.evaluate(()=>{

@@ -18,6 +18,9 @@ module.exports=async function run(){
   {name:'hires-12000x9000-top-edge',mainW:12000,mainH:9000,x:370,y:-135,text:''},
   {name:'hires-8000x6000-rotated-stack',mainW:8000,mainH:6000,x:7710,y:5570,count:3,rotation:32},
   {name:'notes-disabled-really-hides-existing-inset',notes:false,expectWidth:800,expectHeight:600},
+  {name:'nonfinite-bounds-rejected',boundsFault:true,reject:/bezpečné meze/},
+  {name:'unsettled-bounds-rejected',unsettled:true,reject:/bezpečně umístit/},
+  {name:'extreme-inset-is-clamped-without-mutating-data',width:1e12},
  ];
  for(const t of cases){
   const mainW=t.mainW||800,mainH=t.mainH||600;
@@ -42,10 +45,10 @@ module.exports=async function run(){
    };
    result.getContext=()=>result.ctx;created.push(result);return result;
   }
-  const note={id:'n',type:'note',a:{x:30,y:30},text:'Detail s hlasem',
+  const note={id:'n',type:'note',a:{x:30,y:30},text:t.text??'Detail s hlasem',
    media:t.noDetail?[]:Array.from({length:t.count||1},(_,i)=>'detail-'+(i+1)),
    audioMedia:['voice-unchanged'],insetX:t.x??100,insetY:t.y??130,
-   insetWidth:130,insetRotation:t.rotation||0};
+   insetWidth:t.width??130,insetRotation:t.rotation||0};
   const record={id:'p',kind:'photo',media:['main'],items:[note]};
   const before=JSON.stringify(record);
   const window={__detailPhotoCache:{},isRecordLocked:()=>false};
@@ -72,7 +75,14 @@ module.exports=async function run(){
   vm.createContext(s);
   vm.runInContext(insetSource,s,{filename:'inset-workspace.js'});
   vm.runInContext(customerSource,s,{filename:'customer-export.js'});
+  if(t.boundsFault)window.insetAnnotationBounds=()=>({minX:NaN,minY:0,maxX:800,maxY:600});
+  if(t.unsettled){let n=0;window.insetAnnotationBounds=()=>({minX:0,minY:0,maxX:800+(++n)*1000,maxY:600})}
   const options={notes:t.notes!==false,dimensions:true,drawing:true};
+  if(t.reject){
+   await assert.rejects(window.__customerExport.render(record,options),t.reject,t.name);
+   assert.equal(JSON.stringify(record),before,t.name+': rejected export mutated source');
+   continue;
+  }
   await window.__customerExport.render(record,options);
   const page=created.find(c=>c.ctx.draws.some(d=>d.image.naturalWidth===mainW&&d.image.naturalHeight===mainH));
   assert(page,t.name+': customer page not rendered');
