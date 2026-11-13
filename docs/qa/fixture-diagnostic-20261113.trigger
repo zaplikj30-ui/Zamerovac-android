@@ -1,3 +1,0 @@
-APPROVED OWNER: single Windows fixture-only diagnosis, no browser
-QA_SHA=023ae630ee6ed161f99a3b80c5a3eca752b29725
-PREP_SHA=a02ae6399ff9e771a8d02adc84d2475da6ed6f79
