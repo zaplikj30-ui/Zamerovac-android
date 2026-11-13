@@ -146,5 +146,5 @@ jobs:
             ${{ runner.temp }}/zamerovac-one-shot-browser-20261113/run-*/results.json
             ${{ runner.temp }}/zamerovac-one-shot-browser-20261113/run-*/*.log
             ${{ runner.temp }}/zamerovac-one-shot-browser-20261113/run-*/evidence/**/report.json
-          if-no-files-found: warn
+          if-no-files-found: error
           retention-days: 3
