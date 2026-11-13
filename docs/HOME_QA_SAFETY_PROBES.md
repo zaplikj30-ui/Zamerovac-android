@@ -1,6 +1,6 @@
 # HOME QA: bezpečnostní sondy před produktovými testy
 
-Stav: **Linux selftest PASS / HOME Windows, WSL a Chromium NOT RUN**. Jde o neškodné zkoušky, nikoli testy aplikace. Neobsahují žádné nové workflow ani automatický trigger.
+Stav: **všechny nové runtime testy NOT RUN / dosud bez ověřeného logu, včetně Linux selftestu i HOME Windows/WSL/Chromium**. Jde o neškodné zkoušky, nikoli testy aplikace. Neobsahují žádné nové workflow ani automatický trigger.
 
 ## WSL (tools/home_qa_process_probe.py)
 
@@ -24,6 +24,6 @@ Stav: **Linux selftest PASS / HOME Windows, WSL a Chromium NOT RUN**. Jde o neš
 1. Nezávisle zkontrolovat přesný SHA, oba skripty a bezpečný owner-only způsob provedení na existujícím runneru.
 2. Zajistit, že PC/runner je idle, žádné souběžné práce ani osobní data v testovací pracovní oblasti. Nepoužít nedůvěryhodný PR/fork checkout.
 3. Žádné PowerShell, nové instalace, změna ACL, root fallback, nákup/cloudu, merge ani APK.
-4. Zapsat skutečné PASS/FAIL/SKIP/NOT RUN, SHA a prostředí do issue #42. Linux selftest neoznačovat jako HOME PASS.
+4. Zapsat skutečné PASS/FAIL/SKIP/NOT RUN, SHA a prostředí do issue #42. Bez skutečného logu neoznačovat Linux selftest ani HOME jako PASS.
 
 Zdrojové podklady: PR #117 QA-only SOURCE PASS na 2997cd46000a038497e14497a0fba6b8d2d29a2b; produkt PR #116 na 1527e3377609633c554195b0641e02e3cfb5fb5e; historické HOME Chromium PASS na jiném SHA v běhu #43195207268. Dvě původní produktové diagnostiky #88 nezměněny.
