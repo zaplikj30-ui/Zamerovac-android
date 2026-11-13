@@ -143,6 +143,20 @@ class Sync116QaOnlyTests(unittest.TestCase):
         self.assertFalse(QA.owner_root_waiver(env, QA.EXPECTED_SHA,
                                               "43407410666", "2"))
 
+    def test_wsl_copied_git_filemode_only_is_not_content_mutation(self):
+        with mock.patch.dict(QA.os.environ, {"ZAMEROVAC_QA_TEMP_WSL_ROOT": QA.TEMP_WAIVER}):
+            with mock.patch.object(QA, "git", return_value=" M tracked.py"):
+                with mock.patch.object(QA.subprocess, "run",
+                        return_value=types.SimpleNamespace(returncode=0, stdout="")):
+                    self.assertEqual("", QA.copied_worktree_status(Path("/tmp/test")))
+                with mock.patch.object(QA.subprocess, "run",
+                        return_value=types.SimpleNamespace(returncode=0, stdout=" M tracked.py")):
+                    self.assertEqual("M tracked.py", QA.copied_worktree_status(Path("/tmp/test")))
+                with mock.patch.object(QA.subprocess, "run",
+                        return_value=types.SimpleNamespace(returncode=1, stdout="")):
+                    with self.assertRaises(QA.Stop):
+                        QA.copied_worktree_status(Path("/tmp/test"))
+
     def test_nonroot_wsl_is_mandatory_before_source_execution(self):
         with mock.patch.object(QA.platform, "system", return_value="Linux"), \
              mock.patch.object(QA.platform, "release", return_value="microsoft-WSL2"), \
