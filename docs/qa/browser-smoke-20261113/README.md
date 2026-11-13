@@ -1,4 +1,21 @@
-# QA-only: jeden řízený domácí Chromium smoke (13. 11. 2026)
+# QA-only: HOME Chromium – aktuální stav a historie (13. 11. 2026)
+
+## AKTUÁLNÍ: druhý HOME běh zodpovědně BLOCKED, nová neaktivní oprava
+
+**Poslední skutečný HOME běh:** [#43491631712](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/43491631712), ověřený QA SHA `26ff139c48d05c6e2e676442b3b157906a3f11e3`, produkt `ae3b4df53c25557f28b4a25ccb65adc2abdff639`, Windows `ZamerovacQA`. Přesná SHA a clean checkout, offline balíčky Playwright/playwright-core1.62.1 a NODE_PATH **PASS**; skutečný Node `--test tests/home_qa_integrity.js` **8 PASS / 2 FAIL**; Chromium/sandbox/CDP/3 smoke **NOT RUN**. Artifact 0, workflow FAIL a bezpečné zastavení. RUN marker odstraněn v `5e8c7626c3ca6d3ab54658dc2d523f9c4bcc3971`, následný [#43491805763](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/43491805763) **SKIPPED**; starý workflow `.github/workflows/browser-smoke-offline-20261113.yml` spotřebován a odstraněn z REVIEW, RUN je inertní.
+
+**Dva skutečné Node FAIL a jedna vedlejší CMD závada:**
+1. Pozitivní fixture `verifyFile` v `os.tmpdir()` na Windows vyvolala `HOME BLOCKED: Chromium path resolves elsewhere`. Reálná identita plné Chromium binárky tímto testem ještě ověřena nebyla. Nová QA-only úprava `canonicalPathMatches` porovnává přísně dvě **ekvivalentní Windows podoby stejné cesty** přes `path.win32.toNamespacedPath`, aby rozdíl mezi normální cestou a nativní `\\?\` syntaxí nebyl mylným redirection; jakákoliv jiná cílová cesta zůstává FAIL. Beze změny: přesné `profile.path`, lstat všech komponent (symlinky/reparse), `O_NOFOLLOW`, `fstat dev/ino/nlink`, kontrola SHA256 celé binárky a metadat před/po. Vlastní pozorovaný skutečný canonical řetězec nebyl v logu; vysvětlení namespaced variantou je odborná hypotéza, nikoliv dokázaná Windows runtime příčina.
+2. Pozitivní `sourceSnapshot` fixture kopírovala Git produkt se samostatným `git clone` a `git checkout` bez stejného dočasného nastavení `core.autocrlf=false` jako pinned `actions/checkout`, proto selhala přesná bajtová kontrola `address-correction.js`. Nový výhradně **testovací vnořený checkout** nyní používá `git -c core.autocrlf=false checkout`; produkční kontrola SHA a bajtů se nijak neoslabuje. LF/CRLF jako příčina na fyzickém Windows z logu přímo nebyla potvrzena; izolovaný Git model ověřil změnu bajtů při autocrlf=true a zachování při false.
+3. Windows CMD zapsal do `GITHUB_ENV` `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD` jako prázdné kvůli překrytí `1>>` číselným přesměrováním. Nový YAML používá `>>"%GITHUB_ENV%" echo PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1` a následující preflight **výslovně požaduje =1**. Samotná offline příprava v původním běhu už `PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1` používala a nic nestahovala.
+
+**Nové QA REVIEW soubory:** `.github/workflows/browser-smoke-winfix-20261113.yml`, přesný nový owner-only RUN ref `qa/browser-smoke-winfix-20261113-run`, jediný marker `docs/qa/browser-smoke-winfix-20261113.trigger`, přesná message `APPROVED-ONE-SHOT-WINFIX-BROWSER-20261113`. Nová RUN větev/marker **NEAKTIVOVAT** do nezávislého SOURCE/security review na novém finálním SHA a dalšího samostatného schválení vlastníka. Starý spotřebovaný RUN neznovuspouštět. Produkt PR121/QA base PR122/main/Windows/Play/ACL/data zůstávají nedotčeny; merge/APK/release HOLD.
+
+**Autorské modely (nikoli skutečný nový HOME PASS):** Node Linux-independent čisté `path.win32.toNamespacedPath` pozitivní/negativní varianty 5/5 PASS na Node v22 Linux; Git izolovaný model `autocrlf=true` mění bytes, `-c core.autocrlf=false` zachová bytes; V8 parse zdrojového JS PASS. **Windows Chrome v tomto opraveném SHA stále NOT RUN.**
+
+## Archiv původní přípravy a historických rozhodnutí – níže uvedené RUN názvy již nejsou aktuální
+
+
 
 **Neaktivní REVIEW návrh. Nepouštět, dokud nezávislý kontrolor neudělí SOURCE/security PASS a koordinátor s vlastníkem nepotvrdí konkrétní aktivační push.**
 
