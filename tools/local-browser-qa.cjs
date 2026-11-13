@@ -2,6 +2,7 @@
 // Run existing Chromium pixel/UI suites on Windows without consuming Actions minutes.
 // This process does not build, install or alter an Android APK.
 const fs = require('node:fs');
+const crypto = require('node:crypto');
 const http = require('node:http');
 const path = require('node:path');
 const os = require('node:os');
@@ -52,19 +53,22 @@ function createStaticServer(assets){
   });
  });
 }
-function statusReport(mode,records,dir,sourceSha=null){
+function statusReport(mode,records,dir,sourceSha=null,integrity={status:'NOT RUN'},identity={}){
  const counts={PASS:0,FAIL:0,SKIP:0,'NOT RUN':0};
  for(const record of records){if(!Object.hasOwn(counts,record.status))throw Error('Unknown QA state '+record.status);counts[record.status]++}
  const expectedCases=mode==='--all'?92:null;
  const cases=records.reduce((sum,r)=>sum+(Number.isInteger(r.scenarioTotal)?r.scenarioTotal:0),0);
- const complete=!counts['NOT RUN']&&!counts.FAIL&&!counts.SKIP &&
+ const complete=integrity.status==='PASS'&&!counts['NOT RUN']&&!counts.FAIL&&!counts.SKIP &&
   records.length===modes[mode].length &&
   records.every(r=>r.status==='PASS'&&Number.isInteger(r.scenarioTotal)&&
    r.scenarioTotal>0&&r.scenarioPassed===r.scenarioTotal);
  const coverage={status:counts['NOT RUN']?'NOT RUN':
   complete&&(expectedCases===null||cases===expectedCases)?'PASS':'FAIL',
   expectedCases,actualCases:cases};
- const report={schema:3,mode,sourceSha,createdAt:new Date().toISOString(),counts,coverage,records,
+ const report={schema:4,kind:'browser',status:coverage.status,mode,sourceSha,
+  runId:identity.runId||null,runAttempt:identity.runAttempt||null,
+  validatorSha:identity.validatorSha||null,integrity,
+  createdAt:new Date().toISOString(),counts,coverage,records,
   scope:'Local Chromium synthetic-data tests, not Android/WebView/device acceptance'};
  const destination=path.join(dir,'results.json'),temp=destination+'.tmp';
  fs.writeFileSync(temp,JSON.stringify(report,null,2)+'\n','utf8');
@@ -107,13 +111,60 @@ async function terminateTree(child){
   try{process.kill(-child.pid,'SIGKILL')}catch(_){child.kill('SIGKILL')}
  }
 }
+function gitBytes(args){
+ const result=spawnSync('git',args,{cwd:root,encoding:'buffer',maxBuffer:16*1024*1024,
+                                  timeout:15000,windowsHide:true});
+ if(result.error||result.status!==0)throw Error('Source git provenance failed: '+args.join(' '));
+ return result.stdout;
+}
 function testedSha(){
- const result=spawnSync('git',['rev-parse','HEAD'],{cwd:root,encoding:'utf8',timeout:10000,windowsHide:true});
- if(result.error||result.status!==0)throw Error('Cannot verify Git checkout SHA');
- const sha=String(result.stdout||'').trim();
+ const sha=gitBytes(['rev-parse','HEAD']).toString('utf8').trim();
  if(!/^[0-9a-f]{40}$/.test(sha))throw Error('Invalid checkout SHA');
  if(process.env.TESTED_SHA&&sha!==process.env.TESTED_SHA)throw Error('Wrong browser source SHA');
  return sha;
+}
+// Every tracked asset/E2E/harness byte is covered; no dirty index, worktree,
+// submodule or nonignored untracked files. Compare before, per-suite, and after.
+function sourceSnapshot(){
+ const sha=testedSha();
+ if(gitBytes(['status','--porcelain','-z','--untracked-files=all']).length!==0)
+  throw Error('Dirty browser source checkout despite matching HEAD');
+ const names=gitBytes(['ls-files','-z','--','app/src/main/assets','tools/e2e'])
+  .toString('utf8').split('\0').filter(Boolean);
+ if(names.length<20)throw Error('Source files unexpectedly missing');
+ const digest=crypto.createHash('sha256');
+ for(const name of names){
+  const file=path.resolve(root,name),base=path.resolve(root);
+  if(!file.startsWith(base+path.sep))throw Error('Unsafe source path');
+  const stat=fs.lstatSync(file);
+  if(!stat.isFile()||stat.isSymbolicLink())throw Error('Nonregular source file '+name);
+  digest.update(name+'\0').update(fs.readFileSync(file)).update('\0');
+ }
+ return {sha,trackedFiles:names.length,digest:digest.digest('hex')};
+}
+function stableSnapshot(start){
+ const now=sourceSnapshot();
+ if(now.sha!==start.sha||now.trackedFiles!==start.trackedFiles||
+    now.digest!==start.digest)throw Error('Chromium source bytes changed during test');
+ return now;
+}
+function pendingContext(dir,sourceSha){
+ if(process.env.GITHUB_ACTIONS!=='true')
+  return {runId:null,runAttempt:null,validatorSha:null};
+ const runId=process.env.GITHUB_RUN_ID||'';
+ const attempt=process.env.GITHUB_RUN_ATTEMPT||'';
+ const validatorSha=process.env.ZAMEROVAC_QA_GATE_SHA||'';
+ if(!/^[1-9][0-9]{0,19}$/.test(runId)||attempt!=='1'||
+    !/^[0-9a-f]{40}$/.test(validatorSha)||
+    path.basename(dir)!=='browser'||
+    path.basename(path.dirname(dir))!==runId+'-'+attempt)
+  throw Error('Untrusted/missing run identity or report path');
+ const initial=JSON.parse(fs.readFileSync(path.join(dir,'results.json'),'utf8'));
+ if(initial.schema!==4||initial.kind!=='browser'||initial.status!=='NOT RUN'||
+    initial.sourceSha!==sourceSha||initial.validatorSha!==validatorSha||
+    initial.runId!==runId||initial.runAttempt!==1)
+  throw Error('Old or forged browser evidence cannot be reused');
+ return {runId,runAttempt:1,validatorSha};
 }
 
 function listen(server){return new Promise((resolve,reject)=>{server.once('error',reject);server.listen(0,'127.0.0.1',()=>{server.off('error',reject);resolve(server.address().port)})})}
@@ -154,35 +205,47 @@ async function execute(script,env,logFile,maxDurationMs=8*60*1000){
  });
 }
 async function run(mode){
- if(!fs.existsSync(path.join(assetRoot,'index.html')))throw Error('Chybí pracovní kopie aplikace: '+assetRoot);
+ if(!fs.existsSync(path.join(assetRoot,'index.html')))throw Error('Missing product assets');
  const sourceSha=testedSha();
  const date=new Date().toISOString().replace(/[:.]/g,'-');
- const dir=path.join(process.env.LOCALAPPDATA||path.join(os.homedir(),'.local','share'),
-  'Zamerovac-QA','browser','run-'+date+'-'+process.pid);
- fs.mkdirSync(dir,{recursive:true});
+ const dir=process.env.ZAMEROVAC_QA_RESULT_ROOT ?
+  path.resolve(process.env.ZAMEROVAC_QA_RESULT_ROOT) :
+  path.join(process.env.LOCALAPPDATA||path.join(os.homedir(),'.local','share'),
+   'Zamerovac-QA','browser','run-'+date+'-'+process.pid);
+ if(process.env.GITHUB_ACTIONS==='true'&&!process.env.ZAMEROVAC_QA_RESULT_ROOT)
+  throw Error('Missing current-run evidence directory');
+ if(process.env.GITHUB_ACTIONS!=='true')fs.mkdirSync(dir,{recursive:true});
+ const identity=pendingContext(dir,sourceSha);
  const records=initialRecords(mode);
- statusReport(mode,records,dir,sourceSha); // durable NOT RUN before browser setup
+ let integrity={status:'NOT RUN'};
+ let baseline=null,failed=false,port;
+ statusReport(mode,records,dir,sourceSha,integrity,identity);
  const server=createStaticServer(assetRoot);
- let port,failed=false;
- const deadline=Date.now()+38*60*1000; // shorter than 50-minute workflow timeout
+ const deadline=Date.now()+38*60*1000;
  try{
+  baseline=sourceSnapshot();
+  integrity={status:'PASS',...baseline};
+  statusReport(mode,records,dir,sourceSha,integrity,identity);
   const browser=verifyBrowser();
   port=await listen(server);
   const env={...process.env,CI:'1',CHROMIUM_PATH:browser,
    ZAMEROVAC_BASE_URL:'http://127.0.0.1:'+port,
    ZAMEROVAC_E2E_DIR:path.join(dir,'evidence')};
   for(let i=0;i<records.length;i++){
+   stableSnapshot(baseline);
    if(Date.now()+5000>=deadline){failed=true;break}
    const name=records[i].suite,file=path.join(dir,name+'.log');
    records[i]={...records[i],status:'FAIL',error:'interrupted during execution',log:file};
-   statusReport(mode,records,dir,sourceSha); // interrupted work is never PASS
+   statusReport(mode,records,dir,sourceSha,integrity,identity);
    const outcome=await execute(name,env,file,Math.min(8*60*1000,deadline-Date.now()));
    if(outcome.status==='PASS'){
-    try{Object.assign(outcome,checkedCases(name,dir,sourceSha))}
-    catch(e){outcome.status='FAIL';outcome.error='Case evidence rejected: '+e.message}
+    try{
+     Object.assign(outcome,checkedCases(name,dir,sourceSha));
+     stableSnapshot(baseline);
+    }catch(e){outcome.status='FAIL';outcome.error='Case/source evidence rejected: '+e.message}
    }
    records[i]={suite:name,...outcome,log:file};
-   statusReport(mode,records,dir,sourceSha);
+   statusReport(mode,records,dir,sourceSha,integrity,identity);
    console.log(outcome.status+' '+name+' ('+Math.round(outcome.elapsedMs/1000)+' s)');
    if(outcome.status==='FAIL'){
     failed=true;
@@ -190,16 +253,21 @@ async function run(mode){
     console.error(log.slice(-1500));
    }
   }
+ }catch(e){
+  failed=true;
+  integrity={status:'FAIL',error:String(e.message||e)};
+  console.error('FAIL browser integrity/preflight: '+integrity.error);
  }finally{
   if(port){
-   // Do not let a failed browser keep HTTP keepalive sockets alive indefinitely.
    if(typeof server.closeAllConnections==='function')server.closeAllConnections();
    await Promise.race([close(server),new Promise(resolve=>setTimeout(resolve,3000))]);
   }
-  statusReport(mode,records,dir,sourceSha);
+  try{if(baseline)stableSnapshot(baseline)}
+  catch(e){integrity={status:'FAIL',error:'Post-test source changed: '+e.message};failed=true}
+  statusReport(mode,records,dir,sourceSha,integrity,identity);
  }
- const report=statusReport(mode,records,dir,sourceSha);
- console.log('Výsledky Chromium: '+path.join(dir,'results.json'));
+ const report=statusReport(mode,records,dir,sourceSha,integrity,identity);
+ console.log('Current-run Chromium evidence: '+path.join(dir,'results.json'));
  console.log('SUITES: PASS '+report.counts.PASS+' / FAIL '+report.counts.FAIL+
              ' / NOT RUN '+report.counts['NOT RUN']);
  console.log('CASES: '+report.coverage.actualCases+
@@ -238,4 +306,4 @@ async function main(){
  await run(mode);
 }
 if(require.main===module)main().catch(error=>{console.error('FAIL local browser QA: '+String(error.stack||error));process.exitCode=1});
-module.exports={createStaticServer,statusReport,initialRecords,killTreeArgs,checkedCases,modes,sourceRoot:root};
+module.exports={createStaticServer,statusReport,initialRecords,killTreeArgs,checkedCases,sourceSnapshot,stableSnapshot,pendingContext,modes,sourceRoot:root};
