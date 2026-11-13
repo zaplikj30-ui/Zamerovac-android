@@ -122,6 +122,9 @@ class GateUnitTest(unittest.TestCase):
             self.assertIn("github.triggering_actor == 'zaplikj30-ui'", good)
             self.assertIn("github.run_attempt == 1", good)
             self.assertIn("if-no-files-found: error", good)
+            self.assertIn("steps.source_gate.outcome == 'success'", good)
+            self.assertIn("steps.evidence_checked.outcome == 'success'", good)
+            self.assertIn("sync116_evidence.py inspect", good)
             self.assertIn("runs/${{ github.run_id }}-${{ github.run_attempt }}", good)
             self.assertNotIn("browser/**/results.json", good)
             self.assertNotIn("if-no-files-found: ignore", good)
@@ -131,6 +134,9 @@ class GateUnitTest(unittest.TestCase):
                 ("github.run_attempt == 1", "github.run_attempt >= 1"),
                 ("github.run_attempt == 1", "true"),
                 ("if-no-files-found: error", "if-no-files-found: ignore"),
+                ("steps.source_gate.outcome == 'success'", "true"),
+                ("steps.evidence_checked.outcome == 'success'", "true"),
+                ("sync116_evidence.py inspect", "echo stale evidence accepted"),
                 ("runs/${{ github.run_id }}-${{ github.run_attempt }}", "runs/last-success"),
             ):
                 with self.subTest(old=old, new=new), self.assertRaises(GATE.GateError):
