@@ -3,7 +3,7 @@
 const assert=require('node:assert/strict');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
 const {spawnSync}=require('node:child_process');
-const {initialRecords,statusReport,killTreeArgs,modes}=require('../tools/local-browser-qa.cjs');
+const {initialRecords,statusReport,killTreeArgs,checkedCases,modes}=require('../tools/local-browser-qa.cjs');
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),'zamerovac-browser-qa-'));
 try{
  const records=initialRecords('--all');
@@ -27,6 +27,31 @@ try{
  assert.equal(killTreeArgs(1234,'linux'),null);
  assert.throws(()=>killTreeArgs(-1,'win32'),/PID/);
  assert.equal(modes['--all'].length,23);
+
+ const fake=records.map((r,i)=>({...r,status:'PASS',scenarioTotal:4,scenarioPassed:4,error:null}));
+ report=statusReport('--all',fake,dir,'a'.repeat(40));
+ assert.equal(report.coverage.actualCases,92);
+ assert.equal(report.coverage.status,'PASS');
+ report=statusReport('--all',fake.map((r,i)=>i===0?{...r,scenarioTotal:5,scenarioPassed:5}:r),
+  dir,'a'.repeat(40));
+ assert.equal(report.coverage.status,'FAIL','93 cases cannot impersonate 92');
+ report=statusReport('--all',fake.map((r,i)=>i===0?{...r,scenarioPassed:3}:r),
+  dir,'a'.repeat(40));
+ assert.equal(report.coverage.status,'FAIL','incomplete cases must not PASS');
+ const e2eReport=path.join(dir,'evidence','pending-audio','report.json');
+ fs.mkdirSync(path.dirname(e2eReport),{recursive:true});
+ const valid={suite:'pending-audio',sha:'a'.repeat(40),syntheticOnly:true,
+              cases:[{name:'reopen',status:'passed'}]};
+ fs.writeFileSync(e2eReport,JSON.stringify(valid));
+ assert.deepEqual(checkedCases('pending-audio',dir,'a'.repeat(40)),
+                  {scenarioTotal:1,scenarioPassed:1});
+ assert.throws(()=>checkedCases('pending-audio',dir,'b'.repeat(40)),/Untrusted/);
+ fs.writeFileSync(e2eReport,JSON.stringify({...valid,cases:[{name:'reopen',status:'failed'}]}));
+ assert.throws(()=>checkedCases('pending-audio',dir,'a'.repeat(40)),/Incomplete/);
+ fs.writeFileSync(e2eReport,JSON.stringify({...valid,cases:[{name:'reopen',status:'passed'},
+  {name:'reopen',status:'passed'}]}));
+ assert.throws(()=>checkedCases('pending-audio',dir,'a'.repeat(40)),/Incomplete/);
+
  const gateRunner=path.join(__dirname,'..','tools','local-browser-qa.cjs');
  // The pinned runner's real localhost HTTP path is exercised, not only its CLI shape.
  const serverProbe=spawnSync(process.execPath,[gateRunner,'--self-test'],{
