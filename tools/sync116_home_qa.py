@@ -73,6 +73,11 @@ def strict_classify(module, cases, gradle_rc: int, xml_count: int,
     report = module.classify(cases, gradle_rc)
     problems = list(report["product_acceptance"]["problems"])
     counts = report["gradle"]["counts"]
+    ids = [case["id"] for case in cases]
+    if len(ids) != len(set(ids)):
+        problems.append("Duplicate JVM method IDs are forbidden")
+    if gradle_rc != 1:
+        problems.append("Raw Gradle must actually FAIL with exit 1 from exactly two assertions")
     if xml_count != TEST_CLASSES:
         problems.append("Expected exactly 64 fresh JUnit class XML files")
     if len(cases) != TEST_METHODS:
