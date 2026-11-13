@@ -110,6 +110,13 @@ def run_linux(source: Path, expected: str, output: Path) -> int:
     gradle = Path("/opt/gradle-8.10.2/bin/gradle")
     home.check_wsl(gradle)
     module, original = load_product_classifier(source)
+    # Only this explicitly inspected pure-Python file may run under WSL.
+    # Never use WSL-wide unittest discovery: other project tests call Node.
+    probe = subprocess.run([sys.executable, "-m", "unittest", "discover",
+                            "-s", "tests", "-p", "test_sync_ack_acceptance.py", "-v"],
+                           cwd=source, stdin=subprocess.DEVNULL, check=False,
+                           timeout=120)
+    require(probe.returncode == 0, "original ACK classifier negative tests failed")
     require(not output.exists() or not any(output.iterdir()),
             "refuse to overwrite existing HOME evidence")
     output.mkdir(parents=True, exist_ok=True)
