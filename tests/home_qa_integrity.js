@@ -130,8 +130,16 @@ test('Windows namespaced canonical paths keep strict target identity',()=>{
  assert.equal(canonicalPathMatches(file,'D:\\qa\\fixture.exe','win32'),false);
  assert.equal(canonicalPathMatches('/tmp/fixture','/tmp/other','linux'),false);
 });
+// Synthetic files must be created under native canonical TEMP spelling. Portable
+// realpath can retain a Windows 8.3 ancestor alias. Resolve only the newly made
+// directory, before creating bytes/profile; never normalize an approved binary.
+function binaryFixtureDirectory(prefix){
+ const created=fs.mkdtempSync(path.join(os.tmpdir(),prefix));
+ try{return fs.realpathSync.native(created)}
+ catch(error){fs.rmSync(created,{recursive:true,force:true});throw error}
+}
 test('pin verifier rejects changed bytes, wrong paths, symlinks and hardlinks',()=>{
- const dir=fs.mkdtempSync(path.join(os.tmpdir(),'qa-pin-'));
+ const dir=binaryFixtureDirectory('qa-pin-');
  try{
   const binary=path.join(dir,'fixture'),bytes=Buffer.from('7f454c4601020304','hex');fs.writeFileSync(binary,bytes);
   const profile={path:binary,sha256:crypto.createHash('sha256').update(bytes).digest('hex'),magic:'7f454c46'};
@@ -226,12 +234,19 @@ test('Windows equivalent canonical spellings pass all binary checks; changed tar
   assert.throws(()=>model(file,redirected).verifyFile(file,profile,'win32'),/redirected/);
  for(const overrides of [{fstatSync:()=>({...stat,nlink:2})},{lstatSync:()=>({...stat,ino:3})}])
   assert.throws(()=>model(file,undefined,overrides).verifyFile(file,profile,'win32'),/one regular non-linked file/);
+ assert.throws(()=>model(file).verifyFile(file,{...profile,magic:'7f454c46'},'win32'),/format mismatch/);
+ assert.throws(()=>model(file).verifyFile(file,{...profile,sha256:'0'.repeat(64)},'win32'),/bytes\/hash changed/);
+ for(const changed of [{size:stat.size+1},{mtimeMs:stat.mtimeMs+1}]){
+  let reads=0;
+  assert.throws(()=>model(file,undefined,{fstatSync:()=>++reads===1?stat:{...stat,...changed}})
+   .verifyFile(file,profile,'win32'),/bytes\/hash changed/);
+ }
  // The approved input remains literal, even when an alternative spelling could
  // identify the same file. Only realpath's equivalent output is normalized.
  assert.throws(()=>model(file).verifyFile(file.toUpperCase(),profile,'win32'),/unapproved/);
 });
 test('real binary mutation during hashing and name replacement fail closed',()=>{
- const dir=fs.mkdtempSync(path.join(os.tmpdir(),'qa-identity-race-'));
+ const dir=binaryFixtureDirectory('qa-identity-race-');
  try{
   const file=path.join(dir,'fixture'),other=path.join(dir,'other');
   const bytes=Buffer.from('7f454c4601020304','hex');fs.writeFileSync(file,bytes);

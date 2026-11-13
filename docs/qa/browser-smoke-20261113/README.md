@@ -1,6 +1,12 @@
 # QA-only: HOME Chromium – aktuální stav a historie (13. 11. 2026)
 
-## Aktuální: Windows příčina neprokázána, cílená diagnostika připravena, HOME BLOCKED
+## Aktuální: oprava přípravy syntetických TEMP fixture, HOME BLOCKED
+
+Po Windows [#43511412090](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/43511412090) (**13 PASS / 2 FAIL / 0 SKIP**, QA `023ae630ee6ed161f99a3b80c5a3eca752b29725`) je připraven cílený autorský balík dle [zadání](https://github.com/zaplikj30-ui/Zamerovac-android/pull/124#issuecomment-6865578897). Dvě syntetické binární fixture nyní určují native canonical zápis nově vytvořené TEMP složky **před vytvořením souboru a profilu**. Produkční verifier i všechny připnuté profily jsou beze změn; přímý short/long mismatch se stále odmítá, včetně shodného file ID. **Nejde o opravu přijímání aliasů produkční binárky.**
+
+[Příčina, alternativy, bezpečnost, registr testů a omezení](windows-fixture-paths.md). Model obou skutečných testových callbacků před opravou **1 PASS / 2 FAIL**, po opravě **3 PASS / 0 FAIL**. Přiřazení druhého skutečného Windows FAIL ke konkrétnímu testu zůstává **HYPOTÉZA**. Nativní Windows, instalované Chromium, sandbox/CDP/JobObject a 23/96 **NOT RUN**; HOME dál BLOCKED. Finální SHA a výsledky společné regrese jsou v autorském předání PR124/#42. Další krok: nezávislá kontrola Kontrolora 40; nový Windows běh až po samostatném souhlasu. Žádný workflow ani RUN marker se v tomto balíku nemění.
+
+## Historie: diagnostika na SHA 023ae630 před během #43511412090
 
 Poslední skutečný Windows [run #43497273184](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/43497273184), QA `46f8051d8f1105a9b819f6f6db7455984e3ab5d7`, skončil **10 PASS / 1 FAIL / 0 SKIP**. FAIL je pozitivní TEMP fixture `verifyFile`, nikoli důkaz selhání instalované Chromium binárky. Přenos GITHUB_ENV a LF/CRLF fixture zde již **PASS**. Chromium, sandbox, CDP, JobObject a UI **NOT RUN**. Marker odstraněn, následný run #43497530293 **SKIPPED**, starý one-shot spotřebován. Žádná další aktivace není schválena.
 
