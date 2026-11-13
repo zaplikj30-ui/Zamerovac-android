@@ -11,7 +11,7 @@ function executionIdentity(validatorSha,env=process.env){
  if(env.GITHUB_ACTIONS!=='true')return {runId:null,runAttempt:null};
  demand(env.GITHUB_REPOSITORY==='zaplikj30-ui/Zamerovac-android'&&env.GITHUB_ACTOR==='zaplikj30-ui'&&
   env.GITHUB_TRIGGERING_ACTOR==='zaplikj30-ui'&&env.GITHUB_RUN_ATTEMPT==='1'&&
-  env.GITHUB_EVENT_NAME==='push'&&env.GITHUB_REF==='refs/heads/qa/home-props-security-20261113'&&
+  env.GITHUB_EVENT_NAME==='push'&&env.GITHUB_REF==='refs/heads/qa/browser-smoke-20261113-run'&&
   env.ZAMEROVAC_EXPECTED_QA_SHA===validatorSha&&/^[1-9][0-9]{0,19}$/.test(env.GITHUB_RUN_ID||''),
   'unapproved owner/ref/SHA/run attempt; no rerun or arbitrary PR/fork');
  return {runId:env.GITHUB_RUN_ID,runAttempt:1};
