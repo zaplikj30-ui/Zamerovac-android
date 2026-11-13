@@ -29,6 +29,53 @@ test('Actions identity preserves owner, exact ref/SHA and first-attempt protecti
   {GITHUB_REF:'refs/heads/qa/other'},{GITHUB_REPOSITORY:'other/fork'},{ZAMEROVAC_EXPECTED_QA_SHA:'c'.repeat(40)}])
   assert.throws(()=>integrity.executionIdentity(sha,{...env,...change}));
 });
+test('offline browser bootstrap is pinned and rejects missing isolation, cache, identity and artifact guards',()=>{
+ const repo=path.resolve(__dirname,'..');
+ const workflow=fs.readFileSync(path.join(repo,'.github/workflows/browser-smoke-offline-20261113.yml'),'utf8');
+ const pkg=JSON.parse(fs.readFileSync(path.join(repo,'tools/qa-browser/package.json'),'utf8'));
+ const lock=JSON.parse(fs.readFileSync(path.join(repo,'tools/qa-browser/package-lock.json'),'utf8'));
+ assert.equal(pkg.dependencies.playwright,'1.62.1');
+ assert.equal(lock.packages[''].dependencies.playwright,'1.62.1');
+ for(const name of ['playwright','playwright-core']){
+  const record=lock.packages['node_modules/'+name];
+  assert.equal(record.version,'1.62.1');
+  assert.match(record.integrity,/^sha512-[A-Za-z0-9+/]+={0,2}$/);
+ }
+ for(const [filename,blob] of [
+  ['tools/qa-browser/package.json','cd80df5950316c233785c4c96768d836689c79f5'],
+  ['tools/qa-browser/package-lock.json','2901dfe9699efa4edbeab7e9655f4462228c39e9']]){
+  assert.equal(execFileSync('git',['hash-object',filename],{cwd:repo,encoding:'utf8'}).trim(),blob);
+ }
+ const required=[
+  "refs/heads/qa/browser-smoke-offline-20261113-run",
+  "docs/qa/browser-smoke-offline-20261113.trigger",
+  "github.run_number == 1",
+  "github.run_attempt == 1",
+  "if exist \"%DEPS%\" (",
+  "%RUNNER_TEMP%\\zamerovac-qa-playwright-%GITHUB_RUN_ID%-%GITHUB_RUN_ATTEMPT%",
+  "npm.cmd ci --offline --ignore-scripts --omit=optional --no-audit --no-fund",
+  "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1",
+  "npm_config_offline=true",
+  "if errorlevel 1 (\n            echo BLOCKED: pinned Playwright packages missing from offline cache",
+  "echo NODE_PATH=%NODE_PATH%>>\"%GITHUB_ENV%\"",
+  "if-no-files-found: error",
+  "node tools/local-browser-qa.cjs --smoke",
+  "persist-credentials: false",
+  "runs-on: [self-hosted, Windows, X64, zamerovac-qa]",
+ ];
+ const safe=source=>required.every(fragment=>source.includes(fragment))
+  && !source.includes('--no-sandbox')&&!source.includes('workflow_dispatch:')
+  && !source.includes('pull_request:');
+ assert.equal(safe(workflow),true);
+ for(const must of required){
+  const mutated=workflow.replace(must,'DISABLED-EXPECTED-NEGATIVE');
+  assert.notEqual(mutated,workflow,'expected fixture fragment absent: '+must);
+  assert.equal(safe(mutated),false,'must fail closed when guard removed: '+must);
+ }
+ assert.equal(safe(workflow.replace('npm.cmd ci --offline','npm.cmd ci')),false);
+ assert.equal(safe(workflow.replace('if-no-files-found: error','if-no-files-found: warn')),false);
+ assert.equal(safe(workflow+'\n  workflow_dispatch:\n'),false);
+});
 test('21 exit-zero suite records without named scenarios cannot be full PASS',()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'qa-incomplete-'));
  try{
