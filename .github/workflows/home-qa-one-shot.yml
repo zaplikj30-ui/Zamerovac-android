@@ -43,14 +43,14 @@ jobs:
           persist-credentials: false
           submodules: false
       - name: Read-only trusted validator pinned to reviewed OWNER SHA
-         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
-         with:
-           repository: zaplikj30-ui/Zamerovac-android
-           ref: infra/chat39-sync116-qa-20261113
-           path: gate
-           fetch-depth: 1
-           persist-credentials: false
-           submodules: false
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: zaplikj30-ui/Zamerovac-android
+          ref: infra/chat39-sync116-qa-20261113
+          path: gate
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
       - name: Check owner branch SHA and separate validator BEFORE running source code
         id: source_gate
         shell: cmd
