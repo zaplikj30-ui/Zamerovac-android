@@ -147,8 +147,9 @@ class Sync116QaOnlyTests(unittest.TestCase):
         with mock.patch.dict(QA.os.environ, {"ZAMEROVAC_QA_TEMP_WSL_ROOT": QA.TEMP_WAIVER}):
             with mock.patch.object(QA, "git", return_value=" M tracked.py"):
                 with mock.patch.object(QA.subprocess, "run",
-                        return_value=types.SimpleNamespace(returncode=0, stdout="")):
+                        return_value=types.SimpleNamespace(returncode=0, stdout="")) as command:
                     self.assertEqual("", QA.copied_worktree_status(Path("/tmp/test")))
+                    self.assertIn("core.autocrlf=true", command.call_args.args[0])
                 with mock.patch.object(QA.subprocess, "run",
                         return_value=types.SimpleNamespace(returncode=0, stdout=" M tracked.py")):
                     self.assertEqual("M tracked.py", QA.copied_worktree_status(Path("/tmp/test")))
