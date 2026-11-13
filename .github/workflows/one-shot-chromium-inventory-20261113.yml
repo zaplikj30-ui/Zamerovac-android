@@ -1,0 +1,64 @@
+name: Zaměřovač – ONE SHOT read-only Chromium inventory 2026-11-13
+
+# Only the dedicated ACTIVATE branch and unique trigger-file push can invoke this.
+# REVIEW branch is deliberately excluded; no automatic run while preparing/reviewing.
+on:
+  push:
+    branches:
+      - 'qa/one-shot-chromium-inventory-20261113-run'
+    paths:
+      - 'docs/qa/one-shot-chromium-inventory-20261113.trigger'
+
+permissions: {}
+
+concurrency:
+  group: zamerovac-one-shot-chromium-inventory-20261113
+  cancel-in-progress: false
+
+jobs:
+  inventory-only:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/qa/one-shot-chromium-inventory-20261113-run' && github.event_name == 'push' && github.run_attempt == 1 && github.event.head_commit.message == 'APPROVED-ONE-SHOT-CHROMIUM-INVENTORY-20261113' }}
+    name: Windows ZamerovacQA – Chromium file identity ONLY
+    runs-on: [self-hosted, Windows, X64, zamerovac-qa]
+    timeout-minutes: 5
+    steps:
+      - name: Read-only identity, pinned Chromium paths and file hashes
+        shell: cmd
+        run: |
+          @echo off
+          if /i not "%GITHUB_REPOSITORY%"=="zaplikj30-ui/Zamerovac-android" exit /b 1
+          if /i not "%GITHUB_ACTOR%"=="zaplikj30-ui" exit /b 1
+          if /i not "%GITHUB_REF%"=="refs/heads/qa/one-shot-chromium-inventory-20261113-run" exit /b 1
+          if not "%GITHUB_EVENT_NAME%"=="push" exit /b 1
+          if not "%GITHUB_RUN_ATTEMPT%"=="1" exit /b 1
+          for /f "delims=" %%A in ('C:\Windows\System32\whoami.exe') do set "QA_USER=%%A"
+          echo SERVICE_ACCOUNT=%QA_USER%
+          echo %QA_USER% | C:\Windows\System32\findstr.exe /i /l /e /c:"\ZamerovacQA" >nul
+          if errorlevel 1 (
+            echo BLOCKED: not under ZamerovacQA
+            exit /b 1
+          )
+          set "FULL=C:\actions-runner\tools\ms-playwright\chromium-1234\chrome-win64\chrome.exe"
+          set "SHELL=C:\actions-runner\tools\ms-playwright\chromium_headless_shell-1234\chrome-headless-shell-win64\chrome-headless-shell.exe"
+          if not exist "%FULL%" (
+            echo BLOCKED: pinned full Chrome for Testing absent or inaccessible
+            exit /b 1
+          )
+          echo FULL_CHROMIUM_PRESENT=YES
+          C:\Windows\System32\certutil.exe -hashfile "%FULL%" SHA256
+          if errorlevel 1 exit /b 1
+          C:\Windows\System32\certutil.exe -hashfile "%FULL%" SHA256 | C:\Windows\System32\findstr.exe /i /l /c:"409805a16d6416087e6b2f778df1cf8f7bbb267d6b99f6b5bb0a618eace234f2" >nul
+          if errorlevel 1 (
+            echo BLOCKED: full Chromium hash differs from reviewed PR122 pin
+            exit /b 1
+          )
+          echo FULL_CHROMIUM_PIN=PASS
+          if exist "%SHELL%" (
+            echo HISTORICAL_HEADLESS_SHELL_PRESENT=YES
+            C:\Windows\System32\certutil.exe -hashfile "%SHELL%" SHA256
+            if errorlevel 1 exit /b 1
+          ) else (
+            echo HISTORICAL_HEADLESS_SHELL_PRESENT=NO
+          )
+          echo INVENTORY_ONLY=COMPLETE
+          echo NO_BROWSER_EXECUTED_NO_INSTALL_NO_APP_TEST_NO_APK
