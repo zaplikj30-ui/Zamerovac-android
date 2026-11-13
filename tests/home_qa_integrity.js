@@ -68,7 +68,7 @@ test('offline browser bootstrap is pinned and rejects missing isolation, cache, 
   && !source.includes('pull_request:');
  assert.equal(safe(workflow),true);
  for(const must of required){
-  const mutated=workflow.replace(must,'DISABLED-EXPECTED-NEGATIVE');
+  const mutated=workflow.split(must).join('DISABLED-EXPECTED-NEGATIVE');
   assert.notEqual(mutated,workflow,'expected fixture fragment absent: '+must);
   assert.equal(safe(mutated),false,'must fail closed when guard removed: '+must);
  }
