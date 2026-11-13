@@ -244,6 +244,7 @@ jobs:
 # Legacy quick+WSL ONE_SHOT_RECIPE above stays byte-identical.
 # Browser mode runs a PINNED validator and only owner-named source branches.
 BROWSER_PREFLIGHT = r'''      - name: Check owner branch SHA and separate validator BEFORE running source code
+        id: source_gate
         shell: cmd
         run: |
           cd /d "%GITHUB_WORKSPACE%\source"
@@ -304,6 +305,16 @@ BROWSER_STEPS = r'''      - name: Isolated offline package-lock Chromium prerequ
           if errorlevel 1 exit /b 1
 '''
 
+EVIDENCE_INSPECTION = r'''      - name: Validate current-run evidence before possible upload
+        id: evidence_checked
+        if: always() && steps.source_gate.outcome == 'success'
+        shell: cmd
+        run: |
+          cd /d "%GITHUB_WORKSPACE%\gate"
+          python tools\sync116_evidence.py inspect --kind browser --root "%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs" --source-sha __SOURCE_SHA__ --validator-sha __GATE_SHA__
+          if errorlevel 1 exit /b 1
+'''
+
 def browser_workflow_recipe() -> str:
     """Exact browser allowlist derived from unchanged quick template."""
     first = "      - name: All quick Windows Node and Python tests\n"
@@ -332,6 +343,7 @@ def browser_workflow_recipe() -> str:
     last_at = recipe.index(last, first_at)
     recipe = recipe[:first_at] + BROWSER_STEPS + recipe[last_at:]
     recipe = recipe.replace("      - name: Upload synthetic quick results, never APK",
+                            EVIDENCE_INSPECTION +
                             "      - name: Upload checkpointed synthetic Chromium reports, no APK")
     recipe = recipe.replace("name: canonical-home-qa-__SOURCE_SHA__",
                             "name: canonical-home-browser-__SOURCE_SHA__-${{ github.run_id }}-${{ github.run_attempt }}")
@@ -339,6 +351,12 @@ def browser_workflow_recipe() -> str:
     new_path = "          path: qa-evidence/Zamerovac-QA/runs/${{ github.run_id }}-${{ github.run_attempt }}/browser/results.json"
     demand(recipe.count(old_path) == 1, "unknown canonical artifact path")
     recipe = recipe.replace(old_path, new_path).replace("retention-days: 7", "retention-days: 3")
+    upload_before = "        if: always()\n        uses: actions/upload-artifact@"
+    upload_after = ("        if: always() && steps.source_gate.outcome == 'success' "
+                    "&& steps.evidence_checked.outcome == 'success'\n"
+                    "        uses: actions/upload-artifact@")
+    demand(recipe.count(upload_before) == 1, "unknown upload guard")
+    recipe = recipe.replace(upload_before, upload_after)
     return recipe.replace("__EVIDENCE_KIND__", "browser").replace(
         "if-no-files-found: ignore", "if-no-files-found: error")
 
