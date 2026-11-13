@@ -1,0 +1,207 @@
+{
+  "schema": 1,
+  "sourceSha": "1527e3377609633c554195b0641e02e3cfb5fb5e",
+  "origin": "Reviewed literal E2E test titles and Java @Test methods at pinned PR #116",
+  "chromium": {
+    "legacy-conflict-persistence": [
+      "clockless-legacy-copy-persists-reopen-media-editor-and-repeat-callback"
+    ],
+    "drawing": [
+      "dimension",
+      "line",
+      "arrow",
+      "circle",
+      "ellipse",
+      "rect",
+      "area",
+      "polyline",
+      "chain",
+      "cumulative",
+      "angle",
+      "freehand",
+      "target",
+      "note",
+      "symbol",
+      "two_finger_pinch_keeps_undo_redo_and_exact_measure",
+      "pan_then_pinch_does_not_resume_stale_drag"
+    ],
+    "gallery-visual": [
+      "gallery_text_and_lines_remain_sharp_at_real_screen_scale"
+    ],
+    "workflows": [
+      "folders_move_rename_trash_restore",
+      "bulk_copy_move_lock",
+      "note_checklist_sketch_attachment",
+      "photo_details_nested_gallery_png_hashes",
+      "trash_restore_purge_and_live_media",
+      "focus_cancel_layers_history_search"
+    ],
+    "interactions": [
+      "rapid_grips_jitter_cancel",
+      "pan_zoom_fit_and_repeated_reopen",
+      "chain_finish_insert_remove_history"
+    ],
+    "zoom-grid": [
+      "buttons_grid_pixels_and_snap_independence",
+      "trusted_two_finger_pinch_and_limits"
+    ],
+    "update39": [
+      "gallery_bounded_pan_and_caption_pixels",
+      "default_selection_corner_loupe_and_landscape_tools",
+      "real_save_failure_and_photo_loading_errors",
+      "help_occurrences_and_neutral_bluetooth"
+    ],
+    "gallery-state": [
+      "render_is_read_only_even_during_nested_drawing_and_failure",
+      "gestures_navigation_stale_load_and_exact_anchor_pixels"
+    ],
+    "peer-sync": [
+      "offline-folder-cycle-repair-is-visible-reachable-and-exact",
+      "menu-settings-offline-and-data-preserved",
+      "explicit-approval-full-code-reject-back-and-stale-session",
+      "untrusted-names-pending-errors-and-cloud-isolation"
+    ],
+    "drive-accounts": [
+      "historical-receipt-and-live-checkpoint-never-become-current-health-after-disconnect",
+      "local-save-and-independent-target-receipts-never-pretend-a-backup",
+      "independent-explicit-account-controls-and-cancelled-disconnect",
+      "unconfigured-or-invalid-state-never-pretends-account-is-ready-and-text-is-escaped",
+      "backup-account-switch-clears-old-history-and-stale-verification"
+    ],
+    "sync-cadence": [
+      "frequency-selection-persists-without-changing-records-and-old-switch-can-reenable",
+      "failed-persistence-does-not-activate-new-frequency"
+    ],
+    "backup-history": [
+      "offline-ui-two-histories-confirmation-and-network-exception"
+    ],
+    "read-only-sync": [
+      "view-photo-and-detail-without-revision-then-edit-with-history"
+    ],
+    "sync-edit-guard": [
+      "native-callback-during-grip-and-measure-form-preserves-both-edits",
+      "status-message-cannot-drop-deferred-data-when-form-is-cancelled",
+      "detail-parent-cas-keeps-live-item-references-after-conflict"
+    ],
+    "note-sync": [
+      "read-only-note-and-checklist-attachment-causal-autosave",
+      "incoming-note-data-waits-and-read-only-close-does-not-create-conflict",
+      "sketch-stroke-keeps-live-points-through-debounced-note-cas",
+      "failed-note-write-keeps-form-and-retry-and-lock-protects-checks",
+      "voice-keeps-owner-finishes-on-save-and-failed-stop-keeps-form",
+      "rich-voice-failed-stop-and-disk-keep-modal-back-retry-and-cancel"
+    ],
+    "web-content-policy": [
+      "native-csp-blocks-injected-scripts-media-and-frames-keeps-real-drawing"
+    ],
+    "media-import": [
+      "delayed-native-results-stay-in-original-folder-and-stale-token-cannot-complete-new-picker",
+      "deleted-or-locked-destination-and-closed-owner-dialog-do-not-redirect-file",
+      "picker-cancel-and-rejected-write-keep-data-without-ghost-record"
+    ],
+    "pending-audio": [
+      "verified-original-and-suspect-reservation-have-separate-actions-and-acknowledgements",
+      "ordinary-save-uses-native-summary-without-requesting-another-full-media-scan",
+      "stop-is-only-a-draft-before-cancel-and-failed-save",
+      "unknown-journal-warning-preserves-two-independent-copy-actions",
+      "stop-cancel-restart-reattach-save-preserves-exact-values",
+      "failed-save-cancel-keeps-pending-across-reload",
+      "android-back-and-bind-failure-do-not-undo-saved-note",
+      "failed-stop-retains-recovery-and-uncertain-export-never-attaches"
+    ],
+    "help": [
+      "main_menu_search_offline_and_android_back",
+      "overflow_menu_and_small_large_screens"
+    ],
+    "release-history": [
+      "versioned_history_main_menu_offline_and_help_navigation",
+      "settings_history_and_responsive_layout"
+    ],
+    "latency": [
+      "project_1_10_50_editable_documents",
+      "photo_and_gallery_1200x800",
+      "photo_and_gallery_6000x4000",
+      "existing_feedback_320x240",
+      "existing_feedback_1440x2800",
+      "feedback_slow_save_blocks_close_list_and_android_back"
+    ],
+    "quality-regressions": [
+      "existing_note_undo_redo_save",
+      "existing_note_undo_redo_back",
+      "audio_play_pause_must_not_focus_text",
+      "two_notes_explicit_picker_double_click_cancel_back_and_late_result",
+      "cancelled_attachment_has_no_unprotected_orphan",
+      "note_controls_reachable_412",
+      "note_controls_reachable_1100",
+      "project_photo_dimension_note_reopen_and_export"
+    ],
+    "gallery-readability": [
+      "pixels_1200x800_412",
+      "pixels_6000x4000_412",
+      "pixels_1600x4800_1100",
+      "pixels_6000x4000_412_dpr2"
+    ]
+  },
+  "jvmRequired": {
+    "SyncReceiptSafetyTest": [
+      "quietReceiptRestartAndDuplicateKeepExactPerTargetSourceAndUnknownHealth",
+      "everyReceiptTransactionFaultRollsBackQuietingAndSurvivesReopen",
+      "actualSqlDiskFullCannotQuietTheActiveIntent",
+      "corruptedSourceCannotBeOverwrittenOrAcknowledged",
+      "corruptedSqlSourceAndManifestNeverBecomeReceiptEvidence",
+      "accountAndSafUriChangesCannotConsumeAnOldTargetAck",
+      "changedPairingOrRecoveryEpochCannotCompleteTheOriginalJob",
+      "localAuthorityLossCannotRetireTheIntentAfterRestart",
+      "actualNewerInventoryVerifiesCoverageWithoutRollingBackAndStillReportsUnknownNow",
+      "legacyReceiptCannotBePromotedToAnInventoryCheckpoint",
+      "missingOrChangedMediaCannotProduceOrReuseVerifiedInventory",
+      "incomparableCausalRevisionDoesNotVerifyTheReceipt",
+      "corruptedTargetIdentityIsRejectedBeforeUsingItsReceipt",
+      "cachedCurrentSnapshotCannotAdvertiseOldJsonAfterValidExternalReplacement",
+      "registryFailureAfterSqlCommitCannotStrandHistoryOrLoseTheIntent",
+      "verifiedInventoryCannotBeMutatedIntoDifferentCausalCoverage",
+      "wrongEpochCannotReuseAnOtherwiseVerifiedInventory",
+      "restoringOlderWorkingBytesDoesNotRearmTheOldLocalEpoch",
+      "orphanedSqlDeliveryCannotPassQuickCheckOrRecreateLostEvidenceSilently",
+      "knownReceiverEpochCannotBeVerifiedByAnOlderAuthenticatedInventory",
+      "corruptedSqlSnapshotBytesCannotBeReplacedSilentlyDuringReceipt",
+      "liveInventoryCannotReuseTheQuietMetadataCacheAsProofOfCurrentMedia",
+      "aMissingNewReceiptSourceCannotBeSilentlyReplacedByItsSqlEvidence",
+      "onlyVerifiedLegacyQuietReceiptsCanReadSqlSourceAndNeverConsumeSidecars"
+    ],
+    "SyncAckReconciliationTest": [
+      "driveLateDuplicateAckRestartBothAndRetryMustNotFalselyFinish",
+      "safLateDuplicateAckRestartBothAndRetryMustNotFalselyFinish"
+    ],
+    "DatabaseInstallEvidenceTest": [
+      "firstCleanTextOnlySaveCreatesDurableEvidence",
+      "lostTextOnlyDatabaseAndJournalNeverBecomesFreshInstall",
+      "migratedLegacyPrimarySurvivesLaterLossAsEvidence",
+      "interruptedOrCorruptEvidenceMustNotAuthorizeReset",
+      "unreadableMarkerNeverGetsSilentlyReplaced",
+      "redundantNoBackupEvidenceSurvivesSelectiveFilesLossAndRestart",
+      "legacyPrimaryMigratesToBothLocationsWithoutChangingExactData",
+      "legacySyncReceiptsAlonePreventNewBlankDatabaseAndRetireOldAck",
+      "firstInstallWithIdentityAloneIsStillClean",
+      "oversizedBaseBackupAndNewMarkersAreAlwaysRejected",
+      "interruptedAtomicWriteIsDetectedWithoutDestroyingValidPrimary",
+      "malformedSurvivorOrUnusableMarkerCannotBeSilentlyRepaired",
+      "symlinkEvidenceIsNeverInterpretedAsAbsent",
+      "corruptedPrimaryWithValidOldBackupLeavesBytesAndRequiresRecoveryEpoch",
+      "recoveredSnapshotUsesNewHashAndRejectsOldCloudAckIdentity",
+      "temporaryUnreadablePrimaryRetriesWithoutRotatingEpoch",
+      "staleOutboxIsRetainedButCannotBeReacknowledged",
+      "delayedBlobAckKeepsExactOriginalAndArchivedSnapshot",
+      "approvedPairingWithoutAnyProjectCanInitializeButNeverResetAfterFirstSave",
+      "unmarkedLegacyPairingRemainsFailClosedWithoutPrimary",
+      "r9MissingRecoveryJournalCannotReacceptPreRecoveryAckOrOverwritePhoto",
+      "r9MismatchedRecoveryJournalIsRejectedWithoutMutatingOriginal",
+      "r10TemporaryQueuedSnapshotReadErrorRecoversAfterRestartWithoutFalseAck"
+    ]
+  },
+  "javaSourceBlobs": {
+    "SyncReceiptSafetyTest": "25ccb259aced65d021fc8ab02f8e208e01968d5d",
+    "SyncAckReconciliationTest": "3ca27468370432119c834ad4819b00179e33a945",
+    "DatabaseInstallEvidenceTest": "8a405831cc8801f3d35f50fb097b4fad5badcedc"
+  }
+}
