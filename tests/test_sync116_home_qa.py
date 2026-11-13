@@ -64,11 +64,10 @@ class Sync116QaOnlyTests(unittest.TestCase):
             self.assertEqual("FAIL", QA.strict_classify(
                 Classifier, cases(), 1, classes, fresh, unchanged)
                 ["product_acceptance"]["status"])
-        # Source-owned classifier enforces raw Gradle exit1; this stub simulates
-        # its reported failure, rather than treating Gradle PASS as success.
-        with self.assertRaises(AssertionError):
-            self.assertEqual(1, QA.strict_classify(Classifier, cases(), 0, 64,
-                                                   True, True)["gradle"]["exit_code"])
+        self.assertEqual("FAIL", QA.strict_classify(
+            Classifier, cases(), 0, 64, True, True)
+            ["product_acceptance"]["status"],
+            "Even a faulty source classifier must not accept raw Gradle exit0")
 
     def test_source_rejects_wrong_sha_dirty_or_changed_wrapper_before_import(self):
         with tempfile.TemporaryDirectory() as tmp:
