@@ -1,0 +1,128 @@
+name: Zaměřovač - canonical owner-only HOME QA, no APK
+on:
+  push:
+    branches: [qa/sync116-browser-fresh-20261113]
+    paths: ['.github/workflows/home-qa-one-shot.yml']
+permissions:
+  contents: read
+concurrency:
+  group: canonical-home-qa-qa/sync116-browser-fresh-20261113
+  cancel-in-progress: false
+jobs:
+  trusted-qa:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.run_attempt == 1 && github.ref == 'refs/heads/qa/sync116-browser-fresh-20261113' && github.event_name == 'push' }}
+    runs-on: [self-hosted, Windows, X64, zamerovac-qa]
+    timeout-minutes: 50
+    env:
+      CI: '1'
+      PYTHONUTF8: '1'
+      TESTED_SHA: '1527e3377609633c554195b0641e02e3cfb5fb5e'
+    steps:
+      - name: Verify owner service and installed tools
+        shell: cmd
+        run: |
+          if /I not "%USERNAME%"=="ZamerovacQA" exit /b 1
+          if not exist "C:\actions-runner\tools\MinGit-2.56.0.4\cmd\git.exe" exit /b 1
+          if not exist "C:\actions-runner\tools\Python313\python.exe" exit /b 1
+          echo C:\actions-runner\tools\MinGit-2.56.0.4\cmd>>"%GITHUB_PATH%"
+          echo C:\actions-runner\tools\Python313>>"%GITHUB_PATH%"
+      - name: Read-only tested source at literal SHA
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: zaplikj30-ui/Zamerovac-android
+          ref: implement/sync-core-b-20261112
+          path: source
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+      - name: Read-only triggering workflow for self lint
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          path: recipe
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+      - name: Read-only trusted validator pinned to reviewed OWNER SHA
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          repository: zaplikj30-ui/Zamerovac-android
+          ref: infra/coord20-home-browser-runid-20261113
+          path: gate
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+      - name: Check owner branch SHA and separate validator BEFORE running source code
+        id: source_gate
+        shell: cmd
+        run: |
+          cd /d "%GITHUB_WORKSPACE%\source"
+          for /f %%H in ('git rev-parse HEAD') do set "ACTUAL_SOURCE=%%H"
+          if not defined ACTUAL_SOURCE exit /b 1
+          if /I not "%ACTUAL_SOURCE%"=="1527e3377609633c554195b0641e02e3cfb5fb5e" exit /b 1
+          cd /d "%GITHUB_WORKSPACE%\gate"
+          for /f %%H in ('git rev-parse HEAD') do set "ACTUAL_GATE=%%H"
+          if not defined ACTUAL_GATE exit /b 1
+          if /I not "%ACTUAL_GATE%"=="c382b15ea067543c3789bb5aa30131584c2926c8" exit /b 1
+          python tools\home_qa_gate.py lint-workflow "..\recipe\.github\workflows\home-qa-one-shot.yml" --strict
+          if errorlevel 1 exit /b 1
+          python -m unittest discover -s tests -p test_home_qa_gate.py -v
+          if errorlevel 1 exit /b 1
+          python -m unittest discover -s tests -p test_sync116_home_qa.py -v
+          if errorlevel 1 exit /b 1
+          python -m unittest discover -s tests -p test_sync116_evidence.py -v
+          if errorlevel 1 exit /b 1
+          python tools\sync116_evidence.py init --kind browser --root "%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs" --source-sha 1527e3377609633c554195b0641e02e3cfb5fb5e --validator-sha c382b15ea067543c3789bb5aa30131584c2926c8
+          if errorlevel 1 exit /b 1
+          echo TRUSTED_OWNER_SOURCE_BRANCH=implement/sync-core-b-20261112 TESTED_SOURCE_SHA=%ACTUAL_SOURCE% GATE_SHA=%ACTUAL_GATE%
+      - name: Isolated offline package-lock Chromium prerequisites
+        shell: cmd
+        run: |
+          if exist "%GITHUB_WORKSPACE%\qa-browser-deps-%GITHUB_RUN_ID%-%GITHUB_RUN_ATTEMPT%" exit /b 1
+          mkdir "%GITHUB_WORKSPACE%\qa-browser-deps-%GITHUB_RUN_ID%-%GITHUB_RUN_ATTEMPT%"
+          if errorlevel 1 exit /b 1
+          copy /y "%GITHUB_WORKSPACE%\gate\tools\qa-browser\package.json" "%GITHUB_WORKSPACE%\qa-browser-deps-%GITHUB_RUN_ID%-%GITHUB_RUN_ATTEMPT%\package.json" >nul
+          if errorlevel 1 exit /b 1
+          copy /y "%GITHUB_WORKSPACE%\gate\tools\qa-browser\package-lock.json" "%GITHUB_WORKSPACE%\qa-browser-deps-%GITHUB_RUN_ID%-%GITHUB_RUN_ATTEMPT%\package-lock.json" >nul
+          if errorlevel 1 exit /b 1
+          cd /d "%GITHUB_WORKSPACE%\qa-browser-deps-%GITHUB_RUN_ID%-%GITHUB_RUN_ATTEMPT%"
+          set "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1"
+          call npm.cmd ci --offline --ignore-scripts --omit=optional --no-audit --no-fund
+          if errorlevel 1 exit /b 1
+          python "%GITHUB_WORKSPACE%\gate\tools\home_qa_gate.py" verify-browser --browser-root "C:\actions-runner\tools\ms-playwright" --expected-sha256 ce4635cd0e5dc0e21494542a701f347e91c1f1d821970578d97ed8df4ced50ef
+          if errorlevel 1 exit /b 1
+          echo NODE_PATH=%GITHUB_WORKSPACE%\qa-browser-deps-%GITHUB_RUN_ID%-%GITHUB_RUN_ATTEMPT%\node_modules>>"%GITHUB_ENV%"
+          echo PLAYWRIGHT_BROWSERS_PATH=C:\actions-runner\tools\ms-playwright>>"%GITHUB_ENV%"
+          echo LOCALAPPDATA=%GITHUB_WORKSPACE%\qa-evidence>>"%GITHUB_ENV%"
+      - name: Real Chromium and editor pixel QA with durable checkpoints
+        shell: cmd
+        run: |
+          cd /d "%GITHUB_WORKSPACE%\source"
+          python tools\home_qa_gate.py windows-quick --expected-sha 1527e3377609633c554195b0641e02e3cfb5fb5e --root . --check-only
+          if errorlevel 1 exit /b 1
+          set "ZAMEROVAC_SOURCE_ROOT=%GITHUB_WORKSPACE%\source"
+          set "ZAMEROVAC_QA_RESULT_ROOT=%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs\%GITHUB_RUN_ID%-%GITHUB_RUN_ATTEMPT%\browser"
+          set "ZAMEROVAC_QA_GATE_SHA=c382b15ea067543c3789bb5aa30131584c2926c8"
+          node "%GITHUB_WORKSPACE%\gate\tests\browser_qa_runner.js"
+          if errorlevel 1 exit /b 1
+          node "%GITHUB_WORKSPACE%\gate\tools\local-browser-qa.cjs" --self-test
+          if errorlevel 1 exit /b 1
+          node "%GITHUB_WORKSPACE%\gate\tools\local-browser-qa.cjs" --all
+          if errorlevel 1 exit /b 1
+          python "%GITHUB_WORKSPACE%\gate\tools\sync116_evidence.py" verify --kind browser --root "%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs" --source-sha 1527e3377609633c554195b0641e02e3cfb5fb5e --validator-sha c382b15ea067543c3789bb5aa30131584c2926c8
+          if errorlevel 1 exit /b 1
+      - name: Validate current-run evidence before possible upload
+        id: evidence_checked
+        if: always() && steps.source_gate.outcome == 'success'
+        shell: cmd
+        run: |
+          cd /d "%GITHUB_WORKSPACE%\gate"
+          python tools\sync116_evidence.py inspect --kind browser --root "%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs" --source-sha 1527e3377609633c554195b0641e02e3cfb5fb5e --validator-sha c382b15ea067543c3789bb5aa30131584c2926c8
+          if errorlevel 1 exit /b 1
+      - name: Upload checkpointed synthetic Chromium reports, no APK
+        if: always() && steps.source_gate.outcome == 'success' && steps.evidence_checked.outcome == 'success'
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: canonical-home-browser-1527e3377609633c554195b0641e02e3cfb5fb5e-${{ github.run_id }}-${{ github.run_attempt }}
+          path: qa-evidence/Zamerovac-QA/runs/${{ github.run_id }}-${{ github.run_attempt }}/browser/results.json
+          retention-days: 3
+          if-no-files-found: error
