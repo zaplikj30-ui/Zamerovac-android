@@ -41,7 +41,9 @@ def scoped_dir(root: Path, kind: str, env) -> Path:
     require(kind in KINDS, "unknown QA kind")
     run_id, attempt = context(env)
     require(not root.is_symlink(), "results root must not be symlinked")
-    return root / (run_id + "-" + str(attempt)) / kind
+    run_dir = root / (run_id + "-" + str(attempt))
+    require(not run_dir.is_symlink(), "run directory must not be a symlink")
+    return run_dir / kind
 
 def identity(kind, env, source_sha, validator_sha):
     run_id, attempt = context(env)
@@ -58,7 +60,8 @@ def pending(kind, env, source_sha, validator_sha):
 
 def initialize(root, kind, env, source_sha, validator_sha):
     dest = scoped_dir(root, kind, env)
-    require(not dest.exists() and not dest.is_symlink(),
+    require(not dest.exists() and not dest.is_symlink() and
+            not dest.parent.exists() and not dest.parent.is_symlink(),
             "run-scoped evidence already exists; refuse stale/overwritten PASS")
     dest.mkdir(parents=True, exist_ok=False)
     target = dest / "results.json"
