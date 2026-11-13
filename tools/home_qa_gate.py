@@ -68,7 +68,13 @@ def trusted_owner(environ: dict[str, str]) -> None:
     if environ.get("GITHUB_ACTIONS") != "true":
         return
     demand(environ.get("GITHUB_REPOSITORY") == REPO, "untrusted repository; never run HOME on forks")
-    demand(environ.get("GITHUB_ACTOR", "").lower() == OWNER, "untrusted workflow actor")
+    demand(environ.get("GITHUB_ACTOR", "") == OWNER, "untrusted workflow actor")
+    demand(environ.get("GITHUB_TRIGGERING_ACTOR", "") == OWNER,
+           "untrusted triggering actor/re-run; owner only")
+    demand(environ.get("GITHUB_RUN_ATTEMPT") == "1",
+           "first run attempt only; all GitHub re-runs forbidden")
+    demand(bool(re.fullmatch(r"[1-9][0-9]{0,19}", environ.get("GITHUB_RUN_ID", ""))),
+           "missing or invalid GITHUB_RUN_ID")
     demand(environ.get("GITHUB_EVENT_NAME") in ("push", "workflow_dispatch"),
            "PR/fork events cannot run HOME QA")
     ref = environ.get("GITHUB_REF", "")
@@ -167,7 +173,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   trusted-qa:
-    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/__QA_BRANCH__' && github.event_name == 'push' }}
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.run_attempt == 1 && github.ref == 'refs/heads/__QA_BRANCH__' && github.event_name == 'push' }}
     runs-on: [self-hosted, Windows, X64, zamerovac-qa]
     timeout-minutes: 50
     env:
@@ -254,6 +260,8 @@ BROWSER_PREFLIGHT = r'''      - name: Check owner branch SHA and separate valida
           if errorlevel 1 exit /b 1
           python -m unittest discover -s tests -p test_sync116_home_qa.py -v
           if errorlevel 1 exit /b 1
+          python tools\sync116_evidence.py init --kind __EVIDENCE_KIND__ --root "%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs" --source-sha __SOURCE_SHA__ --validator-sha __GATE_SHA__
+          if errorlevel 1 exit /b 1
           echo TRUSTED_OWNER_SOURCE_BRANCH=__SOURCE_BRANCH__ TESTED_SOURCE_SHA=%ACTUAL_SOURCE% GATE_SHA=%ACTUAL_GATE%
 '''
 BROWSER_STEPS = r'''      - name: Isolated offline package-lock Chromium prerequisites
@@ -282,11 +290,15 @@ BROWSER_STEPS = r'''      - name: Isolated offline package-lock Chromium prerequ
           python tools\home_qa_gate.py windows-quick --expected-sha __SOURCE_SHA__ --root . --check-only
           if errorlevel 1 exit /b 1
           set "ZAMEROVAC_SOURCE_ROOT=%GITHUB_WORKSPACE%\source"
+          set "ZAMEROVAC_QA_RESULT_ROOT=%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs\%GITHUB_RUN_ID%-%GITHUB_RUN_ATTEMPT%\browser"
+          set "ZAMEROVAC_QA_GATE_SHA=__GATE_SHA__"
           node "%GITHUB_WORKSPACE%\gate\tests\browser_qa_runner.js"
           if errorlevel 1 exit /b 1
           node "%GITHUB_WORKSPACE%\gate\tools\local-browser-qa.cjs" --self-test
           if errorlevel 1 exit /b 1
           node "%GITHUB_WORKSPACE%\gate\tools\local-browser-qa.cjs" --all
+          if errorlevel 1 exit /b 1
+          python "%GITHUB_WORKSPACE%\gate\tools\sync116_evidence.py" verify --kind browser --root "%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs" --source-sha __SOURCE_SHA__ --validator-sha __GATE_SHA__
           if errorlevel 1 exit /b 1
 '''
 
@@ -320,14 +332,13 @@ def browser_workflow_recipe() -> str:
     recipe = recipe.replace("      - name: Upload synthetic quick results, never APK",
                             "      - name: Upload checkpointed synthetic Chromium reports, no APK")
     recipe = recipe.replace("name: canonical-home-qa-__SOURCE_SHA__",
-                            "name: canonical-home-browser-__SOURCE_SHA__")
+                            "name: canonical-home-browser-__SOURCE_SHA__-${{ github.run_id }}-${{ github.run_attempt }}")
     old_path = "          path: qa-evidence/Zamerovac-QA/results/"
-    new_path = ("          path: |\n"
-                "            qa-evidence/Zamerovac-QA/browser/**/results.json\n"
-                "            qa-evidence/Zamerovac-QA/browser/**/*.log\n"
-                "            qa-evidence/Zamerovac-QA/browser/**/evidence/**/report.json")
+    new_path = "          path: qa-evidence/Zamerovac-QA/runs/${{ github.run_id }}-${{ github.run_attempt }}/browser/results.json"
     demand(recipe.count(old_path) == 1, "unknown canonical artifact path")
-    return recipe.replace(old_path, new_path).replace("retention-days: 7", "retention-days: 3")
+    recipe = recipe.replace(old_path, new_path).replace("retention-days: 7", "retention-days: 3")
+    return recipe.replace("__EVIDENCE_KIND__", "browser").replace(
+        "if-no-files-found: ignore", "if-no-files-found: error")
 
 
 
@@ -337,7 +348,9 @@ SYNC116_JVM_STEPS = r'''      - name: Offline WSL full JVM and ACK evidence; one
         shell: cmd
         run: |
           cd /d "%GITHUB_WORKSPACE%\gate"
-          python tools\sync116_home_qa.py windows-wsl --source "%GITHUB_WORKSPACE%\source" --gate "%GITHUB_WORKSPACE%\gate" --expected-sha __SOURCE_SHA__ --output "%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\sync116"
+          python tools\sync116_home_qa.py windows-wsl --source "%GITHUB_WORKSPACE%\source" --gate "%GITHUB_WORKSPACE%\gate" --expected-sha __SOURCE_SHA__ --validator-sha __GATE_SHA__ --run-id "%GITHUB_RUN_ID%" --run-attempt "%GITHUB_RUN_ATTEMPT%" --output "%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs\%GITHUB_RUN_ID%-%GITHUB_RUN_ATTEMPT%\jvm"
+          if errorlevel 1 exit /b 1
+          python tools\sync116_evidence.py verify --kind jvm --root "%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs" --source-sha __SOURCE_SHA__ --validator-sha __GATE_SHA__
           if errorlevel 1 exit /b 1
 '''
 
@@ -350,13 +363,12 @@ def sync116_jvm_workflow_recipe() -> str:
     browser = browser.replace("Upload checkpointed synthetic Chromium reports, no APK",
                               "Upload synthetic PR116 JVM result only; raw Gradle remains FAIL")
     browser = browser.replace("canonical-home-browser-", "canonical-home-sync116-jvm-")
-    original_paths = ("          path: |\n"
-                      "            qa-evidence/Zamerovac-QA/browser/**/results.json\n"
-                      "            qa-evidence/Zamerovac-QA/browser/**/*.log\n"
-                      "            qa-evidence/Zamerovac-QA/browser/**/evidence/**/report.json")
+    original_paths = "          path: qa-evidence/Zamerovac-QA/runs/${{ github.run_id }}-${{ github.run_attempt }}/browser/results.json"
     demand(browser.count(original_paths) == 1, "reviewed browser paths changed")
-    return browser.replace(original_paths,
-                           "          path: qa-evidence/Zamerovac-QA/sync116/results.json")
+    browser = browser.replace(original_paths,
+                               "          path: qa-evidence/Zamerovac-QA/runs/${{ github.run_id }}-${{ github.run_attempt }}/jvm/results.json")
+    browser = browser.replace("--kind browser --root", "--kind jvm --root")
+    return browser
 
 def safe_owner_branch(branch: str) -> bool:
     """Reject PR refs, shell characters and ambiguous Git revision syntax."""
@@ -629,6 +641,7 @@ def main(argv: list[str] | None = None) -> int:
             run_wsl_checked(root, actual)
             return 0
         if args.mode == "lint-workflow":
+            trusted_owner(os.environ)
             demand(args.path.is_file(), "workflow YAML does not exist: " + str(args.path))
             check_workflow(args.path.read_text(encoding="utf-8"), strict=args.strict)
             print("PASS HOME WORKFLOW LINT " + str(args.path))
