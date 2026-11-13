@@ -132,4 +132,160 @@ suite('gallery-state',async test=>{
   });assert.equal(hash,await page.evaluate(()=>originalHash));
   evidence({fitInk,zoomInk,originalSHA256:hash,lateLoadCannotReopenGallery:true});
  });
+  await test('stacked_voice_marker_gallery_and_customer_export_pixels',async({page,evidence,directory})=>{
+   await page.setViewportSize({width:412,height:850});await photo(page);
+   const before=await page.evaluate(async()=>{
+    const id=current.media[0],url=await assetUrl(id),im=new Image();
+    await new Promise((resolve,reject)=>{im.onload=resolve;im.onerror=reject;im.src=url});
+    window.__detailPhotoCache[id]=im;
+    current.items.push({id:'voice-visual',type:'note',a:{x:1050,y:650},
+     media:[id,id],audioMedia:['synthetic-audio-reference'],text:'Popisek 1250,000001 mm',
+     insetX:1100,insetY:700,insetWidth:260,insetRotation:24});
+    save();paint();
+    const db=await mediaDb(),request=db.transaction('files').objectStore('files').get(id);
+    const blob=await new Promise(resolve=>request.onsuccess=()=>resolve(request.result));
+    const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await blob.arrayBuffer()))).join(',');
+    window.__voiceMarkers=[];
+    const original=CanvasRenderingContext2D.prototype.fillText;
+    CanvasRenderingContext2D.prototype.fillText=function(value,x,y,...rest){
+     if(value==='🎙'){const p=this.getTransform().transformPoint({x,y});
+      __voiceMarkers.push({x:p.x,y:p.y,width:this.canvas.width,height:this.canvas.height,
+       gallery:this.canvas.classList?.contains('gallery-img')||false})}
+     return original.call(this,value,x,y,...rest);
+    };
+    return {items:JSON.stringify(current.items),hash};
+   });
+   const exported=await page.evaluate(async()=>{
+    __voiceMarkers.length=0;
+    const encoded=await __customerExport.render(current,{notes:true,dimensions:true,drawing:true});
+    const image=new Image();image.src='data:image/png;base64,'+encoded;await image.decode();
+    const marker=__voiceMarkers.find(x=>!x.gallery&&x.width===image.naturalWidth);
+    if(!marker)return {error:'customer PDF/ZIP marker not rendered'};
+    const canvas=document.createElement('canvas');canvas.width=image.naturalWidth;canvas.height=image.naturalHeight;
+    const c=canvas.getContext('2d');c.drawImage(image,0,0);
+    const x=Math.floor(marker.x)-15,y=Math.floor(marker.y)-15;
+    if(x<0||y<0||x+30>=canvas.width||y+30>=canvas.height)return {error:'customer marker clipped'};
+    const pixels=c.getImageData(x,y,30,30).data;let ink=0;
+    for(let i=0;i<pixels.length;i+=4)if(pixels[i]<245||pixels[i+1]<245||pixels[i+2]<245)ink++;
+    return {width:canvas.width,height:canvas.height,ink,marker};
+   });
+   assert(!exported.error,JSON.stringify(exported));
+   assert(exported.width>1200&&exported.height>800,'Customer export must include inset outside original');
+   assert(exported.ink>8,'Customer PNG embedded in PDF/ZIP must contain actual voice pixels');
+   await page.click('#galleryMode');await page.waitForFunction(()=>!!document.querySelector('.gallery-img')?.dataset.galleryView);
+   const gallery=await page.evaluate(()=>{
+    const c=document.querySelector('.gallery-img'),markers=__voiceMarkers.filter(m=>m.gallery);
+    const p=markers[markers.length-1];if(!p)return {error:'gallery voice icon not rendered'};
+    if(p.x<14||p.y<14||p.x+14>=c.width||p.y+14>=c.height)return {error:'gallery icon clipped'};
+    const b=c.getContext('2d').getImageData(Math.floor(p.x)-14,Math.floor(p.y)-14,28,28).data;
+    let colored=0;for(let i=0;i<b.length;i+=4)
+     if(Math.abs(b[i]-41)+Math.abs(b[i+1]-42)+Math.abs(b[i+2]-47)>135)colored++;
+    return {colored,marker:p};
+   });
+   assert(!gallery.error,JSON.stringify(gallery));assert(gallery.colored>8,'Gallery must contain visible voice glyph pixels');
+   // A positive raster alone can be a false PASS because of photo/text ink.
+   // Compare real browser pixels with the SAME photo, caption and transform,
+   // changing only audioMedia on a throwaway cloned item.
+   const voiceDifference=await page.evaluate(()=>{
+    const item=current.items.find(x=>x.id==='voice-visual');
+    const image=__detailPhotoCache[item.media[0]];
+    const render=canvas=>annotationRenderContext(canvas.getContext('2d'),{
+     view:{zoom:1,dx:0,dy:0},photoSize:{w:1200,h:800},
+     viewport:{w:1700,h:1250},selected:null,exporting:true,prefs});
+    function draw(audio){
+     const canvas=document.createElement('canvas');
+     canvas.width=1700;canvas.height=1250;
+     const c=canvas.getContext('2d'),orig=c.fillText.bind(c);
+     let center=null;
+     c.fillText=(text,x,y,...rest)=>{
+      if(text==='🎙')center=c.getTransform().transformPoint({x,y});
+      return orig(text,x,y,...rest);
+     };
+     renderPhotoInset(c,{...item,audioMedia:audio?item.audioMedia:[]},image,()=>{},render(canvas));
+     return {canvas,center};
+    }
+    const on=draw(true),off=draw(false);
+    if(!on.center||off.center)return {error:'missing positive or unexpected negative marker'};
+    const x=Math.round(on.center.x)-15,y=Math.round(on.center.y)-15;
+    if(x<0||y<0||x+30>1700||y+30>1250)return {error:'marker outside shared raster'};
+    const a=on.canvas.getContext('2d').getImageData(x,y,30,30).data;
+    const b=off.canvas.getContext('2d').getImageData(x,y,30,30).data;
+    let changed=0;
+    for(let i=0;i<a.length;i+=4){
+     if(Math.abs(a[i]-b[i])+Math.abs(a[i+1]-b[i+1])+Math.abs(a[i+2]-b[i+2])>50)changed++;
+    }
+    return {changed,positiveMarker:on.center,negativeMarkerAbsent:!off.center};
+   });
+   assert(!voiceDifference.error,JSON.stringify(voiceDifference));
+   assert(voiceDifference.changed>8,'Voice glyph must change real pixels versus no-voice negative control');
+   await page.screenshot({path:path.join(directory,'stacked-voice-gallery.png')});
+   await page.click('.gallery-top [data-action="close"]');
+   const after=await page.evaluate(async()=>{
+    const db=await mediaDb(),r=db.transaction('files').objectStore('files').get(current.media[0]);
+    const blob=await new Promise(resolve=>r.onsuccess=()=>resolve(r.result));
+    const hash=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await blob.arrayBuffer()))).join(',');
+    return {items:JSON.stringify(current.items),hash};
+   });
+   assert.deepEqual(after,before,'Read-only gallery/export must not modify originals or exact values');
+   await page.click('#editorBack');await page.reload();await page.locator('.entry-title').click();
+   assert.equal(await page.evaluate(()=>JSON.stringify(current.items)),before.items,'Exact values survive restart');
+   evidence({exported,gallery,voiceDifference,originalSHA256:before.hash,nativePdf:'NOT RUN'});
+  });
+  await test('customer_export_high_resolution_voice_marker_2400px',async({page,evidence})=>{
+   // Compression-friendly 8k image; run only this targeted test on a trusted
+   // serial HOME runner, not concurrently with heavy Java/Gradle jobs.
+   const buffer=Buffer.from(await page.evaluate(()=>{
+    const canvas=document.createElement('canvas');canvas.width=8000;canvas.height=6000;
+    const c=canvas.getContext('2d');c.fillStyle='#596169';c.fillRect(0,0,8000,6000);
+    return canvas.toDataURL('image/png').split(',')[1];
+   }),'base64');
+   await chooseFiles(page,'#galleryBtn',{name:'high-resolution-inset.png',mimeType:'image/png',buffer});
+   await page.waitForFunction(()=>!!stageImg&&stageImg.complete&&stageImg.naturalWidth===8000);
+   const outcome=await page.evaluate(async()=>{
+    const id=current.media[0],source=stageImg;
+    window.__detailPhotoCache[id]=source;
+    const item={id:'highres-marker',type:'note',a:{x:7950,y:220},
+     media:[id],audioMedia:['synthetic-reference-do-not-play'],text:'',
+     insetX:7900,insetY:200,insetWidth:130,insetRotation:0};
+    current.items.push(item);save();
+    const original=JSON.stringify(current.items);
+    const readHash=async()=>{
+     const db=await mediaDb(),request=db.transaction('files').objectStore('files').get(id);
+     const blob=await new Promise(resolve=>request.onsuccess=()=>resolve(request.result));
+     return Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await blob.arrayBuffer()))).join(',');
+    };
+    const beforeHash=await readHash();
+    const markers=[],fill=CanvasRenderingContext2D.prototype.fillText;
+    CanvasRenderingContext2D.prototype.fillText=function(value,x,y,...rest){
+     if(value==='🎙'){
+      const p=this.getTransform().transformPoint({x,y});
+      markers.push({x:p.x,y:p.y,width:this.canvas.width,height:this.canvas.height});
+     }
+     return fill.call(this,value,x,y,...rest);
+    };
+    const encoded=await __customerExport.render(current,{notes:true,dimensions:true,drawing:true});
+    const out=new Image();out.src='data:image/png;base64,'+encoded;await out.decode();
+    const marker=markers.find(m=>m.width===out.naturalWidth&&m.height===out.naturalHeight);
+    const result={width:out.naturalWidth,height:out.naturalHeight,marker,
+     originalUnchanged:original===JSON.stringify(current.items),
+     mediaUnchanged:beforeHash===await readHash()};
+    if(!marker)return {...result,error:'no visible high-res voice marker'};
+    if(marker.x<13||marker.y<13||marker.x+13>out.naturalWidth||
+       marker.y+13>out.naturalHeight)return {...result,error:'high-resolution voice glyph clipped'};
+    const tile=document.createElement('canvas');tile.width=30;tile.height=30;
+    tile.getContext('2d').drawImage(out,
+      Math.floor(marker.x)-15,Math.floor(marker.y)-15,30,30,0,0,30,30);
+    const b=tile.getContext('2d').getImageData(0,0,30,30).data;
+    let ink=0;for(let i=0;i<b.length;i+=4){
+     if(b[i]<235||b[i+1]<235||b[i+2]<235)ink++;
+    }
+    return {...result,ink};
+   });
+   assert(!outcome.error,JSON.stringify(outcome));
+   assert.equal(Math.max(outcome.width,outcome.height),2400,'Export must keep 2400px limit');
+   assert(outcome.ink>8,'High-resolution customer PDF/ZIP must contain glyph pixels');
+   assert(outcome.mediaUnchanged&&outcome.originalUnchanged,
+    'High-resolution export must preserve media SHA-256 and original annotation');
+   evidence({highRes:outcome,sourceResolution:'8000×6000',pdfNative:'NOT RUN'});
+  });
 }).catch(e=>{console.error(e);process.exitCode=1});

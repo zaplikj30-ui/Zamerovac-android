@@ -103,12 +103,69 @@
   const width=clamp(c.measureText(text).width+18,88,Math.max(88,(render?.viewport.w??stageCanvas.clientWidth)-20));
   return {x:p.x-width/2,y:p.y-fs/2-7,w:width,h:fs+15,p,text,fs};
  }
+ // All visible sheets rotate around the front photograph's centre.
+ // Reuse these screen-space bounds for the icon AND export/gallery extents.
+ function insetVisibleBlocks(it,g,render){
+  const count=(it.media||[]).filter(id=>!(it.audioMedia||[]).includes(id)).length;
+  const step=Math.min(10,72/Math.max(1,count-1));
+  const blocks=[];
+  for(let layer=0;layer<Math.max(1,count);layer++){
+   const offset=layer*step;
+   const corners=[
+    {x:-g.w/2+offset,y:-g.h/2-offset},
+    {x:g.w/2+offset,y:-g.h/2-offset},
+    {x:g.w/2+offset,y:g.h/2-offset},
+    {x:-g.w/2+offset,y:g.h/2-offset}
+   ].map(p=>turn(p,g));
+   const xs=corners.map(p=>p.x),ys=corners.map(p=>p.y);
+   blocks.push({x:Math.min(...xs),y:Math.min(...ys),
+    w:Math.max(...xs)-Math.min(...xs),h:Math.max(...ys)-Math.min(...ys)});
+  }
+  // The stack's numeric counter is visible only in the editor/gallery.
+  if(count>1&&!render?.exporting){
+   const offset=step*(count-1);
+   const centre=turn({x:g.w/2+offset+15,y:-g.h/2-offset-11},g);
+   blocks.push({x:centre.x-13,y:centre.y-13,w:26,h:26});
+  }
+  return blocks;
+ }
+ // Place the audio indicator next to the inset rather than over text or photo.
+ // Only screen-space drawing is affected; the stored note and hit areas stay intact.
+ function audioMarkerPosition(c,it,g,render){
+  if(!Array.isArray(it.audioMedia)||!it.audioMedia.length)return null;
+  const blocks=insetVisibleBlocks(it,g,render);
+  const left=Math.min(...blocks.map(p=>p.x)),right=Math.max(...blocks.map(p=>p.x+p.w));
+  const top=Math.min(...blocks.map(p=>p.y)),bottom=Math.max(...blocks.map(p=>p.y+p.h));
+  let caption;c.save();try{caption=labelRect(c,it,g,render)}finally{c.restore()}
+  const radius=13,gap=7;
+  const viewport=render?.viewport||{w:stageCanvas.clientWidth,h:stageCanvas.clientHeight};
+  const collides=(a,b)=>b&&a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
+  const options=[
+   {x:right+gap+radius,y:bottom-radius}, // right/bottom, outside the inset
+   {x:right-radius,y:Math.max(bottom,caption?caption.y+caption.h:bottom)+gap+radius},
+   {x:left-gap-radius,y:bottom-radius},
+   {x:right-radius,y:top-gap-radius},
+   {x:left-gap-radius,y:top+radius}
+  ];
+  for(const p of options){
+   const marker={x:p.x-radius,y:p.y-radius,w:radius*2,h:radius*2};
+   // Export/gallery expands the output bounds; editor stays in the viewport.
+   if(!render?.exporting&&(marker.x<2||marker.y<2||
+    marker.x+marker.w>viewport.w-2||marker.y+marker.h>viewport.h-2))continue;
+   if(blocks.every(block=>!collides(marker,block))&&!collides(marker,caption))return p;
+  }
+  return null; // no safe place: never obscure the inset, its stack or caption
+ }
  // Shared bounds use the same geometry and default caption placement as rendering.
  window.insetAnnotationBounds=function(c,it,render){
   const image=window.__detailPhotoCache?.[it.media?.[0]];if(!image?.naturalWidth)return null;
-  const g=layout(it,image,render),corners=[turn({x:-g.w/2,y:-g.h/2},g),turn({x:g.w/2,y:-g.h/2},g),turn({x:g.w/2,y:g.h/2},g),turn({x:-g.w/2,y:g.h/2},g)];
+  const g=layout(it,image,render);
+  const corners=insetVisibleBlocks(it,g,render).flatMap(box=>
+   [{x:box.x,y:box.y},{x:box.x+box.w,y:box.y+box.h}]);
   const label=labelRect(c,it,g,render);
   if(label)corners.push({x:label.x,y:label.y},{x:label.x+label.w,y:label.y+label.h});
+  const marker=audioMarkerPosition(c,it,g,render);
+  if(marker)corners.push({x:marker.x-13,y:marker.y-13},{x:marker.x+13,y:marker.y+13});
   return {minX:Math.min(...corners.map(p=>p.x))-18,minY:Math.min(...corners.map(p=>p.y))-18,maxX:Math.max(...corners.map(p=>p.x))+18,maxY:Math.max(...corners.map(p=>p.y))+18};
  };
  function renderLabel(c,it,g,render){
@@ -178,11 +235,13 @@
   }finally{c.restore();}
   // ImageMeter zachovává textovou část poznámky i po vložení detailu.
   renderLabel(c,it,g,render);
-  // Přítomnost hlasu vyznačujeme ikonou, i když není vyplněný text.
-  if(Array.isArray(it.audioMedia)&&it.audioMedia.length){
-   const p=labelPosition(it,g,render);
-   c.save();c.font='bold 22px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillStyle='#f7dc27';
-   c.fillText('🎙',p.x+(it.text?Math.min(140,g.w/2):0),p.y+(it.text?0:3));c.restore();
+  // Recalculate the marker on zoom, rotation, drag and in the export renderer.
+  const audioMarker=audioMarkerPosition(c,it,g,render);
+  if(audioMarker){
+   c.save();try{
+    c.font='bold 22px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillStyle='#f7dc27';
+    c.fillText('🎙',audioMarker.x,audioMarker.y);
+   }finally{c.restore();}
   }
   // Bílý úchopový bod na konci šipky pouze při skutečném přetahování.
   if(show&&active?.item===it&&active.kind==='anchor'&&active.changed&&!render.exporting)
