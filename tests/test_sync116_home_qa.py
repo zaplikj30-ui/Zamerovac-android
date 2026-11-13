@@ -143,20 +143,18 @@ class Sync116QaOnlyTests(unittest.TestCase):
         self.assertFalse(QA.owner_root_waiver(env, QA.EXPECTED_SHA,
                                               "43407410666", "2"))
 
-    def test_wsl_copied_git_filemode_only_is_not_content_mutation(self):
-        with mock.patch.dict(QA.os.environ, {"ZAMEROVAC_QA_TEMP_WSL_ROOT": QA.TEMP_WAIVER}):
-            with mock.patch.object(QA, "git", return_value=" M tracked.py"):
-                with mock.patch.object(QA.subprocess, "run",
-                        return_value=types.SimpleNamespace(returncode=0, stdout="")) as command:
-                    self.assertEqual("", QA.copied_worktree_status(Path("/tmp/test")))
-                    self.assertIn("core.autocrlf=true", command.call_args.args[0])
-                with mock.patch.object(QA.subprocess, "run",
-                        return_value=types.SimpleNamespace(returncode=0, stdout=" M tracked.py")):
-                    self.assertEqual("M tracked.py", QA.copied_worktree_status(Path("/tmp/test")))
-                with mock.patch.object(QA.subprocess, "run",
-                        return_value=types.SimpleNamespace(returncode=1, stdout="")):
-                    with self.assertRaises(QA.Stop):
-                        QA.copied_worktree_status(Path("/tmp/test"))
+    def test_wsl_temp_rebuild_preserves_byte_hash_guards(self):
+        script = (ROOT / "tools/sync116_home_qa.py").read_text(encoding="utf-8")
+        staging = 'cp -a "$source_dir/." "$tmp/"'
+        clean = 'git -c core.filemode=false -c core.autocrlf=false reset --hard "$expected"'
+        launch = "setsid timeout -s TERM -k 15s 2650s"
+        self.assertLess(script.index(staging), script.index(clean))
+        self.assertLess(script.index(clean), script.index(launch))
+        self.assertIn('cd "$tmp"\n', script)
+        self.assertIn('git config --local core.autocrlf false', script)
+        self.assertIn('test -z "$(git status --porcelain)"', script)
+        self.assertIn('git(source, "hash-object", "tools/sync-ack-acceptance.py")', script)
+        self.assertNotIn("copied_worktree_status", script)
 
     def test_nonroot_wsl_is_mandatory_before_source_execution(self):
         with mock.patch.object(QA.platform, "system", return_value="Linux"), \
