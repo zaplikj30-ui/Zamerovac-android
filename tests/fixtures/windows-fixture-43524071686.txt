@@ -1,0 +1,16 @@
+# Retained redacted result lines only; original TAP header/plan/summaries are unavailable.
+ok 1 - integration preserves all 23 PR121 suites
+ok 2 - Actions identity preserves owner, exact ref/SHA and first-attempt protections
+ok 3 - offline browser bootstrap is pinned and rejects missing isolation, cache, identity and artifact guards
+ok 4 - 21 exit-zero suite records without named scenarios cannot be full PASS
+ok 5 - a case filter cannot be labelled complete PASS
+ok 6 - untrusted existing executable is rejected before any launch
+ok 7 - full positive control is exactly 23/96; missing, extra, renamed, duplicated and stale evidence blocks
+ok 8 - Windows namespaced canonical paths keep strict target identity
+ok 9 - pin verifier rejects changed bytes, wrong paths, symlinks and hardlinks
+ok 10 - canonical mismatch reports redacted alias, API and file-identity evidence without permitting it
+ok 11 - Windows equivalent canonical spellings pass all binary checks; changed target and reparse points block (API model)
+ok 12 - real binary mutation during hashing and name replacement fail closed
+ok 13 - junction fixture rejects directory redirection without Windows symlink privilege
+ok 14 - real product registration and bytes agree with all 96 pinned scenario identities
+ok 15 - separate product checkout is unchanged by QA staging; actual byte tampering blocks
