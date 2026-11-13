@@ -1,0 +1,21 @@
+name: Zaměřovač - read existing synthetic JVM Gradle failure log, no tests
+on:
+  push:
+    branches: [qa/sync116-jvm-waiver-20261113]
+    paths: ['.github/workflows/home-qa-read-gradle-log.yml']
+permissions:
+  contents: read
+concurrency:
+  group: home-qa-log-tail-only
+  cancel-in-progress: false
+jobs:
+  read-last-gradle-log:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.run_attempt == 1 && github.ref == 'refs/heads/qa/sync116-jvm-waiver-20261113' && github.event_name == 'push' }}
+    runs-on: [self-hosted, Windows, X64, zamerovac-qa]
+    timeout-minutes: 5
+    steps:
+      - name: Read-only diagnostic tail from last synthetic PR116 JVM
+        shell: cmd
+        run: |
+          if /I not "%USERNAME%"=="ZamerovacQA" exit /b 1
+          "C:\actions-runner\tools\Python313\python.exe" -c "from pathlib import Path; p=Path(r'%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs\43410392401-1\jvm\gradle-full.log'); assert p.is_file() and not p.is_symlink(), 'Expected synthetic Gradle log missing'; print('EXISTING GRADLE LOG READ ONLY, original run 43410392401'); print(p.read_text(encoding='utf-8', errors='replace')[-20000:])"
