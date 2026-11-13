@@ -23,7 +23,7 @@ jobs:
     env:
       CI: '1'
       PYTHONUTF8: '1'
-      ZAMEROVAC_EXPECTED_QA_SHA: 'REVIEW_SHA_TO_BE_SET_AT_ACTIVATION'
+      ZAMEROVAC_EXPECTED_QA_SHA: '${{ github.event.before }}'
       ZAMEROVAC_SOURCE_ROOT: '${{ github.workspace }}\source'
       CHROMIUM_PATH: 'C:\actions-runner\tools\ms-playwright\chromium-1234\chrome-win64\chrome.exe'
       ZAMEROVAC_PYTHON: 'C:\actions-runner\tools\Python313\python.exe'
@@ -63,7 +63,7 @@ jobs:
           GIT_CONFIG_VALUE_0: 'false'
         with:
           repository: zaplikj30-ui/Zamerovac-android
-          ref: 'REVIEW_SHA_TO_BE_SET_AT_ACTIVATION'
+          ref: '${{ github.event.before }}'
           path: gate
           fetch-depth: 1
           persist-credentials: false
@@ -89,7 +89,8 @@ jobs:
         shell: cmd
         run: |
           @echo off
-          if "%ZAMEROVAC_EXPECTED_QA_SHA%"=="REVIEW_SHA_TO_BE_SET_AT_ACTIVATION" exit /b 1
+          if "%ZAMEROVAC_EXPECTED_QA_SHA%"=="" exit /b 1
+          if "%ZAMEROVAC_EXPECTED_QA_SHA%"=="0000000000000000000000000000000000000000" exit /b 1
           set "ACTUAL_QA="
           set "ACTUAL_PRODUCT="
           for /f %%H in ('git -C "%GITHUB_WORKSPACE%\gate" rev-parse HEAD') do set "ACTUAL_QA=%%H"
