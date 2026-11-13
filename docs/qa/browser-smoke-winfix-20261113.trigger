@@ -1,0 +1,4 @@
+Owner-approved single HOME Chromium smoke — 2026-11-13
+reviewed_qa_sha=46f8051d8f1105a9b819f6f6db7455984e3ab5d7
+approved_product_sha=ae3b4df53c25557f28b4a25ccb65adc2abdff639
+workflow=browser-smoke-winfix-20261113.yml
