@@ -3,7 +3,7 @@ const {test}=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os');
 const runner=require('../tools/local-browser-qa.cjs');
 const integrity=require('../tools/qa-integrity.cjs');
-const {profiles,verifyFile}=require('../tools/qa-browser-identity.cjs');
+const {profiles,verifyFile,canonicalPathMatches}=require('../tools/qa-browser-identity.cjs');
 const crypto=require('node:crypto'),vm=require('node:vm'),{execFileSync}=require('node:child_process');
 const linuxProof={platform:'linux',evaluation:'You are adequately sandboxed.',rows:[
  ['Layer 1 Sandbox','Namespace'],['PID namespaces','Yes'],['Network namespaces','Yes'],
@@ -120,6 +120,14 @@ test('full positive control is exactly 23/96; missing, extra, renamed, duplicate
  assert.equal(integrity.complete('--all',records,{...identity,finalized:false},{}).status,'BLOCKED');
  assert.equal(integrity.complete('--all',records,{...identity,platform:process.platform==='linux'?'win32':'linux'},{}).status,'BLOCKED');
 });
+test('Windows namespaced canonical paths keep strict target identity',()=>{
+ const file='C:\\qa\\fixture.exe',prefixed='\\\\?\\C:\\qa\\fixture.exe';
+ assert.equal(canonicalPathMatches(file,prefixed,'win32'),true);
+ assert.equal(canonicalPathMatches(file,file.toUpperCase(),'win32'),true);
+ assert.equal(canonicalPathMatches(file,'C:\\qa\\different.exe','win32'),false);
+ assert.equal(canonicalPathMatches(file,'D:\\qa\\fixture.exe','win32'),false);
+ assert.equal(canonicalPathMatches('/tmp/fixture','/tmp/other','linux'),false);
+});
 test('pin verifier rejects changed bytes, wrong paths, symlinks and hardlinks',()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'qa-pin-'));
  try{
@@ -162,7 +170,9 @@ test('separate product checkout is unchanged by QA staging; actual byte tamperin
  const git=(args,cwd=source)=>execFileSync('git',args,{cwd,encoding:'utf8',stdio:['ignore','pipe','pipe']});
  try{
   git(['clone','--shared','--no-checkout',process.env.ZAMEROVAC_SOURCE_ROOT||path.resolve(__dirname,'..'),source],dir);
-  git(['checkout','--detach',integrity.manifest.sourceSha]);
+  // The independent fixture checkout must preserve approved source bytes on Windows.
+  // Match the production actions/checkout process-local core.autocrlf=false.
+  git(['-c','core.autocrlf=false','checkout','--detach',integrity.manifest.sourceSha]);
   assert.equal(integrity.sourceSnapshot(source),integrity.manifest.sourceSha);
   fs.writeFileSync(path.join(source,'app/src/main/assets/ignored.apk'),'unexpected ignored bytes');
   assert.equal(git(['status','--porcelain']).trim(),'');
