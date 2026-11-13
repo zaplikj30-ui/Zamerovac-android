@@ -260,6 +260,8 @@ BROWSER_PREFLIGHT = r'''      - name: Check owner branch SHA and separate valida
           if errorlevel 1 exit /b 1
           python -m unittest discover -s tests -p test_sync116_home_qa.py -v
           if errorlevel 1 exit /b 1
+          python -m unittest discover -s tests -p test_sync116_evidence.py -v
+          if errorlevel 1 exit /b 1
           python tools\sync116_evidence.py init --kind __EVIDENCE_KIND__ --root "%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs" --source-sha __SOURCE_SHA__ --validator-sha __GATE_SHA__
           if errorlevel 1 exit /b 1
           echo TRUSTED_OWNER_SOURCE_BRANCH=__SOURCE_BRANCH__ TESTED_SOURCE_SHA=%ACTUAL_SOURCE% GATE_SHA=%ACTUAL_GATE%
