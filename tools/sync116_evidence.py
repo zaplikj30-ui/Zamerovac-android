@@ -30,6 +30,25 @@ ORIGINAL_FAIL_MESSAGES = {
 class EvidenceStop(RuntimeError):
     pass
 
+# This manifest lives in the separately pinned, independently reviewed QA gate,
+# not in the potentially modified source branch or a JUnit/browser report.
+_MANIFEST_FILE = Path(__file__).with_name("sync116_case_manifest.json")
+if not _MANIFEST_FILE.is_file() or _MANIFEST_FILE.is_symlink():
+    raise EvidenceStop("HOME QA STOP: approved case identity manifest missing")
+_MANIFEST = json.loads(_MANIFEST_FILE.read_text(encoding="utf-8"))
+if (_MANIFEST.get("schema") != 1 or _MANIFEST.get("sourceSha") != SOURCE_SHA or
+        len(_MANIFEST.get("chromium", {})) != 23 or
+        sum(len(v) for v in _MANIFEST["chromium"].values()) != 92 or
+        {k:len(v) for k,v in _MANIFEST.get("jvmRequired",{}).items()} !=
+            {"SyncAckReconciliationTest":2, "SyncReceiptSafetyTest":24,
+             "DatabaseInstallEvidenceTest":23}):
+    raise EvidenceStop("HOME QA STOP: manifest identity/counts do not match PR116")
+APPROVED_CASES = _MANIFEST["chromium"]
+JVM_REQUIRED = {
+    clazz: {"cz.zamerovac.app." + clazz + "." + method for method in methods}
+    for clazz, methods in _MANIFEST["jvmRequired"].items()
+}
+
 def require(value, message):
     if not value:
         raise EvidenceStop("HOME QA STOP: " + message)
@@ -98,12 +117,16 @@ def validate_report(report, kind, env, source_sha, validator_sha):
                 coverage.get("actualCases") == 92,
                 "browser must prove exactly 92 PASS cases")
         rows = report.get("records", [])
-        require(len(rows) == 23 and len({x.get("suite") for x in rows}) == 23 and
+        require(len(rows) == 23 and
+                [x.get("suite") for x in rows] == list(APPROVED_CASES) and
                 all(x.get("status") == "PASS" and
                     isinstance(x.get("scenarioTotal"), int) and x["scenarioTotal"]>0 and
-                    x.get("scenarioPassed")==x["scenarioTotal"] for x in rows) and
+                    x.get("scenarioPassed")==x["scenarioTotal"] and
+                    x["scenarioTotal"] == len(APPROVED_CASES[x["suite"]]) and
+                    x.get("scenarioNames") == APPROVED_CASES[x["suite"]]
+                    for x in rows) and
                 sum(x["scenarioTotal"] for x in rows) == 92,
-                "browser case evidence incomplete")
+                "unapproved browser suite or missing/renamed case identity")
         integrity = report.get("integrity", {})
         require(integrity.get("status") == "PASS" and
                 integrity.get("sha") == source_sha and
@@ -139,6 +162,12 @@ def validate_report(report, kind, env, source_sha, validator_sha):
         require(len(cases)==511 and len({p.get("id") for p in cases})==511 and
                 all(p.get("status")=="PASS" for p in cases),
                 "missing/duplicate/non-PASS product methods")
+        passed_ids = {case["id"] for case in cases}
+        for clazz, required in JVM_REQUIRED.items():
+            actual_class = {method for method in passed_ids
+                            if method.startswith("cz.zamerovac.app." + clazz + ".")}
+            require(actual_class == required,
+                    "required JVM E2E/safety test identities missing or renamed: " + clazz)
         digests = report.get("original_test_sha256", {})
         require(digests == ORIGINAL_TEST_SHA256,
                 "original diagnostic SHA256 identity changed or proof missing")
