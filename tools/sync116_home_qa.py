@@ -282,6 +282,9 @@ if [ "$waiver" != "PR116-ROOT-EXCEPTION-20261113" ]; then
   echo 'BLOCKED dependencies must already be read-only' >&2; exit 80; }
 fi
 export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
+# Existing Linux SDK used by the approved main HOME WSL workflow; no install.
+export ANDROID_HOME=/opt/android-sdk ANDROID_SDK_ROOT=/opt/android-sdk
+test -f "$ANDROID_HOME/platforms/android-35/android.jar" || { echo 'BLOCKED existing WSL Android SDK 35 missing' >&2; exit 81; }
 export PATH="$JAVA_HOME/bin:$PATH" CI=1
 test "$(git -C "$source_dir" rev-parse HEAD)" = "$expected"
 test "$(git -C "$gate_dir" rev-parse HEAD)" = "$gate_sha"
