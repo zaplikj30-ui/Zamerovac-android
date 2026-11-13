@@ -109,6 +109,7 @@ def validate_report(report, kind, env, source_sha, validator_sha):
     counts = report.get("counts")
     require(isinstance(counts,dict), "counts missing")
     if kind == "browser":
+        require(report.get("mode") == "--all", "browser did not use full approved 23-suite mode")
         require(counts == {"PASS":23,"FAIL":0,"SKIP":0,"NOT RUN":0},
                 "browser must have exactly 23 PASS suites")
         coverage = report.get("coverage",{})
@@ -135,6 +136,7 @@ def validate_report(report, kind, env, source_sha, validator_sha):
                 re.fullmatch(r"[0-9a-f]{64}",integrity.get("digest","")) is not None,
                 "source bytes/clean worktree were not verified")
     else:
+        require(report.get("mode") == "sync116-home-jvm", "JVM mode identity mismatch")
         require(counts == {"PASS":511,"FAIL":2,"ERROR":0,"SKIP":0},
                 "JVM must have 511 PASS, two real FAIL and 0 ERROR/SKIP")
         require(report.get("gradle",{}).get("status") == "FAIL" and
