@@ -1,0 +1,155 @@
+name: Zamerovac - one-shot Windows identity fixture diagnosis (NO browser)
+
+# Review branch and initial RUN creation are inert. Owner-approved marker only.
+on:
+  push:
+    branches:
+      - 'qa/fixture-diagnostic-20261113b-run'
+    paths:
+      - 'docs/qa/fixture-diagnostic-20261113b.trigger'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zamerovac-qa-fixture-diagnostic-20261113b-one-shot
+  cancel-in-progress: false
+
+jobs:
+  windows-fixture-only:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.ref == 'refs/heads/qa/fixture-diagnostic-20261113b-run' && github.event_name == 'push' && github.run_number == 1 && github.run_attempt == 1 && github.event.created == false && github.event.head_commit.message == 'APPROVED-ONE-SHOT-FIXTURE-DIAGNOSTIC-20261113B' }}
+    runs-on: [self-hosted, Windows, X64, zamerovac-qa]
+    timeout-minutes: 15
+    env:
+      CI: '1'
+      PYTHONUTF8: '1'
+      ZAMEROVAC_SOURCE_ROOT: '${{ github.workspace }}\source'
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+    steps:
+      - name: Verify owner-only Windows runner and pinned Git before checkout
+        shell: cmd
+        run: |
+          @echo off
+          if /i not "%GITHUB_REPOSITORY%"=="zaplikj30-ui/Zamerovac-android" exit /b 1
+          if /i not "%GITHUB_ACTOR%"=="zaplikj30-ui" exit /b 1
+          if /i not "%GITHUB_TRIGGERING_ACTOR%"=="zaplikj30-ui" exit /b 1
+          if /i not "%GITHUB_REF%"=="refs/heads/qa/fixture-diagnostic-20261113b-run" exit /b 1
+          if not "%GITHUB_EVENT_NAME%"=="push" exit /b 1
+          if not "%GITHUB_RUN_NUMBER%"=="1" exit /b 1
+          if not "%GITHUB_RUN_ATTEMPT%"=="1" exit /b 1
+          set "QA_USER="
+          for /f "delims=" %%A in ('C:\Windows\System32\whoami.exe') do (
+            if defined QA_USER exit /b 1
+            set "QA_USER=%%A"
+          )
+          if not defined QA_USER exit /b 1
+          if not defined COMPUTERNAME exit /b 1
+          if /i not "%QA_USER%"=="%COMPUTERNAME%\ZamerovacQA" exit /b 1
+          if not exist "C:\actions-runner\tools\MinGit-2.56.0.4\cmd\git.exe" exit /b 1
+          echo C:\actions-runner\tools\MinGit-2.56.0.4\cmd>>"%GITHUB_PATH%"
+          echo TRUSTED_WINDOWS_FIXTURE_ONLY=1
+
+      - name: Checkout exact independent-review-approved QA SHA (no scripts yet)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        env:
+          GIT_CONFIG_COUNT: '1'
+          GIT_CONFIG_KEY_0: core.autocrlf
+          GIT_CONFIG_VALUE_0: 'false'
+        with:
+          repository: zaplikj30-ui/Zamerovac-android
+          ref: 65a3e4f1981c1f2a1eb96f39e128a4fcc6190729
+          path: gate
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+          lfs: false
+
+      - name: Checkout exact approved product SHA (no scripts yet)
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        env:
+          GIT_CONFIG_COUNT: '1'
+          GIT_CONFIG_KEY_0: core.autocrlf
+          GIT_CONFIG_VALUE_0: 'false'
+        with:
+          repository: zaplikj30-ui/Zamerovac-android
+          ref: ae3b4df53c25557f28b4a25ccb65adc2abdff639
+          path: source
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+          lfs: false
+
+      - name: Verify both SHA and clean files before running reviewed Node code
+        shell: cmd
+        run: |
+          @echo off
+          set "ACTUAL_QA="
+          set "ACTUAL_SOURCE="
+          for /f %%H in ('git -C "%GITHUB_WORKSPACE%\gate" rev-parse HEAD') do set "ACTUAL_QA=%%H"
+          for /f %%H in ('git -C "%GITHUB_WORKSPACE%\source" rev-parse HEAD') do set "ACTUAL_SOURCE=%%H"
+          if /i not "%ACTUAL_QA%"=="65a3e4f1981c1f2a1eb96f39e128a4fcc6190729" exit /b 1
+          if /i not "%ACTUAL_SOURCE%"=="ae3b4df53c25557f28b4a25ccb65adc2abdff639" exit /b 1
+          set "QA_STATUS=%RUNNER_TEMP%\zamerovac-fixture-qa-status-%GITHUB_RUN_ID%-%GITHUB_RUN_ATTEMPT%.txt"
+          set "SOURCE_STATUS=%RUNNER_TEMP%\zamerovac-fixture-source-status-%GITHUB_RUN_ID%-%GITHUB_RUN_ATTEMPT%.txt"
+          if exist "%QA_STATUS%" exit /b 1
+          if exist "%SOURCE_STATUS%" exit /b 1
+          git -C "%GITHUB_WORKSPACE%\gate" status --porcelain --untracked-files=all >"%QA_STATUS%"
+          if errorlevel 1 exit /b 1
+          for %%F in ("%QA_STATUS%") do if %%~zF GTR 0 exit /b 1
+          git -C "%GITHUB_WORKSPACE%\source" status --porcelain --untracked-files=all >"%SOURCE_STATUS%"
+          if errorlevel 1 exit /b 1
+          for %%F in ("%SOURCE_STATUS%") do if %%~zF GTR 0 exit /b 1
+          del /q "%QA_STATUS%" "%SOURCE_STATUS%"
+          if errorlevel 1 exit /b 1
+          echo VERIFIED_QA_SHA=%ACTUAL_QA%
+          echo VERIFIED_SOURCE_SHA=%ACTUAL_SOURCE%
+
+      - name: Run ONLY 15 reviewed Windows Node fixture tests, log redacted failures
+        shell: cmd
+        working-directory: gate
+        run: |
+          @echo off
+          where node >nul
+          if errorlevel 1 exit /b 1
+          node --version
+          if errorlevel 1 exit /b 1
+          if not "%PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD%"=="1" exit /b 1
+          set "TAP_LOG=%RUNNER_TEMP%\zamerovac-fixture-%GITHUB_RUN_ID%-%GITHUB_RUN_ATTEMPT%.tap"
+          if exist "%TAP_LOG%" exit /b 1
+          node --test --test-reporter=tap tests/home_qa_integrity.js >"%TAP_LOG%" 2>&1
+          if errorlevel 1 (
+            echo BLOCKED: fixture failure. Redacted pathDiagnostic if present:
+            findstr /B /C:"# tests " /C:"# pass " /C:"# fail " /C:"# skipped " "%TAP_LOG%"
+            echo FIXTURE_CASES_REDACTED_BEGIN
+            findstr /B /C:"ok " /C:"not ok " "%TAP_LOG%"
+            echo FIXTURE_CASES_REDACTED_END
+            findstr /C:"pathDiagnostic=" "%TAP_LOG%"
+            echo BLOCKED: no browser or other QA tests were started.
+            del /q "%TAP_LOG%"
+            exit /b 1
+          )
+          set "COUNTS_VALID=1"
+          findstr /X /C:"# tests 15" "%TAP_LOG%" >nul
+          if errorlevel 1 set "COUNTS_VALID=0"
+          findstr /X /C:"# pass 15" "%TAP_LOG%" >nul
+          if errorlevel 1 set "COUNTS_VALID=0"
+          findstr /X /C:"# fail 0" "%TAP_LOG%" >nul
+          if errorlevel 1 set "COUNTS_VALID=0"
+          findstr /X /C:"# skipped 0" "%TAP_LOG%" >nul
+          if errorlevel 1 set "COUNTS_VALID=0"
+          if not "%COUNTS_VALID%"=="1" (
+            echo BLOCKED: TAP counts differ from 15/15/0/0.
+            findstr /B /C:"ok " /C:"not ok " "%TAP_LOG%"
+            del /q "%TAP_LOG%"
+            exit /b 1
+          )
+          echo FIXTURE_CASES_REDACTED_BEGIN
+          findstr /B /C:"ok " /C:"not ok " "%TAP_LOG%"
+          if errorlevel 1 (
+            del /q "%TAP_LOG%"
+            exit /b 1
+          )
+          echo FIXTURE_CASES_REDACTED_END
+          del /q "%TAP_LOG%"
+          if errorlevel 1 exit /b 1
+          echo WINDOWS_FIXTURE_15_PASS_0_FAIL_0_SKIP
