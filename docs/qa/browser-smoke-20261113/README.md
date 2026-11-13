@@ -26,3 +26,15 @@
 
 ## Důkazy a limity přípravy
 Koordinátor 25 provedl nad skutečným textem uloženého GitHub workflow **24 PASS, 0 FAIL** syntetických/static kontrol: 1 správná owner událost, 9 zakázaných událostí (repo, owner, triggering_actor, review ref, PR, nový push, rerun, branch-creation, špatná commit message), 14 invariantů (dva checkouty, exact SHA, rodičovský commit, žádný předčasný source code, absence instalačních příkazů/sandbox bypass/PowerShell/manual/PR trigger, runner, marker, smoke only, QA identity a unit fixture). Tyto V8 modelové/statické kontroly **nejsou Windows CMD ani YAML event parser runtime PASS**. Skutečný Windows/Node/Chromium a Actions spouštěč pro nový SHA: **NOT RUN**. Kompletní testy v autentickém offline Windows prostředí budou probíhat teprve po samostatném SOURCE review a bezpečné aktivaci.
+
+## Historická validační chyba opravená ještě v REVIEW
+První neaktivní YAML `.github/workflows/browser-smoke-20261113.yml` obsahoval výraz `${{ runner.temp }}` přímo v `jobs.windows-browser-smoke.env`. Oficiální GitHub **context availability** dovoluje kontext `runner` až na úrovni **step**, nikoli job-level `env`. To je doložená neplatná konstrukce a pravděpodobná příčina tří workflow-validation FAIL:
+- [43480218762](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/43480218762)
+- [43480387567](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/43480387567)
+- [43480863305](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/43480863305)
+
+**GitHub API pro všechna tato selhání potvrdilo 0 jobs**: žádný Windows/cloud/runner job neběžel. Billable timing záznam má prázdný objekt, neprokazuje účtování. Původní workflow byl **z REVIEW odstraněn**, protože jeho 3 validační pokusy spotřebovaly `run_number` 1–3. Opravený a stále neaktivní workflow je nyní **`.github/workflows/browser-smoke-once-20261113.yml`** pod novou workflow identitou; `ZAMEROVAC_QA_RESULT_PARENT` se nastavuje až uvnitř CMD testovacího kroku z lokálního `%RUNNER_TEMP%`. Následný read-only GitHub check ukázal **žádný nový workflow run** na REVIEW ani RUN větvi po vytvoření opraveného souboru. Nejde o skutečný GH runtime parser PASS do aktivace.
+
+Oficiální zdroj kontextové tabulky: https://docs.github.com/en/actions/reference/workflows-and-actions/contexts#context-availability
+
+**Povinná nová statická regrese:** v job-level `env:` nesmí být `${{ runner.* }}`; případná `runner.temp` výrazy smějí být jen v `steps.with` nebo `steps.env` a v CMD jen skutečné `%RUNNER_TEMP%`. Každý nový `if`/job musí respektovat přiměřené review a neobcházet 1. běh.
