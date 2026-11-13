@@ -88,6 +88,24 @@ def strict_classify(module, cases, gradle_rc: int, xml_count: int,
         problems.append("Expected exactly 511 PASS, 2 actual FAIL, 0 ERROR/SKIP")
     if len(report["physical_diagnostics"]) != 2:
         problems.append("Both original physical diagnostics must be visible")
+    # Independent QA-only check of the JUnit XML identities, not merely
+    # product classifier's previous two E2E and one safety-prefix check.
+    manifest = ROOT / "tools" / "sync116_case_manifest.json"
+    require(manifest.is_file() and not manifest.is_symlink(),
+            "pinned JVM case manifest missing")
+    approved = json.loads(manifest.read_text(encoding="utf-8"))
+    require(approved.get("sourceSha") == EXPECTED_SHA and
+            {k: len(v) for k,v in approved.get("jvmRequired", {}).items()} ==
+            {"SyncAckReconciliationTest":2, "SyncReceiptSafetyTest":24,
+             "DatabaseInstallEvidenceTest":23},
+            "untrusted JVM required test list")
+    passed = {case["id"] for case in cases if case["status"] == "PASS"}
+    for clazz, methods in approved["jvmRequired"].items():
+        prefix = "cz.zamerovac.app." + clazz + "."
+        required = {prefix + method for method in methods}
+        actual = {test for test in passed if test.startswith(prefix)}
+        if actual != required:
+            problems.append("Missing, renamed or unexpected mandatory JUnit methods in " + clazz)
     if not fresh:
         problems.append("JUnit files are missing, old, or incomplete")
     if not unchanged:
