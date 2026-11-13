@@ -250,6 +250,10 @@ BROWSER_PREFLIGHT = r'''      - name: Check owner branch SHA and separate valida
           if /I not "%ACTUAL_GATE%"=="__GATE_SHA__" exit /b 1
           python tools\home_qa_gate.py lint-workflow "..\recipe\.github\workflows\home-qa-one-shot.yml" --strict
           if errorlevel 1 exit /b 1
+          python -m unittest discover -s tests -p test_home_qa_gate.py -v
+          if errorlevel 1 exit /b 1
+          python -m unittest discover -s tests -p test_sync116_home_qa.py -v
+          if errorlevel 1 exit /b 1
           echo TRUSTED_OWNER_SOURCE_BRANCH=__SOURCE_BRANCH__ TESTED_SOURCE_SHA=%ACTUAL_SOURCE% GATE_SHA=%ACTUAL_GATE%
 '''
 BROWSER_STEPS = r'''      - name: Isolated offline package-lock Chromium prerequisites
@@ -278,6 +282,8 @@ BROWSER_STEPS = r'''      - name: Isolated offline package-lock Chromium prerequ
           python tools\home_qa_gate.py windows-quick --expected-sha __SOURCE_SHA__ --root . --check-only
           if errorlevel 1 exit /b 1
           set "ZAMEROVAC_SOURCE_ROOT=%GITHUB_WORKSPACE%\source"
+          node "%GITHUB_WORKSPACE%\gate\tests\browser_qa_runner.js"
+          if errorlevel 1 exit /b 1
           node "%GITHUB_WORKSPACE%\gate\tools\local-browser-qa.cjs" --self-test
           if errorlevel 1 exit /b 1
           node "%GITHUB_WORKSPACE%\gate\tools\local-browser-qa.cjs" --all
