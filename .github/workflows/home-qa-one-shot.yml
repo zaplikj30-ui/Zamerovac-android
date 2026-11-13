@@ -62,7 +62,7 @@ jobs:
           cd /d "%GITHUB_WORKSPACE%\gate"
           for /f %%H in ('git rev-parse HEAD') do set "ACTUAL_GATE=%%H"
           if not defined ACTUAL_GATE exit /b 1
-          if /I not "%ACTUAL_GATE%"=="1d2757bd8710eba3f90e6b250e89d32bb0897d02" exit /b 1
+          if /I not "%ACTUAL_GATE%"=="840f8d502b2fd5eb66287f5f4bdc90a980285843" exit /b 1
           python tools\home_qa_gate.py lint-workflow "..\recipe\.github\workflows\home-qa-one-shot.yml" --strict
           if errorlevel 1 exit /b 1
           python -m unittest discover -s tests -p test_home_qa_gate.py -v
@@ -71,16 +71,16 @@ jobs:
           if errorlevel 1 exit /b 1
           python -m unittest discover -s tests -p test_sync116_evidence.py -v
           if errorlevel 1 exit /b 1
-          python tools\sync116_evidence.py init --kind jvm --root "%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs" --source-sha 1527e3377609633c554195b0641e02e3cfb5fb5e --validator-sha 1d2757bd8710eba3f90e6b250e89d32bb0897d02
+          python tools\sync116_evidence.py init --kind jvm --root "%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs" --source-sha 1527e3377609633c554195b0641e02e3cfb5fb5e --validator-sha 840f8d502b2fd5eb66287f5f4bdc90a980285843
           if errorlevel 1 exit /b 1
           echo TRUSTED_OWNER_SOURCE_BRANCH=implement/sync-core-b-20261112 TESTED_SOURCE_SHA=%ACTUAL_SOURCE% GATE_SHA=%ACTUAL_GATE%
       - name: Offline WSL full JVM and ACK evidence; one Gradle worker, no APK
         shell: cmd
         run: |
           cd /d "%GITHUB_WORKSPACE%\gate"
-          python tools\sync116_home_qa.py windows-wsl --source "%GITHUB_WORKSPACE%\source" --gate "%GITHUB_WORKSPACE%\gate" --expected-sha 1527e3377609633c554195b0641e02e3cfb5fb5e --validator-sha 1d2757bd8710eba3f90e6b250e89d32bb0897d02 --run-id "%GITHUB_RUN_ID%" --run-attempt "%GITHUB_RUN_ATTEMPT%" --output "%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs\%GITHUB_RUN_ID%-%GITHUB_RUN_ATTEMPT%\jvm"
+          python tools\sync116_home_qa.py windows-wsl --source "%GITHUB_WORKSPACE%\source" --gate "%GITHUB_WORKSPACE%\gate" --expected-sha 1527e3377609633c554195b0641e02e3cfb5fb5e --validator-sha 840f8d502b2fd5eb66287f5f4bdc90a980285843 --run-id "%GITHUB_RUN_ID%" --run-attempt "%GITHUB_RUN_ATTEMPT%" --output "%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs\%GITHUB_RUN_ID%-%GITHUB_RUN_ATTEMPT%\jvm"
           if errorlevel 1 exit /b 1
-          python tools\sync116_evidence.py verify --kind jvm --root "%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs" --source-sha 1527e3377609633c554195b0641e02e3cfb5fb5e --validator-sha 1d2757bd8710eba3f90e6b250e89d32bb0897d02
+          python tools\sync116_evidence.py verify --kind jvm --root "%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs" --source-sha 1527e3377609633c554195b0641e02e3cfb5fb5e --validator-sha 840f8d502b2fd5eb66287f5f4bdc90a980285843
           if errorlevel 1 exit /b 1
       - name: Validate current-run evidence before possible upload
         id: evidence_checked
@@ -88,7 +88,7 @@ jobs:
         shell: cmd
         run: |
           cd /d "%GITHUB_WORKSPACE%\gate"
-          python tools\sync116_evidence.py inspect --kind jvm --root "%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs" --source-sha 1527e3377609633c554195b0641e02e3cfb5fb5e --validator-sha 1d2757bd8710eba3f90e6b250e89d32bb0897d02
+          python tools\sync116_evidence.py inspect --kind jvm --root "%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs" --source-sha 1527e3377609633c554195b0641e02e3cfb5fb5e --validator-sha 840f8d502b2fd5eb66287f5f4bdc90a980285843
           if errorlevel 1 exit /b 1
       - name: Upload synthetic PR116 JVM result only; raw Gradle remains FAIL
         if: always() && steps.source_gate.outcome == 'success' && steps.evidence_checked.outcome == 'success'
