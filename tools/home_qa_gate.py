@@ -247,62 +247,62 @@ BROWSER_PREFLIGHT = r'''      - name: Check owner branch SHA and separate valida
         id: source_gate
         shell: cmd
         run: |
-         cd /d "%GITHUB_WORKSPACE%\source"
-         for /f %%H in ('git rev-parse HEAD') do set "ACTUAL_SOURCE=%%H"
-         if not defined ACTUAL_SOURCE exit /b 1
-         if /I not "%ACTUAL_SOURCE%"=="__SOURCE_SHA__" exit /b 1
-         cd /d "%GITHUB_WORKSPACE%\gate"
-         for /f %%H in ('git rev-parse HEAD') do set "ACTUAL_GATE=%%H"
-         if not defined ACTUAL_GATE exit /b 1
-         if /I not "%ACTUAL_GATE%"=="__GATE_SHA__" exit /b 1
-         python tools\home_qa_gate.py lint-workflow "..\recipe\.github\workflows\home-qa-one-shot.yml" --strict
-         if errorlevel 1 exit /b 1
-         python -m unittest discover -s tests -p test_home_qa_gate.py -v
-         if errorlevel 1 exit /b 1
-         python -m unittest discover -s tests -p test_sync116_home_qa.py -v
-         if errorlevel 1 exit /b 1
-         python -m unittest discover -s tests -p test_sync116_evidence.py -v
-         if errorlevel 1 exit /b 1
-         python tools\sync116_evidence.py init --kind __EVIDENCE_KIND__ --root "%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs" --source-sha __SOURCE_SHA__ --validator-sha __GATE_SHA__
-         if errorlevel 1 exit /b 1
-         echo TRUSTED_OWNER_SOURCE_BRANCH=__SOURCE_BRANCH__ TESTED_SOURCE_SHA=%ACTUAL_SOURCE% GATE_SHA=%ACTUAL_GATE%
+          cd /d "%GITHUB_WORKSPACE%\source"
+          for /f %%H in ('git rev-parse HEAD') do set "ACTUAL_SOURCE=%%H"
+          if not defined ACTUAL_SOURCE exit /b 1
+          if /I not "%ACTUAL_SOURCE%"=="__SOURCE_SHA__" exit /b 1
+          cd /d "%GITHUB_WORKSPACE%\gate"
+          for /f %%H in ('git rev-parse HEAD') do set "ACTUAL_GATE=%%H"
+          if not defined ACTUAL_GATE exit /b 1
+          if /I not "%ACTUAL_GATE%"=="__GATE_SHA__" exit /b 1
+          python tools\home_qa_gate.py lint-workflow "..\recipe\.github\workflows\home-qa-one-shot.yml" --strict
+          if errorlevel 1 exit /b 1
+          python -m unittest discover -s tests -p test_home_qa_gate.py -v
+          if errorlevel 1 exit /b 1
+          python -m unittest discover -s tests -p test_sync116_home_qa.py -v
+          if errorlevel 1 exit /b 1
+          python -m unittest discover -s tests -p test_sync116_evidence.py -v
+          if errorlevel 1 exit /b 1
+          python tools\sync116_evidence.py init --kind __EVIDENCE_KIND__ --root "%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs" --source-sha __SOURCE_SHA__ --validator-sha __GATE_SHA__
+          if errorlevel 1 exit /b 1
+          echo TRUSTED_OWNER_SOURCE_BRANCH=__SOURCE_BRANCH__ TESTED_SOURCE_SHA=%ACTUAL_SOURCE% GATE_SHA=%ACTUAL_GATE%
 '''
 BROWSER_STEPS = r'''      - name: Isolated offline package-lock Chromium prerequisites
         shell: cmd
         run: |
-         if exist "%GITHUB_WORKSPACE%\qa-browser-deps" exit /b 1
-         mkdir "%GITHUB_WORKSPACE%\qa-browser-deps"
-         if errorlevel 1 exit /b 1
-         copy /y "%GITHUB_WORKSPACE%\gate\tools\qa-browser\package.json" "%GITHUB_WORKSPACE%\qa-browser-deps\package.json" >nul
-         if errorlevel 1 exit /b 1
-         copy /y "%GITHUB_WORKSPACE%\gate\tools\qa-browser\package-lock.json" "%GITHUB_WORKSPACE%\qa-browser-deps\package-lock.json" >nul
-         if errorlevel 1 exit /b 1
-         cd /d "%GITHUB_WORKSPACE%\qa-browser-deps"
-         set "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1"
-         call npm.cmd ci --offline --ignore-scripts --omit=optional --no-audit --no-fund
-         if errorlevel 1 exit /b 1
-         python "%GITHUB_WORKSPACE%\gate\tools\home_qa_gate.py" verify-browser --browser-root "C:\actions-runner\tools\ms-playwright" --expected-sha256 __BROWSER_SHA256__
-         if errorlevel 1 exit /b 1
-         echo NODE_PATH=%GITHUB_WORKSPACE%\qa-browser-deps\node_modules>>"%GITHUB_ENV%"
-         echo PLAYWRIGHT_BROWSERS_PATH=C:\actions-runner\tools\ms-playwright>>"%GITHUB_ENV%"
-         echo LOCALAPPDATA=%GITHUB_WORKSPACE%\qa-evidence>>"%GITHUB_ENV%"
+          if exist "%GITHUB_WORKSPACE%\qa-browser-deps" exit /b 1
+          mkdir "%GITHUB_WORKSPACE%\qa-browser-deps"
+          if errorlevel 1 exit /b 1
+          copy /y "%GITHUB_WORKSPACE%\gate\tools\qa-browser\package.json" "%GITHUB_WORKSPACE%\qa-browser-deps\package.json" >nul
+          if errorlevel 1 exit /b 1
+          copy /y "%GITHUB_WORKSPACE%\gate\tools\qa-browser\package-lock.json" "%GITHUB_WORKSPACE%\qa-browser-deps\package-lock.json" >nul
+          if errorlevel 1 exit /b 1
+          cd /d "%GITHUB_WORKSPACE%\qa-browser-deps"
+          set "PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1"
+          call npm.cmd ci --offline --ignore-scripts --omit=optional --no-audit --no-fund
+          if errorlevel 1 exit /b 1
+          python "%GITHUB_WORKSPACE%\gate\tools\home_qa_gate.py" verify-browser --browser-root "C:\actions-runner\tools\ms-playwright" --expected-sha256 __BROWSER_SHA256__
+          if errorlevel 1 exit /b 1
+          echo NODE_PATH=%GITHUB_WORKSPACE%\qa-browser-deps\node_modules>>"%GITHUB_ENV%"
+          echo PLAYWRIGHT_BROWSERS_PATH=C:\actions-runner\tools\ms-playwright>>"%GITHUB_ENV%"
+          echo LOCALAPPDATA=%GITHUB_WORKSPACE%\qa-evidence>>"%GITHUB_ENV%"
       - name: Real Chromium and editor pixel QA with durable checkpoints
         shell: cmd
         run: |
-         cd /d "%GITHUB_WORKSPACE%\source"
-         python tools\home_qa_gate.py windows-quick --expected-sha __SOURCE_SHA__ --root . --check-only
-         if errorlevel 1 exit /b 1
-         set "ZAMEROVAC_SOURCE_ROOT=%GITHUB_WORKSPACE%\source"
-         set "ZAMEROVAC_QA_RESULT_ROOT=%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs\%GITHUB_RUN_ID%-%GITHUB_RUN_ATTEMPT%\browser"
-         set "ZAMEROVAC_QA_GATE_SHA=__GATE_SHA__"
-         node "%GITHUB_WORKSPACE%\gate\tests\browser_qa_runner.js"
-         if errorlevel 1 exit /b 1
-         node "%GITHUB_WORKSPACE%\gate\tools\local-browser-qa.cjs" --self-test
-         if errorlevel 1 exit /b 1
-         node "%GITHUB_WORKSPACE%\gate\tools\local-browser-qa.cjs" --all
-         if errorlevel 1 exit /b 1
-         python "%GITHUB_WORKSPACE%\gate\tools\sync116_evidence.py" verify --kind browser --root "%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs" --source-sha __SOURCE_SHA__ --validator-sha __GATE_SHA__
-         if errorlevel 1 exit /b 1
+          cd /d "%GITHUB_WORKSPACE%\source"
+          python tools\home_qa_gate.py windows-quick --expected-sha __SOURCE_SHA__ --root . --check-only
+          if errorlevel 1 exit /b 1
+          set "ZAMEROVAC_SOURCE_ROOT=%GITHUB_WORKSPACE%\source"
+          set "ZAMEROVAC_QA_RESULT_ROOT=%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs\%GITHUB_RUN_ID%-%GITHUB_RUN_ATTEMPT%\browser"
+          set "ZAMEROVAC_QA_GATE_SHA=__GATE_SHA__"
+          node "%GITHUB_WORKSPACE%\gate\tests\browser_qa_runner.js"
+          if errorlevel 1 exit /b 1
+          node "%GITHUB_WORKSPACE%\gate\tools\local-browser-qa.cjs" --self-test
+          if errorlevel 1 exit /b 1
+          node "%GITHUB_WORKSPACE%\gate\tools\local-browser-qa.cjs" --all
+          if errorlevel 1 exit /b 1
+          python "%GITHUB_WORKSPACE%\gate\tools\sync116_evidence.py" verify --kind browser --root "%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs" --source-sha __SOURCE_SHA__ --validator-sha __GATE_SHA__
+          if errorlevel 1 exit /b 1
 '''
 
 EVIDENCE_INSPECTION = r'''      - name: Validate current-run evidence before possible upload
@@ -310,9 +310,9 @@ EVIDENCE_INSPECTION = r'''      - name: Validate current-run evidence before pos
         if: always() && steps.source_gate.outcome == 'success'
         shell: cmd
         run: |
-         cd /d "%GITHUB_WORKSPACE%\gate"
-         python tools\sync116_evidence.py inspect --kind browser --root "%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs" --source-sha __SOURCE_SHA__ --validator-sha __GATE_SHA__
-         if errorlevel 1 exit /b 1
+          cd /d "%GITHUB_WORKSPACE%\gate"
+          python tools\sync116_evidence.py inspect --kind browser --root "%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs" --source-sha __SOURCE_SHA__ --validator-sha __GATE_SHA__
+          if errorlevel 1 exit /b 1
 '''
 
 def browser_workflow_recipe() -> str:
@@ -329,12 +329,12 @@ def browser_workflow_recipe() -> str:
     fixed_gate = r'''      - name: Read-only trusted validator pinned to reviewed OWNER SHA
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-         repository: zaplikj30-ui/Zamerovac-android
-         ref: __GATE_BRANCH__
-         path: gate
-         fetch-depth: 1
-         persist-credentials: false
-         submodules: false
+          repository: zaplikj30-ui/Zamerovac-android
+          ref: __GATE_BRANCH__
+          path: gate
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
 '''
     first_at = recipe.index(guard)
     last_at = recipe.index(first, first_at)
@@ -367,11 +367,11 @@ def browser_workflow_recipe() -> str:
 SYNC116_JVM_STEPS = r'''      - name: Offline WSL full JVM and ACK evidence; one Gradle worker, no APK
         shell: cmd
         run: |
-         cd /d "%GITHUB_WORKSPACE%\gate"
-         python tools\sync116_home_qa.py windows-wsl --source "%GITHUB_WORKSPACE%\source" --gate "%GITHUB_WORKSPACE%\gate" --expected-sha __SOURCE_SHA__ --validator-sha __GATE_SHA__ --run-id "%GITHUB_RUN_ID%" --run-attempt "%GITHUB_RUN_ATTEMPT%" --output "%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs\%GITHUB_RUN_ID%-%GITHUB_RUN_ATTEMPT%\jvm"
-         if errorlevel 1 exit /b 1
-         python tools\sync116_evidence.py verify --kind jvm --root "%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs" --source-sha __SOURCE_SHA__ --validator-sha __GATE_SHA__
-         if errorlevel 1 exit /b 1
+          cd /d "%GITHUB_WORKSPACE%\gate"
+          python tools\sync116_home_qa.py windows-wsl --source "%GITHUB_WORKSPACE%\source" --gate "%GITHUB_WORKSPACE%\gate" --expected-sha __SOURCE_SHA__ --validator-sha __GATE_SHA__ --run-id "%GITHUB_RUN_ID%" --run-attempt "%GITHUB_RUN_ATTEMPT%" --output "%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs\%GITHUB_RUN_ID%-%GITHUB_RUN_ATTEMPT%\jvm"
+          if errorlevel 1 exit /b 1
+          python tools\sync116_evidence.py verify --kind jvm --root "%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\runs" --source-sha __SOURCE_SHA__ --validator-sha __GATE_SHA__
+          if errorlevel 1 exit /b 1
 '''
 
 
