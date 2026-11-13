@@ -92,7 +92,7 @@ class Sync116QaOnlyTests(unittest.TestCase):
     def test_nonroot_wsl_is_mandatory_before_source_execution(self):
         with mock.patch.object(QA.platform, "system", return_value="Linux"), \
              mock.patch.object(QA.platform, "release", return_value="microsoft-WSL2"), \
-             mock.patch.object(QA.os, "geteuid", return_value=0), \
+             mock.patch.object(QA.os, "geteuid", return_value=0, create=True), \
              mock.patch.dict(QA.os.environ, {"WSL_DISTRO_NAME": "Zamerovac-Ubuntu-QA"}):
             with self.assertRaisesRegex(QA.Stop, "root WSL"):
                 QA.run_linux(Path("/fake-src"), QA.EXPECTED_SHA, Path("/fake-out"),
