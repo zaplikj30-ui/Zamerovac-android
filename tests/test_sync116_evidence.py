@@ -118,14 +118,15 @@ class CurrentRunEvidenceTests(unittest.TestCase):
             QA.validate_report(fake,"browser",env(),SHA,GATE)
         for mode in ("missing", "renamed", "reordered"):
             altered=browser()
-            titles=altered["records"][0]["scenarioNames"]
+            titles=next(row["scenarioNames"] for row in altered["records"]
+                        if row["suite"]=="pending-audio")
             if mode=="missing":
                 titles[0]="fabricated-replacement-with-same-92-count"
             elif mode=="renamed":
                 titles[0]="clockless-test-fabricated"
             else:
                 titles.reverse()
-                self.assertNotEqual(titles,good["records"][0]["scenarioNames"])
+                self.assertNotEqual(titles,QA.APPROVED_CASES["pending-audio"])
             with self.subTest(mode=mode), self.assertRaises(QA.EvidenceStop):
                 QA.validate_report(altered,"browser",env(),SHA,GATE)
         no_audio=browser()
