@@ -3,6 +3,13 @@
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
 const profiles=Object.freeze(require('./qa-browser-profiles.json'));
 function fail(message){throw Object.assign(Error('HOME BLOCKED: '+message),{code:'HOME_BLOCKED'})}
+// Win32 native realpath may spell the same absolute path with an extended namespace
+// prefix. Compare equivalent spellings only; do not accept changed target paths.
+function canonicalPathMatches(file,canonical,platform=process.platform){
+ if(platform!=='win32')return file===canonical;
+ const norm=value=>path.win32.normalize(path.win32.toNamespacedPath(value)).toLowerCase();
+ return norm(file)===norm(canonical);
+}
 function verifyFile(file,profile,platform=process.platform){
  const paths=platform==='win32'?path.win32:path.posix;
  if(!profile||typeof file!=='string'||file!==profile.path||!paths.isAbsolute(file))fail('unapproved Chromium path/platform');
@@ -14,7 +21,7 @@ function verifyFile(file,profile,platform=process.platform){
   if(current===paths.dirname(current))break;
  }
  const canonical=fs.realpathSync.native(file);
- if((platform==='win32'?paths.normalize(canonical).toLowerCase():canonical)!==(platform==='win32'?paths.normalize(file).toLowerCase():file))fail('Chromium path resolves elsewhere');
+ if(!canonicalPathMatches(file,canonical,platform))fail('Chromium path resolves elsewhere');
  const fd=fs.openSync(file,fs.constants.O_RDONLY|(fs.constants.O_NOFOLLOW||0));
  try{
   const before=fs.fstatSync(fd),named=fs.lstatSync(file);
@@ -35,4 +42,4 @@ function verifyBrowserIdentity(file){
  try{return verifyFile(file,profiles[process.platform])}
  catch(e){if(e.code==='HOME_BLOCKED')throw e;fail('Chromium identity unavailable: '+e.message)}
 }
-module.exports={profiles,verifyBrowserIdentity,verifyFile};
+module.exports={profiles,verifyBrowserIdentity,verifyFile,canonicalPathMatches};
