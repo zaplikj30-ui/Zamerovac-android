@@ -324,6 +324,34 @@ def browser_workflow_recipe() -> str:
     return recipe.replace(old_path, new_path).replace("retention-days: 7", "retention-days: 3")
 
 
+
+# A separate serial WSL/JVM QA plan for PR #116. Never run this on the
+# generic browser recipe and never reuse the production two-worker runner.
+SYNC116_JVM_STEPS = r'''      - name: Offline WSL full JVM and ACK evidence; one Gradle worker, no APK
+        shell: cmd
+        run: |
+          cd /d "%GITHUB_WORKSPACE%\gate"
+          python tools\sync116_home_qa.py windows-wsl --source "%GITHUB_WORKSPACE%\source" --gate "%GITHUB_WORKSPACE%\gate" --expected-sha __SOURCE_SHA__ --output "%GITHUB_WORKSPACE%\qa-evidence\Zamerovac-QA\sync116"
+          if errorlevel 1 exit /b 1
+'''
+
+
+def sync116_jvm_workflow_recipe() -> str:
+    """A second exact YAML allowlist, never added to main HOME 4/4."""
+    browser = browser_workflow_recipe()
+    demand(browser.count(BROWSER_STEPS) == 1, "reviewed browser template changed")
+    browser = browser.replace(BROWSER_STEPS, SYNC116_JVM_STEPS)
+    browser = browser.replace("Upload checkpointed synthetic Chromium reports, no APK",
+                              "Upload synthetic PR116 JVM result only; raw Gradle remains FAIL")
+    browser = browser.replace("canonical-home-browser-", "canonical-home-sync116-jvm-")
+    original_paths = ("          path: |\n"
+                      "            qa-evidence/Zamerovac-QA/browser/**/results.json\n"
+                      "            qa-evidence/Zamerovac-QA/browser/**/*.log\n"
+                      "            qa-evidence/Zamerovac-QA/browser/**/evidence/**/report.json")
+    demand(browser.count(original_paths) == 1, "reviewed browser paths changed")
+    return browser.replace(original_paths,
+                           "          path: qa-evidence/Zamerovac-QA/sync116/results.json")
+
 def safe_owner_branch(branch: str) -> bool:
     """Reject PR refs, shell characters and ambiguous Git revision syntax."""
     return (bool(re.fullmatch(r"(?:fix|infra|feature|test|chore|docs|codex|bugfix|p1)/[a-z][a-z0-9._/-]{2,75}", branch))
@@ -385,11 +413,12 @@ def report_browser_fingerprints() -> None:
 def render_workflow(branch: str, source_sha: str, browser: bool = False,
                     source_branch: str | None = None, validator_sha: str | None = None,
                     validator_branch: str | None = None,
-                    browser_sha256: str | None = None) -> str:
+                    browser_sha256: str | None = None, sync_jvm: bool = False) -> str:
     demand(bool(re.fullmatch(r"qa/[a-z][a-z0-9._-]{3,65}", branch)),
            "only a literal trusted qa/* branch is allowed")
     demand(bool(SHA.fullmatch(source_sha)), "exact 40-character source SHA required")
-    if browser:
+    demand(not (browser and sync_jvm), "choose browser OR sync JVM, never both")
+    if browser or sync_jvm:
         demand(bool(source_branch and (safe_owner_branch(source_branch) or
                         (source_branch == SYNC116_BRANCH and source_sha == SYNC116_SHA))),
                "browser requires a literal approved owner branch/SHA pair, never PR/fork")
@@ -398,15 +427,21 @@ def render_workflow(branch: str, source_sha: str, browser: bool = False,
         demand(bool(validator_branch and (validator_branch == "main" or
                         safe_owner_branch(validator_branch))),
                "validator must be an owner branch, never PR/fork ref")
-        demand(bool(browser_sha256 and re.fullmatch(r"[0-9a-f]{64}", browser_sha256)),
-               "browser requires SHA256 of preverified Chromium")
-        demand(browser_sha256 == APPROVED_BROWSER_SHA256,
-               "browser SHA256 must match separately approved immutable fingerprint")
+        if browser:
+            demand(bool(browser_sha256 and re.fullmatch(r"[0-9a-f]{64}", browser_sha256)),
+                   "browser requires SHA256 of preverified Chromium")
+            demand(browser_sha256 == APPROVED_BROWSER_SHA256,
+                   "browser SHA256 must match separately approved immutable fingerprint")
+        else:
+            demand(source_branch == SYNC116_BRANCH and source_sha == SYNC116_SHA,
+                   "JVM gate is bound only to the exact approved PR116 owner branch/SHA")
+            demand(browser_sha256 is None, "JVM mode may not take browser settings")
     else:
         demand(source_branch is None and validator_sha is None and validator_branch is None
                and browser_sha256 is None,
                "quick may not silently receive browser-only arguments")
-    template = browser_workflow_recipe() if browser else ONE_SHOT_RECIPE
+    template = (sync116_jvm_workflow_recipe() if sync_jvm else
+                browser_workflow_recipe() if browser else ONE_SHOT_RECIPE)
     return (template.replace("__QA_BRANCH__", branch)
             .replace("__SOURCE_SHA__", source_sha)
             .replace("__SOURCE_BRANCH__", source_branch or "")
@@ -456,14 +491,16 @@ def check_workflow(content: str, strict: bool = True) -> None:
         source_branch = re.search(r"(?m)^          ref: ([a-z0-9_./-]+)\n          path: source$", normalized)
         validator = re.search(r'(?m)^          if /I not "%ACTUAL_GATE%"=="([0-9a-f]{40})" exit /b 1$', normalized)
         validator_branch = re.search(r"(?m)^          ref: ([a-z0-9_./-]+)\n          path: gate$", normalized)
+        is_jvm = "      - name: Offline WSL full JVM and ACK evidence; one Gradle worker, no APK\n" in normalized
         binary = re.search(r"(?m)verify-browser --browser-root [^\n]* --expected-sha256 ([0-9a-f]{64})$", normalized)
-        demand(bool(source and source_branch and validator and validator_branch and binary),
-               "missing source provenance/validator/binary pin")
-        allowed = render_workflow(branch.group(1), source.group(1), browser=True,
+        demand(bool(source and source_branch and validator and validator_branch and
+                    (is_jvm or binary)), "missing source provenance/validator/binary pin")
+        allowed = render_workflow(branch.group(1), source.group(1),
+                                  browser=not is_jvm, sync_jvm=is_jvm,
                                   source_branch=source_branch.group(1),
                                   validator_sha=validator.group(1),
                                   validator_branch=validator_branch.group(1),
-                                  browser_sha256=binary.group(1))
+                                  browser_sha256=binary.group(1) if binary else None)
     else:
         source = re.search(r"(?m)^          ref: ([0-9a-f]{40})$", normalized)
         demand(bool(source), "quick source SHA missing")
@@ -543,6 +580,8 @@ def main(argv: list[str] | None = None) -> int:
     render.add_argument("--expected-sha", required=True)
     render.add_argument("--browser", action="store_true",
                         help="single-job Windows Chromium QA, no APK or WSL")
+    render.add_argument("--sync-jvm", action="store_true",
+                        help="serial WSL full JVM/ACK for pinned PR116 only; no APK")
     render.add_argument("--source-branch")
     render.add_argument("--validator-sha")
     render.add_argument("--validator-branch")
@@ -565,7 +604,8 @@ def main(argv: list[str] | None = None) -> int:
                                       browser=args.browser, source_branch=args.source_branch,
                                       validator_sha=args.validator_sha,
                                       validator_branch=args.validator_branch,
-                                      browser_sha256=args.browser_sha256).encode("utf-8")
+                                      browser_sha256=args.browser_sha256,
+                                      sync_jvm=args.sync_jvm).encode("utf-8")
             output_canonical_utf8(payload, args.output)
             return 0
         if args.mode == "verify-browser":
