@@ -12,6 +12,8 @@ import hashlib
 import importlib.util
 import json
 import os
+import re
+import threading
 from pathlib import Path
 import platform
 import shutil
@@ -95,10 +97,35 @@ def strict_classify(module, cases, gradle_rc: int, xml_count: int,
     return report
 
 
-def run_linux(source: Path, expected: str, output: Path) -> int:
+def pending_evidence(output, expected, validator_sha, run_id, attempt):
+    require(run_id.isdecimal() and 0 < len(run_id) <= 20 and run_id[0] != "0",
+            "missing/invalid run ID")
+    require(attempt == "1", "re-run attempts are forbidden")
+    require(re.fullmatch(r"[0-9a-f]{40}", validator_sha or "") is not None,
+            "missing trusted validator SHA")
+    require(output.name == "jvm" and output.parent.name == run_id + "-" + attempt,
+            "JVM evidence not scoped to the current run")
+    report = output / "results.json"
+    require(report.is_file() and not report.is_symlink(),
+            "current-run initial NOT RUN evidence missing")
+    data = json.loads(report.read_text(encoding="utf-8"))
+    require(data.get("schema") == 4 and data.get("kind") == "jvm" and
+            data.get("status") == "NOT RUN" and data.get("sourceSha") == expected and
+            data.get("validatorSha") == validator_sha and
+            data.get("runId") == run_id and data.get("runAttempt") == 1,
+            "JVM initial evidence is stale, forged or incomplete")
+
+
+def run_linux(source: Path, expected: str, output: Path,
+              validator_sha: str, run_id: str, attempt: str) -> int:
     require(platform.system() == "Linux", "native JVM requires Linux in trusted WSL")
     require(bool(os.environ.get("WSL_DISTRO_NAME")) or
             "microsoft" in platform.release().lower(), "not WSL2")
+    require(hasattr(os, "geteuid") and os.geteuid() != 0,
+            "root WSL execution forbidden")
+    require(git(ROOT, "rev-parse", "HEAD") == validator_sha,
+            "trusted validator checkout changed")
+    pending_evidence(output, expected, validator_sha, run_id, attempt)
     source_guard(source, expected)
     # Reuse the pinned existing source-independent preflight; this verifies
     # installed Java 17, javac 17, Gradle 8.10.2 and WSL. Nothing is installed.
@@ -109,6 +136,8 @@ def run_linux(source: Path, expected: str, output: Path) -> int:
     spec.loader.exec_module(home)
     gradle = Path("/opt/gradle-8.10.2/bin/gradle")
     home.check_wsl(gradle)
+    require(Path.home().joinpath('.gradle', 'caches', 'modules-2').is_dir(),
+            'missing existing nonroot offline Gradle cache; no installation')
     module, original = load_product_classifier(source)
     # Only this explicitly inspected pure-Python file may run under WSL.
     # Never use WSL-wide unittest discovery: other project tests call Node.
@@ -117,9 +146,7 @@ def run_linux(source: Path, expected: str, output: Path) -> int:
                            cwd=source, stdin=subprocess.DEVNULL, check=False,
                            timeout=120)
     require(probe.returncode == 0, "original ACK classifier negative tests failed")
-    require(not output.exists() or not any(output.iterdir()),
-            "refuse to overwrite existing HOME evidence")
-    output.mkdir(parents=True, exist_ok=True)
+    pending_evidence(output, expected, validator_sha, run_id, attempt)
 
     xml_dir = source / "app/build/test-results/testPreviewUnitTest"
     # Only the temporary isolated WSL copy is changed; never the owner branch.
@@ -140,7 +167,10 @@ def run_linux(source: Path, expected: str, output: Path) -> int:
                  module.preserved_tests(source) == original)
     result = strict_classify(module, cases, proc.returncode, len(files), fresh, unchanged)
     result.update({
-        "schema": 1, "mode": "sync116-home-jvm", "tested_sha": expected,
+        "schema": 4, "kind": "jvm", "status": result["product_acceptance"]["status"],
+        "sourceSha": expected, "validatorSha": validator_sha, "runId": run_id,
+        "runAttempt": 1, "counts": result["gradle"]["counts"],
+        "mode": "sync116-home-jvm", "tested_sha": expected,
         "source_branch": SOURCE_BRANCH, "validator": git(ROOT, "rev-parse", "HEAD"),
         "environment": {"platform": platform.platform(),
                         "python": platform.python_version(),
@@ -211,13 +241,18 @@ def main(argv=None) -> int:
         arg.add_argument("--source", type=Path, required=True)
         arg.add_argument("--expected-sha", required=True)
         arg.add_argument("--output", type=Path, required=True)
+        arg.add_argument("--validator-sha", required=True)
+        arg.add_argument("--run-id", required=True)
+        arg.add_argument("--run-attempt", required=True)
         if mode == "windows-wsl":
             arg.add_argument("--gate", type=Path, required=True)
     args = parser.parse_args(argv)
     try:
         if args.mode == "windows-wsl":
-            return launch_wsl(args.source, args.gate, args.expected_sha, args.output)
-        return run_linux(args.source, args.expected_sha, args.output)
+            return launch_wsl(args.source, args.gate, args.expected_sha, args.output,
+                              args.validator_sha, args.run_id, args.run_attempt)
+        return run_linux(args.source, args.expected_sha, args.output,
+                         args.validator_sha, args.run_id, args.run_attempt)
     except (Stop, OSError, subprocess.TimeoutExpired, ValueError) as error:
         print("FAIL-CLOSED: " + str(error), file=sys.stderr)
         return 2
