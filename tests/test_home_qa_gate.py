@@ -110,6 +110,11 @@ class GateUnitTest(unittest.TestCase):
                       {"GITHUB_HEAD_REF": "evil"}):
             with self.subTest(patch=patch), self.assertRaises(GATE.GateError):
                 GATE.trusted_owner({**e, **patch})
+        for absent in ("GITHUB_TRIGGERING_ACTOR", "GITHUB_RUN_ATTEMPT", "GITHUB_RUN_ID"):
+            with self.subTest(missing=absent), self.assertRaises(GATE.GateError):
+                broken = dict(e)
+                broken.pop(absent)
+                GATE.trusted_owner(broken)
 
     def test_rerun_trigger_actor_and_attempt_protected_in_every_recipe(self):
         browser = browser_workflow()
