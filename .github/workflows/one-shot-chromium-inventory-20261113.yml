@@ -17,7 +17,7 @@ concurrency:
 
 jobs:
   inventory-only:
-    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/qa/one-shot-chromium-inventory-20261113-run' && github.event_name == 'push' && github.run_attempt == 1 && github.event.head_commit.message == 'APPROVED-ONE-SHOT-CHROMIUM-INVENTORY-20261113' }}
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/qa/one-shot-chromium-inventory-20261113-run' && github.event_name == 'push' && github.run_attempt == 1 && github.run_number == 1 && github.triggering_actor == 'zaplikj30-ui' && github.event.created == false && github.event.head_commit.message == 'APPROVED-ONE-SHOT-CHROMIUM-INVENTORY-20261113' }}
     name: Windows ZamerovacQA – Chromium file identity ONLY
     runs-on: [self-hosted, Windows, X64, zamerovac-qa]
     timeout-minutes: 5
@@ -31,13 +31,28 @@ jobs:
           if /i not "%GITHUB_REF%"=="refs/heads/qa/one-shot-chromium-inventory-20261113-run" exit /b 1
           if not "%GITHUB_EVENT_NAME%"=="push" exit /b 1
           if not "%GITHUB_RUN_ATTEMPT%"=="1" exit /b 1
-          for /f "delims=" %%A in ('C:\Windows\System32\whoami.exe') do set "QA_USER=%%A"
-          echo SERVICE_ACCOUNT=%QA_USER%
-          echo %QA_USER% | C:\Windows\System32\findstr.exe /i /l /e /c:"\ZamerovacQA" >nul
-          if errorlevel 1 (
-            echo BLOCKED: not under ZamerovacQA
+          if not "%GITHUB_RUN_NUMBER%"=="1" exit /b 1
+          set "QA_USER="
+          for /f "delims=" %%A in ('C:\Windows\System32\whoami.exe') do (
+            if defined QA_USER (
+              echo BLOCKED: whoami yielded multiple lines
+              exit /b 1
+            )
+            set "QA_USER=%%A"
+          )
+          if not defined QA_USER (
+            echo BLOCKED: whoami yielded no identity
             exit /b 1
           )
+          if not defined COMPUTERNAME (
+            echo BLOCKED: missing Windows computer identity
+            exit /b 1
+          )
+          if /i not "%QA_USER%"=="%COMPUTERNAME%\ZamerovacQA" (
+            echo BLOCKED: not under local ZamerovacQA
+            exit /b 1
+          )
+          echo SERVICE_ACCOUNT=%QA_USER%
           set "FULL=C:\actions-runner\tools\ms-playwright\chromium-1234\chrome-win64\chrome.exe"
           set "SHELL=C:\actions-runner\tools\ms-playwright\chromium_headless_shell-1234\chrome-headless-shell-win64\chrome-headless-shell.exe"
           if not exist "%FULL%" (
