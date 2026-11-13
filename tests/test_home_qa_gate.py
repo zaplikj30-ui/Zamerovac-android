@@ -229,6 +229,63 @@ class GateUnitTest(unittest.TestCase):
         with self.assertRaises(GATE.GateError):
             GATE.check_workflow(rendered.replace(approved, "a" * 40), strict=True)
 
+    def test_sync116_jvm_recipe_strict_pinned_one_worker_and_no_browser(self):
+        approved = GATE.SYNC116_SHA
+        args = dict(sync_jvm=True, source_branch=GATE.SYNC116_BRANCH,
+                    validator_sha="b" * 40, validator_branch="infra/approved-gate")
+        yaml = GATE.render_workflow("qa/example", approved, **args)
+        GATE.check_workflow(yaml, strict=True)
+        self.assertIn("tools\\sync116_home_qa.py", yaml)
+        self.assertIn("one Gradle worker", yaml)
+        self.assertNotIn("npm.cmd ci", yaml)
+        self.assertNotIn("playwright install", yaml)
+        self.assertNotIn("assemblePreview", yaml)
+        self.assertNotIn("pull_request:", yaml)
+        self.assertNotIn("ubuntu-latest", yaml)
+        self.assertIn("if /I not \"%ACTUAL_SOURCE%\"==\"" + approved + "\" exit /b 1", yaml)
+        for broken in (yaml.replace("one Gradle worker", "two Gradle workers"),
+                       yaml.replace("self-hosted, Windows", "ubuntu-latest"),
+                       yaml.replace("if errorlevel 1 exit /b 1", "echo bypass", 1),
+                       yaml.replace("python tools\\home_qa_gate.py lint-workflow",
+                                    "echo lint bypass"),
+                       yaml.replace("persist-credentials: false", "persist-credentials: true"),
+                       yaml.replace("branches: [qa/example]", "branches: [main]"),
+                       yaml + "\n  unguarded:\n    runs-on: ubuntu-latest\n"):
+            with self.subTest(fragment=broken[-75:]), self.assertRaises(GATE.GateError):
+                GATE.check_workflow(broken, strict=True)
+        for name, sha in ((GATE.SYNC116_BRANCH, "a" * 40),
+                          ("implement/other", approved),
+                          ("refs/pull/116/merge", approved)):
+            with self.subTest(name=name, sha=sha), self.assertRaises(GATE.GateError):
+                GATE.render_workflow("qa/example", sha,
+                                     **{**args, "source_branch": name})
+        with self.assertRaises(GATE.GateError):
+            GATE.render_workflow("qa/example", approved, browser=True, **args)
+        with self.assertRaises(GATE.GateError):
+            GATE.render_workflow("qa/example", approved,
+                                 **{**args, "browser_sha256": "0" * 64})
+
+    def test_sync116_jvm_cli_utf8_and_no_overwrite(self):
+        with tempfile.TemporaryDirectory() as temp:
+            folder = Path(temp) / ".github" / "workflows"
+            folder.mkdir(parents=True)
+            dest = folder / "home-qa-one-shot.yml"
+            args = ["render-workflow", "--sync-jvm", "--branch", "qa/example",
+                    "--expected-sha", GATE.SYNC116_SHA,
+                    "--source-branch", GATE.SYNC116_BRANCH,
+                    "--validator-sha", "b" * 40,
+                    "--validator-branch", "infra/approved-gate",
+                    "--output", str(dest)]
+            self.assertEqual(0, GATE.main(args))
+            payload = dest.read_bytes()
+            self.assertEqual(GATE.render_workflow(
+                "qa/example", GATE.SYNC116_SHA, sync_jvm=True,
+                source_branch=GATE.SYNC116_BRANCH, validator_sha="b"*40,
+                validator_branch="infra/approved-gate").encode("utf-8"), payload)
+            self.assertEqual(0, GATE.main(["lint-workflow", str(dest), "--strict"]))
+            self.assertEqual(2, GATE.main(args))
+            self.assertEqual(payload, dest.read_bytes())
+
     def test_browser_binary_hash_is_fail_closed_and_read_only(self):
         import hashlib
         with tempfile.TemporaryDirectory() as temp:
