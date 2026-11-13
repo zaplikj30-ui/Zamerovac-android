@@ -31,7 +31,7 @@ test('Actions identity preserves owner, exact ref/SHA and first-attempt protecti
 });
 test('offline browser bootstrap is pinned and rejects missing isolation, cache, identity and artifact guards',()=>{
  const repo=path.resolve(__dirname,'..');
- const workflow=fs.readFileSync(path.join(repo,'.github/workflows/browser-smoke-offline-20261113.yml'),'utf8');
+ const workflow=fs.readFileSync(path.join(repo,'.github/workflows/browser-smoke-winfix-20261113.yml'),'utf8');
  const pkg=JSON.parse(fs.readFileSync(path.join(repo,'tools/qa-browser/package.json'),'utf8'));
  const lock=JSON.parse(fs.readFileSync(path.join(repo,'tools/qa-browser/package-lock.json'),'utf8'));
  assert.equal(pkg.dependencies.playwright,'1.62.1');
@@ -48,7 +48,7 @@ test('offline browser bootstrap is pinned and rejects missing isolation, cache, 
  }
  const required=[
   "refs/heads/qa/browser-smoke-winfix-20261113-run",
-  "docs/qa/browser-smoke-offline-20261113.trigger",
+  "docs/qa/browser-smoke-winfix-20261113.trigger",
   "github.run_number == 1",
   "github.run_attempt == 1",
   "if exist \"%DEPS%\" (",
@@ -58,6 +58,8 @@ test('offline browser bootstrap is pinned and rejects missing isolation, cache, 
   "npm_config_offline=true",
   "if errorlevel 1 (\n            echo BLOCKED: pinned Playwright packages missing from offline cache",
   "echo NODE_PATH=%NODE_PATH%>>\"%GITHUB_ENV%\"",
+  ">>\"%GITHUB_ENV%\" echo PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1",
+  "if not \"%PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD%\"==\"1\" exit /b 1",
   "if-no-files-found: error",
   "node tools/local-browser-qa.cjs --smoke",
   "persist-credentials: false",
