@@ -136,8 +136,11 @@ def run_linux(source: Path, expected: str, output: Path,
     spec.loader.exec_module(home)
     gradle = Path("/opt/gradle-8.10.2/bin/gradle")
     home.check_wsl(gradle)
-    require(Path.home().joinpath('.gradle', 'caches', 'modules-2').is_dir(),
-            'missing existing nonroot offline Gradle cache; no installation')
+    cache = Path.home() / ".gradle" / "caches" / "modules-2"
+    require(cache.is_dir() and os.access(cache, os.R_OK),
+            "missing existing nonroot offline Gradle cache; no installation")
+    require(not os.access(cache, os.W_OK),
+            "writable dependency cache is unverified; require preexisting read-only cache")
     module, original = load_product_classifier(source)
     # Only this explicitly inspected pure-Python file may run under WSL.
     # Never use WSL-wide unittest discovery: other project tests call Node.
@@ -230,6 +233,8 @@ test "$attempt" = "1"
 test -r "$HOME/.gradle/caches/modules-2" && test -d "$HOME/.gradle/caches/modules-2" || {
  echo 'BLOCKED nonroot Gradle offline cache unavailable' >&2; exit 78; }
 test -x /opt/gradle-8.10.2/bin/gradle || exit 79
+test ! -w "$HOME/.gradle/caches/modules-2" || {
+ echo 'BLOCKED dependencies must already be read-only' >&2; exit 80; }
 export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 export PATH="$JAVA_HOME/bin:$PATH" CI=1
 test "$(git -C "$source_dir" rev-parse HEAD)" = "$expected"
