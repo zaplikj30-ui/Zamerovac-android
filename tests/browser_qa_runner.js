@@ -29,15 +29,18 @@ try{
  assert.equal(modes['--all'].length,23);
 
  const fake=records.map((r,i)=>({...r,status:'PASS',scenarioTotal:4,scenarioPassed:4,error:null}));
- report=statusReport('--all',fake,dir,'a'.repeat(40));
+ const verifiedIntegrity={status:'PASS',digest:'synthetic-only'};
+ report=statusReport('--all',fake,dir,'a'.repeat(40),verifiedIntegrity);
  assert.equal(report.coverage.actualCases,92);
  assert.equal(report.coverage.status,'PASS');
  report=statusReport('--all',fake.map((r,i)=>i===0?{...r,scenarioTotal:5,scenarioPassed:5}:r),
-  dir,'a'.repeat(40));
+  dir,'a'.repeat(40),verifiedIntegrity);
  assert.equal(report.coverage.status,'FAIL','93 cases cannot impersonate 92');
  report=statusReport('--all',fake.map((r,i)=>i===0?{...r,scenarioPassed:3}:r),
-  dir,'a'.repeat(40));
+  dir,'a'.repeat(40),verifiedIntegrity);
  assert.equal(report.coverage.status,'FAIL','incomplete cases must not PASS');
+ report=statusReport('--all',fake,dir,'a'.repeat(40),{status:'FAIL',error:'dirty source'});
+ assert.equal(report.coverage.status,'FAIL','source mutation cannot PASS');
  const e2eReport=path.join(dir,'evidence','pending-audio','report.json');
  fs.mkdirSync(path.dirname(e2eReport),{recursive:true});
  const valid={suite:'pending-audio',sha:'a'.repeat(40),syntheticOnly:true,
@@ -53,6 +56,35 @@ try{
  assert.throws(()=>checkedCases('pending-audio',dir,'a'.repeat(40)),/Incomplete/);
 
  const gateRunner=path.join(__dirname,'..','tools','local-browser-qa.cjs');
+
+ // A real synthetic local Git commit: tracked bytes change while HEAD stays identical.
+ const fixture=path.join(dir,'fixture-repo');
+ fs.mkdirSync(path.join(fixture,'app','src','main','assets'),{recursive:true});
+ fs.mkdirSync(path.join(fixture,'tools','e2e'),{recursive:true});
+ for(let i=0;i<22;i++)fs.writeFileSync(
+  path.join(fixture,'tools','e2e','fixture-'+i+'.cjs'),'module.exports='+i+'\n');
+ fs.writeFileSync(path.join(fixture,'app','src','main','assets','index.html'),'<title>original</title>');
+ const git=args=>spawnSync('git',args,{cwd:fixture,encoding:'utf8',timeout:10000});
+ assert.equal(git(['init']).status,0);
+ assert.equal(git(['add','app/src/main/assets','tools/e2e']).status,0);
+ assert.equal(git(['-c','user.name=QA-test','-c','user.email=qa@example.invalid',
+                   'commit','-m','synthetic fixture']).status,0);
+ const testScript=path.join(dir,'git-integrity.cjs');
+ const testBody=[
+  'const {sourceSnapshot,stableSnapshot}=require('+JSON.stringify(gateRunner)+');',
+  "const fs=require('fs'),path=require('path'),assert=require('assert/strict');",
+  'const start=sourceSnapshot();',
+  "const file=path.join(process.env.ZAMEROVAC_SOURCE_ROOT,'app/src/main/assets/index.html');",
+  "fs.appendFileSync(file,'tampered but HEAD unchanged');",
+  "assert.throws(()=>stableSnapshot(start),/Dirty browser source|changed/);"
+ ].join('\n');
+ fs.writeFileSync(testScript,testBody);
+ const dirtyProbe=spawnSync(process.execPath,[testScript],{
+  cwd:fixture,encoding:'utf8',timeout:10000,
+  env:{...process.env,ZAMEROVAC_SOURCE_ROOT:fixture,
+       TESTED_SHA:git(['rev-parse','HEAD']).stdout.trim()}});
+ assert.equal(dirtyProbe.status,0,'Dirty tracked source was accepted: '+dirtyProbe.stderr);
+
  // The pinned runner's real localhost HTTP path is exercised, not only its CLI shape.
  const serverProbe=spawnSync(process.execPath,[gateRunner,'--self-test'],{
   cwd:path.resolve(__dirname,'..'),encoding:'utf8',timeout:15000,
