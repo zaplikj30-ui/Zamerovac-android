@@ -28,9 +28,11 @@ async function main() {
     'BLOCKED: explicit pinned CHROMIUM_PATH required');
   const hash = crypto.createHash('sha256').update(fs.readFileSync(executablePath)).digest('hex');
   assert.equal(hash, EXPECTED_SHA256, 'BLOCKED: Chromium binary SHA256 mismatch');
-  const playwrightDir = path.join(__dirname, 'qa-browser', 'node_modules');
-  // Only use already-approved offline install. No npm install, download or network.
-  const {chromium} = require(require.resolve('playwright', {paths:[playwrightDir]}));
+  // The reviewed HOME gate sets NODE_PATH to its isolated offline Playwright install.
+  const playwright = require('playwright');
+  assert.equal(require('playwright/package.json').version, '1.62.1',
+    'BLOCKED: Playwright version mismatch');
+  const {chromium} = playwright;
   let browser;
   try {
     browser = await chromium.launch({executablePath, chromiumSandbox:true, headless:true,
