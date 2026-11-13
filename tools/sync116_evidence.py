@@ -15,6 +15,17 @@ SOURCE_SHA = "1527e3377609633c554195b0641e02e3cfb5fb5e"
 HEX40 = re.compile(r"[a-f0-9]{40}\Z")
 RUN_ID = re.compile(r"[1-9][0-9]{0,19}\Z")
 KINDS = ("browser", "jvm")
+ORIGINAL_TEST_SHA256 = {
+    "provider-and-helpers": "69297e7750a3e5e774211ff2406c9dadcbe9694ff525edbaeb1f872e9725b088",
+    "original-two-diagnostics": "3770b50aa1b10076015640dcc25832e30a9ba9b8b27fc083ffa3be801e02ba67",
+    "unchanged-product-e2e": "e74689baf33d2ea75b8b420b1ef9898a91937eda8101a76ce3125241dfdf0c70",
+}
+ORIGINAL_FAIL_MESSAGES = {
+    "cz.zamerovac.app.SafSyncV2Test.driveStagedAckMustNotPublishAfterLocalAuthorityLostInsideProviderCommit":
+      "Provider completed signed ACK after recovery epoch loss: Drive staged expected:<0> but was:<1>",
+    "cz.zamerovac.app.SafSyncV2Test.safDirectAckMustNotPublishAfterLocalAuthorityLostInsideProviderWrite":
+      "Provider completed signed ACK after recovery epoch loss: SAF direct expected:<0> but was:<1>",
+}
 
 class EvidenceStop(RuntimeError):
     pass
@@ -120,17 +131,17 @@ def validate_report(report, kind, env, source_sha, validator_sha):
         }
         require(len(physical)==2 and {p.get("id") for p in physical} == expected_ids and
                 all(p.get("classification")=="EXPECTED FAIL" and
-                    p.get("status")=="FAIL" for p in physical),
-                "the two physical counterexamples must remain actual FAIL")
+                    p.get("status")=="FAIL" and
+                    ORIGINAL_FAIL_MESSAGES.get(p.get("id"),"") in p.get("message","")
+                    for p in physical),
+                "the two physical counterexamples must remain actual unchanged FAIL")
         cases = report["product_acceptance"].get("cases", [])
         require(len(cases)==511 and len({p.get("id") for p in cases})==511 and
                 all(p.get("status")=="PASS" for p in cases),
                 "missing/duplicate/non-PASS product methods")
         digests = report.get("original_test_sha256", {})
-        require(set(digests)=={"provider-and-helpers","original-two-diagnostics",
-                               "unchanged-product-e2e"} and
-                all(re.fullmatch(r"[0-9a-f]{64}",value or "") for value in digests.values()),
-                "original diagnostic SHA256 proof missing")
+        require(digests == ORIGINAL_TEST_SHA256,
+                "original diagnostic SHA256 identity changed or proof missing")
     return True
 
 def verify(root, kind, env, source_sha, validator_sha):
