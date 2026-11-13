@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import importlib.util
+import json
 from pathlib import Path
 import tempfile
 import types
@@ -15,13 +16,17 @@ QA = importlib.util.module_from_spec(SPEC)
 SPEC.loader.exec_module(QA)
 
 
+MANIFEST=json.loads((ROOT/"tools/sync116_case_manifest.json").read_text(encoding="utf-8"))
 def cases():
-    return ([{"id": f"cz.zamerovac.app.T{i//9}.case{i}", "status": "PASS"}
-             for i in range(511)] +
-            [{"id": "cz.zamerovac.app.SafSyncV2Test.physicalDrive",
+    required=[{"id":"cz.zamerovac.app."+clazz+"."+method, "status":"PASS"}
+              for clazz,methods in MANIFEST["jvmRequired"].items() for method in methods]
+    fillers=[{"id": f"cz.zamerovac.app.SyntheticOtherFixture.case{i}", "status":"PASS"}
+             for i in range(511-len(required))]
+    return required+fillers+[
+            {"id": "cz.zamerovac.app.SafSyncV2Test.physicalDrive",
               "status": "FAIL", "message": "expected:<0> but was:<1>"},
-             {"id": "cz.zamerovac.app.SafSyncV2Test.physicalSAF",
-              "status": "FAIL", "message": "expected:<0> but was:<1>"}])
+            {"id": "cz.zamerovac.app.SafSyncV2Test.physicalSAF",
+              "status": "FAIL", "message": "expected:<0> but was:<1>"}]
 
 
 class Classifier:
@@ -57,6 +62,27 @@ class Sync116QaOnlyTests(unittest.TestCase):
             self.assertEqual("FAIL", QA.strict_classify(
                 Classifier, change, 1, 64, True, True)
                 ["product_acceptance"]["status"])
+
+    def test_sec05_missing_any_required_group_fails_without_count_change(self):
+        baseline=cases()
+        self.assertEqual(513,len(baseline))
+        self.assertEqual("PASS",QA.strict_classify(
+            Classifier,baseline,1,64,True,True)["product_acceptance"]["status"])
+        for clazz,methods in MANIFEST["jvmRequired"].items():
+            victim="cz.zamerovac.app."+clazz+"."+methods[0]
+            changed=[dict(item) for item in baseline]
+            for entry in changed:
+                if entry["id"]==victim:
+                    entry["id"]="cz.zamerovac.app.SyntheticOtherFixture.missing_"+clazz
+                    break
+            else:
+                raise AssertionError("Approved JUnit test not present: "+victim)
+            with self.subTest(clazz=clazz):
+                self.assertEqual("FAIL",QA.strict_classify(
+                    Classifier,changed,1,64,True,True)["product_acceptance"]["status"])
+        fake=[{"id":"p"+str(i),"status":"PASS"} for i in range(511)]+baseline[-2:]
+        self.assertEqual("FAIL",QA.strict_classify(
+            Classifier,fake,1,64,True,True)["product_acceptance"]["status"])
 
     def test_partial_stale_changed_sha_or_wrong_gradle_exit_blocked(self):
         for classes, fresh, unchanged in ((63, True, True), (64, False, True),
