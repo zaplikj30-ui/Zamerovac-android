@@ -47,28 +47,12 @@ def git(root: Path, *args: str) -> str:
     return proc.stdout.strip()
 
 
-def copied_worktree_status(source: Path) -> str:
-    """Do not confuse copied Windows executable bits with changed content."""
-    status = git(source, "status", "--porcelain")
-    if status and os.environ.get("ZAMEROVAC_QA_TEMP_WSL_ROOT") == TEMP_WAIVER:
-        check = subprocess.run(
-            ["git", "-C", str(source), "-c", "core.filemode=false",
-             "-c", "core.autocrlf=true", "status", "--porcelain"],
-            capture_output=True, text=True, check=False, timeout=20)
-        require(check.returncode == 0, "WSL filemode-neutral status failed")
-        status = check.stdout.strip()
-        if not status:
-            print("PASS: copied WSL worktree differs only in file modes or CRLF normalization")
-    return status
-
-
 def source_guard(source: Path, expected: str) -> None:
     """Reverify inside WSL immediately before touching source-owned Python/Gradle."""
     require(expected == EXPECTED_SHA, "unsupported product SHA")
     require(source.is_dir() and (source / ".git").exists(), "not a checked-out Git repository")
     require(git(source, "rev-parse", "HEAD") == expected, "source HEAD mismatch")
-    status = copied_worktree_status(source)
-    require(not status, "source worktree is not clean: " + status[:900])
+    require(not git(source, "status", "--porcelain"), "source worktree is not clean")
     require(git(source, "hash-object", "tools/sync-ack-acceptance.py") == ACK_WRAPPER_BLOB,
             "product acceptance wrapper differs from approved PR116 bytes")
 
@@ -218,7 +202,7 @@ def run_linux(source: Path, expected: str, output: Path,
     cases = module.read_cases(xml_dir)
     fresh = bool(files) and all(p.stat().st_mtime_ns >= started_ns for p in files)
     unchanged = (git(source, "rev-parse", "HEAD") == expected and
-                 not copied_worktree_status(source) and
+                 not git(source, "status", "--porcelain") and
                  module.preserved_tests(source) == original)
     result = strict_classify(module, cases, proc.returncode, len(files), fresh, unchanged)
     result.update({
@@ -321,6 +305,13 @@ trap cleanup EXIT HUP INT TERM
 cp -a "$source_dir/." "$tmp/"
 cd "$tmp"
 test "$(git rev-parse HEAD)" = "$expected"
+# Rebuild the TEMPORARY WSL worktree from pinned Git objects, not Windows files.
+# This preserves exact tracked bytes (including test digests) across CRLF/filemode.
+git config --local core.filemode false
+git config --local core.autocrlf false
+git -c core.filemode=false -c core.autocrlf=false reset --hard "$expected"
+test "$(git rev-parse HEAD)" = "$expected"
+test -z "$(git status --porcelain)"
 setsid timeout -s TERM -k 15s 2650s python3 "$gate_dir/tools/sync116_home_qa.py" linux-run \
  --source "$tmp" --expected-sha "$expected" --validator-sha "$gate_sha" \
  --run-id "$run_id" --run-attempt "$attempt" --output "$output_dir" &
