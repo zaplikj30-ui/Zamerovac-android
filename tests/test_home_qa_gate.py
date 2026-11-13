@@ -274,6 +274,17 @@ class GateUnitTest(unittest.TestCase):
         with self.assertRaises(GATE.GateError):
             GATE.check_workflow(rendered.replace(approved, "a" * 40), strict=True)
 
+    def test_browser_workspace_is_unique_per_run_and_strict(self):
+        rendered = browser_workflow()
+        scoped = r"qa-browser-deps-%GITHUB_RUN_ID%-%GITHUB_RUN_ATTEMPT%"
+        self.assertEqual(6, rendered.count(scoped))
+        self.assertNotIn(r'qa-browser-deps"', rendered)
+        self.assertNotIn("rmdir /s", rendered.lower())
+        GATE.check_workflow(rendered, strict=True)
+        with self.assertRaises(GATE.GateError):
+            GATE.check_workflow(rendered.replace(scoped, "qa-browser-deps"),
+                                strict=True)
+
     def test_sync116_jvm_recipe_strict_pinned_one_worker_and_no_browser(self):
         approved = GATE.SYNC116_SHA
         args = dict(sync_jvm=True, source_branch=GATE.SYNC116_BRANCH,
