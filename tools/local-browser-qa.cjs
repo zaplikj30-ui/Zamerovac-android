@@ -55,12 +55,31 @@ function createStaticServer(assets){
 function statusReport(mode,records,dir,sourceSha=null){
  const counts={PASS:0,FAIL:0,SKIP:0,'NOT RUN':0};
  for(const record of records){if(!Object.hasOwn(counts,record.status))throw Error('Unknown QA state '+record.status);counts[record.status]++}
- const report={schema:2,mode,sourceSha,createdAt:new Date().toISOString(),counts,records,
+ const expectedCases=mode==='--all'?92:null;
+ const cases=records.reduce((sum,r)=>sum+(Number.isInteger(r.scenarioTotal)?r.scenarioTotal:0),0);
+ const complete=!counts['NOT RUN']&&!counts.FAIL&&!counts.SKIP &&
+  records.length===modes[mode].length &&
+  records.every(r=>r.status==='PASS'&&Number.isInteger(r.scenarioTotal)&&
+   r.scenarioTotal>0&&r.scenarioPassed===r.scenarioTotal);
+ const coverage={status:counts['NOT RUN']?'NOT RUN':
+  complete&&(expectedCases===null||cases===expectedCases)?'PASS':'FAIL',
+  expectedCases,actualCases:cases};
+ const report={schema:3,mode,sourceSha,createdAt:new Date().toISOString(),counts,coverage,records,
   scope:'Local Chromium synthetic-data tests, not Android/WebView/device acceptance'};
  const destination=path.join(dir,'results.json'),temp=destination+'.tmp';
  fs.writeFileSync(temp,JSON.stringify(report,null,2)+'\n','utf8');
  fs.renameSync(temp,destination);
  return report;
+}
+function checkedCases(name,dir,sha){
+ const file=path.join(dir,'evidence',name,'report.json');
+ const report=JSON.parse(fs.readFileSync(file,'utf8'));
+ if(report.suite!==name||report.sha!==sha||report.syntheticOnly!==true||
+    !Array.isArray(report.cases)||report.cases.length===0)throw Error('Untrusted/empty case report '+name);
+ const names=report.cases.map(x=>x.name);
+ if(names.some(x=>typeof x!=='string'||!x)||new Set(names).size!==names.length||
+    report.cases.some(x=>x.status!=='passed'))throw Error('Incomplete/failed Chromium cases '+name);
+ return {scenarioTotal:report.cases.length,scenarioPassed:report.cases.length};
 }
 function initialRecords(mode){
  return modes[mode].map(suite=>({suite,status:'NOT RUN',exitCode:null,signal:null,
@@ -158,6 +177,10 @@ async function run(mode){
    records[i]={...records[i],status:'FAIL',error:'interrupted during execution',log:file};
    statusReport(mode,records,dir,sourceSha); // interrupted work is never PASS
    const outcome=await execute(name,env,file,Math.min(8*60*1000,deadline-Date.now()));
+   if(outcome.status==='PASS'){
+    try{Object.assign(outcome,checkedCases(name,dir,sourceSha))}
+    catch(e){outcome.status='FAIL';outcome.error='Case evidence rejected: '+e.message}
+   }
    records[i]={suite:name,...outcome,log:file};
    statusReport(mode,records,dir,sourceSha);
    console.log(outcome.status+' '+name+' ('+Math.round(outcome.elapsedMs/1000)+' s)');
@@ -177,9 +200,12 @@ async function run(mode){
  }
  const report=statusReport(mode,records,dir,sourceSha);
  console.log('Výsledky Chromium: '+path.join(dir,'results.json'));
- console.log('PASS '+report.counts.PASS+' / FAIL '+report.counts.FAIL+
+ console.log('SUITES: PASS '+report.counts.PASS+' / FAIL '+report.counts.FAIL+
              ' / NOT RUN '+report.counts['NOT RUN']);
- if(failed||report.counts.FAIL||report.counts['NOT RUN'])process.exitCode=1;
+ console.log('CASES: '+report.coverage.actualCases+
+             ' expected='+report.coverage.expectedCases+' '+report.coverage.status);
+ if(failed||report.coverage.status!=='PASS'||report.counts.FAIL||
+    report.counts['NOT RUN'])process.exitCode=1;
 }
 
 async function main(){
