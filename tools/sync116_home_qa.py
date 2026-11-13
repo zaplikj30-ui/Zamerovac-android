@@ -281,6 +281,8 @@ setsid timeout -s TERM -k 15s 2650s python3 "$gate_dir/tools/sync116_home_qa.py"
  --source "$tmp" --expected-sha "$expected" --validator-sha "$gate_sha" \
  --run-id "$run_id" --run-attempt "$attempt" --output "$output_dir" &
 child="$!"
+# Explicit stdin redirection prevents noninteractive Bash from assigning
+# /dev/null to this asynchronous watcher instead of the Windows heartbeat pipe.
 (
  while true; do
   if IFS= read -r -t 20 heartbeat; then
@@ -292,7 +294,7 @@ child="$!"
  kill -TERM -- "-$child" 2>/dev/null || true
  sleep 2
  kill -KILL -- "-$child" 2>/dev/null || true
-) &
+) <&0 &
 watch="$!"
 wait "$child"
 '''

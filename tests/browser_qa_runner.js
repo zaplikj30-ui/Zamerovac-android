@@ -20,6 +20,23 @@ try{
  assert.equal(report.counts.FAIL,1);
  assert.equal(report.counts['NOT RUN'],22);
  assert.equal(fs.existsSync(path.join(dir,'results.json.tmp')),false);
+ const currentReport=fs.readFileSync(path.join(dir,'results.json'));
+ const occupiedTemp=path.join(dir,'results.json.tmp');
+ fs.writeFileSync(occupiedTemp,'independent evidence must survive');
+ assert.throws(()=>statusReport('--all',records,dir,'a'.repeat(40)),/EEXIST/);
+ assert.equal(fs.readFileSync(occupiedTemp,'utf8'),'independent evidence must survive');
+ assert.deepEqual(fs.readFileSync(path.join(dir,'results.json')),currentReport);
+ fs.unlinkSync(occupiedTemp);
+ if(process.platform!=='win32'){
+  const neighbour=path.join(dir,'independent-evidence.txt');
+  fs.writeFileSync(neighbour,'unrelated original bytes');
+  fs.symlinkSync(neighbour,occupiedTemp);
+  assert.throws(()=>statusReport('--all',records,dir,'a'.repeat(40)),/EEXIST/);
+  assert.equal(fs.readFileSync(neighbour,'utf8'),'unrelated original bytes');
+  assert(fs.lstatSync(occupiedTemp).isSymbolicLink());
+  assert.deepEqual(fs.readFileSync(path.join(dir,'results.json')),currentReport);
+  fs.unlinkSync(occupiedTemp);
+ }
  records[0]={...records[0],status:'PASS',error:null};
  report=statusReport('--all',records,dir,'a'.repeat(40));
  assert.equal(report.counts.PASS,1);
@@ -52,8 +69,9 @@ try{
   scenarioNames:['unapproved-scenario',...r.scenarioNames.slice(1)]}:r);
  report=statusReport('--all',substituted,dir,'a'.repeat(40),verifiedIntegrity);
  assert.equal(report.coverage.status,'FAIL','renamed scenario at 92 cannot PASS');
- const reordered=fake.map((r,i)=>i===0?{...r,
+ const reordered=fake.map(r=>r.suite==='pending-audio'?{...r,
   scenarioNames:[...r.scenarioNames].reverse()}:r);
+ assert.notDeepEqual(reordered,fake,'The negative fixture must actually change case order');
  report=statusReport('--all',reordered,dir,'a'.repeat(40),verifiedIntegrity);
  assert.equal(report.coverage.status,'FAIL','reordered required cases cannot PASS');
  const e2eReport=path.join(dir,'evidence','pending-audio','report.json');

@@ -82,7 +82,8 @@ function statusReport(mode,records,dir,sourceSha=null,integrity={status:'NOT RUN
   createdAt:new Date().toISOString(),counts,coverage,records,
   scope:'Local Chromium synthetic-data tests, not Android/WebView/device acceptance'};
  const destination=path.join(dir,'results.json'),temp=destination+'.tmp';
- fs.writeFileSync(temp,JSON.stringify(report,null,2)+'\n','utf8');
+ // Never truncate another run's temporary evidence or follow an existing link.
+ fs.writeFileSync(temp,JSON.stringify(report,null,2)+'\n',{encoding:'utf8',flag:'wx'});
  fs.renameSync(temp,destination);
  return report;
 }
