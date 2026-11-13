@@ -86,9 +86,17 @@ def validate_report(report, kind, env, source_sha, validator_sha):
         rows = report.get("records", [])
         require(len(rows) == 23 and len({x.get("suite") for x in rows}) == 23 and
                 all(x.get("status") == "PASS" and
-                    x.get("scenarioTotal",0)>0 and
-                    x.get("scenarioPassed")==x.get("scenarioTotal") for x in rows),
+                    isinstance(x.get("scenarioTotal"), int) and x["scenarioTotal"]>0 and
+                    x.get("scenarioPassed")==x["scenarioTotal"] for x in rows) and
+                sum(x["scenarioTotal"] for x in rows) == 92,
                 "browser case evidence incomplete")
+        integrity = report.get("integrity", {})
+        require(integrity.get("status") == "PASS" and
+                integrity.get("sha") == source_sha and
+                isinstance(integrity.get("trackedFiles"),int) and
+                integrity["trackedFiles"] >= 20 and
+                re.fullmatch(r"[0-9a-f]{64}",integrity.get("digest","")) is not None,
+                "source bytes/clean worktree were not verified")
     else:
         require(counts == {"PASS":511,"FAIL":2,"ERROR":0,"SKIP":0},
                 "JVM must have 511 PASS, two real FAIL and 0 ERROR/SKIP")
@@ -103,10 +111,23 @@ def validate_report(report, kind, env, source_sha, validator_sha):
                 report.get("fresh_junit") is True,
                 "fresh JVM 64/513 proof missing")
         physical = report.get("physical_diagnostics", [])
-        require(len(physical)==2 and
+        expected_ids = {
+            "cz.zamerovac.app.SafSyncV2Test.driveStagedAckMustNotPublishAfterLocalAuthorityLostInsideProviderCommit",
+            "cz.zamerovac.app.SafSyncV2Test.safDirectAckMustNotPublishAfterLocalAuthorityLostInsideProviderWrite",
+        }
+        require(len(physical)==2 and {p.get("id") for p in physical} == expected_ids and
                 all(p.get("classification")=="EXPECTED FAIL" and
                     p.get("status")=="FAIL" for p in physical),
                 "the two physical counterexamples must remain actual FAIL")
+        cases = report["product_acceptance"].get("cases", [])
+        require(len(cases)==511 and len({p.get("id") for p in cases})==511 and
+                all(p.get("status")=="PASS" for p in cases),
+                "missing/duplicate/non-PASS product methods")
+        digests = report.get("original_test_sha256", {})
+        require(set(digests)=={"provider-and-helpers","original-two-diagnostics",
+                               "unchanged-product-e2e"} and
+                all(re.fullmatch(r"[0-9a-f]{64}",value or "") for value in digests.values()),
+                "original diagnostic SHA256 proof missing")
     return True
 
 def verify(root, kind, env, source_sha, validator_sha):
