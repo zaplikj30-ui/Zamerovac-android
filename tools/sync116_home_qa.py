@@ -134,12 +134,30 @@ def pending_evidence(output, expected, validator_sha, run_id, attempt):
             "JVM initial evidence is stale, forged or incomplete")
 
 
+# Temporary, exact owner-approved HOME exception; NEVER merge into normal gate.
+TEMP_WAIVER = "PR116-ROOT-EXCEPTION-20261113"
+TEMP_QA_REF = "refs/heads/qa/sync116-jvm-waiver-20261113"
+
+
+def owner_root_waiver(env: dict[str, str], expected: str, run_id: str, attempt: str) -> bool:
+    return (expected == EXPECTED_SHA and attempt == "1" and
+            env.get("GITHUB_REPOSITORY") == "zaplikj30-ui/Zamerovac-android" and
+            env.get("GITHUB_REF") == TEMP_QA_REF and
+            env.get("GITHUB_ACTOR") == "zaplikj30-ui" and
+            env.get("GITHUB_TRIGGERING_ACTOR") == "zaplikj30-ui" and
+            env.get("GITHUB_RUN_ATTEMPT") == "1" and
+            env.get("GITHUB_RUN_ID") == run_id and
+            run_id.isdecimal() and 0 < len(run_id) <= 20 and run_id[0] != "0")
+
+
 def run_linux(source: Path, expected: str, output: Path,
               validator_sha: str, run_id: str, attempt: str) -> int:
     require(platform.system() == "Linux", "native JVM requires Linux in trusted WSL")
     require(bool(os.environ.get("WSL_DISTRO_NAME")) or
             "microsoft" in platform.release().lower(), "not WSL2")
-    require(hasattr(os, "geteuid") and os.geteuid() != 0,
+    waiver = (os.environ.get("ZAMEROVAC_QA_TEMP_WSL_ROOT") == TEMP_WAIVER and
+              expected == EXPECTED_SHA and attempt == "1")
+    require(hasattr(os, "geteuid") and (os.geteuid() != 0 or waiver),
             "root WSL execution forbidden")
     require(git(ROOT, "rev-parse", "HEAD") == validator_sha,
             "trusted validator checkout changed")
@@ -157,7 +175,7 @@ def run_linux(source: Path, expected: str, output: Path,
     cache = Path.home() / ".gradle" / "caches" / "modules-2"
     require(cache.is_dir() and os.access(cache, os.R_OK),
             "missing existing nonroot offline Gradle cache; no installation")
-    require(not os.access(cache, os.W_OK),
+    require(waiver or not os.access(cache, os.W_OK),
             "writable dependency cache is unverified; require preexisting read-only cache")
     module, original = load_product_classifier(source)
     # Only this explicitly inspected pure-Python file may run under WSL.
@@ -196,7 +214,8 @@ def run_linux(source: Path, expected: str, output: Path,
         "environment": {"platform": platform.platform(),
                         "python": platform.python_version(),
                         "java": "17", "gradle": "8.10.2",
-                        "gradle_workers": 1, "offline": True, "wsl": True},
+                        "gradle_workers": 1, "offline": True, "wsl": True,
+                        "wsl_uid": os.geteuid(), "temporary_root_waiver": waiver},
         "command": cmd, "junit_class_files": len(files),
         "junit_methods": len(cases), "fresh_junit": fresh,
         "original_test_sha256": original,
@@ -233,12 +252,19 @@ def launch_wsl(source: Path, gate: Path, expected: str, output: Path,
     require(git(gate, "rev-parse", "HEAD") == validator_sha and
             not git(gate, "status", "--porcelain"), "validator checkout changed")
 
-    # Existing WSL default user only; fail closed if root/no offline cache.
+    # Temporary owner-approved QA-branch exception; no PC/account changes.
+    waiver = owner_root_waiver(os.environ, expected, run_id, attempt)
+    # Existing WSL default user remains fail-closed everywhere else.
     # An independent stdin heartbeat watchdog kills the detached WSL process
     # group on lost Windows client, including during a timed-out Gradle.
     linux = r'''
 set -Eeuo pipefail
-if [ "$(id -u)" -eq 0 ]; then echo 'BLOCKED root WSL account forbidden' >&2; exit 77; fi
+waiver="$8"
+if [ "$waiver" = "PR116-ROOT-EXCEPTION-20261113" ]; then
+  export ZAMEROVAC_QA_TEMP_WSL_ROOT="$waiver"
+elif [ "$(id -u)" -eq 0 ]; then
+  echo 'BLOCKED root WSL account forbidden' >&2; exit 77
+fi
 umask 077
 source_dir="$(wslpath -u "$1")"
 gate_dir="$(wslpath -u "$2")"
@@ -251,8 +277,10 @@ test "$attempt" = "1"
 test -r "$HOME/.gradle/caches/modules-2" && test -d "$HOME/.gradle/caches/modules-2" || {
  echo 'BLOCKED nonroot Gradle offline cache unavailable' >&2; exit 78; }
 test -x /opt/gradle-8.10.2/bin/gradle || exit 79
-test ! -w "$HOME/.gradle/caches/modules-2" || {
- echo 'BLOCKED dependencies must already be read-only' >&2; exit 80; }
+if [ "$waiver" != "PR116-ROOT-EXCEPTION-20261113" ]; then
+ test ! -w "$HOME/.gradle/caches/modules-2" || {
+  echo 'BLOCKED dependencies must already be read-only' >&2; exit 80; }
+fi
 export JAVA_HOME=/usr/lib/jvm/java-17-openjdk-amd64
 export PATH="$JAVA_HOME/bin:$PATH" CI=1
 test "$(git -C "$source_dir" rev-parse HEAD)" = "$expected"
@@ -300,7 +328,8 @@ wait "$child"
 '''
     args = ["wsl.exe", "--distribution", "Zamerovac-Ubuntu-QA",
             "--exec", "/bin/bash", "-lc", linux, "_", str(source),
-            str(gate), str(output), expected, validator_sha, run_id, attempt]
+            str(gate), str(output), expected, validator_sha, run_id, attempt,
+            TEMP_WAIVER if waiver else "STRICT-NONROOT"]
     stop = threading.Event()
     proc = subprocess.Popen(args, stdin=subprocess.PIPE)
     def heartbeat():
@@ -329,7 +358,7 @@ wait "$child"
                 proc.kill()
                 proc.wait(timeout=15)
             raise Stop("WSL timeout: process-tree cleanup requested; QA HOLD") from error
-        require(rc == 0, "nonroot WSL JVM failed or dependency missing: " + str(rc))
+        require(rc == 0, "WSL JVM failed or dependency missing: " + str(rc))
         return 0
     finally:
         stop.set()
