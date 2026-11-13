@@ -3,6 +3,8 @@
 // This process does not build, install or alter an Android APK.
 const fs = require('node:fs');
 const crypto = require('node:crypto');
+const approvedManifest = require('./sync116_case_manifest.json');
+const approvedCases = approvedManifest.chromium;
 const http = require('node:http');
 const path = require('node:path');
 const os = require('node:os');
@@ -19,6 +21,10 @@ const modes = Object.freeze({
   'web-content-policy','media-import','pending-audio','help','release-history',
   'latency','quality-regressions','gallery-readability']
 });
+if(approvedManifest.sourceSha!=='1527e3377609633c554195b0641e02e3cfb5fb5e' ||
+   JSON.stringify(Object.keys(approvedCases))!==JSON.stringify(modes['--all']) ||
+   Object.values(approvedCases).reduce((total,items)=>total+items.length,0)!==92)
+ throw Error('Wrong approved case manifest for PR116');
 const types = {'.html':'text/html; charset=utf-8','.js':'text/javascript; charset=utf-8',
  '.css':'text/css; charset=utf-8','.json':'application/json; charset=utf-8',
  '.svg':'image/svg+xml','.png':'image/png','.jpg':'image/jpeg',
@@ -60,8 +66,13 @@ function statusReport(mode,records,dir,sourceSha=null,integrity={status:'NOT RUN
  const cases=records.reduce((sum,r)=>sum+(Number.isInteger(r.scenarioTotal)?r.scenarioTotal:0),0);
  const complete=integrity.status==='PASS'&&!counts['NOT RUN']&&!counts.FAIL&&!counts.SKIP &&
   records.length===modes[mode].length &&
-  records.every(r=>r.status==='PASS'&&Number.isInteger(r.scenarioTotal)&&
-   r.scenarioTotal>0&&r.scenarioPassed===r.scenarioTotal);
+  records.every((r,i)=>r.suite===modes[mode][i] &&
+   Object.hasOwn(approvedCases,r.suite) &&
+   r.status==='PASS' && Number.isInteger(r.scenarioTotal) &&
+   r.scenarioTotal===approvedCases[r.suite].length &&
+   r.scenarioPassed===r.scenarioTotal &&
+   Array.isArray(r.scenarioNames) &&
+   JSON.stringify(r.scenarioNames)===JSON.stringify(approvedCases[r.suite]));
  const coverage={status:counts['NOT RUN']?'NOT RUN':
   complete&&(expectedCases===null||cases===expectedCases)?'PASS':'FAIL',
   expectedCases,actualCases:cases};
@@ -82,8 +93,12 @@ function checkedCases(name,dir,sha){
     !Array.isArray(report.cases)||report.cases.length===0)throw Error('Untrusted/empty case report '+name);
  const names=report.cases.map(x=>x.name);
  if(names.some(x=>typeof x!=='string'||!x)||new Set(names).size!==names.length||
-    report.cases.some(x=>x.status!=='passed'))throw Error('Incomplete/failed Chromium cases '+name);
- return {scenarioTotal:report.cases.length,scenarioPassed:report.cases.length};
+    report.cases.some(x=>x.status!=='passed') ||
+    !Object.hasOwn(approvedCases,name) ||
+    JSON.stringify(names)!==JSON.stringify(approvedCases[name]))
+   throw Error('Missing, renamed or unapproved Chromium case: '+name);
+ return {scenarioTotal:report.cases.length,scenarioPassed:report.cases.length,
+         scenarioNames:names};
 }
 function initialRecords(mode){
  return modes[mode].map(suite=>({suite,status:'NOT RUN',exitCode:null,signal:null,
