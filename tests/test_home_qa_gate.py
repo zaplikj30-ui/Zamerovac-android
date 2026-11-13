@@ -90,7 +90,9 @@ class GateUnitTest(unittest.TestCase):
     def test_owner_controlled_ci_positive(self):
         e = {
             "GITHUB_ACTIONS": "true", "GITHUB_REPOSITORY": "zaplikj30-ui/Zamerovac-android",
-            "GITHUB_ACTOR": "zaplikj30-ui", "GITHUB_EVENT_NAME": "push",
+            "GITHUB_ACTOR": "zaplikj30-ui", "GITHUB_TRIGGERING_ACTOR": "zaplikj30-ui",
+            "GITHUB_RUN_ATTEMPT": "1", "GITHUB_RUN_ID": "43195207268",
+            "GITHUB_EVENT_NAME": "push",
             "GITHUB_REF": "refs/heads/qa/preflight", "RUNNER_ENVIRONMENT": "self-hosted",
         }
         GATE.trusted_owner(e)
@@ -99,9 +101,40 @@ class GateUnitTest(unittest.TestCase):
                       {"RUNNER_ENVIRONMENT": "github-hosted"},
                       {"GITHUB_REF": "refs/pull/7/merge"},
                       {"GITHUB_ACTOR": "other"},
+                      {"GITHUB_TRIGGERING_ACTOR": "other"},
+                      {"GITHUB_TRIGGERING_ACTOR": ""},
+                      {"GITHUB_RUN_ATTEMPT": "2"},
+                      {"GITHUB_RUN_ATTEMPT": ""},
+                      {"GITHUB_RUN_ID": ""},
+                      {"GITHUB_RUN_ID": "fake"},
                       {"GITHUB_HEAD_REF": "evil"}):
             with self.subTest(patch=patch), self.assertRaises(GATE.GateError):
                 GATE.trusted_owner({**e, **patch})
+
+    def test_rerun_trigger_actor_and_attempt_protected_in_every_recipe(self):
+        browser = browser_workflow()
+        jvm = GATE.render_workflow(
+            "qa/example", GATE.SYNC116_SHA, sync_jvm=True,
+            source_branch=GATE.SYNC116_BRANCH, validator_sha="b"*40,
+            validator_branch="infra/approved-gate")
+        for good in (browser, jvm):
+            GATE.check_workflow(good, strict=True)
+            self.assertIn("github.triggering_actor == 'zaplikj30-ui'", good)
+            self.assertIn("github.run_attempt == 1", good)
+            self.assertIn("if-no-files-found: error", good)
+            self.assertIn("runs/${{ github.run_id }}-${{ github.run_attempt }}", good)
+            self.assertNotIn("browser/**/results.json", good)
+            self.assertNotIn("if-no-files-found: ignore", good)
+            for old, new in (
+                ("github.triggering_actor == 'zaplikj30-ui'", "github.triggering_actor == 'other'"),
+                ("github.triggering_actor == 'zaplikj30-ui'", "true"),
+                ("github.run_attempt == 1", "github.run_attempt >= 1"),
+                ("github.run_attempt == 1", "true"),
+                ("if-no-files-found: error", "if-no-files-found: ignore"),
+                ("runs/${{ github.run_id }}-${{ github.run_attempt }}", "runs/last-success"),
+            ):
+                with self.subTest(old=old, new=new), self.assertRaises(GATE.GateError):
+                    GATE.check_workflow(good.replace(old, new), strict=True)
 
     def test_canonical_browser_workflow_is_exact_and_windows_only(self):
         browser = browser_workflow()
@@ -122,7 +155,8 @@ class GateUnitTest(unittest.TestCase):
         self.assertIn("python tools\\home_qa_gate.py lint-workflow", browser)
         self.assertLess(browser.index("ACTUAL_SOURCE"), browser.index("python tools\\home_qa_gate.py lint-workflow"))
         self.assertLess(browser.index("python tools\\home_qa_gate.py lint-workflow"), browser.index("npm.cmd ci --offline"))
-        self.assertNotIn("python -m unittest discover", browser)
+        self.assertIn("python -m unittest discover -s tests -p test_home_qa_gate.py", browser)
+        self.assertNotIn("wsl.exe --exec python3 -m unittest discover", browser)
         self.assertNotIn("wsl-check-from-windows", browser)
         self.assertNotIn("assembleDebug", browser)
         self.assertNotIn("pull_request:", browser)
@@ -311,7 +345,8 @@ class GateUnitTest(unittest.TestCase):
         self.assertIn('if /I not "%ACTUAL_GATE%"=="' + "b" * 40 + '" exit /b 1', browser)
         self.assertLess(browser.index("ACTUAL_SOURCE"), browser.index("python tools\\home_qa_gate.py lint-workflow"))
         self.assertLess(browser.index("python tools\\home_qa_gate.py lint-workflow"), browser.index("npm.cmd ci --offline"))
-        self.assertNotIn("python -m unittest discover", browser)
+        self.assertIn("python -m unittest discover -s tests -p test_home_qa_gate.py", browser)
+        self.assertNotIn("wsl.exe --exec python3 -m unittest discover", browser)
         self.assertNotIn("npx.cmd --no-install playwright install", browser)
 
     def test_workflow_valid_windows_wsl_split(self):
