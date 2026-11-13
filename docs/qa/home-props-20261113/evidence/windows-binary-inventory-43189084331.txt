@@ -1,0 +1,20 @@
+Historical read-only inventory, not a new Windows runtime test or execution permission.
+Source: https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/43189084331/job/131083537605
+Read through the authenticated GitHub job-log connector during this task.
+
+2026-11-12T09:10:40.9668847Z BROWSER_CANDIDATE_SHA256=409805a16d6416087e6b2f778df1cf8f7bbb267d6b99f6b5bb0a618eace234f2 PATH=C:\actions-runner\tools\ms-playwright\chromium-1234\chrome-win64\chrome.exe
+2026-11-12T09:10:41.7664787Z BROWSER_CANDIDATE_SHA256=ce4635cd0e5dc0e21494542a701f347e91c1f1d821970578d97ed8df4ced50ef PATH=C:\actions-runner\tools\ms-playwright\chromium_headless_shell-1234\chrome-headless-shell-win64\chrome-headless-shell.exe
+
+The final proposed Windows profile selects the existing FULL Chromium/Chrome
+for Testing binary because verification uses Chrome WebUI chrome://sandbox.
+Headless Shell is not an automatic alternative. No browser was installed or
+started on HOME. Current Windows identity and WebUI behavior remain NOT RUN.
+
+Relevant source boundary (headless embedder versus Chrome WebUI):
+https://github.com/chromium/chromium/blob/main/headless/lib/browser/headless_content_browser_client.cc
+https://github.com/chromium/chromium/blob/main/chrome/browser/resources/sandbox_internals/sandbox_internals_win.ts
+
+Playwright1.62.1 in the existing managed dependency set does not include
+--enable-automation in its default Chromium switches. The launch policy now
+adds that single fixed flag, required by Browser.getBrowserCommandLine, while
+retaining chromiumSandbox:true and rejecting every other custom argument.

@@ -18,13 +18,18 @@ HOME spuštění, Actions, merge, release a APK nadále neschválilo.
   odkaz/junction, hardlink nebo jiné bajty znamenají BLOCKED před launch.
   Windows cesta/hash jsou převzaty z autentického staršího read-only logu jobu
   131083537605 / běhu 43189084331, nikoli z odhadu nebo nového HOME běhu.
+  Pro Windows je pevně vybrán již instalovaný plný Chromium/Chrome for Testing,
+  protože diagnostika používá Chrome WebUI; Headless Shell se jako náhrada
+  automaticky nepoužívá. Profil vyžaduje nové review před jakýmkoli HOME startem.
   Linux profil je přímo `/usr/lib/chromium/chromium`, nikoli shell `/usr/bin/chromium`.
 - Python supervisor navíc drží binárku po celou dobu pokusu: na Windows native
   handle s FILE_SHARE_READ a držený řetězec adresářů bez DELETE sharing, který
   zakazuje záměnu souboru i přesměrování přejmenováním rodiče; na Linuxu ověřuje
   existující instalaci nezapisovatelnou testovacím účtem a drží O_NOFOLLOW fd.
   Očekávaný hash nelze přepsat prostředím. Nic se neinstaluje ani nepřepisuje.
-- **Sandbox:** pouze `chromiumSandbox:true`, žádné vlastní flagy či fallback.
+- **Sandbox:** pouze `chromiumSandbox:true` a jediný vlastní flag `--enable-automation`,
+  který výslovně zpřístupní CDP příkazovou řádku i na Playwright1.62.1.
+  Jiný vlastní flag nebo fallback je zakázán.
   CDP odmítá vypínače sandboxu a `chrome://sandbox` musí do 7 s potvrdit platformní
   diagnostiku. Linux vyžaduje Namespace/SUID, PID/network namespaces a Seccomp/TSYNC;
   Windows renderer PID, Lockdown a Untrusted integritu. Browser close je omezen
@@ -105,7 +110,7 @@ nepoužívat obecný main browser workflow, který dosud obsahuje instalaci.
    ```bat
    set "ZAMEROVAC_SOURCE_ROOT=%GITHUB_WORKSPACE%\source"
    set "ZAMEROVAC_EXPECTED_QA_SHA=PLNY_NEZAVISLE_SCHVALENY_FINALNI_QA_SHA"
-   set "CHROMIUM_PATH=C:\actions-runner\tools\ms-playwright\chromium_headless_shell-1234\chrome-headless-shell-win64\chrome-headless-shell.exe"
+   set "CHROMIUM_PATH=C:\actions-runner\tools\ms-playwright\chromium-1234\chrome-win64\chrome.exe"
    set "LOCALAPPDATA=%RUNNER_TEMP%\zamerovac-owned-qa-evidence"
    cd /d "%GITHUB_WORKSPACE%\gate"
    ```

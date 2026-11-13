@@ -1,0 +1,46 @@
+✖ pinned Playwright launch explicitly enables its read-only command-line diagnostics (16.447431ms)
+✔ harness explicitly enables sandbox before any application case (9.08882ms)
+✔ launch policy rejects disabled sandbox, flags and malformed options before spawn (2.610332ms)
+✔ launch error blocks once, no retry or downgrade (2.693798ms)
+✔ unverifiable or disabled runtime sandbox closes browser and blocks (2.86666ms)
+✔ positive fixtures keep Linux and Windows evidence separate (2.110364ms)
+✔ runner reports sandbox failure as BLOCKED and cannot count it as PASS (6.200858ms)
+✔ Windows policy diagnostics require live renderer IDs, Lockdown and Untrusted integrity (3.085552ms)
+✔ CDP/diagnostic failure closes the browser and never invokes application body (3.225895ms)
+✔ stalled diagnostics are bounded, close browser and return BLOCKED (7007.161869ms)
+✔ supervised worker checkpoints launch/diagnostic failures without unsafe browser execution (1351.411532ms)
+✔ suite exit 0 cannot pass without a full fresh named report (0.752719ms)
+✔ hung browser.close is bounded and remains BLOCKED (2005.979039ms)
+ℹ tests 13
+ℹ suites 0
+ℹ pass 12
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 10420.365208
+
+✖ failing tests:
+
+test at tests/home_sandbox_security.js:15:1
+✖ pinned Playwright launch explicitly enables its read-only command-line diagnostics (16.447431ms)
+  AssertionError [ERR_ASSERTION]: Expected values to be strictly deep-equal:
+  + actual - expected
+  
+  + []
+  - [
+  -   '--enable-automation'
+  - ]
+  
+      at TestContext.<anonymous> (/workspace/Zamerovac-android/tests/home_sandbox_security.js:16:9)
+      at Test.runInAsyncScope (node:async_hooks:227:14)
+      at Test.run (node:internal/test_runner/test:1402:25)
+      at Test.start (node:internal/test_runner/test:1262:17)
+      at startSubtestAfterBootstrap (node:internal/test_runner/harness:387:17) {
+    generatedMessage: true,
+    code: 'ERR_ASSERTION',
+    actual: [],
+    expected: [Array],
+    operator: 'deepStrictEqual',
+    diff: 'simple'
+  }

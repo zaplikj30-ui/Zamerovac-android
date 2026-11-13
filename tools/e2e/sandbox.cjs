@@ -4,13 +4,13 @@ const path=require('node:path');
 const {verifyBrowserIdentity}=require('../qa-browser-identity.cjs');
 function blocked(message){return Object.assign(Error('HOME BLOCKED: '+message),{code:'HOME_BLOCKED'})}
 function launchOptions(executablePath){
- return {executablePath,chromiumSandbox:true,headless:true,args:[],timeout:15000};
+ return {executablePath,chromiumSandbox:true,headless:true,args:['--enable-automation'],timeout:15000};
 }
 function checkOptions(options){
  const allowed=['executablePath','chromiumSandbox','headless','args','timeout'];
  if(!options||Object.keys(options).some(k=>!allowed.includes(k))||
     options.chromiumSandbox!==true||options.headless!==true||
-    !Array.isArray(options.args)||options.args.length!==0||
+    !Array.isArray(options.args)||options.args.length!==1||options.args[0]!=='--enable-automation'||
     typeof options.executablePath!=='string'||!path.isAbsolute(options.executablePath)||
     (options.timeout!==undefined&&options.timeout!==15000))
   throw blocked('invalid Chromium sandbox launch configuration');

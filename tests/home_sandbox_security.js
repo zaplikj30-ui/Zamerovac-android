@@ -12,6 +12,9 @@ const linuxProof={platform:'linux',evaluation:'You are adequately sandboxed.',ro
  ['Seccomp-BPF sandbox','Yes'],['Seccomp-BPF sandbox supports TSYNC','Yes']]};
 const windowsProof={platform:'win32',rows:[['123','Renderer','','Renderer','Lockdown','S-1-16-0 Untrusted']]};
 const hostProof=process.platform==='win32'?windowsProof:linuxProof;
+test('pinned Playwright launch explicitly enables its read-only command-line diagnostics',()=>{
+ assert.deepEqual(require('../tools/e2e/sandbox.cjs').launchOptions('/safe/chromium').args,['--enable-automation']);
+});
 // Synthetic policy tests inject only the disk-identity boundary; no real executable is launched.
 function policy(){
  const filename=path.resolve(__dirname,'../tools/e2e/sandbox.cjs'),m={exports:{}};
@@ -52,10 +55,10 @@ test('launch policy rejects disabled sandbox, flags and malformed options before
  const {launchSandboxed}=policy();let launched=0;
  for(const change of [{chromiumSandbox:false},{chromiumSandbox:undefined},
   {args:['--no-sandbox']},{args:['--no-sandbox=true']},{args:['--disable-setuid-sandbox']},
-  {args:'--no-sandbox'},{ignoreDefaultArgs:true},{env:{}},{headless:'yes'},
+  {args:[]},{args:'--no-sandbox'},{ignoreDefaultArgs:true},{env:{}},{headless:'yes'},
   {executablePath:'relative/chrome'},{executablePath:undefined},{executablePath:''}, {unknown:true}]){
   await assert.rejects(launchSandboxed({async launch(){launched++}},
-   {executablePath:'/safe/chromium',chromiumSandbox:true,headless:true,args:[],...change}),
+   {executablePath:'/safe/chromium',chromiumSandbox:true,headless:true,args:['--enable-automation'],...change}),
    e=>e.code==='HOME_BLOCKED');
  }
  assert.equal(launched,0);
@@ -63,7 +66,7 @@ test('launch policy rejects disabled sandbox, flags and malformed options before
 test('launch error blocks once, no retry or downgrade',async()=>{
  const {launchSandboxed}=policy();let launched=0;
  await assert.rejects(launchSandboxed({async launch(){launched++;throw Error('sandbox unavailable')}},
-  {executablePath:'/safe/chromium',chromiumSandbox:true,headless:true,args:[]}),
+  {executablePath:'/safe/chromium',chromiumSandbox:true,headless:true,args:['--enable-automation']}),
   e=>e.code==='HOME_BLOCKED'&&/sandbox unavailable/.test(e.message));
  assert.equal(launched,1);
 });
@@ -73,7 +76,7 @@ test('unverifiable or disabled runtime sandbox closes browser and blocks',async(
   [linuxProof,['--no-sandbox']],[{...linuxProof,rows:[]},[]]]){
   const b=fakeBrowser(proof,args);
   await assert.rejects(launchSandboxed({async launch(){return b}},
-   {executablePath:'/safe/chromium',chromiumSandbox:true,headless:true,args:[]}),e=>e.code==='HOME_BLOCKED');
+   {executablePath:'/safe/chromium',chromiumSandbox:true,headless:true,args:['--enable-automation']}),e=>e.code==='HOME_BLOCKED');
   assert.equal(b.closed,1);
  }
 });
@@ -82,7 +85,7 @@ test('positive fixtures keep Linux and Windows evidence separate',async()=>{
  assert.equal(checkEvidence(linuxProof,'linux').platform,'linux');
  assert.throws(()=>checkEvidence(linuxProof,'win32'),e=>e.code==='HOME_BLOCKED');
  const r=await launchSandboxed({async launch(){return b}},
-  {executablePath:'/safe/chromium',chromiumSandbox:true,headless:true,args:[]});
+  {executablePath:'/safe/chromium',chromiumSandbox:true,headless:true,args:['--enable-automation']});
  assert.equal(r.evidence.platform,process.platform);assert.equal(r.evidence.status,'PASS');
  await r.browser.close();
 });
@@ -109,7 +112,7 @@ test('CDP/diagnostic failure closes the browser and never invokes application bo
  for(const method of ['newBrowserCDPSession','newContext']){
   const b=fakeBrowser();b[method]=async()=>{throw Error('unavailable '+method)};
   await assert.rejects(launchSandboxed({async launch(){return b}},
-   {executablePath:'/safe/chromium',chromiumSandbox:true,headless:true,args:[]}),e=>e.code==='HOME_BLOCKED');
+   {executablePath:'/safe/chromium',chromiumSandbox:true,headless:true,args:['--enable-automation']}),e=>e.code==='HOME_BLOCKED');
   assert.equal(b.closed,1);
  }
 });
@@ -118,7 +121,7 @@ test('stalled diagnostics are bounded, close browser and return BLOCKED',async()
  const b=fakeBrowser();b.newBrowserCDPSession=()=>new Promise(()=>{});
  const start=Date.now();
  await assert.rejects(launchSandboxed({async launch(){return b}},
-  {executablePath:'/safe/chromium',chromiumSandbox:true,headless:true,args:[]}),
+  {executablePath:'/safe/chromium',chromiumSandbox:true,headless:true,args:['--enable-automation']}),
   e=>e.code==='HOME_BLOCKED'&&/timed out/.test(e.message));
  assert.equal(b.closed,1);assert(Date.now()-start<10000);
 });
@@ -174,6 +177,6 @@ test('hung browser.close is bounded and remains BLOCKED',async()=>{
  b.close=()=>new Promise(()=>{});
  const start=Date.now();
  await assert.rejects(launchSandboxed({async launch(){return b}},
-  {executablePath:'/safe/chromium',chromiumSandbox:true,headless:true,args:[]}),e=>e.code==='HOME_BLOCKED'&&/close timed out/.test(e.message));
+  {executablePath:'/safe/chromium',chromiumSandbox:true,headless:true,args:['--enable-automation']}),e=>e.code==='HOME_BLOCKED'&&/close timed out/.test(e.message));
  assert(Date.now()-start<4000);
 });

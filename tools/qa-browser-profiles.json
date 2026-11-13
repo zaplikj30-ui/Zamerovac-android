@@ -5,8 +5,8 @@
     "magic": "7f454c46"
   },
   "win32": {
-    "path": "C:\\actions-runner\\tools\\ms-playwright\\chromium_headless_shell-1234\\chrome-headless-shell-win64\\chrome-headless-shell.exe",
-    "sha256": "ce4635cd0e5dc0e21494542a701f347e91c1f1d821970578d97ed8df4ced50ef",
+    "path": "C:\\actions-runner\\tools\\ms-playwright\\chromium-1234\\chrome-win64\\chrome.exe",
+    "sha256": "409805a16d6416087e6b2f778df1cf8f7bbb267d6b99f6b5bb0a618eace234f2",
     "magic": "4d5a"
   }
 }
