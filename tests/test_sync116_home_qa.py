@@ -89,6 +89,48 @@ class Sync116QaOnlyTests(unittest.TestCase):
                     with self.assertRaises(QA.Stop):
                         QA.source_guard(source, QA.EXPECTED_SHA)
 
+    def test_nonroot_wsl_is_mandatory_before_source_execution(self):
+        with mock.patch.object(QA.platform, "system", return_value="Linux"), \
+             mock.patch.object(QA.platform, "release", return_value="microsoft-WSL2"), \
+             mock.patch.object(QA.os, "geteuid", return_value=0), \
+             mock.patch.dict(QA.os.environ, {"WSL_DISTRO_NAME": "Zamerovac-Ubuntu-QA"}):
+            with self.assertRaisesRegex(QA.Stop, "root WSL"):
+                QA.run_linux(Path("/fake-src"), QA.EXPECTED_SHA, Path("/fake-out"),
+                             "b"*40, "43195207268", "1")
+
+    def test_run_scoped_pending_only_current_jvm_evidence(self):
+        import json
+        with tempfile.TemporaryDirectory() as tmp:
+            out=Path(tmp)/"43195207268-1"/"jvm"
+            out.mkdir(parents=True)
+            init={"schema":4, "kind":"jvm", "status":"NOT RUN",
+                  "sourceSha":QA.EXPECTED_SHA, "validatorSha":"b"*40,
+                  "runId":"43195207268", "runAttempt":1}
+            (out/"results.json").write_text(json.dumps(init),encoding="utf-8")
+            QA.pending_evidence(out, QA.EXPECTED_SHA, "b"*40, "43195207268", "1")
+            for name,sha,run,attempt in (
+                ("wrong sha","0"*40,"43195207268","1"),
+                ("wrong run",QA.EXPECTED_SHA,"43195207269","1"),
+                ("re-run",QA.EXPECTED_SHA,"43195207268","2")):
+                with self.subTest(name=name), self.assertRaises(QA.Stop):
+                    QA.pending_evidence(out,sha,"b"*40,run,attempt)
+            (out/"results.json").write_text(json.dumps({**init,"status":"PASS"}),encoding="utf-8")
+            with self.assertRaisesRegex(QA.Stop,"stale"):
+                QA.pending_evidence(out,QA.EXPECTED_SHA,"b"*40,"43195207268","1")
+
+    def test_wsl_execution_path_requires_existing_user_and_timeout_cleanup(self):
+        script=(ROOT/"tools/sync116_home_qa.py").read_text(encoding="utf-8")
+        self.assertIn('if [ "$(id -u)" -eq 0 ]',script)
+        self.assertNotIn('"--user", "root"',script)
+        self.assertNotIn("/root/zamerovac-qa-commits",script)
+        self.assertIn("setsid timeout -s TERM -k 15s 2650s",script)
+        self.assertIn("kill -TERM --",script)
+        self.assertIn("kill -KILL --",script)
+        self.assertIn("QA117_ALIVE",script)
+        self.assertIn("proc.stdin.close()",script)
+        self.assertIn("proc.kill()",script)
+        self.assertIn("missing existing nonroot offline Gradle cache",script)
+
     def test_pinned_offline_one_worker_and_no_auto_install_or_apk(self):
         script = (ROOT / "tools/sync116_home_qa.py").read_text(encoding="utf-8")
         self.assertIn('"--max-workers=1"', script)
