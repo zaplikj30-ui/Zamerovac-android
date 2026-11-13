@@ -145,9 +145,26 @@ def verify(root, kind, env, source_sha, validator_sha):
     validate_report(report,kind,env,source_sha,validator_sha)
     return report_file
 
+def inspect(root,kind,env,source_sha,validator_sha):
+    """Before upload, accept only this run's FAIL/NOT RUN or independently PASS."""
+    dest = scoped_dir(root,kind,env)
+    target=dest/"results.json"
+    require(target.is_file() and not target.is_symlink(),
+            "current-run evidence missing; must not upload anything")
+    require(target.stat().st_size < 512*1024, "oversized current-run evidence")
+    report=json.loads(target.read_text(encoding="utf-8"))
+    for key,value in identity(kind,env,source_sha,validator_sha).items():
+        require(report.get(key)==value,"stale/mismatched artifact: "+key)
+    require(report.get("schema")==4 and report.get("status") in ("PASS","FAIL","NOT RUN"),
+            "invalid artifact status/schema")
+    if report["status"]=="PASS":
+        validate_report(report,kind,env,source_sha,validator_sha)
+    return target
+
+
 def main(argv=None):
     parser=argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("action",choices=("init","verify"))
+    parser.add_argument("action",choices=("init","verify","inspect"))
     parser.add_argument("--kind",choices=KINDS,required=True)
     parser.add_argument("--root",type=Path,required=True)
     parser.add_argument("--source-sha",required=True)
@@ -158,10 +175,14 @@ def main(argv=None):
             target=initialize(args.root,args.kind,os.environ,
                               args.source_sha,args.validator_sha)
             print("PENDING CURRENT RUN: "+str(target))
-        else:
+        elif args.action=="verify":
             target=verify(args.root,args.kind,os.environ,
                           args.source_sha,args.validator_sha)
             print("PASS CURRENT RUN EVIDENCE: "+str(target))
+        else:
+            target=inspect(args.root,args.kind,os.environ,
+                           args.source_sha,args.validator_sha)
+            print("SAFE CURRENT RUN UPLOAD: "+str(target))
         return 0
     except (EvidenceStop,ValueError,TypeError,OSError,KeyError,json.JSONDecodeError) as exc:
         print("HOME QA STOP: "+str(exc),file=sys.stderr)
