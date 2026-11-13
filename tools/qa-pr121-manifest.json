@@ -1,0 +1,217 @@
+{
+  "schema": 1,
+  "sourceSha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+  "evidenceSha": "2a70f8c34f9ef29bb84206d437b241b4cee52cab",
+  "cases": {
+    "legacy-conflict-persistence": [
+      "clockless-legacy-copy-persists-reopen-media-editor-and-repeat-callback"
+    ],
+    "drawing": [
+      "dimension",
+      "line",
+      "arrow",
+      "circle",
+      "ellipse",
+      "rect",
+      "area",
+      "polyline",
+      "chain",
+      "cumulative",
+      "angle",
+      "freehand",
+      "target",
+      "note",
+      "symbol",
+      "two_finger_pinch_keeps_undo_redo_and_exact_measure",
+      "pan_then_pinch_does_not_resume_stale_drag"
+    ],
+    "gallery-visual": [
+      "gallery_text_and_lines_remain_sharp_at_real_screen_scale"
+    ],
+    "workflows": [
+      "folders_move_rename_trash_restore",
+      "bulk_copy_move_lock",
+      "note_checklist_sketch_attachment",
+      "photo_details_nested_gallery_png_hashes",
+      "trash_restore_purge_and_live_media",
+      "focus_cancel_layers_history_search"
+    ],
+    "interactions": [
+      "rapid_grips_jitter_cancel",
+      "pan_zoom_fit_and_repeated_reopen",
+      "chain_finish_insert_remove_history"
+    ],
+    "zoom-grid": [
+      "buttons_grid_pixels_and_snap_independence",
+      "trusted_two_finger_pinch_and_limits"
+    ],
+    "update39": [
+      "gallery_bounded_pan_and_caption_pixels",
+      "default_selection_corner_loupe_and_landscape_tools",
+      "real_save_failure_and_photo_loading_errors",
+      "help_occurrences_and_neutral_bluetooth"
+    ],
+    "gallery-state": [
+      "approved_inset_handles_have_real_pixels_and_stay_out_of_export",
+      "render_is_read_only_even_during_nested_drawing_and_failure",
+      "gestures_navigation_stale_load_and_exact_anchor_pixels",
+      "stacked_voice_marker_gallery_and_customer_export_pixels",
+      "customer_export_high_resolution_voice_marker_2400px"
+    ],
+    "peer-sync": [
+      "offline-folder-cycle-repair-is-visible-reachable-and-exact",
+      "menu-settings-offline-and-data-preserved",
+      "explicit-approval-full-code-reject-back-and-stale-session",
+      "untrusted-names-pending-errors-and-cloud-isolation"
+    ],
+    "drive-accounts": [
+      "historical-receipt-and-live-checkpoint-never-become-current-health-after-disconnect",
+      "local-save-and-independent-target-receipts-never-pretend-a-backup",
+      "independent-explicit-account-controls-and-cancelled-disconnect",
+      "unconfigured-or-invalid-state-never-pretends-account-is-ready-and-text-is-escaped",
+      "backup-account-switch-clears-old-history-and-stale-verification"
+    ],
+    "sync-cadence": [
+      "frequency-selection-persists-without-changing-records-and-old-switch-can-reenable",
+      "failed-persistence-does-not-activate-new-frequency"
+    ],
+    "backup-history": [
+      "offline-ui-two-histories-confirmation-and-network-exception"
+    ],
+    "read-only-sync": [
+      "view-photo-and-detail-without-revision-then-edit-with-history"
+    ],
+    "sync-edit-guard": [
+      "native-callback-during-grip-and-measure-form-preserves-both-edits",
+      "status-message-cannot-drop-deferred-data-when-form-is-cancelled",
+      "detail-parent-cas-keeps-live-item-references-after-conflict"
+    ],
+    "note-sync": [
+      "read-only-note-and-checklist-attachment-causal-autosave",
+      "incoming-note-data-waits-and-read-only-close-does-not-create-conflict",
+      "sketch-stroke-keeps-live-points-through-debounced-note-cas",
+      "failed-note-write-keeps-form-and-retry-and-lock-protects-checks",
+      "voice-keeps-owner-finishes-on-save-and-failed-stop-keeps-form",
+      "rich-voice-failed-stop-and-disk-keep-modal-back-retry-and-cancel"
+    ],
+    "web-content-policy": [
+      "native-csp-blocks-injected-scripts-media-and-frames-keeps-real-drawing"
+    ],
+    "media-import": [
+      "issue46-two-notes-back-focus-cancel-and-delayed-picker-callback",
+      "delayed-native-results-stay-in-original-folder-and-stale-token-cannot-complete-new-picker",
+      "deleted-or-locked-destination-and-closed-owner-dialog-do-not-redirect-file",
+      "picker-cancel-and-rejected-write-keep-data-without-ghost-record"
+    ],
+    "pending-audio": [
+      "verified-original-and-suspect-reservation-have-separate-actions-and-acknowledgements",
+      "ordinary-save-uses-native-summary-without-requesting-another-full-media-scan",
+      "stop-is-only-a-draft-before-cancel-and-failed-save",
+      "unknown-journal-warning-preserves-two-independent-copy-actions",
+      "stop-cancel-restart-reattach-save-preserves-exact-values",
+      "failed-save-cancel-keeps-pending-across-reload",
+      "android-back-and-bind-failure-do-not-undo-saved-note",
+      "failed-stop-retains-recovery-and-uncertain-export-never-attaches"
+    ],
+    "help": [
+      "main_menu_search_offline_and_android_back",
+      "overflow_menu_and_small_large_screens"
+    ],
+    "release-history": [
+      "versioned_history_main_menu_offline_and_help_navigation",
+      "settings_history_and_responsive_layout"
+    ],
+    "latency": [
+      "project_1_10_50_editable_documents",
+      "photo_and_gallery_1200x800",
+      "photo_and_gallery_6000x4000",
+      "existing_feedback_320x240",
+      "existing_feedback_1440x2800",
+      "feedback_slow_save_blocks_close_list_and_android_back"
+    ],
+    "quality-regressions": [
+      "existing_note_undo_redo_save",
+      "existing_note_undo_redo_back",
+      "audio_play_pause_must_not_focus_text",
+      "two_notes_explicit_picker_double_click_cancel_back_and_late_result",
+      "cancelled_attachment_has_no_unprotected_orphan",
+      "note_controls_reachable_412",
+      "note_controls_reachable_1100",
+      "project_photo_dimension_note_reopen_and_export"
+    ],
+    "gallery-readability": [
+      "pixels_1200x800_412",
+      "pixels_6000x4000_412",
+      "pixels_1600x4800_1100",
+      "pixels_6000x4000_412_dpr2"
+    ]
+  },
+  "files": {
+    "app/src/main/assets/address-correction.js": "e9afd16875d0f7efe631592c7231fdfa55609af4bbdcd3630fd3d2d53e88c6ef",
+    "app/src/main/assets/annotation-geometry.js": "4148f45109d05e8cc243069efdc821bb2146a39d3c7805038cda0eb52b6f58b9",
+    "app/src/main/assets/annotation-history.js": "e8f149ae2a053d99adf2ffed1244470ad1b0cc4bbddbcd397570e8233be1f24f",
+    "app/src/main/assets/annotation-resize.js": "09a6a80b4df9f062bec69dad808f5ad32bec7ba6528a14f49b87799d07badb6e",
+    "app/src/main/assets/annotation-selection.js": "ce79b1c258c61f6f7ec364be74acbaff08063dbe8ddc464f8648c53127f9e118",
+    "app/src/main/assets/annotation-translation.js": "daeb676d46ad1c151a2500e320e828ae9be34ffafe24cff9627d6bfd267f8528",
+    "app/src/main/assets/app.js": "fed6c03cf411d68dc2435cbc68cfdc5d8450d42aa3fbdbe5d68b9f86d77cf06a",
+    "app/src/main/assets/backup-history.js": "dd0c0e5faaca2efabdc4bc61fdf4da50980f5f777cfbfee2e65128d139f1738f",
+    "app/src/main/assets/bulk-actions.js": "ec4a696946243e245ae34ae43c2b834d67f533909db99f3b71f97004708753d4",
+    "app/src/main/assets/customer-export.js": "e65d7c1c799f2f93df6dc6259bdfc146cf7bd6e4d6b55fb700588d2c37c92252",
+    "app/src/main/assets/drive-accounts.js": "5362ed5d4a832381d3d76c5f0a8b9bd9c4a205c25f1264cb1672a871c5938540",
+    "app/src/main/assets/editor-extra-toolbar.js": "801d4e899910b28f9f600175bc862f3a8fd77722aa9c62341f9f6334ea5eb546",
+    "app/src/main/assets/editor.js": "2aa9988186599883418c1d3997936425b65fe6870e01d81690282879d0af9f95",
+    "app/src/main/assets/feedback-reports.css": "914106984c41786bd9a6f6f589c8d98f8c9499d79c43bb8d1e6f8e5923504252",
+    "app/src/main/assets/feedback-reports.js": "16ceaabeb4589edbd965669894b29634a9b1809f5c305852f6117bbbf68472bd",
+    "app/src/main/assets/help.css": "0ed5a2c8288e7554feaeca98129d4ccf9005f6f50ede9f5ee6948ab6b88f0a67",
+    "app/src/main/assets/help.js": "5313c8f3de3fa256a2af151f7986e9c89078a309a00b61f1750e5dd10553fe8b",
+    "app/src/main/assets/i18n.js": "a18edb7380667c634a81a4b894605184f71cf17670d8463327c7bace641d0bfe",
+    "app/src/main/assets/index.html": "cfc52e7739035797c5023acbc127efcdff720bd84effb6228aeee223d8721034",
+    "app/src/main/assets/inset-workspace.js": "600b5aa40a8aa5ac96c68b5bcacff84c9c2b02a213f045bd42ae52d9e3e5a8d0",
+    "app/src/main/assets/laser-autofill.js": "53b7e624befc8495e7e28b51662387102917c1b991f0b6ad348486147370e42d",
+    "app/src/main/assets/licenses/json-canonicalization.txt": "7e95e67461063a7698d0dad14da15f2e4e9c15c0e5b51f752b0c2f1a3bd11c9a",
+    "app/src/main/assets/media-import-ownership.js": "36b3c0db537a35e51301c291e0cc1896aa1ac799a47bcb8f9c0228a0303f83c1",
+    "app/src/main/assets/menu-dismiss.js": "3c19b89a8dc7c42fa2272a052f90a798e8a2b7dcdebfea7bd5c51bad1bf7b030",
+    "app/src/main/assets/peer-sync.css": "7c376a478db7901498121acadfbd1e41b872a9e47c03d246f34f45f0b05b8dfb",
+    "app/src/main/assets/peer-sync.js": "5b3f2b407767dcce777eb1191c20b417ac2591c56f31c341f781fa75c1a5e693",
+    "app/src/main/assets/pending-audio.js": "1618fa42a1000e5062abdb7aeff931198754fb062b7c45625b7ded58abfe1a2c",
+    "app/src/main/assets/release-history.js": "eb65fce669952ef23abc0522b1f2f2c9f34f347faa9929ffc907de130711b9dc",
+    "app/src/main/assets/responsive.css": "6fdc1f98a8269b8d090530722b8d52f774675737b3f826d33b20864901520f7a",
+    "app/src/main/assets/rich-notes.js": "695321d33d944f99e5b8f7d0804f75401846876b1c96702c0c7982bf853fdc2c",
+    "app/src/main/assets/sketch.js": "7de95bcaa8dc17c2670cd5255cd9c3939dc6df00b2dfca75a5423516a69575dc",
+    "app/src/main/assets/style.css": "146d3d575d9fc453f4f8b57cadb61fc4b9dc35493b9ad7a2acad19f6e31ff215",
+    "app/src/main/assets/sync-cadence.js": "de6cac0882c0c7cd04bd8467f7ebbfb2d53f8a5a83139623377a23454b7c1809",
+    "app/src/main/assets/sync-edit-guard.js": "61a06d4a325afaefbde67dae47517af8e152867bbb6ceea822068b295fb8eee6",
+    "app/src/main/assets/toolbar-customize.js": "0c195d198fc4f23c9daf961be4957afadd695bf8f27a2badf8e29f25392849b0",
+    "app/src/main/assets/upgrade.css": "5d1f11cdf6d9aca91c7dce25fdf61497ff902e10e4a73b62bd312dbcaa139dab",
+    "app/src/main/assets/upgrade.js": "2ea7e10dd907a78291b68d1e487549c414d8d4cda75b26ba296d456425f0f759",
+    "tools/e2e/android-system.cjs": "8af49f3a5ddd04fd9bd19c6a37eb27b65479eb818e0b90e1e9b7a5529812da31",
+    "tools/e2e/android-window.cjs": "792a2f30f30e4829f3fe715c5234d1eeea15dd65f03da9f13dced31967b87203",
+    "tools/e2e/backup-history.cjs": "f38d6dcb16ee52a1d67555e72caf1ef2718e4a4a157d7c4aca3a86a872633d9c",
+    "tools/e2e/drawing.cjs": "e9d25415b8c42fddf933dc6e3499a5022700615c14dc55b26b27aff40dd1b560",
+    "tools/e2e/drive-accounts.cjs": "c3ef7e56c52ee36e0c259136f80938b8620c9eed6361670712b96ca3ec573f6f",
+    "tools/e2e/gallery-readability.cjs": "88745ebb9d8384c37217eff0422590ca741e1410d04ea34dd27c0231b74b6dff",
+    "tools/e2e/gallery-state.cjs": "81cad91e7a19ab40a7dfefc98657e9597f47341143c915726df5f5ea0d8bf776",
+    "tools/e2e/gallery-visual.cjs": "7cae12df961d4c8e74d22be9491bf3cb4885009c1f0e23f2fca0ef2c16a84b7a",
+    "tools/e2e/harness.cjs": "519443c6493f173677eab700a8de4a134084d72d548d54470f0985ce1a75e809",
+    "tools/e2e/help.cjs": "554e4d95e373c50cf790ea7bc8b669932528b462d57d181359babe95898400a0",
+    "tools/e2e/interactions.cjs": "b62459c56fbee1b1110cec5fe3dd236762b3c94d8b311b4f6bde18bc694793ed",
+    "tools/e2e/latency.cjs": "1a8c5cee05ee44b9a57bdd7012166d62854cacddde24c2be69cbad578148e57b",
+    "tools/e2e/legacy-conflict-persistence.cjs": "8dacb46a1ddaadafd470b319341df5d223fdf0f97e561b032601b11142e9e103",
+    "tools/e2e/media-import.cjs": "68332581dadceda2716d9e47ad90a9f454b10c9584a4306e97a5a3ef513fdb64",
+    "tools/e2e/native-storage-fixture.cjs": "b2922a5f29f1b4672daad5532baf727c20daef87c030871d0417277e381e6816",
+    "tools/e2e/note-sync.cjs": "3ffd7063ac05bf1dbb92131758b89f8675032c619e5ac5b9d19b63cbb81a0966",
+    "tools/e2e/peer-sync.cjs": "788b3f49a7c74ed6acfdfc674756628eb8acfa5c6bd95201c4977b2d1751cd65",
+    "tools/e2e/pending-audio.cjs": "ca5b1aa9af90c4294fbaec659165bbe48997e56dfbc660f1671e2074b86ae50f",
+    "tools/e2e/protected-data.cjs": "db2cc248e3ecf611a7a029b32fc741d31c28c342832e4b9b2f4e214607f9bff7",
+    "tools/e2e/quality-regressions.cjs": "a5f341d3a03174ae2cae4b9126735aaefac92d410d1e5c649d136b46865b2fa1",
+    "tools/e2e/read-only-sync.cjs": "c1dea628dabfb68b8611054013db1ac4b1f55d2618f5aae13120f2dd8b8809cb",
+    "tools/e2e/release-history.cjs": "717764a2b44cc713c683348cd939342aceac46a0bcb6bdfffc611c8170db5b33",
+    "tools/e2e/sync-cadence.cjs": "67a6530a2606b9be4369c30612fa3c1d6e064b0f50ef63b805016050834d60b5",
+    "tools/e2e/sync-edit-guard.cjs": "568fe0f32e5d5eb43a449167a8ea432a72fc5d8d4b7cd0648132a3cc8a4409d8",
+    "tools/e2e/update39.cjs": "f1b94a5b4e466cc919d8cc585cae4f36ec5e3216111b1dd7f7ae74e9778470b5",
+    "tools/e2e/web-content-policy.cjs": "8025c1ae1bf54b3e826bff8c18a3525a6c3574ff8d6dee15738e777532a314c3",
+    "tools/e2e/workflows.cjs": "cd6106af94ed509eefcac63e516f78781c8ec089b2f2f5d614d0c0c028b6e034",
+    "tools/e2e/zoom-grid.cjs": "4044d8430e2d9b1f361da54e024e9d4189de637419f7d44b912292ab8326baed",
+    "app/src/main/java/cz/zamerovac/app/WebContentPolicy.java": "cd98309dccdd16dfc45f17318d0e5ea25d8b5322d7b4abcda015c95b4023a415"
+  }
+}

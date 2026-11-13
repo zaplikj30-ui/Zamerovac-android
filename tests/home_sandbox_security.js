@@ -12,6 +12,17 @@ const linuxProof={platform:'linux',evaluation:'You are adequately sandboxed.',ro
  ['Seccomp-BPF sandbox','Yes'],['Seccomp-BPF sandbox supports TSYNC','Yes']]};
 const windowsProof={platform:'win32',rows:[['123','Renderer','','Renderer','Lockdown','S-1-16-0 Untrusted']]};
 const hostProof=process.platform==='win32'?windowsProof:linuxProof;
+// Synthetic policy tests inject only the disk-identity boundary; no real executable is launched.
+function policy(){
+ const filename=path.resolve(__dirname,'../tools/e2e/sandbox.cjs'),m={exports:{}};
+ const runtime={platform:process.platform,ppid:12345,env:{ZAMEROVAC_SUPERVISOR_PID:'12345',
+  ZAMEROVAC_SCOPE:process.platform==='win32'?'windows-private-job':'linux-pidfd-subreaper',ZAMEROVAC_RUN_TOKEN:'a'.repeat(32)}};
+ vm.runInNewContext(fs.readFileSync(filename,'utf8'),{module:m,process:runtime,setTimeout,clearTimeout,require(id){
+  if(id==='../qa-browser-identity.cjs')return {verifyBrowserIdentity(file){assert.equal(file,'/safe/chromium');return {path:file,sha256:'synthetic-only'}}};
+  return createRequire(filename)(id);
+ }},{filename});
+ return m.exports;
+}
 function fakeBrowser(proof=hostProof,args=['--enable-automation']){
  let closed=0;
  return {get closed(){return closed},async close(){closed++},
@@ -26,6 +37,7 @@ test('harness explicitly enables sandbox before any application case',async()=>{
   vm.runInNewContext(fs.readFileSync(harness,'utf8'),{module:m,
    process:{platform:'linux',argv:[],env:{ZAMEROVAC_E2E_DIR:dir,CHROMIUM_PATH:'/safe/chromium'}},
    require(id){
+    if(id==='./sandbox.cjs')return policy();
     if(id==='playwright')return {chromium:{async launch(o){options=o;return b}}};
     if(id==='node:child_process')return {execFileSync(){return 'a'.repeat(40)}};
     return localRequire(id);
@@ -37,7 +49,7 @@ test('harness explicitly enables sandbox before any application case',async()=>{
  }finally{fs.rmSync(dir,{recursive:true,force:true})}
 });
 test('launch policy rejects disabled sandbox, flags and malformed options before spawn',async()=>{
- const {launchSandboxed}=require('../tools/e2e/sandbox.cjs');let launched=0;
+ const {launchSandboxed}=policy();let launched=0;
  for(const change of [{chromiumSandbox:false},{chromiumSandbox:undefined},
   {args:['--no-sandbox']},{args:['--no-sandbox=true']},{args:['--disable-setuid-sandbox']},
   {args:'--no-sandbox'},{ignoreDefaultArgs:true},{env:{}},{headless:'yes'},
@@ -49,14 +61,14 @@ test('launch policy rejects disabled sandbox, flags and malformed options before
  assert.equal(launched,0);
 });
 test('launch error blocks once, no retry or downgrade',async()=>{
- const {launchSandboxed}=require('../tools/e2e/sandbox.cjs');let launched=0;
+ const {launchSandboxed}=policy();let launched=0;
  await assert.rejects(launchSandboxed({async launch(){launched++;throw Error('sandbox unavailable')}},
   {executablePath:'/safe/chromium',chromiumSandbox:true,headless:true,args:[]}),
   e=>e.code==='HOME_BLOCKED'&&/sandbox unavailable/.test(e.message));
  assert.equal(launched,1);
 });
 test('unverifiable or disabled runtime sandbox closes browser and blocks',async()=>{
- const {launchSandboxed}=require('../tools/e2e/sandbox.cjs');
+ const {launchSandboxed}=policy();
  for(const [proof,args] of [[null,[]],[{...linuxProof,evaluation:'You are NOT adequately sandboxed.'},[]],
   [linuxProof,['--no-sandbox']],[{...linuxProof,rows:[]},[]]]){
   const b=fakeBrowser(proof,args);
@@ -66,7 +78,7 @@ test('unverifiable or disabled runtime sandbox closes browser and blocks',async(
  }
 });
 test('positive fixtures keep Linux and Windows evidence separate',async()=>{
- const {launchSandboxed,checkEvidence}=require('../tools/e2e/sandbox.cjs');const b=fakeBrowser();
+ const {launchSandboxed,checkEvidence}=policy();const b=fakeBrowser();
  assert.equal(checkEvidence(linuxProof,'linux').platform,'linux');
  assert.throws(()=>checkEvidence(linuxProof,'win32'),e=>e.code==='HOME_BLOCKED');
  const r=await launchSandboxed({async launch(){return b}},
@@ -83,7 +95,7 @@ test('runner reports sandbox failure as BLOCKED and cannot count it as PASS',()=
  }finally{fs.rmSync(dir,{recursive:true,force:true})}
 });
 test('Windows policy diagnostics require live renderer IDs, Lockdown and Untrusted integrity',()=>{
- const {checkEvidence}=require('../tools/e2e/sandbox.cjs');
+ const {checkEvidence}=policy();
  const proof=windowsProof;
  assert.equal(checkEvidence(proof,'win32').platform,'win32');
  for(const bad of [{...proof,rows:[]},{...proof,platform:'linux'},
@@ -93,7 +105,7 @@ test('Windows policy diagnostics require live renderer IDs, Lockdown and Untrust
   assert.throws(()=>checkEvidence(bad,'win32'),e=>e.code==='HOME_BLOCKED');
 });
 test('CDP/diagnostic failure closes the browser and never invokes application body',async()=>{
- const {launchSandboxed}=require('../tools/e2e/sandbox.cjs');
+ const {launchSandboxed}=policy();
  for(const method of ['newBrowserCDPSession','newContext']){
   const b=fakeBrowser();b[method]=async()=>{throw Error('unavailable '+method)};
   await assert.rejects(launchSandboxed({async launch(){return b}},
@@ -102,7 +114,7 @@ test('CDP/diagnostic failure closes the browser and never invokes application bo
  }
 });
 test('stalled diagnostics are bounded, close browser and return BLOCKED',async()=>{
- const {launchSandboxed}=require('../tools/e2e/sandbox.cjs');
+ const {launchSandboxed}=policy();
  const b=fakeBrowser();b.newBrowserCDPSession=()=>new Promise(()=>{});
  const start=Date.now();
  await assert.rejects(launchSandboxed({async launch(){return b}},
@@ -110,68 +122,58 @@ test('stalled diagnostics are bounded, close browser and return BLOCKED',async()
   e=>e.code==='HOME_BLOCKED'&&/timed out/.test(e.message));
  assert.equal(b.closed,1);assert(Date.now()-start<10000);
 });
-test('real runner CLI checkpoints BLOCKED for each sandbox preflight failure',()=>{
- const dir=fs.mkdtempSync(path.join(os.tmpdir(),'qa-runner-negative-'));
+test('supervised worker checkpoints launch/diagnostic failures without unsafe browser execution',async()=>{
+ const {ownedWorker}=require('../tools/qa-process-client.cjs');
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'qa-worker-negative-'));
  try{
   const stub=path.join(dir,'playwright.cjs'),preload=path.join(dir,'preload.cjs');
   fs.writeFileSync(path.join(dir,'package.json'),JSON.stringify({version:'1.62.1'}));
   fs.writeFileSync(preload,[
-   "const M=require('node:module'),original=M._resolveFilename;",
-   'M._resolveFilename=function(request,...args){',
-   " if(request==='playwright')return process.env.QA_STUB;",
-   ' return original.call(this,request,...args);};'
+   "const M=require('node:module'),resolve=M._resolveFilename,load=M._load;",
+   "M._resolveFilename=function(r,...a){if(r==='playwright')return process.env.QA_STUB;if(r==='playwright/package.json')return require('path').join(require('path').dirname(process.env.QA_STUB),'package.json');return resolve.call(this,r,...a)};",
+   "M._load=function(r,...a){if(r.endsWith('qa-browser-identity.cjs'))return {verifyBrowserIdentity(){return {path:'/safe/chromium',sha256:'synthetic-only'}}};return load.call(this,r,...a)};"
   ].join('\n'));
   fs.writeFileSync(stub,[
    "const fs=require('node:fs');",
-   'exports.chromium={executablePath:()=>__filename,async launch(options){',
+   'exports.chromium={async launch(options){',
    "fs.appendFileSync(process.env.QA_CALLS,JSON.stringify(options)+'\\n');",
    "if(process.env.QA_FAULT==='launch')throw Error('synthetic launch failure');",
    'return {async close(){},async newBrowserCDPSession(){return {async detach(){},async send(){',
-   " if(process.env.QA_FAULT==='cdp')throw Error('CDP unavailable');",
-   " return {arguments:['--enable-automation',...(process.env.QA_FAULT==='flag'?['--no-sandbox']:[])]};}}},",
+   "if(process.env.QA_FAULT==='cdp')throw Error('CDP unavailable');",
+   "return {arguments:['--enable-automation',...(process.env.QA_FAULT==='flag'?['--no-sandbox']:[])]};}}},",
    "async newContext(){return {async close(){},async newPage(){return {setDefaultTimeout(){},async goto(){},async waitForFunction(){},async evaluate(){return null}}}}}};}};"
   ].join('\n'));
   for(const fault of ['launch','cdp','flag','diagnostics']){
-   const calls=path.join(dir,fault+'-calls');
-   const r=spawnSync(process.execPath,['--require',preload,
-    path.resolve(__dirname,'../tools/local-browser-qa.cjs'),'--smoke'],{
-    encoding:'utf8',timeout:12000,env:{...process.env,QA_STUB:stub,QA_CALLS:calls,
-     QA_FAULT:fault,CHROMIUM_PATH:stub,LOCALAPPDATA:path.join(dir,fault)}});
-   assert.equal(r.status,1,r.stderr);assert.match(r.stderr,/HOME BLOCKED/);
-   const root=path.join(dir,fault,'Zamerovac-QA','browser');
-   const reports=fs.readdirSync(root);assert.equal(reports.length,1);
-   const report=JSON.parse(fs.readFileSync(path.join(root,reports[0],'results.json')));
-   assert.equal(report.status,'BLOCKED');assert.equal(report.counts.BLOCKED,3);
-   assert.equal(report.counts.PASS,0);
-   assert.equal(fs.existsSync(path.join(root,reports[0],'evidence')),false);
+   const token='a'.repeat(32),calls=path.join(dir,fault+'-calls');
+   const env={...process.env,QA_STUB:stub,QA_CALLS:calls,QA_FAULT:fault,
+    CHROMIUM_PATH:'/safe/chromium',ZAMEROVAC_RUN_TOKEN:token};
+   const r=await ownedWorker([process.execPath,'--require',preload,
+    path.resolve(__dirname,'../tools/qa-browser-worker.cjs'),'preflight',path.join(dir,fault+'.json')],
+    dir,env,path.join(dir,fault+'.log'),token,12000);
+   assert.equal(r.status,'BLOCKED');assert.equal(r.cleanupVerified,true);
+   assert.equal(fs.existsSync(path.join(dir,fault+'.json')),false);
    const launches=fs.readFileSync(calls,'utf8').trim().split('\n');
-   assert.equal(launches.length,1,'never retry without sandbox');
-   assert.equal(JSON.parse(launches[0]).chromiumSandbox,true);
+   assert.equal(launches.length,1);assert.equal(JSON.parse(launches[0]).chromiumSandbox,true);
   }
  }finally{fs.rmSync(dir,{recursive:true,force:true})}
 });
-test('suite exit 0 cannot pass runner without validated sandbox report',async()=>{
- const runner=path.resolve(__dirname,'../tools/local-browser-qa.cjs');
- const dir=fs.mkdtempSync(path.join(os.tmpdir(),'qa-suite-proof-'));
- const {EventEmitter}=require('node:events');const m={exports:{}};
- let spawns=0;
- try{
-  vm.runInNewContext(fs.readFileSync(runner,'utf8'),{module:m,__dirname:path.dirname(runner),
-   process,console,setTimeout,clearTimeout,require(id){
-    if(id==='node:child_process')return {spawn(){
-     spawns++;const child=new EventEmitter();child.stdout=new EventEmitter();child.stderr=new EventEmitter();
-     queueMicrotask(()=>child.emit('close',0,null));return child;
-    }};
-    return createRequire(runner)(id);
-   }},{filename:runner});
-  const destination=path.join(dir,'synthetic','report.json');
-  fs.mkdirSync(path.dirname(destination));
-  for(const proof of [null,{sandbox:null},{sandbox:{...hostProof,rows:[]}},{sandbox:hostProof}]){
-   if(proof)fs.writeFileSync(destination,JSON.stringify(proof));
-   const outcome=await m.exports.execute('synthetic',{ZAMEROVAC_E2E_DIR:dir},path.join(dir,'suite.log'));
-   assert.equal(outcome.exitCode,0);
-   assert.equal(outcome.status,proof?.sandbox===hostProof?'PASS':'BLOCKED');
-  }
-  assert.equal(spawns,4);
- }finally{fs.rmSync(dir,{recursive:true,force:true})}
+test('suite exit 0 cannot pass without a full fresh named report',()=>{
+ const {checkedReport,manifest}=require('../tools/qa-integrity.cjs');
+ const {profiles}=require('../tools/qa-browser-identity.cjs');
+ const identity={sourceSha:manifest.sourceSha,validatorSha:'b'.repeat(40),runToken:'a'.repeat(32)};
+ const valid={suite:'drawing',sha:identity.sourceSha,validatorSha:identity.validatorSha,runToken:identity.runToken,
+  filtered:false,status:'COMPLETE',syntheticOnly:true,sandbox:{...hostProof,binary:profiles[process.platform]},
+  cases:manifest.cases.drawing.map(name=>({name,status:'passed'}))};
+ for(const report of [null,{sandbox:null},{...valid,cases:[]},{...valid,cases:valid.cases.slice(1)}])
+  assert.throws(()=>checkedReport(report,'drawing',identity));
+ assert.equal(checkedReport(valid,'drawing',identity).scenarioTotal,manifest.cases.drawing.length);
+});
+test('hung browser.close is bounded and remains BLOCKED',async()=>{
+ const {launchSandboxed}=policy(),b=fakeBrowser();
+ b.newBrowserCDPSession=async()=>{throw Error('diagnostic failure')};
+ b.close=()=>new Promise(()=>{});
+ const start=Date.now();
+ await assert.rejects(launchSandboxed({async launch(){return b}},
+  {executablePath:'/safe/chromium',chromiumSandbox:true,headless:true,args:[]}),e=>e.code==='HOME_BLOCKED'&&/close timed out/.test(e.message));
+ assert(Date.now()-start<4000);
 });

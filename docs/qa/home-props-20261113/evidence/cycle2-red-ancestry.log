@@ -1,0 +1,14 @@
+test_reused_ancestor_pid_does_not_admit_foreign_descendant (test_qa_process_identity.IdentityRaceTests.test_reused_ancestor_pid_does_not_admit_foreign_descendant) ... FAIL
+
+======================================================================
+FAIL: test_reused_ancestor_pid_does_not_admit_foreign_descendant (test_qa_process_identity.IdentityRaceTests.test_reused_ancestor_pid_does_not_admit_foreign_descendant)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/Zamerovac-android/tests/test_qa_process_identity.py", line 29, in test_reused_ancestor_pid_does_not_admit_foreign_descendant
+    self.assertNotIn((300,3),scope.fds,'stale numeric ancestry must never confer ownership')
+AssertionError: (300, 3) unexpectedly found in {(300, 3): 99} : stale numeric ancestry must never confer ownership
+
+----------------------------------------------------------------------
+Ran 1 test in 0.001s
+
+FAILED (failures=1)

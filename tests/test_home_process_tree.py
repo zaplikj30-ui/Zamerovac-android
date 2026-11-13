@@ -60,6 +60,29 @@ class RuntimeGuardTests(unittest.TestCase):
 @unittest.skipUnless(sys.platform == 'linux' and os.geteuid() != 0,
                      'nonroot Linux process probe only; HOME Windows/WSL NOT RUN')
 class ProcessTreeTests(unittest.TestCase):
+    def test_published_readiness_is_never_partial_json(self):
+        with tempfile.TemporaryDirectory(prefix='zamerovac-home-tree-',dir='/tmp') as name, \
+             tempfile.TemporaryDirectory(prefix='qa-slow-writer-') as injection:
+            work=Path(name)
+            Path(injection,'sitecustomize.py').write_text(
+                'from pathlib import Path\nimport time\noriginal=Path.write_text\n'
+                'def slow(self,data,*a,**k):\n'
+                ' if self.parent.name.startswith("zamerovac-home-tree-") and self.suffix==".json":\n'
+                '  self.touch();time.sleep(.2)\n'
+                ' return original(self,data,*a,**k)\nPath.write_text=slow\n')
+            env={**os.environ,'PYTHONPATH':injection}
+            child=subprocess.Popen([sys.executable,str(PROBE),'--fixture','leaf','--work',name],env=env,
+                                   stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True)
+            try:
+                deadline=time.monotonic()+2
+                ready=work/'leaf.json'
+                while not ready.exists():
+                    self.assertLess(time.monotonic(),deadline)
+                    time.sleep(.002)
+                self.assertEqual(json.loads(ready.read_text())['pid'],child.pid)
+            finally:
+                child.kill();child.wait(timeout=2);child.stdout.close();child.stderr.close()
+
     def scenario(self, mode):
         with tempfile.TemporaryDirectory(prefix='home-outside-') as outside:
             sentinel = Path(outside) / 'sentinel.bin'
@@ -102,6 +125,8 @@ class ProcessTreeTests(unittest.TestCase):
                     writer.kill(); writer.wait(timeout=2)
                 elif mode == 'cancel':
                     proc.send_signal(signal.SIGTERM)
+                elif mode == 'token-cancel':
+                    proc.stdin.write('QA_CANCEL\n');proc.stdin.flush()
                 elif mode == 'invalid':
                     proc.stdin.write('WRONG\n'); proc.stdin.flush()
                 elif mode in ('normal', 'timeout'):
@@ -124,7 +149,7 @@ class ProcessTreeTests(unittest.TestCase):
                 else:
                     self.assertEqual(proc.returncode, 0, errors + tail)
                     self.assertEqual(final['status'], 'PASS')
-                    reason = {'heartbeat-loss': 'heartbeat-timeout', 'client-exit': 'eof'}.get(mode, mode)
+                    reason = {'heartbeat-loss': 'heartbeat-timeout', 'client-exit': 'eof','token-cancel':'cancel'}.get(mode, mode)
                     self.assertEqual(final['reason'], reason)
                     self.assertTrue(final['cleanupVerified'])
                     self.assertEqual(final['workloadExitCode'], 0 if mode == 'normal' else -signal.SIGKILL)
@@ -181,6 +206,9 @@ class ProcessTreeTests(unittest.TestCase):
 
     def test_client_process_death_closes_communication(self):
         self.scenario('client-exit')
+
+    def test_windows_bridge_cancel_protocol(self):
+        self.scenario('token-cancel')
 
 
 if __name__ == '__main__':

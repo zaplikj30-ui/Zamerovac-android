@@ -1,0 +1,23 @@
+test_published_readiness_is_never_partial_json (test_home_process_tree.ProcessTreeTests.test_published_readiness_is_never_partial_json) ... ERROR
+
+======================================================================
+ERROR: test_published_readiness_is_never_partial_json (test_home_process_tree.ProcessTreeTests.test_published_readiness_is_never_partial_json)
+----------------------------------------------------------------------
+Traceback (most recent call last):
+  File "/workspace/Zamerovac-android/tests/test_home_process_tree.py", line 82, in test_published_readiness_is_never_partial_json
+    self.assertEqual(json.loads(ready.read_text())['pid'],child.pid)
+                     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/json/__init__.py", line 346, in loads
+    return _default_decoder.decode(s)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/json/decoder.py", line 338, in decode
+    obj, end = self.raw_decode(s, idx=_w(s, 0).end())
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/opt/codex/runtimes/codex-primary-runtime/dependencies/python/lib/python3.12/json/decoder.py", line 356, in raw_decode
+    raise JSONDecodeError("Expecting value", s, err.value) from None
+json.decoder.JSONDecodeError: Expecting value: line 1 column 1 (char 0)
+
+----------------------------------------------------------------------
+Ran 1 test in 0.037s
+
+FAILED (errors=1)

@@ -1,147 +1,143 @@
-# HOME-PROP-01/02 – oddělený QA-only balík Codex 4
+# PR #122 – připravený bezpečný QA runner, HOME dosud BLOCKED
 
-**DRAFT / HOME BLOCKED / bez merge a APK.** Tento balík připravuje bezpečnostní
-předpoklady; neimplementuje finální HOME 4/4 ani release bránu. Autor testuje,
-poté následuje samostatná nezávislá bezpečnostní kontrola. Až pak vlastník
-rozhodne o případném neprodukčním běhu na domácím PC.
+Vlastní větev `qa/home-props-security-20261113`, base/main
+`8d05d2dd77c4a99f8ad64191c97d37ee3c151e3b`. Aktuální finální SHA a čerstvé
+výsledky jsou v popisu PR a issue #42. Předchozí `073d2dd...` a jeho 48/121 PASS
+jsou historická etapa, nikoli výsledek tohoto dokončeného balíku.
 
-## Identita a rozsah
+[Zadání/schválení](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42#issuecomment-6853678011),
+[security review](https://github.com/zaplikj30-ui/Zamerovac-android/pull/122#pullrequestreview-5892180049),
+[korekce závažnosti](https://github.com/zaplikj30-ui/Zamerovac-android/pull/122#issuecomment-6855199818).
+Nové přímé zadání vlastníka schválilo dokončení souvisejícího SOURCE/test balíku;
+HOME spuštění, Actions, merge, release a APK nadále neschválilo.
 
-- Vlastní větev `qa/home-props-security-20261113`, základ main
-  `8d05d2dd77c4a99f8ad64191c97d37ee3c151e3b`.
-- [Schválení a přesné hranice](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42#issuecomment-6853678011).
-- Produkt [#121](https://github.com/zaplikj30-ui/Zamerovac-android/pull/121)
-  `ae3b4df53c25557f28b4a25ccb65adc2abdff639` a
-  [nezávislý nález](https://github.com/zaplikj30-ui/Zamerovac-android/pull/121#pullrequestreview-5891220124).
-- QA reference [#117](https://github.com/zaplikj30-ui/Zamerovac-android/pull/117)
-  `2997cd46000a038497e14497a0fba6b8d2d29a2b`: princip heartbeat/EOF a vlastní
-  session/PGID. Jeho větev ani soubory se zde nepřepisují. Nová sonda není
-  zapojena do `sync116_home_qa.py` ani do Gradlu.
-- Přečten i souběžný [#119](https://github.com/zaplikj30-ui/Zamerovac-android/pull/119)
-  `650b9c0b3358f09e4393780a1627dfef49627748`; jeho tři cesty a větev zachovány.
-  Tento balík opravuje i skutečný harness/runner a přidává autentickou regresi.
-- Finální testovaný SHA, úplné výsledky a potvrzení triggerů jsou v draft PR
-  a závěrečném předání v existujícím issue #42. Žádný PASS se nedědí z #121.
+## Co runner skutečně vynucuje
 
-## HOME-PROP-01 – Chromium
+- **Binárka před startem:** sdílený `qa-browser-profiles.json` obsahuje přesnou
+  absolutní cestu, SHA256 a formát skutečného ELF/PE obrazu. Wrapper, jiná cesta,
+  odkaz/junction, hardlink nebo jiné bajty znamenají BLOCKED před launch.
+  Windows cesta/hash jsou převzaty z autentického staršího read-only logu jobu
+  131083537605 / běhu 43189084331, nikoli z odhadu nebo nového HOME běhu.
+  Linux profil je přímo `/usr/lib/chromium/chromium`, nikoli shell `/usr/bin/chromium`.
+- Python supervisor navíc drží binárku po celou dobu pokusu: na Windows native
+  handle s FILE_SHARE_READ a držený řetězec adresářů bez DELETE sharing, který
+  zakazuje záměnu souboru i přesměrování přejmenováním rodiče; na Linuxu ověřuje
+  existující instalaci nezapisovatelnou testovacím účtem a drží O_NOFOLLOW fd.
+  Očekávaný hash nelze přepsat prostředím. Nic se neinstaluje ani nepřepisuje.
+- **Sandbox:** pouze `chromiumSandbox:true`, žádné vlastní flagy či fallback.
+  CDP odmítá vypínače sandboxu a `chrome://sandbox` musí do 7 s potvrdit platformní
+  diagnostiku. Linux vyžaduje Namespace/SUID, PID/network namespaces a Seccomp/TSYNC;
+  Windows renderer PID, Lockdown a Untrusted integritu. Browser close je omezen
+  na 2 s. Vše běží uvnitř OS scope; zavěšený launch/close nebo Node nemůže udělit PASS.
+- **Úplnost:** `qa-pr121-manifest.json` má přesných **23 sad / 96 jmen** z produktu
+  `ae3b4df53c25557f28b4a25ccb65adc2abdff639`, porovnaných i se skutečnou registrací
+  všech případů, a SHA256 66 skutečně používaných zdrojových souborů. Všechny případy
+  musí mít `passed`, správné pořadí/identitu, source/validator SHA a nový run token.
+  Duplicity, extra/missing/renamed/stale/filtered/partial report ani exit0 bez důkazů
+  nemohou být PASS. `ZAMEROVAC_CASES` je v complete/smoke režimu zakázán i jako prázdná
+  proměnná. Samostatný vývojový filtr harness označí PARTIAL.
+- **Oddělený produkt:** runner z QA checkoutu čte přesný čistý PR121 checkout přes
+  `ZAMEROVAC_SOURCE_ROOT`. Kontroluje skutečné bajty i při assume-unchanged a zakazuje
+  extra ignorované soubory v assets/E2E. Zkopíruje E2E do vlastního scratch prostoru
+  a tam nahradí pouze QA harness/policy. Produktový původní harness se nespouští
+  ani nepřepisuje. Java WebContentPolicy, kterou jedna sada čte, je také připnutá.
+- **Procesy přímo v runneru:** preflight i každá sada používají stejnou cestu
+  JS client → Python supervisor → Node/Chromium. Linux subreaper sleduje i nové SID,
+  ověřuje živou ancestry/starttime/UID a drží pidfds; nepoužívá numerický PID kill
+  ani cizí procesové skupiny. Windows vytváří worker suspended a před ResumeThread
+  jej přiřadí do vlastního Job Object s KILL_ON_JOB_CLOSE a bez breakaway. Dědí jen
+  explicitní log/NUL handles. Native token musí být neelevovaný `ZamerovacQA`.
+  Procesy se řídí vlastními handles; Job musí hlásit active-process count 0.
+- Timeout, EOF, heartbeat loss, zrušení, Node crash i normální konec vždy vedou
+  přes úklid celého vlastního stromu. Chyba primary/emergency/handle cleanupu je
+  BLOCKED. Živé testy obsahují skutečné detached potomky, neúčinný primary cleanup,
+  cizí kontrolní proces a sentinel. Zombie znamená nedokončený úklid.
+- Profily/cache/temp Chromium jsou uvnitř vlastního nového run scratch; mimo něj
+  se nic nečistí. Scratch se odstraní až při prokázaném process cleanupu. Jinak se
+  zachová k diagnostice. Linux core dump limit se mění jen pro vlastní proces a děti.
+- Celkový PASS se zapisuje teprve po poslední kontrole source/validator bajtů,
+  uzavření serveru a úklidu. Průběžný report není finalizovaný a nemůže být PASS.
+  V Actions se zachovává owner + triggering_actor, přesný QA ref/SHA a attempt1.
+  Výsledky nadále mohou ležet pod `LOCALAPPDATA/Zamerovac-QA/browser/run-*`.
 
-`tools/e2e/sandbox.cjs` je společná launch politika harnessu i lokálního runneru:
+## Dostupná a nedostupná ověření
 
-1. Explicitní `chromiumSandbox:true`, headless, prázdné vlastní argumenty,
-   explicitní absolutní `CHROMIUM_PATH` a limit startu 15 s. Žádné vlastní `env`, profily,
-   `ignoreDefaultArgs` ani neznámé volby. Runner vyžaduje existující Playwright
-   1.62.1; nic neinstaluje a nevybírá náhradní browser po selhání.
-2. Před první aplikační stránkou ověří skutečné argumenty přes CDP
-   `Browser.getBrowserCommandLine`. Chybějící/zakázané argumenty znamenají
-   BLOCKED, včetně wrapperem přidaného `--no-sandbox` a vypínačů vrstev sandboxu.
-3. V novém odděleném dočasném contextu přečte `chrome://sandbox`. Celé ověření
-   má limit 7 s; chyba, timeout či neznámé diagnostické schéma zavřou browser
-   a skončí BLOCKED. Žádný druhý pokus s vypnutým sandboxem.
-4. Linux vyžaduje kladné celkové hodnocení, SUID/Namespace vrstvu, PID/network
-   namespaces, Seccomp-BPF a TSYNC. Windows vyžaduje rendererové řádky s PID,
-   sandbox `Renderer`, token policy `Lockdown` a integritu
-   `S-1-16-0 Untrusted`. Linuxový výsledek nesmí projít jako Windows.
-5. Runner provádí preflight před serverem/sadami. Každá sada znovu ověřuje svůj
-   vlastní browser; exit 0 bez platné sandbox evidence není PASS. BLOCKED je
-   uložen v JSON a vrací nenulový exit. Původní Git preflight zůstává před startem.
+Nové `home_qa_integrity.js`, rozšířené sandbox testy, `qa_process_client.js` a
+Python procesové/identity/Windows-contract testy navazují na celou původní sadu.
+Po poslední změně musí autor znovu provést všechny JS/Python testy na čistém SHA.
+Úplné aktuální výsledky, prostředí a logy jsou v PR. Pozitivní fixture dokazují
+rozhodování guardů; nenahrazují živý browser ani Windows kernelový běh.
 
-Diagnostické hodnoty Windows jsou odvozeny z upstream Chromium
-[`sandbox_internals_win.ts`](https://github.com/chromium/chromium/blob/main/chrome/browser/resources/sandbox_internals/sandbox_internals_win.ts)
-a [`sandbox_policy_diagnostic.cc`](https://github.com/chromium/chromium/blob/main/sandbox/win/src/sandbox_policy_diagnostic.cc).
-Jde o kontrolu nativně hlášené politiky živých rendererů, nikoli o nezávislý audit
-Windows kernelových tokenů či přístupů k souborům. Kompatibilita s připnutým
-HOME Chromium a účtem služby zatím nebyla spuštěním ověřena. Neznámá/odlišná
-diagnostika proto zůstane BLOCKED a vyžádá nové posouzení.
+Původní procesová sonda zůstala zachována a opravil se atomický zápis READY JSON.
+Nový `home_qa_wsl_bridge.py` připravuje budoucí skutečnou Windows→WSL pipe zkoušku:
+existující default nonroot účet, konkrétní QA SHA/bajty, explicitní čistě Python
+procesový test soubor (nikoli WSL unittest discovery), normal/EOF/heartbeat/timeout/
+cancel/invalid a následná read-only kontrola PID v /proc. Na Linuxu odmítá volání
+před jakýmkoli WSL procesem. Nikdy nevolá Gradle, sudo, root user ani WSL shutdown.
 
-**Skutečný managed Linux pokus:** Chromium 156.0.8078.79 odmítlo start
-se zapnutým sandboxem: SUID helper má vlastníka `nobody`, režim 4755, nikoli
-požadovaného vlastníka. Zaznamenána také chyba crashpad. Oprávnění, vlastníka,
-instalace ani izolaci prostředí jsme neměnili. Runner vytvořil BLOCKED JSON
-a žádná aplikační sada nezačala. Pozitivní runtime Chromium zde není PASS.
-Windows diagnostické fixture jsou pouze jednotkové testy, nikoli Windows běh.
+**Windows Job, token, file-sharing lock a Windows→WSL transport nyní NOT RUN.**
+API/protokol fixture na Linuxu nejsou Windows runtime PASS. Linux sonda ani Node
+fixture nejsou Chromium 23/96 PASS. Je-li skutečný bezpečný browser v managed Linuxu
+nedostupný, jeho raw exit/log a přesný BLOCKED se zachovají; ochrana se nevypíná.
 
-## HOME-PROP-02 – neprodukční procesový strom
+## Jeden postup pro budoucí výslovně schválený HOME test
 
-`tools/home_process_tree_probe.py --probe` je samostatný Linux/WSL test-only
-supervisor. Sám WSL nespouští a na Windows skončí BLOCKED před startem procesů.
-Neumí přijmout libovolný příkaz ani externí PID/PGID; spouští jen pevnou vlastní
-Python fixture se třemi úrovněmi. Není náhradou produkčního Gradle runneru.
+Toto je připravený payload, **nikoli souhlas jej spustit**. Po jediné nezávislé
+SOURCE kontrole musí vlastník zvlášť schválit konkrétní QA SHA, product SHA a
+owner-only způsob provedení. Použít jen již existující důvěryhodný execution channel
+pod neelevovaným ZamerovacQA; není-li takový schválený kanál dostupný, zůstat BLOCKED.
+Neotvírat interaktivní přihlášení, neměnit service/ACL, neinstalovat závislosti a
+nepoužívat obecný main browser workflow, který dosud obsahuje instalaci.
 
-- Vyžaduje existující neprivilegovaný Linux účet. Odmítá root a nepodporované
-  prostředí/kernel. `start_new_session=True` poskytne vlastní SID/PGID.
-- Soukromý adresář vzniká přes `TemporaryDirectory` pod `/tmp` s počátečním
-  soukromým režimem. Žádné chmod/chown, sudo, instalace, WSL shutdown či cizí kill.
-- Před READY a signály kontroluje vlastního nezreapovaného leadera: PID,
-  starttime z `/proc`, UID, PGID a SID. Nepřijímá PID z vnějšího vstupu. Leader
-  zůstává ukotvený i jako zombie až do dokončení signalizace, aby se PID neuvolnilo.
-- Používá TERM a následně KILL; fixture úmyslně ignorují TERM. Linux
-  `PR_SET_CHILD_SUBREAPER` se nastaví jen na tomto izolovaném supervisoru,
-  bez změny uživatele/oprávnění. Umožní mu reapovat vlastní osiřelé vnuky.
-  Zombie stále znamená nedokončený úklid, nikoli PASS.
-- Hlídá EOF, neplatnou komunikaci, tichou ztrátu heartbeat, absolutní timeout,
-  SIGTERM/INT/HUP zrušení a běžné dokončení. V normálním scénáři leader skutečně
-  skončí s exit 0 a potomci ještě žijí; úklid je přesto musí ukončit a reapovat.
-- Všechny fixture samy časově expirují (6 s; rodič může krátce čekat na potomka).
-  Selhání signálů se nepřeklápí na PASS; oddělená nouzová cesta uklízí pouze
-  tutéž ověřenou vlastní skupinu a zachovává výsledek BLOCKED.
-- Testy kontrolují skutečnou existenci všech tří PID předem a jejich nepřítomnost
-  po návratu, odstranění pouze vlastního tmp, nezměněné sentinel bajty mimo tmp
-  a dál živý vlastní kontrolní proces mimo testovací skupinu.
+1. V již schváleném kontextu připravit dva **read-only checkouty**, `gate` = finální
+   nezávisle schválený QA SHA z tohoto PR, `source` = přesně produkt SHA uvedený výše.
+   Ověřit jejich HEAD a čistotu. Checkouts musí mít kanonické bajty bez CRLF konverze;
+   použít pouze pro tento checkout `git -c core.autocrlf=false`, nikoli změnu globální
+   Git/PC konfigurace. Jakýkoli rozdíl bajtů je BLOCKED. Žádný checkout nebezpečného PR/forku, re-run či cizí
+   větev. V Actions pouze owner push do přesné QA větve, attempt1; payload nedává
+   oprávnění vyrobit/pushnout nové YAML. Případný nový workflow musí samostatně
+   splnit generátor/strict lint pravidla a dostat vlastní schválení před spuštěním.
+2. Použít **již existující** Python3, Node, MinGit a Playwright1.62.1, existující
+   schválený Chromium a WSL distro. Chybějící offline dependency/binárka znamená STOP;
+   žádné npm/npx/pip/install/změny cache. PATH/NODE_PATH jen dočasně pro tento proces
+   z předem ověřených existujících cest. Nastavit:
 
-Živá regrese obsahuje i smrt samostatného klientského procesu, která skutečně
-uzavře komunikační pipe. Další negativní test zneúčinní primární signály;
-procesy skutečně zůstanou živé, ověření vrátí BLOCKED a vlastní nouzový úklid
-je ukončí. To je odlišné od původního #117 mocku `kill()`.
+   ```bat
+   set "ZAMEROVAC_SOURCE_ROOT=%GITHUB_WORKSPACE%\source"
+   set "ZAMEROVAC_EXPECTED_QA_SHA=PLNY_NEZAVISLE_SCHVALENY_FINALNI_QA_SHA"
+   set "CHROMIUM_PATH=C:\actions-runner\tools\ms-playwright\chromium_headless_shell-1234\chrome-headless-shell-win64\chrome-headless-shell.exe"
+   set "LOCALAPPDATA=%RUNNER_TEMP%\zamerovac-owned-qa-evidence"
+   cd /d "%GITHUB_WORKSPACE%\gate"
+   ```
 
-**Hranice důkazu:** provedený managed Linux není WSL. Netestovali jsme přenos
-Windows služby do WSL, násilné SIGKILL supervisoru, vypnutí PC, cache ani Gradle
-daemon, který by změnil SID. Sonda podporuje pevný testovací strom ve vlastní
-session. Žádný HOME JVM PASS či aktivace starého watchdogu z ní automaticky neplyne.
-Po nezávislém review je nutné samostatné povolení Windows/WSL sondy; před ní ověřit
-skutečný nonroot účet, konkrétní PID/PGID izolaci, existující read-only/offline cache
-a přesný schválený způsob přenosu EOF/cancel. Chybějící předpoklad = HOME BLOCKED.
+   Konkrétní finální QA SHA a tentýž payload s doslovnou hodnotou jsou v konečném
+   předání PR; hodnotu nelze odvodit z nedůvěryhodného aktuálního HEAD.
+3. Sériově spustit Windows quick regresi všech `tests/*.js` a `test_*.py`; zaznamenat
+   i platformní SKIP. Potom `node tools/local-browser-qa.cjs --self-test` a
+   `node tools/local-browser-qa.cjs --all`. Každý nenulový exit/BLOCKED znamená STOP.
+   Full browser PASS vyžaduje nový finalizovaný report **23/96**, správný OS/source/
+   validator/run token (a případný Actions runID/attempt), binary a cleanup evidence;
+   žádný filtr či dědění starých důkazů. Při sandbox/Job nekompatibilitě nic nepovolovat.
+4. Po browser části zavolat přesně
+   `python tools/home_qa_wsl_bridge.py --run-home --expected-qa-sha STEJNY_SCHVALENY_QA_SHA`.
+   Zachovat stdout/PID důkazy i Windows výsledky; žádné JVM testy, kopírování klientských
+   souborů či oprava WSL/cache. Neúspěch = BLOCKED. Na 16 GB běžet sériově, bez dalšího
+   browser/Gradle/emulátoru. Výsledky společně nezávisle posoudit v PR a issue #42.
 
-## Test-first a výsledky
+Ani tento úspěšný neprodukční HOME test by nebyl HOME 4/4, JVM513 či release PASS.
+Read-only/offline JDK/Gradle/SDK cache a původní 511+2 raw JVM pravidla se musí ověřit
+v samostatně schválené finální integraci; dvě skutečné #88 FAIL se nesmějí přebarvit.
 
-- [Původní browser RED](evidence/red-browser.log): 6 FAIL před implementací.
-  Skutečné původní aserce prokázaly chybějící `chromiumSandbox:true` a chybějící
-  BLOCKED report; další FAIL prokázaly dosud neexistující policy modul.
-- [Počáteční procesový RED](evidence/red-process.log): nová živá sonda dosud
-  neexistovala. **Není to tvrzení, že byl reprodukován únik procesů původního #117.**
-- [Původní watchdog #117](evidence/reference117-mock.log): oba původní unit testy
-  skutečně PASS z privátního read-only zdrojového snapshotu. Stále pouze mock;
-  jejich PASS neprokazuje zabití procesů a nenahrazuje novou živou regresi.
-- [Průběžný FAIL](evidence/intermediate-process-fail.log): první živý úklid fungoval,
-  ale test při uzavírání pipe po skončení klienta vyvolal `BrokenPipeError`.
-  Opraven testovací teardown, původní FAIL zachován.
-- Finální dostupná společná regrese: všechny `tests/*.js`, všechny
-  `test_*.py`, syntax nových/změněných QA skriptů, skutečný sandboxový pokus a
-  statické ověření nedotčených produktových cest/workflow. Úplný SHA a čerstvé
-  logy viz konečné předání v draft PR; uložené pracovní logy mají vlastní identitu.
-- Dvě původně přeskočené Java smoke kontroly byly znovu provedeny se stávajícím
-  Temurin 17 z `/workspace/toolchains/jdk-17.0.17+10`, bez instalace. Testové
-  executable fixture HOME gate nyní dostanou režim při výlučném vytvoření;
-  následný chmod není potřeba. Původní aserce a runtime gate se nemění.
+## Zachované hranice a historie
 
-Pro autorskou regresi v tomto managed Linuxu (nejde o příkaz pro domácí WSL):
+`app/**`, data/geometrie, média, ukládání/archivy/sync, dvě #88 diagnostiky, podpis,
+package/version a všech sedm workflow jsou byte-exact proti base beze změny.
+PR #121/#117/#119 ani jejich větve se nepřepisují. Nápověda a changelog aplikace se
+nemění, protože nejde o produktovou změnu. Žádný merge, release, APK ani Actions.
 
-```sh
-export JAVA_HOME=/workspace/toolchains/jdk-17.0.17+10
-export PATH="$JAVA_HOME/bin:$PATH"
-for test in tests/*.js; do node "$test" || exit 1; done
-python3 -m unittest discover -s tests -p 'test_*.py' -v
-```
-
-## Bez automatiky a produktových změn
-
-Žádná nová/změněná `.github/workflows/**`, žádný dispatch, Actions rerun,
-merge, release ani APK. Před každým pushem znovu načíst živé main/PR SHA a
-workflow: současný jediný automatický push HOME trigger je omezen na `main`,
-ostatní workflow jsou ruční. Nová `qa/home-props-security-20261113` žádný
-one-shot YAML neobsahuje. Po pushi ověřit skutečné runs/statuses.
-
-`app/**`, přesné hodnoty, původní média, synchronizace a obě původní diagnostiky
-#88 jsou beze změny. Nápověda/changelog aplikace se nemění, protože jde výhradně
-o QA infrastrukturu bez změny produktu. Původní signing/version/provenance a
-vydávací pravidla zůstávají. Linux/JDK autorské testy nelze vydávat za Windows
-HOME, fyzický Android či reálný Drive/SAF PASS.
+Historické RED a průběžné FAIL jsou v `evidence/`; počáteční procesový RED znamenal
+chybějící sondu, nikoli prokázaný únik starého #117. V tomto cyklu jsou navíc zachovány
+RED pro manifest/filter/binárku, stale ancestry při PID reuse, publikaci neúplného
+READY a skutečný owner SIGABRT před opravou daemon buffered stdin. Skutečný Node crash
+je testován. Násilné SIGKILL Linux supervisoru/OS power-loss není zárukou pidfd backendu;
+Windows kernelový Job má kill-on-close, ale jeho skutečný běh čeká na povolení HOME.

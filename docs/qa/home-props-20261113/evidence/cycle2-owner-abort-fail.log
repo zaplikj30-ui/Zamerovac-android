@@ -1,0 +1,33 @@
+✖ actual runner process client: normal (1610.982256ms)
+{"mode":"timeout","pids":[6218,6226,6233],"result":{"event":"result","token":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","status":"BLOCKED","reason":"timeout","exitCode":null,"cleanupVerified":true,"error":null,"processes":[{"pid":6218,"ppid":6211,"start":500254,"uid":1000},{"pid":6226,"ppid":6218,"start":500257,"uid":1000},{"pid":6233,"ppid":6226,"start":500260,"uid":1000}],"platform":"linux","supervisorExit":null,"signal":"SIGABRT"},"outsideProcess":"alive","sentinel":"unchanged"}
+✔ actual runner process client: timeout (2427.29441ms)
+{"mode":"cancel","pids":[6248,6256,6263],"result":{"event":"result","token":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","status":"BLOCKED","reason":"cancel","exitCode":null,"cleanupVerified":true,"error":null,"processes":[{"pid":6248,"ppid":6241,"start":500497,"uid":1000},{"pid":6256,"ppid":6248,"start":500500,"uid":1000},{"pid":6263,"ppid":6256,"start":500503,"uid":1000}],"platform":"linux","supervisorExit":77,"signal":null},"outsideProcess":"alive","sentinel":"unchanged"}
+✔ actual runner process client: cancel (444.522717ms)
+ℹ tests 3
+ℹ suites 0
+ℹ pass 2
+ℹ fail 1
+ℹ cancelled 0
+ℹ skipped 0
+ℹ todo 0
+ℹ duration_ms 4487.961377
+
+✖ failing tests:
+
+test at tests/qa_process_client.js:13:49
+✖ actual runner process client: normal (1610.982256ms)
+  AssertionError [ERR_ASSERTION]: {"event":"result","token":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","status":"BLOCKED","reason":"normal","exitCode":0,"cleanupVerified":true,"error":null,"processes":[{"pid":6180,"ppid":6174,"start":500093,"uid":1000},{"pid":6189,"ppid":6180,"start":500099,"uid":1000},{"pid":6196,"ppid":6189,"start":500105,"uid":1000}],"platform":"linux","supervisorExit":null,"signal":"SIGABRT"}
+  
+  'BLOCKED' !== 'PASS'
+  
+      at TestContext.<anonymous> (/workspace/Zamerovac-android/tests/qa_process_client.js:33:10)
+      at process.processTicksAndRejections (node:internal/process/task_queues:104:5)
+      at async Test.run (node:internal/test_runner/test:1409:7)
+      at async startSubtestAfterBootstrap (node:internal/test_runner/harness:387:3) {
+    generatedMessage: false,
+    code: 'ERR_ASSERTION',
+    actual: 'BLOCKED',
+    expected: 'PASS',
+    operator: 'strictEqual',
+    diff: 'simple'
+  }

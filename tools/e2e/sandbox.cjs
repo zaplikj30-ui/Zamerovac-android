@@ -1,6 +1,7 @@
 'use strict';
 // One launch policy for the harness and local runner. No persistent user profile.
 const path=require('node:path');
+const {verifyBrowserIdentity}=require('../qa-browser-identity.cjs');
 function blocked(message){return Object.assign(Error('HOME BLOCKED: '+message),{code:'HOME_BLOCKED'})}
 function launchOptions(executablePath){
  return {executablePath,chromiumSandbox:true,headless:true,args:[],timeout:15000};
@@ -68,12 +69,23 @@ async function launchSandboxed(chromium,options){
  let browser;
  try{
   checkOptions(options);
+  const backend=process.platform==='win32'?'windows-private-job':'linux-pidfd-subreaper';
+  if(process.env.ZAMEROVAC_SUPERVISOR_PID!==String(process.ppid)||process.env.ZAMEROVAC_SCOPE!==backend||
+     !/^[a-f0-9]{32}$/.test(process.env.ZAMEROVAC_RUN_TOKEN||''))throw blocked('owned process supervisor required before Chromium launch');
+  const identity=verifyBrowserIdentity(options.executablePath);
   browser=await chromium.launch(options);
+  const close=browser.close.bind(browser);
+  browser.close=()=>bounded(close,2000,'browser close timed out');
   const evidence=await boundedVerification(browser);
-  return {browser,evidence};
+  return {browser,evidence:{...evidence,binary:identity}};
  }catch(error){
-  if(browser)await browser.close().catch(()=>{});
+  if(browser)try{await browser.close()}catch(closeError){throw blocked(error.message+'; '+closeError.message)}
   throw error.code==='HOME_BLOCKED'?error:blocked(String(error.message||error));
  }
+}
+async function bounded(action,ms,message){
+ let timer;
+ try{return await Promise.race([action(),new Promise((_,reject)=>{timer=setTimeout(()=>reject(blocked(message)),ms)})])}
+ finally{clearTimeout(timer)}
 }
 module.exports={blocked,launchOptions,launchSandboxed,checkEvidence,checkCommandLine};

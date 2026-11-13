@@ -108,7 +108,10 @@ def fixture(role, work, normal):
                                       '--fixture', next_role, '--work', str(work)],
                                      stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
                                      stderr=subprocess.DEVNULL)
-        (work / (role + '.json')).write_text(json.dumps(identity(os.getpid())))
+        pending=work/(role+'.json.tmp')
+        with pending.open('x') as output:
+            output.write(json.dumps(identity(os.getpid())))
+        os.replace(pending,work/(role+'.json'))
         started = time.monotonic()
         while time.monotonic() - started < 6:
             if role == 'leader' and normal and time.monotonic() - started > .35:
@@ -182,6 +185,8 @@ def run_probe(normal=False):
                                 reason = 'invalid'; break
                             lines = buffer.split(b'\n')
                             buffer = lines.pop()
+                            if b'QA_CANCEL' in lines:
+                                reason = 'cancel'; break
                             if any(line != b'QA_ALIVE' for line in lines):
                                 reason = 'invalid'; break
                             if lines:

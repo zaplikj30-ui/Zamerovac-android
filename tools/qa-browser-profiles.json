@@ -1,0 +1,12 @@
+{
+  "linux": {
+    "path": "/usr/lib/chromium/chromium",
+    "sha256": "ce1ff960ce428a4a88b1b1c38516bdf1954a57fc24036161b7a0d8d0f8aec511",
+    "magic": "7f454c46"
+  },
+  "win32": {
+    "path": "C:\\actions-runner\\tools\\ms-playwright\\chromium_headless_shell-1234\\chrome-headless-shell-win64\\chrome-headless-shell.exe",
+    "sha256": "ce4635cd0e5dc0e21494542a701f347e91c1f1d821970578d97ed8df4ced50ef",
+    "magic": "4d5a"
+  }
+}
