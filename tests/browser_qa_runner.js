@@ -7,7 +7,7 @@ const {initialRecords,statusReport,killTreeArgs,modes}=require('../tools/local-b
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),'zamerovac-browser-qa-'));
 try{
  const records=initialRecords('--all');
- assert.equal(records.length,23)
+ assert.equal(records.length,23);
  assert(records.some(x=>x.suite==='pending-audio'));
  assert(records.some(x=>x.suite==='legacy-conflict-persistence'));
  assert(records.every(x=>x.status==='NOT RUN'));
@@ -26,7 +26,7 @@ try{
  assert.deepEqual(killTreeArgs(1234,'win32'),['taskkill.exe',['/PID','1234','/T','/F']]);
  assert.equal(killTreeArgs(1234,'linux'),null);
  assert.throws(()=>killTreeArgs(-1,'win32'),/PID/);
- assert.equal(modes['--all'].length,21);
+ assert.equal(modes['--all'].length,23);
  const gateRunner=path.join(__dirname,'..','tools','local-browser-qa.cjs');
  // The pinned runner's real localhost HTTP path is exercised, not only its CLI shape.
  const serverProbe=spawnSync(process.execPath,[gateRunner,'--self-test'],{
