@@ -4,6 +4,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
 const {spawnSync}=require('node:child_process');
 const {initialRecords,statusReport,killTreeArgs,checkedCases,modes}=require('../tools/local-browser-qa.cjs');
+const approvedCases=require('../tools/sync116_case_manifest.json').chromium;
 const dir=fs.mkdtempSync(path.join(os.tmpdir(),'zamerovac-browser-qa-'));
 try{
  const records=initialRecords('--all');
@@ -28,32 +29,50 @@ try{
  assert.throws(()=>killTreeArgs(-1,'win32'),/PID/);
  assert.equal(modes['--all'].length,23);
 
- const fake=records.map((r,i)=>({...r,status:'PASS',scenarioTotal:4,scenarioPassed:4,error:null}));
+ const fake=records.map(r=>({...r,status:'PASS',
+  scenarioTotal:approvedCases[r.suite].length,
+  scenarioPassed:approvedCases[r.suite].length,
+  scenarioNames:[...approvedCases[r.suite]],error:null}));
  const verifiedIntegrity={status:'PASS',digest:'synthetic-only'};
  report=statusReport('--all',fake,dir,'a'.repeat(40),verifiedIntegrity);
  assert.equal(report.coverage.actualCases,92);
  assert.equal(report.coverage.status,'PASS');
- report=statusReport('--all',fake.map((r,i)=>i===0?{...r,scenarioTotal:5,scenarioPassed:5}:r),
+ report=statusReport('--all',fake.map((r,i)=>i===0?{...r,scenarioTotal:r.scenarioTotal+1,scenarioPassed:r.scenarioPassed+1}:r),
   dir,'a'.repeat(40),verifiedIntegrity);
  assert.equal(report.coverage.status,'FAIL','93 cases cannot impersonate 92');
- report=statusReport('--all',fake.map((r,i)=>i===0?{...r,scenarioPassed:3}:r),
+ report=statusReport('--all',fake.map((r,i)=>i===0?{...r,scenarioPassed:r.scenarioPassed-1}:r),
   dir,'a'.repeat(40),verifiedIntegrity);
  assert.equal(report.coverage.status,'FAIL','incomplete cases must not PASS');
  report=statusReport('--all',fake,dir,'a'.repeat(40),{status:'FAIL',error:'dirty source'});
  assert.equal(report.coverage.status,'FAIL','source mutation cannot PASS');
+ const fakeSuites=fake.map((r,i)=>({...r,suite:'suite'+i}));
+ report=statusReport('--all',fakeSuites,dir,'a'.repeat(40),verifiedIntegrity);
+ assert.equal(report.coverage.status,'FAIL','23 fabricated suites cannot PASS');
+ const substituted=fake.map((r,i)=>i===0?{...r,
+  scenarioNames:['unapproved-scenario',...r.scenarioNames.slice(1)]}:r);
+ report=statusReport('--all',substituted,dir,'a'.repeat(40),verifiedIntegrity);
+ assert.equal(report.coverage.status,'FAIL','renamed scenario at 92 cannot PASS');
+ const reordered=fake.map((r,i)=>i===0?{...r,
+  scenarioNames:[...r.scenarioNames].reverse()}:r);
+ report=statusReport('--all',reordered,dir,'a'.repeat(40),verifiedIntegrity);
+ assert.equal(report.coverage.status,'FAIL','reordered required cases cannot PASS');
  const e2eReport=path.join(dir,'evidence','pending-audio','report.json');
  fs.mkdirSync(path.dirname(e2eReport),{recursive:true});
  const valid={suite:'pending-audio',sha:'a'.repeat(40),syntheticOnly:true,
-              cases:[{name:'reopen',status:'passed'}]};
+              cases:approvedCases['pending-audio'].map(name=>({name,status:'passed'}))};
  fs.writeFileSync(e2eReport,JSON.stringify(valid));
  assert.deepEqual(checkedCases('pending-audio',dir,'a'.repeat(40)),
-                  {scenarioTotal:1,scenarioPassed:1});
+                  {scenarioTotal:8,scenarioPassed:8,
+                   scenarioNames:approvedCases['pending-audio']});
  assert.throws(()=>checkedCases('pending-audio',dir,'b'.repeat(40)),/Untrusted/);
- fs.writeFileSync(e2eReport,JSON.stringify({...valid,cases:[{name:'reopen',status:'failed'}]}));
- assert.throws(()=>checkedCases('pending-audio',dir,'a'.repeat(40)),/Incomplete/);
- fs.writeFileSync(e2eReport,JSON.stringify({...valid,cases:[{name:'reopen',status:'passed'},
-  {name:'reopen',status:'passed'}]}));
- assert.throws(()=>checkedCases('pending-audio',dir,'a'.repeat(40)),/Incomplete/);
+ fs.writeFileSync(e2eReport,JSON.stringify({...valid,cases:valid.cases.map((v,i)=>
+  i===0?{...v,status:'failed'}:v)}));
+ assert.throws(()=>checkedCases('pending-audio',dir,'a'.repeat(40)),/Incomplete|unapproved/);
+ fs.writeFileSync(e2eReport,JSON.stringify({...valid,cases:valid.cases.map((v,i)=>
+  i===0?{...v,name:'replaced-scenario'}:v)}));
+ assert.throws(()=>checkedCases('pending-audio',dir,'a'.repeat(40)),/Missing|unapproved/);
+ fs.writeFileSync(e2eReport,JSON.stringify({...valid,cases:valid.cases.slice(1)}));
+ assert.throws(()=>checkedCases('pending-audio',dir,'a'.repeat(40)),/Missing|unapproved/);
 
  const gateRunner=path.join(__dirname,'..','tools','local-browser-qa.cjs');
 
