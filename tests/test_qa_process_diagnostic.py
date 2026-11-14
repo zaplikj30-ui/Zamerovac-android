@@ -35,7 +35,7 @@ class DiagnosticTests(unittest.TestCase):
         for failed in ['OpenProcessToken','GetTokenInformation','CreateWellKnownSid','DuplicateToken',
                        'CheckTokenMembership','GetUserNameW','CreateJobObjectW',
                        'SetInformationJobObject','InitializeProcThreadAttributeList','SetHandleInformation','UpdateProcThreadAttribute',
-                       'CreateProcessW','AssignProcessToJobObject','QueryFullProcessImageNameW',
+                       'UpdateProcThreadAttributeJobList','CreateProcessW','IsProcessInJob','job-not-attached','QueryFullProcessImageNameW',
                        'GetProcessTimes','ResumeThread','GetExitCodeProcess','TerminateJobObject','QueryInformationJobObject',
                        'CloseJobHandle','CloseWorkerHandle']:
             with self.subTest(failed=failed):self.exercise(failed)
@@ -53,7 +53,8 @@ class DiagnosticTests(unittest.TestCase):
                     calls.append(name)
                     if name=='CloseHandle' and ((failed=='CloseJobHandle' and args[0]==71) or (failed=='CloseWorkerHandle' and args[0]==81)):
                         last[0]=5;return 0
-                    if name==failed:
+                    if name==failed or (name=='UpdateProcThreadAttribute' and
+                       failed=='UpdateProcThreadAttributeJobList' and args[2]==0x2000d):
                         last[0]=87 if name=='CreateProcessW' else 5
                         return 0xffffffff if name=='ResumeThread' else 0
                     if name=='GetCurrentProcess':return -1
@@ -67,6 +68,7 @@ class DiagnosticTests(unittest.TestCase):
                     if name=='InitializeProcThreadAttributeList':args[3]._obj.value=256
                     if name=='CreateProcessW':
                         p=args[-1]._obj;p.process=81;p.thread=82;p.pid=91
+                    if name=='IsProcessInJob':args[2]._obj.value=0 if failed=='job-not-attached' else 1
                     if name=='QueryFullProcessImageNameW':
                         args[2].value=executable+('-different' if failed=='worker-image-check' else '')
                         last[0]=122
@@ -99,10 +101,12 @@ class DiagnosticTests(unittest.TestCase):
                     except owned.ScopeError as error:
                         if failure is None:failure=error
         self.assertIsNotNone(failure)
-        expected=None if failed=='worker-image-check' else 87 if failed=='CreateProcessW' else 5
-        self.assertEqual(owned.scope_diagnostic(failure,'worker-start'),{'stage':failed,'win32Error':expected})
-        if failed in ('AssignProcessToJobObject','CreateProcessW'):
+        expected_stage='UpdateProcThreadAttribute' if failed=='UpdateProcThreadAttributeJobList' else failed
+        expected=None if failed in ('worker-image-check','job-not-attached') else 87 if failed=='CreateProcessW' else 5
+        self.assertEqual(owned.scope_diagnostic(failure,'worker-start'),{'stage':expected_stage,'win32Error':expected})
+        if failed in ('IsProcessInJob','job-not-attached','CreateProcessW','UpdateProcThreadAttributeJobList'):
             self.assertNotIn('ResumeThread',calls)
-        if failed=='AssignProcessToJobObject':self.assertIn('TerminateProcess',calls)
+        if failed in ('IsProcessInJob','job-not-attached'):
+            self.assertIn('TerminateProcess',calls)
 
 if __name__=='__main__':unittest.main()
