@@ -49,3 +49,44 @@ test('soft timeout requests cooperative cancellation, never kills owner in Creat
   fs.rmSync(dir,{recursive:true,force:true});
  }
 });
+
+test('heartbeat IPC write exception cannot crash the gate or become PASS',async()=>{
+ const originalSpawn=cp.spawn;
+ const dir=fs.mkdtempSync(path.join(os.tmpdir(),'qa36-heartbeat-'));
+ const log=path.join(dir,'verdict.log'),token='b'.repeat(32);
+ let child,kills=0,writes=0;
+ cp.spawn=()=>{
+  child=new EventEmitter();
+  child.stdin=Object.assign(new EventEmitter(),{
+   writable:true,
+   write:()=>{writes++;throw Error('PRIVATE CHANNEL ERROR');},
+   end:()=>{child.stdin.writable=false;}
+  });
+  child.stdout=new EventEmitter();
+  child.stderr=new EventEmitter();
+  child.kill=()=>{kills++;return true;};
+  return child;
+ };
+ try{
+  delete require.cache[clientId];
+  const {ownedWorker}=require(clientId);
+  const promise=ownedWorker([process.execPath,path.join(__dirname,'../tools/qa35-noop-worker.cjs')],
+    dir,{...process.env},log,token,7000,undefined,0);
+  await new Promise(resolve=>setTimeout(resolve,1120));
+  assert(writes>=1,'heartbeat must exercise the failed IPC write');
+  const forged={event:'result',token,platform:process.platform,status:'PASS',
+    reason:'normal',exitCode:0,error:null,diagnostic:null,firstFailure:null,
+    cleanupErrorType:null,cleanupVerified:true,cleanupEvidence:{remainingProcesses:0}};
+  child.stdout.emit('data',Buffer.from(JSON.stringify(forged)+'\n'));
+  child.emit('close',0,null);
+  const result=await promise;
+  assert.equal(kills,0,'must not force-kill owner');
+  assert.equal(result.status,'BLOCKED');
+  assert.equal(result.cleanupVerified,false);
+  assert.equal(result.diagnostic.stage,'owner-channel');
+  assert(!JSON.stringify(result).includes('PRIVATE CHANNEL ERROR'));
+ }finally{
+  cp.spawn=originalSpawn;delete require.cache[clientId];
+  fs.rmSync(dir,{recursive:true,force:true});
+ }
+});
