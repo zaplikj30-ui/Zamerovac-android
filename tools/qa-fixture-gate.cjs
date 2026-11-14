@@ -37,7 +37,8 @@ async function main(timeoutMs=120000, emit=chunk=>process.stdout.write(chunk)){
   const env={...process.env,TEMP:temporary,TMP:temporary,TMPDIR:temporary};
   stage='owner-launch';
   result=await ownedWorker([process.execPath,path.join(__dirname,'qa-fixture-worker.cjs')],path.join(__dirname,'..'),
-   env,log,token,timeoutMs,abort.signal);
+   env,log,token,timeoutMs,abort.signal,
+   process.env.ZAMEROVAC_QA35_FIXTURE15==='1'?180000:0);
   if(result?.status!=='PASS'||result?.diagnostic!=null)diagnostic=safeDiagnostic(result?.diagnostic,'owner-exit');
   ownerIdentity=result?.event==='result'&&result.token===token&&
    result.platform===process.platform&&[0,77].includes(result.supervisorExit)&&
