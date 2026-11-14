@@ -38,10 +38,16 @@ class DiagnosticTests(unittest.TestCase):
                        'SetInformationJobObject','InitializeProcThreadAttributeList','SetHandleInformation','UpdateProcThreadAttribute',
                        'UpdateProcThreadAttributeJobList','CreateProcessW','IsProcessInJob','job-not-attached','QueryFullProcessImageNameW',
                        'GetProcessTimes','ResumeThread','GetExitCodeProcess','TerminateJobObject','QueryInformationJobObject',
-                       'CloseJobHandle','CloseWorkerHandle']:
+                       'CloseJobHandle','CloseWorkerHandle','CloseWorkerThreadHandle']:
             with self.subTest(failed=failed):self.exercise(failed)
 
     def test_image_mismatch_does_not_misattribute_stale_win32_error(self):self.exercise('worker-image-check')
+    def test_failed_worker_thread_close_is_reported_and_resources_still_closed(self):
+        trace=self.exercise('CloseWorkerThreadHandle')
+        self.assertEqual(trace['diagnostic'],{'stage':'CloseWorkerThreadHandle','win32Error':5})
+        self.assertEqual(trace['secondary'],'ScopeError')
+        self.assertTrue(trace['null_closed'])
+        self.assertIn('DeleteProcThreadAttributeList',trace['calls'])
 
     def test_set_and_restore_both_fail_but_resources_are_closed(self):
         trace=self.exercise('SetHandleInformation')
@@ -87,7 +93,9 @@ class DiagnosticTests(unittest.TestCase):
             def __getattr__(self,name):
                 def invoke(*args):
                     calls.append(name)
-                    if name=='CloseHandle' and ((failed=='CloseJobHandle' and args[0]==71) or (failed=='CloseWorkerHandle' and args[0]==81)):
+                    if name=='CloseHandle' and ((failed=='CloseJobHandle' and args[0]==71) or
+                        (failed=='CloseWorkerHandle' and args[0]==81) or
+                        (failed=='CloseWorkerThreadHandle' and args[0]==82)):
                         last[0]=5;return 0
                     if name==failed or (name=='CreateProcessW' and failed=='CreateProcessW+restore-first-fails') or (name=='UpdateProcThreadAttribute' and
                        failed=='UpdateProcThreadAttributeJobList' and args[2]==0x2000d):
