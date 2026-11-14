@@ -3,7 +3,7 @@ name: QA35 - one-shot contained native Windows no-op worker
 on:
   push:
     branches: ['coord35/contained-noop-probe-20261114']
-    paths: ['docs/qa/qa35-contained-noop.trigger']
+    paths: ['docs/qa/qa35-contained-noop-retest.trigger']
 permissions:
   contents: read
 concurrency:
@@ -11,7 +11,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   contained-noop:
-    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.event_name == 'push' && github.ref == 'refs/heads/coord35/contained-noop-probe-20261114' && github.event.created == false && github.run_number == 1 && github.run_attempt == 1 && github.event.head_commit.message == 'OWNER-APPROVED-QA35-CONTAINED-NOOP-20261114' }}
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.event_name == 'push' && github.ref == 'refs/heads/coord35/contained-noop-probe-20261114' && github.event.created == false && github.run_number == 2 && github.run_attempt == 1 && github.event.head_commit.message == 'OWNER-APPROVED-QA35-CONTAINED-NOOP-RETEST-20261114' }}
     runs-on: [self-hosted, Windows, X64, zamerovac-qa]
     timeout-minutes: 3
     env:
@@ -27,7 +27,7 @@ jobs:
           if /i not "%GITHUB_REPOSITORY%"=="zaplikj30-ui/Zamerovac-android" exit /b 1
           if /i not "%GITHUB_ACTOR%"=="zaplikj30-ui" exit /b 1
           if /i not "%GITHUB_TRIGGERING_ACTOR%"=="zaplikj30-ui" exit /b 1
-          if /i not "%GITHUB_RUN_NUMBER%"=="1" exit /b 1
+          if /i not "%GITHUB_RUN_NUMBER%"=="2" exit /b 1
           if /i not "%GITHUB_RUN_ATTEMPT%"=="1" exit /b 1
           if not exist "%ZAMEROVAC_PYTHON%" exit /b 1
           if not exist "C:\actions-runner\tools\MinGit-2.56.0.4\cmd\git.exe" exit /b 1
