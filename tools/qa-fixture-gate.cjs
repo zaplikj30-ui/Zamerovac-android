@@ -20,7 +20,7 @@ function readVerdict(file){
 // API only. The CLI has no configurable arguments and always uses 120 seconds.
 async function main(timeoutMs=120000, emit=chunk=>process.stdout.write(chunk)){
  let dir,result,token,workerPassed=false,ownerSucceeded=false,temporaryFilesRemoved=true;
- let report=evaluateTap(undefined),cleanupVerified=false;
+ let report=evaluateTap(undefined),cleanupVerified=false,verifiedStartup=false;
  let stage='gate-input',diagnostic=null;
  const abort=new AbortController(),cancel=()=>abort.abort();
  const signals=['SIGINT','SIGTERM','SIGHUP'];
@@ -38,8 +38,19 @@ async function main(timeoutMs=120000, emit=chunk=>process.stdout.write(chunk)){
   result=await ownedWorker([process.execPath,path.join(__dirname,'qa-fixture-worker.cjs')],path.join(__dirname,'..'),
    env,log,token,timeoutMs,abort.signal);
   if(result?.status!=='PASS'||result?.diagnostic!=null)diagnostic=safeDiagnostic(result?.diagnostic,'owner-exit');
-  const ownResult=result?.event==='result'&&result.token===token&&result.platform===process.platform&&
-   [0,77].includes(result.supervisorExit)&&result.signal===null&&result.error===null;
+  const ownerIdentity=result?.event==='result'&&result.token===token&&
+   result.platform===process.platform&&[0,77].includes(result.supervisorExit)&&
+   result.signal===null;
+  // Only a scope-created but pre-test startup failure may have a private error
+  // yet still prove zero descendants. The Python owner uses its original
+  // cleanup+verify_empty+close APIs; no new worker or process owner is added.
+  verifiedStartup=ownerIdentity&&result.status==='BLOCKED'&&
+   result.reason==='startup-error'&&result.exitCode===null&&
+   result.supervisorExit===77&&typeof result.error==='string'&&result.error.length>0&&
+   (result.diagnostic?.stage==='verdict-open'&&result.diagnostic.win32Error===null||
+    result.diagnostic?.stage==='CreateProcessW'&&Number.isInteger(result.diagnostic.win32Error))&&
+   result.cleanupVerified===true&&result.cleanupEvidence?.remainingProcesses===0;
+  const ownResult=ownerIdentity&&(result.error===null||verifiedStartup);
   cleanupVerified=ownResult&&result.cleanupVerified===true&&result.cleanupEvidence?.remainingProcesses===0;
   if(!cleanupVerified&&diagnostic===null)diagnostic=safeDiagnostic(null,'owner-exit');
   stage='verdict-read';
@@ -74,7 +85,9 @@ async function main(timeoutMs=120000, emit=chunk=>process.stdout.write(chunk)){
   temporaryFilesRemoved,workerPassed,ownerSucceeded,
   cancelled:abort.signal.aborted,timedOut:result?.reason==='timeout',
   diagnostic:passed?null:safeDiagnostic(diagnostic,stage),
-  publicReport:publicReport.trimEnd()};
+  publicReport:publicReport.trimEnd(),
+  retryEligible:verifiedStartup&&cleanupVerified&&temporaryFilesRemoved&&!workerPassed&&
+    !ownerSucceeded&&!abort.signal.aborted&&result?.status==='BLOCKED'};
 }
 if(require.main===module)void main();
 module.exports={main};
