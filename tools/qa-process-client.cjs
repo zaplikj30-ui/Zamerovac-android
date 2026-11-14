@@ -31,7 +31,7 @@ async function ownedWorker(command,cwd,env,log,token,timeoutMs=480000,signal,har
   // never returns, terminate only the retained Python supervisor handle.
   // Creation-time JOB_LIST + KILL_ON_JOB_CLOSE protect its worker tree.
   // UNKNOWN cleanup after hard stop is always BLOCKED, never retry eligible.
-  if(Number.isInteger(hardStopMs)&&hardStopMs>=1000&&hardStopMs<=60000){
+  if(Number.isInteger(hardStopMs)&&hardStopMs>=1000&&hardStopMs<=180000){
    hardTimer=setTimeout(()=>{if(finished)return;hardTimedOut=true;try{child?.kill()}catch{}},hardStopMs);
   }
   try{
