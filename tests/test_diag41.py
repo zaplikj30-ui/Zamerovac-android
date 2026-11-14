@@ -16,6 +16,7 @@ class FakeScope:
     def __init__(self,mode):
         self.mode=mode;self.calls=[]
         self.start_cleanup_error_type='ScopeError' if mode=='native-start-restore' else None
+        self.start_cleanup_unverified=mode=='native-start-restore'
     def start(self,*args):
         self.calls.append('start')
         if self.mode=='native-start-restore':
