@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   inventory:
-    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.event_name == 'push' && github.ref == 'refs/heads/qa/coord38-win32-inventory-20261114' && contains(github.event.head_commit.added, '.github/workflows/coord38-win32-inventory.yml') }}
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.event_name == 'push' && github.ref == 'refs/heads/qa/coord38-win32-inventory-20261114' && github.event.head_commit.message == 'qa: execute approved read-only Win32 toolchain inventory' }}
     runs-on: [self-hosted, Windows, X64, zamerovac-qa]
     timeout-minutes: 4
     env:
