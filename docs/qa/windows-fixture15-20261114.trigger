@@ -1,0 +1,4 @@
+Owner-approved one-shot HOME Windows fixture15 activation.
+PREP_SHA=03693168bc6eecd6d073f29c991ef2a210a385f0
+QA_SHA=6f98ceffff50d337f7c2999fed0e0878d20a582e
+PRODUCT_SHA=ae3b4df53c25557f28b4a25ccb65adc2abdff639
