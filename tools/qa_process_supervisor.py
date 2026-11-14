@@ -5,12 +5,51 @@ import os
 from pathlib import Path
 import queue
 import signal
+import stat
 import sys
 import threading
 import time
+import traceback
 
 from qa_owned_processes import new_scope, ScopeError, scope_diagnostic
 from qa_browser_lock import BrowserLock
+
+# Diagnostic detail is opt-in and never travels on stdout/stderr. The public
+# failure fields below contain only allowlisted technical values.
+ERROR_TYPES = frozenset(('ScopeError','OSError','FileNotFoundError',
+    'PermissionError','TimeoutError','ValueError','TypeError','KeyError',
+    'RuntimeError','NotImplementedError','AssertionError','OtherError'))
+def safe_error_type(exc):
+    name=type(exc).__name__
+    return name if name in ERROR_TYPES else 'OtherError'
+
+def private_trace(exc,stage,config):
+    """Only create ephemeral, content-redacted frames in an owner-only POSIX temp.
+
+    Windows ACLs cannot be verified with Python mode bits: fail closed there.
+    The existing gate always deletes this per-attempt private TEMP at exit.
+    """
+    if sys.platform!='linux':return False
+    parent=Path(config['log']).parent
+    try:
+        meta=parent.lstat()
+        if (not stat.S_ISDIR(meta.st_mode) or meta.st_uid!=os.geteuid() or
+                stat.S_IMODE(meta.st_mode)!=0o700):return False
+        flags=os.O_WRONLY|os.O_CREAT|os.O_EXCL|os.O_NOFOLLOW
+        fd=os.open(str(parent/'diagnostic.trace'),flags,0o600)
+        try:
+            # No exception message, source lines, arguments, locals or full paths.
+            frames=[]
+            for frame,line in traceback.walk_tb(exc.__traceback__):
+                frames.append({'module':Path(frame.f_code.co_filename).name[:80],
+                               'function':frame.f_code.co_name[:80],'line':line})
+            payload=json.dumps({'stage':stage,'type':safe_error_type(exc),
+                'frames':frames[-24:]},ensure_ascii=True).encode('ascii')
+            if len(payload)>8192:payload=b'{"status":"trace-overflow"}'
+            os.write(fd,payload)
+        finally:os.close(fd)
+        return True
+    except (OSError,ValueError,TypeError):return False
 
 
 def supervise(config):
@@ -25,12 +64,18 @@ def supervise(config):
     cancelled=[]
     old={}
     messages=queue.Queue(maxsize=32)
+    first_error=None
+    first_stage=None
+    cleanup_error_type=None
+    detail_enabled=os.environ.get('ZAMEROVAC_DIAGNOSTICS')=='1'
+    def retain(exc,at):
+        nonlocal first_error,first_stage
+        if first_error is None:
+            first_error,first_stage=exc,at
     def read_input():
         try:
             buffer=b''
             while True:
-                # Raw fd reads avoid a daemon thread holding BufferedReader's
-                # lock during CPython finalization (which can abort the owner).
                 data=os.read(sys.stdin.fileno(),128)
                 if not data:
                     messages.put('eof',timeout=.1)
@@ -42,8 +87,8 @@ def supervise(config):
                 if len(buffer)>128:
                     messages.put('input-error',timeout=.1);return
         except Exception:
-            try: messages.put_nowait('input-error')
-            except queue.Full: pass
+            try:messages.put_nowait('input-error')
+            except queue.Full:pass
     try:
         command=config['command'];cwd=config['cwd'];log=Path(config['log'])
         if (not isinstance(command,list) or not command or
@@ -61,7 +106,7 @@ def supervise(config):
             browser_lock=BrowserLock()
         if sys.platform=='linux':
             import resource
-            resource.setrlimit(resource.RLIMIT_CORE,(0,0))  # Own process/children only, no system setting.
+            resource.setrlimit(resource.RLIMIT_CORE,(0,0))
         stage='scope-create'
         scope=new_scope()
         os.environ['ZAMEROVAC_SUPERVISOR_PID']=str(os.getpid())
@@ -85,8 +130,7 @@ def supervise(config):
                     if message!='ALIVE '+config['token']:
                         reason='eof' if message=='eof' else 'communication-error';break
                     last=now
-                except queue.Empty:
-                    pass
+                except queue.Empty:pass
                 code=scope.poll()
                 if code is not None:
                     reason='normal' if code==0 else 'crash';break
@@ -101,29 +145,36 @@ def supervise(config):
             if not cleanup:
                 raise ScopeError('cleanup returned with surviving owned processes')
     except BaseException as e:
-        error=type(e).__name__+': '+str(e)
+        retain(e,stage)
+        error=safe_error_type(e)  # Never transmit arbitrary exception messages.
         diagnostic=scope_diagnostic(e,stage)
-        # Reuse the existing owned scope's termination and zero-descendant
-        # verification also after a PRE-worker startup failure. Merely closing
-        # the Job was never positive proof of empty ownership.
         if scope is not None and stage in ('verdict-open','worker-start'):
             try:
                 scope.cleanup()
                 cleanup=scope.verify_empty() is True
-            except BaseException as cleanup_error:
+            except BaseException as secondary:
                 cleanup=False
-                error+='; cleanup: '+type(cleanup_error).__name__
+                cleanup_error_type=safe_error_type(secondary)
     finally:
         if scope:
-            try:
-                scope.close()
+            try:scope.close()
             except BaseException as e:
-                cleanup=False;error=(error or '')+'; emergency cleanup: '+str(e)
-                if diagnostic is None:diagnostic=scope_diagnostic(e,'scope-close')
+                cleanup=False
+                if first_error is None:
+                    retain(e,'scope-close')
+                    diagnostic=scope_diagnostic(e,'scope-close')
+                    error=safe_error_type(e)
+                cleanup_error_type=safe_error_type(e)
         if browser_lock:
-            browser_lock.close()
-        for sig,handler in old.items():
-            signal.signal(sig,handler)
+            try:browser_lock.close()
+            except BaseException as e:
+                cleanup=False
+                if first_error is None:
+                    retain(e,'scope-close')
+                    diagnostic=scope_diagnostic(e,'scope-close')
+                    error=safe_error_type(e)
+                cleanup_error_type=safe_error_type(e)
+        for sig,handler in old.items():signal.signal(sig,handler)
     result={'event':'result','token':config.get('token'),'status':'PASS' if
             reason=='normal' and code==0 and cleanup and error is None else 'BLOCKED',
             'reason':reason,'exitCode':code,'cleanupVerified':cleanup,'error':error,
@@ -134,6 +185,12 @@ def supervise(config):
         'crash':'worker-result','timeout':'worker-timeout','cancel':'worker-cancel',
         'eof':'owner-channel','heartbeat-timeout':'owner-channel','communication-error':'owner-channel',
     }.get(reason,stage))
+    if detail_enabled and result['status']!='PASS':
+        first_diag=scope_diagnostic(first_error,first_stage) if first_error else result['diagnostic']
+        result['firstFailure']={'stage':first_diag['stage'],'win32Error':first_diag['win32Error'],
+                                'errorType':safe_error_type(first_error) if first_error else 'OtherError'}
+        result['cleanupErrorType']=cleanup_error_type
+        result['privateTracebackWritten']=private_trace(first_error,first_stage,config) if first_error else False
     print(json.dumps(result),flush=True)
     return 0 if result['status']=='PASS' else 77
 
@@ -147,10 +204,13 @@ def main():
             raise ScopeError('owned regular config required')
         return supervise(json.loads(opts.config.read_text(encoding='utf-8')))
     except BaseException as e:
-        print(json.dumps({'event':'result','status':'BLOCKED','cleanupVerified':False,'error':str(e),
-                          'diagnostic':scope_diagnostic(e,'owner-config')}),flush=True)
+        result={'event':'result','status':'BLOCKED','cleanupVerified':False,
+                'error':safe_error_type(e),'diagnostic':scope_diagnostic(e,'owner-config')}
+        if os.environ.get('ZAMEROVAC_DIAGNOSTICS')=='1':
+            result['firstFailure']={**result['diagnostic'],'errorType':safe_error_type(e)}
+            result['privateTracebackWritten']=False
+        print(json.dumps(result),flush=True)
         return 77
 
 
-if __name__=='__main__':
-    sys.exit(main())
+if __name__=='__main__':sys.exit(main())
