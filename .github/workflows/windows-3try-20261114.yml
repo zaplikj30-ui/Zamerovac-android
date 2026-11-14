@@ -61,7 +61,7 @@ jobs:
           GIT_CONFIG_VALUE_0: 'false'
         with:
           repository: zaplikj30-ui/Zamerovac-android
-          ref: d5367cc7adb3546c4bcebca40c80257c9a3217c8
+          ref: 14d282c2254a99762cd8bce7e86ac2cea047e52d
           path: gate
           fetch-depth: 1
           persist-credentials: false
@@ -93,7 +93,7 @@ jobs:
           for /f %%H in ('git -C "%GITHUB_WORKSPACE%\source" rev-parse HEAD') do set "ACTUAL_PRODUCT=%%H"
           if not defined ACTUAL_QA exit /b 1
           if not defined ACTUAL_PRODUCT exit /b 1
-          if /i not "%ACTUAL_QA%"=="d5367cc7adb3546c4bcebca40c80257c9a3217c8" exit /b 1
+          if /i not "%ACTUAL_QA%"=="14d282c2254a99762cd8bce7e86ac2cea047e52d" exit /b 1
           if /i not "%ACTUAL_PRODUCT%"=="ae3b4df53c25557f28b4a25ccb65adc2abdff639" exit /b 1
           set "QA_STATUS=%RUNNER_TEMP%\zamerovac-fixture15-qa-%GITHUB_RUN_ID%-%GITHUB_RUN_ATTEMPT%.txt"
           set "PRODUCT_STATUS=%RUNNER_TEMP%\zamerovac-fixture15-product-%GITHUB_RUN_ID%-%GITHUB_RUN_ATTEMPT%.txt"
