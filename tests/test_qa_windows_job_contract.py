@@ -57,7 +57,7 @@ class JobContractTests(unittest.TestCase):
                     if name=='WaitForSingleObject':return 0
                     if name=='CloseHandle':
                         handle=a[0].value if hasattr(a[0],'value') else a[0]
-                        return int(close_ok or handle in (61,62))
+                        return int(close_ok or handle in (61,62,82))  # Thread close is tested separately.
                     return 1
                 fn=Function(invoke);setattr(self,name,fn);return fn
         self_outer=self
