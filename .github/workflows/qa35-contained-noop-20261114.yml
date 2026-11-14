@@ -1,0 +1,99 @@
+name: QA35 - one-shot contained native Windows no-op worker
+# Inert on review source commits: only exact marker push can trigger this workflow.
+on:
+  push:
+    branches: ['coord35/contained-noop-probe-20261114']
+    paths: ['docs/qa/qa35-contained-noop.trigger']
+permissions:
+  contents: read
+concurrency:
+  group: qa35-contained-windows-noop-once
+  cancel-in-progress: false
+jobs:
+  contained-noop:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.event_name == 'push' && github.ref == 'refs/heads/coord35/contained-noop-probe-20261114' && github.event.created == false && github.run_number == 1 && github.run_attempt == 1 && github.event.head_commit.message == 'OWNER-APPROVED-QA35-CONTAINED-NOOP-20261114' }}
+    runs-on: [self-hosted, Windows, X64, zamerovac-qa]
+    timeout-minutes: 3
+    env:
+      PYTHONUTF8: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
+      EXPECTED_SOURCE_SHA: ${{ github.event.before }}
+      ZAMEROVAC_PYTHON: 'C:\actions-runner\tools\Python313\python.exe'
+    steps:
+      - name: Verify trusted service identity and pinned tools before checkout
+        shell: cmd
+        run: |
+          @echo off
+          if /i not "%GITHUB_REPOSITORY%"=="zaplikj30-ui/Zamerovac-android" exit /b 1
+          if /i not "%GITHUB_ACTOR%"=="zaplikj30-ui" exit /b 1
+          if /i not "%GITHUB_TRIGGERING_ACTOR%"=="zaplikj30-ui" exit /b 1
+          if /i not "%GITHUB_RUN_NUMBER%"=="1" exit /b 1
+          if /i not "%GITHUB_RUN_ATTEMPT%"=="1" exit /b 1
+          if not exist "%ZAMEROVAC_PYTHON%" exit /b 1
+          if not exist "C:\actions-runner\tools\MinGit-2.56.0.4\cmd\git.exe" exit /b 1
+          set "QA_USER="
+          for /f "delims=" %%U in ('C:\Windows\System32\whoami.exe') do set "QA_USER=%%U"
+          if not defined QA_USER exit /b 1
+          if not defined COMPUTERNAME exit /b 1
+          if /i not "%QA_USER%"=="%COMPUTERNAME%\ZamerovacQA" exit /b 1
+          echo C:\actions-runner\tools\MinGit-2.56.0.4\cmd>>"%GITHUB_PATH%"
+          where node >nul 2>nul
+          if errorlevel 1 exit /b 1
+          echo QA35_TRUSTED_IDENTITY=PASS
+      - name: Checkout pinned source into unique non-cleaning directory
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.before }}
+          path: qa35-noop-${{ github.run_id }}
+          clean: false
+          fetch-depth: 1
+          persist-credentials: false
+          lfs: false
+          submodules: false
+      - name: Prove source SHA and clean unmodified tree
+        shell: cmd
+        working-directory: qa35-noop-${{ github.run_id }}
+        run: |
+          @echo off
+          set "ACTUAL_SHA="
+          for /f %%H in ('git rev-parse HEAD') do set "ACTUAL_SHA=%%H"
+          if not defined ACTUAL_SHA exit /b 1
+          if /i not "%ACTUAL_SHA%"=="%EXPECTED_SOURCE_SHA%" exit /b 1
+          git status --porcelain --untracked-files=all >"%RUNNER_TEMP%\qa35-status-%GITHUB_RUN_ID%.txt"
+          if errorlevel 1 exit /b 1
+          for %%F in ("%RUNNER_TEMP%\qa35-status-%GITHUB_RUN_ID%.txt") do if %%~zF GTR 0 exit /b 1
+          del /q "%RUNNER_TEMP%\qa35-status-%GITHUB_RUN_ID%.txt"
+          if errorlevel 1 exit /b 1
+          echo QA35_EXACT_SOURCE_SHA=PASS
+      - name: Verify Python Windows API models and no-op scripts before native execution
+        shell: cmd
+        working-directory: qa35-noop-${{ github.run_id }}
+        run: |
+          @echo off
+          "%ZAMEROVAC_PYTHON%" tests\test_qa_windows_job_contract.py -v
+          if errorlevel 1 exit /b 1
+          "%ZAMEROVAC_PYTHON%" tests\test_qa_process_diagnostic.py -v
+          if errorlevel 1 exit /b 1
+          node --check tools\qa35-noop-gate.cjs
+          if errorlevel 1 exit /b 1
+          node --check tools\qa35-noop-worker.cjs
+          if errorlevel 1 exit /b 1
+          node --check tools\qa-process-client.cjs
+          if errorlevel 1 exit /b 1
+          echo QA35_PREFLIGHT_TESTS=PASS
+      - name: Verify service token and native empty JobObject
+        shell: cmd
+        working-directory: qa35-noop-${{ github.run_id }}
+        run: |
+          @echo off
+          "%ZAMEROVAC_PYTHON%" tools\qa34_native_job_preflight.py
+          if errorlevel 1 exit /b 1
+          echo QA35_EMPTY_JOB=PASS
+      - name: One bounded inert CMD Node Python Win32 worker and verified cleanup
+        shell: cmd
+        working-directory: qa35-noop-${{ github.run_id }}
+        run: |
+          @echo off
+          call tools\qa35-noop-gate.cmd
+          if errorlevel 1 exit /b 1
+          echo QA35_SINGLE_NOOP=PASS
