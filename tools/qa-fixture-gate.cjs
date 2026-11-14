@@ -2,7 +2,7 @@
 // Public entry point, after the enclosing owner/ref/SHA/clean-checkout gate.
 // Reuse the existing pidfd/subreaper or private Job owner for the ENTIRE tree.
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),crypto=require('node:crypto');
-const {ownedWorker,safeDiagnostic}=require('./qa-process-client.cjs');
+const {ownedWorker,safeDiagnostic,safeErrorType,safeFailure,isNativeStage}=require('./qa-process-client.cjs');
 const {evaluateTap,formatReport}=require('./qa-fixture-tap.cjs');
 const passLine='WINDOWS_FIXTURE_15_PASS_0_FAIL_0_SKIP\n';
 function readVerdict(file){
@@ -20,8 +20,9 @@ function readVerdict(file){
 // API only. The CLI has no configurable arguments and always uses 120 seconds.
 async function main(timeoutMs=120000, emit=chunk=>process.stdout.write(chunk)){
  let dir,result,token,workerPassed=false,ownerSucceeded=false,temporaryFilesRemoved=true;
- let report=evaluateTap(undefined),cleanupVerified=false,verifiedStartup=false;
- let stage='gate-input',diagnostic=null;
+ let report=evaluateTap(undefined),cleanupVerified=false,verifiedStartup=false,ownerIdentity=false;
+ let stage='gate-input',diagnostic=null,firstFailure=null,cleanupFailureType=null;
+ const diagnosticEnabled=process.env.ZAMEROVAC_DIAGNOSTICS==='1';
  const abort=new AbortController(),cancel=()=>abort.abort();
  const signals=['SIGINT','SIGTERM','SIGHUP'];
  try{
@@ -38,9 +39,13 @@ async function main(timeoutMs=120000, emit=chunk=>process.stdout.write(chunk)){
   result=await ownedWorker([process.execPath,path.join(__dirname,'qa-fixture-worker.cjs')],path.join(__dirname,'..'),
    env,log,token,timeoutMs,abort.signal);
   if(result?.status!=='PASS'||result?.diagnostic!=null)diagnostic=safeDiagnostic(result?.diagnostic,'owner-exit');
-  const ownerIdentity=result?.event==='result'&&result.token===token&&
+  ownerIdentity=result?.event==='result'&&result.token===token&&
    result.platform===process.platform&&[0,77].includes(result.supervisorExit)&&
    result.signal===null;
+  if(ownerIdentity&&diagnosticEnabled){
+   if(result.firstFailure)firstFailure=safeFailure(result.firstFailure,'owner-exit');
+   cleanupFailureType=result.cleanupErrorType?safeErrorType(result.cleanupErrorType):null;
+  }
   // Only a scope-created but pre-test startup failure may have a private error
   // yet still prove zero descendants. The Python owner uses its original
   // cleanup+verify_empty+close APIs; no new worker or process owner is added.
@@ -61,14 +66,20 @@ async function main(timeoutMs=120000, emit=chunk=>process.stdout.write(chunk)){
    result.supervisorExit===0&&result.signal===null;
   stage='verdict-result';
   if(text.startsWith('FIXTURE_GATE_BLOCKED '))report={...JSON.parse(text.slice('FIXTURE_GATE_BLOCKED '.length)),status:'BLOCKED'};
- }catch{if(diagnostic===null)diagnostic=safeDiagnostic(null,stage)}
+ }catch(e){
+  if(diagnostic===null)diagnostic=safeDiagnostic(null,stage);
+  // Preserve authenticated owner first failure over secondary gate read error.
+  if(firstFailure===null)firstFailure={...safeDiagnostic(null,stage),errorType:safeErrorType(e?.name)};
+ }
  finally{
   if(dir){
    temporaryFilesRemoved=false;
    try{
     fs.rmSync(dir,{recursive:true,force:true});
     try{fs.lstatSync(dir)}catch(error){if(error.code==='ENOENT')temporaryFilesRemoved=true}
-   }catch{}
+   }catch(e){
+    if(cleanupFailureType===null)cleanupFailureType=safeErrorType(e?.name);
+   }
    if(!temporaryFilesRemoved&&diagnostic===null)diagnostic=safeDiagnostic(null,'temp-cleanup');
   }
   for(const name of signals)process.removeListener(name,cancel);
@@ -78,6 +89,15 @@ async function main(timeoutMs=120000, emit=chunk=>process.stdout.write(chunk)){
  emit(publicReport);
  if(!passed)emit('FIXTURE_SCOPE_BLOCKED '+JSON.stringify({cleanupVerified,temporaryFilesRemoved,workerPassed,ownerSucceeded,cancelled:abort.signal.aborted})+'\n');
  if(!passed)emit('FIXTURE_DIAGNOSTIC '+JSON.stringify(safeDiagnostic(diagnostic,stage))+'\n');
+ if(!passed&&diagnosticEnabled){
+  const failure=firstFailure||{...safeDiagnostic(diagnostic,stage),errorType:'OtherError'};
+  const reason=ownerIdentity&&['normal','startup-error','crash','timeout','cancel','eof','heartbeat-timeout','communication-error'].includes(result?.reason)?result.reason:'unknown';
+  emit('FIXTURE_FAILURE_SAFE '+JSON.stringify({stage:failure.stage,
+   api:isNativeStage(failure.stage)?failure.stage:null,
+   win32Error:failure.win32Error,errorType:failure.errorType,reason,
+   cleanupErrorType:cleanupFailureType,cleanupVerified,ownedRemaining:cleanupVerified?0:null,
+   temporaryFilesRemoved,privateTracebackWritten:ownerIdentity&&result.privateTracebackWritten===true})+'\n');
+ }
  process.exitCode=passed?0:1;
  // Only the existing audited gate knows whether the worker tree was empty and
  // its own TEMP removed. Expose the same redacted facts to the serial caller.
