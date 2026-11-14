@@ -1,0 +1,41 @@
+name: Zamerovac - owner-only Win32 addon inventory no builds
+on:
+  push:
+    branches: [qa/coord38-win32-inventory-20261114]
+    paths: ['.github/workflows/coord38-win32-inventory.yml']
+permissions:
+  contents: read
+concurrency:
+  group: coord38-win32-inventory-20261114
+  cancel-in-progress: false
+jobs:
+  inventory:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.event_name == 'push' && github.ref == 'refs/heads/qa/coord38-win32-inventory-20261114' && contains(github.event.head_commit.added, '.github/workflows/coord38-win32-inventory.yml') }}
+    runs-on: [self-hosted, Windows, X64, zamerovac-qa]
+    timeout-minutes: 4
+    env:
+      PYTHONUTF8: '1'
+    steps:
+      - name: Trust and local runtime guard
+        shell: cmd
+        run: |
+          if /I not "%USERNAME%"=="ZamerovacQA" exit /b 1
+          if not "%RUNNER_ENVIRONMENT%"=="self-hosted" exit /b 1
+          if not exist "C:\actions-runner\tools\MinGit-2.56.0.4\cmd\git.exe" exit /b 1
+          if not exist "C:\actions-runner\tools\Python313\python.exe" exit /b 1
+          echo C:\actions-runner\tools\MinGit-2.56.0.4\cmd>>"%GITHUB_PATH%"
+      - name: Read-only checkout at pinned reviewed script SHA
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: f5600d3a73619d298542bc4bc95647c1c8235c36
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+      - name: Verify exact source SHA, run inventory once
+        shell: cmd
+        run: |
+          for /f %%H in ('git rev-parse HEAD') do set "ACTUAL_SHA=%%H"
+          if /I not "%ACTUAL_SHA%"=="f5600d3a73619d298542bc4bc95647c1c8235c36" exit /b 1
+          echo TRUSTED_INVENTORY_SCRIPT_SHA=f5600d3a73619d298542bc4bc95647c1c8235c36
+          "C:\actions-runner\tools\Python313\python.exe" -I tools\coord38-win32-inventory.py
+          if errorlevel 1 exit /b 1
