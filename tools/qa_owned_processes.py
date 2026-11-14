@@ -267,7 +267,7 @@ class WindowsJob:
           'CreateJobObjectW':([ctypes.c_void_p,w.LPCWSTR],w.HANDLE),
           'SetInformationJobObject':([w.HANDLE,ctypes.c_int,ctypes.c_void_p,w.DWORD],w.BOOL),
           'QueryInformationJobObject':([w.HANDLE,ctypes.c_int,ctypes.c_void_p,w.DWORD,ctypes.c_void_p],w.BOOL),
-          'AssignProcessToJobObject':([w.HANDLE,w.HANDLE],w.BOOL),
+          'IsProcessInJob':([w.HANDLE,w.HANDLE,ctypes.POINTER(w.BOOL)],w.BOOL),
           'TerminateJobObject':([w.HANDLE,w.UINT],w.BOOL),
           'TerminateProcess':([w.HANDLE,w.UINT],w.BOOL),
           'GetExitCodeProcess':([w.HANDLE,ctypes.POINTER(w.DWORD)],w.BOOL),
@@ -297,6 +297,8 @@ class WindowsJob:
             stage={
               'initialize handle list':'InitializeProcThreadAttributeList',
               'restrict inherited handles':'UpdateProcThreadAttribute',
+              'assign job at creation':'UpdateProcThreadAttribute',
+              'verify atomic job membership':'IsProcessInJob',
               'create suspended owned worker':'CreateProcessW',
               'assign private job before resume':'AssignProcessToJobObject',
               'worker image identity':'QueryFullProcessImageNameW',
@@ -312,23 +314,31 @@ class WindowsJob:
         import msvcrt
         w=self.w;k=self.k;startup=self.StartupEx();startup.startup.cb=ctypes.sizeof(startup)
         info=self.Process();size=ctypes.c_size_t()
-        k.InitializeProcThreadAttributeList(None,1,0,ctypes.byref(size))
+        # Both HANDLE_LIST and JOB_LIST are required: no post-create orphan gap.
+        k.InitializeProcThreadAttributeList(None,2,0,ctypes.byref(size))
         attributes=ctypes.create_string_buffer(size.value)
-        self.demand(k.InitializeProcThreadAttributeList(attributes,1,0,ctypes.byref(size)),'initialize handle list')
+        self.demand(k.InitializeProcThreadAttributeList(attributes,2,0,ctypes.byref(size)),'initialize handle list')
         null=open(os.devnull,'rb')
         handles=(w.HANDLE*2)(msvcrt.get_osfhandle(null.fileno()),msvcrt.get_osfhandle(log.fileno()))
+        jobs=(w.HANDLE*1)(self.job)  # Retained ONLY by owner, never inherited by worker.
         try:
             for handle in handles:
                 _set_inheritable(handle,True)
             self.demand(k.UpdateProcThreadAttribute(attributes,0,0x20002,handles,ctypes.sizeof(handles),None,None),'restrict inherited handles')
+            self.demand(k.UpdateProcThreadAttribute(attributes,0,0x2000d,ctypes.cast(jobs,ctypes.c_void_p),ctypes.sizeof(jobs),None,None),'assign job at creation')
             startup.attributes=ctypes.cast(attributes,ctypes.c_void_p)
             startup.startup.flags=0x100
             startup.startup.stdin, startup.startup.stdout, startup.startup.stderr=handles[0],handles[1],handles[1]
             cmd=ctypes.create_unicode_buffer(subprocess.list2cmdline(command))
+            # JOB_LIST attaches the process atomically during CreateProcessW,
+            # eliminating suspended-unassigned orphan gap on normal API operation.
             self.demand(k.CreateProcessW(command[0],cmd,None,None,True,0x08080004,None,str(cwd),ctypes.byref(startup),ctypes.byref(info)),'create suspended owned worker')
             self.process=info.process
             try:
-                self.demand(k.AssignProcessToJobObject(self.job,self.process),'assign private job before resume')
+                belongs=w.BOOL()
+                self.demand(k.IsProcessInJob(self.process,self.job,ctypes.byref(belongs)),'verify atomic job membership')
+                if not belongs.value:
+                    raise ScopeError('worker not in creation-time private job',stage='job-not-attached')
                 image=ctypes.create_unicode_buffer(32768);length=w.DWORD(len(image))
                 self.demand(k.QueryFullProcessImageNameW(self.process,0,image,ctypes.byref(length)),'worker image identity')
                 self.demand(Path(image.value).resolve()==Path(command[0]).resolve(),'worker executable changed')
