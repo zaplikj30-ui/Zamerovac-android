@@ -85,6 +85,21 @@ class Cases(unittest.TestCase):
             except ValueError as e:
                 self.assertFalse(m.private_trace(e,'owner-config',{'log':str(private/'verdict.log')}))
             self.assertEqual(destination.read_bytes(),b'original')
+    def test_private_trace_short_write_is_not_reported_as_success(self):
+        with tempfile.TemporaryDirectory() as d:
+            private=pathlib.Path(d)/'private';private.mkdir(mode=0o700)
+            try:raise ValueError('SECRET')
+            except ValueError as e:
+                with patch.object(m.os,'write',return_value=1):
+                    self.assertFalse(m.private_trace(e,'owner-config',{'log':str(private/'verdict.log')}))
+    def test_private_trace_windows_does_not_assume_posix_mode_is_acl(self):
+        with tempfile.TemporaryDirectory() as d:
+            private=pathlib.Path(d)/'private';private.mkdir(mode=0o700)
+            try:raise ValueError('SECRET')
+            except ValueError as e:
+                with patch.object(m.sys,'platform','win32'):
+                    self.assertFalse(m.private_trace(e,'owner-config',{'log':str(private/'verdict.log')}))
+            self.assertFalse((private/'diagnostic.trace').exists())
     def test_error_type_is_allowlisted(self):
         Sneaky=type('SECRET_PATH_TOKEN', (Exception,), {})
         self.assertEqual(m.safe_error_type(Sneaky('SECRET')),'OtherError')
