@@ -38,8 +38,9 @@ function recordFor(attempt,result){
    tap.summary?.tests?.available===false&&tap.summary?.pass?.available===false&&
    Array.isArray(tap.cases)&&tap.cases.every(x=>x.available===false);
  }
- const startup=diagnostic?.stage==='verdict-open'&&diagnostic.win32Error===null||
-               diagnostic?.stage==='CreateProcessW'&&Number.isInteger(diagnostic.win32Error);
+ // Retrying an uncertain native CreateProcessW failure is unsafe even when
+ // a caller incorrectly supplies retryEligible=true and a zero-process Job.
+ const startup=diagnostic?.stage==='verdict-open'&&diagnostic.win32Error===null;
  const retryEligible=validBlocked&&clean&&result.retryEligible===true&&startup&&noTapCases&&
    result.workerPassed===false&&result.ownerSucceeded===false&&
    result.cancelled===false&&result.timedOut===false;
