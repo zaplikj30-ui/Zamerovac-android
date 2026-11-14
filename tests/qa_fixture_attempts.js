@@ -91,6 +91,15 @@ test('SEC01 real production diagnostic whitelist: logical code null, native code
  const {diagnostic}=recordFor(1,{...failed(),diagnostic:{stage:'owner-launch',win32Error:5}});
  assert.deepEqual(diagnostic,{stage:'owner-launch',win32Error:null});
 });
+test('R44-01 sequencer ignores forged retry eligibility after native creation error',async()=>{
+ const native={...failed(),retryEligible:true,
+  diagnostic:{stage:'CreateProcessW',win32Error:5}};
+ const {result,count}=await run([native,success()]);
+ assert.equal(count,1);
+ assert.equal(result.status,'STOP_NOT_EARLY_DIAGNOSTIC');
+ assert.equal(result.records[0].retryEligible,false);
+ assert.deepEqual(result.records[0].diagnostic,{stage:'CreateProcessW',win32Error:5});
+});
 test('SEC02 a real TAP failure with verified cleanup must not trigger another attempt',async()=>{
  const tapFailure={...failed(),retryEligible:false,diagnostic:{stage:'worker-result',win32Error:null},
   publicReport:tap.formatReport(tap.evaluateTap(undefined,{status:1,signal:null,stderr:Buffer.alloc(0)})).trimEnd()};
