@@ -20,7 +20,7 @@ class Function:
 
 
 class JobContractTests(unittest.TestCase):
-    def exercise(self, assignment=True, close_ok=True, elevated=False, user='ZamerovacQA'):
+    def exercise(self, assignment=True, close_ok=True, elevated=False, admin=False, linked=1, user='ZamerovacQA'):
         calls=[];assigned=False
         executable=str(Path(sys.executable).resolve())
         class Kernel:
@@ -30,7 +30,10 @@ class JobContractTests(unittest.TestCase):
                     calls.append((name,a))
                     if name=='GetCurrentProcess':return -1
                     if name=='OpenProcessToken':a[2]._obj.value=61
-                    if name=='GetTokenInformation':a[2]._obj.value=int(elevated)
+                    if name=='GetTokenInformation':a[2]._obj.value=int(linked)
+                    if name=='DuplicateToken':a[2]._obj.value=62
+                    if name=='CreateWellKnownSid':a[3]._obj.value=16
+                    if name=='CheckTokenMembership':a[2]._obj.value=int(admin)
                     if name=='GetUserNameW':a[0].value=user
                     if name=='CreateJobObjectW':return 71
                     if name=='SetInformationJobObject':
@@ -47,7 +50,9 @@ class JobContractTests(unittest.TestCase):
                     if name=='QueryInformationJobObject':a[2]._obj.active=0
                     if name=='GetExitCodeProcess':a[1]._obj.value=0
                     if name=='WaitForSingleObject':return 0
-                    if name=='CloseHandle':return int(close_ok or (a[0].value if hasattr(a[0],'value') else a[0])==61)
+                    if name=='CloseHandle':
+                        handle=a[0].value if hasattr(a[0],'value') else a[0]
+                        return int(close_ok or handle in (61,62))
                     return 1
                 fn=Function(invoke);setattr(self,name,fn);return fn
         self_outer=self
@@ -62,7 +67,7 @@ class JobContractTests(unittest.TestCase):
              mock.patch.dict(sys.modules,{'msvcrt':types.SimpleNamespace(get_osfhandle=lambda fd:fd)}), \
              mock.patch.object(owned.os,'set_handle_inheritable',create=True), \
              tempfile.TemporaryFile('w+b') as log:
-            if elevated or user!='ZamerovacQA':
+            if admin or linked!=1 or user!='ZamerovacQA':
                 with self.assertRaises(owned.ScopeError):owned.WindowsJob()
                 self.assertNotIn('CreateProcessW',[n for n,_ in calls]);return
             scope=owned.WindowsJob()
@@ -85,7 +90,10 @@ class JobContractTests(unittest.TestCase):
     def test_job_contains_worker_before_any_execution(self):self.exercise()
     def test_failed_assignment_kills_only_retained_suspended_handle(self):self.exercise(assignment=False)
     def test_close_failure_is_not_silently_accepted(self):self.exercise(close_ok=False)
-    def test_elevated_token_never_starts_child(self):self.exercise(elevated=True)
+    def test_scm_high_non_admin_service_is_allowed(self):self.exercise(elevated=True)
+    def test_active_administrators_token_never_starts_child(self):self.exercise(admin=True)
+    def test_linked_full_admin_token_never_starts_child(self):self.exercise(linked=2)
+    def test_linked_limited_admin_token_never_starts_child(self):self.exercise(linked=3)
     def test_other_windows_account_never_starts_child(self):self.exercise(user='different-account')
 
 
