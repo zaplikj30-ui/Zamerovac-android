@@ -27,6 +27,15 @@ Právě 15 původních Node fixture testů přes **`call tools\qa-fixture-gate.c
 - **Windows JobObject/Node26/CMD, fixture15, Chromium/UI23/96, HOME4/4: NOT RUN.** `Node22` statický test není Windows PASS. Po SOURCE review kontrolovat přesný PREP HEAD, zda nejsou spuštěné workflow a zda nevznikla RUN větev či marker. Nové kódové SHA vyžaduje opět review a novou konfiguraci.
 - Rizika: skutečný nativní Windows runner a jeho současná konfigurace/rozpočet neověřeny během přípravy; pokud kterýkoli guard nebo procesní cleanup selže, STOP. Žádné automatické opakování jobu a nikdy tichý převod BLOCKED na PASS.
 
+
+## Oprava QA128-SEC-01 po nezávislém review
+
+Nezávislá [kontrola #5900317790](https://github.com/zaplikj30-ui/Zamerovac-android/pull/128#pullrequestreview-5900317790) na původním SHA `e1a80cb053efaa774a4f384bf25efd0436324084` odhalila, že samostatné `if errorlevel 1` může po záporném návratu externího procesu pokračovat; tím by zvláště prázdný status soubor po chybě `git status` mohl být považován za čistý checkout. Nejde o potvrzený Windows incident.
+
+**Oprava:** za oběma `git status --porcelain`, `where node`, `node -e`, `Python --version` a také za `del /q` následuje okamžitě oboustranná kontrola úspěchu: `if errorlevel 1 exit /b 1` i `if not errorlevel 0 exit /b 1`. To odmítne kladné i záporné chybové kódy. Finální `call tools\\qa-fixture-gate.cmd` už tyto obě kontroly měl; nyní jsou všechny výskyty jednostranného `if errorlevel 1` odstraněny. Spouštěcí podmínky, piny QA PR127/produktu PR121, účet runneru, scope, testovaná fixture a návratová diagnostika se nemění.
+
+**Autorské důkazy dostupné bez Windows:** v přesném aktuálním JS testovém zdroji se ověřuje souvislé pořadí každého nutného externího příkazu a obou kontrol, včetně negativní mutace odebrání ochrany. Model CMD signed errorlevel pokrývá `0, 1, 9009, -1, -1073741819`; prázdný přesměrovaný soubor po chybě `git status` **nesmí** povolit spuštění fixture. Na aktuálním obsahu vzdálených souborů proběhlo **5 PASS/0 FAIL** přímým vykonáním kompletního testového JS ve V8 s omezenými náhradami `node:fs`, `node:path`, `node:test`, `node:assert/strict` (nikoli skutečný Node runtime). Změněné testy na lokálním `node --test`, nativní CMD/Windows a GitHub Actions zůstávají **NOT RUN**; vlastní review proto nepovažovat za provozní PASS. Nezávislý reviewer musí potvrdit celý nový fix a jeho limity.
+
 ## Další brána
 
 1. Nezávislý kontrolor prověří **celý nový workflow a test**, zejména bezpečnost triggeru/checkoutu/budgetu/job exit a provázání PR127/PR121; review samotné není runtime.
