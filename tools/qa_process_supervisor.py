@@ -153,10 +153,16 @@ def supervise(config):
         retain(e,stage)
         error=safe_error_type(e)  # Never transmit arbitrary exception messages.
         diagnostic=scope_diagnostic(e,stage)
+        # WindowsJob.start can fail during both its native operation and its
+        # independent handle/attribute cleanup. Preserve first failure here.
+        if scope is not None and stage=='worker-start':
+            internal=getattr(scope,'start_cleanup_error_type',None)
+            if internal is not None and cleanup_error_type is None:
+                cleanup_error_type=internal if internal in ERROR_TYPES else 'OtherError'
         if scope is not None and stage in ('verdict-open','worker-start'):
             try:
                 scope.cleanup()
-                cleanup=scope.verify_empty() is True
+                cleanup=scope.verify_empty() is True and not getattr(scope,'start_cleanup_error_type',None)
             except BaseException as secondary:
                 cleanup=False
                 note_secondary(secondary)
