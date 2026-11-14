@@ -162,7 +162,7 @@ def supervise(config):
         if scope is not None and stage in ('verdict-open','worker-start'):
             try:
                 scope.cleanup()
-                cleanup=scope.verify_empty() is True and not getattr(scope,'start_cleanup_error_type',None)
+                cleanup=scope.verify_empty() is True and not getattr(scope,'start_cleanup_unverified',False)
             except BaseException as secondary:
                 cleanup=False
                 note_secondary(secondary)
