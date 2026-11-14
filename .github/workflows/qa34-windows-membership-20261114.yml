@@ -1,0 +1,60 @@
+name: QA34 - one-shot Windows administrator membership read-only
+# No checkout, no downloads, no filesystem writes, no worker or elevated child.
+on:
+  push:
+    branches:
+      - 'coord34/windows-account-membership-readonly-20261114'
+    paths:
+      - 'docs/qa/qa34-windows-membership.trigger'
+permissions:
+  contents: read
+concurrency:
+  group: qa34-windows-membership-readonly-once
+  cancel-in-progress: false
+jobs:
+  windows-token-groups:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.event_name == 'push' && github.ref == 'refs/heads/coord34/windows-account-membership-readonly-20261114' && github.event.created == false && github.run_number == 1 && github.run_attempt == 1 && github.event.head_commit.message == 'OWNER-APPROVED-QA34-READONLY-MEMBERSHIP-20261114' }}
+    runs-on: [self-hosted, Windows, X64, zamerovac-qa]
+    timeout-minutes: 2
+    steps:
+      - name: Read actual service token groups without exposing names or raw SID list
+        shell: cmd
+        run: |
+          @echo off
+          if /i not "%GITHUB_REPOSITORY%"=="zaplikj30-ui/Zamerovac-android" exit /b 1
+          if /i not "%GITHUB_ACTOR%"=="zaplikj30-ui" exit /b 1
+          if /i not "%GITHUB_TRIGGERING_ACTOR%"=="zaplikj30-ui" exit /b 1
+          if /i not "%GITHUB_RUN_ATTEMPT%"=="1" exit /b 1
+          if /i not "%GITHUB_RUN_NUMBER%"=="1" exit /b 1
+          set "QA_USER="
+          for /f "delims=" %%U in ('C:\Windows\System32\whoami.exe') do set "QA_USER=%%U"
+          if not defined QA_USER exit /b 1
+          if not defined COMPUTERNAME exit /b 1
+          if /i not "%QA_USER%"=="%COMPUTERNAME%\ZamerovacQA" exit /b 1
+          C:\Windows\System32\whoami.exe /groups /fo csv /nh >nul
+          if errorlevel 1 exit /b 1
+          C:\Windows\System32\whoami.exe /groups /fo csv /nh | C:\Windows\System32\findstr.exe /C:"S-1-5-32-544" >nul
+          if errorlevel 1 (
+            echo QA34_ADMINISTRATORS_SID_IN_CURRENT_TOKEN=NO
+          ) else (
+            echo QA34_ADMINISTRATORS_SID_IN_CURRENT_TOKEN=YES
+          )
+          C:\Windows\System32\whoami.exe /groups /fo csv /nh | C:\Windows\System32\findstr.exe /C:"S-1-16-16384" >nul
+          if errorlevel 1 (
+            echo QA34_INTEGRITY_SYSTEM=NO
+          ) else (
+            echo QA34_INTEGRITY_SYSTEM=YES
+          )
+          C:\Windows\System32\whoami.exe /groups /fo csv /nh | C:\Windows\System32\findstr.exe /C:"S-1-16-12288" >nul
+          if errorlevel 1 (
+            echo QA34_INTEGRITY_HIGH=NO
+          ) else (
+            echo QA34_INTEGRITY_HIGH=YES
+          )
+          C:\Windows\System32\whoami.exe /groups /fo csv /nh | C:\Windows\System32\findstr.exe /C:"S-1-16-8192" >nul
+          if errorlevel 1 (
+            echo QA34_INTEGRITY_MEDIUM=NO
+          ) else (
+            echo QA34_INTEGRITY_MEDIUM=YES
+          )
+          echo QA34_MEMBERSHIP_CHECK_COMPLETE=1
