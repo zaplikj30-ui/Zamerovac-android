@@ -32,7 +32,8 @@ class DiagnosticTests(unittest.TestCase):
     def test_windows_api_failure_is_attributed_before_cleanup_overwrites_last_error(self):
         # Native API model, never a Windows runtime result. All calls use the
         # real production ctypes declarations/control flow and mocked Win32.
-        for failed in ['OpenProcessToken','GetTokenInformation','GetUserNameW','CreateJobObjectW',
+        for failed in ['OpenProcessToken','GetTokenInformation','CreateWellKnownSid','DuplicateToken',
+                       'CheckTokenMembership','GetUserNameW','CreateJobObjectW',
                        'SetInformationJobObject','InitializeProcThreadAttributeList','SetHandleInformation','UpdateProcThreadAttribute',
                        'CreateProcessW','AssignProcessToJobObject','QueryFullProcessImageNameW',
                        'GetProcessTimes','ResumeThread','GetExitCodeProcess','TerminateJobObject','QueryInformationJobObject',
@@ -57,7 +58,10 @@ class DiagnosticTests(unittest.TestCase):
                         return 0xffffffff if name=='ResumeThread' else 0
                     if name=='GetCurrentProcess':return -1
                     if name=='OpenProcessToken':args[2]._obj.value=61
-                    if name=='GetTokenInformation':args[2]._obj.value=0
+                    if name=='GetTokenInformation':args[2]._obj.value=1
+                    if name=='DuplicateToken':args[2]._obj.value=62
+                    if name=='CreateWellKnownSid':args[3]._obj.value=16
+                    if name=='CheckTokenMembership':args[2]._obj.value=0
                     if name=='GetUserNameW':args[0].value='ZamerovacQA'
                     if name=='CreateJobObjectW':return 71
                     if name=='InitializeProcThreadAttributeList':args[3]._obj.value=256
