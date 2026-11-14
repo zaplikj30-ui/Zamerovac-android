@@ -1,0 +1,127 @@
+name: Zamerovac - one-shot Windows 15 fixture and supervised cleanup (NO browser)
+
+# Inert on the PREP branch. Do not create the RUN branch or marker before
+# owner approval and independent source review of this exact workflow SHA.
+on:
+  push:
+    branches:
+      - 'qa/windows-fixture15-20261114-run'
+    paths:
+      - 'docs/qa/windows-fixture15-20261114.trigger'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: zamerovac-windows-fixture15-20261114-one-shot
+  cancel-in-progress: false
+
+jobs:
+  windows-fixture15:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.ref == 'refs/heads/qa/windows-fixture15-20261114-run' && github.event_name == 'push' && github.run_number == 1 && github.run_attempt == 1 && github.event.created == false && github.event.head_commit.message == 'OWNER-APPROVED-WINDOWS-FIXTURE15-20261114' }}
+    runs-on: [self-hosted, Windows, X64, zamerovac-qa]
+    timeout-minutes: 15
+    env:
+      CI: '1'
+      PYTHONUTF8: '1'
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      ZAMEROVAC_PYTHON: 'C:\actions-runner\tools\Python313\python.exe'
+      ZAMEROVAC_SOURCE_ROOT: '${{ github.workspace }}\source'
+    steps:
+      - name: Trust preflight before any checkout code
+        shell: cmd
+        run: |
+          @echo off
+          if /i not "%GITHUB_REPOSITORY%"=="zaplikj30-ui/Zamerovac-android" exit /b 1
+          if /i not "%GITHUB_ACTOR%"=="zaplikj30-ui" exit /b 1
+          if /i not "%GITHUB_TRIGGERING_ACTOR%"=="zaplikj30-ui" exit /b 1
+          if /i not "%GITHUB_REF%"=="refs/heads/qa/windows-fixture15-20261114-run" exit /b 1
+          if not "%GITHUB_EVENT_NAME%"=="push" exit /b 1
+          if not "%GITHUB_RUN_NUMBER%"=="1" exit /b 1
+          if not "%GITHUB_RUN_ATTEMPT%"=="1" exit /b 1
+          set "QA_USER="
+          for /f "delims=" %%A in ('C:\Windows\System32\whoami.exe') do (
+            if defined QA_USER exit /b 1
+            set "QA_USER=%%A"
+          )
+          if not defined QA_USER exit /b 1
+          if not defined COMPUTERNAME exit /b 1
+          if /i not "%QA_USER%"=="%COMPUTERNAME%\ZamerovacQA" exit /b 1
+          if not exist "C:\actions-runner\tools\MinGit-2.56.0.4\cmd\git.exe" exit /b 1
+          if not exist "C:\actions-runner\tools\Python313\python.exe" exit /b 1
+          echo C:\actions-runner\tools\MinGit-2.56.0.4\cmd>>"%GITHUB_PATH%"
+          echo TRUSTED_WINDOWS_FIXTURE_RUNNER=1
+
+      - name: Checkout exact SOURCE-reviewed QA code - no execution yet
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        env:
+          GIT_CONFIG_COUNT: '1'
+          GIT_CONFIG_KEY_0: core.autocrlf
+          GIT_CONFIG_VALUE_0: 'false'
+        with:
+          repository: zaplikj30-ui/Zamerovac-android
+          ref: 6f98ceffff50d337f7c2999fed0e0878d20a582e
+          path: gate
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+          lfs: false
+
+      - name: Checkout exact approved product - no execution yet
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        env:
+          GIT_CONFIG_COUNT: '1'
+          GIT_CONFIG_KEY_0: core.autocrlf
+          GIT_CONFIG_VALUE_0: 'false'
+        with:
+          repository: zaplikj30-ui/Zamerovac-android
+          ref: ae3b4df53c25557f28b4a25ccb65adc2abdff639
+          path: source
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+          lfs: false
+
+      - name: Assert exact SHAs and clean checkout before executing reviewed code
+        shell: cmd
+        run: |
+          @echo off
+          set "ACTUAL_QA="
+          set "ACTUAL_PRODUCT="
+          for /f %%H in ('git -C "%GITHUB_WORKSPACE%\gate" rev-parse HEAD') do set "ACTUAL_QA=%%H"
+          for /f %%H in ('git -C "%GITHUB_WORKSPACE%\source" rev-parse HEAD') do set "ACTUAL_PRODUCT=%%H"
+          if not defined ACTUAL_QA exit /b 1
+          if not defined ACTUAL_PRODUCT exit /b 1
+          if /i not "%ACTUAL_QA%"=="6f98ceffff50d337f7c2999fed0e0878d20a582e" exit /b 1
+          if /i not "%ACTUAL_PRODUCT%"=="ae3b4df53c25557f28b4a25ccb65adc2abdff639" exit /b 1
+          set "QA_STATUS=%RUNNER_TEMP%\zamerovac-fixture15-qa-%GITHUB_RUN_ID%-%GITHUB_RUN_ATTEMPT%.txt"
+          set "PRODUCT_STATUS=%RUNNER_TEMP%\zamerovac-fixture15-product-%GITHUB_RUN_ID%-%GITHUB_RUN_ATTEMPT%.txt"
+          if exist "%QA_STATUS%" exit /b 1
+          if exist "%PRODUCT_STATUS%" exit /b 1
+          git -C "%GITHUB_WORKSPACE%\gate" status --porcelain --untracked-files=all >"%QA_STATUS%"
+          if errorlevel 1 exit /b 1
+          for %%F in ("%QA_STATUS%") do if %%~zF GTR 0 exit /b 1
+          git -C "%GITHUB_WORKSPACE%\source" status --porcelain --untracked-files=all >"%PRODUCT_STATUS%"
+          if errorlevel 1 exit /b 1
+          for %%F in ("%PRODUCT_STATUS%") do if %%~zF GTR 0 exit /b 1
+          del /q "%QA_STATUS%" "%PRODUCT_STATUS%"
+          if errorlevel 1 exit /b 1
+          echo VERIFIED_QA_AND_PRODUCT_SHA=1
+
+      - name: Execute only supervised 15 fixture tests; fail closed on error
+        shell: cmd
+        working-directory: gate
+        run: |
+          @echo off
+          if not "%PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD%"=="1" exit /b 1
+          if not exist "%ZAMEROVAC_PYTHON%" exit /b 1
+          where node >nul
+          if errorlevel 1 exit /b 1
+          node -e "if(!process.version.startsWith('v26.13.'))process.exit(1)"
+          if errorlevel 1 exit /b 1
+          "%ZAMEROVAC_PYTHON%" --version
+          if errorlevel 1 exit /b 1
+          call tools\qa-fixture-gate.cmd
+          if errorlevel 1 exit /b 1
+          if not errorlevel 0 exit /b 1
+          echo VERIFIED_WINDOWS_FIXTURE15_SUPERVISED_GATE=1
