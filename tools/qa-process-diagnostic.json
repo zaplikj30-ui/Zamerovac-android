@@ -5,10 +5,12 @@
     "worker-result", "worker-timeout", "worker-cancel", "owner-channel", "worker-cleanup",
     "scope-close", "owner-launch", "owner-protocol", "owner-overflow", "owner-exit",
     "verdict-read", "verdict-result", "temp-cleanup", "token-platform", "token-elevated",
-    "token-account", "worker-image-check", "job-not-empty"
+    "token-account", "token-admin", "worker-image-check", "job-not-empty"
   ],
   "win32Stages": [
-    "OpenProcessToken", "GetTokenInformation", "GetUserNameW", "CloseTokenHandle",
+    "OpenProcessToken", "GetTokenInformation", "CreateWellKnownSid",
+    "DuplicateToken", "CheckTokenMembership", "CloseImpersonationTokenHandle",
+    "GetUserNameW", "CloseTokenHandle",
     "CreateJobObjectW", "SetInformationJobObject", "InitializeProcThreadAttributeList",
     "SetHandleInformation", "UpdateProcThreadAttribute", "CreateProcessW",
     "AssignProcessToJobObject", "QueryFullProcessImageNameW", "GetProcessTimes", "ResumeThread",
