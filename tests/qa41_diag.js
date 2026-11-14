@@ -92,3 +92,10 @@ test('arbitrary injected native code and type do not escape whitelist',async()=>
  assert.equal(safe.stage,'owner-launch');assert.equal(safe.api,null);assert.equal(safe.win32Error,null);
  assert.equal(safe.errorType,'OtherError');assert(!lines.includes('SECRET_TOKEN_PATH'));
 });
+
+test('contradictory authenticated PASS with a first failure is BLOCKED',async()=>{
+ const {result,exit,lines}=await runWith(async(cmd,cwd,env,log,token)=>{
+  const r=response({token,log,mode:'pass'});return {...r,firstFailure:{stage:'CreateProcessW',win32Error:5,errorType:'ScopeError'}};
+ },true);
+ assert.equal(exit,1);assert.equal(result.passed,false);assert(!lines.startsWith(passLine));
+});
