@@ -14,7 +14,7 @@ const sleep=ms=>new Promise(resolve=>setTimeout(resolve,ms));
 for(const mode of ['normal','fail','timeout','overflow','cancel','parent-eof','cleanup-noop'])
 test('real gate owns and cleans detached descendants: '+mode,{skip:process.platform!=='linux'?'Linux process proof; native Windows Job runtime NOT RUN':false},async()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'qa-fixture-scope-'));
- const neighbour=spawn(process.execPath,['-e','setTimeout(()=>{},30000)'],{stdio:'ignore'});
+ const neighbour=spawn(process.execPath,['-e','setTimeout(()=>{},60000)'],{stdio:'ignore'});
  let outcome;
  try{
   const root=path.join(dir,'checkout');fs.mkdirSync(root);copyGate(root);
@@ -27,7 +27,9 @@ test('real gate owns and cleans detached descendants: '+mode,{skip:process.platf
   fs.writeFileSync(descendants,`const fs=require('node:fs'),cp=require('node:child_process'),path=require('node:path');
 const [role,dir]=process.argv.slice(2);process.on('SIGTERM',()=>{});
 if(role==='child'){const child=cp.spawn(process.execPath,[__filename,'leaf',dir],{detached:true,stdio:'ignore'});child.unref()}
-fs.writeFileSync(path.join(dir,role+'.json'),JSON.stringify({pid:process.pid}));setInterval(()=>{},1000);`);
+// Deliberate startup latency proves the timeout fixture cannot assume instant
+// child/grandchild readiness. This changes no production timeout or workload.
+setTimeout(()=>fs.writeFileSync(path.join(dir,role+'.json'),JSON.stringify({pid:process.pid})),role==='leaf'?${mode==='normal'?3500:mode==='timeout'?1500:0}:0);setInterval(()=>{},1000);`);
   const setup=`const fs=require('node:fs'),cp=require('node:child_process'),path=require('node:path');
 const {test}=require('node:test');process.on('SIGTERM',()=>{});
 const work=${JSON.stringify(work)};
@@ -36,7 +38,7 @@ fs.writeFileSync(path.join(require('node:os').tmpdir(),'interrupted-fixture.tmp'
 `;
   const first=`async()=>{
 const child=cp.spawn(process.execPath,[${JSON.stringify(descendants)},'child',work],{detached:true,stdio:'ignore'});child.unref();
-const deadline=Date.now()+3000;while(!fs.existsSync(path.join(work,'leaf.json'))){if(Date.now()>deadline)throw Error('tree startup');await new Promise(r=>setTimeout(r,10))}
+const deadline=Date.now()+10000;while(!fs.existsSync(path.join(work,'leaf.json'))){if(Date.now()>deadline)throw Error('tree startup');await new Promise(r=>setTimeout(r,10))}
 ${mode==='fail'?"throw Error('PRIVATE FAILURE');":''}
 ${mode==='overflow'?"process.stdout.write('X'.repeat(2*1024*1024));":''}
 ${['timeout','cancel','parent-eof'].includes(mode)?'await new Promise(()=>{setInterval(()=>{},1000)});':''}
@@ -45,7 +47,7 @@ ${['timeout','cancel','parent-eof'].includes(mode)?'await new Promise(()=>{setIn
    `test(${JSON.stringify(name)},${i===0?first:'()=>{}'});`).join('\n'));
   const driver=path.join(root,'driver.cjs');
   fs.writeFileSync(driver,`const fs=require('node:fs'),path=require('node:path');
-const task=require('./tools/qa-fixture-gate.cjs').main(${mode==='timeout'?1000:5000});
+const task=require('./tools/qa-fixture-gate.cjs').main(${mode==='timeout'?5000:15000});
 ${['cancel','parent-eof'].includes(mode)?`const poll=setInterval(()=>{if(fs.existsSync(${JSON.stringify(path.join(work,'leaf.json'))})){clearInterval(poll);${mode==='cancel'?"process.kill(process.pid,'SIGTERM')":'process.exit(0)'}}},10);`:''}
 Promise.resolve(task).then(result=>fs.writeFileSync(${JSON.stringify(path.join(work,'gate-result.json'))},JSON.stringify(result)));`);
   const env={...process.env,TMPDIR:privateTemp};delete env.NODE_TEST_CONTEXT;
@@ -54,7 +56,7 @@ Promise.resolve(task).then(result=>fs.writeFileSync(${JSON.stringify(path.join(w
    command=path.join(root,'eof-witness.cjs');
    fs.writeFileSync(command,`const fs=require('node:fs'),path=require('node:path'),cp=require('node:child_process');
 const child=cp.spawn(process.execPath,[${JSON.stringify(driver)}],{stdio:['ignore','inherit','inherit']});
-child.on('close',()=>{const deadline=Date.now()+3500;const timer=setInterval(()=>{
+child.on('close',()=>{const deadline=Date.now()+10000;const timer=setInterval(()=>{
 const dir=${JSON.stringify(work)},t=JSON.parse(fs.readFileSync(path.join(dir,'test.json')));
 const ids=['test','child','leaf'].map(n=>JSON.parse(fs.readFileSync(path.join(dir,n+'.json'))).pid).concat(t.runner);
 let ownerFinished=!fs.existsSync('/proc/'+t.owner);
@@ -63,8 +65,15 @@ if(ownerFinished&&ids.every(pid=>!fs.existsSync('/proc/'+pid))){clearInterval(ti
 else if(Date.now()>deadline){clearInterval(timer);process.exitCode=77}
 },10)});`);
   }
-  outcome=ownedWorker([process.execPath,command],root,env,path.join(dir,'outer.log'),'d'.repeat(32),8500);
+  outcome=ownedWorker([process.execPath,command],root,env,path.join(dir,'outer.log'),'d'.repeat(32),25000);
   const outer=await outcome;
+  const present=['test','child','leaf'].map(role=>fs.existsSync(path.join(work,role+'.json')));
+  if(!present.every(Boolean)){
+   const gateFile=path.join(work,'gate-result.json');
+   const gateResult=fs.existsSync(gateFile)?JSON.parse(fs.readFileSync(gateFile)):null;
+   const diagnostics=fs.readFileSync(path.join(dir,'outer.log'),'utf8').split('\n').filter(line=>line.startsWith('FIXTURE_DIAGNOSTIC '));
+   assert.fail(JSON.stringify({fixtureReady:present,outerReason:outer.reason,gateResult,diagnostics}));
+  }
   const pids=['test','child','leaf'].map(role=>JSON.parse(fs.readFileSync(path.join(work,role+'.json'))));
   const testProcess=pids[0];
   // EOF cleanup is asynchronous after the gate parent is forcibly gone.

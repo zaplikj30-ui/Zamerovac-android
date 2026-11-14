@@ -114,6 +114,20 @@ cancel, TEMP cleanup, SHA, non-elevated ZamerovacQA a izolace zůstávají povin
   ineffective cleanup; outside proces/sentinel beze změny. Nová diagnostika
   chybu neautorizuje ani nepřeznačí na PASS.
 
+Závěrečná regrese odhalila i nestabilní předpoklad **autorské Linux fixture**:
+test požadoval připravený grandchild, přestože jeho vlastní shortened timeout
+byl1s a setup dovoloval jen3s. Dva případy skončily bez leaf readiness markeru;
+samostatné opakování prošlo, což samo nebylo přijato jako oprava. Řízená latence
+grandchild startupu3.5s pro normal a1.5s pro timeout pak oba FAIL reprodukovala.
+Fixture nyní dává setupu10s, testovacímu normal gate15s a timeout gate5s; vnější
+safety owner má25s. Se stejnou vloženou latencí musí celý strom vzniknout a
+všechny původní cleanup/no-survivor/timeout assertions platí dál. Při chybě
+vzniku stromu se zaznamenají jen booleany readiness a redigovaná fáze, takže
+se důkaz při úklidu neztratí. **Produkční120s deadline ani jeho kontrola se
+nemění.** Nejde o vysvětlení původního Windows běhu ani o dodatečný Windows
+workload. První neúspěšný regresní index i reprodukce se uchovají odděleně od
+finálního PASS indexu, aby nebyl FAIL překryt opakováním.
+
 **Autorský závěr:** prokázána a otestována ztráta vysvětlení v nové vrstvě;
 skutečný Windows root cause NEPROKÁZÁN. Dřívější summary problém není důkazem
 této nové časné chyby. Nelze tvrdit15 FAIL, že testy nezačaly, JobObject bug,
