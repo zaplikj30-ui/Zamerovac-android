@@ -43,8 +43,8 @@ const must=[
 ];
 
 const preflightCommands=[
- 'git -C "%GITHUB_WORKSPACE%\gate" status --porcelain --untracked-files=all >"%QA_STATUS%"',
- 'git -C "%GITHUB_WORKSPACE%\source" status --porcelain --untracked-files=all >"%PRODUCT_STATUS%"',
+ 'git -C "%GITHUB_WORKSPACE%\\gate" status --porcelain --untracked-files=all >"%QA_STATUS%"',
+ 'git -C "%GITHUB_WORKSPACE%\\source" status --porcelain --untracked-files=all >"%PRODUCT_STATUS%"',
  'where node >nul',
  'node -e "if(!process.version.startsWith(\'v26.13.\'))process.exit(1)"',
  '"%ZAMEROVAC_PYTHON%" --version',
@@ -53,7 +53,7 @@ const checkPositive='if errorlevel 1 exit /b 1';
 const checkNegative='if not errorlevel 0 exit /b 1';
 function pairedZeroGuards(text){
  const lines=text.split(/\r?\n/).map(line=>line.trim());
- const gateIndex=lines.indexOf('call tools\qa-fixture-gate.cmd');
+ const gateIndex=lines.indexOf('call tools\\qa-fixture-gate.cmd');
  if(gateIndex<0)return false;
  return preflightCommands.every(cmd=>{
   const indices=lines.flatMap((line,i)=>line===cmd?[i]:[]);
