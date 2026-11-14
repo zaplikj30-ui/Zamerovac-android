@@ -62,7 +62,8 @@ async function main(timeoutMs=120000, emit=chunk=>process.stdout.write(chunk)){
   const text=readVerdict(log);
   workerPassed=text===passLine;
   ownerSucceeded=result.event==='result'&&result.token===token&&result.platform===process.platform&&
-   result.status==='PASS'&&result.diagnostic==null&&result.reason==='normal'&&result.exitCode===0&&result.error===null&&
+   result.status==='PASS'&&result.diagnostic==null&&result.firstFailure==null&&result.cleanupErrorType==null&&
+   result.reason==='normal'&&result.exitCode===0&&result.error===null&&
    result.supervisorExit===0&&result.signal===null;
   stage='verdict-result';
   if(text.startsWith('FIXTURE_GATE_BLOCKED '))report={...JSON.parse(text.slice('FIXTURE_GATE_BLOCKED '.length)),status:'BLOCKED'};
