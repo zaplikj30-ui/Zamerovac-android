@@ -21,11 +21,11 @@ def diagnostic(error,stage):
     return dict(stage=getattr(error,'stage',None) or stage,
                 win32Error=getattr(error,'win32_error',None))
 
-sys.modules.setdefault('qa_owned_processes',types.SimpleNamespace(new_scope=None,ScopeError=ScopeError,scope_diagnostic=diagnostic))
-sys.modules.setdefault('qa_browser_lock',types.SimpleNamespace(BrowserLock=object))
-spec=importlib.util.spec_from_file_location('qa130_exact_supervisor',ROOT/'tools/qa_process_supervisor.py')
-module=importlib.util.module_from_spec(spec)
-spec.loader.exec_module(module)
+with patch.dict(sys.modules,{'qa_owned_processes':types.SimpleNamespace(new_scope=None,ScopeError=ScopeError,scope_diagnostic=diagnostic),
+                             'qa_browser_lock':types.SimpleNamespace(BrowserLock=object)}):
+    spec=importlib.util.spec_from_file_location('qa130_exact_supervisor',ROOT/'tools/qa_process_supervisor.py')
+    module=importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
 
 class FakeScope:
     def __init__(self,mode,verified=True):
