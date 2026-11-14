@@ -23,16 +23,17 @@ async function ownedWorker(command,cwd,env,log,token,timeoutMs=480000,signal,har
  return new Promise(resolve=>{
   let stdout='',finished=false,protocolOverflow=false,child,hardTimedOut=false,hardTimer;
   const finish=result=>{if(finished)return;finished=true;clearInterval(heartbeat);if(hardTimer)clearTimeout(hardTimer);signal?.removeEventListener('abort',cancel);resolve(result)};
-  const cancel=()=>{if(child?.stdin?.writable)child.stdin.end('CANCEL '+token+'\n')};
+  const cancel=()=>{try{if(child?.stdin?.writable)child.stdin.end('CANCEL '+token+'\n')}catch{}};
   // Killing just this supervisor is deliberately not a timeout strategy: EOF
   // lets it contain/reap the full workload; Windows also has kernel Job cleanup.
   const heartbeat=setInterval(()=>{if(child?.stdin?.writable)child.stdin.write('ALIVE '+token+'\n')},1000);
-  // Optional hard boundary for a one-shot probe: if native CreateProcessW
-  // never returns, terminate only the retained Python supervisor handle.
-  // Creation-time JOB_LIST + KILL_ON_JOB_CLOSE protect its worker tree.
-  // UNKNOWN cleanup after hard stop is always BLOCKED, never retry eligible.
+  // Soft deadline only. CreateProcessW may be running when this fires:
+  // killing the owner then has no proven rollback for a partly-created child.
+  // Request cooperative cancellation, NEVER force-kill the owner by PID.
+  // If the native API does not return there is no bounded cleanup guarantee:
+  // the attempt remains BLOCKED and must NOT be retried or run as HOME fault QA.
   if(Number.isInteger(hardStopMs)&&hardStopMs>=1000&&hardStopMs<=180000){
-   hardTimer=setTimeout(()=>{if(finished)return;hardTimedOut=true;try{child?.kill()}catch{}},hardStopMs);
+   hardTimer=setTimeout(()=>{if(finished)return;hardTimedOut=true;cancel()},hardStopMs);
   }
   try{
    child=spawn(env.ZAMEROVAC_PYTHON||(process.platform==='win32'?'python':'python3'),[supervisor,'--config',configFile],
