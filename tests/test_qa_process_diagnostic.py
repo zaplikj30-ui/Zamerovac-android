@@ -1,6 +1,7 @@
 """Safe failure attribution only; no native Windows runtime is executed."""
 import importlib.util
 import ctypes
+import os
 from ctypes import wintypes
 from pathlib import Path
 import sys
@@ -42,8 +43,43 @@ class DiagnosticTests(unittest.TestCase):
 
     def test_image_mismatch_does_not_misattribute_stale_win32_error(self):self.exercise('worker-image-check')
 
+    def test_set_and_restore_both_fail_but_resources_are_closed(self):
+        trace=self.exercise('SetHandleInformation')
+        self.assertEqual(trace['restores'],1)
+        self.assertTrue(trace['null_closed'])
+        self.assertIn('DeleteProcThreadAttributeList',trace['calls'])
+
+    def test_first_restoration_failure_still_restores_second_handle(self):
+        trace=self.exercise('restore-first-fails')
+        self.assertEqual(trace['restores'],2)
+        self.assertTrue(trace['null_closed'])
+        self.assertIn('DeleteProcThreadAttributeList',trace['calls'])
+        self.assertEqual(trace['secondary'],'ScopeError')
+
+    def test_primary_create_failure_survives_secondary_restore_failure(self):
+        trace=self.exercise('CreateProcessW+restore-first-fails')
+        self.assertEqual(trace['diagnostic'],{'stage':'CreateProcessW','win32Error':87})
+        self.assertEqual(trace['secondary'],'ScopeError')
+        self.assertTrue(trace['null_closed'])
+        self.assertIn('DeleteProcThreadAttributeList',trace['calls'])
+
+    def test_get_osfhandle_failure_still_releases_null_and_attributes(self):
+        trace=self.exercise('GetOsfhandle')
+        self.assertEqual(trace['diagnostic'],{'stage':'worker-start','win32Error':None})
+        self.assertTrue(trace['null_closed'])
+        self.assertIn('DeleteProcThreadAttributeList',trace['calls'])
+
     def exercise(self,failed):
         calls=[];last=[0];executable=str(Path(sys.executable).resolve())
+        restores=[];null_opened=[]
+        native_open=open
+        def tracked_open(*args,**kwargs):
+            stream=native_open(*args,**kwargs)
+            if args and str(args[0])==os.devnull:null_opened.append(stream)
+            return stream
+        def os_handle(fd):
+            if failed=='GetOsfhandle':raise OSError('PRIVATE get_osfhandle failure')
+            return fd
         class Function:
             def __init__(self,callback):self.callback=callback
             def __call__(self,*args):return self.callback(*args)
@@ -53,7 +89,7 @@ class DiagnosticTests(unittest.TestCase):
                     calls.append(name)
                     if name=='CloseHandle' and ((failed=='CloseJobHandle' and args[0]==71) or (failed=='CloseWorkerHandle' and args[0]==81)):
                         last[0]=5;return 0
-                    if name==failed or (name=='UpdateProcThreadAttribute' and
+                    if name==failed or (name=='CreateProcessW' and failed=='CreateProcessW+restore-first-fails') or (name=='UpdateProcThreadAttribute' and
                        failed=='UpdateProcThreadAttributeJobList' and args[2]==0x2000d):
                         last[0]=87 if name=='CreateProcessW' else 5
                         return 0xffffffff if name=='ResumeThread' else 0
@@ -78,8 +114,12 @@ class DiagnosticTests(unittest.TestCase):
                     return 0 if name=='WaitForSingleObject' else 1
                 function=Function(invoke);setattr(self,name,function);return function
         scope=None;failure=None
-        def inheritable(*args):
-            if failed=='SetHandleInformation':
+        def inheritable(handle,value):
+            if not value:restores.append(handle)
+            fail=failed=='SetHandleInformation' or (
+                not value and len(restores)==1 and failed in (
+                    'restore-first-fails','CreateProcessW+restore-first-fails'))
+            if fail:
                 error=OSError('PRIVATE HANDLE');error.winerror=5;raise error
         with mock.patch.object(owned.sys,'platform','win32'), \
              mock.patch.object(ctypes,'WinDLL',return_value=Kernel(),create=True), \
@@ -88,25 +128,35 @@ class DiagnosticTests(unittest.TestCase):
              mock.patch.object(wintypes,'WORD',ctypes.c_uint16), \
              mock.patch.object(wintypes,'BOOL',ctypes.c_int32), \
              mock.patch.object(wintypes,'UINT',ctypes.c_uint32), \
-             mock.patch.dict(sys.modules,{'msvcrt':types.SimpleNamespace(get_osfhandle=lambda fd:fd)}), \
+             mock.patch.dict(sys.modules,{'msvcrt':types.SimpleNamespace(get_osfhandle=os_handle)}), \
              mock.patch.object(owned.os,'set_handle_inheritable',side_effect=inheritable,create=True), \
+             mock.patch.object(owned,'open',side_effect=tracked_open,create=True), \
              tempfile.TemporaryFile('w+b') as log:
             try:
                 scope=owned.WindowsJob();scope.start([executable,'fixed'],str(TOOLS),log)
                 scope.poll();scope.cleanup()
-            except owned.ScopeError as error:failure=error
+            except BaseException as error:failure=error
             finally:
                 if scope:
                     try:scope.close()
                     except owned.ScopeError as error:
                         if failure is None:failure=error
         self.assertIsNotNone(failure)
-        expected_stage='UpdateProcThreadAttribute' if failed=='UpdateProcThreadAttributeJobList' else failed
-        expected=None if failed in ('worker-image-check','job-not-attached') else 87 if failed=='CreateProcessW' else 5
+        expected_stage={'UpdateProcThreadAttributeJobList':'UpdateProcThreadAttribute',
+                        'restore-first-fails':'SetHandleInformation',
+                        'CreateProcessW+restore-first-fails':'CreateProcessW',
+                        'GetOsfhandle':'worker-start'}.get(failed,failed)
+        expected=None if failed in ('worker-image-check','job-not-attached','GetOsfhandle') else 87 if failed in ('CreateProcessW','CreateProcessW+restore-first-fails') else 5
         self.assertEqual(owned.scope_diagnostic(failure,'worker-start'),{'stage':expected_stage,'win32Error':expected})
         if failed in ('IsProcessInJob','job-not-attached','CreateProcessW','UpdateProcThreadAttributeJobList'):
             self.assertNotIn('ResumeThread',calls)
         if failed in ('IsProcessInJob','job-not-attached'):
             self.assertIn('TerminateProcess',calls)
+        # Every opened NUL handle must have been closed before the scope returns.
+        self.assertTrue(all(stream.closed for stream in null_opened),'leaked NUL handle / ResourceWarning')
+        return {'calls':calls,'restores':len(restores),
+                'null_closed':all(stream.closed for stream in null_opened),
+                'secondary':getattr(scope,'start_cleanup_error_type',None),
+                'diagnostic':owned.scope_diagnostic(failure,'worker-start')}
 
 if __name__=='__main__':unittest.main()
