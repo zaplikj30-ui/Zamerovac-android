@@ -317,12 +317,20 @@ class WindowsJob:
         # Both HANDLE_LIST and JOB_LIST are required: no post-create orphan gap.
         k.InitializeProcThreadAttributeList(None,2,0,ctypes.byref(size))
         attributes=ctypes.create_string_buffer(size.value)
-        self.demand(k.InitializeProcThreadAttributeList(attributes,2,0,ctypes.byref(size)),'initialize handle list')
-        null=open(os.devnull,'rb')
-        handles=(w.HANDLE*2)(msvcrt.get_osfhandle(null.fileno()),msvcrt.get_osfhandle(log.fileno()))
-        jobs=(w.HANDLE*1)(self.job)  # Retained ONLY by owner, never inherited by worker.
+        initialized=False
+        null=None
+        touched=[]
+        primary=None
+        self.start_cleanup_error_type=None
         try:
+            self.demand(k.InitializeProcThreadAttributeList(attributes,2,0,ctypes.byref(size)),'initialize handle list')
+            initialized=True
+            null=open(os.devnull,'rb')
+            handles=(w.HANDLE*2)(msvcrt.get_osfhandle(null.fileno()),msvcrt.get_osfhandle(log.fileno()))
+            jobs=(w.HANDLE*1)(self.job)  # Retained ONLY by owner, never inherited by worker.
             for handle in handles:
+                # Even a failing SetHandleInformation may have changed state.
+                touched.append(handle)
                 _set_inheritable(handle,True)
             self.demand(k.UpdateProcThreadAttribute(attributes,0,0x20002,handles,ctypes.sizeof(handles),None,None),'restrict inherited handles')
             self.demand(k.UpdateProcThreadAttribute(attributes,0,0x2000d,ctypes.cast(jobs,ctypes.c_void_p),ctypes.sizeof(jobs),None,None),'assign job at creation')
@@ -330,8 +338,8 @@ class WindowsJob:
             startup.startup.flags=0x100
             startup.startup.stdin, startup.startup.stdout, startup.startup.stderr=handles[0],handles[1],handles[1]
             cmd=ctypes.create_unicode_buffer(subprocess.list2cmdline(command))
-            # JOB_LIST attaches the process atomically during CreateProcessW,
-            # eliminating suspended-unassigned orphan gap on normal API operation.
+            # JOB_LIST attaches the process during CreateProcessW on normal
+            # API return. A hanging/crashing API has NO proven rollback.
             self.demand(k.CreateProcessW(command[0],cmd,None,None,True,0x08080004,None,str(cwd),ctypes.byref(startup),ctypes.byref(info)),'create suspended owned worker')
             self.process=info.process
             try:
@@ -353,10 +361,31 @@ class WindowsJob:
                 raise
             finally:
                 k.CloseHandle(info.thread)
+        except BaseException as exc:
+            primary=exc
+            raise
         finally:
-            for handle in handles:
-                _set_inheritable(handle,False)
-            null.close();k.DeleteProcThreadAttributeList(attributes)
+            # Independent cleanup steps: one failed restore must not skip the
+            # second restore, closing NUL, or deleting the attribute list.
+            secondary=None
+            for handle in reversed(touched):
+                try:
+                    _set_inheritable(handle,False)
+                except BaseException as exc:
+                    if secondary is None:secondary=exc
+            if null is not None:
+                try:null.close()
+                except BaseException as exc:
+                    if secondary is None:secondary=exc
+            if initialized:
+                try:k.DeleteProcThreadAttributeList(attributes)
+                except BaseException as exc:
+                    if secondary is None:secondary=exc
+            if secondary is not None:
+                self.start_cleanup_error_type=type(secondary).__name__
+                # Retain the FIRST native failure/stage/code if cleanup also
+                # fails. The owner reports the distinct secondary error.
+                if primary is None:raise secondary
 
     def poll(self):
         code=self.w.DWORD();self.demand(self.k.GetExitCodeProcess(self.process,ctypes.byref(code)),'read worker exit')
