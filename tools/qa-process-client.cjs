@@ -46,14 +46,20 @@ async function ownedWorker(command,cwd,env,log,token,timeoutMs=480000,signal){
      if(protocolOverflow)throw Error('supervisor output limit exceeded');
      report=JSON.parse(stdout.trim().split('\n').at(-1));
      const authentic=report.event==='result'&&report.token===token&&report.platform===process.platform;
+     // A genuine protocol envelope may still contain a contradictory PASS.
+     // Capture this before normalizing diagnostics; never erase failure evidence.
+     const contradictoryPass=authentic&&report.status==='PASS'&&
+      (report.firstFailure!=null||report.cleanupErrorType!=null||
+       report.diagnostic!=null||report.privateTracebackWritten===true);
      report.diagnostic=authentic?
       report.status==='PASS'&&report.diagnostic==null?null:safeDiagnostic(report.diagnostic,'owner-exit'):safeDiagnostic(null,'owner-protocol');
-     report.firstFailure=authentic&&report.status!=='PASS'&&report.firstFailure?
+     report.firstFailure=authentic&&report.firstFailure!=null?
       safeFailure(report.firstFailure,'owner-exit'):null;
      report.cleanupErrorType=authentic&&report.cleanupErrorType?safeErrorType(report.cleanupErrorType):null;
      report.privateTracebackWritten=authentic&&report.privateTracebackWritten===true;
      if(exitSignal||![0,77].includes(code))report={...report,error:'OtherError'};
-     if(report.event!=='result'||report.token!==token||report.cleanupVerified!==true||code!==0||report.status!=='PASS'||report.diagnostic!=null)
+     if(report.event!=='result'||report.token!==token||report.cleanupVerified!==true||code!==0||report.status!=='PASS'||report.diagnostic!=null||
+        contradictoryPass||report.firstFailure!=null||report.cleanupErrorType!=null)
       report={...report,status:'BLOCKED'};
     }catch{
      report={status:'BLOCKED',cleanupVerified:false,error:'OtherError',
