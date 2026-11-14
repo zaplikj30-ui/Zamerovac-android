@@ -1,12 +1,15 @@
 'use strict';
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const {diagnose,recordFor,evidence,MAX_ATTEMPTS,ATTEMPT_MS,TOTAL_MS}=require('../tools/qa-fixture-attempts.cjs');
+const {safeDiagnostic}=require('../tools/qa-process-client.cjs');
+const tap=require('../tools/qa-fixture-tap.cjs');
 const passLine='WINDOWS_FIXTURE_15_PASS_0_FAIL_0_SKIP';
 const success=()=>({passed:true,cleanupVerified:true,ownedRemaining:0,temporaryFilesRemoved:true,
  workerPassed:true,ownerSucceeded:true,timedOut:false,cancelled:false,diagnostic:null,publicReport:passLine});
 const failed=()=>({passed:false,cleanupVerified:true,ownedRemaining:0,temporaryFilesRemoved:true,
  workerPassed:false,ownerSucceeded:false,timedOut:false,cancelled:false,
- diagnostic:{stage:'owner-launch',win32Error:5},publicReport:'FIXTURE_GATE_BLOCKED {"nodeExitOk":false,"planOk":false}'});
+ retryEligible:true,diagnostic:{stage:'verdict-open',win32Error:null},
+ publicReport:tap.formatReport(tap.evaluateTap(undefined)).trimEnd()});
 const run=async(sequence,options={})=>{
  const lines=[];let count=0;let duration=0;
  const result=await diagnose({runOne:async(ms,writer)=>{assert.equal(ms,60000);assert.equal(typeof writer,'function');count++;duration+=3000;const next=sequence.shift();if(next instanceof Error)throw next;if(typeof next==='function')return next();return next;},
@@ -24,7 +27,8 @@ test('one safe early BLOCKED then PASS: original failure retained and FINAL neve
  assert.equal(count,2);assert.equal(result.success,false);assert.equal(result.status,'RECOVERED_WITH_PRIOR_BLOCKED');
  assert.equal(lines.filter(x=>x.startsWith('QA_ATTEMPT ')).length,2);
  const first=JSON.parse(lines.find(x=>x.startsWith('QA_ATTEMPT ')).slice(11));
- assert.equal(first.diagnostic.stage,'owner-launch');assert.equal(first.diagnostic.win32Error,5);
+ assert.equal(first.diagnostic.stage,'verdict-open');assert.equal(first.diagnostic.win32Error,null);
+ assert.equal(first.retryEligible,true);
  assert(lines.some(x=>x.startsWith('QA_ATTEMPT_FIXED_CASES ')));
  assert(!lines.includes(passLine));assert.equal(result.records[0].status,'BLOCKED');
  assert.equal(result.records[1].status,'PASS');
@@ -68,7 +72,7 @@ test('invalid/missing contradictory PASS never accepted or retried',async()=>{
 test('no raw sensitive metadata, arbitrary report is rebuilt from known booleans',async()=>{
  const privateText='PRIVATE_ACCOUNT=ZamerovacQA C:\\SECRET\\USER TOKEN=abcd PID=1234';
  const {result,lines}=await run([{...failed(),publicReport:'FIXTURE_GATE_BLOCKED '+JSON.stringify({nodeExitOk:false,planOk:false,privateText}),
-  diagnostic:{stage:'unknown',win32Error:null},error:privateText},success()]);
+  diagnostic:{stage:'verdict-open',win32Error:null},error:privateText},success()]);
  assert.equal(result.status,'RECOVERED_WITH_PRIOR_BLOCKED');
  const full=lines.join('\n');assert(!full.includes('PRIVATE'));assert(!full.includes('TOKEN='));assert(!full.includes('PID='));
  assert(!full.includes('SECRET'));assert(!full.includes('ZamerovacQA'));
@@ -76,7 +80,28 @@ test('no raw sensitive metadata, arbitrary report is rebuilt from known booleans
 test('deadline prevents new attempt without allowing background or concurrency',async()=>{
  let time=0;let active=0,maxActive=0,count=0;
  const result=await diagnose({clock:()=>time,print:()=>{},runOne:async()=>{
-  active++;maxActive=Math.max(maxActive,active);count++;time+=95000;active--;return failed();}});
+  active++;maxActive=Math.max(maxActive,active);count++;time+=80000;active--;return failed();}});
  assert.equal(count,2);assert.equal(maxActive,1);assert.equal(result.status,'STOP_TOTAL_DEADLINE');
  assert.equal(ATTEMPT_MS,60000);assert.equal(TOTAL_MS,240000);
+});
+
+test('SEC01 real production diagnostic whitelist: logical code null, native code5 retained',()=>{
+ assert.deepEqual(safeDiagnostic({stage:'owner-launch',win32Error:5}),{stage:'owner-launch',win32Error:null});
+ assert.deepEqual(safeDiagnostic({stage:'CreateProcessW',win32Error:5}),{stage:'CreateProcessW',win32Error:5});
+ const {diagnostic}=recordFor(1,{...failed(),diagnostic:{stage:'owner-launch',win32Error:5}});
+ assert.deepEqual(diagnostic,{stage:'owner-launch',win32Error:null});
+});
+test('SEC02 a real TAP failure with verified cleanup must not trigger another attempt',async()=>{
+ const tapFailure={...failed(),retryEligible:false,diagnostic:{stage:'worker-result',win32Error:null},
+  publicReport:tap.formatReport(tap.evaluateTap(undefined,{status:1,signal:null,stderr:Buffer.alloc(0)})).trimEnd()};
+ const {result,count}=await run([tapFailure,success()]);
+ assert.equal(count,1);assert.equal(result.status,'STOP_NOT_EARLY_DIAGNOSTIC');
+ const spoofed=await run([{...tapFailure,retryEligible:true},success()]);
+ assert.equal(spoofed.count,1);assert.equal(spoofed.result.status,'STOP_NOT_EARLY_DIAGNOSTIC');
+});
+test('QA130-TIME monotonic elapsed after each return: 95s early BLOCKED prevents retry',async()=>{
+ let time=0,count=0;
+ const result=await diagnose({clock:()=>time,print:()=>{},runOne:async()=>{
+  count++;time+=95000;return failed();}});
+ assert.equal(count,1);assert.equal(result.status,'STOP_ATTEMPT_DEADLINE');
 });
