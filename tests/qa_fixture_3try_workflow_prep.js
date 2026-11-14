@@ -4,7 +4,7 @@ const {test}=require('node:test'),assert=require('node:assert/strict');
 const file=path.join(__dirname,'..','.github','workflows','windows-3try-20261114.yml');
 const source=fs.readFileSync(file,'utf8');
 const launch='node tools\\qa-fixture-attempts.cjs';
-const qaSha='d5367cc7adb3546c4bcebca40c80257c9a3217c8';
+const qaSha='14d282c2254a99762cd8bce7e86ac2cea047e52d';
 const product='ae3b4df53c25557f28b4a25ccb65adc2abdff639';
 const required=[
  "on:\n  push:\n    branches:\n      - 'qa/windows-3try-20261114-v1-run'\n    paths:\n      - 'docs/qa/windows-3try-20261114.trigger'",
