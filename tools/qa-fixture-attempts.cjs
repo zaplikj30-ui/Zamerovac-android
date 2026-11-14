@@ -5,7 +5,9 @@
 const {main:gateMain}=require('./qa-fixture-gate.cjs');
 const {safeDiagnostic}=require('./qa-process-client.cjs');
 const {formatReport}=require('./qa-fixture-tap.cjs');
-const MAX_ATTEMPTS=3,ATTEMPT_MS=60000,TOTAL_MS=240000;
+const {performance}=require('node:perf_hooks');
+// 60s is the supervisor worker timeout, not the whole startup/cleanup wall time.
+const MAX_ATTEMPTS=3,ATTEMPT_MS=60000,MAX_ATTEMPT_WALL_MS=90000,TOTAL_MS=240000;
 const PASS_LINE='WINDOWS_FIXTURE_15_PASS_0_FAIL_0_SKIP';
 
 function evidence(text){
@@ -23,10 +25,24 @@ function recordFor(attempt,result){
   result.temporaryFilesRemoved===true;
  const publicReport=evidence(result?.publicReport);
  const diagnostic=result?.diagnostic==null?null:safeDiagnostic(result.diagnostic,'unknown');
- const pass=typed&&clean&&result.passed===true&&result.workerPassed===true&&
+ const pass=typed&&clean&&result.retryEligible!==true&&result.passed===true&&result.workerPassed===true&&
   result.ownerSucceeded===true&&result.cancelled===false&&result.timedOut===false&&
   diagnostic===null&&publicReport===PASS_LINE;
  const validBlocked=typed&&result.passed===false&&publicReport?.startsWith('FIXTURE_GATE_BLOCKED ')===true;
+ // Retry is only for the *existing gate's* authenticated pre-test startup
+ // evidence, never a completed/failed TAP case, unknown IPC or missing cleanup.
+ let noTapCases=false;
+ if(validBlocked){
+  const tap=JSON.parse(publicReport.slice('FIXTURE_GATE_BLOCKED '.length));
+  noTapCases=tap.nodeExitOk===false&&tap.planOk===false&&tap.casesOk===false&&
+   tap.summary?.tests?.available===false&&tap.summary?.pass?.available===false&&
+   Array.isArray(tap.cases)&&tap.cases.every(x=>x.available===false);
+ }
+ const startup=diagnostic?.stage==='verdict-open'&&diagnostic.win32Error===null||
+               diagnostic?.stage==='CreateProcessW'&&Number.isInteger(diagnostic.win32Error);
+ const retryEligible=validBlocked&&clean&&result.retryEligible===true&&startup&&noTapCases&&
+   result.workerPassed===false&&result.ownerSucceeded===false&&
+   result.cancelled===false&&result.timedOut===false;
  return {
   attempt,status:pass?'PASS':validBlocked?'BLOCKED':'INVALID',
   cleanupVerified:result?.cleanupVerified===true,ownedRemaining:result?.ownedRemaining===0?0:null,
@@ -34,11 +50,11 @@ function recordFor(attempt,result){
   workerPassed:result?.workerPassed===true,ownerSucceeded:result?.ownerSucceeded===true,
   timedOut:result?.timedOut===true,cancelled:result?.cancelled===true,
   diagnostic:pass?null:safeDiagnostic(diagnostic,'unknown'),
-  publicReport:validBlocked?publicReport:null,clean
+  publicReport:validBlocked?publicReport:null,retryEligible,clean
  };
 }
 async function diagnose({runOne=gateMain,print=line=>process.stdout.write(line+'\n'),
-                       clock=()=>Date.now(),signal}={}){
+                       clock=()=>performance.now(),signal}={}){
  const ctrl=new AbortController(),cancel=()=>ctrl.abort();
  const interrupt=['SIGINT','SIGTERM','SIGHUP'];
  for(const name of interrupt)process.on(name,cancel);
@@ -49,11 +65,16 @@ async function diagnose({runOne=gateMain,print=line=>process.stdout.write(line+'
  try{
   for(let attempt=1;attempt<=MAX_ATTEMPTS;attempt++){
    if(ctrl.signal.aborted){final='STOP_CANCELLED';break}
-   if(clock()-started+ATTEMPT_MS>TOTAL_MS){final='STOP_TOTAL_DEADLINE';break}
+   const before=clock()-started;
+   if(!Number.isFinite(before)||before<0){final='STOP_INVALID_CLOCK';break}
+   if(before+MAX_ATTEMPT_WALL_MS>TOTAL_MS){final='STOP_TOTAL_DEADLINE';break}
+   const attemptStarted=clock();
    let result;
    try{result=await runOne(ATTEMPT_MS,()=>{});
    }catch{result=null}
+   const elapsed=clock()-attemptStarted,overall=clock()-started;
    const item=recordFor(attempt,result);
+   item.elapsedMs=Number.isFinite(elapsed)&&elapsed>=0?Math.round(elapsed):null;
    // Only whitelisted booleans and native stage/code; never raw TAP, stderr,
    // paths, token, PID, process information, exceptions or user data.
    const {publicReport,clean,...visible}=item;
@@ -61,6 +82,9 @@ async function diagnose({runOne=gateMain,print=line=>process.stdout.write(line+'
    if(publicReport)print('QA_ATTEMPT_FIXED_CASES '+JSON.stringify({attempt,evidence:publicReport}));
    records.push(visible);
    if(!clean){final='STOP_UNVERIFIED_CLEANUP';break}
+   if(item.elapsedMs===null||!Number.isFinite(overall)||overall<0){final='STOP_INVALID_CLOCK';break}
+   if(elapsed>MAX_ATTEMPT_WALL_MS){final='STOP_ATTEMPT_DEADLINE';break}
+   if(overall>TOTAL_MS){final='STOP_TOTAL_DEADLINE';break}
    if(ctrl.signal.aborted||item.cancelled){final='STOP_CANCELLED';break}
    if(item.timedOut){final='STOP_TIMEOUT';break}
    if(item.status==='INVALID'||
@@ -70,8 +94,9 @@ async function diagnose({runOne=gateMain,print=line=>process.stdout.write(line+'
    if(item.status==='PASS'){
     final=attempt===1?'PASS_FIRST_ATTEMPT':'RECOVERED_WITH_PRIOR_BLOCKED';break
    }
-   // BLOCKED retries are safe only after the existing gate proved *both* zero
-   // owned descendants and deletion of this specific attempt's temporary files.
+   if(item.status==='BLOCKED'&&!item.retryEligible){final='STOP_NOT_EARLY_DIAGNOSTIC';break}
+   // Only after cleanup of this exact attempt and an authenticated, pre-test
+   // startup diagnostic may the next serial attempt begin.
   }
  }finally{
   signal?.removeEventListener('abort',cancel);
@@ -87,4 +112,4 @@ if(require.main===module){
  if(process.argv.length!==2){process.stderr.write('QA DIAGNOSTIC STOP: unexpected arguments\n');process.exitCode=1}
  else void diagnose().then(result=>{process.exitCode=result.success?0:1},()=>{process.exitCode=1});
 }
-module.exports={diagnose,recordFor,evidence,MAX_ATTEMPTS,ATTEMPT_MS,TOTAL_MS};
+module.exports={diagnose,recordFor,evidence,MAX_ATTEMPTS,ATTEMPT_MS,MAX_ATTEMPT_WALL_MS,TOTAL_MS};
