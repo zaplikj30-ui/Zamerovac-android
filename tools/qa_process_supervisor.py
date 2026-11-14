@@ -72,6 +72,11 @@ def supervise(config):
         nonlocal first_error,first_stage
         if first_error is None:
             first_error,first_stage=exc,at
+    def note_secondary(exc):
+        nonlocal cleanup_error_type
+        # Only the first DISTINCT cleanup failure follows the primary cause.
+        if first_error is not None and exc is not first_error and cleanup_error_type is None:
+            cleanup_error_type=safe_error_type(exc)
     def read_input():
         try:
             buffer=b''
@@ -154,7 +159,7 @@ def supervise(config):
                 cleanup=scope.verify_empty() is True
             except BaseException as secondary:
                 cleanup=False
-                cleanup_error_type=safe_error_type(secondary)
+                note_secondary(secondary)
     finally:
         if scope:
             try:scope.close()
@@ -164,7 +169,7 @@ def supervise(config):
                     retain(e,'scope-close')
                     diagnostic=scope_diagnostic(e,'scope-close')
                     error=safe_error_type(e)
-                cleanup_error_type=safe_error_type(e)
+                note_secondary(e)
         if browser_lock:
             try:browser_lock.close()
             except BaseException as e:
@@ -173,7 +178,7 @@ def supervise(config):
                     retain(e,'scope-close')
                     diagnostic=scope_diagnostic(e,'scope-close')
                     error=safe_error_type(e)
-                cleanup_error_type=safe_error_type(e)
+                note_secondary(e)
         for sig,handler in old.items():signal.signal(sig,handler)
     result={'event':'result','token':config.get('token'),'status':'PASS' if
             reason=='normal' and code==0 and cleanup and error is None else 'BLOCKED',
