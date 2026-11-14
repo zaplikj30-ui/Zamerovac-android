@@ -1,0 +1,83 @@
+name: QA34 - one-shot Windows token guard and empty JobObject test
+# Inert review branch. Marker-only, owner-only, fixed SHA, no worker process.
+on:
+  push:
+    branches: ['coord34/token-admin-guard-20261114']
+    paths: ['docs/qa/qa34-token-guard.trigger']
+permissions:
+  contents: read
+concurrency:
+  group: qa34-windows-token-guard-once
+  cancel-in-progress: false
+jobs:
+  home-token-preflight:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.event_name == 'push' && github.ref == 'refs/heads/coord34/token-admin-guard-20261114' && github.event.created == false && github.run_number == 1 && github.run_attempt == 1 && github.event.head_commit.message == 'OWNER-APPROVED-QA34-TOKEN-GUARD-20261114' }}
+    runs-on: [self-hosted, Windows, X64, zamerovac-qa]
+    timeout-minutes: 5
+    env:
+      PYTHONUTF8: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
+      EXPECTED_REVIEWED_SHA: ${{ github.event.before }}
+      QA34_PYTHON: 'C:\actions-runner\tools\Python313\python.exe'
+    steps:
+      - name: Trusted identity before checkout
+        shell: cmd
+        run: |
+          @echo off
+          if /i not "%GITHUB_REPOSITORY%"=="zaplikj30-ui/Zamerovac-android" exit /b 1
+          if /i not "%GITHUB_ACTOR%"=="zaplikj30-ui" exit /b 1
+          if /i not "%GITHUB_TRIGGERING_ACTOR%"=="zaplikj30-ui" exit /b 1
+          if /i not "%GITHUB_RUN_NUMBER%"=="1" exit /b 1
+          if /i not "%GITHUB_RUN_ATTEMPT%"=="1" exit /b 1
+          if not exist "%QA34_PYTHON%" exit /b 1
+          if not exist "C:\actions-runner\tools\MinGit-2.56.0.4\cmd\git.exe" exit /b 1
+          set "QA_USER="
+          for /f "delims=" %%U in ('C:\Windows\System32\whoami.exe') do set "QA_USER=%%U"
+          if not defined QA_USER exit /b 1
+          if not defined COMPUTERNAME exit /b 1
+          if /i not "%QA_USER%"=="%COMPUTERNAME%\ZamerovacQA" exit /b 1
+          echo C:\actions-runner\tools\MinGit-2.56.0.4\cmd>>"%GITHUB_PATH%"
+          echo QA34_TOKEN_GUARD_IDENTITY=PASS
+      - name: Checkout exact prior reviewed commit in unique directory
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ github.event.before }}
+          path: qa34-token-${{ github.run_id }}
+          clean: false
+          fetch-depth: 1
+          persist-credentials: false
+          lfs: false
+          submodules: false
+      - name: Verify exact SHA and clean source
+        shell: cmd
+        working-directory: qa34-token-${{ github.run_id }}
+        run: |
+          @echo off
+          set "ACTUAL_SHA="
+          for /f %%H in ('git rev-parse HEAD') do set "ACTUAL_SHA=%%H"
+          if not defined ACTUAL_SHA exit /b 1
+          if /i not "%ACTUAL_SHA%"=="%EXPECTED_REVIEWED_SHA%" exit /b 1
+          git status --porcelain --untracked-files=all >"%RUNNER_TEMP%\qa34-guard-status-%GITHUB_RUN_ID%.txt"
+          if errorlevel 1 exit /b 1
+          for %%F in ("%RUNNER_TEMP%\qa34-guard-status-%GITHUB_RUN_ID%.txt") do if %%~zF GTR 0 exit /b 1
+          del /q "%RUNNER_TEMP%\qa34-guard-status-%GITHUB_RUN_ID%.txt"
+          if errorlevel 1 exit /b 1
+          echo QA34_EXACT_SHA=PASS
+      - name: Run mocked native API contracts (never start a worker)
+        shell: cmd
+        working-directory: qa34-token-${{ github.run_id }}
+        run: |
+          @echo off
+          "%QA34_PYTHON%" tests\test_qa_windows_job_contract.py -v
+          if errorlevel 1 exit /b 1
+          "%QA34_PYTHON%" tests\test_qa_process_diagnostic.py -v
+          if errorlevel 1 exit /b 1
+          echo QA34_TOKEN_GUARD_MODELS=PASS
+      - name: Real Windows service token and EMPTY JobObject only
+        shell: cmd
+        working-directory: qa34-token-${{ github.run_id }}
+        run: |
+          @echo off
+          "%QA34_PYTHON%" tools\qa34_native_job_preflight.py
+          if errorlevel 1 exit /b 1
+          echo QA34_TOKEN_GUARD_NATIVE=PASS
