@@ -2,7 +2,7 @@
 // Public entry point, after the enclosing owner/ref/SHA/clean-checkout gate.
 // Reuse the existing pidfd/subreaper or private Job owner for the ENTIRE tree.
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),crypto=require('node:crypto');
-const {ownedWorker}=require('./qa-process-client.cjs');
+const {ownedWorker,safeDiagnostic}=require('./qa-process-client.cjs');
 const {evaluateTap,formatReport}=require('./qa-fixture-tap.cjs');
 const passLine='WINDOWS_FIXTURE_15_PASS_0_FAIL_0_SKIP\n';
 function readVerdict(file){
@@ -21,28 +21,36 @@ function readVerdict(file){
 async function main(timeoutMs=120000){
  let dir,result,token,workerPassed=false,ownerSucceeded=false,temporaryFilesRemoved=true;
  let report=evaluateTap(undefined),cleanupVerified=false;
+ let stage='gate-input',diagnostic=null;
  const abort=new AbortController(),cancel=()=>abort.abort();
  const signals=['SIGINT','SIGTERM','SIGHUP'];
  try{
   if(process.argv.length!==2||!Number.isInteger(timeoutMs)||timeoutMs<250||timeoutMs>120000)throw Error('invalid invocation');
+  stage='gate-signals';
   for(const name of signals)process.on(name,cancel);
+  stage='gate-temp';
   dir=fs.mkdtempSync(path.join(os.tmpdir(),'qa-fixture-gate-'));
   token=crypto.randomBytes(16).toString('hex');
   const log=path.join(dir,'verdict.log');
   const temporary=path.join(dir,'work');fs.mkdirSync(temporary);
   const env={...process.env,TEMP:temporary,TMP:temporary,TMPDIR:temporary};
+  stage='owner-launch';
   result=await ownedWorker([process.execPath,path.join(__dirname,'qa-fixture-worker.cjs')],path.join(__dirname,'..'),
    env,log,token,timeoutMs,abort.signal);
+  if(result?.status!=='PASS')diagnostic=safeDiagnostic(result?.diagnostic,'owner-exit');
   const ownResult=result?.event==='result'&&result.token===token&&result.platform===process.platform&&
    [0,77].includes(result.supervisorExit)&&result.signal===null&&result.error===null;
   cleanupVerified=ownResult&&result.cleanupVerified===true&&result.cleanupEvidence?.remainingProcesses===0;
+  if(!cleanupVerified&&diagnostic===null)diagnostic=safeDiagnostic(null,'owner-exit');
+  stage='verdict-read';
   const text=readVerdict(log);
   workerPassed=text===passLine;
   ownerSucceeded=result.event==='result'&&result.token===token&&result.platform===process.platform&&
    result.status==='PASS'&&result.reason==='normal'&&result.exitCode===0&&result.error===null&&
    result.supervisorExit===0&&result.signal===null;
+  stage='verdict-result';
   if(text.startsWith('FIXTURE_GATE_BLOCKED '))report={...JSON.parse(text.slice('FIXTURE_GATE_BLOCKED '.length)),status:'BLOCKED'};
- }catch{} // Only constant/boolean diagnostics leave this boundary.
+ }catch{if(diagnostic===null)diagnostic=safeDiagnostic(null,stage)}
  finally{
   if(dir){
    temporaryFilesRemoved=false;
@@ -50,12 +58,14 @@ async function main(timeoutMs=120000){
     fs.rmSync(dir,{recursive:true,force:true});
     try{fs.lstatSync(dir)}catch(error){if(error.code==='ENOENT')temporaryFilesRemoved=true}
    }catch{}
+   if(!temporaryFilesRemoved&&diagnostic===null)diagnostic=safeDiagnostic(null,'temp-cleanup');
   }
   for(const name of signals)process.removeListener(name,cancel);
  }
  const passed=workerPassed&&ownerSucceeded&&cleanupVerified&&temporaryFilesRemoved&&!abort.signal.aborted;
  process.stdout.write(passed?passLine:formatReport({...report,status:'BLOCKED'}));
  if(!passed)process.stdout.write('FIXTURE_SCOPE_BLOCKED '+JSON.stringify({cleanupVerified,temporaryFilesRemoved,workerPassed,ownerSucceeded,cancelled:abort.signal.aborted})+'\n');
+ if(!passed)process.stdout.write('FIXTURE_DIAGNOSTIC '+JSON.stringify(safeDiagnostic(diagnostic,stage))+'\n');
  process.exitCode=passed?0:1;
  return {passed,cleanupVerified,temporaryFilesRemoved,timedOut:result?.reason==='timeout'};
 }

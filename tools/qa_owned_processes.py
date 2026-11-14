@@ -4,6 +4,7 @@ No caller-supplied PID is killed. Instances live in a dedicated supervisor with
 no unrelated children. Windows children cannot run before Job assignment.
 """
 import ctypes
+import json
 import os
 from pathlib import Path
 import signal
@@ -12,8 +13,32 @@ import sys
 import time
 
 
+_DIAGNOSTIC=json.loads((Path(__file__).with_name('qa-process-diagnostic.json')).read_text(encoding='utf-8'))
+_NATIVE_STAGES=frozenset(_DIAGNOSTIC['win32Stages'])
+_STAGES=frozenset(_DIAGNOSTIC['stages'])|_NATIVE_STAGES
+
 class ScopeError(RuntimeError):
-    pass
+    def __init__(self,message,*,stage=None,win32_error=None):
+        super().__init__(message)
+        self.stage=stage
+        self.win32_error=win32_error
+
+def scope_diagnostic(error,fallback):
+    stage=getattr(error,'stage',None) if isinstance(error,ScopeError) else None
+    stage=stage if isinstance(stage,str) and stage in _STAGES else fallback if isinstance(fallback,str) and fallback in _STAGES else 'unknown'
+    code=getattr(error,'win32_error',None) if isinstance(error,ScopeError) else None
+    return {'stage':stage,'win32Error':code if stage in _NATIVE_STAGES and type(code) is int and 0<=code<=0xffffffff else None}
+
+def _win_error(message,stage):
+    # Read immediately after the failed API, before any cleanup can overwrite it.
+    code=ctypes.get_last_error()
+    return ScopeError(message+' WinError='+str(code),stage=stage,win32_error=code)
+
+def _set_inheritable(handle,value):
+    try:os.set_handle_inheritable(handle,value)
+    except OSError as error:
+        raise ScopeError('handle inheritance failed',stage='SetHandleInformation',
+                         win32_error=getattr(error,'winerror',None)) from error
 
 
 def proc_info(pid):
@@ -154,7 +179,7 @@ class LinuxScope:
 
 
 def require_windows_service_token():
-    if sys.platform!='win32':raise ScopeError('Windows service token required')
+    if sys.platform!='win32':raise ScopeError('Windows service token required',stage='token-platform')
     from ctypes import wintypes as w
     k=ctypes.WinDLL('kernel32',use_last_error=True)
     advapi=ctypes.WinDLL('advapi32',use_last_error=True)
@@ -165,15 +190,19 @@ def require_windows_service_token():
     advapi.GetUserNameW.argtypes=[w.LPWSTR,ctypes.POINTER(w.DWORD)];advapi.GetUserNameW.restype=w.BOOL
     token=w.HANDLE();elevated=w.DWORD();returned=w.DWORD()
     if not advapi.OpenProcessToken(k.GetCurrentProcess(),8,ctypes.byref(token)):
-        raise ScopeError('cannot verify current Windows token')
+        raise _win_error('cannot verify current Windows token','OpenProcessToken')
     try:
-        if not advapi.GetTokenInformation(token,20,ctypes.byref(elevated),ctypes.sizeof(elevated),ctypes.byref(returned)) or elevated.value:
-            raise ScopeError('non-elevated Windows token required')
+        if not advapi.GetTokenInformation(token,20,ctypes.byref(elevated),ctypes.sizeof(elevated),ctypes.byref(returned)):
+            raise _win_error('cannot query current Windows elevation','GetTokenInformation')
+        if elevated.value:
+            raise ScopeError('non-elevated Windows token required',stage='token-elevated')
     finally:
-        if not k.CloseHandle(token):raise ScopeError('close token query handle failed')
+        if not k.CloseHandle(token):raise _win_error('close token query handle failed','CloseTokenHandle')
     user=ctypes.create_unicode_buffer(256);length=w.DWORD(256)
-    if not advapi.GetUserNameW(user,ctypes.byref(length)) or user.value.casefold()!='zamerovacqa':
-        raise ScopeError('existing ZamerovacQA service token required')
+    if not advapi.GetUserNameW(user,ctypes.byref(length)):
+        raise _win_error('cannot query Windows account','GetUserNameW')
+    if user.value.casefold()!='zamerovacqa':
+        raise ScopeError('existing ZamerovacQA service token required',stage='token-account')
 
 
 class WindowsJob:
@@ -228,15 +257,28 @@ class WindowsJob:
         self.job=self.k.CreateJobObjectW(None,None)
         self.process=None
         if not self.job:
-            raise ScopeError('CreateJobObject failed')
+            raise _win_error('CreateJobObject failed','CreateJobObjectW')
         limits=Limits();limits.basic.flags=0x2000  # KILL_ON_JOB_CLOSE; never BREAKAWAY.
         if not self.k.SetInformationJobObject(self.job,9,ctypes.byref(limits),ctypes.sizeof(limits)):
-            self.close();raise ScopeError('Job kill-on-close unavailable')
+            failure=_win_error('Job kill-on-close unavailable','SetInformationJobObject')
+            self.close();raise failure
         self.observed=[]
 
     def demand(self, ok, message):
         if not ok:
-            raise ScopeError(message+' WinError='+str(ctypes.get_last_error()))
+            stage={
+              'initialize handle list':'InitializeProcThreadAttributeList',
+              'restrict inherited handles':'UpdateProcThreadAttribute',
+              'create suspended owned worker':'CreateProcessW',
+              'assign private job before resume':'AssignProcessToJobObject',
+              'worker image identity':'QueryFullProcessImageNameW',
+              'worker creation identity':'GetProcessTimes','resume owned worker':'ResumeThread',
+              'read worker exit':'GetExitCodeProcess','terminate owned job':'TerminateJobObject',
+              'verify job empty':'QueryInformationJobObject',
+            }.get(message)
+            if stage:raise _win_error(message,stage)
+            # A failed logical comparison has no GetLastError contract.
+            raise ScopeError(message,stage='worker-image-check' if message=='worker executable changed' else 'unknown')
 
     def start(self, command, cwd, log):
         import msvcrt
@@ -249,7 +291,7 @@ class WindowsJob:
         handles=(w.HANDLE*2)(msvcrt.get_osfhandle(null.fileno()),msvcrt.get_osfhandle(log.fileno()))
         try:
             for handle in handles:
-                os.set_handle_inheritable(handle,True)
+                _set_inheritable(handle,True)
             self.demand(k.UpdateProcThreadAttribute(attributes,0,0x20002,handles,ctypes.sizeof(handles),None,None),'restrict inherited handles')
             startup.attributes=ctypes.cast(attributes,ctypes.c_void_p)
             startup.startup.flags=0x100
@@ -275,7 +317,7 @@ class WindowsJob:
                 k.CloseHandle(info.thread)
         finally:
             for handle in handles:
-                os.set_handle_inheritable(handle,False)
+                _set_inheritable(handle,False)
             null.close();k.DeleteProcThreadAttributeList(attributes)
 
     def poll(self):
@@ -291,18 +333,26 @@ class WindowsJob:
             if info.active==0:
                 return True
             time.sleep(.01)
-        raise ScopeError('owned Windows job still contains processes')
+        raise ScopeError('owned Windows job still contains processes',stage='job-not-empty')
 
     def close(self):
         errors=[]
+        diagnostic=None
         if self.job:
-            if not self.k.CloseHandle(self.job):errors.append('close private job failed')
+            if not self.k.CloseHandle(self.job):
+                diagnostic=_win_error('close private job failed','CloseJobHandle')
+                errors.append(str(diagnostic))
             self.job=None
         if self.process:
-            if self.k.WaitForSingleObject(self.process,2000)!=0:errors.append('owned worker did not stop')
-            if not self.k.CloseHandle(self.process):errors.append('close worker handle failed')
+            waited=self.k.WaitForSingleObject(self.process,2000)
+            if waited!=0:
+                if diagnostic is None:diagnostic=_win_error('owned worker wait failed','WaitForSingleObject') if waited==0xffffffff else ScopeError('owned worker did not stop',stage='WaitForSingleObject')
+                errors.append('owned worker did not stop')
+            if not self.k.CloseHandle(self.process):
+                if diagnostic is None:diagnostic=_win_error('close worker handle failed','CloseWorkerHandle')
+                errors.append('close worker handle failed')
             self.process=None
-        if errors:raise ScopeError('; '.join(errors))
+        if errors:raise ScopeError('; '.join(errors),stage=diagnostic.stage,win32_error=diagnostic.win32_error)
 
     def verify_empty(self):
         info=self.Accounting()

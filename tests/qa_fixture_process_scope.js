@@ -101,7 +101,7 @@ test('supervisor output limit cannot be cancelled and then reported as PASS',asy
  child.stdout=new EventEmitter();child.stderr=new EventEmitter();
  vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../tools/qa-process-client.cjs'),'utf8'),{
   module,process,__dirname:path.resolve(__dirname,'../tools'),setInterval,clearInterval,
-  require(id){if(id==='node:fs')return {writeFileSync(){}};if(id==='node:child_process')return {spawn:()=>child};return require(id)},
+  require(id){if(id==='node:fs')return {writeFileSync(){}};if(id==='node:child_process')return {spawn:()=>child};if(id==='./qa-process-diagnostic.json')return require('../tools/qa-process-diagnostic.json');return require(id)},
  });
  const token='e'.repeat(32),task=module.exports.ownedWorker([process.execPath,'fixed-worker'],__dirname,process.env,'not-written',token);
  child.stdout.emit('data',Buffer.alloc(1024*1024+1,0x58));
@@ -133,7 +133,7 @@ async function modeledGate(mode,timeoutMs=120000){
     if(id==='node:fs')return fsModel;
     if(id==='node:os')return {...os,tmpdir:()=>root};
     if(id==='./qa-fixture-tap.cjs')return tapGate;
-    if(id==='./qa-process-client.cjs')return {async ownedWorker(...args){
+    if(id==='./qa-process-client.cjs')return {safeDiagnostic:require('../tools/qa-process-client.cjs').safeDiagnostic,async ownedWorker(...args){
      launches++;invocation=args;
      const [command,cwd,env,log,token]=args;
      if(mode==='startup-error')throw Error('PRIVATE EXEC PATH');
@@ -156,6 +156,10 @@ async function modeledGate(mode,timeoutMs=120000){
      if(mode==='scope-status')result.status='BLOCKED';
      if(mode==='reason')result.reason='timeout';
      if(mode==='owner-error')result.error='PRIVATE OWNER PATH';
+     if(mode==='native-error'){
+      result.status='BLOCKED';result.error='PRIVATE OWNER PATH';result.cleanupVerified=false;
+      result.diagnostic={stage:'CreateProcessW',win32Error:87,message:'PRIVATE OWNER PATH'};
+     }
      return result;
     }};
     return require(id);
@@ -193,4 +197,17 @@ test('PASS is withheld unless owner, zero descendants and temporary-file cleanup
   if(mode==='argv')assert.equal(outcome.launches,0);
  }
  for(const timeout of [249,120001,NaN,'1000'])assert.equal((await modeledGate('success',timeout)).launches,0);
+});
+
+test('public diagnostic identifies the early layer and does not overwrite a native failure with verdict-read',async()=>{
+ for(const [mode,expected] of [['argv','gate-input'],['startup-error','owner-launch'],
+  ['native-error','CreateProcessW'],['remove-noop','temp-cleanup'],['large-report','verdict-read']]){
+  const result=await modeledGate(mode);
+  assert.equal(result.exitCode,1);
+  const line=result.output.split('\n').find(line=>line.startsWith('FIXTURE_DIAGNOSTIC '));
+  const diagnostic=JSON.parse(line.slice('FIXTURE_DIAGNOSTIC '.length));
+  assert.equal(diagnostic.stage,expected);
+  assert.equal(diagnostic.win32Error,mode==='native-error'?87:null);
+  assert.deepEqual(Object.keys(diagnostic),['stage','win32Error']);
+ }
 });

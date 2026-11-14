@@ -9,7 +9,7 @@ import sys
 import threading
 import time
 
-from qa_owned_processes import new_scope, ScopeError
+from qa_owned_processes import new_scope, ScopeError, scope_diagnostic
 from qa_browser_lock import BrowserLock
 
 
@@ -20,6 +20,8 @@ def supervise(config):
     code=None
     cleanup=False
     error=None
+    diagnostic=None
+    stage='owner-config'
     cancelled=[]
     old={}
     messages=queue.Queue(maxsize=32)
@@ -50,6 +52,7 @@ def supervise(config):
                 not .1<=config['timeout']<=480 or not .1<=config['heartbeatTimeout']<=10 or
                 not isinstance(config['token'],str) or len(config['token'])!=32):
             raise ScopeError('invalid owned worker configuration')
+        stage='owner-signals'
         for sig in (signal.SIGINT,signal.SIGTERM):
             old[sig]=signal.signal(sig,lambda signum,frame:cancelled.append(signum))
         if hasattr(signal,'SIGHUP'):
@@ -59,14 +62,18 @@ def supervise(config):
         if sys.platform=='linux':
             import resource
             resource.setrlimit(resource.RLIMIT_CORE,(0,0))  # Own process/children only, no system setting.
+        stage='scope-create'
         scope=new_scope()
         os.environ['ZAMEROVAC_SUPERVISOR_PID']=str(os.getpid())
         os.environ['ZAMEROVAC_SCOPE']='windows-private-job' if sys.platform=='win32' else 'linux-pidfd-subreaper'
+        stage='verdict-open'
         with log.open('xb',buffering=0) as output:
+            stage='worker-start'
             owner=scope.start(command,cwd,output)
             print(json.dumps({'event':'ready',**owner,'token':config['token']}),flush=True)
             threading.Thread(target=read_input,daemon=True).start()
             started=last=time.monotonic()
+            stage='worker-run'
             while True:
                 now=time.monotonic()
                 if cancelled:
@@ -88,18 +95,21 @@ def supervise(config):
                 if now-last>config['heartbeatTimeout']:
                     reason='heartbeat-timeout';break
                 time.sleep(.02)
+            stage='worker-cleanup'
             scope.cleanup()
             cleanup=scope.verify_empty()
             if not cleanup:
                 raise ScopeError('cleanup returned with surviving owned processes')
     except BaseException as e:
         error=type(e).__name__+': '+str(e)
+        diagnostic=scope_diagnostic(e,stage)
     finally:
         if scope:
             try:
                 scope.close()
             except BaseException as e:
                 cleanup=False;error=(error or '')+'; emergency cleanup: '+str(e)
+                if diagnostic is None:diagnostic=scope_diagnostic(e,'scope-close')
         if browser_lock:
             browser_lock.close()
         for sig,handler in old.items():
@@ -110,6 +120,10 @@ def supervise(config):
             'processes':scope.observed if scope else [],'platform':sys.platform}
     result['cleanupEvidence']={'method':'Windows Job active-process query' if sys.platform=='win32' else 'Linux pidfd + subreaper + /proc',
                                'remainingProcesses':0 if cleanup else None}
+    result['diagnostic']=diagnostic if error is not None else None if result['status']=='PASS' else scope_diagnostic(None,{
+        'crash':'worker-result','timeout':'worker-timeout','cancel':'worker-cancel',
+        'eof':'owner-channel','heartbeat-timeout':'owner-channel','communication-error':'owner-channel',
+    }.get(reason,stage))
     print(json.dumps(result),flush=True)
     return 0 if result['status']=='PASS' else 77
 
@@ -123,7 +137,8 @@ def main():
             raise ScopeError('owned regular config required')
         return supervise(json.loads(opts.config.read_text(encoding='utf-8')))
     except BaseException as e:
-        print(json.dumps({'event':'result','status':'BLOCKED','cleanupVerified':False,'error':str(e)}),flush=True)
+        print(json.dumps({'event':'result','status':'BLOCKED','cleanupVerified':False,'error':str(e),
+                          'diagnostic':scope_diagnostic(e,'owner-config')}),flush=True)
         return 77
 
 

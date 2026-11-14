@@ -1,6 +1,13 @@
 'use strict';
 const fs=require('node:fs'),path=require('node:path');
 const {spawn}=require('node:child_process');
+const diagnosticSpec=require('./qa-process-diagnostic.json');
+const nativeStages=new Set(diagnosticSpec.win32Stages),stages=new Set([...diagnosticSpec.stages,...nativeStages]);
+function safeDiagnostic(value,fallback='unknown'){
+ const stage=stages.has(value?.stage)?value.stage:stages.has(fallback)?fallback:'unknown';
+ const code=value?.win32Error;
+ return {stage,win32Error:nativeStages.has(stage)&&Number.isInteger(code)&&code>=0&&code<=0xffffffff?code:null};
+}
 const supervisor=path.join(__dirname,'qa_process_supervisor.py');
 async function ownedWorker(command,cwd,env,log,token,timeoutMs=480000,signal){
  const configFile=log+'.owner.json';
@@ -24,21 +31,24 @@ async function ownedWorker(command,cwd,env,log,token,timeoutMs=480000,signal){
     stdout+=chunk;
    });
    child.stderr.on('data',data=>{stderr+=data.toString().slice(0,Math.max(0,16000-stderr.length))});
-   child.once('error',e=>finish({status:'BLOCKED',cleanupVerified:false,error:e.message}));
+   child.once('error',e=>finish({status:'BLOCKED',cleanupVerified:false,error:e.message,diagnostic:safeDiagnostic(null,'owner-launch')}));
    child.once('close',(code,exitSignal)=>{
     let report;
     try{
      if(protocolOverflow)throw Error('supervisor output limit exceeded');
      report=JSON.parse(stdout.trim().split('\n').at(-1));
+     report.diagnostic=report.event==='result'&&report.token===token&&report.platform===process.platform?
+      report.status==='PASS'&&report.diagnostic==null?null:safeDiagnostic(report.diagnostic,'owner-exit'):safeDiagnostic(null,'owner-protocol');
      if(exitSignal||![0,77].includes(code))report={...report,error:'supervisor failed: '+String(code||exitSignal)+' '+stderr};
      if(report.event!=='result'||report.token!==token||report.cleanupVerified!==true||code!==0||report.status!=='PASS')
       report={...report,status:'BLOCKED'};
-    }catch(e){report={status:'BLOCKED',cleanupVerified:false,error:'missing owned-process evidence: '+stderr}}
+    }catch(e){report={status:'BLOCKED',cleanupVerified:false,error:'missing owned-process evidence: '+stderr,
+     diagnostic:safeDiagnostic(null,protocolOverflow?'owner-overflow':'owner-protocol')}}
     finish({...report,supervisorExit:code,signal:exitSignal});
    });
    signal?.addEventListener('abort',cancel,{once:true});
    if(signal?.aborted)cancel();
-  }catch(e){finish({status:'BLOCKED',cleanupVerified:false,error:e.message})}
+  }catch(e){finish({status:'BLOCKED',cleanupVerified:false,error:e.message,diagnostic:safeDiagnostic(null,'owner-launch')})}
  });
 }
-module.exports={ownedWorker};
+module.exports={ownedWorker,safeDiagnostic};
