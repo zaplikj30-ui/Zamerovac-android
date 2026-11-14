@@ -37,7 +37,7 @@ async function main(timeoutMs=120000){
   stage='owner-launch';
   result=await ownedWorker([process.execPath,path.join(__dirname,'qa-fixture-worker.cjs')],path.join(__dirname,'..'),
    env,log,token,timeoutMs,abort.signal);
-  if(result?.status!=='PASS')diagnostic=safeDiagnostic(result?.diagnostic,'owner-exit');
+  if(result?.status!=='PASS'||result?.diagnostic!=null)diagnostic=safeDiagnostic(result?.diagnostic,'owner-exit');
   const ownResult=result?.event==='result'&&result.token===token&&result.platform===process.platform&&
    [0,77].includes(result.supervisorExit)&&result.signal===null&&result.error===null;
   cleanupVerified=ownResult&&result.cleanupVerified===true&&result.cleanupEvidence?.remainingProcesses===0;
@@ -46,7 +46,7 @@ async function main(timeoutMs=120000){
   const text=readVerdict(log);
   workerPassed=text===passLine;
   ownerSucceeded=result.event==='result'&&result.token===token&&result.platform===process.platform&&
-   result.status==='PASS'&&result.reason==='normal'&&result.exitCode===0&&result.error===null&&
+   result.status==='PASS'&&result.diagnostic==null&&result.reason==='normal'&&result.exitCode===0&&result.error===null&&
    result.supervisorExit===0&&result.signal===null;
   stage='verdict-result';
   if(text.startsWith('FIXTURE_GATE_BLOCKED '))report={...JSON.parse(text.slice('FIXTURE_GATE_BLOCKED '.length)),status:'BLOCKED'};

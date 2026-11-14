@@ -54,6 +54,25 @@ test('a failed owner preserves a structured native stage/code without accepting 
  assert.equal(wrong.status,'BLOCKED');assert.equal(wrong.diagnostic.stage,'owner-protocol');
 });
 
+test('an otherwise valid owner PASS accepts null or absent diagnostics',async()=>{
+ for(const ending of ['\n','\r\n'])for(const diagnostic of [null,undefined]){
+  const result=await protocol({event:'result',token:'a'.repeat(32),platform:process.platform,
+   status:'PASS',reason:'normal',exitCode:0,error:null,cleanupVerified:true,
+   cleanupEvidence:{remainingProcesses:0},diagnostic},{code:0,ending});
+  assert.equal(result.status,'PASS');assert.equal(result.diagnostic,null);
+ }
+});
+
+test('an otherwise valid owner PASS with any non-null diagnostic is BLOCKED',async()=>{
+ for(const diagnostic of [{stage:'CreateProcessW',win32Error:5},{},false,0,secret]){
+  const result=await protocol({event:'result',token:'a'.repeat(32),platform:process.platform,
+   status:'PASS',reason:'normal',exitCode:0,error:null,cleanupVerified:true,
+   cleanupEvidence:{remainingProcesses:0},diagnostic},{code:0,ending:'\r\n'});
+  assert.equal(result.status,'BLOCKED');
+  assert(!JSON.stringify(result.diagnostic).includes('PRIVATE'));
+ }
+});
+
 test('the whole new launch chain exposes an injected owner failure that the previous public gate hid',()=>{
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'qa-diagnostic-chain-'));
  const env={...process.env};delete env.NODE_TEST_CONTEXT;

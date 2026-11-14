@@ -40,7 +40,7 @@ async function ownedWorker(command,cwd,env,log,token,timeoutMs=480000,signal){
      report.diagnostic=report.event==='result'&&report.token===token&&report.platform===process.platform?
       report.status==='PASS'&&report.diagnostic==null?null:safeDiagnostic(report.diagnostic,'owner-exit'):safeDiagnostic(null,'owner-protocol');
      if(exitSignal||![0,77].includes(code))report={...report,error:'supervisor failed: '+String(code||exitSignal)+' '+stderr};
-     if(report.event!=='result'||report.token!==token||report.cleanupVerified!==true||code!==0||report.status!=='PASS')
+     if(report.event!=='result'||report.token!==token||report.cleanupVerified!==true||code!==0||report.status!=='PASS'||report.diagnostic!=null)
       report={...report,status:'BLOCKED'};
     }catch(e){report={status:'BLOCKED',cleanupVerified:false,error:'missing owned-process evidence: '+stderr,
      diagnostic:safeDiagnostic(null,protocolOverflow?'owner-overflow':'owner-protocol')}}

@@ -123,7 +123,7 @@ test('supervisor output limit cannot be cancelled and then reported as PASS',asy
  assert.equal(cancellations,1);
 });
 
-async function modeledGate(mode,timeoutMs=120000){
+async function modeledGate(mode,timeoutMs=120000,diagnostic){
  const root=fs.mkdtempSync(path.join(os.tmpdir(),'qa-scope-model-'));
  const processModel=Object.assign(new EventEmitter(),{argv:['node','qa-fixture-gate.cjs'],execPath:process.execPath,
   platform:process.platform,env:process.env,stdout:{write(value){output+=value}}});
@@ -153,7 +153,7 @@ async function modeledGate(mode,timeoutMs=120000){
      if(mode==='hardlink')fs.linkSync(sentinel,log);else fs.writeFileSync(log,text);
      if(mode==='cancel')processModel.emit('SIGTERM');
      const result={event:'result',token,platform:process.platform,status:'PASS',reason:'normal',exitCode:0,error:null,
-      supervisorExit:0,signal:null,cleanupVerified:true,cleanupEvidence:{remainingProcesses:0}};
+      supervisorExit:0,signal:null,cleanupVerified:true,cleanupEvidence:{remainingProcesses:0},diagnostic};
      if(mode==='cleanup-false')result.cleanupVerified=false;
      if(mode==='remaining')result.cleanupEvidence.remainingProcesses=1;
      if(mode==='missing-evidence')delete result.cleanupEvidence;
@@ -218,5 +218,26 @@ test('public diagnostic identifies the early layer and does not overwrite a nati
   assert.equal(diagnostic.stage,expected);
   assert.equal(diagnostic.win32Error,mode==='native-error'?87:null);
   assert.deepEqual(Object.keys(diagnostic),['stage','win32Error']);
+ }
+});
+
+test('public PASS remains unchanged with null or absent owner diagnostics',async()=>{
+ for(const diagnostic of [null,undefined]){
+  const result=await modeledGate('success',120000,diagnostic);
+  assert.equal(result.exitCode,0);assert.equal(result.result.passed,true);
+  assert.equal(result.output,'WINDOWS_FIXTURE_15_PASS_0_FAIL_0_SKIP\n');
+ }
+});
+
+test('public gate blocks an otherwise valid PASS verdict carrying owner error diagnostics',async()=>{
+ for(const diagnostic of [{stage:'CreateProcessW',win32Error:5},{},false,0,'PRIVATE DIAGNOSTIC']){
+  const result=await modeledGate('success',120000,diagnostic);
+  assert.equal(result.exitCode,1);assert.equal(result.result.passed,false);
+  assert.equal(result.result.cleanupVerified,true);assert.equal(result.result.temporaryFilesRemoved,true);
+  assert(!result.output.includes('WINDOWS_FIXTURE_15_PASS_0_FAIL_0_SKIP'));
+  assert(result.output.includes('FIXTURE_SCOPE_BLOCKED '));
+  const line=result.output.split('\n').find(line=>line.startsWith('FIXTURE_DIAGNOSTIC '));
+  assert.deepEqual(JSON.parse(line.slice('FIXTURE_DIAGNOSTIC '.length)),
+   require('../tools/qa-process-client.cjs').safeDiagnostic(diagnostic,'owner-exit'));
  }
 });
