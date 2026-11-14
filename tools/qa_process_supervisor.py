@@ -46,7 +46,7 @@ def private_trace(exc,stage,config):
             payload=json.dumps({'stage':stage,'type':safe_error_type(exc),
                 'frames':frames[-24:]},ensure_ascii=True).encode('ascii')
             if len(payload)>8192:payload=b'{"status":"trace-overflow"}'
-            os.write(fd,payload)
+            if os.write(fd,payload)!=len(payload):return False
         finally:os.close(fd)
         return True
     except (OSError,ValueError,TypeError):return False
