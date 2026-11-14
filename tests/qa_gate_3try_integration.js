@@ -55,10 +55,13 @@ test('SEC02 pre-test log-open BLOCKED with owner zero-process proof may retry, b
  assert.equal(messages.filter(x=>x==='WINDOWS_FIXTURE_15_PASS_0_FAIL_0_SKIP').length,0);
  assert.equal(result.records[0].diagnostic.stage,'verdict-open');assert.equal(result.records[0].retryEligible,true);
 });
-test('SEC02 native CreateProcessW pre-test start with verified cleanup may retry',async()=>{
- const {result}=await run(['CREATE','PASS']);
- assert.equal(result.attempts,2);assert.equal(result.status,'RECOVERED_WITH_PRIOR_BLOCKED');
+test('R44-01 native CreateProcessW failure stops despite Job zero-process report',async()=>{
+ const {result,temps}=await run(['CREATE','PASS']);
+ assert.equal(result.attempts,1);
+ assert.equal(result.status,'STOP_NOT_EARLY_DIAGNOSTIC');
+ assert.equal(result.records[0].retryEligible,false);
  assert.deepEqual(result.records[0].diagnostic,{stage:'CreateProcessW',win32Error:5});
+ assert(temps.every(t=>!fs.existsSync(t)));
 });
 test('SEC02 real runner TAP failure with owner clean MUST STOP at one attempt',async()=>{
  const {result,temps}=await run(['TAP_FAIL','PASS']);
