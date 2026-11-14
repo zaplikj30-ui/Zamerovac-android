@@ -37,12 +37,16 @@ jobs:
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
           ref: ${{ github.event.before }}
+          # Unique checkout path: NEVER git-clean a previous HOME workspace.
+          path: qa34-native-${{ github.run_id }}
+          clean: false
           fetch-depth: 1
           persist-credentials: false
           submodules: false
           lfs: false
       - name: Verify exact SHA and clean checkout
         shell: cmd
+        working-directory: qa34-native-${{ github.run_id }}
         run: |
           @echo off
           set "ACTUAL_SHA="
@@ -57,6 +61,7 @@ jobs:
           echo QA34_PINNED_CLEAN_SHA=1
       - name: Actual native token and empty JobObject test (no CreateProcessW)
         shell: cmd
+        working-directory: qa34-native-${{ github.run_id }}
         run: |
           @echo off
           "C:\actions-runner\tools\Python313\python.exe" tools\qa34_native_job_preflight.py
