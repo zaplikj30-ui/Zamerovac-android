@@ -108,7 +108,10 @@ async function main(timeoutMs=120000, emit=chunk=>process.stdout.write(chunk)){
   cancelled:abort.signal.aborted,timedOut:result?.reason==='timeout',
   diagnostic:passed?null:safeDiagnostic(diagnostic,stage),
   publicReport:publicReport.trimEnd(),
-  retryEligible:verifiedStartup&&cleanupVerified&&temporaryFilesRemoved&&!workerPassed&&
+  // A failed CreateProcessW cannot establish absence of an uncontained child:
+  // never advertise a retry even when this Job reports zero active processes.
+  retryEligible:verifiedStartup&&result?.diagnostic?.stage==='verdict-open'&&
+    result.diagnostic.win32Error===null&&cleanupVerified&&temporaryFilesRemoved&&!workerPassed&&
     !ownerSucceeded&&!abort.signal.aborted&&result?.status==='BLOCKED'};
 }
 if(require.main===module)void main();
