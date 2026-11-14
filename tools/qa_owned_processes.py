@@ -322,6 +322,7 @@ class WindowsJob:
         touched=[]
         primary=None
         self.start_cleanup_error_type=None
+        self.start_cleanup_unverified=False
         try:
             self.demand(k.InitializeProcThreadAttributeList(attributes,2,0,ctypes.byref(size)),'initialize handle list')
             initialized=True
@@ -362,11 +363,14 @@ class WindowsJob:
                 child_error=exc
                 try:
                     if not k.TerminateProcess(self.process,77):
-                        self.start_cleanup_error_type='ScopeError'
+                        self.start_cleanup_unverified=True
+                        if self.start_cleanup_error_type is None:self.start_cleanup_error_type='ScopeError'
                     if k.WaitForSingleObject(self.process,2000)!=0:
-                        self.start_cleanup_error_type='ScopeError'
+                        self.start_cleanup_unverified=True
+                        if self.start_cleanup_error_type is None:self.start_cleanup_error_type='ScopeError'
                 except BaseException:
-                    self.start_cleanup_error_type='OtherError'
+                    self.start_cleanup_unverified=True
+                    if self.start_cleanup_error_type is None:self.start_cleanup_error_type='OtherError'
                 raise
             finally:
                 # CloseHandle(FALSE) is a real failure; never accept it as PASS.
@@ -374,10 +378,14 @@ class WindowsJob:
                 try:
                     if not k.CloseHandle(info.thread):
                         failure=_win_error('close worker thread handle failed','CloseWorkerThreadHandle')
-                        self.start_cleanup_error_type='ScopeError'
+                        self.start_cleanup_unverified=True
+                        if child_error is not None and self.start_cleanup_error_type is None:
+                            self.start_cleanup_error_type='ScopeError'
                         if child_error is None:raise failure
                 except BaseException as exc:
-                    self.start_cleanup_error_type=type(exc).__name__
+                    self.start_cleanup_unverified=True
+                    if child_error is not None and self.start_cleanup_error_type is None:
+                        self.start_cleanup_error_type=type(exc).__name__
                     if child_error is None:raise
         except BaseException as exc:
             primary=exc
@@ -400,10 +408,12 @@ class WindowsJob:
                 except BaseException as exc:
                     if secondary is None:secondary=exc
             if secondary is not None:
-                self.start_cleanup_error_type=type(secondary).__name__
-                # Retain the FIRST native failure/stage/code if cleanup also
-                # fails. The owner reports the distinct secondary error.
+                self.start_cleanup_unverified=True
+                # An isolated restore failure is PRIMARY. Only report
+                # secondary telemetry when an earlier operation already failed.
                 if primary is None:raise secondary
+                if self.start_cleanup_error_type is None:
+                    self.start_cleanup_error_type=type(secondary).__name__
 
     def poll(self):
         code=self.w.DWORD();self.demand(self.k.GetExitCodeProcess(self.process,ctypes.byref(code)),'read worker exit')
