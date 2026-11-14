@@ -18,7 +18,7 @@ function readVerdict(file){
 }
 // A shorter bounded deadline is available to process tests through this module
 // API only. The CLI has no configurable arguments and always uses 120 seconds.
-async function main(timeoutMs=120000){
+async function main(timeoutMs=120000, emit=chunk=>process.stdout.write(chunk)){
  let dir,result,token,workerPassed=false,ownerSucceeded=false,temporaryFilesRemoved=true;
  let report=evaluateTap(undefined),cleanupVerified=false;
  let stage='gate-input',diagnostic=null;
@@ -63,11 +63,18 @@ async function main(timeoutMs=120000){
   for(const name of signals)process.removeListener(name,cancel);
  }
  const passed=workerPassed&&ownerSucceeded&&cleanupVerified&&temporaryFilesRemoved&&!abort.signal.aborted;
- process.stdout.write(passed?passLine:formatReport({...report,status:'BLOCKED'}));
- if(!passed)process.stdout.write('FIXTURE_SCOPE_BLOCKED '+JSON.stringify({cleanupVerified,temporaryFilesRemoved,workerPassed,ownerSucceeded,cancelled:abort.signal.aborted})+'\n');
- if(!passed)process.stdout.write('FIXTURE_DIAGNOSTIC '+JSON.stringify(safeDiagnostic(diagnostic,stage))+'\n');
+ const publicReport=passed?passLine:formatReport({...report,status:'BLOCKED'});
+ emit(publicReport);
+ if(!passed)emit('FIXTURE_SCOPE_BLOCKED '+JSON.stringify({cleanupVerified,temporaryFilesRemoved,workerPassed,ownerSucceeded,cancelled:abort.signal.aborted})+'\n');
+ if(!passed)emit('FIXTURE_DIAGNOSTIC '+JSON.stringify(safeDiagnostic(diagnostic,stage))+'\n');
  process.exitCode=passed?0:1;
- return {passed,cleanupVerified,temporaryFilesRemoved,timedOut:result?.reason==='timeout'};
+ // Only the existing audited gate knows whether the worker tree was empty and
+ // its own TEMP removed. Expose the same redacted facts to the serial caller.
+ return {passed,cleanupVerified,ownedRemaining:cleanupVerified?0:null,
+  temporaryFilesRemoved,workerPassed,ownerSucceeded,
+  cancelled:abort.signal.aborted,timedOut:result?.reason==='timeout',
+  diagnostic:passed?null:safeDiagnostic(diagnostic,stage),
+  publicReport:publicReport.trimEnd()};
 }
 if(require.main===module)void main();
 module.exports={main};
