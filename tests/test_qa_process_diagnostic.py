@@ -45,7 +45,8 @@ class DiagnosticTests(unittest.TestCase):
     def test_failed_worker_thread_close_is_reported_and_resources_still_closed(self):
         trace=self.exercise('CloseWorkerThreadHandle')
         self.assertEqual(trace['diagnostic'],{'stage':'CloseWorkerThreadHandle','win32Error':5})
-        self.assertEqual(trace['secondary'],'ScopeError')
+        self.assertIsNone(trace['secondary'],'isolated thread close is the primary')
+        self.assertTrue(trace['unverified'])
         self.assertTrue(trace['null_closed'])
         self.assertIn('DeleteProcThreadAttributeList',trace['calls'])
 
@@ -60,12 +61,14 @@ class DiagnosticTests(unittest.TestCase):
         self.assertEqual(trace['restores'],2)
         self.assertTrue(trace['null_closed'])
         self.assertIn('DeleteProcThreadAttributeList',trace['calls'])
-        self.assertEqual(trace['secondary'],'ScopeError')
+        self.assertIsNone(trace['secondary'],'restore error is the first failure')
+        self.assertTrue(trace['unverified'])
 
     def test_primary_create_failure_survives_secondary_restore_failure(self):
         trace=self.exercise('CreateProcessW+restore-first-fails')
         self.assertEqual(trace['diagnostic'],{'stage':'CreateProcessW','win32Error':87})
         self.assertEqual(trace['secondary'],'ScopeError')
+        self.assertTrue(trace['unverified'])
         self.assertTrue(trace['null_closed'])
         self.assertIn('DeleteProcThreadAttributeList',trace['calls'])
 
@@ -165,6 +168,7 @@ class DiagnosticTests(unittest.TestCase):
         return {'calls':calls,'restores':len(restores),
                 'null_closed':all(stream.closed for stream in null_opened),
                 'secondary':getattr(scope,'start_cleanup_error_type',None),
+                'unverified':getattr(scope,'start_cleanup_unverified',False),
                 'diagnostic':owned.scope_diagnostic(failure,'worker-start')}
 
 if __name__=='__main__':unittest.main()
