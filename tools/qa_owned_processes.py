@@ -187,17 +187,45 @@ def require_windows_service_token():
     k.CloseHandle.argtypes=[w.HANDLE];k.CloseHandle.restype=w.BOOL
     advapi.OpenProcessToken.argtypes=[w.HANDLE,w.DWORD,ctypes.POINTER(w.HANDLE)];advapi.OpenProcessToken.restype=w.BOOL
     advapi.GetTokenInformation.argtypes=[w.HANDLE,ctypes.c_int,ctypes.c_void_p,w.DWORD,ctypes.POINTER(w.DWORD)];advapi.GetTokenInformation.restype=w.BOOL
+    advapi.DuplicateToken.argtypes=[w.HANDLE,ctypes.c_int,ctypes.POINTER(w.HANDLE)];advapi.DuplicateToken.restype=w.BOOL
+    advapi.CreateWellKnownSid.argtypes=[ctypes.c_int,ctypes.c_void_p,ctypes.c_void_p,ctypes.POINTER(w.DWORD)];advapi.CreateWellKnownSid.restype=w.BOOL
+    advapi.CheckTokenMembership.argtypes=[w.HANDLE,ctypes.c_void_p,ctypes.POINTER(w.BOOL)];advapi.CheckTokenMembership.restype=w.BOOL
     advapi.GetUserNameW.argtypes=[w.LPWSTR,ctypes.POINTER(w.DWORD)];advapi.GetUserNameW.restype=w.BOOL
-    token=w.HANDLE();elevated=w.DWORD();returned=w.DWORD()
-    if not advapi.OpenProcessToken(k.GetCurrentProcess(),8,ctypes.byref(token)):
+    token=w.HANDLE();impersonation=w.HANDLE()
+    # Windows SCM can give a NON-admin service HIGH integrity. TokenElevation
+    # is therefore not proof of effective administrative membership.
+    if not advapi.OpenProcessToken(k.GetCurrentProcess(),0x000A,ctypes.byref(token)):  # QUERY | DUPLICATE
         raise _win_error('cannot verify current Windows token','OpenProcessToken')
     try:
-        if not advapi.GetTokenInformation(token,20,ctypes.byref(elevated),ctypes.sizeof(elevated),ctypes.byref(returned)):
-            raise _win_error('cannot query current Windows elevation','GetTokenInformation')
-        if elevated.value:
-            raise ScopeError('non-elevated Windows token required',stage='token-elevated')
+        elevation_type=w.DWORD();returned=w.DWORD()
+        if not advapi.GetTokenInformation(token,18,ctypes.byref(elevation_type),ctypes.sizeof(elevation_type),ctypes.byref(returned)):
+            raise _win_error('cannot query Windows linked-token type','GetTokenInformation')
+        # Reject linked UAC admin tokens (Full OR Limited); only a default,
+        # unlinked service token can enter this dedicated QA boundary.
+        if elevation_type.value!=1:
+            raise ScopeError('linked administrator token not permitted',stage='token-admin')
+        sid=ctypes.create_string_buffer(68)  # SECURITY_MAX_SID_SIZE
+        sid_size=w.DWORD(ctypes.sizeof(sid))
+        if not advapi.CreateWellKnownSid(26,None,sid,ctypes.byref(sid_size)):  # WinBuiltinAdministratorsSid
+            raise _win_error('cannot construct administrator SID','CreateWellKnownSid')
+        # CheckTokenMembership requires an impersonation token; explicitly
+        # duplicate THIS process token, not the calling thread's identity.
+        if not advapi.DuplicateToken(token,2,ctypes.byref(impersonation)):  # SecurityImpersonation
+            raise _win_error('cannot duplicate service token for query','DuplicateToken')
+        admin=w.BOOL()
+        if not advapi.CheckTokenMembership(impersonation,sid,ctypes.byref(admin)):
+            raise _win_error('cannot check enabled administrator membership','CheckTokenMembership')
+        # Disabled and deny-only Administrator SIDs cannot grant allow-ACEs.
+        # A token that actually enables Administrators must never start QA.
+        if admin.value:
+            raise ScopeError('enabled administrator token not permitted',stage='token-admin')
     finally:
-        if not k.CloseHandle(token):raise _win_error('close token query handle failed','CloseTokenHandle')
+        close_error=None
+        if impersonation.value and not k.CloseHandle(impersonation):
+            close_error=_win_error('close duplicated token failed','CloseImpersonationTokenHandle')
+        if token.value and not k.CloseHandle(token):
+            if close_error is None:close_error=_win_error('close token query handle failed','CloseTokenHandle')
+        if close_error is not None:raise close_error
     user=ctypes.create_unicode_buffer(256);length=w.DWORD(256)
     if not advapi.GetUserNameW(user,ctypes.byref(length)):
         raise _win_error('cannot query Windows account','GetUserNameW')
