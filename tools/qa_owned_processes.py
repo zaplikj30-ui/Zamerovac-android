@@ -342,6 +342,7 @@ class WindowsJob:
             # API return. A hanging/crashing API has NO proven rollback.
             self.demand(k.CreateProcessW(command[0],cmd,None,None,True,0x08080004,None,str(cwd),ctypes.byref(startup),ctypes.byref(info)),'create suspended owned worker')
             self.process=info.process
+            child_error=None
             try:
                 belongs=w.BOOL()
                 self.demand(k.IsProcessInJob(self.process,self.job,ctypes.byref(belongs)),'verify atomic job membership')
@@ -355,12 +356,29 @@ class WindowsJob:
                 self.demand(k.ResumeThread(info.thread)!=0xffffffff,'resume owned worker')
                 self.observed=[{'pid':info.pid,'creationTime':times[0].value,'sameToken':True}]
                 return {'pid':info.pid,'creationTime':times[0].value,'backend':'windows-private-job'}
-            except BaseException:
-                k.TerminateProcess(self.process,77)  # Own retained handle, never a PID lookup.
-                k.WaitForSingleObject(self.process,2000)
+            except BaseException as exc:
+                # Keep the original membership/image/resume failure even if
+                # native cleanup or waiting on our retained handle fails.
+                child_error=exc
+                try:
+                    if not k.TerminateProcess(self.process,77):
+                        self.start_cleanup_error_type='ScopeError'
+                    if k.WaitForSingleObject(self.process,2000)!=0:
+                        self.start_cleanup_error_type='ScopeError'
+                except BaseException:
+                    self.start_cleanup_error_type='OtherError'
                 raise
             finally:
-                k.CloseHandle(info.thread)
+                # CloseHandle(FALSE) is a real failure; never accept it as PASS.
+                # Preserve an earlier error if we are already unwinding.
+                try:
+                    if not k.CloseHandle(info.thread):
+                        failure=_win_error('close worker thread handle failed','CloseWorkerThreadHandle')
+                        self.start_cleanup_error_type='ScopeError'
+                        if child_error is None:raise failure
+                except BaseException as exc:
+                    self.start_cleanup_error_type=type(exc).__name__
+                    if child_error is None:raise
         except BaseException as exc:
             primary=exc
             raise
