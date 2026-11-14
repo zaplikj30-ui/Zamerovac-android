@@ -7,7 +7,7 @@ async function ownedWorker(command,cwd,env,log,token,timeoutMs=480000,signal){
  fs.writeFileSync(configFile,JSON.stringify({command,cwd,log,token,timeout:timeoutMs/1000,heartbeatTimeout:5,
   browser:command[1]===path.join(__dirname,'qa-browser-worker.cjs')}),{flag:'wx'});
  return new Promise(resolve=>{
-  let stdout='',stderr='',finished=false,child;
+  let stdout='',stderr='',finished=false,protocolOverflow=false,child;
   const finish=result=>{if(finished)return;finished=true;clearInterval(heartbeat);signal?.removeEventListener('abort',cancel);resolve(result)};
   const cancel=()=>{if(child?.stdin?.writable)child.stdin.end('CANCEL '+token+'\n')};
   // Killing just this supervisor is deliberately not a timeout strategy: EOF
@@ -17,12 +17,18 @@ async function ownedWorker(command,cwd,env,log,token,timeoutMs=480000,signal){
    child=spawn(env.ZAMEROVAC_PYTHON||(process.platform==='win32'?'python':'python3'),[supervisor,'--config',configFile],
     {cwd:__dirname,env,windowsHide:true,stdio:['pipe','pipe','pipe']});
    child.stdin.on('error',()=>{});
-   child.stdout.on('data',data=>{stdout+=data;if(stdout.length>1024*1024)cancel()});
-   child.stderr.on('data',data=>{if(stderr.length<16000)stderr+=data});
+   child.stdout.on('data',data=>{
+    if(protocolOverflow)return;
+    const chunk=data.toString();
+    if(stdout.length+chunk.length>1024*1024){protocolOverflow=true;cancel();return}
+    stdout+=chunk;
+   });
+   child.stderr.on('data',data=>{stderr+=data.toString().slice(0,Math.max(0,16000-stderr.length))});
    child.once('error',e=>finish({status:'BLOCKED',cleanupVerified:false,error:e.message}));
    child.once('close',(code,exitSignal)=>{
     let report;
     try{
+     if(protocolOverflow)throw Error('supervisor output limit exceeded');
      report=JSON.parse(stdout.trim().split('\n').at(-1));
      if(exitSignal||![0,77].includes(code))report={...report,error:'supervisor failed: '+String(code||exitSignal)+' '+stderr};
      if(report.event!=='result'||report.token!==token||report.cleanupVerified!==true||code!==0||report.status!=='PASS')

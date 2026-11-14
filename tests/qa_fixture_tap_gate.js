@@ -2,6 +2,7 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os'),vm=require('node:vm');
 const {spawnSync}=require('node:child_process');
+const {copyGate}=require('./helpers/qa-fixture-checkout.cjs');
 const gate=require('../tools/qa-fixture-tap.cjs');
 const repo=path.resolve(__dirname,'..');
 const names=Array.from(fs.readFileSync(path.join(__dirname,'home_qa_integrity.js'),'utf8')
@@ -111,21 +112,23 @@ test('real Node TAP child pass, fail, skip and todo evidence is classified corre
   }
  }finally{fs.rmSync(dir,{recursive:true,force:true})}
 });
-function runCli(child,args=[]){
+function runCli(child,args=[],supervised=true){
  let output='',launches=0,invocation;
- const module={exports:{}},modeledProcess={argv:['node','qa-fixture-gate.cjs',...args],execPath:process.execPath,
+ const module={exports:{}},modeledProcess={argv:['node','qa-fixture-worker.cjs',...args],execPath:process.execPath,
+  platform:process.platform,ppid:42,env:{ZAMEROVAC_SUPERVISOR_PID:'42',ZAMEROVAC_SCOPE:process.platform==='win32'?'windows-private-job':'linux-pidfd-subreaper'},
   stdout:{write(value){output+=value}},exitCode:undefined};
  const requireModel=Object.assign(id=>{
   if(id==='node:child_process')return {spawnSync(...values){launches++;invocation=values;if(child instanceof Error)throw child;return child}};
   if(id==='./qa-fixture-tap.cjs')return gate;
   return require(id);
  },{main:module});
- vm.runInNewContext(fs.readFileSync(path.join(repo,'tools/qa-fixture-gate.cjs'),'utf8'),{
+ if(!supervised)modeledProcess.env={};
+ vm.runInNewContext(fs.readFileSync(path.join(repo,'tools/qa-fixture-worker.cjs'),'utf8'),{
   module,require:requireModel,__dirname:path.join(repo,'tools'),process:modeledProcess,Buffer,
  });
  return {output,exitCode:modeledProcess.exitCode,launches,invocation};
 }
-test('CLI captures the actual exit code and invokes only the pinned 15-case suite without a shell',()=>{
+test('owned worker captures the actual exit code and invokes only the pinned 15-case suite without a shell',()=>{
  const result=runCli({...success,stdout:Buffer.from(tap())});
  assert.equal(result.exitCode,0);assert.equal(result.launches,1);
  assert.equal(result.output,'WINDOWS_FIXTURE_15_PASS_0_FAIL_0_SKIP\n');
@@ -144,6 +147,8 @@ test('CLI captures the actual exit code and invokes only the pinned 15-case suit
  }
  const extra=runCli({...success,stdout:Buffer.from(tap())},['PRIVATE ARG']);
  assert.equal(extra.exitCode,1);assert.equal(extra.launches,0);assert(!extra.output.includes('PRIVATE'));
+ const unscoped=runCli({...success,stdout:Buffer.from(tap())},[],false);
+ assert.equal(unscoped.exitCode,1);assert.equal(unscoped.launches,0);
 });
 
 test('retained Windows 15-ok evidence without the original summaries remains BLOCKED',()=>{
@@ -173,8 +178,7 @@ test('real CLI launches Node and passes or blocks the whole synthetic checkout, 
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'qa-gate-chain-'));
  const env={...process.env};delete env.NODE_TEST_CONTEXT;
  try{
-  fs.mkdirSync(path.join(dir,'tools'));fs.mkdirSync(path.join(dir,'tests'));
-  for(const name of ['qa-fixture-gate.cjs','qa-fixture-tap.cjs'])fs.copyFileSync(path.join(repo,'tools',name),path.join(dir,'tools',name));
+  copyGate(dir);
   for(const mode of ['pass','fail','skip','todo','exit-error']){
    const body="const {test}=require('node:test'); console.log('PRIVATE STDOUT PATH');\n"+names.map((name,i)=>
     `test(${JSON.stringify(name)},${i===0&&['skip','todo'].includes(mode)?JSON.stringify({[mode]:true})+',':''}()=>{${i===0&&mode==='fail'?"throw Error('PRIVATE RAW FAILURE')":''}});`).join('\n')+

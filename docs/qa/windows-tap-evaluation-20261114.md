@@ -9,6 +9,96 @@ a následné upřesnění vlastníka: ověřit celý řetězec Node → exit cod
 `qa/windows-tap-evaluation-20261114`, oddělený worktree a draft PR.
 Žádný zápis do původních PR/RUN větví a žádná aktivace.
 
+## Aktuální dokončení QA127-SEC-01 a audit celého mechanismu
+
+Navazuje na [REQUEST FIX Kontrolora40](https://github.com/zaplikj30-ui/Zamerovac-android/pull/127#pullrequestreview-5899645492)
+a [rozhodnutí koordinátora](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42#issuecomment-6867817312).
+Poslední upřesnění vlastníka vyžaduje vlastní kritický audit **celého souvisejícího
+mechanismu** a následnou nezávislou kontrolu Kontrolora40 rovněž celého mechanismu.
+Původní autorův SHA `b2371d81e412b6e0e1b7aead1c8a8f046a6abdb8` neobsahoval
+procesní scope; jeho 54 PASS nebylo důkazem tree cleanupu. Finální nový SHA a
+regrese jsou v aktuálním autorském předání tohoto stejného PR127.
+
+**Zvolené minimální řešení:** zachovat původní TAP parser/CMD a přesunout původní
+Node testovací spuštění do `qa-fixture-worker.cjs`. Veřejná `qa-fixture-gate.cjs`
+ho spustí přes existující `ownedWorker` → `qa_process_supervisor.py` → existující
+Linux pidfd/subreaper nebo Windows private JobObject. Scope tak obsahuje worker,
+`node --test`, jeho izolovaný test-file proces i skutečné Git/ostatní potomky.
+`--test-isolation=none` nebylo zvoleno: odstranilo by jen jeden child a nedokázalo
+cleanup Git potomků. Žádný nový procesní framework nebo změna OS práv.
+
+Veřejný PASS se uvolní až po současném splnění: přesný worker PASS marker,
+normální worker exit0, autentizovaný token/platform/event supervisoru, supervisor
+exit0 bez signálu/chyby, `cleanupVerified=true`, `remainingProcesses=0`, úspěšné
+smazání soukromé složky a žádné zrušení. Vyhodnocení TAP a whitelist jsou proti
+`b2371d81` **bajtově beze změny**, stejně CMD adaptér, oba Chromium profily,
+symlink/junction/hardlink/SHA256/TOCTOU, sandbox a implementace OS scopes.
+
+SIGINT/SIGTERM/SIGHUP předají tokened cancel a čekají na owner cleanup; supervisor
+se nezabíjí jako timeout strategie. Nezávislý supervisor má 120s deadline i když
+workerův `spawnSync` uvízne na procesu ignorujícím SIGTERM. Kratší deadline
+250–120000ms slouží pouze exportovanému API pro skutečné procesní testy; CLI
+nepřijímá žádný parametr a vždy používá 120s. Interní worker navíc odmítne běh
+bez odpovídajícího parent/scope prostředí. Tento guard proti náhodnému přímému
+spuštění nenahrazuje skutečný OS scope ani finální cleanup důkaz.
+
+Raw TAP zůstává pouze v omezené paměti workeru. Existující supervisor potřebuje
+log handle: do nové soukromé složky proto zapisuje pouze workerův redigovaný
+verdikt a vlastní config; parent čte maximálně16KiB ověřeného pravidelného
+single-link souboru bez symlinku a s kontrolou fd/name identity a stability.
+Nečekaný obsah, panic/OS metadata či chyba čtení se nikdy nepřenášejí do logu.
+Per-child TEMP/TMP/TMPDIR ukazují do podadresáře téže soukromé složky, takže se
+po timeoutu odstraní i rozpracované syntetické fixture. Globální env, oprávnění
+nebo produktové soubory se nemění. Při chybě/no-op smazání nelze vrátit PASS.
+
+BLOCKED zachovává původní whitelist TAP diagnostiku a přidává jen pevný
+`FIXTURE_SCOPE_BLOCKED` s booleany `cleanupVerified/temporaryFilesRemoved/
+workerPassed/ownerSucceeded/cancelled`. Žádná PID, token, skutečná cesta, raw
+TAP, stderr ani chybová zpráva se nevypisuje. Při chybě scope může být workerův
+TAP validní, ale výsledný job musí být FAIL.
+
+**Další opravený nález vlastního auditu:** `qa-process-client.cjs` po překročení
+1MiB stdout jen poslal CANCEL, dále přidával data a poslední validní PASS řádek
+mohl výsledek znovu označit PASS. Counterexample nad skutečným starým JS kódem
+s modelovanými streamy prokázal **before=PASS / after=BLOCKED**, v obou případech
+jeden cancel. Nyní je overflow nevratný BLOCKED, další data se neakumulují,
+client stále čeká na close supervisoru/cleanup. Také stderr limit16k platí i
+pro jeden oversized chunk. Jde o úzkou opravu existujícího klienta, ne přepis
+jeho protokolu; právě proto se opakuje i regrese ostatních jeho konzumentů.
+
+### Kritický audit celého řetězce – konkrétní důkazy
+
+| Oblast / možnost falešného PASS | Ověření a výsledek |
+| --- | --- |
+| Spuštění / izolovaný Node child / Git descendants | Pevný worker command, stejný Node executable, původní pevná sada bez shellu; celá větev v existujícím scope. Skutečné Node test-file + detached child/grandchild procesy na Linuxu. |
+| Normal / FAIL / timeout / TAP overflow / cancel | Pět skutečných procesních případů; po gate return žádný známý owned PID/zombie, inner cleanup true, temp prázdný, mimo scope živý neighbour a sentinel beze změny. Overflow musí skončit chybou workeru, nikoli být maskován testovým timeoutem. |
+| Ztráta rodiče / EOF | Gate parent po vytvoření stromu ihned skončí. Samostatný witness před startem vnějšího safety-cleanupu ověří ukončený vnitřní owner a zmizení jeho workloadu; pak vnější testový owner reapne i orphan zombie. Žádný veřejný PASS. |
+| Neúčinný primární cleanup | Ve skutečné izolované kopii scope se injektuje cleanup no-op. Ověření surviving procesů odmítne PASS, emergency close je odstraní; finální gate zůstává BLOCKED i po úspěšném recovery. |
+| Chybějící či cizí proof / zbývající procesy | Modely false/missing cleanup, remaining1, jiný token/platform, error/signal/exit/status/reason; ani přesný PASS marker nestačí. |
+| Dočasné soubory / redakce | Skutečný zanechaný testový soubor na worker TEMP se uklidí; modely neúspěšného a no-op rm, hardlink verdiktu na outside sentinel, oversized/špatný report a soukromé sentinel zprávy ⇒ BLOCKED bez úniku dat. |
+| Stream limit supervisoru | Reprodukční model before PASS → after BLOCKED, cancel jednou, bounded stdout/stderr. Skutečný raw TAP overflow má vlastní procesní test výše. |
+| TAP | Původních14 scénářů zachováno, včetně CRLF/LF/BOM, čtyř unikátních counts, 15 identit, FAIL/SKIP/TODO, plan/encoding/truncation a skutečných child fixture. Parser se nepřepisuje. |
+| CMD / GitHub job | CMD0/1 a pozitivní/záporné chyby beze změny, model přebírá reálný nový CLI status v syntetických checkoutech. Skutečný Windows CMD/GitHub job stále NOT RUN. Žádný continue-on-error nebo změna workflow. |
+| Vnější trust / domácí runner | Žádné nové triggery/markery, původní owner/ref/SHA/clean-checkout/first-run/first-attempt guardy beze změny. Scope na Windows vyžaduje původní ne-elevated ZamerovacQA token a assign před resume, KILL_ON_JOB_CLOSE bez breakaway; dosavadní Win32 API kontrakty se regresně ověřují. |
+
+Procesní sada používá vnější existující supervisor pouze jako bezpečnostní síť
+pro případ vadné implementace. PASS důkaz musí pocházet z **vnitřního gate**;
+timeout vnější sítě se nesmí vydávat za opravu. Konkrétní nulový počet známých
+procesů se ověřuje na `/proc`, žádný produkční proces se nezabíjí podle cizího
+PID/názvu. Modelové fault injekce a Windows API modely jsou oddělené od skutečných
+Linux procesů. Windows JobObject runtime nebyl proveden.
+
+**Zbývající limity:** při násilném zániku gate parenta může zůstat jeho soukromá
+složka s configem/redigovaným verdiktem a syntetickými TEMP daty; test ji po
+ověření procesů explicitně odstraní. Bez žijícího rodiče se žádný PASS nevrací.
+Násilné ukončení celého hosta nebo samotného Linux owneru není doklad úspěšného
+userspace cleanupu; Windows má v původním scope kernelový kill-on-job-close,
+jeho nativní chování zde zůstává NOT RUN. Python musí již existovat; chybějící
+interpreter/unsupported scope skončí BLOCKED před provedením testové sady,
+bez instalace či změny runneru. Pro reálný Windows/CMD/job výsledek je po
+review stále potřeba nové samostatné schválení. **Následný Kontrolor40 má
+nezávisle posoudit celý související mechanismus, nejen poslední diff.**
+
 ## Příčina a hranice dostupného důkazu
 
 Originální [job 132225342246](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/43524071686/job/132225342246)
@@ -42,12 +132,13 @@ Linux model nebo SOURCE analýzu za Windows runtime PASS.
 
 ## Implementace a PASS/FAIL jobu
 
-`tools/qa-fixture-gate.cjs` spustí přímo stejný `process.execPath`, bez shellu,
+Interní `tools/qa-fixture-worker.cjs` v ověřeném scope spustí stejný `process.execPath`, bez shellu,
 s pevnými argumenty `--test --test-reporter=tap` a jediným souborem
 `tests/home_qa_integrity.js` ve vlastním QA rootu. Nelze předat jinou sadu,
 očekávaný počet, TAP soubor nebo status parametrem či stdin. Aktuální Node proces
 musí být předtím autorizován původní owner/ref/SHA/clean-checkout bránou.
-Žádné prostředí procesu, produktové soubory nebo původní testy se neupravují.
+Globální prostředí, produktové soubory a původní testy se neupravují; per-child
+TEMP je nyní izolován a odstraňuje se až po ověřeném cleanupu.
 
 Výstup a stderr dítěte zůstávají v omezené paměti (`maxBuffer` 1 MiB na stream,
 120s timeout). Raw TAP se nikam neukládá, nevypisuje a nenahrává. Spawn error,
@@ -131,8 +222,8 @@ preflight ani instalace.
 
 ## Jediný další krok a zbývající rizika
 
-Po autorském finálním SHA a dostupné regresi následuje nezávislý Kontrolor40 nad
-celým balíkem. **Windows CMD/Node26/GitHub stav jobu nativně, Chromium, HOME4/4,
+Po autorském finálním SHA, vlastním kritickém auditu a dostupné regresi následuje
+nezávislý Kontrolor40 nad celým souvisejícím mechanismem. **Windows CMD/Node26/GitHub stav jobu nativně, Chromium, HOME4/4,
 UI23/96, merge/APK: NOT RUN.** Linux end-to-end a CMD model tato tvrzení nenahrazují.
 
 Teprve po review a novém výslovném souhlasu vlastníka připravit novou inertní
