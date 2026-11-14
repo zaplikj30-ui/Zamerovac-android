@@ -16,15 +16,23 @@ class FakeScope:
     def __init__(self,mode):self.mode=mode;self.calls=[]
     def start(self,*args):
         self.calls.append('start')
-        if self.mode in ('create','both'):
+        if self.mode in ('create','both','primary-secondary-close','primary-secondary-browser'):
             raise ScopeError('SECRET_TOKEN=abc private path',stage='CreateProcessW',win32_error=5)
         return {'pid':42,'backend':'model'}
     def poll(self):self.calls.append('poll');return 1 if self.mode=='crash' else 0
     def cleanup(self):
         self.calls.append('cleanup')
         if self.mode in ('both','cleanup'):raise ScopeError('secondary SECRET',stage='TerminateJobObject',win32_error=32)
+        if self.mode in ('primary-secondary-close','primary-secondary-browser'):
+            raise PermissionError('first secondary cleanup SECRET')
     def verify_empty(self):self.calls.append('verify_empty');return True
-    def close(self):self.calls.append('close');return None
+    def close(self):
+        self.calls.append('close')
+        if self.mode in ('primary-secondary-close','only-close'):
+            raise TypeError('later close SECRET')
+        return None
+class FakeBrowserLock:
+    def close(self):raise OSError('later browser close SECRET')
 @unittest.skipUnless(sys.platform=='linux', 'Linux-only scope API model; not native Windows')
 class Cases(unittest.TestCase):
     def run_case(self,mode,enabled=False):
@@ -32,9 +40,10 @@ class Cases(unittest.TestCase):
             base=pathlib.Path(d);scope=FakeScope(mode)
             cfg={'command':[sys.executable], 'cwd':d, 'log':str(base/('no-dir' if mode=='open' else 'present')/'log'), 'timeout':1,'heartbeatTimeout':1,'token':'a'*32}
             if mode!='open':(base/'present').mkdir(mode=0o700)
+            if mode=='primary-secondary-browser':cfg['browser']=True
             capture=io.StringIO()
             env={'ZAMEROVAC_DIAGNOSTICS':'1'} if enabled else {}
-            with patch.dict(os.environ,env,clear=False),patch.object(m,'new_scope',return_value=scope),patch('resource.setrlimit'),patch.object(m.threading.Thread,'start',return_value=None),contextlib.redirect_stdout(capture):
+            with patch.dict(os.environ,env,clear=False),patch.object(m,'new_scope',return_value=scope),patch.object(m,'BrowserLock',return_value=FakeBrowserLock()),patch('resource.setrlimit'),patch.object(m.threading.Thread,'start',return_value=None),contextlib.redirect_stdout(capture):
                 if not enabled:os.environ.pop('ZAMEROVAC_DIAGNOSTICS',None)
                 rc=m.supervise(cfg)
             output=capture.getvalue();report=json.loads(output.splitlines()[-1]);
@@ -103,6 +112,22 @@ class Cases(unittest.TestCase):
     def test_error_type_is_allowlisted(self):
         Sneaky=type('SECRET_PATH_TOKEN', (Exception,), {})
         self.assertEqual(m.safe_error_type(Sneaky('SECRET')),'OtherError')
+    def test_primary_then_cleanup_then_scope_close_preserves_first_secondary(self):
+        rc,r,out,trace,c=self.run_case('primary-secondary-close',True)
+        self.assertEqual(rc,77);self.assertEqual(r['firstFailure']['stage'],'CreateProcessW')
+        self.assertEqual(r['firstFailure']['win32Error'],5)
+        self.assertEqual(r['cleanupErrorType'],'PermissionError')
+        self.assertFalse(r['cleanupVerified']);self.assertNotIn('SECRET',out)
+    def test_only_scope_close_failure_is_primary_not_secondary(self):
+        rc,r,out,trace,c=self.run_case('only-close',True)
+        self.assertEqual(rc,77);self.assertEqual(r['firstFailure']['errorType'],'TypeError')
+        self.assertIsNone(r['cleanupErrorType'])
+        self.assertFalse(r['cleanupVerified']);self.assertNotIn('SECRET',out)
+    def test_primary_then_cleanup_then_browser_close_preserves_first_secondary(self):
+        rc,r,out,trace,c=self.run_case('primary-secondary-browser',True)
+        self.assertEqual(rc,77);self.assertEqual(r['firstFailure']['stage'],'CreateProcessW')
+        self.assertEqual(r['cleanupErrorType'],'PermissionError')
+        self.assertFalse(r['cleanupVerified']);self.assertNotIn('SECRET',out)
     def test_cleanup_first_failure(self):
         rc,r,out,trace,c=self.run_case('cleanup',True)
         self.assertEqual(rc,77);self.assertEqual(r['firstFailure']['stage'],'TerminateJobObject');self.assertFalse(r['cleanupVerified'])
