@@ -103,6 +103,16 @@ def supervise(config):
     except BaseException as e:
         error=type(e).__name__+': '+str(e)
         diagnostic=scope_diagnostic(e,stage)
+        # Reuse the existing owned scope's termination and zero-descendant
+        # verification also after a PRE-worker startup failure. Merely closing
+        # the Job was never positive proof of empty ownership.
+        if scope is not None and stage in ('verdict-open','worker-start'):
+            try:
+                scope.cleanup()
+                cleanup=scope.verify_empty() is True
+            except BaseException as cleanup_error:
+                cleanup=False
+                error+='; cleanup: '+type(cleanup_error).__name__
     finally:
         if scope:
             try:
