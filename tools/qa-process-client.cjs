@@ -21,12 +21,17 @@ async function ownedWorker(command,cwd,env,log,token,timeoutMs=480000,signal,har
  fs.writeFileSync(configFile,JSON.stringify({command,cwd,log,token,timeout:timeoutMs/1000,heartbeatTimeout:5,
   browser:command[1]===path.join(__dirname,'qa-browser-worker.cjs')}),{flag:'wx'});
  return new Promise(resolve=>{
-  let stdout='',finished=false,protocolOverflow=false,child,hardTimedOut=false,hardTimer;
+  let stdout='',finished=false,protocolOverflow=false,channelWriteFailed=false,child,hardTimedOut=false,hardTimer;
   const finish=result=>{if(finished)return;finished=true;clearInterval(heartbeat);if(hardTimer)clearTimeout(hardTimer);signal?.removeEventListener('abort',cancel);resolve(result)};
   const cancel=()=>{try{if(child?.stdin?.writable)child.stdin.end('CANCEL '+token+'\n')}catch{}};
   // Killing just this supervisor is deliberately not a timeout strategy: EOF
   // lets it contain/reap the full workload; Windows also has kernel Job cleanup.
-  const heartbeat=setInterval(()=>{if(child?.stdin?.writable)child.stdin.write('ALIVE '+token+'\n')},1000);
+  // An IPC write can throw synchronously as the supervisor channel closes.
+  // Never let that crash the gate while a native worker might exist.
+  const heartbeat=setInterval(()=>{
+   try{if(child?.stdin?.writable)child.stdin.write('ALIVE '+token+'\n')}
+   catch{channelWriteFailed=true;cancel()}
+  },1000);
   // Soft deadline only. CreateProcessW may be running when this fires:
   // killing the owner then has no proven rollback for a partly-created child.
   // Request cooperative cancellation, NEVER force-kill the owner by PID.
@@ -76,6 +81,8 @@ async function ownedWorker(command,cwd,env,log,token,timeoutMs=480000,signal,har
     }
     if(hardTimedOut)report={status:'BLOCKED',cleanupVerified:false,error:'TimeoutError',
      diagnostic:safeDiagnostic(null,'owner-hard-timeout'),firstFailure:null,cleanupErrorType:null};
+    if(channelWriteFailed&&!hardTimedOut)report={...report,status:'BLOCKED',cleanupVerified:false,
+     error:'OtherError',diagnostic:safeDiagnostic(null,'owner-channel')};
     finish({...report,supervisorExit:code,signal:exitSignal});
    });
    signal?.addEventListener('abort',cancel,{once:true});
