@@ -16,17 +16,24 @@ function safeFailure(value,fallback='owner-exit'){
  return {...diagnostic,errorType:safeErrorType(value?.errorType)};
 }
 const supervisor=path.join(__dirname,'qa_process_supervisor.py');
-async function ownedWorker(command,cwd,env,log,token,timeoutMs=480000,signal){
+async function ownedWorker(command,cwd,env,log,token,timeoutMs=480000,signal,hardStopMs=0){
  const configFile=log+'.owner.json';
  fs.writeFileSync(configFile,JSON.stringify({command,cwd,log,token,timeout:timeoutMs/1000,heartbeatTimeout:5,
   browser:command[1]===path.join(__dirname,'qa-browser-worker.cjs')}),{flag:'wx'});
  return new Promise(resolve=>{
-  let stdout='',finished=false,protocolOverflow=false,child;
-  const finish=result=>{if(finished)return;finished=true;clearInterval(heartbeat);signal?.removeEventListener('abort',cancel);resolve(result)};
+  let stdout='',finished=false,protocolOverflow=false,child,hardTimedOut=false,hardTimer;
+  const finish=result=>{if(finished)return;finished=true;clearInterval(heartbeat);if(hardTimer)clearTimeout(hardTimer);signal?.removeEventListener('abort',cancel);resolve(result)};
   const cancel=()=>{if(child?.stdin?.writable)child.stdin.end('CANCEL '+token+'\n')};
   // Killing just this supervisor is deliberately not a timeout strategy: EOF
   // lets it contain/reap the full workload; Windows also has kernel Job cleanup.
   const heartbeat=setInterval(()=>{if(child?.stdin?.writable)child.stdin.write('ALIVE '+token+'\n')},1000);
+  // Optional hard boundary for a one-shot probe: if native CreateProcessW
+  // never returns, terminate only the retained Python supervisor handle.
+  // Creation-time JOB_LIST + KILL_ON_JOB_CLOSE protect its worker tree.
+  // UNKNOWN cleanup after hard stop is always BLOCKED, never retry eligible.
+  if(Number.isInteger(hardStopMs)&&hardStopMs>=1000&&hardStopMs<=60000){
+   hardTimer=setTimeout(()=>{if(finished)return;hardTimedOut=true;try{child?.kill()}catch{}},hardStopMs);
+  }
   try{
    child=spawn(env.ZAMEROVAC_PYTHON||(process.platform==='win32'?'python':'python3'),[supervisor,'--config',configFile],
     {cwd:__dirname,env,windowsHide:true,stdio:['pipe','pipe','pipe']});
@@ -66,6 +73,8 @@ async function ownedWorker(command,cwd,env,log,token,timeoutMs=480000,signal){
       diagnostic:safeDiagnostic(null,protocolOverflow?'owner-overflow':'owner-protocol'),
       firstFailure:null,cleanupErrorType:null,privateTracebackWritten:false};
     }
+    if(hardTimedOut)report={status:'BLOCKED',cleanupVerified:false,error:'TimeoutError',
+     diagnostic:safeDiagnostic(null,'owner-hard-timeout'),firstFailure:null,cleanupErrorType:null};
     finish({...report,supervisorExit:code,signal:exitSignal});
    });
    signal?.addEventListener('abort',cancel,{once:true});
