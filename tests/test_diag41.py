@@ -13,9 +13,13 @@ with patch.dict(sys.modules,{'qa_owned_processes':types.SimpleNamespace(new_scop
     m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
 class FakeScope:
     observed=[]
-    def __init__(self,mode):self.mode=mode;self.calls=[]
+    def __init__(self,mode):
+        self.mode=mode;self.calls=[]
+        self.start_cleanup_error_type='ScopeError' if mode=='native-start-restore' else None
     def start(self,*args):
         self.calls.append('start')
+        if self.mode=='native-start-restore':
+            raise ScopeError('SECRET_TOKEN=abc private path',stage='CreateProcessW',win32_error=87)
         if self.mode in ('create','both','primary-secondary-close','primary-secondary-browser'):
             raise ScopeError('SECRET_TOKEN=abc private path',stage='CreateProcessW',win32_error=5)
         return {'pid':42,'backend':'model'}
@@ -131,4 +135,13 @@ class Cases(unittest.TestCase):
     def test_cleanup_first_failure(self):
         rc,r,out,trace,c=self.run_case('cleanup',True)
         self.assertEqual(rc,77);self.assertEqual(r['firstFailure']['stage'],'TerminateJobObject');self.assertFalse(r['cleanupVerified'])
+    def test_native_start_restore_failure_is_secondary_but_blocks_cleanup(self):
+        rc,r,out,trace,c=self.run_case('native-start-restore',True)
+        self.assertEqual(rc,77)
+        self.assertEqual(r['firstFailure'],{'stage':'CreateProcessW','win32Error':87,'errorType':'ScopeError'})
+        self.assertEqual(r['cleanupErrorType'],'ScopeError')
+        self.assertFalse(r['cleanupVerified'])
+        self.assertIsNone(r['cleanupEvidence']['remainingProcesses'])
+        self.assertEqual(c,['start','cleanup','verify_empty','close'])
+        self.assertNotIn('SECRET',out)
 if __name__=='__main__':unittest.main()
