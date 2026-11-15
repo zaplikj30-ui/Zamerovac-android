@@ -1,26 +1,9 @@
 name: Zaměřovač - důvěryhodná Windows QA
 
 # Domácí runner: jen důvěryhodný main commit; žádné PR/forky ani testovací infra checkouty.
-# Před sloučením odstranen dočasný pevný QA B12 ref i dočasný infra trigger.
+# Domácí QA se spouští ručně vlastníkem na main.
 on:
   workflow_dispatch:
-  push:
-    branches: [main]
-    paths:
-      - 'app/src/main/assets/**'
-      - 'app/src/main/java/**'
-      - 'app/src/main/res/**'
-      - 'app/src/main/AndroidManifest.xml'
-      - 'app/build.gradle'
-      - 'config/**'
-      - 'gradle/**'
-      - 'app/src/test/**'
-      - 'app/src/androidTest/**'
-      - 'tests/**'
-      - 'sync/**'
-      - 'tools/**'
-      - '.github/workflows/windows-self-hosted-qa.yml'
-      - '.github/workflows/windows-home-apk-release.yml'
 
 permissions:
   contents: read
@@ -36,9 +19,9 @@ concurrency:
 
 jobs:
   local-quick:
-    # Push na main nebo explicitní ruční spuštění vlastníkem; job-level gate blokuje ostatní branche.
+    # Ruční spuštění vlastníkem; job-level gate blokuje ostatní větve.
     # ZÁMĚRNĚ žádné pull_request ani pull_request_target.
-    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' }}
     name: Windows 11 - Node + Python lokální QA
     runs-on: [self-hosted, Windows, X64, zamerovac-qa]
     timeout-minutes: 25
@@ -109,7 +92,7 @@ jobs:
   browser-smoke:
     # Domácí runner po rychlé kontrole; jeden fyzický runner serializuje těžké úlohy.
     needs: local-quick
-    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' }}
     name: Windows Chromium - kreslení a viditelné pixely
     runs-on: [self-hosted, Windows, X64, zamerovac-qa]
     timeout-minutes: 30
@@ -208,7 +191,7 @@ jobs:
     # Direct Windows Robolectric produced 85 filesystem-specific failures (not suppressed).
     # Full 265 native tests, Drive negative cases, Java compile + independent PDF renderer.
     needs: local-quick
-    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' }}
     name: Home WSL2 native Java + 265 Robolectric + PDF
     runs-on: [self-hosted, Windows, X64, zamerovac-qa]
     timeout-minutes: 60
@@ -378,7 +361,7 @@ jobs:
   # Pouze mistni vystup, po overeni vzdy smazan. ZADNY RELEASE ANI APK ARTIFAKT.
   preview-build-smoke:
     needs: [browser-smoke, native-jvm]
-    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && (github.event_name == 'push' || github.event_name == 'workflow_dispatch') }}
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' }}
     name: Windows technicke sestaveni APK BEZ vydani
     runs-on: [self-hosted, Windows, X64, zamerovac-qa]
     timeout-minutes: 45
