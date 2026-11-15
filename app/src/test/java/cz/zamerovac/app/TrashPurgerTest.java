@@ -28,7 +28,7 @@ public class TrashPurgerTest {
             "{\"id\":\"deleted-photo\",\"deleted\":true,\"parentId\":\"deleted-folder\",\"media\":[\"trash-media\",\"shared-media\",\"history-photo\",\"../outside\"],\"items\":[{\"media\":[\"note-audio\"],\"detailItems\":[{\"media\":[\"detail-photo\"]}]}]},"+
             "{\"id\":\"active-child\",\"parentId\":\"deleted-folder\",\"media\":[\"child-media\"]}]}");
     }
-    void file(String id) throws Exception {Files.write(new File(home,"media/"+id).toPath(),new byte[]{1,2,3});prefs.edit().putString("mime-"+id,"image/png").putString("name-"+id,id).commit();}
+    void file(String id) throws Exception {Files.write(new File(cache,"photo-thumbs/"+id+".jpg").toPath(),new byte[]{5});Files.write(new File(home,"media/"+id).toPath(),new byte[]{1,2,3});prefs.edit().putString("mime-"+id,"image/png").putString("name-"+id,id).commit();}
     void persist(String text) throws Exception {Files.write(new File(home,"projects.json").toPath(),text.getBytes(StandardCharsets.UTF_8));}
     String read(File file) throws Exception{return new String(Files.readAllBytes(file.toPath()),StandardCharsets.UTF_8);}
     JSONArray targets() throws Exception{return new JSONArray("[\"deleted-folder\",\"deleted-photo\"]");}
@@ -38,18 +38,73 @@ public class TrashPurgerTest {
         File thumb=new File(cache,"photo-thumbs/trash-media.jpg");Files.write(thumb.toPath(),new byte[]{5});
         File temporaryThumb=new File(cache,"photo-thumbs/trash-media.tmp");Files.write(temporaryThumb.toPath(),new byte[]{6});
         persist(db.toString());JSONObject result=purger.purge(db.toString(),db.toString(),targets(),this::persist);
-        assertEquals(0,result.getInt("pending"));assertEquals("",result.getString("warning"));
+        assertEquals(0,result.getInt("pending"));assertTrue(result.getString("warning").contains("Chráněné"));
         JSONObject reloaded=new JSONObject(read(new File(home,"projects.json")));
         assertEquals(2,reloaded.getJSONArray("records").length());
         assertEquals(active,reloaded.getJSONArray("records").getJSONObject(0).toString());
         assertEquals("active-child",reloaded.getJSONArray("records").getJSONObject(1).getString("id"));
         assertEquals(reloaded.toString(),read(new File(home,"projects.bak")));
         for(String id:new String[]{"active-media","shared-media","history-photo","child-media","unrelated"})assertTrue(id,new File(home,"media/"+id).isFile());
-        for(String id:new String[]{"trash-media","note-audio","detail-photo","deleted-photo"}){assertFalse(new File(home,"media/"+id).exists());assertFalse(prefs.contains("mime-"+id));}
+        for(String id:new String[]{"trash-media","note-audio","detail-photo","deleted-photo"}){assertArrayEquals(new byte[]{1,2,3},Files.readAllBytes(new File(home,"media/"+id).toPath()));assertTrue(prefs.contains("mime-"+id));}
         assertFalse(thumb.exists());assertFalse(temporaryThumb.exists());assertEquals(0,new TrashPurger(home,cache,prefs).pendingCount());
         // Safe repeated empty purge; no broad media garbage collection.
         purger.purge(reloaded.toString(),reloaded.toString(),new JSONArray(),this::persist);
         assertTrue(new File(home,"media/unrelated").isFile());
+    }
+    @Test public void legacyPendingWithoutPinFailsClosedBeforeAnyCommitAfterRestart() throws Exception {
+        // Pre-P1 interrupted cleanup: the deleted record is already gone, so
+        // preserving today's DB cannot discover/pin this last physical photo.
+        String saved=new JSONObject().put("schema",1).put("records",new JSONArray())
+            .put("trashPurgedIds",new JSONArray().put("old-deleted-record")).toString();
+        persist(saved);file("legacy-photo");
+        File original=new File(home,"media/legacy-photo");
+        byte[] bytes=Files.readAllBytes(original.toPath());
+        File pending=new File(home,"trash-cleanup.json");
+        String oldIntent=new JSONArray().put("legacy-photo").toString();
+        Files.write(pending.toPath(),oldIntent.getBytes(StandardCharsets.UTF_8));
+        assertFalse("This fixture predates the P1 hold registry",new File(home,"protected-revisions").exists());
+        int[] databaseWrites={0};
+        for(int restart=0;restart<2;restart++){
+            try{
+                new TrashPurger(home,cache,prefs).purge(saved,saved,new JSONArray(),next->{
+                    databaseWrites[0]++;persist(next);
+                });
+                fail("Legacy pending cleanup deleted an unpinned last original");
+            }catch(IOException expected){
+                assertTrue("Unexpected failure: "+expected.getMessage(),
+                    expected.getMessage().contains("Neověřený seznam úklidu"));
+            }
+            assertArrayEquals("Exact original bytes must survive restart/retry",
+                bytes,Files.readAllBytes(original.toPath()));
+            assertEquals("No premature DB save",0,databaseWrites[0]);
+            assertEquals("Original DB unchanged",saved,read(new File(home,"projects.json")));
+            assertEquals("Keep the uncertain intent as evidence",oldIntent,read(pending));
+            assertEquals(1,new TrashPurger(home,cache,prefs).pendingCount());
+            assertEquals("image/png",prefs.getString("mime-legacy-photo",null));
+        }
+    }
+    @Test public void knownP1PinnedPendingCanFinishCleanupWithoutDeletingOriginal() throws Exception {
+        // A valid previously protected preimage is not an untrusted legacy intent.
+        JSONObject old=new JSONObject().put("schema",1).put("records",new JSONArray().put(
+            new JSONObject().put("id","old-deleted-record").put("deleted",true)
+                .put("media",new JSONArray().put("pinned-photo"))));
+        String previous=old.toString();
+        persist(previous);file("pinned-photo");
+        byte[] original=Files.readAllBytes(new File(home,"media/pinned-photo").toPath());
+        new ProtectedRevisions(home,new File(home.getParentFile(),"no_backup"),prefs)
+            .preserveDatabase(previous);
+        String current=new JSONObject().put("schema",1).put("records",new JSONArray()).toString();
+        persist(current);
+        Files.write(new File(home,"trash-cleanup.json").toPath(),
+            new JSONArray().put("pinned-photo").toString().getBytes(StandardCharsets.UTF_8));
+        for(int attempt=0;attempt<2;attempt++){
+            JSONObject result=new TrashPurger(home,cache,prefs).purge(current,current,
+                new JSONArray(),this::persist);
+            assertEquals(0,result.getInt("pending"));
+            assertArrayEquals(original,Files.readAllBytes(new File(home,"media/pinned-photo").toPath()));
+            assertEquals("image/png",prefs.getString("mime-pinned-photo",null));
+            assertEquals(0,new TrashPurger(home,cache,prefs).pendingCount());
+        }
     }
     @Test public void staleSnapshotOrRestoredRecordCannotDeleteAnything() throws Exception {
         String db=fixture().toString();file("trash-media");persist(db);
@@ -62,7 +117,7 @@ public class TrashPurgerTest {
         try{purger.purge(db,db,targets(),text->{throw new IOException("disk full");});fail();}catch(IOException expected){}
         assertEquals(db,read(new File(home,"projects.json")));assertTrue(new File(home,"media/trash-media").exists());
         assertTrue(new TrashPurger(home,cache,prefs).pendingCount()>0);
-        purger.purge(db,db,targets(),this::persist);assertFalse(new File(home,"media/trash-media").exists());
+        purger.purge(db,db,targets(),this::persist);assertTrue(new File(home,"media/trash-media").exists());
     }
     @Test public void failedUnlinkIsReportedAndRetryableAfterRestart() throws Exception {
         String db=fixture().toString();persist(db);file("trash-media");
@@ -72,7 +127,7 @@ public class TrashPurgerTest {
         assertTrue(new File(home,"media/trash-media").isFile());
         String saved=read(new File(home,"projects.json"));
         result=new TrashPurger(home,cache,prefs).purge(saved,saved,new JSONArray(),this::persist);
-        assertEquals(0,result.getInt("pending"));assertFalse(new File(home,"media/trash-media").exists());
+        assertEquals(0,result.getInt("pending"));assertArrayEquals(new byte[]{1,2,3},Files.readAllBytes(new File(home,"media/trash-media").toPath()));
     }
     @Test public void failedBackupWriteNeverUnlinksMedia() throws Exception {
         String db=fixture().toString();persist(db);file("trash-media");
@@ -128,7 +183,7 @@ public class TrashPurgerTest {
         assertArrayEquals(protectedAudio,Files.readAllBytes(new File(home,"media/note-audio").toPath()));
         assertTrue(prefs.contains("mime-trash-media"));
         assertTrue(prefs.contains("mime-note-audio"));
-        assertFalse("Exclusively deleted original must still be cleaned",new File(home,"media/detail-photo").exists());
+        assertArrayEquals("P1 retains the last exclusive original",new byte[]{1,2,3},Files.readAllBytes(new File(home,"media/detail-photo").toPath()));
         assertEquals(active.toString(),new JSONObject(read(new File(home,"projects.json")))
             .getJSONArray("records").getJSONObject(0).toString());
         // Repeated cleanup after restart must not delete these originals.

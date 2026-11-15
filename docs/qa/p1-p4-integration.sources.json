@@ -1,0 +1,793 @@
+{
+  "base": "a3cc8eb3a14a9a6710664b73ba8a5c70ed1a340a",
+  "productInput": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+  "safetyInput": "57c2d6ae4cfdc5fdf50494db45883da78c7d0b83",
+  "copied": [
+    {
+      "path": "app/src/main/assets/app.js",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "fed6c03cf411d68dc2435cbc68cfdc5d8450d42aa3fbdbe5d68b9f86d77cf06a",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/assets/customer-export.js",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "e65d7c1c799f2f93df6dc6259bdfc146cf7bd6e4d6b55fb700588d2c37c92252",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/assets/drive-accounts.js",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "5362ed5d4a832381d3d76c5f0a8b9bd9c4a205c25f1264cb1672a871c5938540",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/assets/help.js",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "5313c8f3de3fa256a2af151f7986e9c89078a309a00b61f1750e5dd10553fe8b",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/assets/i18n.js",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "a18edb7380667c634a81a4b894605184f71cf17670d8463327c7bace641d0bfe",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/assets/index.html",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "cfc52e7739035797c5023acbc127efcdff720bd84effb6228aeee223d8721034",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/assets/inset-workspace.js",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "600b5aa40a8aa5ac96c68b5bcacff84c9c2b02a213f045bd42ae52d9e3e5a8d0",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/assets/peer-sync.js",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "5b3f2b407767dcce777eb1191c20b417ac2591c56f31c341f781fa75c1a5e693",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/assets/pending-audio.js",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "1618fa42a1000e5062abdb7aeff931198754fb062b7c45625b7ded58abfe1a2c",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/assets/release-history.js",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "eb65fce669952ef23abc0522b1f2f2c9f34f347faa9929ffc907de130711b9dc",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/assets/rich-notes.js",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "695321d33d944f99e5b8f7d0804f75401846876b1c96702c0c7982bf853fdc2c",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/ArchiveLimits.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "53e3d22a1b87c585556d6a5849ec820cf046bfb13dffb62beea848493683b528",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/AudioCapture.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "ba33d879adb7d9eb33161fc268ce51e834d12e38e729ac806bb34d6e2fef61ca",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/BackupHistory.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "b53722832cd049daf345c68769a5e9654a45a618666d5168e8830f835f0d17a8",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/BackupImporter.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "74826778d2d678bb0f9f0c9cb9db3d4bf26503954df488affe1e129b32a6c2ec",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/CloudFiles.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "07e8ad8efa3d9b81e910a3fb7730be4bcd650e151021a664c738ea8929f2d9fa",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/CloudInbox.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "fad639a09d66b538deca3af1df46276131174ebed667ad034b4a61dea6c37b77",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/CloudPublications.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "d0de209a9b82d4e67e5f54b1349b6466994202f0843135641afe40c7d4b7295f",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/CloudScan.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "4ca30058f9b78c73a0f1a376f48d8480089f85a530c902fa0baa00674a7d89ec",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/CloudStorage.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "a6ef30f7a0c0a4c4abbe44f1831a1b9fede4ed5c5a3d62cf933e71605dbb6a24",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/DatabaseInstallEvidence.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "8b4941f6207e91ba5e2efc7c18b36b8727b35c533d270fddda045177eebb304a",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/DatabaseRecovery.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "cb4007d583c74dc47a606b25ee2bd23a4e5b875418e1c6f5861d33caeb7c3417",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/DriveApi.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "c02cee6e2ff78e03b85e8f661affc6a48e08aa5831247cb1af0a7773c2b080fe",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/DriveObjectStore.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "ea7d015200184b8be4b5a233c2dcabe4e9621690e80190650533e86209c46b25",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/DriveResumableUpload.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "69cdd8cc5f1938a770f2f6c810760d236cdeb6726f3769b22acf8ba9404f4fd1",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/DriveSyncStore.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "d24da90ed337c263cbb0477fe25e79dd50353c27b18f8b87d662c764aecbe1ee",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/GuardedSyncStore.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "c763d53311d0aa8db51e1dbf753085ba3b1c907161d5547f0ca5684c57f5dc4c",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/ImmutableMediaProof.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "7a48b3471622684b08991d2d965ce42027908bf3e488225beb44d468e744df0f",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/JsonInput.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "0b67c1fe4ddb6e0f436931d64c05e4ca79a062a399de876c76e8248901e396ea",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/LocalDatabase.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "632675d6a7ba5b4d632f06b7d6a507c7122fa6d0498c32dc892d107ffb2bab3e",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/MainActivity.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "e153e9d1801cd4b64d204949210641717cf46ac0c99fd1c7910cd5fffbb363d5",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/MediaIngest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "99bc091b667f6f6e9e9949ac9978b98dbfa271a4c853a30dba85dd621a92a327",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/MediaStaging.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "e94aa79c37ab3f7d8e47cd7ce6ebad9604b45d3f4a22db17667592be6c1b4141",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/PeerCoordinator.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "cd374664426df39c74ae67be6de5374d736fb0d70b4294f0f40a1f9fe93d5e8e",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/PeerDataStore.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "022d24da34684be3dfee1d39e95d937920c0406f3d0fea10478369399209fc47",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/PeerHandshake.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "ff4963ec72a7bf994ac774e1b935fbe391669cd2b01222a3c99e87947104f887",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/PeerMedia.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "e611781d7c79b33950314cc47aaedc218b7bdbe648a6edb9075b6203561abda8",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/PeerOutbox.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "f956a80f01757e2605bc19b2a7a6ece0549eb6f6eabbff9090add0e0b0dba97d",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/PeerSnapshot.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "6430687628a0ccdf334178b0111391d4111d62f1a4384d05c4baa316db8024ac",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/PeerTransfer.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "7cfd2917c8e061106191cad39359e43422ec9fe61fd88c95a6afc9432939ae5f",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/PendingAudio.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "0b7ccf2acbe4d935783fd6623336eed6021af172015981c7098f0de3fc646801",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/ProtectedRevisions.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "d13cd96ec72e1f790e3385a46bad93e7c50e29d7da71a8539748a1a8064eeb17",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/RecoveryCandidateReview.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "4183d59f5f0dcd2aa3cba80734609972beb38f3b68460289803725d8b8f80d7a",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/RecoveryInventory.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "6f1373663fe73eb92bc39fd21ee350f68f3fa892bf09b5b3c565b29cc9a900e0",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/RecoveryProtectionArchive.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "48085224f131572cb526ff47e23c1995750c41b26d43da52f0d7a316254dc6a7",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/SafSyncV2.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "51c48aea5c238edf62e45330cbe0cd18b5ea864b9df75b76565812c7725d5ebe",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/SyncEngine.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "9c0c7b98c32c54fa744beedf159939ac806735df142412cee449c26c53bd1561",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/SyncLedger.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "18434aa8aa8d780bf96549a72eee51ae19850db9e1f3ea38e2ab79838d22e560",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/SyncNetworkPolicy.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "af269461d929f2031876e82b1fe64365d2a9ee3ffe3b5aefec15baa445fe4c06",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/SyncPeerRegistry.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "9e652f6050409de4569c3c50e220c70f9b8b6599127ad7ba46436d42be50aed9",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/SyncQueueStore.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "10647ee9e7f0d94872ef90a97cc656df1b2cdc9b94fb546ce0a403f346cd5603",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/SyncRecoveryContent.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "69019e96256b4a4f3ae849a8dbc5d024e1ce0b4ed597949005a4df7026ba47d6",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/SyncStorageAdapter.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "5eb42d19b0437534e984108f970572777c61bffa16c25f976bfc757888eb3c96",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/SyncStore.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "12950edc6815dc95d8915f8498c005c62f327bc16f4dc770c26829e9d41432a1",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/java/cz/zamerovac/app/TrashPurger.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "33aff7e8d4477741626e877fcbba6fe34eb5fcf380d39bc966d230d9a94e47b1",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/main/res/values/strings.xml",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "1e652d5c088c87a35ac532a3429fc720f074883433445b6682a2d549672bf249",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/AudioCaptureTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "4475c74c4d890d2b1ea537981c519f1369a65dffe9499dc9ab1a94b010ed88ad",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/AudioCompletedKeepTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "9aaa2009172a41a4d6f5e93ef49545390242b84ccae93518af740e9baceef62a",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/AudioRecoveryIsolationTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "5111380c9d30c4b3c1dee4fabd77fe4cc2b572f9d564bc8f5b004f6586261266",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/Audit39FindingsTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "b75392f5cd9964b1696634a090be265454248bb762057ad95b7ea4b1d675c605",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/Audit39SafetyTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "e4cc98bd3ca01657e1f85f800a6211478cc129024b18e26d87fef6c4a8f0786e",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/BackupHistoryTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "15170901a337597e708da78054fb359e8ed00c04e64c6e9dafc514f6760302bf",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/CloudInboxTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "73ca6dff6953c012eb4b191e4863fdcf57280bf3e4af5a27264075919b183b79",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/CloudPublicationsTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "0cfa6c7e500607b54dad56df2752daa17f2b28aea8c909fa50ae553fd1a9f439",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/CloudScanTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "083cc0834776555e635dd2f568eb4761c42d346e6e0e6ef75ff2d9fe7fc29e6c",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/DatabaseInstallEvidenceTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "954c9b5af19dbd0b59ab6e7240a282a28e5cf2888d00d40e2942bef41ce08eef",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/DatabaseRecoveryTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "814891a1839d80f79433184e0cef45f7c1bf370b214297538365d60d72f0666e",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/DriveResumableUploadTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "31634c5988bc03e62d3bf69ee1085db9bc2b52822e2a2d4939cf2459fb9d7c28",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/DriveStoresTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "29c4ae97047766d0280aef3337ff8a26f709d13eb68fa520ef8308a4937edbd0",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/ImmutableMediaProofTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "5d9452e242ef13a96ed0a3bd09fb6e6e23868f32ef084d40e5eb005a1a20c359",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/LedgerTestFault.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "f162bcbbebd4557e8b2c1797c0089388332208a44f0ffbf280156f3cd67fb61a",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/MediaIngestTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "bb6e862694ce94478f8b0729bdc489ce77811b167be5687526e526458bd9894a",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/PeerLargeTlsTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "0eba76a05ac8170e75cbb26bcc61cfee3ab572b4f971d801d398ccba2fc339ab",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/PeerLegacyCompatibilityTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "1787dd8db2327bbf971719a0f47fe5e67cb36379723854efa399baee7a4b738b",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/PeerMediaLargeTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "0b58a165ed172f2d236763636135adcde750c64427bcda75f6d3776204f52461",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/PeerTransferTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "93fa2752d4d4328067d5172660defa3290d3dacdcb6a31bd97950cf9930815d6",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/PendingAudioTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "83252a7daaa94188e7de7f4b651bbb686206bc468fb5ecd3011f7803b1fd677c",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/Post147DataTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "9a7987570cfbe32c1fdfc1d62646a0b671aaf29b994831837fa23d4b94e34dec",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/Post149NativeTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "f6d40c7719379ed1e2ac3bbdd924f1a81bd46a908da892719414c174d6ab0a65",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/ProtectedArchiveCoverageTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "4692de81149bfa8e1332da470954cd715385de43034bc153770d8b7241ddcd8a",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/ProtectedRevisionsTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "3e0ce96d3365a64789e77406da2d1bd1e2f4923c7f0f975dbbbf8e2a422da96a",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/RecoveryCandidateReviewTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "859aed19b4df8421116808e6296404fdbf0fca60e2bc7c4fc4e92f6a5932e42c",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/RecoveryInventoryTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "120887ece8a83a3bf9c40d60b6752d0515787b91dd562598785a3cd985d2310e",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/RecoveryProtectionArchiveTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "61d7280c1340065e5ad7d7ae199f37465e0c01b8ee75c57964bfaeacc039925e",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/SafSyncV2Test.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "c01dc4e5e5d2e8741142322d84829dc3c108676567624812e429cc3ef4cce197",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/StorageLifecycleTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "072dfb0a09745616a305d2f05943796c1310dbd9023701e93c536e99a463786a",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/SyncAckReconciliationTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "e74689baf33d2ea75b8b420b1ef9898a91937eda8101a76ce3125241dfdf0c70",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/SyncAdapterFaultTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "8e618dbf2b9f087e4eb56adb29d0e0e48be421c7c95163f5027d0e877f209b88",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/SyncConsistencyTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "a7b33ada5d1f6595ae15475250dfd83ba152727471df2d63ad263fdbe1db4393",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/SyncContentTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "06660e32c35a27fdd9cad436daa0353f7e66feedc00e5a6e6de05468ac076d65",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/SyncLedgerTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "ad4f62c277dec082e114835233d2c3f67ede53ee58059515233ea9688b7204a8",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/SyncReceiptSafetyTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "a8b998fd1aaaf30c32e40c72d0d5c5ff476b2930a8302ab767c4a87eedc7b456",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/SyncSafetyTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "ea8d1bf97ef46d634d4509c411f213b08bb2429a1e4317631f733ecb7a6242c6",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "app/src/test/java/cz/zamerovac/app/TrashPurgerTest.java",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "9affed8c64371a888b03ce2ceec7a7a917aa334e58a74b8af27ef962b1adceba",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "docs/p1-hybrid-retention.md",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "bd1277104993bcfab2fe1bff55346ad9ad0dff6d987f4070db5c1b7cb89078b5",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "docs/qa-s2-r2-f1-20261109.md",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "9bf87560109cae8d9cbc464cb27c484e8ea0664f0bea65128e2b074a5066541b",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "docs/qa107-06-original-selection.md",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "fc7ad10dd02caaced83958812e0b14267882e97e4d1b012e211bd903aaa7e180",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "docs/qa107-recovery-isolation.md",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "8810bc7b6bc2f004f8ec1738a76589745946d6a14feb96c31218527c0ae793a4",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "docs/qa107-variant-b.md",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "0b79deb0861600977dc3493da65c295283ebe2dccd12c92db9901be05deaa456",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "docs/sync-ack-88-acceptance.md",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "b983e8ceca01e0a7af97c3fbedc9b9865ce7d0ca4b02a835cfcfced4b75738d5",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "docs/sync-core-b.md",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "72ee436345ffb75b062e81e8a26a0229549ecfffbb6ca3cb36f7f2e4cad1eee0",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "docs/sync-p1-88-blocker.md",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "44ee07cc6f2773a347f25662a3392f0558b6059b77acc8a4d714a897234a703f",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "qa/coverage-v1.json",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "dc6217ba95a336e772fea8575179dcb8b7dcf2f61a40c49e207510d527c8b75e",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "tests/causal_app_clock.js",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "c07cd19b5f89d9b78dd8501d375692cf50dcda1a33cfc4f8117838530f66e29d",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "tests/help_guide.js",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "8d7bbd5e0625a3f4f4a268959da8be437248894ba24ed86fd232a8744c55913f",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "tests/inset_audio_customer_export.js",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "1807d22ce3aa62d328d9c3e1ef78570b75f623d28f9e5e515a7863d846153009",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "tests/inset_audio_marker_geometry.js",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "2ae406d270463b06823c89c9448d8e351206000b9ea5603d6043fe72df01610c",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "tests/inset_workspace_interaction.js",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "61bece367cf93196fdeb8a5a1adca7be409ab86532b60e2fdcf8e99a0cad8e96",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "tests/manual_audio_completed_keep_regression.py",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "5a2441da48c7ca043294993c84e060d8b763102a9a0d042d9840b0a4ea9e61b4",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "tests/media_import_real_chromium.py",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "0cdd79c6517233845d66919772221b9955aed214896713c5c6c5fcc80012c4f9",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "tests/media_import_transaction_faults.js",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "b9430c65ca39cbf78611e10a15209e188dbdc8eed5f717a2ffce3a1617d38c79",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "tests/new_record_save_failure.js",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "ebf59949de8220185edd471ad2f997d367bc3cd90b18ad4ecc0e7ac1bddc93a8",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "tests/release_history.js",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "a3797c84c0b78bec029513df965697ff2a63fd340b48604d616cb32717f2836a",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "tests/rich_note_attachment_state.js",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "4a6b800c7cacc6509497e18f5626b3e205ed045d33686b5ee99455d18343ccf9",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "tests/save_acknowledgement.js",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "c4e8a0c846e99ebefd260caa85075bdeb04044240bca0708c95799853616f134",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "tests/save_cas_conflict_guard.js",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "36d0bc7c9db80cf75fca620cd24a7546a8a196f28fb2cb1b242264fb05b89787",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "tests/save_cas_missing_database.js",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "ee7be1302234d0a628ff99807e3bdac3293c1610d3cb2e273ee8649bf500db4b",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "tests/save_cas_recovery_integrity.js",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "1ca2484c3b15fc7292c06f6330ded65fa0e18b03f2993d3bcc3bcedfcc95b16d",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "tests/test_imagemeter_inset.py",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "64247b8d790f03414ec57c1b1b16b71e1b306924ef3907d59731403ace87bea6",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "tests/test_sync_ack_acceptance.py",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "7652b5540ec55f39cae9904bf2058098267afcd6b9e41b623ddc188e6023a24f",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "tests/test_upgrade.py",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "8123031d29964a7b79086c050cf4abfdb7573bbb55afd972573c5113ad7c99fd",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "tests/trash_restore_save_confirmation.js",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "362e4354e084715afc6ff7d0da6ed38843fe05a9e266650ae0bc182e785a3155",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "tools/e2e/drive-accounts.cjs",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "c3ef7e56c52ee36e0c259136f80938b8620c9eed6361670712b96ca3ec573f6f",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "tools/e2e/gallery-state.cjs",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "81cad91e7a19ab40a7dfefc98657e9597f47341143c915726df5f5ea0d8bf776",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "tools/e2e/help.cjs",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "554e4d95e373c50cf790ea7bc8b669932528b462d57d181359babe95898400a0",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "tools/e2e/legacy-conflict-persistence.cjs",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "8dacb46a1ddaadafd470b319341df5d223fdf0f97e561b032601b11142e9e103",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "tools/e2e/media-import.cjs",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "68332581dadceda2716d9e47ad90a9f454b10c9584a4306e97a5a3ef513fdb64",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "tools/e2e/pending-audio.cjs",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "ca5b1aa9af90c4294fbaec659165bbe48997e56dfbc660f1671e2074b86ae50f",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "tools/e2e/protected-data.cjs",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "db2cc248e3ecf611a7a029b32fc741d31c28c342832e4b9b2f4e214607f9bff7",
+      "mainUnchangedSinceMergeBase": true
+    },
+    {
+      "path": "tools/sync-ack-acceptance.py",
+      "from": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+      "sha256": "0446d6dfa6ffa2a851f486d00c1b1587e6cdc0e147a13392ee101ec13a46c3e5",
+      "mainUnchangedSinceMergeBase": true
+    }
+  ],
+  "preservedConflicts": [
+    "AGENTS.md",
+    "START_ZDE.md",
+    "tools/local-browser-qa.cjs",
+    "tools/e2e/harness.cjs"
+  ]
+}

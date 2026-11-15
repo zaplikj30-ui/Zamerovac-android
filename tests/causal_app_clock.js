@@ -12,4 +12,9 @@ ctx.current=local.records[0];ctx.applySavedState(merged);assert.equal(ctx.curren
 assert.equal(ctx.reconcileSavedState(base,base,remote).records.length,0,'observed old data cannot revive purged ID');
 const legacy={...base,syncTombstones:JSON.parse('{"constructor":{"'+B+'":1}}')};assert.equal(ctx.reconcileSavedState(base,base,legacy).syncTombstones.constructor[B],1,'untrusted record ID is a key, not a prototype');
 console.log('PASS actual app clock helpers: causal order, bounds, tombstone versus independent edit, no old revival and active editor copy');
-const unknown=structuredClone(base);delete unknown.records[0].syncClock;assert.equal(ctx.reconcileSavedState(unknown,unknown,remote).records.length,1,'live legacy data with unknown causality is preserved as a marked copy');
+const unknown=structuredClone(base);delete unknown.records[0].syncClock;
+const legacyCopy=ctx.reconcileSavedState(unknown,unknown,remote).records;
+assert.equal(legacyCopy.length,1,'live legacy data with unknown causality is preserved as a marked copy');
+assert.notEqual(legacyCopy[0].id,'photo','purged ID must never be revived');
+assert.equal(legacyCopy[0].conflictOf,'photo','original identity is retained as a conflict reference');
+assert.equal(legacyCopy[0].items[0].measure,'1250,123456789','unknown-causality copy retains exact measurement');

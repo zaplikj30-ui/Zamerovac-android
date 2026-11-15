@@ -67,17 +67,21 @@ public class Audit39FindingsTest {
   } finally {release.countDown();worker.shutdown();assertTrue(worker.awaitTermination(5,TimeUnit.SECONDS));}
  }
  @Test public void successfulZipExportMustFitImporterEntryLimit()throws Exception {
+  // Confirm a clean first-launch DB BEFORE originals exist; never relax readForCas.
+  LocalDatabase.write(context.getFilesDir(),db().toString());
   File media=new File(context.getFilesDir(),"media");media.mkdirs();JSONArray ids=new JSONArray();
   // 19,998 one-byte originals plus the three mandatory metadata entries = 20,001.
   for(int i=0;i<19998;i++){String id="audit-media-"+i;ids.put(id);Files.write(new File(media,id).toPath(),new byte[]{42});}
   String before=db(new JSONObject().put("id","photo").put("kind","photo").put("media",ids)).toString();LocalDatabase.write(context.getFilesDir(),before);
   File zip=new File(context.getCacheDir(),"audit-many.zip");
   java.lang.reflect.Method export=MainActivity.class.getDeclaredMethod("exportArchive",OutputStream.class,String.class);export.setAccessible(true);
-  try(OutputStream out=new FileOutputStream(zip)){try{export.invoke(activity,out,null);}catch(java.lang.reflect.InvocationTargetException rejected){assertTrue(rejected.getCause() instanceof IOException);return;}}
+  try(OutputStream out=new FileOutputStream(zip)){try{export.invoke(activity,out,null);}catch(java.lang.reflect.InvocationTargetException rejected){assertTrue("Export must reject the entry-count limit, not an unrelated I/O failure",rejected.getCause() instanceof IOException);assertTrue("Export rejection must be specifically the 20 000 entry limit: "+rejected.getCause(),rejected.getCause().getMessage().contains("20 000"));assertEquals("No partial archive bytes may be published",0,zip.length());return;}}
   try{BackupImporter.importZip(context,Uri.fromFile(zip),new JSONObject(before),prefs);}
   catch(IOException rejected){fail("Export returned success but its own importer rejects it: "+rejected.getMessage());}
  }
  @Test public void purgeMustRemoveExclusiveVoiceAndHistoricalMedia()throws Exception {
+  // First-boot commit precedes media staging; the purge still exercises real files.
+  LocalDatabase.write(context.getFilesDir(),db().toString());
   File media=new File(context.getFilesDir(),"media");media.mkdirs();
   for(String id:new String[]{"voice-only","history-only","shared-safe"})Files.write(new File(media,id).toPath(),new byte[]{1,2,3});
   JSONObject removed=new JSONObject().put("id","deleted-record").put("deleted",true)
@@ -86,8 +90,14 @@ public class Audit39FindingsTest {
   JSONObject kept=new JSONObject().put("id","live-record").put("media",new JSONArray().put("shared-safe"));
   String saved=db(removed,kept).toString();LocalDatabase.write(context.getFilesDir(),saved);
   JSONObject result=new TrashPurger(context,prefs).purge(saved,saved,new JSONArray().put("deleted-record"),text->LocalDatabase.write(context.getFilesDir(),text));
-  assertTrue(new File(media,"shared-safe").isFile());assertEquals(0,result.getInt("pending"));
+  assertArrayEquals("Shared original must remain byte-exact",new byte[]{1,2,3},Files.readAllBytes(new File(media,"shared-safe").toPath()));assertEquals(0,result.getInt("pending"));
   boolean voice=new File(media,"voice-only").exists(),history=new File(media,"history-only").exists();
-  assertTrue("Reported complete purge retained exclusive files: voice="+voice+", history="+history,!voice&&!history);
+  // Approved P1 hybrid replaces physical purge of the last recoverable originals.
+  assertTrue("Hybrid must retain exclusive voice/history originals",voice&&history);
+  assertTrue(new ProtectedRevisions(context,prefs).pins().containsAll(Set.of("voice-only","history-only","shared-safe")));
+  assertArrayEquals(new byte[]{1,2,3},Files.readAllBytes(new File(media,"voice-only").toPath()));
+  assertArrayEquals(new byte[]{1,2,3},Files.readAllBytes(new File(media,"history-only").toPath()));
+  assertEquals(1,result.getJSONObject("data").getJSONArray("records").length());
+  assertTrue(result.getString("warning").contains("Chráněné"));
  }
 }

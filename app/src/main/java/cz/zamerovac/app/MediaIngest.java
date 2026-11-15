@@ -26,7 +26,7 @@ final class MediaIngest {
         source(uri);live();if(!MediaStaging.metadata(mime,name))throw new IOException("Neplatná metadata přílohy");File temporary=MediaStaging.temporary(new File(context.getFilesDir(),"media"),id);
         try{
             InputStream source=io.call(()->context.getContentResolver().openInputStream(uri),null);if(source==null)throw new IOException("Přílohu nelze číst");
-            try(InputStream in=io.input(source);FileOutputStream out=new FileOutputStream(temporary)){long total=0;byte[] block=new byte[65536];int count;while((count=in.read(block))!=-1){live();total+=count;if(total>MediaStaging.LIMIT)throw new IOException("Příloha překračuje limit 2 GiB");out.write(block,0,count);}out.getFD().sync();}
+            try(InputStream in=io.input(source);FileOutputStream out=new FileOutputStream(temporary)){long total=0;byte[] block=new byte[65536];int count;while((count=in.read(block))!=-1){live();total+=count;if(total>MediaStaging.LIMIT)throw new IOException("Příloha překračuje bezpečný číselný rozsah formátu");out.write(block,0,count);}out.getFD().sync();}
             live();MediaStaging.commit(temporary,id,prefs,mime,name);return new File(temporary.getParentFile(),id);
         }finally{temporary.delete();}
     }

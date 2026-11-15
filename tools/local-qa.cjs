@@ -2,6 +2,15 @@
 const fs=require('node:fs'),path=require('node:path'),os=require('node:os');
 const {spawnSync}=require('node:child_process');
 const root=path.resolve(__dirname,'..'),mode=process.argv[2]||'--quick';
+// Same persistent admission marker as tests/qa_process_stop.py. Presence (even
+// a dangling link) or an unreadable observation is STOP; never auto-clear it.
+const processStopPath=process.platform==='linux'?path.join('/tmp','zamerovac-qa-process-tests-'+process.getuid()+'.blocked'):null;
+const processStop=Symbol('PROCESS_TESTS_BLOCKED_STOP_NO_RETRY');
+function processTestsBlocked(){
+ if(processStopPath===null)return false;
+ try{fs.lstatSync(processStopPath);return true}catch(error){return error.code!=='ENOENT'}
+}
+function requireProcessTestsSafe(){if(processTestsBlocked())throw processStop}
 if(!['--quick','--native','--help'].includes(mode)){console.error('Použití: node tools/local-qa.cjs [--quick | --native]');process.exit(2)}
 if(mode==='--help'){console.log('Rychlé Node/Python testy nebo --native také Gradle JVM, nikdy APK.');process.exit(0)}
 const base=path.join(process.env.LOCALAPPDATA||path.join(os.homedir(),'.local','share'),'Zamerovac-QA','results');
@@ -9,17 +18,27 @@ const dir=path.join(base,'qa-'+new Date().toISOString().replace(/[:.]/g,'-'));fs
 const results=[];let num=0;
 function record(name,status,detail){results.push({name,status,detail});console.log(status+' '+name+' '+detail)}
 function run(name,cmd,args,timeout=720000){
+ requireProcessTestsSafe();
  const file=String(++num).padStart(3,'0')+'.log',at=Date.now();
  const r=spawnSync(cmd,args,{cwd:root,encoding:'utf8',shell:false,windowsHide:true,timeout,maxBuffer:24*1024*1024,env:{...process.env,CI:'1'}});
- const output=(r.stdout||'')+(r.stderr||'');fs.writeFileSync(path.join(dir,file),output,'utf8');
+ const output=(r.stdout||'')+(r.stderr||'');
+ if(r.status===78||processTestsBlocked()){
+  try{fs.writeFileSync(path.join(dir,file),'PROCESS_TESTS_BLOCKED_STOP_NO_RETRY\n',{mode:0o600})}catch{}
+  record(name,'FAIL','BLOCKED PROCESS_TESTS_BLOCKED_STOP_NO_RETRY');throw processStop;
+ }
+ fs.writeFileSync(path.join(dir,file),output,{encoding:'utf8',mode:0o600});
  const ok=!r.error&&r.status===0;
  record(name,ok?'PASS':'FAIL',file+' ('+Math.round((Date.now()-at)/1000)+' s)'+(r.error?' '+r.error.message:''));
  if(!ok)console.error(output.slice(-1600));
 }
 function files(p){const dir=path.join(root,p);if(!fs.existsSync(dir))throw Error('Chybí '+p);return fs.readdirSync(dir).filter(x=>x.endsWith('.js')).sort().map(x=>p+'/'+x)}
 function python(){for(const [cmd,args,prefix] of (process.platform==='win32'?[['py',['-3','--version'],['-3']],['python',['--version'],[]]]:[['python3',['--version'],[]],['python',['--version'],[]]])){
- const r=spawnSync(cmd,args,{encoding:'utf8',shell:false,windowsHide:true,timeout:15000});if(!r.error&&r.status===0)return [cmd,prefix];}return null}
+ requireProcessTestsSafe();
+ const r=spawnSync(cmd,args,{encoding:'utf8',shell:false,windowsHide:true,timeout:15000});
+ if(r.status===78||processTestsBlocked())throw processStop;
+ if(!r.error&&r.status===0)return [cmd,prefix];}return null}
 try{
+ requireProcessTestsSafe();
  for(const f of [...files('app/src/main/assets'),...files('sync')])run('syntax '+f,process.execPath,['--check',f]);
  run('registr QA',process.execPath,['tools/qa/audit.cjs']);
  run('Android focus/ANR model',process.execPath,['tools/check-android-window.cjs']);
@@ -30,7 +49,7 @@ try{
   run('Gradle Drive config',gradle,[...cmd,'--no-daemon','-p','tools/drive-config-checks','verify'],1200000);
   run('Gradle JVM',gradle,[...cmd,'--no-daemon',':app:verifyDriveRegistration',':app:compilePreviewJavaWithJavac',':app:testPreviewUnitTest','-PdriveRequireConfigured=true'],2400000);
  }else record('Gradle JVM','NOT RUN','jen v režimu --native');
-}catch(e){record('Spouštěč','FAIL',String(e.stack||e))}
+}catch(e){record('Spouštěč','FAIL',e===processStop?'BLOCKED PROCESS_TESTS_BLOCKED_STOP_NO_RETRY':String(e.stack||e))}
 record('Chromium E2E','NOT RUN','zatím nepřipojené');
 record('Fyzický Samsung','NOT RUN','vyžaduje samostatnou Android/ADB etapu');
 record('APK','NOT RUN','žádné sestavení ani instalace');

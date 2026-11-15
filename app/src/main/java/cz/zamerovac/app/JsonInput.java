@@ -7,12 +7,18 @@ import java.nio.charset.*;
 /** Bound untrusted input before org.json recursively allocates its object graph. */
 final class JsonInput {
     static String decode(byte[] bytes)throws IOException {
-        if(bytes.length>20*1024*1024)throw new IOException("JSON překračuje limit velikosti");
+        return decode(bytes,20*1024*1024);
+    }
+    static String decode(byte[] bytes,int maximum)throws IOException {
+        if(bytes.length>maximum)throw new IOException("JSON překračuje limit velikosti");
         try{return StandardCharsets.UTF_8.newDecoder().onMalformedInput(CodingErrorAction.REPORT).onUnmappableCharacter(CodingErrorAction.REPORT).decode(ByteBuffer.wrap(bytes)).toString();}
         catch(CharacterCodingException invalid){throw new IOException("Neplatné kódování JSON",invalid);}
     }
     static void check(String text)throws IOException {
-        if(text==null||text.length()>20*1024*1024)throw new IOException("JSON překračuje limit velikosti");
+        check(text,20*1024*1024);
+    }
+    static void check(String text,int maximum)throws IOException {
+        if(text==null||text.length()>maximum)throw new IOException("JSON překračuje limit velikosti");
         boolean quoted=false,escaped=false;int depth=0;
         for(int i=0;i<text.length();i++){
             char c=text.charAt(i);

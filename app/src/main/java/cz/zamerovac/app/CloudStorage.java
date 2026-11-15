@@ -23,16 +23,18 @@ final class CloudStorage {
     });}
     CloudStorage(Context context,SharedPreferences prefs,Platform platform){this.context=context;this.prefs=prefs;this.platform=platform;accounts=new DriveAccounts(context.getNoBackupFilesDir());}
     private String tree(String kind){return prefs.getString("sync".equals(kind)?"treeUri":"backupTreeUri",null);}
+    String syncKind()throws Exception{return accounts.backend("sync");}
+    String syncScope()throws Exception{Account account=accounts.account("sync");return "drive".equals(syncKind())?"drive-appdata-v2:"+PeerWire.hash((platform.project()+"/"+account.name).getBytes(StandardCharsets.UTF_8)):tree("sync");}
     boolean configured(String kind)throws Exception{String backend=accounts.backend(kind);return "drive".equals(backend)?accounts.account(kind)!=null:"saf".equals(backend)&&tree(kind)!=null;}
     String key(String kind)throws Exception{String backend=accounts.backend(kind);Account account=accounts.account(kind);String value=account==null?String.valueOf(tree(kind)):platform.project()+"/"+account.name;return backend+":"+PeerWire.hash(value.getBytes(StandardCharsets.UTF_8));}
     boolean offline(String kind){try{return "drive".equals(accounts.backend(kind))&&!platform.online();}catch(Exception invalid){return false;}}
     boolean allowed(String kind,boolean explicit,long bytes){try{
-        if(!configured(kind))return false;if(!"drive".equals(accounts.backend(kind)))return BackupNetwork.allowed(context,tree(kind),explicit)||"sync".equals(kind)&&!SyncCadence.current(context,prefs).wifiOnly&&bytes<=1024*1024;
-        if(!platform.online())return false;return explicit||platform.unmetered()||"sync".equals(kind)&&!SyncCadence.current(context,prefs).wifiOnly&&bytes<=1024*1024;
+        if(!configured(kind))return false;if(!"drive".equals(accounts.backend(kind)))return BackupNetwork.allowed(context,tree(kind),explicit)||"sync".equals(kind)&&!SyncCadence.current(context,prefs).wifiOnly&&bytes>=0&&bytes<=SyncNetworkPolicy.LEGACY_METERED_ATTEMPT_BYTES;
+        return new SyncNetworkPolicy(!"sync".equals(kind)||SyncCadence.current(context,prefs).wifiOnly,SyncNetworkPolicy.LEGACY_METERED_ATTEMPT_BYTES).allows(platform.online(),platform.unmetered(),explicit,bytes);
     }catch(Exception invalid){return false;}}
     private DriveObjectStore drive(String kind,boolean explicit,BooleanSupplier cancelled)throws Exception{
         Account account=accounts.account(kind);if(account==null)throw new IOException("Nejdříve připoj účet Disku");if(!DriveAuthorization.validProjectId(platform.project()))throw new IOException("Připojení Disku čeká na dokončení nastavení aplikace");ImmutableStore.Checkpoint selected=accounts.binding(kind,account);ImmutableStore.Checkpoint binding=()->{if(cancelled.getAsBoolean()||Thread.currentThread().isInterrupted())throw new CloudScan.Deferred();selected.check();};
-        DriveHttp.Gate gate=bytes->{binding.check();if(!allowed(kind,explicit,bytes))throw new CloudScan.Deferred();};return new DriveObjectStore(platform.api(account,binding,gate),context.getCacheDir(),platform.project()+"/"+account.name);
+        DriveHttp.Gate gate=bytes->{binding.check();if(!allowed(kind,explicit,bytes))throw new CloudScan.Deferred();};return new DriveObjectStore(platform.api(account,binding,gate),context.getNoBackupFilesDir(),platform.project()+"/"+account.name);
     }
     SyncStore sync(boolean explicit,BooleanSupplier cancelled)throws Exception{if(!configured("sync"))throw new IOException("Vyber úložiště synchronizace");return "drive".equals(accounts.backend("sync"))?new DriveSyncStore(drive("sync",explicit,cancelled)):new DocumentSyncStore(context,tree("sync"));}
     BackupStore backup(boolean explicit)throws Exception{if(!configured("backup"))throw new IOException("Vyber úložiště historických záloh");return "drive".equals(accounts.backend("backup"))?new DriveBackupStore(drive("backup",explicit,()->false)):new DocumentBackupStore(context,tree("backup"));}

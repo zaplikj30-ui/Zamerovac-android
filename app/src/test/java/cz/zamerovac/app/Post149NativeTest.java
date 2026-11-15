@@ -187,7 +187,10 @@ public class Post149NativeTest {
         try(ActivityController<MainActivity> controller=Robolectric.buildActivity(MainActivity.class).setup()){
             MainActivity activity=controller.get();Object web=field(activity,"web");
             String data="{\"schema\":1,\"records\":[{\"id\":\"saved-photo\",\"kind\":\"photo\",\"media\":[\"original-image\"],\"items\":[{\"measure\":\"1585,800001\",\"unit\":\"mm\"}]}]}";
-            activity.new JsApi().saveData(data);
+            activity.new JsApi().loadData(); // confirmed first-launch DB before media
+            File original=new File(activity.getFilesDir(),"media/original-image");original.getParentFile().mkdirs();
+            java.nio.file.Files.write(original.toPath(),new byte[]{1,3,5,7});
+            assertTrue(activity.new JsApi().saveData(data));
             for(int orientation:new int[]{android.content.res.Configuration.ORIENTATION_LANDSCAPE,android.content.res.Configuration.ORIENTATION_PORTRAIT}){
                 android.content.res.Configuration configuration=new android.content.res.Configuration(activity.getResources().getConfiguration());
                 configuration.orientation=orientation;configuration.screenWidthDp=orientation==2?1024:768;configuration.screenHeightDp=orientation==2?768:1024;

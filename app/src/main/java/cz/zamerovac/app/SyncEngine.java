@@ -51,8 +51,8 @@ public class SyncEngine {
         while((n=in.read(block))!=-1){if(b.size()+n>20*1024*1024)throw new java.io.IOException("Cloudová databáze je příliš velká");b.write(block,0,n);}
         return JsonInput.decode(b.toByteArray());
     }
-    private String loadLocal() throws Exception {return LocalDatabase.read(home);}
-    private void saveLocal(String text) throws Exception {LocalDatabase.write(home,text);}
+    private String loadLocal() throws Exception {return LocalDatabase.readForCas(context);}
+    private void saveLocal(String text) throws Exception {LocalDatabase.write(context,text);}
     private JSONObject parse(String text) throws Exception {
         if(text==null||text.isEmpty())return new JSONObject().put("schema",1).put("records",new JSONArray()).put("prefs",new JSONObject());
         LocalDatabase.validate(text);JSONObject o=new JSONObject(text);
@@ -179,7 +179,7 @@ public class SyncEngine {
                         // A concurrent trash purge must not bring back an orphaned media file.
                         JSONObject latest=parse(loadLocal());Set<String> purged=TrashPurger.purgedIds(latest);boolean allowed=false;
                         JSONArray records=data.optJSONArray("records");if(records!=null)for(int i=0;i<records.length();i++){JSONObject rec=records.optJSONObject(i);if(rec!=null&&!purged.contains(rec.optString("id"))){Set<String> used=new HashSet<>();references(rec,used);if(used.contains(id)){allowed=true;break;}}}
-                        if(allowed&&!file.exists())java.nio.file.Files.move(temporary.toPath(),file.toPath());
+                        if(allowed&&!file.exists()){ProtectedRevisions.requireUnpinned(file);java.nio.file.Files.move(temporary.toPath(),file.toPath());}
                     }
                 }finally{temporary.delete();}
                 prefs.edit().putString("mime-"+id,entry.mime).apply();
@@ -203,7 +203,19 @@ public class SyncEngine {
     public Result sync() throws Exception{
         if(!SESSION.tryLock())throw new java.io.IOException("Jiná synchronizace již probíhá");
         try{
-            String snapshot=loadLocal();JSONObject local=parse(snapshot),remote=fetchRemote();
+            // Establish a durable empty baseline BEFORE downloading the first photo.
+            // If a new installation loses connectivity after a media transfer,
+            // strict CAS must see this confirmed DB instead of orphaned media.
+            // Never bootstrap a lost/corrupt initialized DB: loadLocal throws.
+            String snapshot;
+            synchronized(TrashPurger.LOCK){
+                snapshot=loadLocal();
+                if(snapshot.isEmpty()){
+                    saveLocal("{\"schema\":1,\"records\":[]}");
+                    snapshot=loadLocal();
+                }
+            }
+            JSONObject local=parse(snapshot),remote=fetchRemote();
             JSONObject merged=merge(local,remote);String publishedBase=nextBaseline;
             transferMedia(merged);publishRemote(merged);
             boolean pending;
