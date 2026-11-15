@@ -156,9 +156,23 @@ jobs:
           set "QA_ROOT=%GITHUB_WORKSPACE%\qa141-gate-%GITHUB_RUN_ID%"
           set "REF_ROOT=%GITHUB_WORKSPACE%\qa141-reference-%GITHUB_RUN_ID%"
           set "PROD_ROOT=%GITHUB_WORKSPACE%\qa141-product-%GITHUB_RUN_ID%"
-          git -C "%QA_ROOT%" fetch --no-tags --no-recurse-submodules "%REF_ROOT%" %EXPECTED_REFERENCE_SHA%
+          rem The two reviewed inputs MUST be present and have exact HEAD before local-only import.
+          rem A cached Git object may make fetch exit 0 even when the source path disappeared.
+          if not exist "%REF_ROOT%\.git" exit /b 1
+          if not exist "%PROD_ROOT%\.git" exit /b 1
+          git -C "%REF_ROOT%" rev-parse HEAD | findstr /x /i /c:"%EXPECTED_REFERENCE_SHA%" >nul
           if errorlevel 1 exit /b 1
-          git -C "%QA_ROOT%" fetch --no-tags --no-recurse-submodules "%PROD_ROOT%" %EXPECTED_PRODUCT_SHA%
+          git -C "%PROD_ROOT%" rev-parse HEAD | findstr /x /i /c:"%EXPECTED_PRODUCT_SHA%" >nul
+          if errorlevel 1 exit /b 1
+          rem Both input checkouts are depth=1: accept only their already-pinned shallow roots.
+          rem No remote origin, network fallback, unshallow or alternate revision.
+          git -C "%QA_ROOT%" fetch --update-shallow --no-tags --no-recurse-submodules "%REF_ROOT%" %EXPECTED_REFERENCE_SHA%
+          if errorlevel 1 exit /b 1
+          git -C "%QA_ROOT%" fetch --update-shallow --no-tags --no-recurse-submodules "%PROD_ROOT%" %EXPECTED_PRODUCT_SHA%
+          if errorlevel 1 exit /b 1
+          git -C "%QA_ROOT%" cat-file -t "%EXPECTED_REFERENCE_SHA%" | findstr /x /c:"commit" >nul
+          if errorlevel 1 exit /b 1
+          git -C "%QA_ROOT%" cat-file -t "%EXPECTED_PRODUCT_SHA%" | findstr /x /c:"commit" >nul
           if errorlevel 1 exit /b 1
           git -C "%QA_ROOT%" cat-file -t ec8a2664d2d051f2ef40ee4b51564cc95dcb7485 | findstr /x /c:"blob" >nul
           if errorlevel 1 exit /b 1
