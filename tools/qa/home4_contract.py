@@ -184,3 +184,16 @@ def exact_results(rows, expected, optional=()):
     demand(len(names)==len(set(names)) and set(names)==set(expected)|set(optional),'quick-registry')
     demand(all(r['status']=='PASS' if r['id'] in expected else r['status']=='NOT RUN' for r in rows),'quick-result')
     return {'required':len(expected),'pass':len(expected),'fail':0,'skip':0,'optionalNotRun':len(optional)}
+
+
+def audit_source(root, files):
+    """Tracked bytes plus a narrow allowlist of generated build data, no redirects."""
+    verify_manifest(root,files)
+    mutable=('app/build/','build/','.gradle/','tools/drive-config-checks/build/','tools/drive-config-checks/.gradle/')
+    for base,dirs,names in os.walk(root,followlinks=False):
+        for name in dirs+names:
+            p=Path(base)/name;m=p.lstat()
+            demand(not stat.S_ISLNK(m.st_mode) and not getattr(m,'st_file_attributes',0)&0x400,'native-source-redirection')
+        for name in names:
+            n=(Path(base)/name).relative_to(root).as_posix()
+            demand(n in files or n=='tools/debug-signing.p12' or n.startswith(mutable),'native-unexpected-write')

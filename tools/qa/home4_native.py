@@ -6,7 +6,7 @@ import shutil
 import subprocess
 import sys
 import time
-from home4_contract import demand,read_json,checked_bytes,verify_inventory,verify_manifest,validate_partition
+from home4_contract import demand,read_json,checked_bytes,verify_inventory,verify_manifest,validate_partition,audit_source
 
 
 def tree_bytes(root):
@@ -45,6 +45,7 @@ def run(cfg):
     env={**os.environ,'JAVA_HOME':components['jdk']['root'],'ANDROID_HOME':components['androidSdk']['root'],
          'ANDROID_SDK_ROOT':components['androidSdk']['root'],'GRADLE_USER_HOME':cfg['linuxGradleCache'],
          'HOME4_ROBOLECTRIC_INPUTS':components['robolectric']['root'],'TMPDIR':str(private),
+         'PYTHONDONTWRITEBYTECODE':'1','PYTHONNOUSERSITE':'1','PYTHONPATH':'','PYTHONHOME':'',
          'PATH':str(Path(components['jdk']['root'])/'bin')+':'+os.environ['PATH']}
     versions="import sys;from pathlib import Path;sys.path.insert(0,sys.argv[1]);import home_qa_gate;home_qa_gate.check_wsl(Path(sys.argv[2]))"
     demand(command([entry('python'),'-c',versions,str(root/'tools'),entry('gradle')],root,env,private,'tool-versions',90)==0,'native-tool-versions')
@@ -76,7 +77,7 @@ def run(cfg):
             demand(all(p.name in allowed for p in fixtures),'pdf-fixture-registry')
             demand(command([entry('pdf'),str(root/'tools/check-customer-pdf.py'),*[str(p) for p in fixtures]],root,env,private,'pdf')==0,'pdf-render')
         result.update(status='PASS',pdfFixtures=[p.name for p in fixtures])
-    verify_manifest(root,source['files']);verify_inventory(profile,'linux')
+    audit_source(root,source['files']);verify_inventory(profile,'linux')
     result.update(binding=cfg['binding'],token=cfg['token'])
     with (out/(group+'.json')).open('x',encoding='utf8') as dest:json.dump(result,dest)
     return 0

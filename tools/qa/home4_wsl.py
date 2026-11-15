@@ -93,6 +93,7 @@ def run(config_file, owner_file):
         copy_manifest(Path(cache['root']),private/'gradle',cache['files'],6*1024**3,cfg['token'])
         cfg.update(linuxSource=str(private/'source'),linuxValidator=str(private/'validator'),linuxPrivate=str(private),linuxGradleCache=str(private/'gradle'),windowsPrivateLinuxPath=str(mapped(cfg['privateDir'],drives)))
         work=private/'payload.json';work.write_text(json.dumps(cfg));work.chmod(0o600)
+        os.environ['PYTHONDONTWRITEBYTECODE']='1'
         sys.path.insert(0,str(private/'validator/tools'))
         import qa_process_supervisor as owner
         check_channel(cfg['token'])
@@ -105,6 +106,7 @@ def run(config_file, owner_file):
         result=lines[-1]
         demand(code==0 and result['status']=='PASS' and result['cleanupVerified'] is True and result['cleanupEvidence']['remainingProcesses']==0,'wsl-owner-cleanup')
         verify_manifest(source,cfg['sourceFiles']);verify_manifest(validator,cfg['validatorFiles']);verify_manifest(Path(cache['root']),cache['files'])
+        closed_tree(private/'validator',cfg['validatorFiles'])
         shutil.rmtree(private);demand(not private.exists(),'wsl-private-cleanup');known=True
         # Do not forward a PASS until the owner AND private workspace are gone.
         for line in lines:print(json.dumps(line),flush=True)

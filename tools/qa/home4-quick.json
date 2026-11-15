@@ -995,7 +995,7 @@
     "tests/test_gallery_camera_notes.py": "42f33d4f8d4272de03e7a1df8f47883761c5e8ba4f4147a4b77029c97f341994",
     "tests/test_home4_contract.py": "b873a5c2d8ea69d9e521d3259a1402bb8b8d740195465141f3e5c05c107791ab",
     "tests/test_home4_preactivation_design.py": "29bba6a5017c4eb093b55e7255cb6b4d798882540441940b38edba3925202ae6",
-    "tests/test_home4_wsl_adapter.py": "9c28e6d64a2623ec4e6f0c1ca0f60fc78c018321ad36af3f7ff7d07633354b31",
+    "tests/test_home4_wsl_adapter.py": "26a7dfb7968fe0a654d13af08bd0f1852d152cb01152e6cd6e1c442156b60f69",
     "tests/test_home_qa_gate.py": "614de88b69fc945d5e58ebc89c229f939943a7c3cfb5f4320ecd0644d1baa14c",
     "tests/test_home_qa_version_preflight.py": "f9bc858acf43738ec2e73eded09ef61b2eb5c2d96bdabe161a5500f17a3d4f33",
     "tests/test_home_release_asset_redirect.py": "289cde596a64dd1343cdca3303235d910f24566d695c9afbd403f5b130331449",

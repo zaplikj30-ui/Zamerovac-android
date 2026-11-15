@@ -8,7 +8,7 @@ import unittest
 from unittest.mock import patch
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'tools/qa'))
-from home4_contract import Blocked,sha
+from home4_contract import Blocked,sha,audit_source
 import home4_wsl as bridge
 
 
@@ -25,7 +25,10 @@ class WslAdapterModels(unittest.TestCase):
             bridge.copy_manifest(source,target,files,3)
             self.assertEqual((target/'sentinel').read_bytes(),(source/'sentinel').read_bytes())
             with self.assertRaises(FileExistsError):bridge.copy_manifest(source,target,files,3)
+            audit_source(target,files)
+            build=target/'app/build';build.mkdir(parents=True);(build/'output').write_bytes(b'generated');audit_source(target,files)
             (target/'extra').write_bytes(b'unknown')
+            with self.assertRaises(Blocked):audit_source(target,files)
             with self.assertRaises(Blocked):bridge.closed_tree(target,files)
             self.assertEqual((source/'sentinel').read_bytes(),bytes([0,255,42]))
 
