@@ -14,8 +14,10 @@ Většina pochází beze změny z finálního PR136
 `1d6a786c77aa2a797bf7bd75f9977a3ae6613459`. Pouze opravené fixtures
 `qa_fixture_process_scope.js` a `test_diag41.py` pocházejí z PR140
 `dcb44e2652a9ee3da678d91ca1e71d4fc79593ec`. Přizpůsobení tří původních
-testových souborů je popsáno níže. Žádná produkční změna těchto pinovaných
-runtime souborů při výběru; zvlášť jsou nové test-only helpery a dokumentace.
+testových souborů je popsáno níže. Procesní a bezpečnostní runtime je převzat
+beze změny. Jediná funkční adaptace dvou browser souborů zachovává existující
+novější diagnostický režim PR121, jak je popsáno níže. Zvlášť jsou nové
+test-only helpery a dokumentace.
 
 | Potřebná skupina | Důvod |
 | --- | --- |
@@ -55,6 +57,20 @@ Nové pozitivní/negativní testy ověřují skutečný reference helper (včetn
 Gitu, chybného obsahu a přesného omezeného příkazu) a Windows registraci těchto
 sad **bez spuštění jejich payloadu**. Odstraněný skip guard je negativní model,
 ne Windows fault experiment. Python model ověřuje všech11 zachovaných metod.
+
+## Kolize s novějším produktem PR121
+
+Přímé porovnání vybraných cest s produktovým PR121 našlo jediný překryv:
+`tools/local-browser-qa.cjs`. Původní QA136 runner už má stejných23 suite
+v manifestu, ale postrádal existující PR121 CLI režim `--legacy-conflict`.
+Zachován tento konkrétní diagnostický režim (jen legacy-conflict-persistence)
+v `qa-integrity.modes` i CLI help. Není přidán nový produktový scénář ani obecný
+filtr. Owner/ref/SHA, source pin, sandbox a cleanup se nemění.
+Nový test porovnává všechny tři režimy a jejich pořadí přímo s pinovaným
+PR121. Druhý pozitivní/negativní test prokazuje1 suite/1 case diagnostického
+výsledku a odmítnutí stejného výsledku pro plné `--all`23/96; libovolný
+ZAMEROVAC_CASES filtr je dál BLOCKED. Při budoucím začlenění PR121 se tato
+novější funkce nesmí přepsat starším QA runnerem.
 
 První integrace prokázala chybějící historický YAML:15 testů,13 PASS/1 FAIL/
 1 Windows-only SKIP. Reference helper odstranil tuto závislost na workflow

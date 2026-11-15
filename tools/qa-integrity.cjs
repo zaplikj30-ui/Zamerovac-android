@@ -4,7 +4,9 @@ const {execFileSync}=require('node:child_process');
 const manifest=require('./qa-pr121-manifest.json');
 const {checkEvidence,blocked}=require('./e2e/sandbox.cjs');
 const {profiles}=require('./qa-browser-identity.cjs');
-const modes=Object.freeze({'--smoke':['drawing','quality-regressions','gallery-readability'],'--all':Object.keys(manifest.cases)});
+// Preserve PR121's explicit diagnostic mode; it is never full --all coverage.
+const modes=Object.freeze({'--legacy-conflict':['legacy-conflict-persistence'],
+ '--smoke':['drawing','quality-regressions','gallery-readability'],'--all':Object.keys(manifest.cases)});
 function demand(ok,message){if(!ok)throw blocked(message)}
 function noFilter(env=process.env){demand(!Object.hasOwn(env,'ZAMEROVAC_CASES'),'case filter forbidden in complete/smoke QA')}
 function executionIdentity(validatorSha,env=process.env){

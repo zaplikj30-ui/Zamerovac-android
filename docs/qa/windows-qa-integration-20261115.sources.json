@@ -26,7 +26,8 @@
       "path": "tools/local-browser-qa.cjs",
       "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
       "sourceGitBlob": "a36fa9f0fc2a2a35a68bf907412413aaf9c4fcb2",
-      "adapted": false
+      "adapted": true,
+      "adaptationReason": "Preserve PR121 diagnostic CLI help"
     },
     {
       "path": "tools/qa-browser-identity.cjs",
@@ -92,7 +93,8 @@
       "path": "tools/qa-integrity.cjs",
       "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
       "sourceGitBlob": "42517db9ed5950be2d33232cad001b6c1810c178",
-      "adapted": false
+      "adapted": true,
+      "adaptationReason": "Preserve PR121 diagnostic mode with strict partial coverage"
     },
     {
       "path": "tools/qa-pr121-manifest.json",
@@ -176,7 +178,8 @@
       "path": "tests/home_qa_integrity.js",
       "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
       "sourceGitBlob": "275a40f9ccb9fd61bd20f5e1ea42ac449b4b927c",
-      "adapted": true
+      "adapted": true,
+      "adaptationReason": "Pinned non-executing reference input and local-only product transfer for shallow clones"
     },
     {
       "path": "tests/home_sandbox_security.js",
@@ -236,7 +239,8 @@
       "path": "tests/qa_process_client.js",
       "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
       "sourceGitBlob": "8be4347b71dd2236db2336ec6e870ba79ff54791",
-      "adapted": true
+      "adapted": true,
+      "adaptationReason": "Linux-only automatic native lifecycle proof"
     },
     {
       "path": "tests/qa_process_diagnostics.js",
@@ -278,7 +282,8 @@
       "path": "tests/test_qa_process_supervisor.py",
       "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
       "sourceGitBlob": "71a70f3f6a04a9ba0130b8adbf6371e8bfaafb09",
-      "adapted": true
+      "adapted": true,
+      "adaptationReason": "Linux-only automatic native lifecycle proof"
     },
     {
       "path": "tests/test_qa_windows_file_lock.py",

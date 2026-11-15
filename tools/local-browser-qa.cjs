@@ -174,7 +174,7 @@ async function run(mode){
 }
 async function main(){
  const mode=process.argv[2]||'--smoke';
- if(mode==='--help'){console.log('node tools/local-browser-qa.cjs --all | --smoke | --self-test; explicit trusted PR121 checkout and pinned Chromium, no installs');return}
+ if(mode==='--help'){console.log('node tools/local-browser-qa.cjs --all | --legacy-conflict | --smoke | --self-test; explicit trusted PR121 checkout and pinned Chromium, no installs');return}
  if(mode==='--self-test'){
   const server=createStaticServer(assetRoot),port=await listen(server);
   try{
