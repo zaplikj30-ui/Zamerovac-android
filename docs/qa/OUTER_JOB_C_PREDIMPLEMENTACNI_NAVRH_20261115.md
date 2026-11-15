@@ -1,5 +1,5 @@
 # Windows HOME QA – varianta C: předimplementační bezpečnostní návrh
-**Stav: DESIGN / ČEKÁ NA NEZÁVISLÉ SECURITY REVIEW A SCHVÁLENÍ VLASTNÍKA. ŽÁDNÁ IMPLEMENTACE, MERGE ANI RUNTIME TEST.**
+**Stav: DESIGN / po review Kontrolora 44 (REQUEST FIX) doplněny D1–D3; vlastní průběžná kontrola Koordinátora 42; závěrečný nezávislý kontrolor 46. ŽÁDNÁ IMPLEMENTACE, MERGE ANI RUNTIME TEST.**
 Autor návrhu: Koordinátor 42, 15. 11. 2026.
 
 ## 1. Přesná výchozí verze a zdroje
@@ -32,6 +32,65 @@ Současný Node client používá child_process.spawn přímo pro Python. Post-c
 - Node klient dnes vyžaduje child.stdin.write/end, child.stdout data a close. Nový adapter musí bezpečně zajišťovat **stejné pořadí a meze IPC** (1 MiB stdout, heartbeat, error/close, redakce stderr), např. nativními čtecími pracovníky a omezenou N-API threadsafe frontou. Toto **není vyřešené zadáním jedné .cc funkce**. Nelze stavět na nepotvrzeném převodu raw Windows HANDLE na Node.js stream.
 - Vnější výsledek musí být oddělená nezfalšovatelná stavová evidence modulu/Job handle, ne hodnoty dodané přes stdout z Pythonu. Parser si dál ověřuje token/protocol/exit; PASS až při vnitřním i vnějším cleanup Verified a odstranění vlastního TEMP. Chybějící outer evidence = BLOCKED. Žádný retry po CreateProcessW i při 0 procesů.
 - Pokud reprodukovatelná bezpečná implementace pipe/IPC transportu, bootstrap/late-return a Node owner shutdown není prokazatelná bez dalšího guardian procesu, **STOP a nové cílené C-versus-B rozhodnutí**, ne improvizované připojení Jobu po spawn.
+
+
+### 3c. C44-D1 / P1 – přesný lifecycle, synchronizace a in-flight CreateProcessW
+
+**Jediný zdroj pravdy:** nativní OwnerContext se synchronizovaným stavem, stopRequested a monotónním sticky BLOCKED. JS může požádat o STOP, ale nesmí mít paralelní vlastní „resume povoleno“. Zámek se nesmí držet při blokujících Win32 operacích: CreateProcessW, ReadFile, WriteFile, WaitForSingleObject, TerminateJobObject. N-API async work neznamená zrušitelné běžící CreateProcessW; napi_cancel_async_work to negarantuje.
+
+| Stav | Povolený další krok | STOP a fail-closed |
+| --- | --- | --- |
+| NEW | ověřit kontext a účet → JOB_READY | bez nového procesu při STOP |
+| JOB_READY | vytvořit Job s KILL_ON_JOB_CLOSE, připravit handles → STARTING; zvýšit in-flight počítadlo **před** uvolněním zámku | STOPPING bez CreateProcess |
+| STARTING | po prokazatelném návratu CreateProcessW převzít originální process/thread handles → VERIFIED_SUSPENDED | při CANCEL před / během / po API: STOPPING; pokud CreateProcessW nevrací, UNKNOWN a nikdy PASS |
+| VERIFIED_SUSPENDED | ověřit IsProcessInJob + image/token/time; pouze jedna synchronizovaná autorizace ResumeThread → RUNNING | STOP zakazuje další resume; chyba nebo nejistá atomika => BLOCKED |
+| RUNNING | bounded IPC, wait originálního process handle, pipe EOF → STOPPING | timeout/IPC/kill/cancel sticky BLOCKED |
+| STOPPING | TerminateJobObject na **vlastním** outer Job, uzavřít veškerý in-flight/pipe/proc lifecycle, audit → VERIFIED_CLOSED | nejistý handle nebo in-flight → UNKNOWN; STOP nesmí vytvořit další proces |
+| UNKNOWN | pouze BLOCKED a izolovaná diagnostika; NO RETRY | žádný fiktivní cleanup/Job=0 PASS |
+| VERIFIED_CLOSED | terminální stav pouze po všech C44-D3 atestacích | žádný návrat do RUNNING, žádný druhý close |
+
+**Kritická podmínka STOP vs. ResumeThread:** prostá kontrola bool pod zámkem před odemčením není dostatečná. Implementátor musí vymezit linearizační bod výhradního „resume lease“ a prokázat, že STOP/finalize současně neuzavře použitý HANDLE, neumožní druhý resume a nepustí proces mimo již při vytvoření připojený Job. Přijde-li STOP těsně po rezervaci, ale před reálným ResumeThread, nelze bez dalšího tvrdit „žádné fyzicky pozdní ResumeThread“. Buď je doložen bezpečný atomický mechanismus, nebo musí být přechod označen BLOCKED/UNKNOWN a nesmí nikdy vzniknout falešný PASS. Tato konkrétní volba zůstává **otevřenou implementační branou**, ne důkazem hotové bezpečnosti.
+
+**Vlastnictví:** každému Job/process/thread/pipe HANDLE právě jeden vlastník, atomické předání mezi etapami a jednoruční, kontrolovaný CloseHandle. Outer Job vlastní výhradně Node OwnerContext; Python/worker jej nezdědí a Python dál výhradně vlastní inner Job. Před CreateProcess zvýšit refcount/in-flight; startup argumenty, writable command line, STARTUPINFOEX, seznam atributů a handle list zůstávají živé, dokud se native API **prokazatelně nevrátí**. Jediný final callback/promise, idempotentní STOP/close, žádný double-free, use-after-free ani TerminateThread.
+
+**Node teardown:** po zániku napi_env už žádný callback do JS. Frontu bezpečně uzavřít, zachovat platnost OwnerContext do doběhnutí posledního native volání; nezastavená funkce nesmí číst uvolněné buffery. Nelze-li prokázat bezpečné ukončení/teardown při trvale zaseknutém CreateProcessW, je to UNKNOWN/BLOCKED bez runtime testu na cenném HOME hostu; před implementací je nutný důkazně realizovatelný native ownership/shutdown návrh.
+
+### 3d. C44-D2 / P1 – creation-time Python, 3 pipes a přesný IPC kontrakt
+
+Nový at-creation bootstrap je **náhradou** nynějšího Node child_process.spawn pouze na Windows, nikoli pouhým post-spawn AssignProcessToJobObject. Process creation: pevné lpApplicationName (ověřený Python executable), writeable command line, bez shell/PATH fallbacku, STARTUPINFOEX se správnou velikostí, STARTF_USESTDHANDLES, EXTENDED_STARTUPINFO_PRESENT, CREATE_SUSPENDED, bInheritHandles=TRUE, PROC_THREAD_ATTRIBUTE_JOB_LIST obsahuje **jen původní outer Job**, PROC_THREAD_ATTRIBUTE_HANDLE_LIST **jen 3 child stdio ends**. Žádný BREAKAWAY. Neřídit dědičnost sdílených parent handles; vytvořit samostatné inheritable child ends.
+
+| Roura | Jediný děděný child konec v HANDLE_LIST | Neděděný parent konec v Node | Směr |
+| --- | --- | --- | --- |
+| stdin | child READ (inheritable) | parent WRITE (non-inheritable) | Node → Python: serializované ALIVE/CANCEL + token |
+| stdout | child WRITE (inheritable) | parent READ (non-inheritable) | Python → Node: bounded byte buffer |
+| stderr | child WRITE (inheritable) | parent READ (non-inheritable) | Python → Node: vždy vyčíst a zahodit osobní obsah |
+
+Všech šest pipe konců má jednoznačného vlastníka. Parent po úspěšném CreateProcess uzavře vlastní child-end kopie; child nedědí parent ends ani Job handle. Chyba create nebo suspend/resume nesmí přeskočit cleanup; při in-flight API se žádné jím používané handles/buffery neuvolňují. Musí být dokázána bezpečná možnost současného spuštění více pokusů bez leakage cizích konců.
+
+**I/O model:** ReadFile, WriteFile a WaitForSingleObject pouze mimo Node JS event loop (oddělené native threads nebo auditované overlapped IO), nikoli blokující JS volání. Vstupní/výstupní data do JS přenášet přes omezenou napi_threadsafe_function frontu či ekvivalent; po zaplnění okamžitý sticky BLOCKED + STOP, nikoli neomezená alokace nebo blokování watchdogu. Nepředpokládat automatickou transformaci Windows HANDLE na Node stream bez potvrzeného adapteru. stdout celkem max **1 048 576 BYTŮ**, ne znaků JS; stdin pending nejvýš navržených 64 KiB; stdout/stderr event queue nejvýš 64 KiB na směr (ověřit v testech). stderr nikdy neposílat do veřejného logu/reportu; pokud přijatých raw stderr dat překročí rozumný cap, BLOCKED. U partial write/read musí být zachováno pořadí, UTF-8 hranice, backpressure, heartbeat a CANCEL; po CANCEL už žádné další ALIVE.
+
+**Události:** nanejvýš jeden error, data před EOF, exit až po signalizovaném originálním process handle, close až po obou výstupních EOF, dokončených I/O a uzavření parent/child handles. Po close nesmějí přicházet data/error. Chybějící close/EOF, porušené pořadí, overflow, write-after-close, zaniklé napi_env nebo poškozený token => BLOCKED bez retry. Stdout JSON Pythonu se ověřuje dosavadním token/event/platform/exit/diagnostic kontraktem, ale nesmí sám potvrdit outer cleanup.
+
+**Předimplementační STOP bod:** jestli nelze doložit bezpečné Windows pipe/async adapter chování bez dalšího guardian procesu a bez nezajištěného překladu raw HANDLE→JS stream, neimplementovat addon a předložit krátké C vs. B vs. ponechat A (PR136).
+
+### 3e. C44-D3 / P1 – důkaz outer cleanup a přesná PASS podmínka
+
+Nativní outerCleanupVerified=true smí vzniknout **jen** z původního OwnerContext, nikoliv z dat stdout Pythonu, a při SOUČASNÉ platnosti:
+
+1. Všechny CreateProcessW/ResumeThread/Stop/nativní pipe operace dokončeny, žádný neznámý in-flight call, žádný nerozhodnutý STOP/START závod, žádná možnost pozdního přiřazení či resume.
+2. Originální Python process HANDLE potvrzuje skutečný exit (úspěšný TerminateJobObject, PID lookup, boolean killed či samotný GH timeout nestačí); token/image/creation identity odpovídají ověřenému procesu.
+3. Úspěšný QueryInformationJobObject **na stále otevřeném stejném outer Job HANDLE** ukáže ActiveProcesses=0; vyloučeno nové pozdní připojení procesu. Job=0 u in-flight CreateProcess není důkaz bezpečí.
+4. Všechny pipe/child/process/thread handles i nativní workers dokončily, byly bezpečně uzavřeny; chybný/duplicitní CloseHandle = cleanup NOT VERIFIED.
+5. Oddělená interní identita OwnerContext/generation nonce váže attestation na právě tento pokus; nesmí ji poskytnout či podvrhnout stdout Pythonu; chybějící atestace = BLOCKED.
+6. Úklid vlastního TEMP **po** ukončení pipe/native workers a nezávisle ověřená nepřítomnost TEMP.
+
+**Celkový PASS** jen pokud outerCleanupVerified + vnitřní Python cleanupVerified + inner remainingProcesses=0 + přesný dosavadní token, protocol, worker exit0, 15-TAP marker při příslušném testu, stderr bez protokolu, žádné timeout/abort/diagnostic/IPC/close chyby a TEMP skutečně pryč. Každý STOP/CANCEL, timeout, chyba API/pipe, neprokázaný cleanup nebo nesoulad protokolu nastavuje sticky BLOCKED **i kdyby** později fyzicky proběhl úklid. outerCleanupVerified=false + ownedRemaining=null při nejistém stavu; nikdy měnit na 0/PASS z domněnky či stejného JSON zdroje.
+
+**Smrt Pythonu:** Node ukončí a ověří vlastní outer Job, nenahradí to Python exit message. **Smrt Node:** nelze vydat PASS; KILL_ON_JOB_CLOSE chrání jen již připojené procesy, neprokazuje rollback libovolného in-flight CreateProcessW. Žádné PID-only kill, cizí procesy, automatický retry, OpenJobObject NOT_FOUND jako důkaz ani schovávání neznámých potomků.
+
+**Předběžné povinné kontraktní testy:** C44-D1 stavové přechody a bariéry CANCEL před/během/po native create, late return + STOP před resume, refcount/teardown/single close, native event loop nezablokovaný; C44-D2 inheritance všech 6 pipe ends, partial I/O, Unicode na 1 MiB hranici, stderr backpressure a redakce, pořadí EOF/exit/close, raw HANDLE leak; C44-D3 Job0 s in-flight, chybějící process exit, záměna Job handle, opožděný callback, forged Python PASS, no TEMP cleanup, dvojí Job attestace a NO RETRY. Všech 57 historických modelů a původních 15 TAP zachovat bez oslabení. Skutečné native failure/crash/hang testy jen obnovitelná Windows VM, nikoli 16GB domácí PC.
+
+**Konkrétní rozhodovací brána:** Pokud autor nedoloží v jednom úzkém N-API addon adapteru bezpečné ownership + bounded transport + no late resume/cleanup bez dalších procesů, tento návrh C je STOP; koordinátor vyhodnotí nejmenší bezpečnou variantu B nebo zachování osvědčené A. Tento dokument není runtime PASS ani souhlas s programováním.
 
 ## 4. Build, dodávka, licence a původ
 - Aktuální Windows runner používá Node **26.13.0.0**. Přesný zdroj hlaviček a knihovny existuje u výrobce; bez potřeby další Visual Studio instalace:
