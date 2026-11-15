@@ -282,4 +282,11 @@ jobs:
               if errorlevel 1 exit /b 1
             )
           )
+          rem Verify the postcondition for ALL FOUR exact run-owned paths, not only RD exit status.
+          rem lstat never follows symlinks/junctions; only ENOENT proves absence.
+          node -e "const fs=require('node:fs'),p=require('node:path');const root=p.resolve(process.env.GITHUB_WORKSPACE||'.'),id=process.env.GITHUB_RUN_ID;if(!/^[1-9][0-9]*$/.test(id)||!process.env.GITHUB_WORKSPACE)process.exit(1);for(const n of ['qa141-activation','qa141-gate','qa141-product','qa141-reference']){const file=p.join(root,n+'-'+id);if(p.dirname(file)!==root)process.exit(1);try{fs.lstatSync(file);process.exit(1)}catch(e){if(e.code!=='ENOENT')process.exit(1)}}"
+          if errorlevel 1 (
+            echo QA141_BLOCKED_WORKSPACE_POSTCONDITION_FAILED - STOP_NO_RETRY_RETAIN_EVIDENCE
+            exit /b 1
+          )
           echo QA141_SAFE_CHECKOUT_CLEANUP=PASS
