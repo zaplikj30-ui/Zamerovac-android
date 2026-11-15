@@ -1,0 +1,306 @@
+name: QA141 SECOND - owner-only normal Win11 57 mock models, no-op and 15 TAP
+# REVIEW-ONLY DRAFT. Never run until independent approval and explicit owner-only marker push.
+# Temporary: never merge into main. No installs, Chromium, WSL, fault injection, cloud or APK.
+# PRIOR TO ACTIVATION, coordinator MUST independently verify reviewed PR142 SHA and write a
+# SINGLE marker-only child Git commit by expected-SHA compare-and-swap (never raw branch push).
+# Workflow itself attest marker-only direct parent and unchanged YAML before any QA scripts.
+# Unbounded CreateProcessW is NOT fixed; outer cancel/timeout is not cleanup proof.
+# If timeout/cancel/unknown cleanup => BLOCKED, STOP, NO RETRY, preserve workspace evidence.
+# Residual risk on isolated nonadmin ZamerovacQA accepted only for one inert normal test;
+# no escalation, no VM/Sandbox, no fault injection, no changes to runner or product data.
+on:
+  push:
+    branches: ['qa/pr141-normal-second-20261115']
+    paths: ['docs/qa/qa141-authorized-normal-second-run.trigger']
+permissions:
+  contents: read
+concurrency:
+  group: qa141-owner-normal-second-57-15-once
+  cancel-in-progress: false
+jobs:
+  windows-fixture15:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.event_name == 'push' && github.ref == 'refs/heads/qa/pr141-normal-second-20261115' && github.event.created == false && github.run_number == 1 && github.run_attempt == 1 && github.event.head_commit.message == 'OWNER-APPROVED-QA141-NORMAL-SECOND-20261115' }}
+    runs-on: [self-hosted, Windows, X64, zamerovac-qa]
+    timeout-minutes: 12
+    env:
+      CI: '1'
+      PYTHONUTF8: '1'
+      PYTHONDONTWRITEBYTECODE: '1'
+      PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD: '1'
+      ZAMEROVAC_PYTHON: 'C:\actions-runner\tools\Python313\python.exe'
+      EXPECTED_QA_SHA: '58b456c8ad3f603c57cf2ee8c6d784c76c2446fb'
+      EXPECTED_REFERENCE_SHA: '7445ebc456e59ea735a377fc98c83542066a88b8'
+      EXPECTED_PRODUCT_SHA: 'ae3b4df53c25557f28b4a25ccb65adc2abdff639'
+      ZAMEROVAC_SOURCE_ROOT: '${{ github.workspace }}\qa141-product-${{ github.run_id }}'
+    steps:
+      - name: Identity and pinned Windows tools
+        shell: cmd
+        run: |
+          @echo off
+          if /i not "%GITHUB_REPOSITORY%"=="zaplikj30-ui/Zamerovac-android" exit /b 1
+          if /i not "%GITHUB_ACTOR%"=="zaplikj30-ui" exit /b 1
+          if /i not "%GITHUB_TRIGGERING_ACTOR%"=="zaplikj30-ui" exit /b 1
+          if /i not "%GITHUB_EVENT_NAME%"=="push" exit /b 1
+          if /i not "%GITHUB_RUN_ATTEMPT%"=="1" exit /b 1
+          if /i not "%GITHUB_RUN_NUMBER%"=="1" exit /b 1
+          set "QA_USER="
+          for /f "delims=" %%U in ('C:\Windows\System32\whoami.exe') do set "QA_USER=%%U"
+          if not defined QA_USER exit /b 1
+          if not defined COMPUTERNAME exit /b 1
+          if /i not "%QA_USER%"=="%COMPUTERNAME%\ZamerovacQA" exit /b 1
+          if not exist "%ZAMEROVAC_PYTHON%" exit /b 1
+          if not exist "C:\actions-runner\tools\MinGit-2.56.0.4\cmd\git.exe" exit /b 1
+          echo C:\actions-runner\tools\MinGit-2.56.0.4\cmd>>"%GITHUB_PATH%"
+          where node >nul 2>nul
+          if errorlevel 1 exit /b 1
+          node -e "if(!process.version.startsWith('v26.13.'))process.exit(1)"
+          if errorlevel 1 exit /b 1
+          echo QA141_TRUSTED_IDENTITY=PASS
+      - name: Checkout marker activation commit as NONEXECUTING data
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        env:
+          GIT_CONFIG_COUNT: '1'
+          GIT_CONFIG_KEY_0: core.autocrlf
+          GIT_CONFIG_VALUE_0: 'false'
+        with:
+          ref: ${{ github.sha }}
+          path: qa141-activation-${{ github.run_id }}
+          clean: false
+          fetch-depth: 2
+          persist-credentials: false
+          submodules: false
+          lfs: false
+      - name: Pre-execution approval boundary - ONLY one marker; reviewed YAML must not change
+        shell: cmd
+        env:
+          EXPECTED_GATE_PARENT: ${{ github.event.before }}
+        run: |
+          @echo off
+          node -e "const cp=require('node:child_process'),fs=require('node:fs'),p=require('node:path');const dir=p.join(process.env.GITHUB_WORKSPACE,'qa141-activation-'+process.env.GITHUB_RUN_ID);const git=(...args)=>cp.execFileSync('git',args,{cwd:dir,encoding:'utf8',timeout:15000,windowsHide:true}).trim();const commit=git('rev-parse','HEAD');const parents=git('rev-list','--parents','-n','1','HEAD').split(' ');const changes=git('diff-tree','--no-commit-id','--name-status','-r','HEAD');const marker='docs/qa/qa141-authorized-normal-second-run.trigger';const contents=fs.readFileSync(p.join(dir,marker),'utf8');const workflow='.github/workflows/qa141-normal-second-owner-once.yml';const blob=git('rev-parse','HEAD:'+workflow),parentBlob=git('rev-parse','HEAD^:'+workflow);if(commit!==process.env.GITHUB_SHA||parents.length!==2||parents[1]!==process.env.EXPECTED_GATE_PARENT||changes!=='A\t'+marker||contents!=='OWNER-APPROVED-QA141-NORMAL-SECOND-20261115\n'||blob!==parentBlob||git('status','--porcelain','--untracked-files=all')!=='')process.exit(1)"
+          if errorlevel 1 exit /b 1
+          echo QA141_ONLY_MARKER_FROM_REVIEWED_PARENT_AND_UNCHANGED_WORKFLOW=PASS
+      - name: Checkout reviewed QA commit in unique nonclean directory
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        env:
+          GIT_CONFIG_COUNT: '1'
+          GIT_CONFIG_KEY_0: core.autocrlf
+          GIT_CONFIG_VALUE_0: 'false'
+        with:
+          ref: 58b456c8ad3f603c57cf2ee8c6d784c76c2446fb
+          path: qa141-gate-${{ github.run_id }}
+          clean: false
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+          lfs: false
+      - name: Checkout pinned original product in distinct nonclean directory
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        env:
+          GIT_CONFIG_COUNT: '1'
+          GIT_CONFIG_KEY_0: core.autocrlf
+          GIT_CONFIG_VALUE_0: 'false'
+        with:
+          ref: ae3b4df53c25557f28b4a25ccb65adc2abdff639
+          path: qa141-product-${{ github.run_id }}
+          clean: false
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+          lfs: false
+      - name: Checkout historical immutable YAML blob as NONEXECUTING data
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        env:
+          GIT_CONFIG_COUNT: '1'
+          GIT_CONFIG_KEY_0: core.autocrlf
+          GIT_CONFIG_VALUE_0: 'false'
+        with:
+          ref: 7445ebc456e59ea735a377fc98c83542066a88b8
+          path: qa141-reference-${{ github.run_id }}
+          clean: false
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+          lfs: false
+      - name: Verify three exact SHAs and clean checkouts
+        shell: cmd
+        run: |
+          @echo off
+          set "QA_SHA="
+          set "PROD_SHA="
+          set "REF_SHA="
+          for /f %%H in ('git -C "%GITHUB_WORKSPACE%\qa141-gate-%GITHUB_RUN_ID%" rev-parse HEAD') do set "QA_SHA=%%H"
+          for /f %%H in ('git -C "%GITHUB_WORKSPACE%\qa141-product-%GITHUB_RUN_ID%" rev-parse HEAD') do set "PROD_SHA=%%H"
+          for /f %%H in ('git -C "%GITHUB_WORKSPACE%\qa141-reference-%GITHUB_RUN_ID%" rev-parse HEAD') do set "REF_SHA=%%H"
+          if not defined QA_SHA exit /b 1
+          if not defined PROD_SHA exit /b 1
+          if not defined REF_SHA exit /b 1
+          if /i not "%QA_SHA%"=="%EXPECTED_QA_SHA%" exit /b 1
+          if /i not "%PROD_SHA%"=="%EXPECTED_PRODUCT_SHA%" exit /b 1
+          if /i not "%REF_SHA%"=="%EXPECTED_REFERENCE_SHA%" exit /b 1
+          git -C "%GITHUB_WORKSPACE%\qa141-gate-%GITHUB_RUN_ID%" status --porcelain --untracked-files=all >"%RUNNER_TEMP%\qa141-qa-%GITHUB_RUN_ID%.txt"
+          if errorlevel 1 exit /b 1
+          for %%F in ("%RUNNER_TEMP%\qa141-qa-%GITHUB_RUN_ID%.txt") do if %%~zF GTR 0 exit /b 1
+          git -C "%GITHUB_WORKSPACE%\qa141-product-%GITHUB_RUN_ID%" status --porcelain --untracked-files=all >"%RUNNER_TEMP%\qa141-prod-%GITHUB_RUN_ID%.txt"
+          if errorlevel 1 exit /b 1
+          for %%F in ("%RUNNER_TEMP%\qa141-prod-%GITHUB_RUN_ID%.txt") do if %%~zF GTR 0 exit /b 1
+          git -C "%GITHUB_WORKSPACE%\qa141-reference-%GITHUB_RUN_ID%" status --porcelain --untracked-files=all >"%RUNNER_TEMP%\qa141-reference-%GITHUB_RUN_ID%.txt"
+          if errorlevel 1 exit /b 1
+          for %%F in ("%RUNNER_TEMP%\qa141-reference-%GITHUB_RUN_ID%.txt") do if %%~zF GTR 0 exit /b 1
+          del /q "%RUNNER_TEMP%\qa141-qa-%GITHUB_RUN_ID%.txt" "%RUNNER_TEMP%\qa141-prod-%GITHUB_RUN_ID%.txt" "%RUNNER_TEMP%\qa141-reference-%GITHUB_RUN_ID%.txt"
+          if errorlevel 1 exit /b 1
+          echo QA141_THREE_SHAS_CLEAN=PASS
+      - name: Import only pinned immutable Git objects FROM LOCAL checked out references
+        shell: cmd
+        run: |
+          @echo off
+          set "QA_ROOT=%GITHUB_WORKSPACE%\qa141-gate-%GITHUB_RUN_ID%"
+          set "REF_ROOT=%GITHUB_WORKSPACE%\qa141-reference-%GITHUB_RUN_ID%"
+          set "PROD_ROOT=%GITHUB_WORKSPACE%\qa141-product-%GITHUB_RUN_ID%"
+          rem The two reviewed inputs MUST be present and have exact HEAD before local-only import.
+          rem A cached Git object may make fetch exit 0 even when the source path disappeared.
+          if not exist "%REF_ROOT%\.git" exit /b 1
+          if not exist "%PROD_ROOT%\.git" exit /b 1
+          git -C "%REF_ROOT%" rev-parse HEAD | findstr /x /i /c:"%EXPECTED_REFERENCE_SHA%" >nul
+          if errorlevel 1 exit /b 1
+          git -C "%PROD_ROOT%" rev-parse HEAD | findstr /x /i /c:"%EXPECTED_PRODUCT_SHA%" >nul
+          if errorlevel 1 exit /b 1
+          rem Both input checkouts are depth=1: accept only their already-pinned shallow roots.
+          rem No remote origin, network fallback, unshallow or alternate revision.
+          git -C "%QA_ROOT%" fetch --update-shallow --no-tags --no-recurse-submodules "%REF_ROOT%" %EXPECTED_REFERENCE_SHA%
+          if errorlevel 1 exit /b 1
+          git -C "%QA_ROOT%" fetch --update-shallow --no-tags --no-recurse-submodules "%PROD_ROOT%" %EXPECTED_PRODUCT_SHA%
+          if errorlevel 1 exit /b 1
+          git -C "%QA_ROOT%" cat-file -t "%EXPECTED_REFERENCE_SHA%" | findstr /x /c:"commit" >nul
+          if errorlevel 1 exit /b 1
+          git -C "%QA_ROOT%" cat-file -t "%EXPECTED_PRODUCT_SHA%" | findstr /x /c:"commit" >nul
+          if errorlevel 1 exit /b 1
+          git -C "%QA_ROOT%" cat-file -t ec8a2664d2d051f2ef40ee4b51564cc95dcb7485 | findstr /x /c:"blob" >nul
+          if errorlevel 1 exit /b 1
+          git -C "%QA_ROOT%" status --porcelain --untracked-files=all >"%RUNNER_TEMP%\qa141-ref-status-%GITHUB_RUN_ID%.txt"
+          if errorlevel 1 exit /b 1
+          for %%F in ("%RUNNER_TEMP%\qa141-ref-status-%GITHUB_RUN_ID%.txt") do if %%~zF GTR 0 exit /b 1
+          del /q "%RUNNER_TEMP%\qa141-ref-status-%GITHUB_RUN_ID%.txt"
+          if errorlevel 1 exit /b 1
+          echo QA141_LOCAL_GIT_REFERENCES=PASS
+      - name: Original exact 57 SAFE mock-only model tests, no fault injection
+        shell: cmd
+        working-directory: qa141-gate-${{ github.run_id }}
+        run: |
+          @echo off
+          "%ZAMEROVAC_PYTHON%" -Werror::ResourceWarning tests\test_qa_process_diagnostic.py -v
+          if errorlevel 1 exit /b 1
+          "%ZAMEROVAC_PYTHON%" -Werror::ResourceWarning tests\test_qa_windows_job_contract.py -v
+          if errorlevel 1 exit /b 1
+          "%ZAMEROVAC_PYTHON%" -Werror::ResourceWarning tests\test_qa36_supervisor_model.py -v
+          if errorlevel 1 exit /b 1
+          node --check tools\qa-process-client.cjs
+          if errorlevel 1 exit /b 1
+          node --check tests\qa36_soft_timeout.js
+          if errorlevel 1 exit /b 1
+          node --test tests\qa36_soft_timeout.js tests\qa34_client_gate_integration.js tests\qa41_diag.js
+          if errorlevel 1 exit /b 1
+          node --check tools\qa-fixture-gate.cjs
+          if errorlevel 1 exit /b 1
+          node --check tools\qa-fixture-attempts.cjs
+          if errorlevel 1 exit /b 1
+          node --check tests\qa_gate_3try_integration.js
+          if errorlevel 1 exit /b 1
+          node --check tests\qa_fixture_attempts.js
+          if errorlevel 1 exit /b 1
+          node --test tests\qa_fixture_attempts.js
+          if errorlevel 1 exit /b 1
+          rem Only the new mocked R44 test; other older cases spawn actual Node children.
+          node --test --test-name-pattern=R44-01 tests\qa_gate_3try_integration.js
+          if errorlevel 1 exit /b 1
+          echo QA141_MODEL_COMMANDS_EXIT0_COUNTS_AWAIT_LOG_AUDIT=PASS
+      - name: Validate mocked native containment and JS before real tests
+        shell: cmd
+        working-directory: qa141-gate-${{ github.run_id }}
+        run: |
+          @echo off
+          "%ZAMEROVAC_PYTHON%" tests\test_qa_windows_job_contract.py -v
+          if errorlevel 1 exit /b 1
+          "%ZAMEROVAC_PYTHON%" tests\test_qa_process_diagnostic.py -v
+          if errorlevel 1 exit /b 1
+          node --check tools\qa-process-client.cjs
+          if errorlevel 1 exit /b 1
+          node --check tools\qa-fixture-gate.cjs
+          if errorlevel 1 exit /b 1
+          node --check tools\qa-fixture-worker.cjs
+          if errorlevel 1 exit /b 1
+          echo QA141_FIXTURE_MODELS=PASS
+      - name: Read-only runner preflight - no leftover QA-account Node or Python jobs
+        shell: cmd
+        run: |
+          @echo off
+          tasklist /FI "IMAGENAME eq node.exe" /FI "USERNAME eq %COMPUTERNAME%\ZamerovacQA" /FO CSV /NH > "%RUNNER_TEMP%\qa141-node-%GITHUB_RUN_ID%.txt"
+          if errorlevel 1 exit /b 1
+          findstr /I /C:"node.exe" "%RUNNER_TEMP%\qa141-node-%GITHUB_RUN_ID%.txt" >nul
+          if not errorlevel 1 exit /b 1
+          tasklist /FI "IMAGENAME eq python.exe" /FI "USERNAME eq %COMPUTERNAME%\ZamerovacQA" /FO CSV /NH > "%RUNNER_TEMP%\qa141-python-%GITHUB_RUN_ID%.txt"
+          if errorlevel 1 exit /b 1
+          findstr /I /C:"python.exe" "%RUNNER_TEMP%\qa141-python-%GITHUB_RUN_ID%.txt" >nul
+          if not errorlevel 1 exit /b 1
+          tasklist /FI "IMAGENAME eq pythonw.exe" /FI "USERNAME eq %COMPUTERNAME%\ZamerovacQA" /FO CSV /NH > "%RUNNER_TEMP%\qa141-pythonw-%GITHUB_RUN_ID%.txt"
+          if errorlevel 1 exit /b 1
+          findstr /I /C:"pythonw.exe" "%RUNNER_TEMP%\qa141-pythonw-%GITHUB_RUN_ID%.txt" >nul
+          if not errorlevel 1 exit /b 1
+          del /q "%RUNNER_TEMP%\qa141-node-%GITHUB_RUN_ID%.txt" "%RUNNER_TEMP%\qa141-python-%GITHUB_RUN_ID%.txt" "%RUNNER_TEMP%\qa141-pythonw-%GITHUB_RUN_ID%.txt"
+          if errorlevel 1 exit /b 1
+          echo QA141_RUNNER_IDLE_PREFLIGHT=PASS
+      - name: Single normal inert native no-op with verified cleanup
+        id: native_noop
+        shell: cmd
+        working-directory: qa141-gate-${{ github.run_id }}
+        run: |
+          @echo off
+          call tools\qa35-noop-gate.cmd
+          if errorlevel 1 exit /b 1
+          echo QA141_NATIVE_NOOP=PASS
+          echo cleanup_verified=true>>"%GITHUB_OUTPUT%"
+          if errorlevel 1 exit /b 1
+      - name: One original fifteen-case suite after no-op; cooperative stop only
+        id: original15
+        shell: cmd
+        working-directory: qa141-gate-${{ github.run_id }}
+        run: |
+          @echo off
+          if not "%PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD%"=="1" exit /b 1
+          if not defined ZAMEROVAC_SOURCE_ROOT exit /b 1
+          call tools\qa35-fixture15-gate.cmd
+          if errorlevel 1 exit /b 1
+          echo QA141_FIXTURE15_FULL=PASS
+          echo cleanup_verified=true>>"%GITHUB_OUTPUT%"
+          if errorlevel 1 exit /b 1
+      - name: FINAL SAFE CLEANUP - NO BLIND DELETE AFTER UNKNOWN NATIVE OWNER STATE
+        if: always()
+        shell: cmd
+        env:
+          SAFE_TO_REMOVE_CHECKOUTS: ${{ (steps.native_noop.outcome == 'skipped' && steps.original15.outcome == 'skipped') || (steps.native_noop.outputs.cleanup_verified == 'true' && (steps.original15.outputs.cleanup_verified == 'true' || steps.original15.outcome == 'skipped')) }}
+        run: |
+          @echo off
+          rem Only temporary list files from this run. Never delete unknown native work or run another test.
+          for %%N in (qa141-qa qa141-prod qa141-reference qa141-ref-status qa141-node qa141-python qa141-pythonw) do if exist "%RUNNER_TEMP%\%%N-%GITHUB_RUN_ID%.txt" del /f /q "%RUNNER_TEMP%\%%N-%GITHUB_RUN_ID%.txt"
+          if errorlevel 1 exit /b 1
+          if /i not "%SAFE_TO_REMOVE_CHECKOUTS%"=="true" (
+            echo QA141_BLOCKED_CLEANUP_UNVERIFIED=YES - Preserve workspaces for manual review, STOP, NO RETRY
+            exit /b 1
+          )
+          rem Only the four uniquely named directories under the trusted workspace and current numeric run ID.
+          rem Reject symlink/junction/redirection at every exact cleanup path before recursive removal.
+          node -e "const fs=require('node:fs'),p=require('node:path');const id=process.env.GITHUB_RUN_ID,root=p.resolve(process.env.GITHUB_WORKSPACE||'.');if(!/^[1-9][0-9]*$/.test(id)||!fs.existsSync(root))process.exit(1);for(const n of ['qa141-activation','qa141-gate','qa141-product','qa141-reference']){const d=p.join(root,n+'-'+id);if(p.dirname(d)!==root)process.exit(1);if(fs.existsSync(d)){const s=fs.lstatSync(d);if(s.isSymbolicLink()||!s.isDirectory()||fs.realpathSync(d).toLowerCase()!==d.toLowerCase())process.exit(1)}}"
+          if errorlevel 1 exit /b 1
+          for %%N in (qa141-activation qa141-gate qa141-product qa141-reference) do (
+            if exist "%GITHUB_WORKSPACE%\%%N-%GITHUB_RUN_ID%" (
+              rmdir /s /q "%GITHUB_WORKSPACE%\%%N-%GITHUB_RUN_ID%"
+              if errorlevel 1 exit /b 1
+            )
+          )
+          rem Verify the postcondition for ALL FOUR exact run-owned paths, not only RD exit status.
+          rem lstat never follows symlinks/junctions; only ENOENT proves absence.
+          node -e "const fs=require('node:fs'),p=require('node:path');const root=p.resolve(process.env.GITHUB_WORKSPACE||'.'),id=process.env.GITHUB_RUN_ID;if(!/^[1-9][0-9]*$/.test(id)||!process.env.GITHUB_WORKSPACE)process.exit(1);for(const n of ['qa141-activation','qa141-gate','qa141-product','qa141-reference']){const file=p.join(root,n+'-'+id);if(p.dirname(file)!==root)process.exit(1);try{fs.lstatSync(file);process.exit(1)}catch(e){if(e.code!=='ENOENT')process.exit(1)}}"
+          if errorlevel 1 (
+            echo QA141_BLOCKED_WORKSPACE_POSTCONDITION_FAILED - STOP_NO_RETRY_RETAIN_EVIDENCE
+            exit /b 1
+          )
+          echo QA141_SAFE_CHECKOUT_CLEANUP=PASS
