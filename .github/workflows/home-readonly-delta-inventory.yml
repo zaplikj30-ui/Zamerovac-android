@@ -23,11 +23,11 @@ jobs:
       SNAPSHOT_APPROVED_SHA: ${{ inputs.approved_sha }}
     steps:
       - name: Read-only delta; no checkout, tool execution, or WSL command
-        # Built-in powershell is required: GitHub runner v2.338.2 creates a .ps1
-        # only for the shell key 'powershell', not an absolute executable path.
-        # Runner PATH resolution remains UNVERIFIED; before any HOME dispatch,
-        # independently attest PATH ordering and exact trusted PowerShell binary.
-        shell: powershell
+        # Keyword 'powershell' makes runner v2.338.2 create a .ps1 script.
+        # Explicit -NoProfile/-NonInteractive preserve the original restrictions.
+        # The absolute exe path made an extensionless temp script. Runner PATH
+        # resolution still requires separate owner-approved prestart attestation.
+        shell: 'powershell -NoProfile -NonInteractive -File "{0}"'
         run: |
           # The runner writes this temp step script / diagnostic logs and contacts GitHub.
           # Those runner effects MUST have been separately reviewed and owner-approved.
