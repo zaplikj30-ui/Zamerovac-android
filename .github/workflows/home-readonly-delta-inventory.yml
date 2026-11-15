@@ -23,7 +23,11 @@ jobs:
       SNAPSHOT_APPROVED_SHA: ${{ inputs.approved_sha }}
     steps:
       - name: Read-only delta; no checkout, tool execution, or WSL command
-        shell: 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -NonInteractive -File "{0}"'
+        # Built-in powershell is required: GitHub runner v2.338.2 creates a .ps1
+        # only for the shell key 'powershell', not an absolute executable path.
+        # Runner PATH resolution remains UNVERIFIED; before any HOME dispatch,
+        # independently attest PATH ordering and exact trusted PowerShell binary.
+        shell: powershell
         run: |
           # The runner writes this temp step script / diagnostic logs and contacts GitHub.
           # Those runner effects MUST have been separately reviewed and owner-approved.
@@ -31,6 +35,14 @@ jobs:
           $ErrorActionPreference = 'Stop'
           $ProgressPreference = 'SilentlyContinue'
           try {
+            # Defense in depth: reject a different interpreter BEFORE inventory.
+            # This cannot attest PATH before process creation; that is a separate
+            # prestart SECURITY/OWNER gate and is NOT approved by this patch.
+            $actualShell = [Diagnostics.Process]::GetCurrentProcess().MainModule.FileName
+            if (-not [String]::Equals(
+                $actualShell,
+                'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe',
+                [StringComparison]::OrdinalIgnoreCase)) { throw 'shell-path' }
             $expected = @{
               GITHUB_ACTIONS = 'true'
               GITHUB_REPOSITORY = 'zaplikj30-ui/Zamerovac-android'
