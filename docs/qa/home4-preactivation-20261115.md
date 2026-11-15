@@ -297,6 +297,27 @@ dispatch guardy, procesní modely, preflight/cert/package/version/redirect a
 home_qa_gate strict generator negativy. Výsledek každého příkazu, SHA a hash
 důkazu jsou v autorském předání. Nevymýšlet Windows PASS z Linux modelu.
 
+**Nový regresní blokér L1:** při opakování na `0292718df8252eb4ffa62c0a80b7ec0f631d0eda`
+selhalo vytváření kompletního stromu původní Linux-only fixture v
+test_qa_process_supervisor.OwnedRunnerTests.test_cleanup_error; samostatné
+opakování zachytilo stejnou assertion v test_cancel (další dva průchody11
+metod byly PASS). Vlastní nové9+2 testy a původních57 prošly. Tyto výsledky
+nejsou stabilní celá zelená regrese. Zdroj fixture čeká na leader/child/leaf
+před spuštěním heartbeat senderu, ale owner má heartbeatTimeout0,35 s a
+worker timeout0,8 s; samotný tree wait má2 s. Tato neslučitelná okna jsou
+zdrojový fakt; že způsobila konkrétní zachycené selhání, je **hypotéza**, bez
+zachyceného owner verdictu ji nelze vydávat za prokázanou příčinu.
+
+Před runtime aktivací L1 došetřit v Linuxu: minimální další krok je v původní
+fixture zachytit redigovaný owner reason při neúspěchu formation a test-first
+ověřit pomalou přípravu stromu. Případná oprava musí oddělit přípravu fixture
+od měřeného fault scénáře a nepřepisovat produkční timeouty/guardy ani Windows
+skip. V tomto **výhradně inertním návrhovém** balíku se existující živý
+process-fault payload ani jeho harness nemění; blokér se neskrývá opakováním
+do PASS. L1 vyžaduje cílené autorské řešení před tvrzením úplné runtime regrese,
+nikoli HOME experiment. Předimplementační review tohoto návrhu může přímo
+posoudit i tento zaznamenaný blokér; není to žádost o aktivaci.
+
 **NOT RUN/BLOCKED:** HOME4/4 a Windows token/Job/junction na novém SHA,
 Chromium/CDP/pixely/IndexedDB, WSL/JVM a skutečné64/513 XML, PDF ZIP render,
 APK build/signer/asset download/cleanup na Windows, Android/S Pen/Bosch/
