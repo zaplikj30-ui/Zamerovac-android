@@ -302,7 +302,12 @@ test('separate product checkout is unchanged by QA staging; actual byte tamperin
  const source=path.join(dir,'product'),stage=path.join(dir,'scratch');
  const git=(args,cwd=source)=>execFileSync('git',args,{cwd,encoding:'utf8',stdio:['ignore','pipe','pipe']});
  try{
-  git(['clone','--shared','--no-checkout',process.env.ZAMEROVAC_SOURCE_ROOT||path.resolve(__dirname,'..'),source],dir);
+  const localProduct=path.resolve(process.env.ZAMEROVAC_SOURCE_ROOT||path.resolve(__dirname,'..'));
+  git(['clone','--shared','--no-checkout',localProduct,source],dir);
+  // A shallow input clone does not advertise a previously fetched product
+  // commit as a branch. Transfer only the exact already-staged object locally;
+  // never download, change the source checkout, or substitute another product.
+  git(['fetch','--no-tags',localProduct,integrity.manifest.sourceSha]);
   // The independent fixture checkout must preserve approved source bytes on Windows.
   // Match the production actions/checkout process-local core.autocrlf=false.
   git(['-c','core.autocrlf=false','checkout','--detach',integrity.manifest.sourceSha]);

@@ -39,7 +39,7 @@ release/4job workflow a aktivní PR121. Žádná instalace závislosti z package
    a současně SHA256
    `e31e02bc0938a6ba28c514765380c5bbd1b99c230117d0b0128618d562431120`.
    Všechna původní pozitivní i negativní guard/fragment assertions zůstala.
-   Žádný fetch, instalace, shell, vytvoření YAML či fallback. Chybějící objekt
+   Žádný fetch, instalace, shell, vytvoření YAML či fallback v helperu. Chybějící objekt
    je skutečný FAIL, nikoli přeskočený test nebo vymyšlená úspěšná fixture.
 2. `qa_process_client.js` spouštělo skutečný normal/timeout/cancel procesní
    strom i ve Windows. Při běžném automatickém testování nyní spouští tento
@@ -85,8 +85,13 @@ git fetch --no-tags origin 1d6a786c77aa2a797bf7bd75f9977a3ae6613459 ae3b4df53c25
 ```
 
 Žádný checkout spotřebovaných RUN, žádný merge ani aktivní workflow tím
-nevzniká. Testy nikdy samy nedostupný vstup nestahují a nepovolují alternativní
-hash. Chybějící externí vstup není PASS. Pro případný Windows běh musí být
+nevzniká. Testy nikdy samy nedostupný vstup nestahují ze sítě a nepovolují
+alternativní hash. Vnitřní disposable produktový clone převezme přesný již
+lokálně připravený PR121 commit samostatným lokálním Git fetch; bez tohoto
+kroku se v mělkém clone nezveřejněný commit nepřenesl a původní test skutečně
+selhal na `unable to read tree`. Negativní shallow běh je zachován; oprava
+mění jen přenos dat, nikoli assertions nebo povolený produkt. Absolutní místní
+cesta nemůže přejít na URL fallback. Chybějící externí vstup není PASS. Pro případný Windows běh musí být
 tyto vstupy zahrnuty do předem schváleného pinned receptu; zde nový YAML není.
 
 ## Zachované hranice, skutečné testy a další brána
