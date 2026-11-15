@@ -1,6 +1,13 @@
 name: QA141 - owner-only normal Win11 57 mock models, no-op and 15 TAP
 # REVIEW-ONLY DRAFT. Never run until independent approval and explicit owner-only marker push.
 # Temporary: never merge into main. No installs, Chromium, WSL, fault injection, cloud or APK.
+# PRIOR TO ACTIVATION, coordinator MUST independently verify reviewed PR142 SHA and write a
+# SINGLE marker-only child Git commit by expected-SHA compare-and-swap (never raw branch push).
+# Workflow itself attest marker-only direct parent and unchanged YAML before any QA scripts.
+# Unbounded CreateProcessW is NOT fixed; outer cancel/timeout is not cleanup proof.
+# If timeout/cancel/unknown cleanup => BLOCKED, STOP, NO RETRY, preserve workspace evidence.
+# Residual risk on isolated nonadmin ZamerovacQA accepted only for one inert normal test;
+# no escalation, no VM/Sandbox, no fault injection, no changes to runner or product data.
 on:
   push:
     branches: ['qa/coord42-pr141-normal-20261115']
@@ -49,6 +56,29 @@ jobs:
           node -e "if(!process.version.startsWith('v26.13.'))process.exit(1)"
           if errorlevel 1 exit /b 1
           echo QA141_TRUSTED_IDENTITY=PASS
+      - name: Checkout marker activation commit as NONEXECUTING data
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        env:
+          GIT_CONFIG_COUNT: '1'
+          GIT_CONFIG_KEY_0: core.autocrlf
+          GIT_CONFIG_VALUE_0: 'false'
+        with:
+          ref: ${{ github.sha }}
+          path: qa141-activation-${{ github.run_id }}
+          clean: false
+          fetch-depth: 2
+          persist-credentials: false
+          submodules: false
+          lfs: false
+      - name: Pre-execution approval boundary - ONLY one marker; reviewed YAML must not change
+        shell: cmd
+        env:
+          EXPECTED_GATE_PARENT: ${{ github.event.before }}
+        run: |
+          @echo off
+          node -e "const cp=require('node:child_process'),fs=require('node:fs'),p=require('node:path');const dir=p.join(process.env.GITHUB_WORKSPACE,'qa141-activation-'+process.env.GITHUB_RUN_ID);const git=(...args)=>cp.execFileSync('git',args,{cwd:dir,encoding:'utf8',timeout:15000,windowsHide:true}).trim();const commit=git('rev-parse','HEAD');const parents=git('rev-list','--parents','-n','1','HEAD').split(' ');const changes=git('diff-tree','--no-commit-id','--name-status','-r','HEAD');const marker='docs/qa/qa141-authorized-normal-run.trigger';const contents=fs.readFileSync(p.join(dir,marker),'utf8');const workflow='.github/workflows/qa141-normal-57-15-owner-once.yml';const blob=git('rev-parse','HEAD:'+workflow),parentBlob=git('rev-parse','HEAD^:'+workflow);if(commit!==process.env.GITHUB_SHA||parents.length!==2||parents[1]!==process.env.EXPECTED_GATE_PARENT||changes!=='A\t'+marker||contents!=='OWNER-APPROVED-QA141-NORMAL-OWNER-20261115\n'||blob!==parentBlob||git('status','--porcelain','--untracked-files=all')!=='')process.exit(1)"
+          if errorlevel 1 exit /b 1
+          echo QA141_ONLY_MARKER_FROM_REVIEWED_PARENT_AND_UNCHANGED_WORKFLOW=PASS
       - name: Checkout reviewed QA commit in unique nonclean directory
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         env:
@@ -113,7 +143,10 @@ jobs:
           git -C "%GITHUB_WORKSPACE%\qa141-product-%GITHUB_RUN_ID%" status --porcelain --untracked-files=all >"%RUNNER_TEMP%\qa141-prod-%GITHUB_RUN_ID%.txt"
           if errorlevel 1 exit /b 1
           for %%F in ("%RUNNER_TEMP%\qa141-prod-%GITHUB_RUN_ID%.txt") do if %%~zF GTR 0 exit /b 1
-          del /q "%RUNNER_TEMP%\qa141-qa-%GITHUB_RUN_ID%.txt" "%RUNNER_TEMP%\qa141-prod-%GITHUB_RUN_ID%.txt"
+          git -C "%GITHUB_WORKSPACE%\qa141-reference-%GITHUB_RUN_ID%" status --porcelain --untracked-files=all >"%RUNNER_TEMP%\qa141-reference-%GITHUB_RUN_ID%.txt"
+          if errorlevel 1 exit /b 1
+          for %%F in ("%RUNNER_TEMP%\qa141-reference-%GITHUB_RUN_ID%.txt") do if %%~zF GTR 0 exit /b 1
+          del /q "%RUNNER_TEMP%\qa141-qa-%GITHUB_RUN_ID%.txt" "%RUNNER_TEMP%\qa141-prod-%GITHUB_RUN_ID%.txt" "%RUNNER_TEMP%\qa141-reference-%GITHUB_RUN_ID%.txt"
           if errorlevel 1 exit /b 1
           echo QA141_THREE_SHAS_CLEAN=PASS
       - name: Import only pinned immutable Git objects FROM LOCAL checked out references
@@ -165,7 +198,7 @@ jobs:
           rem Only the new mocked R44 test; other older cases spawn actual Node children.
           node --test --test-name-pattern=R44-01 tests\qa_gate_3try_integration.js
           if errorlevel 1 exit /b 1
-          echo QA141_57_MODELS=PASS
+          echo QA141_MODEL_COMMANDS_EXIT0_COUNTS_AWAIT_LOG_AUDIT=PASS
       - name: Validate mocked native containment and JS before real tests
         shell: cmd
         working-directory: qa141-gate-${{ github.run_id }}
@@ -186,22 +219,23 @@ jobs:
         shell: cmd
         run: |
           @echo off
-          tasklist /FI "IMAGENAME eq node.exe" /FI "USERNAME eq %COMPUTERNAME%\ZamerovacQA" /FO CSV /NH > "%RUNNER_TEMP%\qa36-node-%GITHUB_RUN_ID%.txt"
+          tasklist /FI "IMAGENAME eq node.exe" /FI "USERNAME eq %COMPUTERNAME%\ZamerovacQA" /FO CSV /NH > "%RUNNER_TEMP%\qa141-node-%GITHUB_RUN_ID%.txt"
           if errorlevel 1 exit /b 1
-          findstr /I /C:"node.exe" "%RUNNER_TEMP%\qa36-node-%GITHUB_RUN_ID%.txt" >nul
+          findstr /I /C:"node.exe" "%RUNNER_TEMP%\qa141-node-%GITHUB_RUN_ID%.txt" >nul
           if not errorlevel 1 exit /b 1
-          tasklist /FI "IMAGENAME eq python.exe" /FI "USERNAME eq %COMPUTERNAME%\ZamerovacQA" /FO CSV /NH > "%RUNNER_TEMP%\qa36-python-%GITHUB_RUN_ID%.txt"
+          tasklist /FI "IMAGENAME eq python.exe" /FI "USERNAME eq %COMPUTERNAME%\ZamerovacQA" /FO CSV /NH > "%RUNNER_TEMP%\qa141-python-%GITHUB_RUN_ID%.txt"
           if errorlevel 1 exit /b 1
-          findstr /I /C:"python.exe" "%RUNNER_TEMP%\qa36-python-%GITHUB_RUN_ID%.txt" >nul
+          findstr /I /C:"python.exe" "%RUNNER_TEMP%\qa141-python-%GITHUB_RUN_ID%.txt" >nul
           if not errorlevel 1 exit /b 1
-          tasklist /FI "IMAGENAME eq pythonw.exe" /FI "USERNAME eq %COMPUTERNAME%\ZamerovacQA" /FO CSV /NH > "%RUNNER_TEMP%\qa36-pythonw-%GITHUB_RUN_ID%.txt"
+          tasklist /FI "IMAGENAME eq pythonw.exe" /FI "USERNAME eq %COMPUTERNAME%\ZamerovacQA" /FO CSV /NH > "%RUNNER_TEMP%\qa141-pythonw-%GITHUB_RUN_ID%.txt"
           if errorlevel 1 exit /b 1
-          findstr /I /C:"pythonw.exe" "%RUNNER_TEMP%\qa36-pythonw-%GITHUB_RUN_ID%.txt" >nul
+          findstr /I /C:"pythonw.exe" "%RUNNER_TEMP%\qa141-pythonw-%GITHUB_RUN_ID%.txt" >nul
           if not errorlevel 1 exit /b 1
-          del /q "%RUNNER_TEMP%\qa36-node-%GITHUB_RUN_ID%.txt" "%RUNNER_TEMP%\qa36-python-%GITHUB_RUN_ID%.txt" "%RUNNER_TEMP%\qa36-pythonw-%GITHUB_RUN_ID%.txt"
+          del /q "%RUNNER_TEMP%\qa141-node-%GITHUB_RUN_ID%.txt" "%RUNNER_TEMP%\qa141-python-%GITHUB_RUN_ID%.txt" "%RUNNER_TEMP%\qa141-pythonw-%GITHUB_RUN_ID%.txt"
           if errorlevel 1 exit /b 1
           echo QA141_RUNNER_IDLE_PREFLIGHT=PASS
       - name: Single normal inert native no-op with verified cleanup
+        id: native_noop
         shell: cmd
         working-directory: qa141-gate-${{ github.run_id }}
         run: |
@@ -209,7 +243,10 @@ jobs:
           call tools\qa35-noop-gate.cmd
           if errorlevel 1 exit /b 1
           echo QA141_NATIVE_NOOP=PASS
+          echo cleanup_verified=true>>"%GITHUB_OUTPUT%"
+          if errorlevel 1 exit /b 1
       - name: One original fifteen-case suite after no-op; cooperative stop only
+        id: original15
         shell: cmd
         working-directory: qa141-gate-${{ github.run_id }}
         run: |
@@ -219,3 +256,29 @@ jobs:
           call tools\qa35-fixture15-gate.cmd
           if errorlevel 1 exit /b 1
           echo QA141_FIXTURE15_FULL=PASS
+          echo cleanup_verified=true>>"%GITHUB_OUTPUT%"
+          if errorlevel 1 exit /b 1
+      - name: FINAL SAFE CLEANUP - NO BLIND DELETE AFTER UNKNOWN NATIVE OWNER STATE
+        if: always()
+        shell: cmd
+        env:
+          SAFE_TO_REMOVE_CHECKOUTS: ${{ (steps.native_noop.outcome == 'skipped' && steps.original15.outcome == 'skipped') || (steps.native_noop.outputs.cleanup_verified == 'true' && (steps.original15.outputs.cleanup_verified == 'true' || steps.original15.outcome == 'skipped')) }}
+        run: |
+          @echo off
+          rem Only temporary list files from this run. Never delete unknown native work or run another test.
+          for %%N in (qa141-qa qa141-prod qa141-reference qa141-ref-status qa141-node qa141-python qa141-pythonw) do if exist "%RUNNER_TEMP%\%%N-%GITHUB_RUN_ID%.txt" del /f /q "%RUNNER_TEMP%\%%N-%GITHUB_RUN_ID%.txt"
+          if errorlevel 1 exit /b 1
+          if /i not "%SAFE_TO_REMOVE_CHECKOUTS%"=="true" (
+            echo QA141_BLOCKED_CLEANUP_UNVERIFIED=YES - Preserve workspaces for manual review, STOP, NO RETRY
+            exit /b 1
+          )
+          rem Only the four uniquely named directories under the trusted workspace and current numeric run ID.
+          node -e "if(!/^[1-9][0-9]*$/.test(process.env.GITHUB_RUN_ID)||!process.env.GITHUB_WORKSPACE)process.exit(1)"
+          if errorlevel 1 exit /b 1
+          for %%N in (qa141-activation qa141-gate qa141-product qa141-reference) do (
+            if exist "%GITHUB_WORKSPACE%\%%N-%GITHUB_RUN_ID%" (
+              rmdir /s /q "%GITHUB_WORKSPACE%\%%N-%GITHUB_RUN_ID%"
+              if errorlevel 1 exit /b 1
+            )
+          )
+          echo QA141_SAFE_CHECKOUT_CLEANUP=PASS
