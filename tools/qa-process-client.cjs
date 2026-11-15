@@ -66,7 +66,7 @@ async function runOwned(command,cwd,env,log,token,timeoutMs=480000,signal,hardSt
      const contradictoryPass=authentic&&report.status==='PASS'&&
       (report.error!=null||report.reason!=='normal'||report.exitCode!==0||report.cleanupEvidence?.remainingProcesses!==0||
        report.firstFailure!=null||report.cleanupErrorType!=null||
-       report.diagnostic!=null||report.privateTracebackWritten===true);
+       report.diagnostic!=null||(report.privateTracebackWritten!=null&&report.privateTracebackWritten!==false));
      report.diagnostic=authentic?
       report.status==='PASS'&&report.diagnostic==null?null:safeDiagnostic(report.diagnostic,'owner-exit'):safeDiagnostic(null,'owner-protocol');
      report.firstFailure=authentic&&report.firstFailure!=null?

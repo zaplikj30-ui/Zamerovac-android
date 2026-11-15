@@ -65,7 +65,7 @@ function structuredCases(evidence,item,protocol){
  return {counts:exactCases(rows,item.cases.filter(n=>!optional.includes(n)),optional),caseIdsSha256:hash(JSON.stringify(rows))};
 }
 function boundReport(report,identity){
- demand(report?.status==='PASS'&&['error','diagnostic','firstFailure','cleanupErrorType'].every(k=>report[k]==null)&&report.privateTracebackWritten!==true,'worker-report-status');
+ demand(report?.status==='PASS'&&['error','diagnostic','firstFailure','cleanupErrorType'].every(k=>report[k]==null)&&(report.privateTracebackWritten==null||report.privateTracebackWritten===false),'worker-report-status');
  demand(JSON.stringify(report.binding)===JSON.stringify(identity),'report-binding');
  return report;
 }

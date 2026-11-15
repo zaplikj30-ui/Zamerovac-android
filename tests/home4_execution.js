@@ -25,7 +25,7 @@ test('HOME4 required names reject missing extra duplicate SKIP and FAIL',()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'home4-json-'));try{const file=path.join(dir,'pin.json');fs.writeFileSync(file,'{"verified":true}');const digest=p.hash(fs.readFileSync(file));assert.equal(p.json(file,digest).verified,true);assert.throws(()=>p.json(file,'0'.repeat(64)));fs.writeFileSync(file,'{"verified":false}');assert.throws(()=>p.json(file,digest))}finally{fs.rmSync(dir,{recursive:true})}
  const identity={sourceSha:'a'.repeat(40),validatorSha:'b'.repeat(40)},valid={status:'PASS',binding:identity};
  assert.equal(p.boundReport(valid,identity).status,'PASS');
- for(const change of [{status:'BLOCKED'},{status:'FAIL'},{error:'error'},{diagnostic:false},{firstFailure:{}},{cleanupErrorType:'Error'},{privateTracebackWritten:true},{binding:{}}])assert.throws(()=>p.boundReport({...valid,...change},identity));
+ for(const change of [{status:'BLOCKED'},{status:'FAIL'},{error:'error'},{diagnostic:false},{firstFailure:{}},{cleanupErrorType:'Error'},{privateTracebackWritten:true},{privateTracebackWritten:'true'},{binding:{}}])assert.throws(()=>p.boundReport({...valid,...change},identity));
  assert.equal(p.exactCases([{id:'x',status:'PASS'},{id:'linux',status:'NOT RUN'}],['x'],['linux']).required,1);
  for(const rows of [[],[{id:'other',status:'PASS'}],[{id:'x',status:'PASS'},{id:'x',status:'PASS'}],[{id:'x',status:'SKIP'}],[{id:'x',status:'FAIL'}]])assert.throws(()=>p.exactCases(rows,['x']));
 });
@@ -63,7 +63,7 @@ test('HOME4 actual client rejects contradictory PASS and malformed protocol with
  const cp=require('node:child_process'),{EventEmitter}=require('node:events'),id=require.resolve('../tools/qa-process-client.cjs');
  const original=cp.spawn,d=fs.mkdtempSync(path.join(os.tmpdir(),'home4-client-'));let starts=0,kills=0;
  try{
-  for(const [index,change] of [null,{error:'PRIVATE ERROR'},{reason:'crash'},{exitCode:1},{cleanupEvidence:{remainingProcesses:1}},'duplicate','garbage'].entries()){
+  for(const [index,change] of [null,{error:'PRIVATE ERROR'},{privateTracebackWritten:'true'},{reason:'crash'},{exitCode:1},{cleanupEvidence:{remainingProcesses:1}},'duplicate','garbage'].entries()){
    const token='a'.repeat(32);
    cp.spawn=()=>{starts++;const child=new EventEmitter();child.stdin=Object.assign(new EventEmitter(),{writable:true,write:()=>true,end:()=>{}});child.stdout=new EventEmitter();child.stderr=new EventEmitter();child.kill=()=>{kills++};
     queueMicrotask(()=>{const r={event:'result',token,platform:process.platform,status:'PASS',reason:'normal',exitCode:0,error:null,diagnostic:null,cleanupVerified:true,cleanupEvidence:{remainingProcesses:0},...(typeof change==='object'&&change?change:{})};let text=JSON.stringify(r)+'\n';if(change==='duplicate')text+=text;if(change==='garbage')text='PRIVATE GARBAGE\n'+text;child.stdout.emit('data',Buffer.from(text));child.emit('close',0,null)});return child};
