@@ -50,7 +50,10 @@ Současný `qa-pr121-manifest.json` pinuje `ae3b4df...`, 66 souborů,
 tentýž HEAD, čistotu a přesné bajty; main má 19 odlišných souborů, nejen jiný
 commit: 11 app assets a 8 e2e souborů včetně harnessu. `executionIdentity`
 vyžaduje owner/push/`refs/heads/qa/browser-smoke-winfix-20261113-run`/attempt1
-a očekávaný validator SHA. Main workflow má owner/manual/main; `CHROMIUM_PATH`
+a očekávaný validator SHA. Z těchto19 rozdílů je15 změněných souborů a4
+chybějící: app/src/main/assets/pending-audio.js a tools/e2e/{legacy-conflict-persistence,
+pending-audio,protected-data}.cjs. První dvě chybějící e2e sady obsahují1+8
+povinných případů. Main workflow má owner/manual/main; `CHROMIUM_PATH`
 nenastavuje. Tento rozpor je **prokázaný zdrojově**, nikoli nový HOME experiment.
 
 | Identita | M — test dnešního main | I — budoucí schválený integrovaný PR121 produkt |
@@ -58,12 +61,16 @@ nenastavuje. Tento rozpor je **prokázaný zdrojově**, nikoli nový HOME experi
 | SOURCE / EVENT SHA dnes | `a3cc8eb3a14a9a6710664b73ba8a5c70ed1a340a` / stejné SHA; po jakémkoli merge nutný nový přesný pin | Zatím **NEEXISTUJE**; PR121 `ae3b4df53c25557f28b4a25ccb65adc2abdff639` je pouze historický vstup, není finální integrovaný main |
 | VALIDATOR dnes | Reviewovaný základ `a3cc8eb3a14a9a6710664b73ba8a5c70ed1a340a`; současná politika M odmítne | Tentýž základ je pouze návrhový vstup; žádný schválený nový validátor |
 | VALIDATOR pro běh | Plný budoucí V po implementaci a nezávislém review; **nevyplněno = BLOCKED**, nelze vybrat branch/latest | Totéž; V musí pinovat konkrétní finální integrovaný SOURCE, nikoli pouze ae3 |
-| Browser kontrakt | Zachovat úplný 23/96 jmenný rozsah. Předem přezkoumat kompatibilitu všech 23 scénářů s main, vytvořit přesný main manifest 66 či výslovně zkontrolovaného úplného seznamu; žádné snížení pokrytí | Zachovat 23/96, porovnat finální produkt s 66 původními piny, změny jednotlivě přezkoumat a vytvořit finální manifest |
+| Browser kontrakt | Zachovat úplný 23/96 jmenný rozsah. Dnes chybí2 sady/9 případů a jejich produktová závislost, takže varianta bez další změny není dostupná. Nový manifest musí zahrnout všech66 původních cest, jednotlivě schválené bajty a případné dodatečné závislosti; žádné snížení pokrytí | Zachovat 23/96, porovnat finální produkt s66 původními piny, všechny cesty a nové závislosti ponechat, změny jednotlivě přezkoumat a vytvořit finální manifest |
 | Co nelze tvrdit | Starý ae3 manifest ani synthetic PASS nedokazuje browser main | Běh samostatného ae3 checkoutu s novým QA by byl PR121 evidence, nikdy main HOME4/4 nebo release evidence |
 | Cena / rozhodnutí | Nejmenší zásah do produktu; pokud některý scénář vyžaduje funkci jen PR121, STOP a rozhodnutí o I, žádný SKIP/oslabení | Samostatná produktová integrace + její testy/review/souhlas; tento balík ji neprovádí |
 
-Doporučení P1: zachovat M jako nejmenší první cíl **pouze při prokázané
-kompatibilitě 23/96**; jinak vybrat I samostatným produktovým rozhodnutím.
+Zdrojové ověření M: existující test home4_preactivation_boundaries.js
+prokazuje chybějící soubory/sady a skutečné odmítnutí sourceSnapshot i
+executionIdentity; nejde o pouhý model nové policy. **Doporučení P1: I**,
+samostatné rozhodnutí o produktové integraci s ponecháním novější QA. M by
+vyžadovala samostatně schválený backport chybějícího produktu/scénářů; pouhá
+změna manifestu není řešení a test ae3 jako main by byl falešná identita.
 Ani jedna varianta není tímto aktivována. Není možné nyní poctivě uvést
 budoucí schválený V/I SHA; jejich absence je explicitní blokér.
 
@@ -277,7 +284,10 @@ Nový tests/test_home4_preactivation_design.py obsahuje jen unittest a čisté
 in-memory reference modely. Fiktivní validator b×40, syntetické cache,513
 metod a64 XML **nejsou skutečné registry, prostředí ani schválení**. Model
 nic nespouští, nestahuje, neopravuje ani neautorizuje; nesmí být importován
-do runtime. Statický test potvrzuje dosavadní manual workflow a neslučitelnou
+do runtime. Další2 read-only Node testy v home4_preactivation_boundaries.js
+ověřují reálný pin/obsah checkoutu a skutečné stávající odmítnutí browser
+validátorem (pozitivní control je historická predicate, nikoli spuštění).
+Statický test potvrzuje dosavadní manual workflow a neslučitelnou
 historickou browser policy, nesnaží se je změnit.
 
 Relevantní opakovaná regrese používá skutečné stávající validátory: 57,
