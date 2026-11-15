@@ -48,3 +48,4 @@ jobs:
           echo TRUSTED_INVENTORY_SCRIPT_SHA=e60a1e09b4750c88ceb384387c7c04cbeb0569a7
           "C:\actions-runner\tools\Python313\python.exe" -I tools\coord42-win32-inventory.py
           if errorlevel 1 exit /b 1
+# Owner-only one-time activation of verified read-only inventory (no build).
