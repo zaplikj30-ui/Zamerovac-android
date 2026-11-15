@@ -1,5 +1,6 @@
 'use strict';
 const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const {launchSandboxed,launchOptions}=require('./sandbox.cjs');
 const base=process.env.ZAMEROVAC_BASE_URL||process.argv[2]||'http://127.0.0.1:8765';
 async function suite(name,body){
  const directory=path.resolve(process.env.ZAMEROVAC_E2E_DIR||'test-artifacts',name);fs.mkdirSync(directory,{recursive:true});
@@ -7,8 +8,14 @@ async function suite(name,body){
  // missing from the Windows service PATH, fail immediately, never leave a
  // headless browser alive waiting for the outer eight-minute kill timeout.
  const sha=require('node:child_process').execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
- const browser=await chromium.launch({executablePath:process.env.CHROMIUM_PATH||'/usr/bin/chromium',args:['--no-sandbox']});
- const report={suite:name,sha,startedAt:new Date().toISOString(),syntheticOnly:true,cases:[]};let failed=0;
+ if(process.env.ZAMEROVAC_SOURCE_SHA&&sha!==process.env.ZAMEROVAC_SOURCE_SHA)throw Error('HOME BLOCKED: source SHA changed before launch');
+ let launched;
+ try{launched=await launchSandboxed(chromium,launchOptions(process.env.CHROMIUM_PATH))}
+ catch(error){fs.writeFileSync(path.join(directory,'report.json'),JSON.stringify({suite:name,sha,status:'BLOCKED',error:error.message,cases:[]},null,2));throw error}
+ const {browser,evidence:sandbox}=launched;
+ const report={suite:name,sha,sandbox,validatorSha:process.env.ZAMEROVAC_QA_GATE_SHA,
+  runToken:process.env.ZAMEROVAC_RUN_TOKEN,filtered:Object.hasOwn(process.env,'ZAMEROVAC_CASES'),
+  startedAt:new Date().toISOString(),syntheticOnly:true,cases:[]};let failed=0,bodyCompleted=false;
  try{await body(async(title,test)=>{
   if(process.env.ZAMEROVAC_CASES&&!process.env.ZAMEROVAC_CASES.split(',').includes(title))return;
   const slug=title.replace(/[^a-z0-9_-]/gi,'_'),context=await browser.newContext({viewport:{width:600,height:950},hasTouch:true});
@@ -29,7 +36,15 @@ async function suite(name,body){
    await context.tracing.stop({path:path.join(directory,slug+'-trace.zip')}).catch(()=>{});
    console.error('FAIL '+name+'/'+title+' at '+result.steps.at(-1)+': '+error.message);
   }finally{await context.close();fs.writeFileSync(path.join(directory,'report.json'),JSON.stringify(report,null,2))}
- })}finally{await browser.close()}
+ });bodyCompleted=true}finally{
+  let closeError;
+  try{await browser.close()}catch(error){closeError=error;throw error}finally{
+   report.status=closeError||!bodyCompleted||failed?'FAIL':report.filtered?'PARTIAL':'COMPLETE';
+   report.finishedAt=new Date().toISOString();
+   if(closeError)report.cleanupError=closeError.message;
+   fs.writeFileSync(path.join(directory,'report.json'),JSON.stringify(report,null,2));
+  }
+ }
  assert(report.cases.length>0,'No matching test cases');
  assert.equal(failed,0,name+': failed '+failed+' cases; see '+directory);
 }

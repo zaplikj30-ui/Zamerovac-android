@@ -1,0 +1,296 @@
+{
+  "baseMain": "3e3f4ae4384f39c4599c5b0e43a43877e93b3a9f",
+  "qaSource": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+  "productReference": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+  "fixtureFixSource": "dcb44e2652a9ee3da678d91ca1e71d4fc79593ec",
+  "referenceBootstrap": {
+    "gitBlob": "ec8a2664d2d051f2ef40ee4b51564cc95dcb7485",
+    "sha256": "e31e02bc0938a6ba28c514765380c5bbd1b99c230117d0b0128618d562431120",
+    "sourceCommit": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+    "role": "TEST_DATA_ONLY_NO_WORKFLOW_FILE"
+  },
+  "selected": [
+    {
+      "path": "tools/e2e/harness.cjs",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "d7bb5160c1f5df303001b9eda8ce568d6c2b61d0",
+      "adapted": false
+    },
+    {
+      "path": "tools/e2e/sandbox.cjs",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "5aeebc4fe36c35d8c8805b4af5239e6e43d94129",
+      "adapted": false
+    },
+    {
+      "path": "tools/local-browser-qa.cjs",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "a36fa9f0fc2a2a35a68bf907412413aaf9c4fcb2",
+      "adapted": false
+    },
+    {
+      "path": "tools/qa-browser-identity.cjs",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "c264b183b80da42ebe082088aa9cc671af291918",
+      "adapted": false
+    },
+    {
+      "path": "tools/qa-browser-profiles.json",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "32429b10de326f8538c8105285b72ee62d298bc2",
+      "adapted": false
+    },
+    {
+      "path": "tools/qa-browser-worker.cjs",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "db5d52b6b984c3bfe30f3b92d36c4894696c8936",
+      "adapted": false
+    },
+    {
+      "path": "tools/qa-browser/package-lock.json",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "2901dfe9699efa4edbeab7e9655f4462228c39e9",
+      "adapted": false
+    },
+    {
+      "path": "tools/qa-browser/package.json",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "cd80df5950316c233785c4c96768d836689c79f5",
+      "adapted": false
+    },
+    {
+      "path": "tools/qa-fixture-attempts.cjs",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "18fabfdbb55252ce1272468fb3be93814dadbf23",
+      "adapted": false
+    },
+    {
+      "path": "tools/qa-fixture-gate.cjs",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "b9c0754142cb8e60926a2acfb6fca67ffef1c47b",
+      "adapted": false
+    },
+    {
+      "path": "tools/qa-fixture-gate.cmd",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "643186aab3b309d640ad5b96c74bbaed778e934a",
+      "adapted": false
+    },
+    {
+      "path": "tools/qa-fixture-tap.cjs",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "54f0c8d48b36dc2c7d7cf35082ea5b7a01b5b127",
+      "adapted": false
+    },
+    {
+      "path": "tools/qa-fixture-worker.cjs",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "509bcc2b17e00d9b3a3f527a8406ba59699f7381",
+      "adapted": false
+    },
+    {
+      "path": "tools/qa-integrity.cjs",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "42517db9ed5950be2d33232cad001b6c1810c178",
+      "adapted": false
+    },
+    {
+      "path": "tools/qa-pr121-manifest.json",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "cde59d6282dac2a4928e3387ab0cba7312991e49",
+      "adapted": false
+    },
+    {
+      "path": "tools/qa-process-client.cjs",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "2360d45d352a0d21e63b1fe2314292e1d5dd3d9c",
+      "adapted": false
+    },
+    {
+      "path": "tools/qa-process-diagnostic.json",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "f98e2f389976344829be18cb52787541ecc63ffb",
+      "adapted": false
+    },
+    {
+      "path": "tools/qa35-fixture15-gate.cmd",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "324e2d4362235da35f2087363b8746a8dd978eb7",
+      "adapted": false
+    },
+    {
+      "path": "tools/qa35-noop-gate.cjs",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "ca50d19db09e16aae90aaf92a91a1878867df48f",
+      "adapted": false
+    },
+    {
+      "path": "tools/qa35-noop-gate.cmd",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "094619b0b98fbce7d1106bfe35e6981536fab315",
+      "adapted": false
+    },
+    {
+      "path": "tools/qa35-noop-worker.cjs",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "f331f3b975557ff4f9e4ba002c639096ec045a6e",
+      "adapted": false
+    },
+    {
+      "path": "tools/qa_browser_lock.py",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "7f02f3eeed52f1ca2f54d33ace1c050f98600719",
+      "adapted": false
+    },
+    {
+      "path": "tools/qa_owned_processes.py",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "d5078c035611db47c23e738e505cb7a8e88b16f7",
+      "adapted": false
+    },
+    {
+      "path": "tools/qa_process_supervisor.py",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "72c1337f9a3ebaa48da6398a4f00e332d144252d",
+      "adapted": false
+    },
+    {
+      "path": "tests/e2e_harness_git_preflight.js",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "c4f4242108a63cef5a87b1764432c76270ea9cca",
+      "adapted": false
+    },
+    {
+      "path": "tests/fixtures/windows-fixture-43524071686.txt",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "6a37934601a112208adc1d55e6c7fb27b69fd319",
+      "adapted": false
+    },
+    {
+      "path": "tests/helpers/qa-fixture-checkout.cjs",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "345eaad2f26c8f81060509501d9214646f4eea91",
+      "adapted": false
+    },
+    {
+      "path": "tests/home_qa_integrity.js",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "275a40f9ccb9fd61bd20f5e1ea42ac449b4b927c",
+      "adapted": true
+    },
+    {
+      "path": "tests/home_sandbox_security.js",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "582f94d4b17e7752aee23679868f75e6120c05e0",
+      "adapted": false
+    },
+    {
+      "path": "tests/qa34_client_gate_integration.js",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "6149a662a98d8adf5b2c031c6c392dbd01ee6f07",
+      "adapted": false
+    },
+    {
+      "path": "tests/qa36_soft_timeout.js",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "6923c4c392d0cebe5bee664600b572a35d137b8f",
+      "adapted": false
+    },
+    {
+      "path": "tests/qa41_diag.js",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "38f26f009cd92b193a4ec96664a2cb59f9faefb8",
+      "adapted": false
+    },
+    {
+      "path": "tests/qa_binary_fixture_paths.js",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "0f6bd4738f432381b0568aea97d37930ba8ccd5d",
+      "adapted": false
+    },
+    {
+      "path": "tests/qa_fixture_attempts.js",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "de8183bbb1f8a30c554265df99ba2b5024567af5",
+      "adapted": false
+    },
+    {
+      "path": "tests/qa_fixture_process_scope.js",
+      "source": "dcb44e2652a9ee3da678d91ca1e71d4fc79593ec",
+      "sourceGitBlob": "c55cf79a134edfb10a2c37ee2ff0761dca4825dd",
+      "adapted": false
+    },
+    {
+      "path": "tests/qa_fixture_tap_gate.js",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "5324da920a03ec08bc3e3666bfee4c78ee5fe267",
+      "adapted": false
+    },
+    {
+      "path": "tests/qa_gate_3try_integration.js",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "72057ad2a37127ab30e801844242a08bcc39a8bf",
+      "adapted": false
+    },
+    {
+      "path": "tests/qa_process_client.js",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "8be4347b71dd2236db2336ec6e870ba79ff54791",
+      "adapted": true
+    },
+    {
+      "path": "tests/qa_process_diagnostics.js",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "28264b60ff21a60b7d43e119486de470798c1d42",
+      "adapted": false
+    },
+    {
+      "path": "tests/test_diag41.py",
+      "source": "dcb44e2652a9ee3da678d91ca1e71d4fc79593ec",
+      "sourceGitBlob": "b157331d5d9a2065305e6688ae74d265004d86a3",
+      "adapted": false
+    },
+    {
+      "path": "tests/test_qa130_startup_cleanup.py",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "0affee1a43e52e0a60aa51dfdb54f194e779c178",
+      "adapted": false
+    },
+    {
+      "path": "tests/test_qa36_supervisor_model.py",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "3fea0aa368951b8a9bdc0911047434099b1982a2",
+      "adapted": false
+    },
+    {
+      "path": "tests/test_qa_process_diagnostic.py",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "7bfdbe7765a8f3aa9e12b31844ce50c6e4cab9af",
+      "adapted": false
+    },
+    {
+      "path": "tests/test_qa_process_identity.py",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "2677d4105d41b048ffe199877419bb1475471531",
+      "adapted": false
+    },
+    {
+      "path": "tests/test_qa_process_supervisor.py",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "71a70f3f6a04a9ba0130b8adbf6371e8bfaafb09",
+      "adapted": true
+    },
+    {
+      "path": "tests/test_qa_windows_file_lock.py",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "75c4d009b13a0f6cca79be96a6c3cce636b0032e",
+      "adapted": false
+    },
+    {
+      "path": "tests/test_qa_windows_job_contract.py",
+      "source": "1d6a786c77aa2a797bf7bd75f9977a3ae6613459",
+      "sourceGitBlob": "3eebb745d91814bf3dc227843f87f1ad1b381777",
+      "adapted": false
+    }
+  ]
+}

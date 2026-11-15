@@ -18,7 +18,7 @@ const sandbox={
    assert.equal(Array.from(args).join(' '),'rev-parse HEAD');
    const error=new Error('spawnSync git ENOENT');error.code='ENOENT';throw error;
   }};
-  return require(id);
+  return require('node:module').createRequire(path.resolve(__dirname,'../tools/e2e/harness.cjs'))(id);
  }
 };
 (async()=>{

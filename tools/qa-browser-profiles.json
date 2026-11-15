@@ -1,0 +1,12 @@
+{
+  "linux": {
+    "path": "/usr/lib/chromium/chromium",
+    "sha256": "ce1ff960ce428a4a88b1b1c38516bdf1954a57fc24036161b7a0d8d0f8aec511",
+    "magic": "7f454c46"
+  },
+  "win32": {
+    "path": "C:\\actions-runner\\tools\\ms-playwright\\chromium-1234\\chrome-win64\\chrome.exe",
+    "sha256": "409805a16d6416087e6b2f778df1cf8f7bbb267d6b99f6b5bb0a618eace234f2",
+    "magic": "4d5a"
+  }
+}
