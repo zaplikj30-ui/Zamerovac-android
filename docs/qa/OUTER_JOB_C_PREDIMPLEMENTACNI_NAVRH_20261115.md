@@ -133,6 +133,36 @@ Tato kapitola doplňuje D1–D3 po věcné kontrole **skutečného** Node klient
 - Před implementací musí být konzistentní modelové kontrakty pro výše uvedené chyby a návrh konkrétního nativního I/O/launch adaptéru. Při nedostupnosti ověřitelného řešení STOP a úzké nové C-vs-B-vs-A rozhodnutí, bez slévání několika neověřených variant.
 - Vlastní technická kontrola návrhu a Microsoft/Node dokumentace **není** PASS nativní implementace. SOURCE-ONLY review připravenosti návrhu je možné označit „zlepšeno / požadavky specifikovány“, ne „C bezpečnost PASS“. Po dokončení autorských pozitivních i negativních testů a celého balíku patří nezávislé závěrečné review **Kontrolorovi 46**.
 
+### 3g. Negativní rozhodovací matice (kontrakty pro implementaci, nikoliv vykonané testy)
+
+Každý řádek má mít v budoucí implementaci **konkrétní negativní automatický test** s PASS/FAIL/NOT RUN, prostředím a SHA. Tento seznam je kontrola konzistence návrhu, **žádné testy zde neběžely**.
+
+| Scénář | Výslovný očekávaný bezpečný výsledek |
+| --- | --- |
+| STOP před zahájením outer create | žádný Python start; BLOCKED, žádný retry |
+| STOP během CreateProcessW, API dosud nevrací | UNKNOWN; žádný resume/cleanup PASS, context/handles neuvolňovat předčasně |
+| CreateProcessW se vrátí po přijatém STOP | ověřit handle pouze pro bezpečný cleanup, **nikdy nový resume**, finální výsledek BLOCKED |
+| STOP souběžný s již rezervovaným ResumeThread | proces po celý závod v outer Jobu, sticky BLOCKED, nanejvýš jeden pokus o resume; fyzické časování neslibovat bez důkazu |
+| Neplatný JOB_LIST, HANDLE_LIST, UI limit či nesting | BLOCKED před spuštěním nebo bezpečné ukončení stále suspendovaného dítěte, bez necontainovaného fallbacku |
+| V Node chybí .node / nesedí hash, ABI nebo Node verze | STOP **před** spouštěním Pythonu; nikdy zpět na child_process.spawn ve Windows |
+| Vynechaný stderr reader, zaplněná pipe, napi_queue_full | bounded STOP/BLOCKED, žádná deadlock závislost na JS event loop, stderr soukromý obsah neuniká |
+| Stdout překročí 1 048 576 bytů nebo rozdělené UTF-8 | byte-exact limit a bezpečný parsing; přesah BLOCKED; nevypisovat raw payload |
+| Stdin partial write, CANCEL mezi zápisy, write po close | žádné další ALIVE po přijímaném CANCEL, bezpečné uzavření, BLOCKED pokud není přesný protokol |
+| Python exit bez EOF stdout/stderr nebo bez native close | timeout/protokol BLOCKED, žádný falešný PASS ani neomezený čekací úspěch |
+| Podvržený Python JSON říká cleanupVerified=true | bez vlastní vnější handle atestace **BLOCKED** |
+| Outer Job ActiveProcesses=0, ale in-flight create trvá | UNKNOWN/BLOCKED, **ani čistá nula není důkaz úklidu** |
+| TerminateJobObject vrátí SUCCESS, ale Python process handle nesignalizuje exit | BLOCKED; kill request není exit |
+| Query úspěšná, ale následný CloseHandle selže | outerCleanupVerified=false, BLOCKED; neoznačit cleanupVerified=true |
+| Chybí inner cleanup nebo TAP/exit/token přesná shoda | celkový BLOCKED i při ověřeném outer=0 |
+| TEMP/konfigurační soubor nelze vytvořit/odstranit (plný disk, práva, chyba zápisu) | fail-closed, žádný PASS ani mazání cizích cest; nezkoušet bez kontroly ostatních procesů |
+| Současné dva pokusy / duplicitní callback / stará generation nonce | izolované own handles/dirs a serializace; žádné křížové potvrzení, double-close ani falešný PASS |
+| NAPI env zmizí před dokončením native workeru | žádný callback do mrtvého env, OwnerContext stále živý pro in-flight; bez ukončení BLOCKED/UNKNOWN |
+| Node/Python náhle skončí v nested hierarchii | vnější/inner cleanup dle skutečných handles, bez pozitivního reportu při chybějícím ownerovi |
+| Mimo vlastní scope existuje cizí sentinel proces | **nesmí být ukončen**, žádný celosystémový PID sweep ani změna ACL |
+| Skutečný nevracející se Win32 API/kernel fault | pouze izolovaná obnovitelná Windows VM; HOME host **NOT RUN/BLOCKED** |
+
+**Interpretace:** všechny „bezpečně skončil BLOCKED“ výsledky jsou negativní kontrakty PASS, pouze pokud je implementace a testy opravdu doloží; nejsou PASS už z této tabulky. Na HOME runneru se netestuje nebezpečný hung/force-kill fault. Pokud autor neprokáže některý kritický kontrakt D1–D3 v rámci C, neimplementovat „přibližnou“ verzi a znovu cíleně rozhodnout C/B/A.
+
 ## 4. Build, dodávka, licence a původ
 - Aktuální Windows runner používá Node **26.13.0.0**. Přesný zdroj hlaviček a knihovny existuje u výrobce; bez potřeby další Visual Studio instalace:
   - https://nodejs.org/download/release/v26.13.0/node-v26.13.0-headers.tar.gz
