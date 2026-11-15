@@ -106,13 +106,15 @@ async function execute(suite,env,log,maxDurationMs=480000,signal){
   return {status:'PASS',report,cleanupVerified:true,lifecycle:life,exitCode:life.exitCode};
  }catch(e){return {status:'BLOCKED',cleanupVerified:life?.cleanupVerified===true,lifecycle:life,error:e.message}}
 }
-async function run(mode){
+async function run(mode,externalSignal){
  const parent=process.env.ZAMEROVAC_QA_RESULT_PARENT||path.join(process.env.LOCALAPPDATA||os.tmpdir(),'Zamerovac-QA','browser');
  fs.mkdirSync(parent,{recursive:true});
  const dir=fs.mkdtempSync(path.join(parent,'run-'));
  const identity={sourceSha:integrity.manifest.sourceSha,validatorSha:null,runToken:crypto.randomBytes(16).toString('hex'),platform:process.platform,finalized:false};
  const records=modes[mode].map(suite=>({suite,status:'NOT RUN'}));
  const controller=new AbortController();const cancel=()=>controller.abort();
+ externalSignal?.addEventListener('abort',cancel,{once:true});
+ if(externalSignal?.aborted)cancel();
  for(const sig of ['SIGINT','SIGTERM',...(process.platform==='win32'?[]:['SIGHUP'])])process.on(sig,cancel);
  let server,work,preflight,allClean=true,succeeded=false;
  const deadline=setTimeout(cancel,38*60*1000);
@@ -156,6 +158,7 @@ async function run(mode){
   console.error('HOME BLOCKED: '+e.message);
  }finally{
   clearTimeout(deadline);
+  externalSignal?.removeEventListener('abort',cancel);
   for(const sig of ['SIGINT','SIGTERM',...(process.platform==='win32'?[]:['SIGHUP'])])process.off(sig,cancel);
   try{
    if(server){server.closeAllConnections?.();await close(server)}
@@ -171,6 +174,7 @@ async function run(mode){
  console.log('Current QA report: '+path.join(dir,'results.json'));
  console.log(report.status+' '+JSON.stringify(report.counts));
  if(report.status!=='PASS')process.exitCode=1;
+ return report;
 }
 async function main(){
  const mode=process.argv[2]||'--smoke';
@@ -191,4 +195,4 @@ async function main(){
  await run(mode);
 }
 if(require.main===module)main().catch(e=>{console.error('HOME BLOCKED: '+e.message);process.exitCode=1});
-module.exports={createStaticServer,statusReport,modes,execute,stageProduct};
+module.exports={run,createStaticServer,statusReport,modes,execute,stageProduct};

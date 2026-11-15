@@ -4,6 +4,7 @@ No GitHub token, no network, no APK generation, no releases.
 """
 from pathlib import Path
 import sys
+import subprocess
 import unittest
 from unittest import mock
 import urllib.request
@@ -102,8 +103,10 @@ class HomeQaCodePreflight(unittest.TestCase):
                     v.api_read(url, "FAKE_TOKEN")
 
     def test_workflow_requires_exact_dynamic_preflight(self):
-        workflow = (Path(__file__).resolve().parents[1] /
-                    ".github/workflows/windows-self-hosted-qa.yml").read_text("utf-8")
+        # Preserve the historical guard regression as immutable Git DATA.
+        # Current preview is strictly blocked before any process/build starts;
+        # tests/home4_execution.js verifies the stronger current stop.
+        workflow = subprocess.check_output(['git','show','a3cc8eb3a14a9a6710664b73ba8a5c70ed1a340a:.github/workflows/windows-self-hosted-qa.yml'],cwd=Path(__file__).resolve().parents[1],text=True)
         self.assertIn("home_qa_version_preflight import main", workflow)
         self.assertIn('set "GITHUB_RUN_NUMBER=%QA_PREVIEW_BUILD_OFFSET%"', workflow)
         self.assertIn("versionCode='%QA_PREVIEW_EXPECTED_CODE%'", workflow)

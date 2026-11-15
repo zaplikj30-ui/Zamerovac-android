@@ -1,6 +1,6 @@
 {
   "schema": 1,
-  "sourceSha": "ae3b4df53c25557f28b4a25ccb65adc2abdff639",
+  "sourceSha": "c7e71327d69bfe87f622ff6293422e2e15332a11",
   "evidenceSha": "2a70f8c34f9ef29bb84206d437b241b4cee52cab",
   "cases": {
     "legacy-conflict-persistence": [
@@ -192,7 +192,7 @@
     "tools/e2e/gallery-readability.cjs": "88745ebb9d8384c37217eff0422590ca741e1410d04ea34dd27c0231b74b6dff",
     "tools/e2e/gallery-state.cjs": "81cad91e7a19ab40a7dfefc98657e9597f47341143c915726df5f5ea0d8bf776",
     "tools/e2e/gallery-visual.cjs": "7cae12df961d4c8e74d22be9491bf3cb4885009c1f0e23f2fca0ef2c16a84b7a",
-    "tools/e2e/harness.cjs": "519443c6493f173677eab700a8de4a134084d72d548d54470f0985ce1a75e809",
+    "tools/e2e/harness.cjs": "139d4a69dfd917501857460d355adc81119ad854f4afb21771217ffff6aafa4b",
     "tools/e2e/help.cjs": "554e4d95e373c50cf790ea7bc8b669932528b462d57d181359babe95898400a0",
     "tools/e2e/interactions.cjs": "b62459c56fbee1b1110cec5fe3dd236762b3c94d8b311b4f6bde18bc694793ed",
     "tools/e2e/latency.cjs": "1a8c5cee05ee44b9a57bdd7012166d62854cacddde24c2be69cbad578148e57b",
@@ -213,5 +213,8 @@
     "tools/e2e/workflows.cjs": "cd6106af94ed509eefcac63e516f78781c8ec089b2f2f5d614d0c0c028b6e034",
     "tools/e2e/zoom-grid.cjs": "4044d8430e2d9b1f361da54e024e9d4189de637419f7d44b912292ab8326baed",
     "app/src/main/java/cz/zamerovac/app/WebContentPolicy.java": "cd98309dccdd16dfc45f17318d0e5ea25d8b5322d7b4abcda015c95b4023a415"
+  },
+  "sourceDependencies": {
+    "tools/e2e/sandbox.cjs": "a4d8f2d0c02879d4d02cd05fee5eebfe6532284b83ac8eb88fc492bf3a1d16bf"
   }
 }

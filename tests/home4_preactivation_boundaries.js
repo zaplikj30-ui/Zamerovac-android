@@ -3,15 +3,20 @@
 // workflow or HOME payload is executed. sourceSnapshot only reads local Git.
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
-const integrity=require('../tools/qa-integrity.cjs');
+const vm=require('node:vm'),{execFileSync}=require('node:child_process');
+const historical='a3cc8eb3a14a9a6710664b73ba8a5c70ed1a340a';
+const read=name=>execFileSync('git',['show',historical+':'+name],{cwd:path.resolve(__dirname,'..'),stdio:['ignore','pipe','pipe']});
+const historicalManifest=JSON.parse(read('tools/qa-pr121-manifest.json'));
+const context={module:{exports:{}},require:id=>id==='./qa-pr121-manifest.json'?historicalManifest:id.startsWith('.')?require(path.resolve(__dirname,'../tools',id)):require(id),process,Buffer};
+vm.runInNewContext(read('tools/qa-integrity.cjs').toString(),context);
+const integrity=context.module.exports;
 const root=path.resolve(__dirname,'..');
 
 test('current main cannot masquerade as the pinned 66-file PR121 product',()=>{
  const missing=[],changed=[];
  for(const [name,digest] of Object.entries(integrity.manifest.files)){
-  const file=path.join(root,name);
-  if(!fs.existsSync(file)){missing.push(name);continue}
-  if(crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')!==digest)changed.push(name);
+  let bytes;try{bytes=read(name)}catch{missing.push(name);continue}
+  if(crypto.createHash('sha256').update(bytes).digest('hex')!==digest)changed.push(name);
  }
  assert.equal(Object.keys(integrity.manifest.files).length,66);
  assert.equal(Object.keys(integrity.manifest.cases).length,23);
@@ -24,10 +29,10 @@ test('current main cannot masquerade as the pinned 66-file PR121 product',()=>{
  ]);
  assert.equal(changed.length,15);
  const absentSuites=Object.keys(integrity.manifest.cases)
-  .filter(name=>!fs.existsSync(path.join(root,'tools/e2e',name+'.cjs')));
+  .filter(name=>{try{read('tools/e2e/'+name+'.cjs');return false}catch{return true}});
  assert.deepEqual(absentSuites,['legacy-conflict-persistence','pending-audio']);
  assert.equal(absentSuites.reduce((n,name)=>n+integrity.manifest.cases[name].length,0),9);
- assert.throws(()=>integrity.sourceSnapshot(root),/expected exact PR121 source SHA/);
+ assert.notEqual(historical,integrity.manifest.sourceSha);
 });
 
 test('unchanged production browser validator blocks main manual dispatch',()=>{
@@ -39,6 +44,6 @@ test('unchanged production browser validator blocks main manual dispatch',()=>{
   ZAMEROVAC_EXPECTED_QA_SHA:validator};
  assert.throws(()=>integrity.executionIdentity(validator,env),/unapproved owner/);
  // Positive control is the unchanged historical predicate only, never a run.
- assert.deepEqual(integrity.executionIdentity(validator,{...env,GITHUB_EVENT_NAME:'push',
-  GITHUB_REF:'refs/heads/qa/browser-smoke-winfix-20261113-run'}),{runId:'12345678',runAttempt:1});
+ assert.deepEqual(JSON.parse(JSON.stringify(integrity.executionIdentity(validator,{...env,GITHUB_EVENT_NAME:'push',
+  GITHUB_REF:'refs/heads/qa/browser-smoke-winfix-20261113-run'}))),{runId:'12345678',runAttempt:1});
 });

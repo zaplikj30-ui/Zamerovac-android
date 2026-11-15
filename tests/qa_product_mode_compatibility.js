@@ -5,7 +5,7 @@ const {execFileSync}=require('node:child_process');
 const integrity=require('../tools/qa-integrity.cjs'),runner=require('../tools/local-browser-qa.cjs');
 const {profiles}=require('../tools/qa-browser-identity.cjs');
 test('all PR121 product suite modes survive the security integration',()=>{
- const source=execFileSync('git',['show',integrity.manifest.sourceSha+':tools/local-browser-qa.cjs'],{cwd:path.resolve(__dirname,'..'),encoding:'utf8'});
+ const source=execFileSync('git',['show','ae3b4df53c25557f28b4a25ccb65adc2abdff639:tools/local-browser-qa.cjs'],{cwd:path.resolve(__dirname,'..'),encoding:'utf8'});
  for(const mode of ['--all','--smoke','--legacy-conflict']){
   const match=new RegExp("'"+mode+"': \\[([\\s\\S]*?)\\]").exec(source);assert(match,mode);
   const expected=Array.from(match[1].matchAll(/'([^']+)'/g),x=>x[1]);

@@ -22,10 +22,12 @@ test('integration preserves all 23 PR121 suites',()=>assert.equal(runner.modes['
 test('Actions identity preserves owner, exact ref/SHA and first-attempt protections',()=>{
  const sha='b'.repeat(40),env={GITHUB_ACTIONS:'true',GITHUB_REPOSITORY:'zaplikj30-ui/Zamerovac-android',
   GITHUB_ACTOR:'zaplikj30-ui',GITHUB_TRIGGERING_ACTOR:'zaplikj30-ui',GITHUB_RUN_ATTEMPT:'1',GITHUB_RUN_ID:'123',
-  GITHUB_EVENT_NAME:'push',GITHUB_REF:'refs/heads/qa/browser-smoke-winfix-20261113-run',ZAMEROVAC_EXPECTED_QA_SHA:sha};
+  GITHUB_EVENT_NAME:'workflow_dispatch',GITHUB_REF:'refs/heads/main',ZAMEROVAC_EXPECTED_QA_SHA:sha,
+  GITHUB_SHA:'c'.repeat(40),HOME4_APPROVED_MAIN_SHA:'c'.repeat(40),HOME4_SOURCE_SHA:integrity.manifest.sourceSha,HOME4_VALIDATOR_SHA:sha};
  assert.deepEqual(integrity.executionIdentity(sha,env),{runId:'123',runAttempt:1});
  for(const change of [{GITHUB_ACTOR:'other'},{GITHUB_TRIGGERING_ACTOR:'other'},
-  {GITHUB_RUN_ATTEMPT:'2'},{GITHUB_RUN_ID:undefined},{GITHUB_EVENT_NAME:'pull_request'},
+  {GITHUB_RUN_ATTEMPT:'2'},{GITHUB_RUN_ID:undefined},{GITHUB_EVENT_NAME:'pull_request'},{GITHUB_EVENT_NAME:'push'},
+  {HOME4_SOURCE_SHA:'d'.repeat(40)},{HOME4_VALIDATOR_SHA:'d'.repeat(40)},{HOME4_APPROVED_MAIN_SHA:'d'.repeat(40)},
   {GITHUB_REF:'refs/heads/qa/other'},{GITHUB_REPOSITORY:'other/fork'},{ZAMEROVAC_EXPECTED_QA_SHA:'c'.repeat(40)}])
   assert.throws(()=>integrity.executionIdentity(sha,{...env,...change}));
 });

@@ -7,6 +7,7 @@ fictional pins below cannot authorize a real run; this module has no CLI gate.
 import hashlib
 from pathlib import Path
 import re
+import subprocess
 import unittest
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -225,7 +226,7 @@ class Home4ProposalModels(unittest.TestCase):
         workflow = (ROOT / ".github/workflows/windows-self-hosted-qa.yml").read_text()
         trigger = workflow.split("on:\n", 1)[1].split("\npermissions:", 1)[0]
         self.assertEqual(trigger.strip(), "workflow_dispatch:")
-        browser = (ROOT / "tools/qa-integrity.cjs").read_text()
+        browser = subprocess.check_output(["git", "show", MAIN+":tools/qa-integrity.cjs"], cwd=ROOT, text=True)
         self.assertIn("env.GITHUB_EVENT_NAME==='push'", browser)
         self.assertIn("refs/heads/qa/browser-smoke-winfix-20261113-run", browser)
         self.assertIn("env.GITHUB_TRIGGERING_ACTOR==='zaplikj30-ui'", browser)

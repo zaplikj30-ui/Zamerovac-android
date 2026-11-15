@@ -1,0 +1,11 @@
+// Trusted validator input, supplied with --init-script. Never installs a plugin.
+if (!gradle.startParameter.offline) throw new GradleException('HOME4_BLOCKED_OFFLINE_REQUIRED')
+def dependencies = System.getenv('HOME4_ROBOLECTRIC_INPUTS')
+if (!dependencies || !new File(dependencies).isDirectory()) throw new GradleException('HOME4_BLOCKED_ROBOLECTRIC_CACHE')
+allprojects {
+    tasks.withType(Test).configureEach {
+        systemProperty 'robolectric.offline', 'true'
+        systemProperty 'robolectric.dependency.dir', dependencies
+        maxParallelForks = 1
+    }
+}

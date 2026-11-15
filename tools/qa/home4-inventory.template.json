@@ -1,0 +1,79 @@
+{
+  "schema": 1,
+  "verified": false,
+  "platform": "win32",
+  "dependencyNetwork": "forbidden",
+  "privateRoot": null,
+  "wsl": {
+    "distribution": "Zamerovac-Ubuntu-QA",
+    "user": null,
+    "uid": null,
+    "privateRoot": null,
+    "python": null,
+    "driveMap": {},
+    "containmentEvidence": null,
+    "diskEvidence": null
+  },
+  "components": {
+    "node": {
+      "root": null,
+      "entry": "node.exe",
+      "version": null,
+      "files": {}
+    },
+    "python": {
+      "root": "C:\\actions-runner\\tools\\Python313",
+      "entry": "python.exe",
+      "version": null,
+      "files": {}
+    },
+    "git": {
+      "root": "C:\\actions-runner\\tools\\MinGit-2.56.0.4",
+      "entry": "cmd/git.exe",
+      "version": null,
+      "files": {}
+    },
+    "chromium": {
+      "root": "C:\\actions-runner\\tools\\ms-playwright\\chromium-1234\\chrome-win64",
+      "entry": "chrome.exe",
+      "version": null,
+      "files": {
+        "chrome.exe": "409805a16d6416087e6b2f778df1cf8f7bbb267d6b99f6b5bb0a618eace234f2"
+      }
+    },
+    "playwright": {
+      "root": null,
+      "version": "1.62.1",
+      "files": {}
+    },
+    "jdk": {
+      "root": null,
+      "version": null,
+      "files": {}
+    },
+    "wsl": {
+      "root": null,
+      "entry": "wsl.exe",
+      "version": null,
+      "files": {}
+    }
+  },
+  "linux": {
+    "verified": false,
+    "components": {},
+    "gradleCache": {
+      "root": null,
+      "files": {}
+    },
+    "robolectricInputs": null,
+    "schema": 1,
+    "platform": "linux",
+    "dependencyNetwork": "forbidden"
+  },
+  "readOnlyTransfers": [
+    "fixed-git-source-objects",
+    "fixed-actions-code"
+  ],
+  "releaseProof": null,
+  "diskEvidence": null
+}

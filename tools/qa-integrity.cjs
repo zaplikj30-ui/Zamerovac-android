@@ -13,14 +13,16 @@ function executionIdentity(validatorSha,env=process.env){
  if(env.GITHUB_ACTIONS!=='true')return {runId:null,runAttempt:null};
  demand(env.GITHUB_REPOSITORY==='zaplikj30-ui/Zamerovac-android'&&env.GITHUB_ACTOR==='zaplikj30-ui'&&
   env.GITHUB_TRIGGERING_ACTOR==='zaplikj30-ui'&&env.GITHUB_RUN_ATTEMPT==='1'&&
-  env.GITHUB_EVENT_NAME==='push'&&env.GITHUB_REF==='refs/heads/qa/browser-smoke-winfix-20261113-run'&&
+  env.GITHUB_EVENT_NAME==='workflow_dispatch'&&env.GITHUB_REF==='refs/heads/main'&&
+  /^[a-f0-9]{40}$/.test(env.GITHUB_SHA||'')&&env.HOME4_APPROVED_MAIN_SHA===env.GITHUB_SHA&&
+  env.HOME4_SOURCE_SHA===manifest.sourceSha&&env.HOME4_VALIDATOR_SHA===validatorSha&&
   env.ZAMEROVAC_EXPECTED_QA_SHA===validatorSha&&/^[1-9][0-9]{0,19}$/.test(env.GITHUB_RUN_ID||''),
   'unapproved owner/ref/SHA/run attempt; no rerun or arbitrary PR/fork');
  return {runId:env.GITHUB_RUN_ID,runAttempt:1};
 }
 function sourceSnapshot(root){
  const git=args=>execFileSync('git',args,{cwd:root,encoding:'utf8',timeout:15000,windowsHide:true});
- demand(git(['rev-parse','HEAD']).trim()===manifest.sourceSha,'expected exact PR121 source SHA');
+ demand(git(['rev-parse','HEAD']).trim()===manifest.sourceSha,'expected exact integrated source SHA');
  demand(!git(['status','--porcelain','--untracked-files=all']).trim(),'source checkout must be clean');
  const found=[];
  function walk(relative){
@@ -31,9 +33,9 @@ function sourceSnapshot(root){
   }
  }
  for(const name of ['app/src/main/assets','tools/e2e'])walk(name);
- const expected=Object.keys(manifest.files).filter(n=>n.startsWith('app/src/main/assets/')||n.startsWith('tools/e2e/'));
+ const expected=Object.keys({...manifest.files,...manifest.sourceDependencies}).filter(n=>n.startsWith('app/src/main/assets/')||n.startsWith('tools/e2e/'));
  demand(JSON.stringify(found.sort())===JSON.stringify(expected.sort()),'extra/missing source file (including ignored files)');
- for(const [name,expected] of Object.entries(manifest.files)){
+ for(const [name,expected] of Object.entries({...manifest.files,...manifest.sourceDependencies})){
   const file=path.join(root,name),stat=fs.lstatSync(file);
   demand(stat.isFile()&&!stat.isSymbolicLink(),'source file redirected: '+name);
   demand(crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')===expected,'source bytes changed: '+name);

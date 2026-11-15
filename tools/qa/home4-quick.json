@@ -1,0 +1,1017 @@
+{
+  "schema": 1,
+  "node": {
+    "tests/annotation_geometry_contract.js": {
+      "cases": [
+        "tests/annotation_geometry_contract.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/annotation_grip_geometry.js": {
+      "cases": [
+        "tests/annotation_grip_geometry.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/annotation_history_contract.js": {
+      "cases": [
+        "tests/annotation_history_contract.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/annotation_history_save_failure.js": {
+      "cases": [
+        "tests/annotation_history_save_failure.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/annotation_hit_geometry.js": {
+      "cases": [
+        "tests/annotation_hit_geometry.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/annotation_pinch_contract.js": {
+      "cases": [
+        "tests/annotation_pinch_contract.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/annotation_resize_contract.js": {
+      "cases": [
+        "tests/annotation_resize_contract.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/annotation_selection_contract.js": {
+      "cases": [
+        "tests/annotation_selection_contract.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/annotation_snap_contract.js": {
+      "cases": [
+        "tests/annotation_snap_contract.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/annotation_translation_contract.js": {
+      "cases": [
+        "tests/annotation_translation_contract.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/annotation_viewport_contract.js": {
+      "cases": [
+        "tests/annotation_viewport_contract.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/audit39_hierarchy.js": {
+      "cases": [
+        "tests/audit39_hierarchy.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/bosch_history_devices.js": {
+      "cases": [
+        "tests/bosch_history_devices.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/causal_app_clock.js": {
+      "cases": [
+        "tests/causal_app_clock.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/dimension_drag_interaction.js": {
+      "cases": [
+        "tests/dimension_drag_interaction.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/e2e_harness_git_preflight.js": {
+      "cases": [
+        "tests/e2e_harness_git_preflight.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/editor_full_tools.js": {
+      "cases": [
+        "tests/editor_full_tools.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/experimental_and_precision.js": {
+      "cases": [
+        "tests/experimental_and_precision.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/extra_toolbar_interaction.js": {
+      "cases": [
+        "tests/extra_toolbar_interaction.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/feedback_inflight_save.js": {
+      "cases": [
+        "tests/feedback_inflight_save.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/feedback_raster_reuse.js": {
+      "cases": [
+        "tests/feedback_raster_reuse.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/feedback_report_structure.js": {
+      "cases": [
+        "tests/feedback_report_structure.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/geometry_drag_28.js": {
+      "cases": [
+        "tests/geometry_drag_28.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/gesture_history_undo_redo.js": {
+      "cases": [
+        "tests/gesture_history_undo_redo.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/help_guide.js": {
+      "cases": [
+        "tests/help_guide.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/home4_execution.js": {
+      "cases": [
+        "HOME4 structured reporter accepts complete supported Node events",
+        "HOME4 missing duplicate or forged summary never completes",
+        "HOME4 structured FAIL SKIP TODO and nesting cannot become required PASS",
+        "HOME4 required names reject missing extra duplicate SKIP and FAIL",
+        "HOME4 separate source validator event pins require owner main manual attempt one",
+        "HOME4 I88 does not authorize preview or release",
+        "HOME4 admission normal known cleanup permits continuation and preserves neighbour bytes",
+        "HOME4 unknown admission blocks every later start without retry or auto reset",
+        "HOME4 changed admission identity cannot be released",
+        "HOME4 platform and unavailable WSL proof block before spawning",
+        "HOME4 four jobs stay inert manual-only offline with immutable source validator pins",
+        "HOME4 actual client rejects contradictory PASS and malformed protocol without retry or PID kill"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/home4_preactivation_boundaries.js": {
+      "cases": [
+        "current main cannot masquerade as the pinned 66-file PR121 product",
+        "unchanged production browser validator blocks main manual dispatch"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/home_qa_integrity.js": {
+      "cases": [
+        "integration preserves all 23 PR121 suites",
+        "Actions identity preserves owner, exact ref/SHA and first-attempt protections",
+        "offline browser bootstrap is pinned and rejects missing isolation, cache, identity and artifact guards",
+        "21 exit-zero suite records without named scenarios cannot be full PASS",
+        "a case filter cannot be labelled complete PASS",
+        "untrusted existing executable is rejected before any launch",
+        "full positive control is exactly 23/96; missing, extra, renamed, duplicated and stale evidence blocks",
+        "Windows namespaced canonical paths keep strict target identity",
+        "pin verifier rejects changed bytes, wrong paths, symlinks and hardlinks",
+        "canonical mismatch reports redacted alias, API and file-identity evidence without permitting it",
+        "Windows equivalent canonical spellings pass all binary checks; changed target and reparse points block (API model)",
+        "real binary mutation during hashing and name replacement fail closed",
+        "junction fixture rejects directory redirection without Windows symlink privilege",
+        "real product registration and bytes agree with all 96 pinned scenario identities",
+        "separate product checkout is unchanged by QA staging; actual byte tampering blocks"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": [
+        "junction fixture rejects directory redirection without Windows symlink privilege"
+      ]
+    },
+    "tests/home_sandbox_security.js": {
+      "cases": [
+        "pinned Playwright launch explicitly enables its read-only command-line diagnostics",
+        "harness explicitly enables sandbox before any application case",
+        "launch policy rejects disabled sandbox, flags and malformed options before spawn",
+        "launch error blocks once, no retry or downgrade",
+        "unverifiable or disabled runtime sandbox closes browser and blocks",
+        "positive fixtures keep Linux and Windows evidence separate",
+        "runner reports sandbox failure as BLOCKED and cannot count it as PASS",
+        "Windows policy diagnostics require live renderer IDs, Lockdown and Untrusted integrity",
+        "CDP/diagnostic failure closes the browser and never invokes application body",
+        "stalled diagnostics are bounded, close browser and return BLOCKED",
+        "supervised worker checkpoints launch/diagnostic failures without unsafe browser execution",
+        "suite exit 0 cannot pass without a full fresh named report",
+        "hung browser.close is bounded and remains BLOCKED"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/inset_audio_customer_export.js": {
+      "cases": [
+        "tests/inset_audio_customer_export.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/inset_audio_marker_geometry.js": {
+      "cases": [
+        "tests/inset_audio_marker_geometry.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/inset_workspace_interaction.js": {
+      "cases": [
+        "tests/inset_workspace_interaction.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/laser_auto_interaction.js": {
+      "cases": [
+        "tests/laser_auto_interaction.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/laser_precision_regression.js": {
+      "cases": [
+        "tests/laser_precision_regression.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/laser_tap_interaction.js": {
+      "cases": [
+        "tests/laser_tap_interaction.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/local_browser_qa_contract.js": {
+      "cases": [
+        "tests/local_browser_qa_contract.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/media_import_ownership.js": {
+      "cases": [
+        "tests/media_import_ownership.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/media_import_transaction_faults.js": {
+      "cases": [
+        "tests/media_import_transaction_faults.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/menu_dismiss_interaction.js": {
+      "cases": [
+        "tests/menu_dismiss_interaction.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/new_28_regressions.js": {
+      "cases": [
+        "tests/new_28_regressions.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/new_record_save_failure.js": {
+      "cases": [
+        "tests/new_record_save_failure.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/note_leader_interaction.js": {
+      "cases": [
+        "tests/note_leader_interaction.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/post17_regressions.js": {
+      "cases": [
+        "tests/post17_regressions.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/qa34_client_gate_integration.js": {
+      "cases": [
+        "real client->gate: uncontested owner PASS is byte-exact",
+        "real client->gate: authenticated PASS+firstFailure fails closed",
+        "real client->gate: authenticated PASS+cleanupErrorType fails closed",
+        "real client->gate: authenticated PASS+diagnostic fails closed",
+        "real client->gate: authenticated PASS+private traceback fails closed",
+        "real client->gate: wrong protocol token fails closed",
+        "real client->gate: wrong platform fails closed",
+        "real client->gate: owner exit mismatch fails closed",
+        "real client->gate: cleanup evidence not zero fails closed"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/qa36_soft_timeout.js": {
+      "cases": [
+        "soft timeout requests cooperative cancellation, never kills owner in CreateProcessW",
+        "heartbeat IPC write exception cannot crash the gate or become PASS"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/qa41_diag.js": {
+      "cases": [
+        "safe failure allowlists type and API; no arbitrary fields leak",
+        "default OFF preserves original PASS bytes (no diagnostic line)",
+        "default OFF failure has no private debug fields",
+        "enabled preserves first Win32 API/code/type despite secondary gate read error",
+        "spoofed token refuses forged API detail and never PASS",
+        "unverified job cleanup never results in PASS",
+        "forged PASS with diagnostic is BLOCKED",
+        "gate read error is FIRST when owner has no first failure",
+        "arbitrary injected native code and type do not escape whitelist",
+        "contradictory authenticated PASS with a first failure is BLOCKED"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/qa_binary_fixture_paths.js": {
+      "cases": [
+        "pin verifier rejects changed bytes, wrong paths, symlinks and hardlinks (portable/native alias model)",
+        "real binary mutation during hashing and name replacement fail closed (portable/native alias model)",
+        "same-file short spelling remains BLOCKED before open in the production verifier"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/qa_fixture_attempts.js": {
+      "cases": [
+        "positive: first attempt PASS prints exactly one original success marker",
+        "one safe early BLOCKED then PASS: original failure retained and FINAL never clean PASS",
+        "3 sequential safe failures hard cap: no fourth attempt",
+        "unverified cleanup OR surviving owned process stops immediately",
+        "timeout with proven cleanup still STOP; timeout with uncertain cleanup is never retried",
+        "interrupt / cancellation before first and during first stops next",
+        "invalid/missing contradictory PASS never accepted or retried",
+        "no raw sensitive metadata, arbitrary report is rebuilt from known booleans",
+        "deadline prevents new attempt without allowing background or concurrency",
+        "SEC01 real production diagnostic whitelist: logical code null, native code5 retained",
+        "R44-01 sequencer ignores forged retry eligibility after native creation error",
+        "SEC02 a real TAP failure with verified cleanup must not trigger another attempt",
+        "QA130-TIME monotonic elapsed after each return: 95s early BLOCKED prevents retry"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/qa_fixture_process_scope.js": {
+      "cases": [
+        "real gate owns and cleans detached descendants: normal",
+        "real gate owns and cleans detached descendants: fail",
+        "real gate owns and cleans detached descendants: timeout",
+        "real gate owns and cleans detached descendants: overflow",
+        "real gate owns and cleans detached descendants: cancel",
+        "real gate owns and cleans detached descendants: parent-eof",
+        "real gate owns and cleans detached descendants: cleanup-noop",
+        "supervisor output limit cannot be cancelled and then reported as PASS",
+        "PASS is withheld unless owner, zero descendants and temporary-file cleanup all succeed",
+        "public diagnostic identifies the early layer and does not overwrite a native failure with verdict-read",
+        "public PASS remains unchanged with null or absent owner diagnostics",
+        "public gate blocks an otherwise valid PASS verdict carrying owner error diagnostics"
+      ],
+      "windowsNotRun": [
+        "real gate owns and cleans detached descendants: normal",
+        "real gate owns and cleans detached descendants: fail",
+        "real gate owns and cleans detached descendants: timeout",
+        "real gate owns and cleans detached descendants: overflow",
+        "real gate owns and cleans detached descendants: cancel",
+        "real gate owns and cleans detached descendants: parent-eof",
+        "real gate owns and cleans detached descendants: cleanup-noop"
+      ],
+      "linuxNotRun": []
+    },
+    "tests/qa_fixture_tap_gate.js": {
+      "cases": [
+        "fixed whitelist agrees with all 15 reviewed fixture identities",
+        "complete LF, CRLF, mixed newlines and UTF-8 BOM evidence passes",
+        "every required summary key must occur exactly once with the correct integer",
+        "per-key diagnostics distinguish missing, duplicate, malformed and wrong count evidence",
+        "15 ok lines alone cannot replace summaries, plan or actual child success",
+        "missing, extra, duplicate, renamed, reordered, failing and skipped cases block",
+        "bailout, cancelled/todo suites, hidden summaries and truncated diagnostics block",
+        "invalid encodings, NUL, oversized output and unsupported text fail closed",
+        "blocked output contains only constant labels, whitelisted names and booleans",
+        "real Node TAP child pass, fail, skip and todo evidence is classified correctly",
+        "owned worker captures the actual exit code and invokes only the pinned 15-case suite without a shell",
+        "retained Windows 15-ok evidence without the original summaries remains BLOCKED",
+        "CMD job adapter propagates zero only, including negative process and missing-node codes (model)",
+        "real CLI launches Node and passes or blocks the whole synthetic checkout, then job adapter agrees"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/qa_gate_3try_integration.js": {
+      "cases": [
+        "SEC01 actual imported Win32 whitelist cannot leak numeric code on logical stages",
+        "SEC02 pre-test log-open BLOCKED with owner zero-process proof may retry, but never mask old BLOCKED",
+        "R44-01 native CreateProcessW failure stops despite Job zero-process report",
+        "SEC02 real runner TAP failure with owner clean MUST STOP at one attempt",
+        "SEC02 owner cleanup missing STOP, never start next attempt",
+        "QA130-TIME actual imported modules: 95s modeled wall time stops, no second attempt"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/qa_integration_boundaries.js": {
+      "cases": [
+        "Windows automatic client suite registers only explicit skips and never launches a process",
+        "unguarded native registration is rejected without running its fault payload"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/qa_process_client.js": {
+      "cases": [
+        "actual runner process client: normal",
+        "actual runner process client: timeout",
+        "actual runner process client: cancel"
+      ],
+      "windowsNotRun": [
+        "actual runner process client: normal",
+        "actual runner process client: timeout",
+        "actual runner process client: cancel"
+      ],
+      "linuxNotRun": []
+    },
+    "tests/qa_process_diagnostics.js": {
+      "cases": [
+        "diagnostic whitelist emits only a stage and a genuine typed Win32 code",
+        "a failed owner preserves a structured native stage/code without accepting PASS or parsing stderr",
+        "an otherwise valid owner PASS accepts null or absent diagnostics",
+        "an otherwise valid owner PASS with any non-null diagnostic is BLOCKED",
+        "the whole new launch chain exposes an injected owner failure that the previous public gate hid"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/qa_process_stop_gate.js": {
+      "cases": [
+        "known command completion and ordinary failure allow the remaining commands",
+        "blocked child status stops all subsequent Node/Python/Gradle launches without retry",
+        "preexisting or unreadable quarantine blocks before even Python discovery",
+        "Python discovery propagates blocked status without fallback or native launch",
+        "exit zero with a retained marker cannot pass or launch the next command",
+        "blocked diagnostic write failure still stops and never prints private error"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/qa_product_mode_compatibility.js": {
+      "cases": [
+        "all PR121 product suite modes survive the security integration",
+        "successful legacy diagnostic stays 1/1 and cannot be accepted as full 23/96 evidence"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/qa_reference_bootstrap.js": {
+      "cases": [
+        "reviewed original bootstrap is available as immutable data, without an active workflow",
+        "Git input is fixed, bounded, no shell or network; approved data passes",
+        "missing object or Git error fails closed once without leaking the underlying error",
+        "replaced reference bytes never become accepted test evidence"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/refactor_end_to_end_undo.js": {
+      "cases": [
+        "tests/refactor_end_to_end_undo.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/refactor_shape_resize_undo.js": {
+      "cases": [
+        "tests/refactor_shape_resize_undo.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/release_history.js": {
+      "cases": [
+        "tests/release_history.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/revision_vector.js": {
+      "cases": [
+        "tests/revision_vector.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/rich_note_attachment_state.js": {
+      "cases": [
+        "tests/rich_note_attachment_state.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/save_acknowledgement.js": {
+      "cases": [
+        "tests/save_acknowledgement.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/save_blocked_load_regression.js": {
+      "cases": [
+        "tests/save_blocked_load_regression.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/save_cas_conflict_guard.js": {
+      "cases": [
+        "tests/save_cas_conflict_guard.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/save_cas_missing_database.js": {
+      "cases": [
+        "tests/save_cas_missing_database.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/save_cas_recovery_integrity.js": {
+      "cases": [
+        "tests/save_cas_recovery_integrity.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/symbol_search_interaction.js": {
+      "cases": [
+        "tests/symbol_search_interaction.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/sync_canonical.js": {
+      "cases": [
+        "tests/sync_canonical.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/sync_conflict_bridge.js": {
+      "cases": [
+        "tests/sync_conflict_bridge.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/sync_protocol_v2.js": {
+      "cases": [
+        "tests/sync_protocol_v2.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/trash_restore_save_confirmation.js": {
+      "cases": [
+        "tests/trash_restore_save_confirmation.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/trash_ui_interaction.js": {
+      "cases": [
+        "tests/trash_ui_interaction.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    },
+    "tests/versioning.js": {
+      "cases": [
+        "tests/versioning.js"
+      ],
+      "windowsNotRun": [],
+      "linuxNotRun": []
+    }
+  },
+  "python": {
+    "cases": [
+      "test_address_and_icons.PhotoAddressAndIconsTest.test_address_script_loaded_and_valid",
+      "test_address_and_icons.PhotoAddressAndIconsTest.test_manually_confirmed_address_is_preserved",
+      "test_address_and_icons.PhotoAddressAndIconsTest.test_ruian_only_looks_at_real_addresses",
+      "test_address_and_icons.PhotoAddressAndIconsTest.test_rural_house_number_not_discarded_when_street_missing",
+      "test_address_and_icons.PhotoAddressAndIconsTest.test_svg_icons_not_placeholder_characters",
+      "test_address_map_link.AddressMapLinkTest.test_valid_and_invalid_coordinates",
+      "test_bosch_ble.BoschBleTests.test_binary_distance_frame",
+      "test_bosch_ble.BoschBleTests.test_meter_history_separate_button_and_long_press",
+      "test_bosch_ble.BoschBleTests.test_meter_identity_is_private_and_persistent",
+      "test_bosch_ble.BoschBleTests.test_protocol_integration",
+      "test_ci_cloud_release_gate.CloudReleaseSafetyGateTest.test_cloud_is_manual_only",
+      "test_ci_cloud_release_gate.CloudReleaseSafetyGateTest.test_no_stale_fixed_release_notes",
+      "test_ci_cloud_release_gate.CloudReleaseSafetyGateTest.test_owner_main_and_two_explicit_approvals",
+      "test_ci_cloud_release_gate.CloudReleaseSafetyGateTest.test_preflight_checks_old_package_before_expensive_build",
+      "test_ci_cloud_release_gate.CloudReleaseSafetyGateTest.test_release_race_stops_publication",
+      "test_ci_cloud_release_gate.CloudReleaseSafetyGateTest.test_version_comes_from_published_apk_not_workflow_counter",
+      "test_diag41.Cases.test_cleanup_first_failure",
+      "test_diag41.Cases.test_create_preserves_win32_primary",
+      "test_diag41.Cases.test_default_off_no_metadata_no_private_trace",
+      "test_diag41.Cases.test_error_type_is_allowlisted",
+      "test_diag41.Cases.test_local_private_trace_file_permission_and_redacted_content",
+      "test_diag41.Cases.test_native_start_restore_failure_is_secondary_but_blocks_cleanup",
+      "test_diag41.Cases.test_only_scope_close_failure_is_primary_not_secondary",
+      "test_diag41.Cases.test_open_failure_preserved",
+      "test_diag41.Cases.test_primary_then_cleanup_then_browser_close_preserves_first_secondary",
+      "test_diag41.Cases.test_primary_then_cleanup_then_scope_close_preserves_first_secondary",
+      "test_diag41.Cases.test_private_trace_fails_closed_on_existing_symlink",
+      "test_diag41.Cases.test_private_trace_fails_closed_when_directory_is_public",
+      "test_diag41.Cases.test_private_trace_short_write_is_not_reported_as_success",
+      "test_diag41.Cases.test_private_trace_windows_does_not_assume_posix_mode_is_acl",
+      "test_diag41.Cases.test_secondary_cleanup_does_not_replace_first",
+      "test_dimension_selection.DimensionSelectionTests.test_other_selection_tools_remain",
+      "test_dimension_selection.DimensionSelectionTests.test_soft_outline_includes_line_terminal_ticks_and_arrows",
+      "test_dimension_selection.DimensionSelectionTests.test_visual_rings_are_translucent_and_independent_of_touch_target",
+      "test_dimension_selection.DimensionSelectionTests.test_white_selection_is_behind_yellow_line_not_drawn_over_it",
+      "test_editor_toolbar.EditorToolbarTests.test_current_tool_is_highlighted_with_accessible_state",
+      "test_editor_toolbar.EditorToolbarTests.test_existing_tools_and_repeat_mode_still_available",
+      "test_editor_toolbar.EditorToolbarTests.test_new_sketch_menu_uses_consistent_name_and_icon",
+      "test_editor_toolbar.EditorToolbarTests.test_style_button_is_pencil_and_ruler_not_dimension_shortcut",
+      "test_editor_toolbar.EditorToolbarTests.test_toolbar_extension_parses",
+      "test_editor_toolbar.EditorToolbarTests.test_tools_only_behind_plus",
+      "test_editor_toolbar.EditorToolbarTests.test_undo_and_redo_icons_are_exact_mirrors",
+      "test_gallery_camera_notes.PhotoNotesGalleryTests.test_back_persists_unsaved_photo_note",
+      "test_gallery_camera_notes.PhotoNotesGalleryTests.test_camera_cancellation_cleans_state",
+      "test_gallery_camera_notes.PhotoNotesGalleryTests.test_gallery_includes_outside_insets",
+      "test_home4_contract.Home4Contract.test_I88_exact_positive_preserves_raw_FAIL_and_blocks_release_mapping",
+      "test_home4_contract.Home4Contract.test_XML_exact_fresh_positive_and_stale_or_forged_summary_block",
+      "test_home4_contract.Home4Contract.test_XML_extra_file_and_DTD_block",
+      "test_home4_contract.Home4Contract.test_legacy_same_count_rename_counterexample_is_closed",
+      "test_home4_contract.Home4Contract.test_offline_missing_unverified_or_modified_cache_is_not_available",
+      "test_home4_contract.Home4Contract.test_owner_manual_main_first_attempt_and_precise_SHA",
+      "test_home4_contract.Home4Contract.test_partition_raw_exits_and_complete_registry_are_coupled",
+      "test_home4_contract.Home4Contract.test_quick_named_cases_and_required_zero_SKIP_FAIL",
+      "test_home4_contract.Home4Contract.test_real_file_aliases_and_source_tamper_block",
+      "test_home4_contract.Home4Contract.test_registry_missing_duplicate_renamed_critical_or_extra_is_blocked",
+      "test_home4_contract.Home4Contract.test_standard_Gradle_binary_data_is_not_XML_and_unknown_data_block",
+      "test_home4_contract.Home4Contract.test_wrong_assertion_type_message_PASS_SKIP_ERROR_and_third_FAIL_block",
+      "test_home4_preactivation_design.Home4ProposalModels.test_A_D_manual_exact_identity_positive_and_unresolved_pins",
+      "test_home4_preactivation_design.Home4ProposalModels.test_B_cache_bytes_missing_corrupt_extra_and_unapproved_hash",
+      "test_home4_preactivation_design.Home4ProposalModels.test_B_transfers_are_explicit_and_not_package_installs",
+      "test_home4_preactivation_design.Home4ProposalModels.test_C_WSL_fresh_tree_and_objects_not_just_HEAD",
+      "test_home4_preactivation_design.Home4ProposalModels.test_E_cleanup_unknown_timeout_cancel_and_budget_never_PASS",
+      "test_home4_preactivation_design.Home4ProposalModels.test_F_named_results_not_exit_code_only",
+      "test_home4_preactivation_design.Home4ProposalModels.test_G_513_synthetic_cases_exact_raw_FAIL_separate_acceptance",
+      "test_home4_preactivation_design.Home4ProposalModels.test_G_four_job_conclusions_do_not_replace_bound_evidence",
+      "test_home4_preactivation_design.Home4ProposalModels.test_static_runtime_remains_manual_and_original_browser_policy_is_not_activated",
+      "test_home4_wsl_adapter.WslAdapterModels.test_cancel_EOF_wrong_token_and_partial_channel_block_before_launch",
+      "test_home4_wsl_adapter.WslAdapterModels.test_copy_over_budget_and_changed_source_block_without_overwrite",
+      "test_home4_wsl_adapter.WslAdapterModels.test_fragmented_LF_CRLF_heartbeats_allow_preparation",
+      "test_home4_wsl_adapter.WslAdapterModels.test_fresh_manifest_copy_preserves_bytes_and_neighbour_and_rejects_reuse",
+      "test_home4_wsl_adapter.WslAdapterModels.test_mapped_paths_are_explicit_and_reject_unknown_drive_or_traversal",
+      "test_home_qa_gate.GateUnitTest.test_adversarial_comment_only_preflight_before_gradle_rejected",
+      "test_home_qa_gate.GateUnitTest.test_adversarial_extra_cloud_job_must_fail_closed",
+      "test_home_qa_gate.GateUnitTest.test_adversarial_fake_jdk_and_gradle_files_are_not_valid_versions",
+      "test_home_qa_gate.GateUnitTest.test_adversarial_inline_pr_trigger_and_unguarded_job_rejected",
+      "test_home_qa_gate.GateUnitTest.test_adversarial_powershell_wsl_python_alias_rejected",
+      "test_home_qa_gate.GateUnitTest.test_adversarial_python_script_triplequote_wsl_discovery_rejected",
+      "test_home_qa_gate.GateUnitTest.test_adversarial_wrong_executable_versions_rejected",
+      "test_home_qa_gate.GateUnitTest.test_all_home_workflows_never_run_node_python_unittest_inside_wsl",
+      "test_home_qa_gate.GateUnitTest.test_current_trusted_home_workflows_are_safe_from_wsl_node_discovery",
+      "test_home_qa_gate.GateUnitTest.test_owner_controlled_ci_positive",
+      "test_home_qa_gate.GateUnitTest.test_python_x_utf8_explicit_subprocess_remains_supported",
+      "test_home_qa_gate.GateUnitTest.test_render_explicit_output_file_utf8_without_pythonutf8",
+      "test_home_qa_gate.GateUnitTest.test_render_output_file_refuses_overwriting_existing_yaml",
+      "test_home_qa_gate.GateUnitTest.test_render_rejects_noncanonical_output_location",
+      "test_home_qa_gate.GateUnitTest.test_render_rejects_unsafe_branch_or_sha",
+      "test_home_qa_gate.GateUnitTest.test_render_stdout_redirect_cp1250_must_be_utf8_bytes",
+      "test_home_qa_gate.GateUnitTest.test_source_sha_exact_accept",
+      "test_home_qa_gate.GateUnitTest.test_strict_rejects_disagreement_of_source_and_expected",
+      "test_home_qa_gate.GateUnitTest.test_strict_rejects_missing_preflight_before_junit",
+      "test_home_qa_gate.GateUnitTest.test_strict_rejects_untrusted_checkout_ref",
+      "test_home_qa_gate.GateUnitTest.test_windows_node_missing_is_fail_fast",
+      "test_home_qa_gate.GateUnitTest.test_windows_python_and_node_positive",
+      "test_home_qa_gate.GateUnitTest.test_windows_python_missing_is_fail_fast",
+      "test_home_qa_gate.GateUnitTest.test_workflow_rejects_missing_wsl_node_before_gradle",
+      "test_home_qa_gate.GateUnitTest.test_workflow_rejects_unpinned_actions_cloud_and_credentials",
+      "test_home_qa_gate.GateUnitTest.test_workflow_rejects_wsl_direct_unittest",
+      "test_home_qa_gate.GateUnitTest.test_workflow_valid_windows_wsl_split",
+      "test_home_qa_gate.GateUnitTest.test_wrong_or_nonliteral_source_rejected",
+      "test_home_qa_gate.GateUnitTest.test_wsl_must_not_run_windows_python_node",
+      "test_home_qa_gate.GateUnitTest.test_wsl_native_missing_java_rejected_before_junit",
+      "test_home_qa_gate.GateUnitTest.test_wsl_native_valid_even_without_node",
+      "test_home_qa_gate.GateUnitTest.test_wsl_on_plain_linux_is_rejected",
+      "test_home_qa_version_preflight.HomeQaCodePreflight.test_api_only_correct_repo",
+      "test_home_qa_version_preflight.HomeQaCodePreflight.test_authorization_stripped_cross_origin",
+      "test_home_qa_version_preflight.HomeQaCodePreflight.test_current_and_future_release_codes_not_fixed",
+      "test_home_qa_version_preflight.HomeQaCodePreflight.test_downgrade_overflow_and_bad_semver_stop",
+      "test_home_qa_version_preflight.HomeQaCodePreflight.test_https_only_redirect",
+      "test_home_qa_version_preflight.HomeQaCodePreflight.test_missing_release_fails_closed",
+      "test_home_qa_version_preflight.HomeQaCodePreflight.test_prior_signature_package_and_version_code",
+      "test_home_qa_version_preflight.HomeQaCodePreflight.test_published_latest_ignores_draft",
+      "test_home_qa_version_preflight.HomeQaCodePreflight.test_version_name_mismatch_rejected",
+      "test_home_qa_version_preflight.HomeQaCodePreflight.test_workflow_requires_exact_dynamic_preflight",
+      "test_home_release_asset_redirect.ReleaseRedirectSecurity.test_cross_host_signed_asset_never_receives_token",
+      "test_home_release_asset_redirect.ReleaseRedirectSecurity.test_insecure_http_redirect_is_rejected",
+      "test_home_release_asset_redirect.ReleaseRedirectSecurity.test_other_https_host_also_never_receives_token",
+      "test_home_release_asset_redirect.ReleaseRedirectSecurity.test_plain_python_would_forward_fake_token",
+      "test_home_release_asset_redirect.ReleaseRedirectSecurity.test_request_rejects_non_api_origin_before_network",
+      "test_home_release_asset_redirect.ReleaseRedirectSecurity.test_request_rejects_wrong_repo_before_network",
+      "test_home_release_asset_redirect.ReleaseRedirectSecurity.test_same_origin_github_api_retains_token",
+      "test_home_release_asset_redirect.ReleaseRedirectSecurity.test_workflow_stays_owner_only_and_manual",
+      "test_home_release_publish_url_security.ReleasePublishingSecurity.test_all_authenticated_redirects_refused",
+      "test_home_release_publish_url_security.ReleasePublishingSecurity.test_exact_upload_endpoint_and_name_allowed",
+      "test_home_release_publish_url_security.ReleasePublishingSecurity.test_expected_release_api_calls_allowed",
+      "test_home_release_publish_url_security.ReleasePublishingSecurity.test_publish_uses_restrictive_opener_not_default_urlopen",
+      "test_home_release_publish_url_security.ReleasePublishingSecurity.test_upload_host_cannot_be_used_for_arbitrary_paths",
+      "test_home_release_publish_url_security.ReleasePublishingSecurity.test_workflow_requires_owner_main_and_approved_release",
+      "test_home_release_publish_url_security.ReleasePublishingSecurity.test_wrong_hosts_ports_paths_and_schemes_rejected",
+      "test_imagemeter_inset.ImageMeterInsetTests.test_detail_can_leave_photo_without_moving_note_anchor",
+      "test_imagemeter_inset.ImageMeterInsetTests.test_grips_show_resize_and_rotation_without_changing_hit_targets",
+      "test_imagemeter_inset.ImageMeterInsetTests.test_image_border_stays_yellow_when_selected",
+      "test_imagemeter_inset.ImageMeterInsetTests.test_new_inset_is_large_enough_and_existing_size_survives",
+      "test_imagemeter_inset.ImageMeterInsetTests.test_original_image_remains_editable",
+      "test_project.SourceSmokeTest.test_cloud_and_media_are_real_modules",
+      "test_project.SourceSmokeTest.test_dimension_endpoints_match_grips_and_loupe",
+      "test_project.SourceSmokeTest.test_editor_controls_present",
+      "test_project.SourceSmokeTest.test_excluded_tools",
+      "test_project.SourceSmokeTest.test_installed_version_visible_to_user",
+      "test_project.SourceSmokeTest.test_javascript_syntax",
+      "test_project.SourceSmokeTest.test_manifest_and_resources",
+      "test_project.SourceSmokeTest.test_photo_capture_time_and_readable_location",
+      "test_project.SourceSmokeTest.test_photo_thumbnails_and_menu",
+      "test_project.SourceSmokeTest.test_photo_waits_before_drawing_annotations",
+      "test_project.SourceSmokeTest.test_reference_magnifier_geometry",
+      "test_qa130_startup_cleanup.StartupCleanup.test_failed_create_process_cleanup_and_win32_metadata",
+      "test_qa130_startup_cleanup.StartupCleanup.test_genuine_worker_fail_is_not_early_startup",
+      "test_qa130_startup_cleanup.StartupCleanup.test_pre_worker_file_open_failure_requires_real_owned_cleanup",
+      "test_qa130_startup_cleanup.StartupCleanup.test_unverified_cleanup_never_passes",
+      "test_qa36_supervisor_model.SupervisorFailureModels.test_first_native_failure_and_later_restore_failure_are_distinct",
+      "test_qa36_supervisor_model.SupervisorFailureModels.test_isolated_thread_close_failure_is_primary_not_secondary",
+      "test_qa36_supervisor_model.SupervisorFailureModels.test_primary_create_failure_with_proved_empty_scope_is_distinguished",
+      "test_qa_integration_boundaries.IntegrationBoundaries.test_windows_supervisor_fault_suite_is_not_automatically_executed",
+      "test_qa_process_diagnostic.DiagnosticTests.test_failed_worker_thread_close_is_reported_and_resources_still_closed",
+      "test_qa_process_diagnostic.DiagnosticTests.test_first_restoration_failure_still_restores_second_handle",
+      "test_qa_process_diagnostic.DiagnosticTests.test_get_osfhandle_failure_still_releases_null_and_attributes",
+      "test_qa_process_diagnostic.DiagnosticTests.test_image_mismatch_does_not_misattribute_stale_win32_error",
+      "test_qa_process_diagnostic.DiagnosticTests.test_logical_and_malformed_errors_never_leak_stale_codes",
+      "test_qa_process_diagnostic.DiagnosticTests.test_primary_create_failure_survives_secondary_restore_failure",
+      "test_qa_process_diagnostic.DiagnosticTests.test_raw_error_text_never_becomes_a_native_error_code",
+      "test_qa_process_diagnostic.DiagnosticTests.test_set_and_restore_both_fail_but_resources_are_closed",
+      "test_qa_process_diagnostic.DiagnosticTests.test_typed_native_error_is_preserved_without_sensitive_text",
+      "test_qa_process_diagnostic.DiagnosticTests.test_windows_api_failure_is_attributed_before_cleanup_overwrites_last_error",
+      "test_qa_process_identity.IdentityRaceTests.test_reused_ancestor_pid_does_not_admit_foreign_descendant",
+      "test_qa_process_stop.ProcessStopModels.test_fresh_discovery_rejects_quarantine_before_any_test_body",
+      "test_qa_process_stop.ProcessStopModels.test_known_closed_channel_after_proved_cleanup_continues",
+      "test_qa_process_stop.ProcessStopModels.test_known_safe_cleanup_after_assertion_failure_continues",
+      "test_qa_process_stop.ProcessStopModels.test_normal_completion_continues",
+      "test_qa_process_stop.ProcessStopModels.test_preexisting_quarantine_stops_before_first_launch",
+      "test_qa_process_stop.ProcessStopModels.test_unavailable_admission_storage_prevents_every_launch",
+      "test_qa_process_stop.ProcessStopModels.test_unknown_cleanup_stops_all_tests_and_retry",
+      "test_qa_process_stop.ProcessStopModels.test_unknown_communication_stops_all_tests_and_retry",
+      "test_qa_process_stop.ProcessStopModels.test_unknown_neighbour_launch_stops_before_owner",
+      "test_qa_process_stop.ProcessStopModels.test_unknown_owner_stops_all_tests_and_retry",
+      "test_qa_process_supervisor.FixtureDiagnosticModels.test_redaction_uses_constants_and_strict_cleanup_observations",
+      "test_qa_process_supervisor.FixturePreparationTests.test_incomplete_preparation_fails_closed_and_cleans_tree",
+      "test_qa_process_supervisor.FixturePreparationTests.test_missing_preparation_barrier_is_detected",
+      "test_qa_process_supervisor.FixturePreparationTests.test_slow_tree_cancel_and_cleanup_failures",
+      "test_qa_process_supervisor.FixturePreparationTests.test_slow_tree_normal_crash_and_heartbeat_loss",
+      "test_qa_process_supervisor.FixturePreparationTests.test_slow_tree_preparation_preserves_timeout_scenario",
+      "test_qa_process_supervisor.OwnedRunnerTests.test_cancel",
+      "test_qa_process_supervisor.OwnedRunnerTests.test_cleanup_error",
+      "test_qa_process_supervisor.OwnedRunnerTests.test_crashed_node",
+      "test_qa_process_supervisor.OwnedRunnerTests.test_eof",
+      "test_qa_process_supervisor.OwnedRunnerTests.test_final_close_error",
+      "test_qa_process_supervisor.OwnedRunnerTests.test_heartbeat_loss",
+      "test_qa_process_supervisor.OwnedRunnerTests.test_ineffective_primary_cleanup",
+      "test_qa_process_supervisor.OwnedRunnerTests.test_invalid_communication",
+      "test_qa_process_supervisor.OwnedRunnerTests.test_normal_exit_with_detached_children",
+      "test_qa_process_supervisor.OwnedRunnerTests.test_signal_cancel",
+      "test_qa_process_supervisor.OwnedRunnerTests.test_timeout",
+      "test_qa_windows_file_lock.FileLockTests.test_parent_chain_and_file_deny_replacement",
+      "test_qa_windows_file_lock.FileLockTests.test_path_handle_close_error_is_reported",
+      "test_qa_windows_file_lock.FileLockTests.test_reparse_component_is_rejected",
+      "test_qa_windows_job_contract.JobContractTests.test_active_administrators_token_never_starts_child",
+      "test_qa_windows_job_contract.JobContractTests.test_close_failure_is_not_silently_accepted",
+      "test_qa_windows_job_contract.JobContractTests.test_failed_atomic_job_attribute_does_not_create_any_worker",
+      "test_qa_windows_job_contract.JobContractTests.test_failed_membership_kills_only_retained_suspended_handle",
+      "test_qa_windows_job_contract.JobContractTests.test_job_contains_worker_before_any_execution",
+      "test_qa_windows_job_contract.JobContractTests.test_linked_full_admin_token_never_starts_child",
+      "test_qa_windows_job_contract.JobContractTests.test_linked_limited_admin_token_never_starts_child",
+      "test_qa_windows_job_contract.JobContractTests.test_other_windows_account_never_starts_child",
+      "test_qa_windows_job_contract.JobContractTests.test_scm_high_non_admin_service_is_allowed",
+      "test_sync_ack_acceptance.SyncAckAcceptanceTest.test_expected_failures_remain_fail_and_only_product_gate_is_pass",
+      "test_sync_ack_acceptance.SyncAckAcceptanceTest.test_known_name_cannot_hide_different_failure_or_pass",
+      "test_sync_ack_acceptance.SyncAckAcceptanceTest.test_missing_duplicate_or_wrong_gradle_result_blocks",
+      "test_sync_ack_acceptance.SyncAckAcceptanceTest.test_original_diagnostics_helpers_and_e2e_are_byte_preserved",
+      "test_sync_ack_acceptance.SyncAckAcceptanceTest.test_other_fail_skip_error_or_missing_e2e_always_blocks",
+      "test_upgrade.BigUpdateSmokeTest.test_all_added_javascript_compiles",
+      "test_upgrade.BigUpdateSmokeTest.test_backup_includes_originals_and_isolated_restore",
+      "test_upgrade.BigUpdateSmokeTest.test_deferred_ideas_are_not_claimed_as_shipped",
+      "test_upgrade.BigUpdateSmokeTest.test_diagnostics_and_version_history_present",
+      "test_upgrade.BigUpdateSmokeTest.test_new_modules_are_loaded_from_app_index",
+      "test_upgrade.BigUpdateSmokeTest.test_photo_notes_contain_editable_detail",
+      "test_upgrade.BigUpdateSmokeTest.test_preview_id_and_signing_are_not_changed"
+    ],
+    "windowsNotRun": [
+      "test_diag41.Cases.test_cleanup_first_failure",
+      "test_diag41.Cases.test_create_preserves_win32_primary",
+      "test_diag41.Cases.test_default_off_no_metadata_no_private_trace",
+      "test_diag41.Cases.test_error_type_is_allowlisted",
+      "test_diag41.Cases.test_local_private_trace_file_permission_and_redacted_content",
+      "test_diag41.Cases.test_native_start_restore_failure_is_secondary_but_blocks_cleanup",
+      "test_diag41.Cases.test_only_scope_close_failure_is_primary_not_secondary",
+      "test_diag41.Cases.test_open_failure_preserved",
+      "test_diag41.Cases.test_primary_then_cleanup_then_browser_close_preserves_first_secondary",
+      "test_diag41.Cases.test_primary_then_cleanup_then_scope_close_preserves_first_secondary",
+      "test_diag41.Cases.test_private_trace_fails_closed_on_existing_symlink",
+      "test_diag41.Cases.test_private_trace_fails_closed_when_directory_is_public",
+      "test_diag41.Cases.test_private_trace_short_write_is_not_reported_as_success",
+      "test_diag41.Cases.test_private_trace_windows_does_not_assume_posix_mode_is_acl",
+      "test_diag41.Cases.test_secondary_cleanup_does_not_replace_first",
+      "test_qa_process_stop.ProcessStopModels.test_fresh_discovery_rejects_quarantine_before_any_test_body",
+      "test_qa_process_stop.ProcessStopModels.test_known_closed_channel_after_proved_cleanup_continues",
+      "test_qa_process_stop.ProcessStopModels.test_known_safe_cleanup_after_assertion_failure_continues",
+      "test_qa_process_stop.ProcessStopModels.test_normal_completion_continues",
+      "test_qa_process_stop.ProcessStopModels.test_preexisting_quarantine_stops_before_first_launch",
+      "test_qa_process_stop.ProcessStopModels.test_unavailable_admission_storage_prevents_every_launch",
+      "test_qa_process_stop.ProcessStopModels.test_unknown_cleanup_stops_all_tests_and_retry",
+      "test_qa_process_stop.ProcessStopModels.test_unknown_communication_stops_all_tests_and_retry",
+      "test_qa_process_stop.ProcessStopModels.test_unknown_neighbour_launch_stops_before_owner",
+      "test_qa_process_stop.ProcessStopModels.test_unknown_owner_stops_all_tests_and_retry",
+      "test_qa_process_supervisor.FixturePreparationTests.test_incomplete_preparation_fails_closed_and_cleans_tree",
+      "test_qa_process_supervisor.FixturePreparationTests.test_missing_preparation_barrier_is_detected",
+      "test_qa_process_supervisor.FixturePreparationTests.test_slow_tree_cancel_and_cleanup_failures",
+      "test_qa_process_supervisor.FixturePreparationTests.test_slow_tree_normal_crash_and_heartbeat_loss",
+      "test_qa_process_supervisor.FixturePreparationTests.test_slow_tree_preparation_preserves_timeout_scenario",
+      "test_qa_process_supervisor.OwnedRunnerTests.test_cancel",
+      "test_qa_process_supervisor.OwnedRunnerTests.test_cleanup_error",
+      "test_qa_process_supervisor.OwnedRunnerTests.test_crashed_node",
+      "test_qa_process_supervisor.OwnedRunnerTests.test_eof",
+      "test_qa_process_supervisor.OwnedRunnerTests.test_final_close_error",
+      "test_qa_process_supervisor.OwnedRunnerTests.test_heartbeat_loss",
+      "test_qa_process_supervisor.OwnedRunnerTests.test_ineffective_primary_cleanup",
+      "test_qa_process_supervisor.OwnedRunnerTests.test_invalid_communication",
+      "test_qa_process_supervisor.OwnedRunnerTests.test_normal_exit_with_detached_children",
+      "test_qa_process_supervisor.OwnedRunnerTests.test_signal_cancel",
+      "test_qa_process_supervisor.OwnedRunnerTests.test_timeout"
+    ]
+  },
+  "testSources": {
+    "tests/annotation_geometry_contract.js": "02a4f039414818e131faf9b9cdd1894bc42ab523753f115d5ed293d46e52b32d",
+    "tests/annotation_grip_geometry.js": "d407cd8f2d0ccaf726ad6caefc465c7c7d5f7cebc6431801eaba27486229e5e9",
+    "tests/annotation_history_contract.js": "c7e264902e219900aefdff161b3ec123ca8ed922346f5d87270d4f075561c2b7",
+    "tests/annotation_history_save_failure.js": "c6b16af5582944d50690d49cfa9a8dff70556abb512dbb57499f2a4b4d4dae53",
+    "tests/annotation_hit_geometry.js": "5ec9c78b0de2336868bfa17367f1a47c11364abc21fc3daf7aab2ad63f24a0a1",
+    "tests/annotation_pinch_contract.js": "363da576c984f46096a729fd3d5f0f83503e657852d01b0dfd36c1f92a8a8c96",
+    "tests/annotation_resize_contract.js": "042910480452ff6cd239e471ff90bde8db0fb134cda353bafbea7f28ed8066c8",
+    "tests/annotation_selection_contract.js": "34cd074068ed19af04551bbbf2b94cf5d1879e0685629ae350c8e3e0d1408570",
+    "tests/annotation_snap_contract.js": "e696a980db3eb6aa216c2cec4cf959ee0e171a1ba5cbfc50b1284fefa45fe22f",
+    "tests/annotation_translation_contract.js": "f4f951022fcbcef87ce61981a505313af0352be7a14638e31d71170c9a7c6066",
+    "tests/annotation_viewport_contract.js": "da3ffb98429c8aeb9fe565833bb86270b7a36cebdecfd7dc0ede662b955415c9",
+    "tests/audit39_hierarchy.js": "2b9e35231c2ffe87848b4a08f1b5c046c8fb8d77ccc3dbec217c10de3826e2dc",
+    "tests/bosch_history_devices.js": "bd325980ab6db07f7091bcceb07e7961c6f895d37b5b7b54f3e54f7ecc11577f",
+    "tests/causal_app_clock.js": "c07cd19b5f89d9b78dd8501d375692cf50dcda1a33cfc4f8117838530f66e29d",
+    "tests/dimension_drag_interaction.js": "19be1757ffaa3767d215d99f6a78c0da1eca0cc2f632201cce44c0354edf1bc4",
+    "tests/e2e_harness_git_preflight.js": "c624cd7c72647f87f0a6320782016f97c849f9725cfdb4072272902734290414",
+    "tests/editor_full_tools.js": "c9749b249ab71eb54a98d631733488d0e2168bbf18b6b2c0d796e2c81af50e6d",
+    "tests/experimental_and_precision.js": "291f44a6c6ee308b1d5d35146b296b3b4be1c1a258a820738f0f24ffbc8e2f4d",
+    "tests/extra_toolbar_interaction.js": "445a57a084ab9d86746f26ea197100db2ee9c9a42d4051510c1fff875ffc8c91",
+    "tests/feedback_inflight_save.js": "5ace293b8f3579e4bf8a94217f3e55a8c20b088b10d5737ee97e44047b5dc8ba",
+    "tests/feedback_raster_reuse.js": "9fca1ac5a7ee32ad05fb2a1894eaff9b74fd0babd4e923e8389a00e3459a84aa",
+    "tests/feedback_report_structure.js": "7792e12e471f6a7af29a5d6a2ae403b29e2883b6331ddfe14ea42854c747bc16",
+    "tests/geometry_drag_28.js": "4c9f9f408b5df9270ba6ca1a7efb6d1891600e7ed6df6f2a44dddae6d63c79fb",
+    "tests/gesture_history_undo_redo.js": "b7708749be0723f0857b1e3eef437ef8196d8db3dfa0d98acf12b6e4c4e6ae7c",
+    "tests/help_guide.js": "8d7bbd5e0625a3f4f4a268959da8be437248894ba24ed86fd232a8744c55913f",
+    "tests/home4_execution.js": "c935f55632e1584c77e87e46845b7eb59bcd883c3a54e17645af0cdc39248da7",
+    "tests/home4_preactivation_boundaries.js": "5778c74e1f66ef8e56d7436c8b695079e38c51abd7c5f304e9bb65be4585da91",
+    "tests/home_qa_integrity.js": "eb19a9706a72c5e485d734060e29a9d07185cf5b8d52af4da73d35d894f5bcf3",
+    "tests/home_sandbox_security.js": "2c54c1077d6d3f42c309b5d934abf2ae3dfef284de5307a360fc8116eb3758c0",
+    "tests/inset_audio_customer_export.js": "1807d22ce3aa62d328d9c3e1ef78570b75f623d28f9e5e515a7863d846153009",
+    "tests/inset_audio_marker_geometry.js": "2ae406d270463b06823c89c9448d8e351206000b9ea5603d6043fe72df01610c",
+    "tests/inset_workspace_interaction.js": "61bece367cf93196fdeb8a5a1adca7be409ab86532b60e2fdcf8e99a0cad8e96",
+    "tests/laser_auto_interaction.js": "20addf0217e6658cff442e9222c31f924149e0fec9149678ce4ba55358ddfea6",
+    "tests/laser_precision_regression.js": "6188b58325d1820794368b531680fea3310b276a36a6d2b6d83ba03e4fcda3ad",
+    "tests/laser_tap_interaction.js": "3d48eb3dd38fba66abe30d4191bd37428eba53269283db604b44e24587620794",
+    "tests/local_browser_qa_contract.js": "724ccf45c62ec9b377e552d3674433eecbdad110888f0a772003978cfd631735",
+    "tests/media_import_ownership.js": "dcd5c2d8869ac9e66335595827e0695760eb410d60b0ced26440abd29d5ddf89",
+    "tests/media_import_transaction_faults.js": "b9430c65ca39cbf78611e10a15209e188dbdc8eed5f717a2ffce3a1617d38c79",
+    "tests/menu_dismiss_interaction.js": "1a99c18e48589b78f3b7795333cf403bcadf68157052a80dd9053bf92cb62b63",
+    "tests/new_28_regressions.js": "c8f023172028628878bd4d689d314cecfe3c47a0692d1ed9892fcf87f4301d69",
+    "tests/new_record_save_failure.js": "ebf59949de8220185edd471ad2f997d367bc3cd90b18ad4ecc0e7ac1bddc93a8",
+    "tests/note_leader_interaction.js": "6b0e79e980e882a97f5ef2ed5ae6ddffb7226a10ef8d8d609f9bbec1a6c3444d",
+    "tests/post17_regressions.js": "84f3f7564a28cc0018719ece47148da06bb34abbd2f5697fd24aec7a67bd5a7d",
+    "tests/qa34_client_gate_integration.js": "998044579a1b0f3d771d9f37913b79472225edca8bd7a75cacad934909ef6e31",
+    "tests/qa36_soft_timeout.js": "aed7a746822e19a4470ef96ca60a82c896a02601dc76fa41371e19f92083be5f",
+    "tests/qa41_diag.js": "f2e49d4c5e7b7750f4de11c8722a579593807fa7f66a99c423a9360f91f494c0",
+    "tests/qa_binary_fixture_paths.js": "1004a62162516f70202566b31f7034e6990e03750fea21c68b1ac26a54214ab7",
+    "tests/qa_fixture_attempts.js": "f02376a3943c003c376bd9441508ae7dad8355d3c227b7cead83d33673bdcdf5",
+    "tests/qa_fixture_process_scope.js": "3e86d6ae02482a1abf47649b824a0be9d0c3a4910cd666141446c6ba182b2eb9",
+    "tests/qa_fixture_tap_gate.js": "eec6a411d8fe3ecbae4515d3693b1da2fdabaa24e5d23ab327d9ca2e288cbee0",
+    "tests/qa_gate_3try_integration.js": "623b4cecdbc8aebbaa21a88b27dd4aafdfa131f2646938062a10ba7b3cb036cc",
+    "tests/qa_integration_boundaries.js": "8798fcbaff48b27c2de37e8b8866fbf2c2454e46da0b65e6bfb28d9dfe5dedbd",
+    "tests/qa_process_client.js": "58f6f1bb67001f21172f746bea699d450f54aa61cd7b2ccdd2454e0fc2296020",
+    "tests/qa_process_diagnostics.js": "a40271abc0bf044e878a51fdf91444e55a1081283c10b78093b9139f94b0fec9",
+    "tests/qa_process_stop_gate.js": "2c978d14e9e10f8b4400b94b5f2e3813da77f8c3d184d0167793ee264ca37e58",
+    "tests/qa_product_mode_compatibility.js": "032ff694d50f9073fa3c004e28955414bab8c7f8245506f89d5190b1dec48b6f",
+    "tests/qa_reference_bootstrap.js": "b78dfafb49503c895aace56ae1e7f4eaa444509c8f999728d9adedc1f5641b1d",
+    "tests/refactor_end_to_end_undo.js": "7163f569dd967322256283ef61e8a7cc0bfdbad60690d26a3c08fb9208235413",
+    "tests/refactor_shape_resize_undo.js": "dcc48496732f61bdc2d8b955a05c582a5569d1f07d992874519a081bf0214ad1",
+    "tests/release_history.js": "a3797c84c0b78bec029513df965697ff2a63fd340b48604d616cb32717f2836a",
+    "tests/revision_vector.js": "6eb458dbd462461d14bf4d72d22c49f9511122d11f81ed0705d57aac1e2a63c5",
+    "tests/rich_note_attachment_state.js": "4a6b800c7cacc6509497e18f5626b3e205ed045d33686b5ee99455d18343ccf9",
+    "tests/save_acknowledgement.js": "c4e8a0c846e99ebefd260caa85075bdeb04044240bca0708c95799853616f134",
+    "tests/save_blocked_load_regression.js": "3eea2bc31e71664cb5b8ff50d30067b3332dd57559d3f6f033e3741713047dd4",
+    "tests/save_cas_conflict_guard.js": "36d0bc7c9db80cf75fca620cd24a7546a8a196f28fb2cb1b242264fb05b89787",
+    "tests/save_cas_missing_database.js": "ee7be1302234d0a628ff99807e3bdac3293c1610d3cb2e273ee8649bf500db4b",
+    "tests/save_cas_recovery_integrity.js": "1ca2484c3b15fc7292c06f6330ded65fa0e18b03f2993d3bcc3bcedfcc95b16d",
+    "tests/symbol_search_interaction.js": "ba24d51eae909dc3929ccc0ca2b1bd6de26ed06332447e8f1beaf49da2ba4cc6",
+    "tests/sync_canonical.js": "3343401833aba3f1c8a5f578c618a35206f890f78383c7d02f00950bb0fcfcdf",
+    "tests/sync_conflict_bridge.js": "26116496b6957552da5b4ac6d15881ffaf7a66ed311a53673196dfd3af0b5d32",
+    "tests/sync_protocol_v2.js": "d68f6110c9d1e35be8d102267b0cefd35d0394f0140f56380133bc10cd305def",
+    "tests/trash_restore_save_confirmation.js": "362e4354e084715afc6ff7d0da6ed38843fe05a9e266650ae0bc182e785a3155",
+    "tests/trash_ui_interaction.js": "38a094d1796631ff0002c6716d8a7cf048bdb9dd0f4c8035bba6d49047fbb723",
+    "tests/versioning.js": "781feace1a12ebc3cf005e65c4dbd040b348970731f408adaaff53450d14be5d",
+    "tests/test_address_and_icons.py": "efba12d16e2cd74542dffb9c05c4613d5e1c141ef075bc5dd1dcd751a807fe21",
+    "tests/test_address_map_link.py": "060d53125417a160684dcf7b39db846bae122922521743a5920b84590730e447",
+    "tests/test_bosch_ble.py": "264597db08d2c4696956124f8187907ab0c33a63580939dbfa4dbd263176b7c9",
+    "tests/test_ci_cloud_release_gate.py": "87baa787ae283a7450882d1b3238321c46bbe8b3fa2213ac41b0b27ab3f44127",
+    "tests/test_diag41.py": "79efaa1e603d716ef321cfc0578de1fbdf09057a9a7dc37dd8dcfc2648e5cf7c",
+    "tests/test_dimension_selection.py": "ebc1cd8e04adc3bfefe38da87e3fc87114358384d2bc0dbb1a7d07cd6dae7404",
+    "tests/test_editor_toolbar.py": "a89124be271f0515b39bd18ed29e9cef67cebe4e17e18bc01c196c443d7e4806",
+    "tests/test_gallery_camera_notes.py": "42f33d4f8d4272de03e7a1df8f47883761c5e8ba4f4147a4b77029c97f341994",
+    "tests/test_home4_contract.py": "906ca02125b7d9c82401fce3220bd0f8aa9fcbb1e8ca0f0d0633c1a14953470a",
+    "tests/test_home4_preactivation_design.py": "29bba6a5017c4eb093b55e7255cb6b4d798882540441940b38edba3925202ae6",
+    "tests/test_home4_wsl_adapter.py": "9c28e6d64a2623ec4e6f0c1ca0f60fc78c018321ad36af3f7ff7d07633354b31",
+    "tests/test_home_qa_gate.py": "614de88b69fc945d5e58ebc89c229f939943a7c3cfb5f4320ecd0644d1baa14c",
+    "tests/test_home_qa_version_preflight.py": "f9bc858acf43738ec2e73eded09ef61b2eb5c2d96bdabe161a5500f17a3d4f33",
+    "tests/test_home_release_asset_redirect.py": "289cde596a64dd1343cdca3303235d910f24566d695c9afbd403f5b130331449",
+    "tests/test_home_release_publish_url_security.py": "4fcfb09cb645b66ac11b58e79ad58a821d323caf3cb817c7acd3e64f99c4e42c",
+    "tests/test_imagemeter_inset.py": "64247b8d790f03414ec57c1b1b16b71e1b306924ef3907d59731403ace87bea6",
+    "tests/test_project.py": "800197e1155ce9b42d1c05c1969638285f9c3eaac333faa5f3935378908d9b68",
+    "tests/test_qa130_startup_cleanup.py": "4e674b5b512f7300dbe6b4fdc3d19cfc548434afdba4a84c28568427c8abab56",
+    "tests/test_qa36_supervisor_model.py": "6b50e1521613cfda63ea6174ba6975c72f0be261c2aa4b7cfe45bf98fe1d8012",
+    "tests/test_qa_integration_boundaries.py": "66d5da3cec232a324b6500020e4fc76ed0c5b492819e6e0069f3236f2bf277a8",
+    "tests/test_qa_process_diagnostic.py": "4aa701a0f87517f1d5188a5bbe110305825ee2218af8caafed8c4754fa6d07f5",
+    "tests/test_qa_process_identity.py": "f8e5d449fbedb815d6358ecc5cc45a8fe5bb0aeaeb75aff8bda6ed4956a12497",
+    "tests/test_qa_process_stop.py": "cc6e6d8d9f56a9527040541b848bed12df0dc64f0af25a9a2e80ece27440f7f8",
+    "tests/test_qa_process_supervisor.py": "96ef195cfe46b04ecd3cca2e07255617bf00b5ab0289c9d018fa2373eba75500",
+    "tests/test_qa_windows_file_lock.py": "6b645b112c9f74863c3657bc341797a70d75ef5db55fe86b547676f3c82b7a45",
+    "tests/test_qa_windows_job_contract.py": "7c54bfeeddf437983e09ae4c2a03fd6dfbda14d7c1f999a117dbcd3c214d6b02",
+    "tests/test_sync_ack_acceptance.py": "7652b5540ec55f39cae9904bf2058098267afcd6b9e41b623ddc188e6023a24f",
+    "tests/test_upgrade.py": "8123031d29964a7b79086c050cf4abfdb7573bbb55afd972573c5113ad7c99fd"
+  }
+}
