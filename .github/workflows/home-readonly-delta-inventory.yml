@@ -1,0 +1,188 @@
+name: Zaměřovač - HOME read-only delta inventory (DISABLED)
+# SOURCE-ONLY CANDIDATE: no HOME dispatch; runner effects require separate owner approval.
+# Activation is a separate reviewed change removing the false-and guard; NEVER use PR/fork/push.
+on:
+  workflow_dispatch:
+    inputs:
+      approved_sha:
+        description: 'Owner-approved exact MAIN commit SHA (40 lowercase hex)'
+        required: true
+        type: string
+permissions: {}
+concurrency:
+  group: zamerovac-readonly-delta-inventory
+  cancel-in-progress: false
+jobs:
+  read-only-delta:
+    # Deliberately disabled even on main until a NEW SOURCE/SECURITY review,
+    # independent runner temp/log/network/update prestart review, and owner approval.
+    if: ${{ false && github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && github.run_attempt == 1 && inputs.approved_sha == github.sha }}
+    runs-on: [self-hosted, Windows, X64, zamerovac-qa]
+    timeout-minutes: 5
+    env:
+      SNAPSHOT_APPROVED_SHA: ${{ inputs.approved_sha }}
+    steps:
+      - name: Read-only delta; no checkout, tool execution, or WSL command
+        shell: 'C:\Windows\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "{0}"'
+        run: |
+          # The runner writes this temp step script / diagnostic logs and contacts GitHub.
+          # Those runner effects MUST have been separately reviewed and owner-approved.
+          # The probe itself only reads fixed OS paths; no file, env or network writes.
+          $ErrorActionPreference = 'Stop'
+          $ProgressPreference = 'SilentlyContinue'
+          try {
+            $expected = @{
+              GITHUB_ACTIONS = 'true'
+              GITHUB_REPOSITORY = 'zaplikj30-ui/Zamerovac-android'
+              GITHUB_ACTOR = 'zaplikj30-ui'
+              GITHUB_TRIGGERING_ACTOR = 'zaplikj30-ui'
+              GITHUB_REF = 'refs/heads/main'
+              GITHUB_EVENT_NAME = 'workflow_dispatch'
+              GITHUB_RUN_ATTEMPT = '1'
+              RUNNER_OS = 'Windows'
+            }
+            foreach ($name in $expected.Keys) {
+              if ([Environment]::GetEnvironmentVariable($name) -cne $expected[$name]) { throw 'identity' }
+            }
+            if ($env:GITHUB_SHA -cnotmatch '^[a-f0-9]{40}$' -or
+                $env:SNAPSHOT_APPROVED_SHA -cne $env:GITHUB_SHA -or
+                $env:GITHUB_RUN_ID -cnotmatch '^[1-9][0-9]{0,19}$') { throw 'sha-or-run' }
+            $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+            try {
+              if ($identity.Name -ine ($env:COMPUTERNAME + '\ZamerovacQA')) { throw 'service-user' }
+              $principal = New-Object Security.Principal.WindowsPrincipal($identity)
+              if ($principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw 'admin-token' }
+            } finally { $identity.Dispose() }
+            $deadline = [DateTime]::UtcNow.AddSeconds(210)
+            function EnsureTime {
+              if ([DateTime]::UtcNow -ge $deadline) { throw 'bounded-time' }
+            }
+            function NoRedirect([string]$p) {
+              $at = [IO.Path]::GetFullPath($p)
+              if (-not [IO.Path]::IsPathRooted($p)) { throw 'nonabsolute' }
+              while ($true) {
+                EnsureTime
+                $m = Get-Item -LiteralPath $at -Force -ErrorAction Stop
+                if (($m.Attributes -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'redirect' }
+                $parent = [IO.Path]::GetDirectoryName($at.TrimEnd('\'))
+                if ([string]::IsNullOrEmpty($parent) -or $at -eq $parent) { break }
+                $at = $parent
+              }
+            }
+            function Digest([string]$p) {
+              EnsureTime
+              NoRedirect $p
+              $m = Get-Item -LiteralPath $p -Force -ErrorAction Stop
+              if ($m.PSIsContainer -or $m.Length -gt 268435456) { throw 'oversize-file' }
+              $beforeLength = $m.Length
+              $beforeTime = $m.LastWriteTimeUtc.Ticks
+              $h = [Security.Cryptography.SHA256]::Create()
+              $stream = $null
+              try {
+                $stream = [IO.FileStream]::new($p, [IO.FileMode]::Open,
+                    [IO.FileAccess]::Read, [IO.FileShare]::Read)
+                if ($stream.Length -ne $beforeLength) { throw 'changed-file' }
+                $buffer = New-Object byte[] 1048576
+                while ($true) {
+                  EnsureTime
+                  $got = $stream.Read($buffer, 0, $buffer.Length)
+                  if ($got -eq 0) { break }
+                  [void]$h.TransformBlock($buffer, 0, $got, $buffer, 0)
+                }
+                [void]$h.TransformFinalBlock($buffer, 0, 0)
+                $hex = [BitConverter]::ToString($h.Hash).Replace('-', '').ToLowerInvariant()
+              } finally { if ($null -ne $stream) { $stream.Dispose() }; $h.Dispose() }
+              $m.Refresh()
+              if (-not $m.Exists -or $m.Length -ne $beforeLength -or
+                  $m.LastWriteTimeUtc.Ticks -ne $beforeTime) { throw 'changed-file' }
+              EnsureTime
+              return $hex
+            }
+            function Snapshot([string]$root, [string]$entry) {
+              NoRedirect $root
+              $all = New-Object 'System.Collections.Generic.List[string]'
+              $seen = 0
+              $stack = New-Object 'System.Collections.Generic.Stack[string]'
+              $stack.Push($root)
+              while ($stack.Count -gt 0) {
+                EnsureTime
+                $dir = $stack.Pop()
+                foreach ($item in [IO.Directory]::EnumerateFileSystemEntries($dir)) {
+                  EnsureTime
+                  $attr = [IO.File]::GetAttributes($item)
+                  if (($attr -band [IO.FileAttributes]::ReparsePoint) -ne 0) { throw 'redirect' }
+                  $seen += 1
+                  if ($seen -gt 1600) { throw 'too-many-items' }
+                  if (($attr -band [IO.FileAttributes]::Directory) -ne 0) { $stack.Push($item) }
+                  else { $all.Add($item) }
+                }
+              }
+              if ($all.Count -eq 0 -or -not [IO.File]::Exists((Join-Path $root $entry))) { throw 'missing-entry' }
+              $total = [long]0
+              $digestRows = New-Object 'System.Collections.Generic.List[string]'
+              $entrySha = $null
+              $sorted = $all.ToArray()
+              [Array]::Sort($sorted, [StringComparer]::OrdinalIgnoreCase)
+              foreach ($file in $sorted) {
+                EnsureTime
+                $len = ([IO.FileInfo]$file).Length
+                $total += $len
+                if ($total -gt 805306368) { throw 'bounded-bytes' }
+                $sum = Digest $file
+                $rel = $file.Substring($root.TrimEnd('\').Length + 1).Replace('\', '/')
+                $digestRows.Add($rel + ':' + $sum)
+                if ($rel -ieq $entry.Replace('\', '/')) { $entrySha = $sum }
+              }
+              if ($null -eq $entrySha) { throw 'missing-entry' }
+              # FileVersionInfo reads static PE metadata; it does not launch the target.
+              $v = [Diagnostics.FileVersionInfo]::GetVersionInfo((Join-Path $root $entry)).FileVersion
+              if ($v -notmatch '^[0-9a-zA-Z. _-]{1,64}$') { $v = 'UNKNOWN' }
+              $mem = [Text.Encoding]::UTF8.GetBytes(($digestRows -join ([char]10)))
+              $algo = [Security.Cryptography.SHA256]::Create()
+              try { $tree = [BitConverter]::ToString($algo.ComputeHash($mem)).Replace('-', '').ToLowerInvariant() }
+              finally { $algo.Dispose() }
+              return @{ Count = $all.Count; Bytes = $total; EntrySha = $entrySha; TreeSha = $tree; Version = $v }
+            }
+            Write-Output ('INVENTORY_OBSERVATION sha=' + $env:GITHUB_SHA + ' run=' + $env:GITHUB_RUN_ID)
+            # Reviewable fixed allowlist. No PATH/registry discovery, no unknown fallback.
+            $targets = @(
+              @{Name='python'; Root='C:\actions-runner\tools\Python313'; Entry='python.exe'},
+              @{Name='git'; Root='C:\actions-runner\tools\MinGit-2.56.0.4'; Entry='cmd\git.exe'},
+              @{Name='chromium'; Root='C:\actions-runner\tools\ms-playwright\chromium-1234\chrome-win64'; Entry='chrome.exe'},
+              @{Name='node-candidate'; Root='C:\Program Files\nodejs'; Entry='node.exe'}
+            )
+            foreach ($target in $targets) {
+              try {
+                $r = Snapshot $target.Root $target.Entry
+                Write-Output ('OBSERVED component=' + $target.Name + ' count=' + $r.Count +
+                  ' bytes=' + $r.Bytes + ' version=' + $r.Version + ' entrySha256=' + $r.EntrySha + ' treeSha256=' + $r.TreeSha)
+              } catch {
+                # Never log untrusted exception text, raw paths, ACLs or file names.
+                Write-Output ('BLOCKED component=' + $target.Name + ' evidence=incomplete')
+              }
+            }
+            try {
+              NoRedirect 'C:\actions-runner\tools'
+              $acl = Get-Acl -LiteralPath 'C:\actions-runner\tools'
+              $buf = [Text.Encoding]::UTF8.GetBytes($acl.Sddl)
+              $algo = [Security.Cryptography.SHA256]::Create()
+              try { $aclSha = [BitConverter]::ToString($algo.ComputeHash($buf)).Replace('-', '').ToLowerInvariant() }
+              finally { $algo.Dispose() }
+              Write-Output ('OBSERVED aclSddlSha256=' + $aclSha + ' effectiveRights=BLOCKED')
+            } catch { Write-Output 'BLOCKED acl=incomplete' }
+            try {
+              $drive = [IO.DriveInfo]::new('C')
+              if (-not $drive.IsReady -or $drive.AvailableFreeSpace -lt 0) { throw 'disk' }
+              Write-Output ('OBSERVED windowsFreeBytes=' + $drive.AvailableFreeSpace + ' quota=BLOCKED')
+            } catch { Write-Output 'BLOCKED disk=incomplete' }
+            # No wsl.exe / --exec: a list/running check is not an atomic no-start guarantee.
+            Write-Output 'BLOCKED wslNonrootExt4CpuMemoryCache=no-safe-no-start-proof'
+            Write-Output 'BLOCKED playwrightJdkGradleSdkRobolectricPdfCache=no-reviewed-roots'
+            Write-Output 'BLOCKED fullProfile=hardlink-fileid-toctou-and-runtime-proof-unverified'
+            # Observations are NOT an approved complete HOME4 inventory or test PASS.
+            Write-Output 'BLOCKED inventory=partial STOP_NO_RETRY HOME4_NOT_RUN'
+            exit 78
+          } catch {
+            Write-Output 'BLOCKED inventory=identity-or-preflight STOP_NO_RETRY HOME4_NOT_RUN'
+            exit 78
+          }
