@@ -49,3 +49,4 @@ jobs:
           "C:\actions-runner\tools\Python313\python.exe" -I tools\coord42-win32-inventory.py
           if errorlevel 1 exit /b 1
 # Owner-only one-time activation of verified read-only inventory (no build).
+# Owner-only activation after correcting documented VS2026 install path to 18.
