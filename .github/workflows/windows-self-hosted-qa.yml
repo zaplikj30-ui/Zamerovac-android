@@ -9,7 +9,7 @@ concurrency:
   cancel-in-progress: false
 env:
   HOME4_SOURCE_SHA: c7e71327d69bfe87f622ff6293422e2e15332a11
-  HOME4_VALIDATOR_SHA: 0000000000000000000000000000000000000000
+  HOME4_VALIDATOR_SHA: 908ceeed67b18e050b2335553c9a517ec7484a04
   HOME4_APPROVED_MAIN_SHA: '' # Deliberately unresolved; no approved future main run.
   HOME4_PROFILE_FILE: 'C:\actions-runner\tools\home4-approved-inventory.json'
   HOME4_PROFILE_SHA256: UNVERIFIED

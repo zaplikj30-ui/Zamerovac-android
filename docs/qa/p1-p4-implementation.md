@@ -12,7 +12,7 @@ a [scope freeze](https://github.com/zaplikj30-ui/Zamerovac-android/pull/149#issu
 - Historický produkt PR121: `ae3b4df53c25557f28b4a25ccb65adc2abdff639`.
 - Převzatá L1/H1 oprava PR149: `57c2d6ae4cfdc5fdf50494db45883da78c7d0b83`.
 - Nový integrovaný SOURCE: `c7e71327d69bfe87f622ff6293422e2e15332a11`.
-- VALIDATOR je následný skutečný implementační commit; jeho plný pin je ve
+- VALIDATOR: `908ceeed67b18e050b2335553c9a517ec7484a04`; jeho plný pin je ve
   finálním workflow. Finální HEAD obsahuje pouze následné připnutí validatoru
   a důkazy; přesné SHA jsou v předání PR. Budoucí schválené MAIN/EVENT **není
   známé** a není nahrazené žádným historickým SHA.
@@ -100,3 +100,41 @@ HOME ani placené Actions. Ostatních šest workflow ani release guard se neměn
 Žádný merge, build APK, upload APK, vydání, instalace nebo HOME inventář/test
 nebyl proveden. Finální commit/piny a autorské regresní důkazy jsou v PR;
 nezávislý kontrolor posuzuje celý diff, nikoli jen tento dokument.
+
+## Vlastní review autora a zbývající ověření
+
+Kontrola zahrnuje obsahovou návaznost všech130 importovaných cest, dvě kolize,
+novější main guardy, produktové CAS/rollback, ochranu archivů/originálů a audia,
+Sync ACK/recovery witness, registry 23/96/66+1 a přesné JUnit/quick výsledky.
+Dostupné JS/JVM scénáře ověřují hodnoty a původní bajty včetně kombinovaných
+selhání/obnovy. Dvě #88 provider-boundary diagnostiky zůstávají skutečné FAIL;
+nepředstírá se, že je tato integrace opravila. Geometrický výpočetní základ,
+jednotky a schválené úchopy nejsou nově přestavovány.
+
+Kontrola nového QA diffu opravila rozporné PASS, přesné protokolové rámce,
+totožnost čtených JSON bajtů/hashů, jmenné registry, omezené kopie, bytecode
+zápisy do validatoru, přípustné build výstupy, privátní ACL bootstrap a audit
+před/po. Produkční WindowsJob a supervisor/480s limit se nemění. Není přidán
+framework, externí závislost ani alternativní procesní backend.
+
+Skutečný Cloud Chromium preflight na tomto produktu skončil BLOCKED:
+existující SUID sandbox helper nemá požadovanou konfiguraci. Owner doložil
+cleanupVerified=true a remainingProcesses=0. Všech23 browser sad je tedy
+**NOT RUN/BLOCKED**, nikoli PASS nebo náhradní SKIP. Oprávnění/sandbox se
+nemění. Linux JVM má skutečný výsledek 64XML/513/511PASS/2rawFAIL a tři
+archivy prošly nezávislým PDF parserem/renderem; nejde o HOME/Android důkaz.
+Finální dostupná Node/Python regrese a přesná SHA/log hashe budou v PR.
+
+**Aktivační blokéry:** ověřený HOME inventář a jeho schválený hash; skutečný
+Windows/WSL normální containment/cleanup a disková mez; schválený EVENT/main
+SHA; oprávněný sandbox/pixel běh; zvláštní rozhodnutí preview/I88 a čerstvý
+lokální release-asset proof před APK. Nejsou to souhlasy k instalacím nebo
+nové infrastruktuře. Fyzický Android/S Pen/Bosch/reálný Drive NOT RUN.
+Admission není odolnost vůči externímu smazání nebo nahrazení důkazů;
+reboot/externí zásah neautorizuje retry bez zvlášť schváleného auditu.
+
+**TEĎ:** nezávisle posoudit tento implementační diff a přesné důkazy;
+**POZDĚJI po souhlasu vlastníka:** nezbytný read-only HOME inventář a běžné
+runtime ověření, následně rozhodnutí k jedné APK;
+**NEMĚNIT:** data/geometrie, raw #88 FAIL, owner/main/manual/attempt1,
+NO RETRY, procesní izolace, release guard a vypnutá aktivace.
