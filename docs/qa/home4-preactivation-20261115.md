@@ -30,7 +30,9 @@ Aktuální zdroje:
 V tomto balíku jsou implementovány **dokumentace a test-only změny**:
 inertní modely/read-only testy a následná oprava přípravy Linux procesní
 fixture L1 podle [navazujícího zadání](https://github.com/zaplikj30-ui/Zamerovac-android/pull/149#issuecomment-6897523725).
-Workflow, produkční guardy/runtime, produkt a release se nemění. Původních57
+Workflow, produkční procesní runtime/Job/timeouty, produkt a release se nemění.
+Následná oprava H1 mění pouze STOP v testové sadě a jeho předání lokálnímu
+QA launcheru; neimplementuje ostatní politiku P1–P4. Původních57
 modelů a15 TAP zůstává beze změny; změna Linux fixture je popsána níže. Následující
 tabulka uvádí budoucí dotčené soubory, nikoli již provedené změny.
 
@@ -340,7 +342,7 @@ close-error/normal/crash/heartbeat-loss důvod, nikoli libovolné BLOCKED.
 Původních11 metod zůstává, aserce jsou posílené o přesný reason, exit/token/
 platform a cleanup evidence; Linux-only guard nezměněný. Přidáno5 Linux-only
 přípravných testů a1 čistý model redakce, takže cílený modul má17 metod a
-plná dostupná Python regrese182. Windows dispatch model ověřuje, že všech
+plná dostupná Python regrese na L1 HEAD bf6b28c měla182 metod. Windows dispatch model ověřuje, že všech
 11+5 živých Linux testů je na Windows SKIP; čistý redakční model nic nespouští.
 Původních57 zůstává57, nepřičítat subscénáře a opakování jako nové testy.
 
@@ -357,6 +359,72 @@ Přesný finální SHA, opakované cílené i úplné Node/Python výsledky, RED
 hashes a vlastní kumulativní review jsou v navazujícím komentáři stejného PR.
 L1 se neuzavírá pouhým zeleným opakováním: opravena je prokázaná přípravná
 příčina a zachována negativní regrese. P1–P4 zůstávají návrhy bez aktivace.
+
+## H1 — skutečné STOP napříč sadou a launcherem
+
+[Nezávislé review5911901483](https://github.com/zaplikj30-ui/Zamerovac-android/pull/149#pullrequestreview-5911901483)
+prokázalo, že samotné self.fail v L1 nezastaví unittest bez failfast ani další
+příkazy local-qa.cjs. Toto tvrzení L1 o STOP bylo neúplné. Bezpečné stub modely
+před opravou skutečně zachytily pokračování po unknown owner/cleanup/protokolu;
+nejde o tvrzení, že při historickém běhu unikl skutečný proces.
+
+Minimální oprava používá pouze standardní filesystem a stávající launcher:
+
+1. tests/qa_process_stop.py rezervuje **před prvním Popen** exkluzivní privátní
+   admission adresář /tmp/zamerovac-qa-process-tests-<UID>.blocked (0700).
+   Pevný sticky /tmp je nezávislý na checkoutu, HOME a jobovém TMPDIR;
+   neověřitelný /tmp nebo nemožnost rezervace => exit78 před jakýmkoli launch.
+   Původní HOME kandidát v Cloud narazil na EROFS před launch a byl nahrazen;
+   žádný neznámý vlastník tím nevznikl a žádná práva nebyla měněna.
+2. Ještě před spuštěním se zapíše privátní evidence.json (0600) s pointerem
+   na již existující privátní fixture adresář (0700). Její raw obsah se nikdy
+   netiskne. Při UNKNOWN se pokud možno přidají pouze booleany unknown.json
+   (0600); pointer, vlastní data, cfg i log zůstávají k autorizovanému auditu.
+3. Známé dokončení/nezávisle prokázaný bezpečný cleanup odstraní vlastní
+   adresář a uvolní jen vlastní admission ověřené podle device/inode/UID/mode.
+   Známá testová assertion failure s doloženým cleanup může pokračovat;
+   očekávané BLOCKED worker verdicty se nezmění na runtime PASS.
+4. Unknown owner, neověřený cleanup/protokol nebo chyba úklidu **ponechá
+   admission a ukončí CELÝ testovací interpret přes os._exit(78)** po pokusu
+   o nezávislé bezpečné čištění. Nejde o exit/kill supervisoru ani PID signal.
+   self.fail/SystemExit by unittest zachytil a pokračoval. Žádná pozdější
+   metoda/třída tedy nespustí další proces ani bez --failfast.
+5. Preflight při importu procesní sady odmítá existující admission i v novém
+   interpretě před spuštěním testových metod. Claim před každou fixture navíc
+   blokuje přímý další vstup. Žádný TTL, čekání/retry, PID-based recovery ani
+   příkaz automatického resetu. Neočekávaná smrt harnessu admission neuvolní.
+6. tools/local-qa.cjs kontroluje stejnou Linux cestu před každým příkazem i
+   Python discovery; exit78 či přetrvávající admission blokuje celý zbytek
+   toku včetně --native. Zakázán Python fallback po78 i další Gradle/Node.
+   Exit0 s admission není PASS. Na STOP se veřejně/logem launcheru předává
+   jen pevný redigovaný marker; raw privátní důkazy zůstávají u fixture.
+
+Toto je vynucení již požadovaného STOP, nikoli schválení HOME/P1–P4. Linux-only
+původních11+5 fixture guardů se nemění; Windows Job a produkční supervisor se
+nemění. Node model spouští celý skutečný launcher jen ve VM se stub spawn/fs,
+včetně --native; žádný skutečný Gradle/browser/Windows příkaz tím nevzniká.
+Python modely mají samostatné stub interpretéry a syntetickou admission,
+nevytvářejí skutečného neznámého vlastníka ani hard-hang. Ukončení tohoto stub
+harnessu není forced owner-death test. Syntetickou evidence po testu uklidí
+rodič až po ověření, že vznikly jen stub objekty a vlastní známé modelové děti.
+
+Pozitivní modely ověřují normální pokračování, známý cleanup po assertion
+FAIL a známé uzavření pipe. Negativy: unknown owner/soused, unknown cleanup,
+malformed/duplicitní/cizí token/platform protokol; po BLOCKED ani další třída,
+nový pokus nebo nový interpret nemá další launch. Privátní bajty důkazů se
+nemění, skutečný oddělený sousední modelový proces je živý a skutečný sentinel
+byte-exact. Dále nemožnost admission před Popen, čerstvé unittest discovery,
+launcher exit78 bez markeru, exit0 s markerem, nečitelný stav, Python discovery
+fallback a selhání zápisu redigované diagnostiky. Redigovaný strojově čitelný
+souhrn s exact SHA/env/příkazy/exity/počty/reason/cleanup je v novém PR komentáři.
+
+Hranice: podporovaný řetězec unittest discovery/procesní fixture/local-qa má
+STOP; nemění se OS ani schopnost vlastníka spustit libovolný přímý příkaz.
+Žádný kód automaticky nemaže starou admission. Existující marker znamená STOP
+pro další QA, dokud autorizovaný audit neprokáže ukončení vlastníka/potomků,
+bezpečný cleanup a stav souborů. Smazání markeru administrátorem/OS či reset
+stroje není tímto testem ověřené odblokování. Bounded rollback při skutečném
+hard-hang/forced owner death zůstává NOT PROVEN; v tomto balíku se netestuje.
 
 **NOT RUN/BLOCKED:** HOME4/4 a Windows token/Job/junction na novém SHA,
 Chromium/CDP/pixely/IndexedDB, WSL/JVM a skutečné64/513 XML, PDF ZIP render,

@@ -13,6 +13,7 @@ import threading
 import time
 import unittest
 from unittest import mock
+import qa_process_stop as process_stop
 
 ROOT=Path(__file__).resolve().parents[1]
 TOOLS=ROOT/'tools'
@@ -75,15 +76,20 @@ def safe_verdict(report):
 class OwnedRunnerTests(unittest.TestCase):
     def scenario(self, mode, preparation_delay=0, preparation_fault=''):
         # Unknown owner/cleanup => retain private evidence, STOP, never PID kill.
-        temporary=Path(tempfile.mkdtemp(prefix='qa-owned-runner-'))
+        admission=process_stop.claim()
+        try:
+            temporary=Path(tempfile.mkdtemp(prefix='qa-owned-runner-'))
+            admission.retain_evidence(temporary)
+        except BaseException:process_stop.abort()
         proc=neighbour=reader=sender=None
         stop=threading.Event()
         final_reports=[];read_errors=[];members=[]
-        completed=False;owner_attempted=False
+        completed=False;owner_attempted=False;neighbour_attempted=False
         token='a'*32
         try:
             work=temporary/'work';work.mkdir()
             sentinel=temporary/'outside.bin';sentinel.write_bytes(b'unchanged\x00\xff')
+            neighbour_attempted=True
             neighbour=subprocess.Popen([sys.executable,'-c','import time;time.sleep(12)'])
             script=work/'fixture.cjs';script.write_text(FIXTURE)
             config={'command':[str(Path(shutil.which('node')).resolve()),str(script),'leader',str(work),mode,str(preparation_delay),preparation_fault],
@@ -175,31 +181,41 @@ class OwnedRunnerTests(unittest.TestCase):
             print(json.dumps({'mode':'preparation-failure' if preparation_fault else mode,
                               **safe_verdict(result),'outsideProcess':'alive','sentinel':'unchanged'}),flush=True)
         finally:
-            stop.set()
-            if sender:sender.join(timeout=1)
-            if proc and proc.stdin and not proc.stdin.closed:
-                try:proc.stdin.close()
-                except OSError:pass
-            if proc and proc.poll() is None:
-                # EOF requests existing containment/cleanup. Unknown => STOP.
-                try:proc.wait(timeout=5)
-                except subprocess.TimeoutExpired:pass
-            if reader:reader.join(timeout=1)
-            stopped=proc is not None and proc.poll() is not None and reader is not None and not reader.is_alive()
-            if stopped:proc.stdout.close();proc.stderr.close()
-            neighbour_stopped=True
+            channel_cleanup=True
+            stopped=False
+            try:
+                stop.set()
+                if sender:sender.join(timeout=1)
+                if proc and proc.stdin and not proc.stdin.closed:
+                    try:proc.stdin.close()
+                    except BrokenPipeError:pass  # Only safe if independent owner/cleanup proof below succeeds.
+                    except OSError:channel_cleanup=False
+                if proc and proc.poll() is None:
+                    # EOF requests existing containment/cleanup. Unknown => STOP.
+                    try:proc.wait(timeout=5)
+                    except subprocess.TimeoutExpired:pass
+                if reader:reader.join(timeout=1)
+                stopped=proc is not None and proc.poll() is not None and reader is not None and not reader.is_alive()
+                if stopped:proc.stdout.close();proc.stderr.close()
+            except BaseException:channel_cleanup=False
+            neighbour_stopped=not neighbour_attempted
             if neighbour:
                 try:
-                    neighbour.terminate();neighbour.wait(timeout=2)
-                except (OSError,subprocess.TimeoutExpired):neighbour_stopped=False
+                    neighbour.terminate();neighbour.wait(timeout=2);neighbour_stopped=True
+                except BaseException:neighbour_stopped=False
             report=final_reports[0] if len(final_reports)==1 else {}
-            safe=(not owner_attempted or (stopped and not read_errors and
-                  report.get('event')=='result' and report.get('platform')==sys.platform and
-                  report.get('token')==token and (completed or safe_verdict(report)['cleanupVerified'] and
+            protocol_known=(not read_errors and len(final_reports)==1 and report.get('event')=='result' and
+                            report.get('platform')==sys.platform and report.get('token')==token)
+            safe=(not owner_attempted or (stopped and protocol_known and
+                  (completed or safe_verdict(report)['cleanupVerified'] and
                   safe_verdict(report)['ownedEmpty'])))
-            if not safe or not neighbour_stopped or (sender and sender.is_alive()):
-                self.fail('STOP / NO RETRY: fixture owner or cleanup unknown; private evidence retained')
-            shutil.rmtree(temporary)
+            if not safe or not channel_cleanup or not neighbour_stopped or (sender and sender.is_alive()):
+                admission.block(ownerStopped=stopped,protocolKnown=protocol_known,
+                                cleanupKnown=safe,neighbourStopped=neighbour_stopped,
+                                senderStopped=not sender or not sender.is_alive(),channelCleanup=channel_cleanup)
+            try:shutil.rmtree(temporary)
+            except BaseException:admission.block(filesRemoved=False)
+            admission.release_verified()
 
     def test_normal_exit_with_detached_children(self):self.scenario('normal')
     def test_crashed_node(self):self.scenario('crash')
