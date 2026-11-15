@@ -31,7 +31,7 @@ jobs:
     name: Windows quick
     if: ${{ false && github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && github.run_attempt == 1 }}
     runs-on: [self-hosted, Windows, X64, zamerovac-qa]
-    timeout-minutes: 40
+    timeout-minutes: 25
     steps:
       - name: Read-only bootstrap; missing inventory means BLOCKED
         shell: powershell
@@ -106,7 +106,15 @@ jobs:
             $json = ($text -join "`n")
             if ($json.Length -gt 4096) { throw 'evidence limit' }
             $r = $json | ConvertFrom-Json
-            if ($code -ne 0 -or $r.status -cne 'PASS' -or $r.cleanupVerified -cne $true) { throw 'blocked' }
+            if ($code -ne 0 -or $r.status -cne 'PASS' -or $r.cleanupVerified -cne $true) {
+              $stages = (Get-Content -LiteralPath validator/tools/qa-process-diagnostic.json -Raw | ConvertFrom-Json)
+              if ($null -ne $r.diagnostic -and (@($stages.stages) + @($stages.win32Stages)) -ccontains $r.diagnostic.stage) {
+                $nativeCode = 'none'
+                if ($null -ne $r.diagnostic.win32Error -and $stages.win32Stages -ccontains $r.diagnostic.stage -and ($r.diagnostic.win32Error -is [int] -or $r.diagnostic.win32Error -is [long]) -and $r.diagnostic.win32Error -ge 0 -and $r.diagnostic.win32Error -le 4294967295) { $nativeCode = [string]$r.diagnostic.win32Error }
+                Write-Output ('BLOCKED owner stage=' + $r.diagnostic.stage + ' Win32=' + $nativeCode)
+              }
+              throw 'blocked'
+            }
             Write-Output 'PASS quick; required results and cleanup verified'
           } catch { Write-Output 'BLOCKED quick; STOP / NO RETRY'; exit 78 }
   browser-smoke:
@@ -114,7 +122,7 @@ jobs:
     if: ${{ false && github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && github.run_attempt == 1 }}
     needs: [local-quick]
     runs-on: [self-hosted, Windows, X64, zamerovac-qa]
-    timeout-minutes: 45
+    timeout-minutes: 30
     steps:
       - name: Read-only bootstrap; missing inventory means BLOCKED
         shell: powershell
@@ -189,7 +197,15 @@ jobs:
             $json = ($text -join "`n")
             if ($json.Length -gt 4096) { throw 'evidence limit' }
             $r = $json | ConvertFrom-Json
-            if ($code -ne 0 -or $r.status -cne 'PASS' -or $r.cleanupVerified -cne $true) { throw 'blocked' }
+            if ($code -ne 0 -or $r.status -cne 'PASS' -or $r.cleanupVerified -cne $true) {
+              $stages = (Get-Content -LiteralPath validator/tools/qa-process-diagnostic.json -Raw | ConvertFrom-Json)
+              if ($null -ne $r.diagnostic -and (@($stages.stages) + @($stages.win32Stages)) -ccontains $r.diagnostic.stage) {
+                $nativeCode = 'none'
+                if ($null -ne $r.diagnostic.win32Error -and $stages.win32Stages -ccontains $r.diagnostic.stage -and ($r.diagnostic.win32Error -is [int] -or $r.diagnostic.win32Error -is [long]) -and $r.diagnostic.win32Error -ge 0 -and $r.diagnostic.win32Error -le 4294967295) { $nativeCode = [string]$r.diagnostic.win32Error }
+                Write-Output ('BLOCKED owner stage=' + $r.diagnostic.stage + ' Win32=' + $nativeCode)
+              }
+              throw 'blocked'
+            }
             Write-Output 'PASS browser; required results and cleanup verified'
           } catch { Write-Output 'BLOCKED browser; STOP / NO RETRY'; exit 78 }
   native-jvm:
@@ -272,7 +288,15 @@ jobs:
             $json = ($text -join "`n")
             if ($json.Length -gt 4096) { throw 'evidence limit' }
             $r = $json | ConvertFrom-Json
-            if ($code -ne 0 -or $r.status -cne 'PASS' -or $r.cleanupVerified -cne $true) { throw 'blocked' }
+            if ($code -ne 0 -or $r.status -cne 'PASS' -or $r.cleanupVerified -cne $true) {
+              $stages = (Get-Content -LiteralPath validator/tools/qa-process-diagnostic.json -Raw | ConvertFrom-Json)
+              if ($null -ne $r.diagnostic -and (@($stages.stages) + @($stages.win32Stages)) -ccontains $r.diagnostic.stage) {
+                $nativeCode = 'none'
+                if ($null -ne $r.diagnostic.win32Error -and $stages.win32Stages -ccontains $r.diagnostic.stage -and ($r.diagnostic.win32Error -is [int] -or $r.diagnostic.win32Error -is [long]) -and $r.diagnostic.win32Error -ge 0 -and $r.diagnostic.win32Error -le 4294967295) { $nativeCode = [string]$r.diagnostic.win32Error }
+                Write-Output ('BLOCKED owner stage=' + $r.diagnostic.stage + ' Win32=' + $nativeCode)
+              }
+              throw 'blocked'
+            }
             if ($r.rawGradle.status -cne 'FAIL' -or $r.rawGradle.exit -ne 1 -or $r.rawGradle.pass -ne 511 -or $r.rawGradle.fail -ne 2 -or $r.rawGradle.error -ne 0 -or $r.rawGradle.skip -ne 0 -or $r.productAcceptance -cne 'PASS' -or $r.releaseMapping -cne 'BLOCKED' -or $r.previewMapping -cne 'BLOCKED') { throw 'I88 contract' }
             Write-Output 'RAW GRADLE FAIL / exit 1: 511 PASS, 2 FAIL, 0 ERROR/SKIP; separate PRODUCT ACCEPTANCE PASS; preview/release BLOCKED'
           } catch { Write-Output 'BLOCKED native; STOP / NO RETRY'; exit 78 }
@@ -356,6 +380,14 @@ jobs:
             $json = ($text -join "`n")
             if ($json.Length -gt 4096) { throw 'evidence limit' }
             $r = $json | ConvertFrom-Json
-            if ($code -ne 0 -or $r.status -cne 'PASS' -or $r.cleanupVerified -cne $true) { throw 'blocked' }
+            if ($code -ne 0 -or $r.status -cne 'PASS' -or $r.cleanupVerified -cne $true) {
+              $stages = (Get-Content -LiteralPath validator/tools/qa-process-diagnostic.json -Raw | ConvertFrom-Json)
+              if ($null -ne $r.diagnostic -and (@($stages.stages) + @($stages.win32Stages)) -ccontains $r.diagnostic.stage) {
+                $nativeCode = 'none'
+                if ($null -ne $r.diagnostic.win32Error -and $stages.win32Stages -ccontains $r.diagnostic.stage -and ($r.diagnostic.win32Error -is [int] -or $r.diagnostic.win32Error -is [long]) -and $r.diagnostic.win32Error -ge 0 -and $r.diagnostic.win32Error -le 4294967295) { $nativeCode = [string]$r.diagnostic.win32Error }
+                Write-Output ('BLOCKED owner stage=' + $r.diagnostic.stage + ' Win32=' + $nativeCode)
+              }
+              throw 'blocked'
+            }
             Write-Output 'PASS preview; required results and cleanup verified'
           } catch { Write-Output 'BLOCKED preview; STOP / NO RETRY'; exit 78 }

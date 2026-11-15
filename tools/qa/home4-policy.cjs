@@ -69,5 +69,12 @@ function boundReport(report,identity){
  demand(JSON.stringify(report.binding)===JSON.stringify(identity),'report-binding');
  return report;
 }
+function ownerEvidence(outcome){
+ const client=require('../qa-process-client.cjs');
+ return {status:outcome.status==='PASS'?'PASS':'BLOCKED',cleanupVerified:outcome.cleanupVerified===true,remainingProcesses:outcome.cleanupEvidence?.remainingProcesses===0?0:null,
+  diagnostic:outcome.diagnostic==null?null:client.safeDiagnostic(outcome.diagnostic),
+  firstFailure:outcome.firstFailure==null?null:client.safeFailure(outcome.firstFailure),
+  cleanupErrorType:outcome.cleanupErrorType==null?null:client.safeErrorType(outcome.cleanupErrorType)};
+}
 function previewAllowed(){fail('I88-preview-release-mapping-unapproved')}
-module.exports={fail,demand,hash,json,execution,executable,snapshot,contentManifest,exactCases,structuredCases,boundReport,previewAllowed};
+module.exports={fail,demand,hash,json,execution,executable,snapshot,contentManifest,exactCases,structuredCases,boundReport,ownerEvidence,previewAllowed};

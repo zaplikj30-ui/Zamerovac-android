@@ -44,8 +44,8 @@ async function run(phase,sourceRoot,inventoryFile,inventoryHash,pins,env=process
    const log=path.join(privateDir,'command-'+crypto.randomBytes(8).toString('hex')+'.log');
    const outcome=await ownedWorker([node,path.join(__dirname,'home4-command-worker.cjs'),kind,group,file],root,
     {...env,ZAMEROVAC_PYTHON:python,PATH:path.join(profile.components.jdk.root,'bin')+';'+path.dirname(node)+';'+path.dirname(python)+';'+path.dirname(git)+';'+env.PATH},log,token,420000,controller.signal);
-   p.demand(!exceeded&&outcome.cleanupVerified===true&&outcome.cleanupEvidence?.remainingProcesses===0,'command-cleanup');
-   p.demand(outcome.status==='PASS','command-failed');
+   const evidence=p.ownerEvidence(outcome);fs.writeFileSync(log+'.lifecycle.json',JSON.stringify({...evidence,ownedProcesses:outcome.processes,supervisorExit:outcome.supervisorExit}),{flag:'wx',mode:0o600});
+   if(exceeded||!evidence.cleanupVerified||evidence.remainingProcesses!==0||evidence.status!=='PASS')throw Object.assign(Error('HOME4_BLOCKED'),{phase:'command-failed',diagnostic:evidence.diagnostic});
    return p.boundReport(p.json(log),identity);
   }
   let report;
@@ -87,7 +87,7 @@ async function run(phase,sourceRoot,inventoryFile,inventoryHash,pins,env=process
 if(require.main===module){
  const [phase,source,inventory,digest,sourceSha,validatorSha]=process.argv.slice(2);
  run(phase,source,inventory,digest,{sourceSha,validatorSha}).then(r=>console.log(JSON.stringify(r))).catch(e=>{
-  console.log(JSON.stringify({status:'BLOCKED',phase:/^[a-z0-9-]+$/.test(e.phase||'')?e.phase:'home4-gate',retry:false}));process.exitCode=78;
+  console.log(JSON.stringify({status:'BLOCKED',phase:/^[a-z0-9-]+$/.test(e.phase||'')?e.phase:'home4-gate',retry:false,...(e.diagnostic?{diagnostic:require('../qa-process-client.cjs').safeDiagnostic(e.diagnostic)}:{})}));process.exitCode=78;
  });
 }
 module.exports={run,reserve,checkLease,release,diskBytes};

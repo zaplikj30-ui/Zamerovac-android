@@ -48,6 +48,7 @@ test('HOME4 changed admission identity cannot be released',()=>{
  try{const lease=reserve(d);assert.throws(()=>checkLease({...lease,ino:lease.ino+1}));assert(fs.existsSync(lease.path))}finally{fs.rmSync(d,{recursive:true})}
 });
 test('HOME4 platform and unavailable WSL proof block before spawning',async()=>{
+ const safe=p.ownerEvidence({status:'BLOCKED',cleanupVerified:false,diagnostic:{stage:'CreateProcessW',win32Error:5,secret:'PRIVATE'},processes:[{path:'PRIVATE'}],token:'PRIVATE'});assert.equal(safe.diagnostic.stage,'CreateProcessW');assert.equal(safe.diagnostic.win32Error,5);assert(!JSON.stringify(safe).includes('PRIVATE'));
  const client=require('../tools/qa-process-client.cjs');
  await assert.rejects(client.ownedWslWorker({profile:{wsl:{}}},{},'unused','a'.repeat(32),'probes'));
 });

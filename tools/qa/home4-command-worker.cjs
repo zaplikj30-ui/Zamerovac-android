@@ -22,6 +22,8 @@ async function main(){
   }
   const child=cp.spawnSync(executable,args,{cwd:root,windowsHide:true,shell:false,encoding:'utf8',timeout:360000,maxBuffer:16*1024*1024,
    env:{...process.env,HOME4_COMMAND_WORKER_PID:String(process.pid),HOME4_PRIVATE_DIR:cfg.privateDir,TMP:cfg.privateDir,TEMP:cfg.privateDir,TMPDIR:cfg.privateDir,LOCALAPPDATA:cfg.privateDir,PYTHONDONTWRITEBYTECODE:'1',PYTHONNOUSERSITE:'1'}});
+  const prefix=path.join(cfg.privateDir,'quick-'+policy.hash(group).slice(0,16));
+  for(const [kind,data] of [['stdout',child.stdout],['stderr',child.stderr]])fs.writeFileSync(prefix+'.'+kind,Buffer.from(String(data||''),'utf8').subarray(0,16*1024*1024),{flag:'wx',mode:0o600});
   policy.demand(!child.error&&!child.signal&&child.status===0&&!child.stderr,'quick-process-exit');
   const evidence=JSON.parse(child.stdout.trim());
   const item=group==='python'?registry.python:registry.node[group];
@@ -29,6 +31,7 @@ async function main(){
  }else if(phase==='native'){
   const {ownedWslWorker}=require('../qa-process-client.cjs');
   const result=await ownedWslWorker(cfg,process.env,path.join(cfg.privateDir,'wsl-owner-'+group+'.log'),cfg.token,group);
+  fs.writeFileSync(path.join(cfg.privateDir,'wsl-'+group+'.lifecycle.json'),JSON.stringify({...policy.ownerEvidence(result),ownedProcesses:result.processes,supervisorExit:result.supervisorExit}),{flag:'wx',mode:0o600});
   policy.demand(result.status==='PASS'&&result.cleanupVerified===true&&result.cleanupEvidence?.remainingProcesses===0,'wsl-owner-cleanup');
   report=policy.json(path.join(cfg.privateDir,group+'.json'));
   policy.demand(JSON.stringify(report.binding)===JSON.stringify(cfg.binding)&&report.token===cfg.token&&report.status==='PASS','native-report-binding');

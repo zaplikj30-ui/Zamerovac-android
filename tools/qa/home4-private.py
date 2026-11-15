@@ -47,7 +47,7 @@ def private(path):
         demand(sid(owner)==own and bool(acl.value))
         count=c.c_ushort.from_address(acl.value+4).value
         demand(0<count<100)
-        own_access=False
+        own_access=False;inheritable=False
         for i in range(count):
             ace=c.c_void_p();demand(a.GetAce(acl,i,c.byref(ace)))
             demand(c.c_ushort.from_address(ace.value+2).value>=12)
@@ -57,7 +57,9 @@ def private(path):
             allowed=sid(c.c_void_p(ace.value+8))
             demand(allowed in (own,'S-1-5-18','S-1-5-32-544'))
             own_access=own_access or allowed==own
-        demand(own_access)
+            flags=c.c_ubyte.from_address(ace.value+1).value
+            inheritable=inheritable or (allowed==own and flags&3==3 and not flags&4)
+        demand(own_access and inheritable)
     finally:demand(k.LocalFree(descriptor) is None)
     meta=path.lstat()
     return {'private':True,'dev':str(meta.st_dev),'ino':str(meta.st_ino)}

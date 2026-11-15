@@ -166,3 +166,20 @@ Kompoziční kontrola navíc prokázala na skutečném starším validačním ř
 i PASS bez chybové diagnostiky a úplné quick souhrny proti registru, včetně
 výslovného NOT RUN pro nepříslušné platformní případy. Nejde o Windows runtime
 reprodukci: je to přímý test zdrojového rozhodování nad dodaným výsledkem.
+
+
+Nový adaptér také uchovává omezenou privátní lifecycle projekci a omezený
+stdout/stderr testovacího příkazu ještě před posouzením FAIL. Veřejně jde pouze
+allowlist fáze a typovaný Win32 kód, nikdy raw log, token, procesní seznam nebo
+soukromá cesta. Tím se neztrácí stávající Windows diagnostika při přechodu
+přes nový gate; nevyvolává se opravný HOME pokus. Diagnostika je modelově
+ověřena, skutečný nový Windows přenos výsledku zůstává NOT RUN.
+
+
+ACL preflight vyžaduje také propagující OI/CI oprávnění vlastníka, aby nově
+vytvořené privátní potomky neodkázal na neověřený default DACL. Jde výhradně
+o čtení a fail-closed kontrolu; žádné ACL se nemění. Skutečný Windows ACL/load
+test zůstává NOT RUN. Job limity quick25/browser30/native60/preview45 minut
+jsou zachovány. Výkon celých64 partition ve WSL na HOME nebyl měřen; je to
+konkrétní neověřené riziko, nikoli prokázaná chyba nebo souhlas k prodlužování
+limitů. Před aktivací musí běžný runtime důkaz potvrdit i tuto proveditelnost.
