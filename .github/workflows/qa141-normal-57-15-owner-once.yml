@@ -273,7 +273,8 @@ jobs:
             exit /b 1
           )
           rem Only the four uniquely named directories under the trusted workspace and current numeric run ID.
-          node -e "if(!/^[1-9][0-9]*$/.test(process.env.GITHUB_RUN_ID)||!process.env.GITHUB_WORKSPACE)process.exit(1)"
+          rem Reject symlink/junction/redirection at every exact cleanup path before recursive removal.
+          node -e "const fs=require('node:fs'),p=require('node:path');const id=process.env.GITHUB_RUN_ID,root=p.resolve(process.env.GITHUB_WORKSPACE||'.');if(!/^[1-9][0-9]*$/.test(id)||!fs.existsSync(root))process.exit(1);for(const n of ['qa141-activation','qa141-gate','qa141-product','qa141-reference']){const d=p.join(root,n+'-'+id);if(p.dirname(d)!==root)process.exit(1);if(fs.existsSync(d)){const s=fs.lstatSync(d);if(s.isSymbolicLink()||!s.isDirectory()||fs.realpathSync(d).toLowerCase()!==d.toLowerCase())process.exit(1)}}"
           if errorlevel 1 exit /b 1
           for %%N in (qa141-activation qa141-gate qa141-product qa141-reference) do (
             if exist "%GITHUB_WORKSPACE%\%%N-%GITHUB_RUN_ID%" (
