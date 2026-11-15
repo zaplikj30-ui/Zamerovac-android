@@ -1,5 +1,5 @@
 # Windows HOME QA – varianta C: předimplementační bezpečnostní návrh
-**Stav: DESIGN / po review Kontrolora 44 (REQUEST FIX) doplněny D1–D3; vlastní průběžná kontrola Koordinátora 42; závěrečný nezávislý kontrolor 46. ŽÁDNÁ IMPLEMENTACE, MERGE ANI RUNTIME TEST.**
+**Stav: DESIGN / kontrola Koordinátora 42 opravila D1–D3 a R42-A–G; koncepční rizika bez native důkazu zůstávají BLOCKED. Nezávislá závěrečná kontrola: Kontrolor 46. ŽÁDNÁ IMPLEMENTACE, MERGE ANI RUNTIME TEST.**
 Autor návrhu: Koordinátor 42, 15. 11. 2026.
 
 ## 1. Přesná výchozí verze a zdroje
@@ -93,6 +93,40 @@ Nativní outerCleanupVerified=true smí vzniknout **jen** z původního OwnerCon
 **NO-RETRY je závazné i pro zdánlivě čistý CreateProcessW fail, Job ActiveProcesses=0 či úspěšný outer Terminate.**
 
 **Konkrétní rozhodovací brána:** Pokud autor nedoloží v jednom úzkém N-API addon adapteru bezpečné ownership + bounded transport + no late resume/cleanup bez dalších procesů, tento návrh C je STOP; koordinátor vyhodnotí nejmenší bezpečnou variantu B nebo zachování osvědčené A. Tento dokument není runtime PASS ani souhlas s programováním.
+
+### 3f. Koordinátor 42 – hloubková kontrola integrace, opravy a přetrvávající hranice
+
+Tato kapitola doplňuje D1–D3 po věcné kontrole **skutečného** Node klienta (qa-process-client.cjs), Python supervisoru a WindowsJob (qa_process_supervisor.py, qa_owned_processes.py), gate (qa-fixture-gate.cjs, qa35-noop-gate.cjs, qa-fixture-attempts.cjs) na PR136 HEAD 1d6a786c77aa2a797bf7bd75f9977a3ae6613459. Nejde o test nebo nezávislé review. Dále vychází z oficiálních Microsoft CreateProcessW / nested jobs / pipe inheritance a Node-API TSFN dokumentace.
+
+**R42-A – D1, přesný okamžik STOP/resume (P1):**
+- Existují dva okamžiky: (a) uživatelský/JS požadavek na CANCEL a (b) **linearizované přijetí STOP nativním stavovým automatem**. Samotný JS timestamp, callback ani čtení boolean před ResumeThread nestačí k jednoznačnému určení, který úkon nastal dříve.
+- Jedno vlastnictví „resume permit“: pod stejným synchronizačním primitivem buď STOP změní stav na STOPPING, **nebo** se jednoznačně rezervuje jediný závazný pokus o ResumeThread; po STOPPING/UNKNOWN žádný nový permit. STOP mezitím může okamžitě nastavit sticky žádost a z oddělené dohledové cesty ukončit **pouze vlastní outer Job** bez čekání na případně zablokovaný CreateProcessW. Resume permit nesmí být překlasifikován za „PASS“. Pokud vznikne STOP během již rezervovaného/spouštěného ResumeThread, proces zůstává v ochranném Jobu, výsledek BLOCKED a musí se prověřit jeho dokončení. Přísnější fyzické tvrzení „ani jeden ResumeThread nezačne po prvním časovém okamžiku JS CANCEL“ **není prokázáno** a nesmí být vydáváno za splněný kontrakt.
+- Nutný důkaz: tabulka paralelních časování před zámkem, při rezervaci, bezprostředně před Win32 voláním, během volání a po návratu; každá běhová větev zachová jediný start, žádný necontainovaný proces a nikdy PASS po STOP. Pokud nejde prokázat tuto linearizaci s neblokujícím dohledem, implementace C se **nespouští**.
+
+**R42-B – D3, dvoufázová pozitivní atestace (P1):**
+- Vnější Job nelze současně „mít stále otevřený pro Query“ a „mít jej úspěšně zavřený“. Zavést dvě samostatné fáze: (1) při vlastnictví **otevřeného původního** handle QueryInformationJobObject + ověření ActiveProcesses=0, doložený exit originálního Python process handle a žádný in-flight START; (2) poté kontrolovaně uzavřít pipe/process/thread/Job handles a až po úspěchu všech CloseHandle zapsat finální outerCleanupVerified. Při selhání CloseHandle, vynechání Query, sporném posledním referentu Jobu nebo souběžném in-flight nemůže být atestace kladná. Pozitivní výsledek existuje až po druhé fázi a bezpečném TEMP cleanup. „Query po uzavření“ i „PASS před uzavřením“ jsou zakázány.
+- Dosavadní Python inner attestation je **převzatá ze stdout** a nadále se musí ověřit tokenem/protokolem; **nepovažovat ji za vnější OS důkaz**. Vnější atestace musí být svázaná s původním nativním OwnerContext a pořadovým nonce.
+
+**R42-C – fail-closed integrace Node klienta (P1):**
+- Současný Windows Node používá child_process.spawn. Nový adaptor jej **musí nahradit na Windows** pro konkrétní QA owner; nesmí při chybě načtení binárky, neshodě hash, unsupported Node version/nesting ani selhání bootstrapu tiše spadnout zpět na nechráněný spawn. Výsledek STOP/BLOCKED před jakýmkoli novým Python procesem. Linux cesta může ponechat současné chování; není tím povolen fallback pro Windows.
+- Zachovat původní IPC smlouvu: heartbeat ALIVE, CANCEL, limit stdout, chybějící close, error při startu, stderr redakce, source identity, sticky BLOCKED, přesné marker/exit podmínky a fail closed při odlišnosti protokolu. Native „child-like“ adaptor nesmí svou strukturou obejít kontrolu ve fixture/no-op gate.
+
+**R42-D – TSFN/backpressure a paměť (P1):**
+- Node-API max_queue_size pro napi_threadsafe_function je **počet položek**, nikoli limit bajtů; samostatně účtovat **bajty** atomickým čítačem včetně alokovaných kopií chunků, s malými horními hranicemi a event položek. Fronta v každém směru musí mít byte cap i item cap a při plnosti napi_queue_full přejít na STOP/BLOCKED, aniž zablokuje JS thread.
+- Při napi_closing, chybě enqueue, odloženém callbacku nebo napi_tsfn_abort bez výjimky bezpečně uvolnit pouze vlastní payload, nezavolat JS v zaniklém napi_env a neprovést double-free. Worker threads si samostatně drží/release TSFN reference; po posledním release je nelze používat. Zrušení již běžícího napi_async_work není možné považovat za cleanup.
+- Stderr i stdout se musí průběžně odčerpávat, jinak může Python uvíznout na zaplněné rouře; po překročení limitu vyhlásit sticky BLOCKED a ukončit vlastní Job, ale na naplněnou pipe nesmí navazovat další neomezené alokace. Výstupní limit stdout se měří na **skutečných byte chunkech** (1 MiB) ještě před převodem do JS UTF-16, nikoliv přes JS string.length. Limit privátního stderr je lokální omezení přečteného obsahu, nikoliv důvod vypisovat či uchovávat citlivé bajty.
+
+**R42-E – životnost workerů, pipe EOF a close (P1):**
+- Exit z process handle a EOF stdout/stderr jsou **dvě různé události**. Samotný Python exit ještě neprokazuje EOF (jiný proces může nechtěně držet inherited end), proto finální close potřebuje obě potvrzení a ukončená native I/O vlákna. Naopak neúplný EOF po omezené době není důvod k PASS či neomezenému čekání bez označení BLOCKED. Nevytvářet novou globální PID cleanup smyčku; špatně zděděné pipe je bezpečnostní FAIL.
+- Pokud native CreateProcessW nikdy nedokončí, addon nemá prokázaný bezpečný způsob force-free in-flight buffers nebo dokončení Node process teardown. V tomto stavu **nelze tvrdit bounded shutdown ani uklizení**. Udržet refcount/lifetime, označit UNKNOWN, zastavit další pokusy a neslibovat automatickou obnovu; extrémní experiment pouze v obnovitelné izolované VM. „Event loop je responzivní“ samo nedokazuje možnost Node bezpečně opustit.
+
+**R42-F – parent Job, identita a původ binárky (P1):**
+- V HOME runneru může být Node již členem Job hierarchy nadřízeného runneru. Node musí být mimo **svůj** outer Job, nikoli nutně mimo runner-parent Job. Python musí být bez BREAKAWAY at-creation v outer Jobu a v platné hierarchii s nadřazeným Jobem; Pythonův worker navíc v inner Jobu. Jakékoli nested UI limit/parent-breakaway/identita selhání = BLOCKED, žádný necontainovaný fallback. Nevyvozovat HOME PASS z pouhé dokumentace podpory nesting Windows 11.
+- Node 26.13.0 oficiální headers/node.lib nejsou zatím stažené ani ověřené na QA PC. Navržený build musí ověřit vstupní SHA256, binární původ Node.exe a výsledného .node, odpovídající ABI a MSVC/SDK. Hash známý pouze z téhož právě vytvořeného neověřeného buildu neprokazuje supply chain; schválený manifest musí svázat source SHA, vstupní artefakty a výsledek. Žádný další systémový instalátor/permissions/service zásah.
+
+**R42-G – pravdivé testovací důkazy a přechod do implementace (P1):**
+- Před implementací musí být konzistentní modelové kontrakty pro výše uvedené chyby a návrh konkrétního nativního I/O/launch adaptéru. Při nedostupnosti ověřitelného řešení STOP a úzké nové C-vs-B-vs-A rozhodnutí, bez slévání několika neověřených variant.
+- Vlastní technická kontrola návrhu a Microsoft/Node dokumentace **není** PASS nativní implementace. SOURCE-ONLY review připravenosti návrhu je možné označit „zlepšeno / požadavky specifikovány“, ne „C bezpečnost PASS“. Po dokončení autorských pozitivních i negativních testů a celého balíku patří nezávislé závěrečné review **Kontrolorovi 46**.
 
 ## 4. Build, dodávka, licence a původ
 - Aktuální Windows runner používá Node **26.13.0.0**. Přesný zdroj hlaviček a knihovny existuje u výrobce; bez potřeby další Visual Studio instalace:
