@@ -12,7 +12,7 @@ a [scope freeze](https://github.com/zaplikj30-ui/Zamerovac-android/pull/149#issu
 - Historický produkt PR121: `ae3b4df53c25557f28b4a25ccb65adc2abdff639`.
 - Převzatá L1/H1 oprava PR149: `57c2d6ae4cfdc5fdf50494db45883da78c7d0b83`.
 - Nový integrovaný SOURCE: `c7e71327d69bfe87f622ff6293422e2e15332a11`.
-- VALIDATOR: `908ceeed67b18e050b2335553c9a517ec7484a04`; jeho plný pin je ve
+- VALIDATOR: `51f15a99b11acf4f0499e92d149c33c9dff16de7`; jeho plný pin je ve
   finálním workflow. Finální HEAD obsahuje pouze následné připnutí validatoru
   a důkazy; přesné SHA jsou v předání PR. Budoucí schválené MAIN/EVENT **není
   známé** a není nahrazené žádným historickým SHA.
