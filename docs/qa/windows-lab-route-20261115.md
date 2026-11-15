@@ -1,5 +1,10 @@
 # PR140 — konkrétní cesta k Windows laboratoři
 
+**Historický návrh, nyní neprovádět:** novější zadání vlastníka zakazuje novou
+infrastrukturu a vrací cíl k původní normální QA. Aktuální [důkazy opravy
+PR136 a návrh uzavření](qa136-original-blocker-resolution-20261115.md) mají
+přednost. Ani níže uvedená čtecí inventura se nyní nevyžaduje.
+
 **Rozhodnutí k 15. 11. 2026: Windows část C zůstává BLOCKED.** Nejmenší další
 krok je níže uvedená čtecí inventura PC vlastníkem. Žádná laboratoř nebyla
 zpřístupněna, nic na PC ani v Actions se tímto dokumentem nespouští. Nejde

@@ -1,5 +1,10 @@
 # Varianta C — dostupné dílčí kontrakty, Windows integrace BLOCKED
 
+**Novější zadání vlastníka:** žádná nová infrastruktura; nejprve doložit,
+zda původní normální QA již opravilo PR136. Viz [konkrétní výsledek a návrh
+uzavření](qa136-original-blocker-resolution-20261115.md). C zůstává nezapojená;
+o jejím odložení rozhodne koordinátor. Následující text je historický checkpoint.
+
 Toto není kompletní oprava Windows QA ani povolení k HOME testu. Nový Windows
 spawn, Node-API addon, tři nativní pipes a skutečná outer Job atestace **nejsou
 implementovány**. Dosavadní řízení procesů, Python backend, Linux cesta a všechny
