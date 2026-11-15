@@ -77,7 +77,7 @@ def main() -> int:
     for root in roots:
         vs = root / "Microsoft Visual Studio"
         if vs.is_dir():
-            for year in ("2022", "2026"):
+            for year in ("2022", "18", "2026"):  # VS 2026 uses major-version folder 18
                 for edition in ("BuildTools", "Community", "Professional", "Enterprise"):
                     vc = vs / year / edition / "VC" / "Tools"
                     msvc.extend(vc.glob("MSVC/*/bin/Hostx64/x64/cl.exe"))
