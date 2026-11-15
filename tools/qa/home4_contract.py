@@ -17,13 +17,16 @@ def demand(condition, phase):
     if not condition:raise Blocked(phase)  # phase is code-owned, never an OS message.
 
 
-def read_json(path):
+def decode_json(data):
     def pairs(items):
         result={}
         for key,value in items:
             demand(key not in result,'duplicate-json-key');result[key]=value
         return result
-    return json.loads(checked_bytes(Path(path),4*1024*1024).decode('utf8'),object_pairs_hook=pairs)
+    return json.loads(data.decode('utf8'),object_pairs_hook=pairs)
+
+
+def read_json(path):return decode_json(checked_bytes(Path(path),4*1024*1024))
 
 
 def checked_bytes(path, limit=32*1024*1024):
@@ -197,3 +200,43 @@ def audit_source(root, files):
         for name in names:
             n=(Path(base)/name).relative_to(root).as_posix()
             demand(n in files or n=='tools/debug-signing.p12' or n.startswith(mutable),'native-unexpected-write')
+
+
+def verify_runtime_evidence(profile, identity, phase):
+    """Owner-approved, hash-pinned PRIVATE records; a boolean is not a record.
+
+    This authenticates the approved record bytes/binding, not the physical OS
+    observation by itself. Independent runtime evidence must actually exist.
+    """
+    inputs=[('windows-disk',profile.get('diskEvidence'))]
+    if phase=='native':inputs += [('wsl-disk',profile['wsl'].get('diskEvidence')),('wsl-scope',profile['wsl'].get('containmentEvidence'))]
+    for purpose,descriptor in inputs:
+        demand(isinstance(descriptor,dict) and descriptor.get('verified') is True and
+               isinstance(descriptor.get('file'),str) and Path(descriptor['file']).is_absolute() and
+               bool(re.fullmatch('[a-f0-9]{64}',descriptor.get('sha256') or '')),'runtime-proof-unverified')
+        data=checked_bytes(descriptor['file'],65536)
+        demand(sha(data)==descriptor['sha256'],'runtime-proof-hash')
+        record=decode_json(data)
+        demand(record.get('kind')=='actual-runtime' and record.get('purpose')==purpose and
+               all(record.get(k)==identity[k] for k in ('sourceSha','validatorSha')),'runtime-proof-binding-or-model')
+        if purpose.endswith('-disk'):
+            limit=(2 if purpose=='windows-disk' else 8)*1024**3
+            demand(type(record.get('limitBytes')) is int and record['limitBytes']==limit and
+                   type(record.get('minimumFreeBytes')) is int and record['minimumFreeBytes']>=10*1024**3 and
+                   all(record.get(k) is True for k in ('boundedWritesVerified','cleanupVerified','auditUnchanged')) and
+                   record.get('monitorOnly') is False,'runtime-disk-proof')
+        else:
+            demand(record.get('platform')=='linux' and record.get('scope')=='linux-pidfd-subreaper' and
+                   record.get('uid')==profile['wsl']['uid'] and type(record.get('uid')) is int and record['uid']>0 and
+                   record.get('distribution')=='Zamerovac-Ubuntu-QA' and record.get('hardHangTest') is False and
+                   record.get('forcedOwnerDeath') is False,'runtime-wsl-proof')
+            scenarios=record.get('scenarios',{})
+            demand(set(scenarios)=={'normal','timeout','cancel'},'runtime-scenario-registry')
+            for reason,r in scenarios.items():
+                expected_diag=None if reason=='normal' else {'stage':'worker-'+reason,'win32Error':None}
+                demand(r.get('reason')==reason and r.get('status')==('PASS' if reason=='normal' else 'BLOCKED') and
+                       r.get('cleanupVerified') is True and type(r.get('cleanupEvidence',{}).get('remainingProcesses')) is int and r['cleanupEvidence']['remainingProcesses']==0 and
+                       'exitCode' in r and ((type(r['exitCode']) is int and r['exitCode']==0) if reason=='normal' else r['exitCode'] is None) and
+                       r.get('diagnostic')==expected_diag and r.get('error') is None and r.get('firstFailure') is None and
+                       r.get('cleanupErrorType') is None and r.get('privateTracebackWritten',False) is False and
+                       all(r.get(k) is True for k in ('neighbourUnchanged','originalBytesUnchanged','filesRemoved')),'runtime-scenario-proof')

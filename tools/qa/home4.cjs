@@ -33,7 +33,7 @@ async function run(phase,sourceRoot,inventoryFile,inventoryHash,pins,env=process
  try{fs.writeFileSync(pointer,JSON.stringify({privateDirectory:privateDir,binding:identity}));fs.fsyncSync(pointer)}finally{fs.closeSync(pointer)}
  let known=false;
  try{
-  const cfg={startedNs:String(BigInt(Date.now())*1000000n),binding:identity,sourceRoot,validatorRoot:root,profileFile:inventoryFile,profileHash:inventoryHash,profile,privateDir,token,python,
+  const cfg={phase,startedNs:String(BigInt(Date.now())*1000000n),binding:identity,sourceRoot,validatorRoot:root,profileFile:inventoryFile,profileHash:inventoryHash,profile,privateDir,token,python,
    sourceFiles:p.contentManifest(sourceRoot,pins.sourceSha,git),validatorFiles:p.contentManifest(root,pins.validatorSha,git)};
   const file=path.join(privateDir,'config.json');fs.writeFileSync(file,JSON.stringify(cfg),{flag:'wx'});
   const controller=new AbortController();let exceeded=false;

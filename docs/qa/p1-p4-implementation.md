@@ -138,3 +138,18 @@ reboot/externí zásah neautorizuje retry bez zvlášť schváleného auditu.
 runtime ověření, následně rozhodnutí k jedné APK;
 **NEMĚNIT:** data/geometrie, raw #88 FAIL, owner/main/manual/attempt1,
 NO RETRY, procesní izolace, release guard a vypnutá aktivace.
+
+### Připnuté doklady místo pouhého verified=true
+
+Vlastní negativní test prokázal, že původní nový preflight mohl po hashové
+kontrole nástrojů přijmout samotný boolean runtime/disk evidence. Stávající
+validace nyní také vyžaduje privátní `file` + `sha256`, stejné načtené bajty,
+SOURCE/VALIDATOR vazbu a přesný obsah skutečného runtime dokladu. Modelový
+záznam, změněný hash/binding, monitor bez prokázané meze nebo neověřený cleanup
+jsou BLOCKED. Native navíc vyžaduje běžné normal/timeout/cancel scope záznamy
+s nulovými potomky, ochranou souseda/původních bajtů a odstraněním vlastních
+souborů; žádný hard-hang či forced owner death. Schéma určuje přímo
+`verify_runtime_evidence` v `home4_contract.py`; nejde o nový supervisor.
+Šablona nemá žádný takový doklad. Kontrola autentizuje vlastníkem schválené
+připnuté bajty, **sama nevytváří fyzický runtime důkaz**. Jeho získání a
+nezávislé posouzení bez nepovolených HOME pokusů zůstává BLOCKED/NOT RUN.

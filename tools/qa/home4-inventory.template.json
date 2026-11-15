@@ -11,8 +11,16 @@
     "privateRoot": null,
     "python": null,
     "driveMap": {},
-    "containmentEvidence": null,
-    "diskEvidence": null
+    "containmentEvidence": {
+      "verified": false,
+      "file": null,
+      "sha256": null
+    },
+    "diskEvidence": {
+      "verified": false,
+      "file": null,
+      "sha256": null
+    }
   },
   "components": {
     "node": {
@@ -75,5 +83,9 @@
     "fixed-actions-code"
   ],
   "releaseProof": null,
-  "diskEvidence": null
+  "diskEvidence": {
+    "verified": false,
+    "file": null,
+    "sha256": null
+  }
 }

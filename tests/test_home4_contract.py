@@ -12,7 +12,7 @@ import xml.etree.ElementTree as ET
 
 ROOT=Path(__file__).resolve().parents[1]
 sys.path.insert(0,str(ROOT/'tools/qa'))
-from home4_contract import Blocked,binding,classify_records,validate_junit,verify_manifest,verify_inventory,exact_results,validate_partition,validate_partitions,checked_bytes
+from home4_contract import Blocked,binding,classify_records,validate_junit,verify_manifest,verify_inventory,exact_results,validate_partition,validate_partitions,checked_bytes,verify_runtime_evidence
 C=json.loads((ROOT/'tools/qa/home4-jvm.json').read_text())
 
 
@@ -144,6 +144,49 @@ class Home4Contract(unittest.TestCase):
         self.assertEqual(exact_results([dict(id='one',status='PASS'),dict(id='linux',status='NOT RUN')],['one'],['linux'])['pass'],1)
         for rows in ([],[dict(id='one',status='SKIP')],[dict(id='one',status='FAIL')],[dict(id='one',status='PASS')]*2):
             with self.assertRaises(Blocked):exact_results(rows,['one'])
+
+
+
+class Home4RuntimeProof(unittest.TestCase):
+    def test_bare_verified_boolean_is_not_runtime_proof(self):
+        spec=importlib.util.spec_from_file_location('home4_preflight',ROOT/'tools/qa/home4_preflight.py')
+        m=importlib.util.module_from_spec(spec);spec.loader.exec_module(m)
+        from unittest.mock import patch
+        from types import SimpleNamespace
+        profile=dict(diskEvidence={'verified':True},components={k:dict(root=str(ROOT),entry=k,files={k:'0'*64},version='1') for k in ('node','python','git')})
+        def fake_version(args,**kwargs):
+            prefix={'node':'v','python':'Python ','git':'git version '}[Path(args[0]).name]
+            return SimpleNamespace(stdout=prefix+'1',stderr='')
+        cfg=dict(profile=profile,validatorRoot=str(ROOT),binding={'sourceSha':'a'*40,'validatorSha':'b'*40},phase='quick')
+        with patch.object(m.sys,'platform','win32'),patch.dict(os.environ,{'HOME4_COMMAND_WORKER_PID':str(os.getppid())}),patch.object(m,'verify_inventory'),patch.object(m,'verify_manifest'),patch.object(m,'read_json',return_value={'testSources':{}}),patch.object(m.subprocess,'run',side_effect=fake_version):
+            with self.assertRaises((Blocked,KeyError)):m.run(cfg)
+
+    def test_pinned_actual_record_positive_and_missing_model_stale_hash_block(self):
+        with tempfile.TemporaryDirectory() as d:
+            p=Path(d)/'proof.json';identity=dict(sourceSha='a'*40,validatorSha='b'*40)
+            good=dict(kind='actual-runtime',purpose='windows-disk',**identity,limitBytes=2*1024**3,minimumFreeBytes=10*1024**3,boundedWritesVerified=True,cleanupVerified=True,auditUnchanged=True,monitorOnly=False)
+            def profile(record):
+                p.write_text(json.dumps(record));return {'diskEvidence':dict(verified=True,file=str(p),sha256=__import__('hashlib').sha256(p.read_bytes()).hexdigest())}
+            verified=profile(good);verify_runtime_evidence(verified,identity,'quick')
+            for change in (dict(kind='model'),dict(sourceSha='c'*40),dict(validatorSha='c'*40),dict(monitorOnly=True),dict(cleanupVerified=False),dict(minimumFreeBytes=0),dict(limitBytes=True)):
+                with self.assertRaises(Blocked):verify_runtime_evidence(profile({**good,**change}),identity,'quick')
+            verified=profile(good);p.write_text('{}')
+            with self.assertRaises(Blocked):verify_runtime_evidence(verified,identity,'quick')
+
+            def pinned(name,record):
+                file=Path(d)/name;file.write_text(json.dumps(record));return dict(verified=True,file=str(file),sha256=__import__('hashlib').sha256(file.read_bytes()).hexdigest())
+            scenes={}
+            for reason in ('normal','timeout','cancel'):
+                scenes[reason]=dict(status='PASS' if reason=='normal' else 'BLOCKED',reason=reason,exitCode=0 if reason=='normal' else None,error=None,diagnostic=None if reason=='normal' else dict(stage='worker-'+reason,win32Error=None),cleanupVerified=True,cleanupEvidence={'remainingProcesses':0},neighbourUnchanged=True,originalBytesUnchanged=True,filesRemoved=True)
+            scope=dict(kind='actual-runtime',purpose='wsl-scope',**identity,platform='linux',scope='linux-pidfd-subreaper',uid=1000,distribution='Zamerovac-Ubuntu-QA',hardHangTest=False,forcedOwnerDeath=False,scenarios=scenes)
+            full=dict(diskEvidence=pinned('windows.json',good),wsl=dict(uid=1000,diskEvidence=pinned('linux.json',{**good,'purpose':'wsl-disk','limitBytes':8*1024**3}),containmentEvidence=pinned('scope.json',scope)))
+            verify_runtime_evidence(full,identity,'native')
+            for change in (dict(uid=0),dict(hardHangTest=True),dict(forcedOwnerDeath=True),dict(scope='windows-job'),dict(scenarios={**scenes,'extra':scenes['normal']})):
+                full['wsl']['containmentEvidence']=pinned('scope.json',{**scope,**change})
+                with self.assertRaises(Blocked):verify_runtime_evidence(full,identity,'native')
+            for change in (dict(cleanupVerified=False),dict(cleanupEvidence={'remainingProcesses':False}),dict(exitCode=False),dict(neighbourUnchanged=False),dict(originalBytesUnchanged=False),dict(filesRemoved=False)):
+                full['wsl']['containmentEvidence']=pinned('scope.json',{**scope,'scenarios':{**scenes,'normal':{**scenes['normal'],**change}}})
+                with self.assertRaises(Blocked):verify_runtime_evidence(full,identity,'native')
 
 
 if __name__=='__main__':unittest.main()
