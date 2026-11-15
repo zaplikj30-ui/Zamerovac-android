@@ -5,6 +5,10 @@ spawn, Node-API addon, tři nativní pipes a skutečná outer Job atestace **nej
 implementovány**. Dosavadní řízení procesů, Python backend, Linux cesta a všechny
 PASS/NO-RETRY podmínky PR136 zůstávají beze změny.
 
+Navazující [konkrétní návrh laboratoře a jediný čtecí postup pro vlastníka](windows-lab-route-20261115.md)
+ověřuje možnosti16 GB PC, odděluje compile/load/fault a společnou obsluhu přes
+GitHub. Zatím nepotvrzuje dostupnou Windows laboratoř ani neodstraňuje blokér C.
+
 Výchozí base: PR136 `1d6a786c77aa2a797bf7bd75f9977a3ae6613459`.
 Návrh: PR138 `e54a787dfcfebc6a2fc2fad6feee34dd6292a823`.
 Závazné nové role: PR139 `f4f6504daa8400cf45bfd81914943e98c74b0d46`,
