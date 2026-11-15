@@ -40,8 +40,8 @@ Současný Node client používá child_process.spawn přímo pro Python. Post-c
 
 | Stav | Povolený další krok | STOP a fail-closed |
 | --- | --- | --- |
-| NEW | ověřit kontext a účet → JOB_READY | bez nového procesu při STOP |
-| JOB_READY | vytvořit Job s KILL_ON_JOB_CLOSE, připravit handles → STARTING; zvýšit in-flight počítadlo **před** uvolněním zámku | STOPPING bez CreateProcess |
+| NEW | ověřit účet, vytvořit outer Job a nastavit KILL_ON_JOB_CLOSE; teprve po úspěchu → JOB_READY | bez nového procesu při STOP; chyba vytváření Jobu je BLOCKED |
+| JOB_READY | připravit tři pipe a STARTUPINFOEX, vstoupit do STARTING; zvýšit in-flight počítadlo **před** uvolněním zámku | STOPPING bez CreateProcess; nesmí vzniknout druhý Job handle |
 | STARTING | po prokazatelném návratu CreateProcessW převzít originální process/thread handles → VERIFIED_SUSPENDED | při CANCEL před / během / po API: STOPPING; pokud CreateProcessW nevrací, UNKNOWN a nikdy PASS |
 | VERIFIED_SUSPENDED | ověřit IsProcessInJob + image/token/time; pouze jedna synchronizovaná autorizace ResumeThread → RUNNING | STOP zakazuje další resume; chyba nebo nejistá atomika => BLOCKED |
 | RUNNING | bounded IPC, wait originálního process handle, pipe EOF → STOPPING | timeout/IPC/kill/cancel sticky BLOCKED |
@@ -89,6 +89,8 @@ Nativní outerCleanupVerified=true smí vzniknout **jen** z původního OwnerCon
 **Smrt Pythonu:** Node ukončí a ověří vlastní outer Job, nenahradí to Python exit message. **Smrt Node:** nelze vydat PASS; KILL_ON_JOB_CLOSE chrání jen již připojené procesy, neprokazuje rollback libovolného in-flight CreateProcessW. Žádné PID-only kill, cizí procesy, automatický retry, OpenJobObject NOT_FOUND jako důkaz ani schovávání neznámých potomků.
 
 **Předběžné povinné kontraktní testy:** C44-D1 stavové přechody a bariéry CANCEL před/během/po native create, late return + STOP před resume, refcount/teardown/single close, native event loop nezablokovaný; C44-D2 inheritance všech 6 pipe ends, partial I/O, Unicode na 1 MiB hranici, stderr backpressure a redakce, pořadí EOF/exit/close, raw HANDLE leak; C44-D3 Job0 s in-flight, chybějící process exit, záměna Job handle, opožděný callback, forged Python PASS, no TEMP cleanup, dvojí Job attestace a NO RETRY. Všech 57 historických modelů a původních 15 TAP zachovat bez oslabení. Skutečné native failure/crash/hang testy jen obnovitelná Windows VM, nikoli 16GB domácí PC.
+
+**NO-RETRY je závazné i pro zdánlivě čistý CreateProcessW fail, Job ActiveProcesses=0 či úspěšný outer Terminate.**
 
 **Konkrétní rozhodovací brána:** Pokud autor nedoloží v jednom úzkém N-API addon adapteru bezpečné ownership + bounded transport + no late resume/cleanup bez dalších procesů, tento návrh C je STOP; koordinátor vyhodnotí nejmenší bezpečnou variantu B nebo zachování osvědčené A. Tento dokument není runtime PASS ani souhlas s programováním.
 
