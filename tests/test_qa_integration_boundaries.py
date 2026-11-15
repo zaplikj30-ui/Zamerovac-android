@@ -17,6 +17,10 @@ class IntegrationBoundaries(unittest.TestCase):
         self.assertIn('native Windows fault testing requires separate isolated approval',
                       module.OwnedRunnerTests.__unittest_skip_why__)
         self.assertEqual(unittest.defaultTestLoader.loadTestsFromTestCase(module.OwnedRunnerTests).countTestCases(),11)
+        self.assertTrue(module.FixturePreparationTests.__unittest_skip__)
+        self.assertEqual(module.FixturePreparationTests.__unittest_skip_why__,
+                         module.OwnedRunnerTests.__unittest_skip_why__)
+        self.assertEqual(unittest.defaultTestLoader.loadTestsFromTestCase(module.FixturePreparationTests).countTestCases(),5)
 
 
 if __name__=='__main__':unittest.main()

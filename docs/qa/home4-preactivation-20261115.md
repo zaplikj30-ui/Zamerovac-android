@@ -27,8 +27,11 @@ Aktuální zdroje:
   `db2127abf22030088fbab21bacb0ca11c1d5890b`, QA zdroj `58b456c8ad3f603c57cf2ee8c6d784c76c2446fb`.
   Není HOME4/4 pro nový main ani důkaz hard-hang rollbacku.
 
-V tomto balíku jsou implementovány **pouze dokument a test-only modely**.
-Workflow, guardy, produkt, release a původní testy se nemění. Následující
+V tomto balíku jsou implementovány **dokumentace a test-only změny**:
+inertní modely/read-only testy a následná oprava přípravy Linux procesní
+fixture L1 podle [navazujícího zadání](https://github.com/zaplikj30-ui/Zamerovac-android/pull/149#issuecomment-6897523725).
+Workflow, produkční guardy/runtime, produkt a release se nemění. Původních57
+modelů a15 TAP zůstává beze změny; změna Linux fixture je popsána níže. Následující
 tabulka uvádí budoucí dotčené soubory, nikoli již provedené změny.
 
 ## Sedm nálezů — jednotný návrh a brána rozhodnutí
@@ -297,26 +300,63 @@ dispatch guardy, procesní modely, preflight/cert/package/version/redirect a
 home_qa_gate strict generator negativy. Výsledek každého příkazu, SHA a hash
 důkazu jsou v autorském předání. Nevymýšlet Windows PASS z Linux modelu.
 
-**Nový regresní blokér L1:** při opakování na `0292718df8252eb4ffa62c0a80b7ec0f631d0eda`
-selhalo vytváření kompletního stromu původní Linux-only fixture v
-test_qa_process_supervisor.OwnedRunnerTests.test_cleanup_error; samostatné
-opakování zachytilo stejnou assertion v test_cancel (další dva průchody11
-metod byly PASS). Vlastní nové9+2 testy a původních57 prošly. Tyto výsledky
-nejsou stabilní celá zelená regrese. Zdroj fixture čeká na leader/child/leaf
-před spuštěním heartbeat senderu, ale owner má heartbeatTimeout0,35 s a
-worker timeout0,8 s; samotný tree wait má2 s. Tato neslučitelná okna jsou
-zdrojový fakt; že způsobila konkrétní zachycené selhání, je **hypotéza**, bez
-zachyceného owner verdictu ji nelze vydávat za prokázanou příčinu.
+## L1 — příčina a příčinná oprava pouze Linux testovací fixture
 
-Před runtime aktivací L1 došetřit v Linuxu: minimální další krok je v původní
-fixture zachytit redigovaný owner reason při neúspěchu formation a test-first
-ověřit pomalou přípravu stromu. Případná oprava musí oddělit přípravu fixture
-od měřeného fault scénáře a nepřepisovat produkční timeouty/guardy ani Windows
-skip. V tomto **výhradně inertním návrhovém** balíku se existující živý
-process-fault payload ani jeho harness nemění; blokér se neskrývá opakováním
-do PASS. L1 vyžaduje cílené autorské řešení před tvrzením úplné runtime regrese,
-nikoli HOME experiment. Předimplementační review tohoto návrhu může přímo
-posoudit i tento zaznamenaný blokér; není to žádost o aktivaci.
+Historický stav je zachován v původním autorském komentáři: na0292718 selhal
+cleanup_error, samostatně cancel a na53948c4 test_timeout při čekání na úplný
+leader/child/leaf strom (175PASS/1FAIL). Tehdy byl střet časových oken pouze
+hypotéza. Nyní je tato chyba přípravy **deterministicky reprodukována**:
+
+- Stejná skutečná Linux fixture s omezeným jednosekundovým zpožděním přípravy
+  skončila před kompletním stromem: BLOCKED / heartbeat-timeout / owner-channel,
+  cleanupVerified=true. Negativní test očekávající původní zamýšlený timeout
+  scénář před opravou skutečně FAIL (test-first RED).
+- Samotný časnější heartbeat nestačí: se stejným zpožděním a živým heartbeat
+  odesílačem nezměněný supervisor vydal BLOCKED / timeout, exit77, prázdný
+  scope, ale treeComplete=false. Tím je doložen i druhý závod s worker timeoutem.
+- Příčina třídy L1 je start runtime hodin před dokončením přípravy fixture,
+  nikoli chyba Windows Jobu. U každého starého náhodného výskytu bez verdictu
+  nelze zpětně tvrdit konkrétní reason; prokázaný je řízeně reprodukovaný závod.
+
+**Oprava:** tests/test_qa_process_supervisor.py rozšiřuje jen existující
+Linux test-only scope wrapper: skutečný LinuxScope vytvoří strom, během
+stávajícího2s přípravného okna se ověřuje jeho existence a život vůdce.
+Teprve po úplné přípravě se vrátí start a nezměněný supervisor vyšle ready
+se svými původními runtime hodinami. Heartbeat klient začne okamžitě při
+ready. Normal/crash fixture čeká na testový begin marker, aby neskončila
+před ověřením preconditions. **Timeout0,8s, heartbeat0,35s, příprava2s i
+produkční timeouty/protokol jsou nezměněné.** Žádné maskování clocku v runtime.
+Jde o oddělení přípravy testu, ne o nový produkční supervisor či framework.
+
+Neúplná příprava vyvolá ScopeError v worker-start a použije existující cleanup
+supervisoru; neoznačuje se PASS. Nový negativní test nechá všechny tři vlastní
+procesy vzniknout, zadrží pouze leaf ready soubor a ověří BLOCKED/startup-error,
+exit77, scope empty, reaped všechny3, sousední proces živý a sentinel beze změny.
+Negativní kontrola s odstraněným testovým barrierem musí zachytit předčasné
+ready i po opravě; není to runtime přepínač. Pomalá příprava1s (delší než
+oba runtime limity) nově ověřuje původně zamýšlený timeout/cancel/cleanup-error/
+close-error/normal/crash/heartbeat-loss důvod, nikoli libovolné BLOCKED.
+
+Původních11 metod zůstává, aserce jsou posílené o přesný reason, exit/token/
+platform a cleanup evidence; Linux-only guard nezměněný. Přidáno5 Linux-only
+přípravných testů a1 čistý model redakce, takže cílený modul má17 metod a
+plná dostupná Python regrese182. Windows dispatch model ověřuje, že všech
+11+5 živých Linux testů je na Windows SKIP; čistý redakční model nic nespouští.
+Původních57 zůstává57, nepřičítat subscénáře a opakování jako nové testy.
+
+Při vlastní kontrole byl odstraněn testový fallback proc.terminate() na
+neukončeného vlastníka: test nyní zavře kanál, čeká na existující cleanup,
+nezávisle uzavře vlastní sousední proces a maže privátní adresář jen po
+známém dokončení/ověřeném úklidu. Unknown owner/cleanup/protokol => STOP /
+NO RETRY a zachování privátního důkazu. Žádné zabíjení cizích PID. Výstup
+fixture obsahuje jen povolené status/reason a booleany, ne PID/token/log/cesty.
+U očekávaných cleanup/close chyb zůstává skutečný výsledek BLOCKED a neověřený
+cleanup; test navíc nezávisle prokazuje ukončení všech tří známých potomků.
+
+Přesný finální SHA, opakované cílené i úplné Node/Python výsledky, RED/GREEN
+hashes a vlastní kumulativní review jsou v navazujícím komentáři stejného PR.
+L1 se neuzavírá pouhým zeleným opakováním: opravena je prokázaná přípravná
+příčina a zachována negativní regrese. P1–P4 zůstávají návrhy bez aktivace.
 
 **NOT RUN/BLOCKED:** HOME4/4 a Windows token/Job/junction na novém SHA,
 Chromium/CDP/pixely/IndexedDB, WSL/JVM a skutečné64/513 XML, PDF ZIP render,
