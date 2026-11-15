@@ -1,6 +1,6 @@
 # HOME4: jediná úzká read-only inventární sonda — návrh bez aktivace (15. 11. 2026)
 
-**Stav: DESIGN ONLY / SOURCE NOT REVIEWED / HOME NOT RUN.** Tento soubor není skript, workflow ani svolení k jejich spuštění. Úkol je pouze získat *dosud chybějící aktuální* údaje o HOME Windows/WSL. Žádný QA test ani build/APK. Sonda neinstaluje, nestahuje, neaktualizuje ani nemění účet, ACL, službu, WSL či existující guardy; samostatné interní efekty runneru vyžadují předstartovní bránu uvedenou níže.
+**Stav: DESIGN APPROVE pouze pro návrh; nový executable SOURCE čeká na nezávislé SOURCE/SECURITY review; HOME NOT RUN.** Tento soubor není skript, workflow ani svolení k jejich spuštění. Úkol je pouze získat *dosud chybějící aktuální* údaje o HOME Windows/WSL. Žádný QA test ani build/APK. Sonda neinstaluje, nestahuje, neaktualizuje ani nemění účet, ACL, službu, WSL či existující guardy; samostatné interní efekty runneru vyžadují předstartovní bránu uvedenou níže.
 
 ## Připnutý výchozí stav a již existující důkazy
 
@@ -14,7 +14,7 @@
 
 ## Nejmenší bezpečný mechanismus, předložený k nezávislému posouzení
 
-**Jediný nový, oddělený, časově omezený read-only krok, nikoli přestavba HOME4.** Až po nezávislé SOURCE/SECURITY kontrole přesného spustitelného diffu a výslovném rozhodnutí vlastníka připravit samostatné `workflow_dispatch` pouze na schváleném `main`, `permissions: {}`, `self-hosted,Windows,X64,zamerovac-qa`, `timeout-minutes: 5`, `cancel-in-progress:false`. Před jediným krokem i uvnitř něj vyžadovat přesný repository, owner actor, triggering_actor, `refs/heads/main`, `workflow_dispatch`, `run_attempt=1`, schválené EVENT SHA a servisní identitu `ZamerovacQA`; žádný PR/fork/push, checkout, reusable workflow, sondou iniciovaný token/API požadavek, síťový přenos, download ani externí akce. Nový workflow v této návrhové větvi **NEEXISTUJE**, nelze jej spustit. Žádný zásah do současného `.github/workflows/windows-self-hosted-qa.yml`, jeho čtyř `false &&`, prázdného `HOME4_APPROVED_MAIN_SHA` a `UNVERIFIED` profilu.
+**Jediný nový, oddělený, časově omezený read-only krok, nikoli přestavba HOME4.** Až po nezávislé SOURCE/SECURITY kontrole přesného spustitelného diffu a výslovném rozhodnutí vlastníka připravit samostatné `workflow_dispatch` pouze na schváleném `main`, `permissions: {}`, `self-hosted,Windows,X64,zamerovac-qa`, `timeout-minutes: 5`, `cancel-in-progress:false`. Před jediným krokem i uvnitř něj vyžadovat přesný repository, owner actor, triggering_actor, `refs/heads/main`, `workflow_dispatch`, `run_attempt=1`, schválené EVENT SHA a servisní identitu `ZamerovacQA`; žádný PR/fork/push, checkout, reusable workflow, sondou iniciovaný token/API požadavek, síťový přenos, download ani externí akce. Nový kandidát `.github/workflows/home-readonly-delta-inventory.yml` nyní existuje pouze v izolovaném draft PR a obsahuje bezpodmínečné `false &&` na jediném jobu; HOME nespouští. Před jakýmkoli odstraněním této pojistky, umístěním do main nebo ručním spuštěním je nutné nové nezávislé SOURCE/SECURITY review, samostatná kontrola runner interních efektů a výslovné rozhodnutí vlastníka. Žádný zásah do současného `.github/workflows/windows-self-hosted-qa.yml`, jeho čtyř `false &&`, prázdného `HOME4_APPROVED_MAIN_SHA` a `UNVERIFIED` profilu.
 
 Navrhovaný pozdější krok sestává **jen z pasivního dotazu přes předem existující OS nástroje** na předem fixovaný allowlist; nesmí vykonat ani importovat žádný nalezený Node/Python/Git/Gradle/JDK/Chrome modul. Důvěryhodný shell a OS nástroje se nejprve identifikují; bootstrap jejich důvěry zůstává samostatnou podmínkou review, nelze ji odvozovat jen z toho, že si binárka sama spočítá hash.
 
@@ -39,10 +39,10 @@ Bezpečné dokončení **není** automatické vyplnění `verified:true`, změna
 
 ## Výsledek této etapy
 
-- **SOURCE:** design dokument, bez nového spustitelného kódu, bez úpravy guardů/QA.
+- **SOURCE:** schválený design a jediný neaktivovaný kandidát workflow pro nové SOURCE/SECURITY review. Sonda bez checkoutu či spuštění WSL sbírá pouze omezené Windows pozorování; celý HOME4 profil, úplné cache, nonroot/ext4/CPU/RAM WSL, hardlink/TOCTOU, efektivní ACL a hard disk quota vždy zůstávají BLOCKED. Stávající HOME4 guardy/QA beze změn.
 - **PASS:** GitHub metadata výchozích SHA a cílená revize existujícího mechanismu.
 - **NOT RUN:** HOME scan, nový Windows/WSL runtime, cache/hash/ACL/disk, QA4/4, Chromium 23/96, JVM, APK.
 - **BLOCKED:** skutečné aktuální hodnoty a spuštění (chybí recenzovaný nástroj a bezpečná exekuční cesta); WSL nonroot a privátní evidence zvlášť.
-- **TEĎ:** nezávisle prověřit tento úzký návrh a možnost nejprve bezpečně ověřit nonroot WSL bez jeho startu.
+- **TEĎ:** nezávisle prověřit celý nový vykonatelný SOURCE/SECURITY diff a bezpečnostní předstartovní runner bránu; bezpečný nonroot WSL bez startu zůstává BLOCKED, neobcházet.
 - **POZDĚJI:** jediná recenzovaná sonda pouze na nově schváleném MAIN, oddělený souhlas s ručním spuštěním; až dle výsledku rozhodnout o dalších runtime důkazech.
 - **NEMĚNIT:** produkt/geometrii/data/média, raw #88 FAIL, PR150 autorovu větev, HOME4 `false &&`, manual/owner/main/attempt1, STOP/NO RETRY.
