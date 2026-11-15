@@ -10,7 +10,7 @@ concurrency:
   cancel-in-progress: false
 jobs:
   inventory:
-    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.event_name == 'push' && github.event.created == false && github.run_number == 3 && github.run_attempt == 1 && github.ref == 'refs/heads/qa/coord42-vs2026-inventory-20261115' && github.event.head_commit.message == 'execute-coord42-vs2026-inventory' }}
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.event_name == 'push' && github.event.created == false && github.run_number == 5 && github.run_attempt == 1 && github.ref == 'refs/heads/qa/coord42-vs2026-inventory-20261115' && github.event.head_commit.message == 'execute-coord42-vs2026-inventory' }}
     runs-on: [self-hosted, Windows, X64, zamerovac-qa]
     timeout-minutes: 4
     env:
@@ -32,7 +32,7 @@ jobs:
           GIT_CONFIG_KEY_0: core.autocrlf
           GIT_CONFIG_VALUE_0: 'false'
         with:
-          ref: e60a1e09b4750c88ceb384387c7c04cbeb0569a7
+          ref: 0591009eeb7344b11e638fed674f76cfd909fdac
           path: qa42-inventory-${{ github.run_id }}
           clean: false
           fetch-depth: 1
@@ -44,8 +44,8 @@ jobs:
         working-directory: qa42-inventory-${{ github.run_id }}
         run: |
           for /f %%H in ('git rev-parse HEAD') do set "ACTUAL_SHA=%%H"
-          if /I not "%ACTUAL_SHA%"=="e60a1e09b4750c88ceb384387c7c04cbeb0569a7" exit /b 1
-          echo TRUSTED_INVENTORY_SCRIPT_SHA=e60a1e09b4750c88ceb384387c7c04cbeb0569a7
+          if /I not "%ACTUAL_SHA%"=="0591009eeb7344b11e638fed674f76cfd909fdac" exit /b 1
+          echo TRUSTED_INVENTORY_SCRIPT_SHA=0591009eeb7344b11e638fed674f76cfd909fdac
           "C:\actions-runner\tools\Python313\python.exe" -I tools\coord42-win32-inventory.py
           if errorlevel 1 exit /b 1
 # Owner-only one-time activation of verified read-only inventory (no build).
