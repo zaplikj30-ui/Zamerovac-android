@@ -69,3 +69,15 @@ test('HOME4 actual client rejects contradictory PASS and malformed protocol with
   }
  }finally{cp.spawn=original;delete require.cache[id];fs.rmSync(d,{recursive:true})}
 });
+test('HOME4 bootstrap race model executes only already verified bytes',()=>{
+ const cp=require('node:child_process'),source=fs.readFileSync(path.join(__dirname,'../tools/qa-process-client.cjs'),'utf8');
+ const bootstrap=JSON.parse(source.match(/const bootstrap=(".*");/)[1]);
+ const folder=fs.mkdtempSync(path.join(os.tmpdir(),'home4-bootstrap-')),file=path.join(folder,'entry.py');
+ const original=Buffer.from("print('VERIFIED')\n");fs.writeFileSync(file,original);
+ const script="import runpy,sys,base64\nold=runpy.run_path\ndef changed(p,**kw):\n open(p,'w').write(\"print('UNVERIFIED')\\n\")\n return old(p,**kw)\nrunpy.run_path=changed\nb=base64.b64decode(sys.argv[1]);sys.argv=['-c',*sys.argv[2:]];exec(b)";
+ try{
+  const python=process.env.ZAMEROVAC_PYTHON||(process.platform==='win32'?null:'python3');assert(python,'HOME requires pinned Python');
+  const r=cp.spawnSync(python,['-I','-B','-c',script,Buffer.from(bootstrap).toString('base64'),file,p.hash(original)],{encoding:'utf8',windowsHide:true,shell:false});
+  assert.ifError(r.error);assert.equal(r.status,0);assert.equal(r.stderr,'');assert.equal(r.stdout.trim(),'VERIFIED');assert.deepEqual(fs.readFileSync(file),original);
+ }finally{fs.rmSync(folder,{recursive:true})}
+});

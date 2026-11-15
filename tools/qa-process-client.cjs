@@ -107,7 +107,7 @@ async function ownedWslWorker(cfg,env,log,token,group){
  const config=path.join(cfg.privateDir,'wsl-config-'+group+'.json');
  fs.writeFileSync(config,JSON.stringify({...cfg,group}),{flag:'wx'});
  const bridge=path.join(__dirname,'qa','home4_wsl.py'),digest=cfg.validatorFiles['tools/qa/home4_wsl.py'];
- const bootstrap="import hashlib,runpy,sys; p=sys.argv[1]; b=open(p,'rb').read(); assert hashlib.sha256(b).hexdigest()==sys.argv[2]; sys.path.insert(0,str(__import__('pathlib').Path(p).parent)); sys.argv=[p,*sys.argv[3:]]; runpy.run_path(p,run_name='__main__')";
+ const bootstrap="import hashlib,sys; p=sys.argv[1]; b=open(p,'rb').read(); assert hashlib.sha256(b).hexdigest()==sys.argv[2]; sys.path.insert(0,str(__import__('pathlib').Path(p).parent)); sys.argv=[p,*sys.argv[3:]]; exec(compile(b,p,'exec'),{'__name__':'__main__','__file__':p,'__package__':None})";
  const transport={executable:wsl,args:owner=>['--distribution',w.distribution,'--user',w.user,'--exec',w.python,'-I','-B','-c',bootstrap,map(bridge),digest,map(config),map(owner)]};
  return runOwned([w.python,'home4-native-partition'],cfg.sourceRoot,env,log,token,400000,null,0,transport);
 }

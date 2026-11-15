@@ -153,3 +153,9 @@ souborů; žádný hard-hang či forced owner death. Schéma určuje přímo
 Šablona nemá žádný takový doklad. Kontrola autentizuje vlastníkem schválené
 připnuté bajty, **sama nevytváří fyzický runtime důkaz**. Jeho získání a
 nezávislé posouzení bez nepovolených HOME pokusů zůstává BLOCKED/NOT RUN.
+
+
+Další vlastní konkrétní negativní model prokázal záměnu souboru mezi hashem
+WSL bootstrapu a jeho opětovným otevřením pomocí runpy. Bootstrap nyní spouští
+přímo již načtené a hashované bajty, neopakuje čtení cesty. Model běží jen nad
+vlastním dočasným Python souborem; není to Windows/WSL runtime test.
