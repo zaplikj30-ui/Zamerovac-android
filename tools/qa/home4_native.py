@@ -46,6 +46,8 @@ def run(cfg):
          'ANDROID_SDK_ROOT':components['androidSdk']['root'],'GRADLE_USER_HOME':cfg['linuxGradleCache'],
          'HOME4_ROBOLECTRIC_INPUTS':components['robolectric']['root'],'TMPDIR':str(private),
          'PATH':str(Path(components['jdk']['root'])/'bin')+':'+os.environ['PATH']}
+    versions="import sys;from pathlib import Path;sys.path.insert(0,sys.argv[1]);import home_qa_gate;home_qa_gate.check_wsl(Path(sys.argv[2]))"
+    demand(command([entry('python'),'-c',versions,str(root/'tools'),entry('gradle')],root,env,private,'tool-versions',90)==0,'native-tool-versions')
     packages=components['pdf'].get('packages',{})
     demand(set(packages)=={'pypdf','PyMuPDF'},'pdf-package-registry')
     identity="import json;from importlib import metadata;print(json.dumps({p:metadata.version(p) for p in ('pypdf','PyMuPDF')}))"

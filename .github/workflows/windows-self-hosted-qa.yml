@@ -90,7 +90,7 @@ jobs:
             $env:GIT_CONFIG_COUNT = '2'
             $env:GIT_CONFIG_KEY_1 = 'http.https://github.com/.extraheader'
             $env:GIT_CONFIG_VALUE_1 = 'AUTHORIZATION: basic ' + [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes('x-access-token:' + $env:GH_READ_TOKEN))
-            git -C validator fetch --no-tags --depth=1 origin a3cc8eb3a14a9a6710664b73ba8a5c70ed1a340a ae3b4df53c25557f28b4a25ccb65adc2abdff639 1d6a786c77aa2a797bf7bd75f9977a3ae6613459 $env:HOME4_SOURCE_SHA *> $null
+            git -C validator fetch --no-tags --depth=1 origin a3cc8eb3a14a9a6710664b73ba8a5c70ed1a340a ae3b4df53c25557f28b4a25ccb65adc2abdff639 1d6a786c77aa2a797bf7bd75f9977a3ae6613459 6f98ceffff50d337f7c2999fed0e0878d20a582e $env:HOME4_SOURCE_SHA *> $null
             if ($LASTEXITCODE -ne 0) { throw 'objects' }
           } catch { Write-Output 'BLOCKED pinned Git data; STOP / NO RETRY'; exit 78 }
           finally { Remove-Item Env:GIT_CONFIG_KEY_1,Env:GIT_CONFIG_VALUE_1,Env:GH_READ_TOKEN -ErrorAction SilentlyContinue }
@@ -173,7 +173,7 @@ jobs:
             $env:GIT_CONFIG_COUNT = '2'
             $env:GIT_CONFIG_KEY_1 = 'http.https://github.com/.extraheader'
             $env:GIT_CONFIG_VALUE_1 = 'AUTHORIZATION: basic ' + [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes('x-access-token:' + $env:GH_READ_TOKEN))
-            git -C validator fetch --no-tags --depth=1 origin a3cc8eb3a14a9a6710664b73ba8a5c70ed1a340a ae3b4df53c25557f28b4a25ccb65adc2abdff639 1d6a786c77aa2a797bf7bd75f9977a3ae6613459 $env:HOME4_SOURCE_SHA *> $null
+            git -C validator fetch --no-tags --depth=1 origin a3cc8eb3a14a9a6710664b73ba8a5c70ed1a340a ae3b4df53c25557f28b4a25ccb65adc2abdff639 1d6a786c77aa2a797bf7bd75f9977a3ae6613459 6f98ceffff50d337f7c2999fed0e0878d20a582e $env:HOME4_SOURCE_SHA *> $null
             if ($LASTEXITCODE -ne 0) { throw 'objects' }
           } catch { Write-Output 'BLOCKED pinned Git data; STOP / NO RETRY'; exit 78 }
           finally { Remove-Item Env:GIT_CONFIG_KEY_1,Env:GIT_CONFIG_VALUE_1,Env:GH_READ_TOKEN -ErrorAction SilentlyContinue }
@@ -256,7 +256,7 @@ jobs:
             $env:GIT_CONFIG_COUNT = '2'
             $env:GIT_CONFIG_KEY_1 = 'http.https://github.com/.extraheader'
             $env:GIT_CONFIG_VALUE_1 = 'AUTHORIZATION: basic ' + [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes('x-access-token:' + $env:GH_READ_TOKEN))
-            git -C validator fetch --no-tags --depth=1 origin a3cc8eb3a14a9a6710664b73ba8a5c70ed1a340a ae3b4df53c25557f28b4a25ccb65adc2abdff639 1d6a786c77aa2a797bf7bd75f9977a3ae6613459 $env:HOME4_SOURCE_SHA *> $null
+            git -C validator fetch --no-tags --depth=1 origin a3cc8eb3a14a9a6710664b73ba8a5c70ed1a340a ae3b4df53c25557f28b4a25ccb65adc2abdff639 1d6a786c77aa2a797bf7bd75f9977a3ae6613459 6f98ceffff50d337f7c2999fed0e0878d20a582e $env:HOME4_SOURCE_SHA *> $null
             if ($LASTEXITCODE -ne 0) { throw 'objects' }
           } catch { Write-Output 'BLOCKED pinned Git data; STOP / NO RETRY'; exit 78 }
           finally { Remove-Item Env:GIT_CONFIG_KEY_1,Env:GIT_CONFIG_VALUE_1,Env:GH_READ_TOKEN -ErrorAction SilentlyContinue }
@@ -340,7 +340,7 @@ jobs:
             $env:GIT_CONFIG_COUNT = '2'
             $env:GIT_CONFIG_KEY_1 = 'http.https://github.com/.extraheader'
             $env:GIT_CONFIG_VALUE_1 = 'AUTHORIZATION: basic ' + [Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes('x-access-token:' + $env:GH_READ_TOKEN))
-            git -C validator fetch --no-tags --depth=1 origin a3cc8eb3a14a9a6710664b73ba8a5c70ed1a340a ae3b4df53c25557f28b4a25ccb65adc2abdff639 1d6a786c77aa2a797bf7bd75f9977a3ae6613459 $env:HOME4_SOURCE_SHA *> $null
+            git -C validator fetch --no-tags --depth=1 origin a3cc8eb3a14a9a6710664b73ba8a5c70ed1a340a ae3b4df53c25557f28b4a25ccb65adc2abdff639 1d6a786c77aa2a797bf7bd75f9977a3ae6613459 6f98ceffff50d337f7c2999fed0e0878d20a582e $env:HOME4_SOURCE_SHA *> $null
             if ($LASTEXITCODE -ne 0) { throw 'objects' }
           } catch { Write-Output 'BLOCKED pinned Git data; STOP / NO RETRY'; exit 78 }
           finally { Remove-Item Env:GIT_CONFIG_KEY_1,Env:GIT_CONFIG_VALUE_1,Env:GH_READ_TOKEN -ErrorAction SilentlyContinue }

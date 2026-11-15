@@ -127,6 +127,12 @@ class Home4Contract(unittest.TestCase):
             for mapping in ({'file':None},{'file':'0'*64},{'absent':h},{'../file':h}):
                 with self.assertRaises((Blocked,OSError)):verify_manifest(base,mapping)
             with self.assertRaises(Blocked):verify_inventory({'schema':1,'verified':False},'win32')
+            components={k:dict(root=str(base),version='1.0',files={'file':h}) for k in ('python','git','jdk','gradle','androidSdk','robolectric','pdf')}
+            components['jdk']['version']='17.0.17';components['gradle']['version']='8.10.2'
+            profile=dict(schema=1,verified=True,platform='linux',dependencyNetwork='forbidden',components=components)
+            verify_inventory(profile,'linux')
+            (base/'extra').write_bytes(b'unknown')
+            with self.assertRaises(Blocked):verify_inventory(profile,'linux')
 
     def test_owner_manual_main_first_attempt_and_precise_SHA(self):
         env=dict(GITHUB_ACTIONS='true',GITHUB_REPOSITORY='zaplikj30-ui/Zamerovac-android',GITHUB_EVENT_NAME='workflow_dispatch',GITHUB_REF='refs/heads/main',GITHUB_ACTOR='zaplikj30-ui',GITHUB_TRIGGERING_ACTOR='zaplikj30-ui',GITHUB_RUN_ATTEMPT='1',GITHUB_SHA='c'*40,HOME4_APPROVED_MAIN_SHA='c'*40,GITHUB_RUN_ID='123')

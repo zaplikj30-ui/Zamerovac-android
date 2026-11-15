@@ -101,6 +101,8 @@ async function ownedWslWorker(cfg,env,log,token,group){
  p.demand(cfg.profile.wsl.containmentEvidence?.verified===true&&cfg.profile.wsl.diskEvidence?.verified===true,'wsl-runtime-proof-required');
  const wsl=p.executable(cfg.profile.components.wsl),w=cfg.profile.wsl;
  p.demand(w.distribution==='Zamerovac-Ubuntu-QA'&&typeof w.user==='string'&&/^[a-z_][a-z0-9_-]*$/.test(w.user)&&w.user!=='root'&&Number.isSafeInteger(w.uid)&&w.uid>0,'wsl-identity');
+ const linuxPython=cfg.profile.linux?.components?.python;
+ p.demand(linuxPython&&w.python===path.posix.join(linuxPython.root,linuxPython.entry)&&/^[a-f0-9]{64}$/.test(linuxPython.files?.[linuxPython.entry]||''),'wsl-python-pin');
  const map=file=>{const parsed=path.win32.parse(file),base=w.driveMap?.[parsed.root.toUpperCase()];p.demand(typeof base==='string'&&/^\/mnt\/[a-z]$/.test(base),'wsl-drive-map');return base+'/'+path.win32.relative(parsed.root,file).replaceAll('\\','/')};
  const config=path.join(cfg.privateDir,'wsl-config-'+group+'.json');
  fs.writeFileSync(config,JSON.stringify({...cfg,group}),{flag:'wx'});

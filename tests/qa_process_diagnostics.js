@@ -46,7 +46,7 @@ test('a failed owner preserves a structured native stage/code without accepting 
  assert.deepEqual(JSON.parse(JSON.stringify(result.diagnostic)),d);
  const windows=await protocol({event:'result',token,platform:process.platform,status:'BLOCKED',cleanupVerified:false,error:secret,diagnostic:d},{ending:'\r\n'});
  assert.deepEqual(JSON.parse(JSON.stringify(windows.diagnostic)),d);
- const positive=await protocol({event:'result',token,platform:process.platform,status:'PASS',cleanupVerified:true,diagnostic:null},{code:0,ending:'\r\n'});
+ const positive=await protocol({event:'result',token,platform:process.platform,status:'PASS',reason:'normal',exitCode:0,error:null,cleanupVerified:true,cleanupEvidence:{remainingProcesses:0},diagnostic:null},{code:0,ending:'\r\n'});
  assert.equal(positive.status,'PASS');assert.equal(positive.diagnostic,null);
  assert.equal((await protocol(null,{noise:true})).diagnostic.stage,'owner-protocol');
  assert.equal((await protocol(null,{spawnError:true})).diagnostic.stage,'owner-launch');
