@@ -142,7 +142,7 @@ async function modeledGate(mode,timeoutMs=120000,diagnostic){
     if(id==='node:fs')return fsModel;
     if(id==='node:os')return {...os,tmpdir:()=>root};
     if(id==='./qa-fixture-tap.cjs')return tapGate;
-    if(id==='./qa-process-client.cjs')return {safeDiagnostic:require('../tools/qa-process-client.cjs').safeDiagnostic,async ownedWorker(...args){
+    if(id==='./qa-process-client.cjs')return {...require('../tools/qa-process-client.cjs'),async ownedWorker(...args){
      launches++;invocation=args;
      const [command,cwd,env,log,token]=args;
      if(mode==='startup-error')throw Error('PRIVATE EXEC PATH');

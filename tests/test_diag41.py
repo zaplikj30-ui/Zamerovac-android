@@ -86,6 +86,10 @@ class Cases(unittest.TestCase):
     def test_private_trace_fails_closed_when_directory_is_public(self):
         with tempfile.TemporaryDirectory() as d:
             public=pathlib.Path(d)/'public';public.mkdir(mode=0o755)
+            # mkdir's mode is filtered by umask (077 in Codex Cloud). Make the
+            # owned fixture genuinely public; its TemporaryDirectory stays700.
+            public.chmod(0o755)
+            self.assertEqual(public.stat().st_mode & 0o777,0o755)
             try:raise ValueError('SECRET')
             except ValueError as e:
                 self.assertFalse(m.private_trace(e,'owner-config',{'log':str(public/'verdict.log')}))

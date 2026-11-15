@@ -9,7 +9,9 @@ Výchozí base: PR136 `1d6a786c77aa2a797bf7bd75f9977a3ae6613459`.
 Návrh: PR138 `e54a787dfcfebc6a2fc2fad6feee34dd6292a823`.
 Závazné nové role: PR139 `f4f6504daa8400cf45bfd81914943e98c74b0d46`,
 současně přečtena pravidla main `8d05d2dd77c4a99f8ad64191c97d37ee3c151e3b`.
-Nové pokyny jsou stále draft; u tohoto úkolu je výslovně vyžaduje vlastník.
+Při práci PR139 postoupilo na `e9bcdaabff5ca2a8e1fc5bd368027f4e34fad961`;
+přečtena i tato změna, která výslovně odstraňuje starou volitelnou formulaci
+nezávislého review. U tohoto úkolu nové role výslovně vyžaduje vlastník.
 Jediný autor/větev: `qa/outer-job-c-20261115`. Žádná cizí větev se nepřepisuje.
 
 Vlastník během práce potvrdil, že není dostupná ověřená obnovitelná Windows
@@ -120,8 +122,19 @@ Linux concurrency/model/ASan/UBSan výsledek není Win32 ABI ani native fault d�
 Test nové POSIX utility je na Windows výslovně SKIP; historických57 scénářů
 se toto omezení netýká. Původních15 na Linuxu má Windows-only junction SKIP.
 
-Kontrolovaný kumulativní rozsah: pouze toto nové jádro, vstupní utility, jejich
-testy a tento dokument. Žádná změna app/dat/médií/sync, procesního klienta,
+První plná regrese měla63/65 úspěšných příkazů,2 FAIL příkazy. Našla také dvě
+předexistující chyby testovacího zapojení PR136: VM mock v
+`qa_fixture_process_scope.js` nedodával aktuální diagnostické exports
+(`safeErrorType is not a function`,2 modelové FAIL), a `test_diag41.py` vytvářel
+údajně veřejný adresář přes mkdir0755, ale umask077 z něj udělal0700
+(1 Python FAIL). Mock nyní přebírá skutečné exports a nahrazuje pouze ownedWorker;
+permissions test nastaví a ověří0755 jen na vlastní dočasné podfixture pod
+privátním parentem. Globální umask ani systémová práva se nemění. Assertions,
+privacy guard i reálné Linux lifecycle testy jsou zachovány. FAIL index/logy
+zůstaly oddělené před opakováním společné regrese.
+
+Kontrolovaný kumulativní rozsah: toto nové jádro, vstupní utility, jejich
+testy, opravy2 existujících testovacích fixtures a tento dokument. Žádná změna app/dat/médií/sync, procesního klienta,
 Python backendu, CMD/TAP/workeru, workflow/markeru nebo Windows permissions.
 Kód není volán produkčním runtime. Byly prověřeny všechny nové metody a
 chybové cesty, meze, duplicitní dokončení, synchronizace a fail-closed výstupy;
