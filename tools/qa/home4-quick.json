@@ -939,7 +939,7 @@
     "tests/geometry_drag_28.js": "4c9f9f408b5df9270ba6ca1a7efb6d1891600e7ed6df6f2a44dddae6d63c79fb",
     "tests/gesture_history_undo_redo.js": "b7708749be0723f0857b1e3eef437ef8196d8db3dfa0d98acf12b6e4c4e6ae7c",
     "tests/help_guide.js": "8d7bbd5e0625a3f4f4a268959da8be437248894ba24ed86fd232a8744c55913f",
-    "tests/home4_execution.js": "e41d6d22c27652a0cf4ef9196f878643914f2f6325feb91f5f44e37575a7c3a1",
+    "tests/home4_execution.js": "64169705d4a46299a89e8b9dca67cab6d830483a2afb75294dd94ff4fa12e863",
     "tests/home4_preactivation_boundaries.js": "5778c74e1f66ef8e56d7436c8b695079e38c51abd7c5f304e9bb65be4585da91",
     "tests/home_qa_integrity.js": "eb19a9706a72c5e485d734060e29a9d07185cf5b8d52af4da73d35d894f5bcf3",
     "tests/home_sandbox_security.js": "2c54c1077d6d3f42c309b5d934abf2ae3dfef284de5307a360fc8116eb3758c0",

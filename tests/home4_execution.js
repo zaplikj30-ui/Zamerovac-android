@@ -23,6 +23,9 @@ test('HOME4 structured FAIL SKIP TODO and nesting cannot become required PASS',a
 });
 test('HOME4 required names reject missing extra duplicate SKIP and FAIL',()=>{
  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'home4-json-'));try{const file=path.join(dir,'pin.json');fs.writeFileSync(file,'{"verified":true}');const digest=p.hash(fs.readFileSync(file));assert.equal(p.json(file,digest).verified,true);assert.throws(()=>p.json(file,'0'.repeat(64)));fs.writeFileSync(file,'{"verified":false}');assert.throws(()=>p.json(file,digest))}finally{fs.rmSync(dir,{recursive:true})}
+ const identity={sourceSha:'a'.repeat(40),validatorSha:'b'.repeat(40)},valid={status:'PASS',binding:identity};
+ assert.equal(p.boundReport(valid,identity).status,'PASS');
+ for(const change of [{status:'BLOCKED'},{status:'FAIL'},{error:'error'},{diagnostic:false},{firstFailure:{}},{cleanupErrorType:'Error'},{privateTracebackWritten:true},{binding:{}}])assert.throws(()=>p.boundReport({...valid,...change},identity));
  assert.equal(p.exactCases([{id:'x',status:'PASS'},{id:'linux',status:'NOT RUN'}],['x'],['linux']).required,1);
  for(const rows of [[],[{id:'other',status:'PASS'}],[{id:'x',status:'PASS'},{id:'x',status:'PASS'}],[{id:'x',status:'SKIP'}],[{id:'x',status:'FAIL'}]])assert.throws(()=>p.exactCases(rows,['x']));
 });

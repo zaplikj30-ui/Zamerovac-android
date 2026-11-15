@@ -64,5 +64,10 @@ function structuredCases(evidence,item,protocol){
  const rows=evidence.cases.filter(r=>!optional.includes(r.id)).concat(optional.map(id=>({id,status:'NOT RUN'})));
  return {counts:exactCases(rows,item.cases.filter(n=>!optional.includes(n)),optional),caseIdsSha256:hash(JSON.stringify(rows))};
 }
+function boundReport(report,identity){
+ demand(report?.status==='PASS'&&['error','diagnostic','firstFailure','cleanupErrorType'].every(k=>report[k]==null)&&report.privateTracebackWritten!==true,'worker-report-status');
+ demand(JSON.stringify(report.binding)===JSON.stringify(identity),'report-binding');
+ return report;
+}
 function previewAllowed(){fail('I88-preview-release-mapping-unapproved')}
-module.exports={fail,demand,hash,json,execution,executable,snapshot,contentManifest,exactCases,structuredCases,previewAllowed};
+module.exports={fail,demand,hash,json,execution,executable,snapshot,contentManifest,exactCases,structuredCases,boundReport,previewAllowed};

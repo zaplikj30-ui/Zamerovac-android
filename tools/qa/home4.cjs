@@ -46,7 +46,7 @@ async function run(phase,sourceRoot,inventoryFile,inventoryHash,pins,env=process
     {...env,ZAMEROVAC_PYTHON:python,PATH:path.join(profile.components.jdk.root,'bin')+';'+path.dirname(node)+';'+path.dirname(python)+';'+path.dirname(git)+';'+env.PATH},log,token,420000,controller.signal);
    p.demand(!exceeded&&outcome.cleanupVerified===true&&outcome.cleanupEvidence?.remainingProcesses===0,'command-cleanup');
    p.demand(outcome.status==='PASS','command-failed');
-   const report=JSON.parse(fs.readFileSync(log,'utf8').trim());p.demand(JSON.stringify(report.binding)===JSON.stringify(identity),'report-binding');return report;
+   return p.boundReport(p.json(log),identity);
   }
   let report;
   try{
@@ -55,7 +55,10 @@ async function run(phase,sourceRoot,inventoryFile,inventoryHash,pins,env=process
     await command('preflight','');
     const registry=require('./home4-quick.json'),groups=Object.entries(registry.node).filter(([,v])=>v.cases.length>v.windowsNotRun.length).map(([f])=>f);
     const results=[];for(const group of [...groups,'python'])results.push(await command('quick',group));
-    report={status:'PASS',groups:results.length,required:results.reduce((n,r)=>n+r.counts.required,0),fail:0,skip:0};
+    const required=results.reduce((n,r)=>n+r.counts.required,0),items=[...Object.values(registry.node),registry.python];
+    const expected=items.reduce((n,r)=>n+r.cases.length-r.windowsNotRun.length,0);
+    p.demand(required===expected&&results.every(r=>r.counts.pass===r.counts.required&&r.counts.fail===0&&r.counts.skip===0),'quick-summary');
+    report={status:'PASS',groups:results.length,required,pass:required,fail:0,skip:0,optionalNotRun:items.reduce((n,r)=>n+r.windowsNotRun.length,0)};
    }else if(phase==='browser'){
     await command('preflight','');
     p.executable(profile.components.chromium);

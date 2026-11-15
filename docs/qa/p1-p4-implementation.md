@@ -159,3 +159,10 @@ Další vlastní konkrétní negativní model prokázal záměnu souboru mezi ha
 WSL bootstrapu a jeho opětovným otevřením pomocí runpy. Bootstrap nyní spouští
 přímo již načtené a hashované bajty, neopakuje čtení cesty. Model běží jen nad
 vlastním dočasným Python souborem; není to Windows/WSL runtime test.
+
+
+Kompoziční kontrola navíc prokázala na skutečném starším validačním řádku,
+že samotná shoda bindingu neodmítala worker status BLOCKED. Nyní se ověřuje
+i PASS bez chybové diagnostiky a úplné quick souhrny proti registru, včetně
+výslovného NOT RUN pro nepříslušné platformní případy. Nejde o Windows runtime
+reprodukci: je to přímý test zdrojového rozhodování nad dodaným výsledkem.
