@@ -17,6 +17,8 @@ EXTRAS = {
     'test_cloud_pdf_validation.CloudPDFOptimizeTests.test_positive_mock_interface_for_one_synthetic_raster',
     'test_cloud_pdf_validation.CloudPDFOptimizeTests.test_invalid_zip_is_blocked_under_python_O',
     'test_cloud_pdf_validation.CloudPDFOptimizeTests.test_no_args_or_symlink_cannot_claim_PASS_under_python_O',
+    'test_cloud_pdf_validation.CloudPDFOptimizeTests.test_bound_current_run_sha_and_modified_same_mtime_block',
+    'test_cloud_pdf_validation.CloudPDFOptimizeTests.test_missing_or_forged_run_proof_blocks_before_PDF',
 }
 
 
@@ -70,9 +72,9 @@ class Outcome(unittest.TestResult):
 def main():
     demand(os.environ.get('ZAMEROVAC_CLOUD_QUICK') == '1' and sys.platform == 'linux')
     manifest = json.loads(REGISTRY.read_text(encoding='utf8'))
-    demand(len(manifest['python']['cases']) == 216 and len(EXTRAS) == 3)
+    demand(len(manifest['python']['cases']) == 216 and len(EXTRAS) == 5)
     expected = set(manifest['python']['cases']) | EXTRAS
-    demand(len(expected) == 219)
+    demand(len(expected) == 221)
     # Test collection is redirected as it may print exception paths/data.
     with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
         tests = collect()
@@ -94,7 +96,7 @@ def main():
         unittest.TestSuite(tests).run(out)
     demand(len(out.cases) == len(expected) and len({case[0] for case in out.cases}) == len(expected))
     demand(all(status == 'PASS' for _, status in out.cases) and out.wasSuccessful())
-    print('PASS Python exact QUICK: 216 reviewed + 3 X1 synthetic cases, no FAIL/SKIP/ERROR')
+    print('PASS Python exact QUICK: 216 reviewed + 5 cloud PDF/X1 synthetic cases, no FAIL/SKIP/ERROR')
     return 0
 
 
