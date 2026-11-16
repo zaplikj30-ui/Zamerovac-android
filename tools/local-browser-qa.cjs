@@ -258,5 +258,6 @@ async function main(){
  if(!modes[mode])throw blocked('invalid QA mode');
  await run(mode);
 }
-if(require.main===module)main().catch(e=>{console.error('HOME BLOCKED: '+e.message);process.exitCode=1});
+if(require.main===module)main().catch(e=>{console.error(process.env.ZAMEROVAC_QA_MODE==='cloud'?
+ 'QA CLOUD BLOCKED: redacted entrypoint failure':'HOME BLOCKED: '+e.message);process.exitCode=1});
 module.exports={run,createStaticServer,statusReport,modes,execute,stageProduct,gateSnapshot};
