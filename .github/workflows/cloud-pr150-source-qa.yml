@@ -98,13 +98,14 @@ jobs:
           print('PASS checked-out source identity (not test PASS)')
           PY
       - name: Prepare Node 24 (same major as author Linux evidence), no npm cache
+        id: node_setup
         if: ${{ !cancelled() && steps.pinned.outcome == 'success' }}
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '24'
       - name: QUICK - exact PR150 JS syntax and existing Node/Python regression
         id: quick
-        if: ${{ !cancelled() && steps.pinned.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.pinned.outcome == 'success' && steps.node_setup.outcome == 'success' }}
         timeout-minutes: 15
         shell: bash
         run: |
@@ -118,7 +119,7 @@ jobs:
           python3 -m unittest discover -s tests -p 'test_*.py' -v
       - name: CHROMIUM 23/96 - keep original immutable identity and sandbox gates
         id: strict_browser
-        if: ${{ !cancelled() && steps.pinned.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.pinned.outcome == 'success' && steps.node_setup.outcome == 'success' }}
         timeout-minutes: 6
         shell: bash
         env:
@@ -135,19 +136,21 @@ jobs:
           # and sandbox. At PR150 HEAD this is expected to BLOCK before suite execution.
           node tools/local-browser-qa.cjs --all
       - name: Prepare hosted JDK 17 for native tests, without APK
+        id: java_setup
         if: ${{ !cancelled() && steps.pinned.outcome == 'success' }}
         uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
           java-version: '17'
       - name: Prepare Gradle 8.10.2, do not restore/store Actions cache
-        if: ${{ !cancelled() && steps.pinned.outcome == 'success' }}
+        id: gradle_setup
+        if: ${{ !cancelled() && steps.pinned.outcome == 'success' && steps.java_setup.outcome == 'success' }}
         uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
         with:
           gradle-version: '8.10.2'
           cache-disabled: true
       - name: NATIVE - public Drive configuration checks (no APK)
-        if: ${{ !cancelled() && steps.pinned.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.pinned.outcome == 'success' && steps.gradle_setup.outcome == 'success' }}
         timeout-minutes: 9
         shell: bash
         run: |
@@ -155,14 +158,14 @@ jobs:
           gradle --no-daemon -p tools/drive-config-checks verify
       - name: JVM - real Robolectric, exact raw Gradle exit and XML (no APK)
         id: native
-        if: ${{ !cancelled() && steps.pinned.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.pinned.outcome == 'success' && steps.gradle_setup.outcome == 'success' }}
         timeout-minutes: 35
         shell: bash
         run: |
           set -euo pipefail
           gradle --no-daemon :app:verifyDriveRegistration :app:compilePreviewJavaWithJavac :app:testPreviewUnitTest -PdriveRequireConfigured=true
       - name: Report RAW JVM XML without rewriting expected #88 failures
-        if: ${{ !cancelled() && steps.pinned.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.pinned.outcome == 'success' && steps.native.outcome != 'skipped' }}
         shell: bash
         run: |
           set -euo pipefail
@@ -184,7 +187,7 @@ jobs:
               sys.exit('RAW JVM is not green; preserve FAIL/SKIP, no release mapping')
           PY
       - name: PDF - independently parse and render only existing synthetic fixtures
-        if: ${{ !cancelled() && steps.pinned.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.pinned.outcome == 'success' && steps.native.outcome != 'skipped' }}
         timeout-minutes: 9
         shell: bash
         run: |
