@@ -102,6 +102,20 @@ def supervise(config):
                 not .1<=config['timeout']<=480 or not .1<=config['heartbeatTimeout']<=10 or
                 not isinstance(config['token'],str) or len(config['token'])!=32):
             raise ScopeError('invalid owned worker configuration')
+        if os.environ.get('ZAMEROVAC_QA_MODE') == 'cloud':
+            # An independent Python barrier BEFORE scope.start/worker spawn.
+            from qa_cloud_runtime import verified_runtime
+            r = verified_runtime()
+            worker = str(Path(__file__).with_name('qa-browser-worker.cjs'))
+            expected = [r['node']['path'], worker]
+            if (config.get('browser') is not True or
+                    config.get('kind') != 'browser' or
+                    len(command) != 4 or command[:2] != expected or
+                    command[2] not in ('preflight', 'suite') or
+                    not Path(command[3]).is_absolute() or
+                    os.environ.get('ZAMEROVAC_PYTHON') != r['python']['path'] or
+                    os.environ.get('CHROMIUM_PATH') != r['chromium']['path']):
+                raise ScopeError('unreviewed cloud browser worker command')
         stage='owner-signals'
         for sig in (signal.SIGINT,signal.SIGTERM):
             old[sig]=signal.signal(sig,lambda signum,frame:cancelled.append(signum))
