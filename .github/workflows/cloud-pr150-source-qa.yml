@@ -1,0 +1,215 @@
+name: Zaměřovač - PR150 CLOUD ONLY source QA (INERT)
+# SOURCE REVIEW CANDIDATE. Removal of false&&, merge and dispatch require separate owner approval.
+# The source under test is a trusted, exact PR150 commit; never a PR/fork event checkout.
+on:
+  workflow_dispatch:
+    inputs:
+      source_sha:
+        description: 'Exact reviewed PR150 HEAD (40 lowercase hexadecimal characters)'
+        required: true
+        type: string
+      owner_approved:
+        description: 'Owner separately approved this one CLOUD test run (not HOME or APK)'
+        required: true
+        default: false
+        type: boolean
+permissions:
+  contents: read
+concurrency:
+  group: zamerovac-pr150-cloud-only
+  cancel-in-progress: false
+jobs:
+  cloud-pr150:
+    name: Ubuntu standard - quick, strict Chromium, JVM and PDF
+    # Intentionally inert at SOURCE review. No jobs execute even on a manual dispatch.
+    if: ${{ false && github.event.repository.private == false && github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.run_attempt == 1 && inputs.owner_approved == true && inputs.source_sha == '3886fcf80213e4693464d3f30104885c1c58f53e' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 75
+    env:
+      PR150_SHA: ${{ inputs.source_sha }}
+      PYTHONDONTWRITEBYTECODE: '1'
+      PYTHONNOUSERSITE: '1'
+      GIT_CONFIG_NOSYSTEM: '1'
+      GIT_CONFIG_GLOBAL: /dev/null
+    steps:
+      - name: Before checkout - verify owner/main, public billing and LIVE PR150 HEAD
+        id: preflight
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, re, urllib.request
+          want = '3886fcf80213e4693464d3f30104885c1c58f53e'
+          env = os.environ
+          exact = {'GITHUB_REPOSITORY':'zaplikj30-ui/Zamerovac-android',
+                   'GITHUB_ACTOR':'zaplikj30-ui','GITHUB_TRIGGERING_ACTOR':'zaplikj30-ui',
+                   'GITHUB_EVENT_NAME':'workflow_dispatch','GITHUB_REF':'refs/heads/main',
+                   'GITHUB_RUN_ATTEMPT':'1','RUNNER_OS':'Linux',
+                   'RUNNER_ENVIRONMENT':'github-hosted'}
+          if any(env.get(k) != v for k,v in exact.items()) or env.get('PR150_SHA') != want:
+              raise SystemExit('BLOCKED identity/runner/sha; STOP NO RETRY')
+          if not re.fullmatch('[a-f0-9]{40}', env.get('GITHUB_SHA', '')) or not re.fullmatch('[1-9][0-9]{0,19}', env.get('GITHUB_RUN_ID', '')):
+              raise SystemExit('BLOCKED event SHA; STOP NO RETRY')
+          def get(resource):
+              request = urllib.request.Request(
+                  'https://api.github.com/repos/zaplikj30-ui/Zamerovac-android/'+resource,
+                  headers={'Accept':'application/vnd.github+json','User-Agent':'zamerovac-pr150-cloud-source-qa'})
+              with urllib.request.urlopen(request, timeout=12) as response:
+                  if response.status != 200:
+                      raise RuntimeError('api-status')
+                  return json.load(response)
+          repo = get('')
+          pr = get('pulls/150')
+          if repo.get('private') is not False or repo.get('visibility') != 'public':
+              raise SystemExit('BLOCKED private/unknown billing; STOP NO RETRY')
+          head = pr.get('head') or {}
+          base = pr.get('base') or {}
+          if pr.get('state') != 'open' or head.get('sha') != want or \
+             (head.get('repo') or {}).get('full_name') != env['GITHUB_REPOSITORY'] or \
+             base.get('ref') != 'main' or \
+             (base.get('repo') or {}).get('full_name') != env['GITHUB_REPOSITORY']:
+              raise SystemExit('BLOCKED PR150 moved/fork/base; STOP NO RETRY')
+          print('PASS metadata-only: current public PR150 SHA pinned; no checkout yet')
+          PY
+      - name: Exact PR150 checkout without persisted credentials
+        id: source
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.source_sha }}
+          persist-credentials: false
+          fetch-depth: 1
+          clean: true
+      - name: Recheck exact checked-out source and live PR before tests
+        id: pinned
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$PR150_SHA"
+          test -z "$(git status --porcelain --untracked-files=all)"
+          python3 - <<'PY'
+          import json, os, urllib.request
+          req = urllib.request.Request('https://api.github.com/repos/zaplikj30-ui/Zamerovac-android/pulls/150',
+                                       headers={'Accept':'application/vnd.github+json','User-Agent':'zamerovac-pr150-cloud-source-qa'})
+          with urllib.request.urlopen(req, timeout=12) as response:
+              pr = json.load(response)
+          if pr.get('state')!='open' or (pr.get('head') or {}).get('sha')!=os.environ['PR150_SHA'] or \
+             ((pr.get('head') or {}).get('repo') or {}).get('full_name')!='zaplikj30-ui/Zamerovac-android':
+              raise SystemExit('BLOCKED stale PR150 before payload; STOP NO RETRY')
+          print('PASS checked-out source identity (not test PASS)')
+          PY
+      - name: Prepare Node 24 (same major as author Linux evidence), no npm cache
+        id: node_setup
+        if: ${{ !cancelled() && steps.pinned.outcome == 'success' }}
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+      - name: QUICK - exact PR150 JS syntax and existing Node/Python regression
+        id: quick
+        if: ${{ !cancelled() && steps.pinned.outcome == 'success' && steps.node_setup.outcome == 'success' }}
+        timeout-minutes: 15
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --version
+          python3 --version
+          for file in app/src/main/assets/*.js sync/*.js; do node --check "$file"; done
+          node tools/qa/audit.cjs
+          node tools/check-android-window.cjs
+          for script in tests/*.js; do node "$script"; done
+          python3 -m unittest discover -s tests -p 'test_*.py' -v
+      - name: CHROMIUM 23/96 - keep original immutable identity and sandbox gates
+        id: strict_browser
+        if: ${{ !cancelled() && steps.pinned.outcome == 'success' && steps.node_setup.outcome == 'success' }}
+        timeout-minutes: 6
+        shell: bash
+        env:
+          ZAMEROVAC_SOURCE_ROOT: ${{ github.workspace }}
+          ZAMEROVAC_EXPECTED_QA_SHA: 05494a2a56df25f40ff41e423b289a84a45e2697
+          HOME4_SOURCE_SHA: c7e71327d69bfe87f622ff6293422e2e15332a11
+          HOME4_VALIDATOR_SHA: 05494a2a56df25f40ff41e423b289a84a45e2697
+          HOME4_APPROVED_MAIN_SHA: ''
+        run: |
+          set -euo pipefail
+          echo 'Strict original 23/96: SOURCE c7e... / VALIDATOR 054... / Linux Chromium pinned.'
+          echo 'No browser substitution, case filter, bypassed sandbox or fabricated 23/96 PASS.'
+          # Existing runner validates its own git SOURCE/VALIDATOR, Chromium path/hash
+          # and sandbox. At PR150 HEAD this is expected to BLOCK before suite execution.
+          node tools/local-browser-qa.cjs --all
+      - name: Prepare hosted JDK 17 for native tests, without APK
+        id: java_setup
+        if: ${{ !cancelled() && steps.pinned.outcome == 'success' }}
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Prepare Gradle 8.10.2, do not restore/store Actions cache
+        id: gradle_setup
+        if: ${{ !cancelled() && steps.pinned.outcome == 'success' && steps.java_setup.outcome == 'success' }}
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
+        with:
+          gradle-version: '8.10.2'
+          cache-disabled: true
+      - name: NATIVE - public Drive configuration checks (no APK)
+        if: ${{ !cancelled() && steps.pinned.outcome == 'success' && steps.gradle_setup.outcome == 'success' }}
+        timeout-minutes: 9
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon -p tools/drive-config-checks verify
+      - name: JVM - real Robolectric, exact raw Gradle exit and XML (no APK)
+        id: native
+        if: ${{ !cancelled() && steps.pinned.outcome == 'success' && steps.gradle_setup.outcome == 'success' }}
+        timeout-minutes: 35
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon :app:verifyDriveRegistration :app:compilePreviewJavaWithJavac :app:testPreviewUnitTest -PdriveRequireConfigured=true
+      - name: Report RAW JVM XML without rewriting expected #88 failures
+        if: ${{ !cancelled() && steps.pinned.outcome == 'success' && steps.native.outcome != 'skipped' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import glob, os, sys, xml.etree.ElementTree as ET
+          files = sorted(glob.glob('app/build/test-results/testPreviewUnitTest/TEST-*.xml'))
+          if not files:
+              raise SystemExit('BLOCKED: no genuine Gradle JVM XML; NOT RUN is not PASS')
+          tests=failures=errors=skips=0
+          for file in files:
+              root=ET.parse(file).getroot()
+              tests+=int(root.attrib['tests']); failures+=int(root.attrib['failures'])
+              errors+=int(root.attrib['errors']); skips+=int(root.attrib['skipped'])
+          row=f'RAW JVM: {len(files)} XML, {tests-failures-errors-skips} PASS, {failures} FAIL, {errors} ERROR, {skips} SKIP (no assertion suppressed)'
+          print(row)
+          with open(os.environ['GITHUB_STEP_SUMMARY'],'a',encoding='utf8') as out:
+              out.write(row+'\n')
+          if failures or errors or skips:
+              sys.exit('RAW JVM is not green; preserve FAIL/SKIP, no release mapping')
+          PY
+      - name: PDF - independently parse and render only existing synthetic fixtures
+        if: ${{ !cancelled() && steps.pinned.outcome == 'success' && steps.native.outcome != 'skipped' }}
+        timeout-minutes: 9
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in app/build/customer-pdf-1.zip app/build/customer-pdf-3.zip app/build/customer-pdf-multipage.zip; do
+            test -s "$file" || { echo 'BLOCKED missing generated PDF fixture'; exit 78; }
+          done
+          python3 -m venv "$RUNNER_TEMP/zamerovac-pdf"
+          "$RUNNER_TEMP/zamerovac-pdf/bin/pip" install --disable-pip-version-check --no-input 'pypdf[image]>=5,<7' 'pymupdf>=1.24,<2'
+          "$RUNNER_TEMP/zamerovac-pdf/bin/python" tools/check-customer-pdf.py \
+            app/build/customer-pdf-1.zip app/build/customer-pdf-3.zip app/build/customer-pdf-multipage.zip
+      - name: Final stale-head detection; never relabel an older SHA as current
+        if: ${{ !cancelled() && steps.pinned.outcome == 'success' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, urllib.request
+          req=urllib.request.Request('https://api.github.com/repos/zaplikj30-ui/Zamerovac-android/pulls/150',
+                                     headers={'Accept':'application/vnd.github+json','User-Agent':'zamerovac-pr150-cloud-source-qa'})
+          with urllib.request.urlopen(req,timeout=12) as response: pr=json.load(response)
+          if (pr.get('head') or {}).get('sha') != os.environ['PR150_SHA']:
+              raise SystemExit('BLOCKED PR150 moved during cloud tests; results belong only to pinned old SHA')
+          print('Final PR150 HEAD still equals pinned test SOURCE SHA')
+          PY
