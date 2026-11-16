@@ -65,7 +65,7 @@ def fresh_pdf(source, started_ns):
                'pdf-not-fresh-regular-bounded-file')
     # The evaluator's own explicit checks survive Python -O.
     from subprocess import run
-    pdf = Path(__file__).resolve().parent.parent/'check-customer-pdf.py'
+    pdf = Path(__file__).resolve().parent/'check-customer-pdf.py'
     executable = os.environ.get('ZAMEROVAC_PDF_PYTHON') or sys.executable
     result = run([executable, str(pdf), *map(str, files)],
                  stdin=-3, stdout=-3, stderr=-3, timeout=120, check=False)
