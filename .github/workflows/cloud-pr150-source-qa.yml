@@ -1,5 +1,5 @@
-name: Zaměřovač - PR150 CLOUD ONLY source QA (INERT)
-# SOURCE REVIEW CANDIDATE. Removal of false&&, merge and dispatch require separate owner approval.
+name: Zaměřovač - PR150 CLOUD ONLY source QA (ACTIVATION CANDIDATE)
+# SOURCE REVIEW CANDIDATE. Merge and one manual dispatch require separate owner approvals.
 # The source under test is a trusted, exact PR150 commit; never a PR/fork event checkout.
 on:
   workflow_dispatch:
@@ -21,8 +21,8 @@ concurrency:
 jobs:
   cloud-pr150:
     name: Ubuntu standard - quick, strict Chromium, JVM and PDF
-    # Intentionally inert at SOURCE review. No jobs execute even on a manual dispatch.
-    if: ${{ false && github.event.repository.private == false && github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.run_attempt == 1 && inputs.owner_approved == true && inputs.source_sha == '3886fcf80213e4693464d3f30104885c1c58f53e' }}
+    # Draft branch cannot run this manual-only workflow. Requires owner-approved main merge and separate manual dispatch.
+    if: ${{ github.event.repository.private == false && github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.run_attempt == 1 && inputs.owner_approved == true && inputs.source_sha == '3886fcf80213e4693464d3f30104885c1c58f53e' }}
     runs-on: ubuntu-latest
     timeout-minutes: 75
     env:
