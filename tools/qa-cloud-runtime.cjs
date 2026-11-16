@@ -11,6 +11,7 @@ function need(value){if(!value)stop()}
 function checked(filePath,max=128*1024*1024){
   need(typeof filePath==='string'&&path.isAbsolute(filePath));
   const absolute=path.resolve(filePath),stat=fs.lstatSync(absolute);
+  need(filePath===absolute);
   need(stat.isFile()&&!stat.isSymbolicLink()&&stat.nlink===1&&stat.size>0&&stat.size<=max);
   need(fs.realpathSync.native(absolute)===absolute);
   const before=fs.statSync(absolute),bytes=fs.readFileSync(absolute),after=fs.statSync(absolute);
