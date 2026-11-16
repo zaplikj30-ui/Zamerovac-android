@@ -17,8 +17,16 @@ function byteFile(base,relative,expected,maxBytes=131072){
   demand(/^[a-f0-9]{40}$/.test(expected)&&path.isAbsolute(base));
   const file=path.join(base,relative),stat=fs.lstatSync(file);
   demand(stat.isFile()&&!stat.isSymbolicLink()&&stat.nlink===1&&stat.size>0&&stat.size<=maxBytes);
-  // A symlinked parent would bypass lstat of the leaf.
-  demand(fs.realpathSync.native(file)===file);
+  // Detect symlink/junction ancestors. Native Win32 realpath may add the
+  // \\?\\ namespace prefix without redirecting to a different target.
+  for(let current=file;;current=path.dirname(current)){
+    demand(!fs.lstatSync(current).isSymbolicLink());
+    if(current===path.dirname(current))break;
+  }
+  const native=fs.realpathSync.native(file);
+  const canonical=value=>process.platform==='win32'?
+    path.win32.normalize(path.win32.toNamespacedPath(value)).toLowerCase():value;
+  demand(canonical(native)===canonical(file));
   const before=fs.statSync(file),bytes=fs.readFileSync(file),after=fs.statSync(file);
   demand(bytes.length===before.size&&before.dev===after.dev&&before.ino===after.ino&&
    before.size===after.size&&before.mtimeMs===after.mtimeMs&&gitBlob(bytes)===expected);
