@@ -1,7 +1,8 @@
 'use strict';
-const {chromium}=require('playwright'),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
+const {chromium}=(process.env.ZAMEROVAC_QA_MODE==='cloud'?require('../qa-cloud-runtime.cjs').loadPlaywright():require('playwright')),assert=require('node:assert/strict'),fs=require('node:fs'),path=require('node:path');
 const {launchSandboxed,launchOptions}=require('./sandbox.cjs');
 const base=process.env.ZAMEROVAC_BASE_URL||process.argv[2]||'http://127.0.0.1:8765';
+if(process.env.ZAMEROVAC_QA_MODE==='cloud'&&!/^http:\/\/127\.0\.0\.1:[1-9][0-9]{0,4}\/$/.test(base+'/'))throw Error('QA CLOUD BLOCKED: explicit loopback base URL required');
 async function suite(name,body){
  const directory=path.resolve(process.env.ZAMEROVAC_E2E_DIR||'test-artifacts',name);fs.mkdirSync(directory,{recursive:true});
  // Resolve the actual checked-out commit before starting Chromium. If git.exe is
