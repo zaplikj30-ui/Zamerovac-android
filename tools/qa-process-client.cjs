@@ -58,8 +58,19 @@ async function runOwned(command,cwd,env,log,token,timeoutMs=480000,signal,hardSt
     try{
      if(protocolOverflow)throw Error('supervisor output limit exceeded');
      const messages=stdout.trim().split('\n').map(line=>JSON.parse(line));
-     if(![1,2].includes(messages.length)||(messages.length===2&&(messages[0].event!=='ready'||messages[0].token!==token)))throw Error('owner protocol');
+     if(![1,2].includes(messages.length))throw Error('owner protocol count');
+     const ready=messages.length===2?messages[0]:null;
+     const backend=transport?'linux-pidfd-subreaper':
+       process.platform==='win32'?'windows-private-job':'linux-pidfd-subreaper';
+     const readyValid=ready?.event==='ready'&&ready.token===token&&
+       ready.backend===backend&&Number.isInteger(ready.pid)&&ready.pid>0&&
+       (backend!=='windows-private-job'||
+         (typeof ready.creationTime==='number'&&ready.creationTime>0));
+     if(ready&&!readyValid)throw Error('invalid owner ready envelope');
      report=messages.at(-1);
+     // A startup error may emit only a BLOCKED result; never accept
+     // result-only PASS without a ready worker scoped to this owner.
+     if(report?.status==='PASS'&&!readyValid)throw Error('result-only PASS forbidden');
      const authentic=report.event==='result'&&report.token===token&&report.platform===(transport?'linux':process.platform);
      // A genuine protocol envelope may still contain a contradictory PASS.
      // Capture this before normalizing diagnostics; never erase failure evidence.
