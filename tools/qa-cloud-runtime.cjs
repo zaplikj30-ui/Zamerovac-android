@@ -47,7 +47,7 @@ function exactlyTree(root,files){
 function approvedRuntime(env=process.env){
   need(env.ZAMEROVAC_QA_MODE==='cloud'&&env.ZAMEROVAC_CLOUD_TRUST==='trusted-host/change-detection');
   need(!env.ZAMEROVAC_CLOUD_IMMUTABLE_CLAIM&&!env.NODE_OPTIONS&&!env.NODE_PATH);
-  const bytes=checked(file,64*1024);
+  const bytes=checked(file,4*1024*1024);
   need(/^[a-f0-9]{64}$/.test(env.ZAMEROVAC_CLOUD_RUNTIME_SHA256||'')&&
     sha(bytes)===env.ZAMEROVAC_CLOUD_RUNTIME_SHA256);
   const r=JSON.parse(bytes.toString('utf8'));
