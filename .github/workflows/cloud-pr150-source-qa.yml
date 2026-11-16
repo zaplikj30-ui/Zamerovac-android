@@ -124,6 +124,15 @@ jobs:
           test "$(git -C product rev-parse HEAD)" = "$QA_PRODUCT_SHA"
           test -z "$(git -C validator status --porcelain --untracked-files=all)"
           test -z "$(git -C product status --porcelain --untracked-files=all)"
+          # QUICK executes validator-owned tests; they must exercise exactly P's
+          # product/native sources, not a quietly altered V product overlay.
+          # git tree/blob identities compare *all bytes* within each path.
+          for product_path in app sync config gradle build.gradle gradle.properties settings.gradle; do
+            test "$(git -C validator rev-parse "HEAD:$product_path")" = \
+                 "$(git -C product rev-parse "HEAD:$product_path")" || {
+              echo 'BLOCKED P/V product tree differs; STOP NO RETRY'; exit 78;
+            }
+          done
       - name: Node 24 exact major; no npm cache/install
         id: node_setup
         if: ${{ !cancelled() && steps.pinned.outcome == 'success' }}
