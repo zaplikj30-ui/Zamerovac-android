@@ -2,21 +2,27 @@
 // Read-only evidence for the proposal. No suite body, browser, process fault,
 // workflow or HOME payload is executed. sourceSnapshot only reads local Git.
 const {test}=require('node:test'),assert=require('node:assert/strict');
-const fs=require('node:fs'),path=require('node:path'),crypto=require('node:crypto');
-const vm=require('node:vm'),{execFileSync}=require('node:child_process');
+const path=require('node:path'),vm=require('node:vm');
+const {historicalBytes,snapshot}=require('./helpers/qa-historical.cjs');
 const historical='a3cc8eb3a14a9a6710664b73ba8a5c70ed1a340a';
-const read=name=>execFileSync('git',['show',historical+':'+name],{cwd:path.resolve(__dirname,'..'),stdio:['ignore','pipe','pipe']});
-const historicalManifest=JSON.parse(read('tools/qa-pr121-manifest.json'));
+// Inert bytes preserve original executionIdentity logic; two exact Git tree
+// snapshots preserve the original 66-file change/missing comparison offline.
+const reference=snapshot();
+const historicalManifest=JSON.parse(historicalBytes('manifest'));
 const context={module:{exports:{}},require:id=>id==='./qa-pr121-manifest.json'?historicalManifest:id.startsWith('.')?require(path.resolve(__dirname,'../tools',id)):require(id),process,Buffer};
-vm.runInNewContext(read('tools/qa-integrity.cjs').toString(),context);
+vm.runInNewContext(historicalBytes('integrity').toString(),context);
 const integrity=context.module.exports;
 const root=path.resolve(__dirname,'..');
 
 test('current main cannot masquerade as the pinned 66-file PR121 product',()=>{
+ assert.equal(reference.history.baseline,historical);
+ assert.equal(reference.history.original,integrity.manifest.sourceSha);
+ assert.deepEqual(Object.keys(reference.originalFiles).sort(),Object.keys(integrity.manifest.files).sort());
  const missing=[],changed=[];
- for(const [name,digest] of Object.entries(integrity.manifest.files)){
-  let bytes;try{bytes=read(name)}catch{missing.push(name);continue}
-  if(crypto.createHash('sha256').update(bytes).digest('hex')!==digest)changed.push(name);
+ for(const name of Object.keys(integrity.manifest.files)){
+  const oldBlob=reference.baselineFiles[name];
+  if(oldBlob===null){missing.push(name);continue}
+  if(oldBlob!==reference.originalFiles[name])changed.push(name);
  }
  assert.equal(Object.keys(integrity.manifest.files).length,66);
  assert.equal(Object.keys(integrity.manifest.cases).length,23);
@@ -29,7 +35,7 @@ test('current main cannot masquerade as the pinned 66-file PR121 product',()=>{
  ]);
  assert.equal(changed.length,15);
  const absentSuites=Object.keys(integrity.manifest.cases)
-  .filter(name=>{try{read('tools/e2e/'+name+'.cjs');return false}catch{return true}});
+  .filter(name=>reference.baselineFiles['tools/e2e/'+name+'.cjs']===null);
  assert.deepEqual(absentSuites,['legacy-conflict-persistence','pending-audio']);
  assert.equal(absentSuites.reduce((n,name)=>n+integrity.manifest.cases[name].length,0),9);
  assert.notEqual(historical,integrity.manifest.sourceSha);
