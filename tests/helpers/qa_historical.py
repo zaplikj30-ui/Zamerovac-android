@@ -33,7 +33,7 @@ def historical_bytes(key, root=DEFAULT):
     if ((before.st_dev, before.st_ino, before.st_size, before.st_mtime_ns) !=
             (after.st_dev, after.st_ino, after.st_size, after.st_mtime_ns) or
             len(data) != before.st_size or
-            hashlib.sha1(b'blob ' + str(len(data)).encode('ascii') + b'\\0' + data).hexdigest() != expected):
+            hashlib.sha1(b'blob ' + str(len(data)).encode('ascii') + bytes([0]) + data).hexdigest() != expected):
         raise ValueError('QA HISTORICAL BLOCKED: byte hash mismatch')
     return data
 
