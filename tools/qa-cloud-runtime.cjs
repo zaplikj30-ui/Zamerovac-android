@@ -85,6 +85,10 @@ function loadPlaywright(){
   const r=approvedRuntime();
   const loader=Module.createRequire(path.join(r.playwright.root,'qa-reviewed-entry.cjs'));
   const pwMain=loader.resolve('playwright'),coreMain=loader.resolve('playwright-core');
+  // The Playwright package itself must resolve exactly that same reviewed core.
+  // A nested shadow playwright/node_modules/playwright-core may be hash-listed
+  // in a broad tree yet would violate this single-runtime closure contract.
+  need(Module.createRequire(pwMain).resolve('playwright-core')===coreMain);
   for(const [name,filename] of [['playwright',pwMain],['playwright-core',coreMain]]){
     const relative=path.relative(r.playwright.root,filename).split(path.sep).join('/');
     need(relative.startsWith('node_modules/'+name+'/')&&
