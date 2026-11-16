@@ -20,6 +20,17 @@ async function suite(name,body){
  try{await body(async(title,test)=>{
   if(process.env.ZAMEROVAC_CASES&&!process.env.ZAMEROVAC_CASES.split(',').includes(title))return;
   const slug=title.replace(/[^a-z0-9_-]/gi,'_'),context=await browser.newContext({viewport:{width:600,height:950},hasTouch:true});
+   if(process.env.ZAMEROVAC_QA_MODE==='cloud'){
+    const origin=new URL(base).origin;
+    // Test-owned page.route fixtures (e.g. native media mocks) can fulfill
+    // requests without network. No unreviewed external HTTP(S) fetch/redirect.
+    await context.route('**/*',route=>{
+     let allowed=false;
+     try{const u=new URL(route.request().url());allowed=u.protocol==='http:'&&
+        u.origin===origin&&u.hostname==='127.0.0.1'}catch{}
+     return allowed?route.continue():route.abort();
+    });
+   }
   await context.tracing.start({screenshots:true,snapshots:true,sources:true});const page=await context.newPage(),errors=[],logs=[];
   page.setDefaultTimeout(7000);page.on('pageerror',e=>errors.push(e.message));page.on('console',m=>{if(m.type()==='error')logs.push(m.text())});
   const result={name:title,status:'running',steps:[],evidence:[]};report.cases.push(result);
