@@ -34,7 +34,7 @@ async function runOwned(command,cwd,env,log,token,timeoutMs=480000,signal,hardSt
  }
  const configFile=log+'.owner.json';
  fs.writeFileSync(configFile,JSON.stringify({command,cwd,log,token,timeout:timeoutMs/1000,heartbeatTimeout:5,
-  browser}),{flag:'wx'});
+  browser,kind:env.ZAMEROVAC_QA_MODE==='cloud'?'browser':undefined}),{flag:'wx'});
  return new Promise(resolve=>{
   let stdout='',finished=false,protocolOverflow=false,channelWriteFailed=false,child,hardTimedOut=false,hardTimer;
   const finish=result=>{if(finished)return;finished=true;clearInterval(heartbeat);if(hardTimer)clearTimeout(hardTimer);signal?.removeEventListener('abort',cancel);resolve(result)};
