@@ -2,6 +2,15 @@
 
 > **Platná pravidla a brány:** [AGENTS.md](AGENTS.md), [projektový plán](PROJEKTOVY_PLAN_ZAMEROVACE.md) a poslední rozhodnutí v [issue #42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42). Tento krátký soubor nenahrazuje historii ani důkazy. **Před vývojovou prací vždy ověř aktuální HEAD, relevantní issues a komentáře, PR, CI, dotčené soubory a Releases.** Před zápisem ověř HEAD a kolize znovu.
 
+## AKTUÁLNÍ PROVOZ – 16. 11. 2026 (dočasná změna)
+
+- Repozitář **dočasně PUBLIC** kvůli bezplatnému standardnímu GitHub-hosted CLOUD QA; vlastník chce po obnovení měsíčního limitu prověřit aktuální vyúčtování a vrátit jej na **PRIVATE**. Neautomatizovat přepnutí, žádný nákup ani automatické dobíjení; placený strop **12 USD/měsíc**.
+- **Domácí runner `Zamerovac-Win11-QA` je odstavený**: dle potvrzení vlastníka Windows služba Zastavená/Zakázaná, na doložených snímcích GitHub runner Offline a obě HOME QA/release workflow ručně Disabled. **Neaktivovat, nespouštět, nezapínat HOME ani nezměkčovat guardy.** O jeho případném návratu rozhodne vlastník odděleně.
+- Práce pokračuje na [PR #150](https://github.com/zaplikj30-ui/Zamerovac-android/pull/150) (draft; poslední ověřený HEAD `3886fcf80213e4693464d3f30104885c1c58f53e`, base `a3cc8eb3a14a9a6710664b73ba8a5c70ed1a340a`; vždy znovu ověřit). Připravit CLOUD-ONLY QA s přesným checkout SHA: rychlé, Chromium/pixely, JVM/Robolectric/PDF; plné 23/96 PASS jen po skutečné kontrole identity. Historické raw #88 2 FAIL nezamlčet. Bez merge, spuštění testů či vydání APK bez příslušné brány.
+- **Koordinátor musí při opakovaném blokéru aktivně hledat jinou cestu** a kriticky porovnat opravu, jiné prostředí/poskytovatele a změnu procesu. Nepřitakávat automaticky. Viz [doplnění AGENTS.md](AGENTS.md#aktuální-dočasný-režim-a-aktivní-hledání-alternativ-16-11-2026) a [#42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42#issuecomment-6913282802).
+
+**Níže následuje historický přehled z 11. 11.; jeho tehdejší HOME priority a staré odkazy nejsou dnešním provozním příkazem.**
+
 ## Poslední ověřený přehled (11. 11. 2026, historický snapshot)
 
 - `main` při této revizi: `c604860db4fddeefc077e27411bc1941815f7d94`. **Není zaručeno, že je to dnešní nejnovější HEAD.**
