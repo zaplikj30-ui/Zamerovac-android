@@ -139,7 +139,7 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '24'
-      - name: QUICK – exact 74+1 Node families, 190 named TAP, 216+3 Python
+      - name: QUICK – exact 74+4 Node families, 190 named TAP, 216+5 Python
         id: quick
         if: ${{ !cancelled() && steps.pinned.outcome == 'success' && steps.node_setup.outcome == 'success' }}
         working-directory: validator
