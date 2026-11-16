@@ -190,8 +190,24 @@ async function run(mode,externalSignal){
    }
   }
   integrity.sourceSnapshot(root);if(gateSnapshot()!==identity.validatorSha)throw blocked('validator changed after tests');
+  if(cloud){
+   // Recheck R/ELF after the last suite; P/V snapshots alone are not sufficient.
+   require('./qa-cloud-runtime.cjs').approvedRuntime();
+   verifyBrowserIdentity(process.env.CHROMIUM_PATH);
+  }
   succeeded=true;
  }catch(e){
+  // A cleaned-up assertion failure may permit INDEPENDENT JVM evidence only
+  // after the source/validator/runtime/ELF are checked again post-failure.
+  // Identity drift is UNKNOWN/STOP even when OS process cleanup is proven.
+  if(cloud&&cleanSuiteFailure){
+   try{
+    integrity.sourceSnapshot(root);
+    if(gateSnapshot()!==identity.validatorSha)throw blocked('validator changed after failed suite');
+    require('./qa-cloud-runtime.cjs').approvedRuntime();
+    verifyBrowserIdentity(process.env.CHROMIUM_PATH);
+   }catch(_){cleanSuiteFailure=false;identity.error='post-failure identity unverified';}
+  }
   for(let i=0;i<records.length;i++)if(records[i].status==='NOT RUN')records[i]={...records[i],status:'BLOCKED',error:e.message};
   // If an integrity error follows all suites, preserve the failure independently.
   identity.error=e.message;
