@@ -1,0 +1,265 @@
+name: Zaměřovač – PR150 P/V/E strict CLOUD source QA (INERT DRAFT)
+# A1-A3 approved for implementation only. Owner has NOT authorized dispatch,
+# inventory, provisioning, merge, APK, uploads or any HOME operation.
+# This workflow MUST remain inert until separate SOURCE/SECURITY + owner GO.
+on:
+  workflow_dispatch:
+    inputs:
+      product_sha:
+        description: 'Exact reviewed PR150 product commit'
+        type: string
+        required: true
+      validator_sha:
+        description: 'Exact independently reviewed PR155 validator commit'
+        type: string
+        required: true
+      event_sha:
+        description: 'Exact owner-approved event/main commit'
+        type: string
+        required: true
+      runtime_sha256:
+        description: 'Approved complete R/D JSON sha256; empty means BLOCKED'
+        type: string
+        required: false
+        default: ''
+      python_path:
+        description: 'Preapproved absolute hosted Python path; no fallback'
+        type: string
+        required: false
+        default: ''
+      chromium_path:
+        description: 'Preapproved absolute Chromium ELF path; no fallback'
+        type: string
+        required: false
+        default: ''
+      owner_approved:
+        description: 'Separately approved one cloud-only run (not approved yet)'
+        type: boolean
+        required: true
+        default: false
+permissions:
+  contents: read
+concurrency:
+  group: zamerovac-pr150-strict-cloud-only
+  cancel-in-progress: false
+jobs:
+  cloud-pr150:
+    # Deliberately FALSE: authoring approval is NOT run/activation consent.
+    if: ${{ false && github.repository == 'zaplikj30-ui/Zamerovac-android' && github.event.repository.private == false && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && github.run_attempt == 1 && inputs.owner_approved == true && inputs.product_sha == '3886fcf80213e4693464d3f30104885c1c58f53e' }
+    runs-on: ubuntu-latest
+    timeout-minutes: 330
+    env:
+      PYTHONDONTWRITEBYTECODE: '1'
+      PYTHONNOUSERSITE: '1'
+      PYTHONOPTIMIZE: '0'
+      GIT_CONFIG_NOSYSTEM: '1'
+      GIT_CONFIG_GLOBAL: /dev/null
+      QA_PRODUCT_SHA: ${{ inputs.product_sha }
+      QA_VALIDATOR_SHA: ${{ inputs.validator_sha }
+      QA_EVENT_SHA: ${{ inputs.event_sha }
+    steps:
+      - name: Strict precheckout owner/main/P/V/E/public metadata; no payload
+        id: preflight
+        shell: bash
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json, os, re, urllib.request
+          e=os.environ
+          expected={'GITHUB_REPOSITORY':'zaplikj30-ui/Zamerovac-android',
+            'GITHUB_ACTOR':'zaplikj30-ui','GITHUB_TRIGGERING_ACTOR':'zaplikj30-ui',
+            'GITHUB_EVENT_NAME':'workflow_dispatch','GITHUB_REF':'refs/heads/main',
+            'GITHUB_RUN_ATTEMPT':'1','RUNNER_OS':'Linux','RUNNER_ENVIRONMENT':'github-hosted'}
+          def block(message):raise SystemExit('BLOCKED cloud precheckout: '+message)
+          if any(e.get(k)!=v for k,v in expected.items()):block('actor/ref/runner')
+          if e.get('QA_PRODUCT_SHA')!='3886fcf80213e4693464d3f30104885c1c58f53e':block('unreviewed P')
+          for k in ('QA_VALIDATOR_SHA','QA_EVENT_SHA','GITHUB_SHA'):
+            if not re.fullmatch('[0-9a-f]{40}',e.get(k,'')):block('missing SHA')
+          if e['GITHUB_SHA']!=e['QA_EVENT_SHA']:block('stale E')
+          def get(resource):
+            req=urllib.request.Request('https://api.github.com/repos/zaplikj30-ui/Zamerovac-android/'+resource,
+              headers={'Accept':'application/vnd.github+json','User-Agent':'zamerovac-cloud-qa'})
+            with urllib.request.urlopen(req,timeout=12) as response:
+              if response.status!=200:block('API status')
+              return json.load(response)
+          repo=get('')
+          p=get('pulls/150')
+          v=get('pulls/155')
+          if repo.get('private') is not False or repo.get('visibility')!='public':block('billing/private')
+          def safe_pr(pr,sha):
+            return (pr.get('state')=='open' and (pr.get('head') or {}).get('sha')==sha
+              and ((pr.get('head') or {}).get('repo') or {}).get('full_name')==e['GITHUB_REPOSITORY'])
+          if not safe_pr(p,e['QA_PRODUCT_SHA']):block('moved P')
+          if not safe_pr(v,e['QA_VALIDATOR_SHA']):block('moved V')
+          if (v.get('base') or {}).get('ref')!='implement/home4-p1-p4-20261115':block('V base')
+          if (p.get('base') or {}).get('ref')!='main':block('P base')
+          print('PASS only precheckout metadata P/V/E/public; NOT test PASS')
+          PY
+      - name: Checkout exact reviewed validator V, no persisted credentials
+        id: checkout_v
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.validator_sha }
+          path: validator
+          clean: true
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Checkout exact product P separately, no replaced source bytes
+        id: checkout_p
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          ref: ${{ inputs.product_sha }
+          path: product
+          clean: true
+          fetch-depth: 1
+          persist-credentials: false
+      - name: Verify both clean HEAD and no HOME or unexpected source overlay
+        id: pinned
+        shell: bash
+        timeout-minutes: 2
+        run: |
+          set -euo pipefail
+          test "$(git -C validator rev-parse HEAD)" = "$QA_VALIDATOR_SHA"
+          test "$(git -C product rev-parse HEAD)" = "$QA_PRODUCT_SHA"
+          test -z "$(git -C validator status --porcelain --untracked-files=all)"
+          test -z "$(git -C product status --porcelain --untracked-files=all)"
+      - name: Node 24 exact major; no npm cache/install
+        id: node_setup
+        if: ${{ !cancelled() && steps.pinned.outcome == 'success' }
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
+      - name: QUICK – exact 74+1 Node families, 190 named TAP, 216+3 Python
+        id: quick
+        if: ${{ !cancelled() && steps.pinned.outcome == 'success' && steps.node_setup.outcome == 'success' }
+        working-directory: validator
+        timeout-minutes: 22
+        env:
+          ZAMEROVAC_CLOUD_QUICK: '1'
+        shell: bash
+        run: |
+          set -euo pipefail
+          for file in app/src/main/assets/*.js sync/*.js; do node --check "$file"; done
+          node tools/qa/audit.cjs
+          node tools/check-android-window.cjs
+          node tools/qa-cloud-quick.cjs
+          python3 tools/qa_cloud_quick.py
+      - name: STRICT Chromium – reviewed R required; no provisioning, no fallback
+        id: strict_browser
+        if: ${{ !cancelled() && steps.quick.outcome == 'success' }
+        working-directory: validator
+        timeout-minutes: 210
+        shell: bash
+        env:
+          ZAMEROVAC_QA_MODE: cloud
+          ZAMEROVAC_CLOUD_TRUST: trusted-host/change-detection
+          ZAMEROVAC_EXPECTED_PRODUCT_SHA: ${{ inputs.product_sha }
+          ZAMEROVAC_CLOUD_REVIEWED_V_SHA: ${{ inputs.validator_sha }
+          ZAMEROVAC_CLOUD_EVENT_SHA: ${{ github.sha }
+          ZAMEROVAC_CLOUD_RUNTIME_SHA256: ${{ inputs.runtime_sha256 }
+          ZAMEROVAC_SOURCE_ROOT: ${{ github.workspace }}/product
+          ZAMEROVAC_QA_RESULT_PARENT: ${{ runner.temp }}/zamerovac-cloud-browser
+          ZAMEROVAC_EXPECTED_QA_SHA: ${{ inputs.validator_sha }
+          ZAMEROVAC_PYTHON: ${{ inputs.python_path }
+          CHROMIUM_PATH: ${{ inputs.chromium_path }
+        run: |
+          set -euo pipefail
+          set +e
+          node tools/local-browser-qa.cjs --all
+          raw=$?
+          set -e
+          python3 - <<'PY'
+          import json,os
+          from pathlib import Path
+          root=Path(os.environ['ZAMEROVAC_QA_RESULT_PARENT'])
+          try:
+            found=list(root.glob('run-*/results.json'))
+            if len(found)!=1:raise ValueError('missing private report')
+            data=json.loads(found[0].read_text())
+            if data.get('cleanupVerdict')!='KNOWN_CLEAN':raise ValueError('cleanup UNKNOWN')
+            if data.get('mode')!='--all':raise ValueError('wrong mode')
+            with open(os.environ['GITHUB_OUTPUT'],'a',encoding='ascii') as out:
+              out.write('cleanup=KNOWN_CLEAN\n')
+            print('Browser known cleanup proof; raw case result retained separately')
+          except Exception:
+            raise SystemExit('BLOCKED browser cleanup UNKNOWN / STOP / NO RETRY')
+          PY
+          exit "$raw"
+      - name: Prepare JDK 17 after browser KNOWN_CLEAN only
+        id: java_setup
+        if: ${{ !cancelled() && steps.pinned.outcome == 'success' && steps.quick.outcome == 'success' && steps.strict_browser.outputs.cleanup == 'KNOWN_CLEAN' }
+        uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Gradle 8.10.2 cache disabled
+        id: gradle_setup
+        if: ${{ !cancelled() && steps.java_setup.outcome == 'success' }
+        uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
+        with:
+          gradle-version: '8.10.2'
+          cache-disabled: true
+      - name: Native Drive public config – offline only, no APK
+        id: drive
+        if: ${{ !cancelled() && steps.gradle_setup.outcome == 'success' }
+        timeout-minutes: 9
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --offline --no-daemon -p product/tools/drive-config-checks verify
+      - name: RAW JVM 64/513 – retain 2 genuine #88 FAIL, no Gradle downloads
+        id: jvm
+        if: ${{ !cancelled() && steps.gradle_setup.outcome == 'success' && steps.drive.outcome == 'success' }
+        timeout-minutes: 35
+        working-directory: product
+        shell: bash
+        run: |
+          set -euo pipefail
+          date +%s%N > "$RUNNER_TEMP/zamerovac-native-start"
+          set +e
+          gradle --offline --no-daemon :app:verifyDriveRegistration :app:compilePreviewJavaWithJavac :app:testPreviewUnitTest -PdriveRequireConfigured=true
+          code=$?
+          set -e
+          printf '%s\n' "$code" > "$RUNNER_TEMP/zamerovac-raw-exit"
+          exit "$code"
+      - name: Strict fresh JVM XML – no count-only or false green
+        id: strict_xml
+        if: ${{ !cancelled() && steps.jvm.outcome != 'skipped' && steps.jvm.outcome != 'cancelled' && steps.strict_browser.outputs.cleanup == 'KNOWN_CLEAN' }
+        working-directory: validator
+        timeout-minutes: 5
+        shell: bash
+        run: |
+          set -euo pipefail
+          test -s "$RUNNER_TEMP/zamerovac-native-start"
+          test -s "$RUNNER_TEMP/zamerovac-raw-exit"
+          python3 tools/qa_cloud_native.py xml "$GITHUB_WORKSPACE/product" "$(cat "$RUNNER_TEMP/zamerovac-native-start")" "$(cat "$RUNNER_TEMP/zamerovac-raw-exit")"
+      - name: Synthetic PDF – 3 fresh ZIP, no unapproved pip/apt/install
+        id: pdf
+        if: ${{ !cancelled() && steps.strict_xml.outputs.jvm_verified == 'true' && steps.strict_browser.outputs.cleanup == 'KNOWN_CLEAN' }
+        working-directory: validator
+        timeout-minutes: 9
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 -c "import pypdf,pymupdf"
+          python3 tools/qa_cloud_native.py pdf "$GITHUB_WORKSPACE/product" "$(cat "$RUNNER_TEMP/zamerovac-native-start")" "$(cat "$RUNNER_TEMP/zamerovac-raw-exit")"
+      - name: Final live P/V/E check, no stale HEAD or fake PASS
+        if: ${{ !cancelled() && steps.pinned.outcome == 'success' }
+        timeout-minutes: 2
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,urllib.request
+          e=os.environ
+          for number,sha in ((150,e['QA_PRODUCT_SHA']),(155,e['QA_VALIDATOR_SHA'])):
+            request=urllib.request.Request(
+              'https://api.github.com/repos/zaplikj30-ui/Zamerovac-android/pulls/'+str(number),
+              headers={'Accept':'application/vnd.github+json','User-Agent':'zamerovac-cloud-qa'})
+            with urllib.request.urlopen(request,timeout=12) as response: pr=json.load(response)
+            if pr.get('state')!='open' or (pr.get('head') or {}).get('sha')!=sha:
+              raise SystemExit('BLOCKED stale P/V; STOP / NO RETRY')
+          if e['QA_EVENT_SHA']!=e['GITHUB_SHA']:raise SystemExit('BLOCKED stale E')
+          print('Final P/V/E still exactly reviewed; individual test results remain raw')
+          PY
