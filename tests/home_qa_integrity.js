@@ -326,7 +326,7 @@ test('separate product checkout is unchanged by QA staging; actual byte tamperin
   fs.mkdirSync(stage);const staged=runner.stageProduct(stage,source);
   assert(fs.readFileSync(path.join(staged,'harness.cjs'),'utf8').includes('launchSandboxed'));
   assert(!fs.readFileSync(path.join(staged,'harness.cjs'),'utf8').includes("args:['--no-sandbox']"));
-  assert.equal(integrity.sourceSnapshot(source,snapEnv),integrity.manifest.sourceSha);
+  assert.equal(integrity.sourceSnapshot(source,snapEnv),approved);
   git(['update-index','--assume-unchanged','app/src/main/assets/index.html']);
   fs.appendFileSync(path.join(source,'app/src/main/assets/index.html'),'tamper');
   assert.equal(git(['status','--porcelain']).trim(),'');
