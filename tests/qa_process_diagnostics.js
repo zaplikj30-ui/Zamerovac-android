@@ -2,7 +2,8 @@
 const {test}=require('node:test'),assert=require('node:assert/strict');
 const fs=require('node:fs'),path=require('node:path'),vm=require('node:vm');
 const {EventEmitter}=require('node:events');
-const os=require('node:os'),{spawnSync,execFileSync}=require('node:child_process');
+const os=require('node:os'),{spawnSync}=require('node:child_process');
+const {historicalBytes}=require('./helpers/qa-historical.cjs');
 const {copyGate}=require('./helpers/qa-fixture-checkout.cjs');
 const client=require('../tools/qa-process-client.cjs');
 const secret='PRIVATE ACCOUNT C:\\Users\\PrivateUser\\SecretFolder stderr=123456789';
@@ -101,8 +102,7 @@ test('the whole new launch chain exposes an injected owner failure that the prev
    "\ndef new_scope():\n raise ScopeError('PRIVATE ACCOUNT PATH',stage='AssignProcessToJobObject',win32_error=5)\n");
   const gatePath=path.join(root,'tools/qa-fixture-gate.cjs');
   const current=fs.readFileSync(gatePath);
-  const previous=execFileSync('git',['show','6f98ceffff50d337f7c2999fed0e0878d20a582e:tools/qa-fixture-gate.cjs'],{
-   cwd:path.resolve(__dirname,'..'),encoding:'utf8'});
+  const previous=historicalBytes('fixtureGate'); // reviewed original 6f98ce bytes
   fs.writeFileSync(gatePath,previous);
   const before=spawnSync(process.execPath,[gatePath],{env,timeout:10000,maxBuffer:65536});
   assert.ifError(before.error);assert.equal(before.status,1);assert.equal(before.stderr.length,0);
