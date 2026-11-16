@@ -27,7 +27,10 @@ function secure(source){
   "node tools/qa-cloud-quick.cjs",
   "gradle --offline --no-daemon",
   "runtime_sha256:",
-  "ZAMEROVAC_CLOUD_TRUST: trusted-host/change-detection"
+  "ZAMEROVAC_CLOUD_TRUST: trusted-host/change-detection",
+  'for product_path in app sync config gradle build.gradle gradle.properties settings.gradle;',
+  'git -C validator rev-parse "HEAD:$product_path"',
+  'git -C product rev-parse "HEAD:$product_path"'
  ];
  const forbidden=[
   'runs-on: [self-hosted','sudo ', 'npm install','npm ci','npx playwright install',
@@ -58,6 +61,7 @@ test('negative mutations reject activation, native after UNKNOWN, install or oth
   workflow.replace("persist-credentials: false","persist-credentials: true"),
   workflow.replace("timeout-minutes: 330","timeout-minutes: 30"),
   workflow.replace("runtime_sha256:","removed_runtime:"),
+  workflow.replace("for product_path in app sync config gradle build.gradle gradle.properties settings.gradle;","for product_path in;"),
   workflow+" \n npm install playwright\n"
  ])assert(!secure(mutation));
 });
