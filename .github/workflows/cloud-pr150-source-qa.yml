@@ -146,6 +146,7 @@ jobs:
         timeout-minutes: 22
         env:
           ZAMEROVAC_CLOUD_QUICK: '1'
+          ZAMEROVAC_CLOUD_QUICK_PRODUCT_ROOT: ${{ github.workspace }}/product
         shell: bash
         run: |
           set -euo pipefail
