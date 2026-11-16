@@ -16,7 +16,9 @@ const EXTRA_CASES=Object.freeze({
   "tests/qa_cloud_workflow_policy.js": [
     "only inert owner/main public hosted dispatch with pinned P/V/E and no installs/outputs",
     "time arithmetic fits job without shrinking 23/96 or cleanup time",
-    "negative mutations reject activation, native after UNKNOWN, install or other runner"
+    "negative mutations reject activation, native after UNKNOWN, install or other runner",
+    "EXTRA Node exact TAP registry rejects every false-PASS mutation",
+    "real Node test reporter rejects empty auto-PASS and requires exact EXTRA TAP names"
   ],
   "tests/qa_cloud_runtime_guard.js": [
     "unreviewed R blocks before touching config file or launching Python",
@@ -40,7 +42,7 @@ function checkFiles(){
  demand(JSON.stringify(names)===JSON.stringify(expected));
  demand(JSON.stringify(Object.keys(EXTRA_CASES).sort())===JSON.stringify(EXTRA.slice().sort()));
  const extraNames=Object.values(EXTRA_CASES).flat();
- demand(extraNames.length===14&&new Set(extraNames).size===extraNames.length);
+ demand(extraNames.length===16&&new Set(extraNames).size===extraNames.length);
  demand(Object.values(EXTRA_CASES).every(c=>Array.isArray(c)&&c.length>0));
  demand(Object.keys(registry.node).length===74);
  const caseNames=Object.values(registry.node).flatMap(x=>x.cases);
