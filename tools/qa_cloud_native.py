@@ -3,6 +3,7 @@
 Never change HOME4 contract or translate productAcceptance into Gradle PASS.
 No customer data, network install, APK, artifact upload or partial PASS.
 """
+import hashlib
 import json
 import os
 from pathlib import Path
@@ -52,17 +53,74 @@ def raw_xml(source, started_ns, raw_exit):
     return result
 
 
-def fresh_pdf(source, started_ns):
+# A current JVM XML acceptance binds the exact synthetic ZIP byte identities
+# to this owner/run/P/V/E. A fresh mtime alone is NOT origin evidence.
+PDF_PROOF = 'zamerovac-cloud-pdf-proof.json'
+
+
+def proof_context(started_ns):
+    e = os.environ
+    demand(e.get('GITHUB_RUN_ATTEMPT') == '1'
+           and (e.get('GITHUB_RUN_ID') or '').isdecimal()
+           and len(e.get('GITHUB_SHA') or '') == 40
+           and len(e.get('QA_VALIDATOR_SHA') or '') == 40,
+           'pdf-proof-event-identity')
+    return {'runId':e['GITHUB_RUN_ID'], 'eventSha':e['GITHUB_SHA'],
+            'validatorSha':e['QA_VALIDATOR_SHA'],
+            'productSha':EXPECTED_SOURCE, 'startedNs':started_ns, 'rawExit':1}
+
+
+def proof_path():
+    root = Path(os.environ.get('RUNNER_TEMP') or '.')
+    demand(root.is_absolute() and root.is_dir() and not root.is_symlink(),
+           'pdf-proof-private-runner-temp')
+    return root/PDF_PROOF
+
+
+def pdf_rows(source, started_ns):
     build = source/'app/build'
     files = sorted(build.glob('customer-pdf-*.zip'))
-    demand({p.name for p in files} == PDF_NAMES
-           and len(files) == len(PDF_NAMES), 'pdf-exact-fixture-registry')
+    demand({p.name for p in files} == PDF_NAMES and len(files) == len(PDF_NAMES),
+           'pdf-exact-fixture-registry')
+    rows = []
     for p in files:
         st = p.lstat()
         demand(p.is_file() and not p.is_symlink()
                and 0 < st.st_size <= MAX_PDF_ZIP_BYTES
                and st.st_nlink == 1 and st.st_mtime_ns >= started_ns,
                'pdf-not-fresh-regular-bounded-file')
+        digest = hashlib.sha256()
+        with p.open('rb') as stream:
+            for chunk in iter(lambda: stream.read(1024 * 1024), b''):
+                digest.update(chunk)
+        post = p.lstat()
+        demand((st.st_dev, st.st_ino, st.st_size, st.st_mtime_ns) ==
+               (post.st_dev, post.st_ino, post.st_size, post.st_mtime_ns),
+               'pdf-fixture-changed-while-hashing')
+        rows.append({'name':p.name, 'bytes':st.st_size,
+                     'sha256':digest.hexdigest(), 'mtimeNs':st.st_mtime_ns})
+    return rows
+
+
+def bind_pdf_proof(source, started_ns):
+    payload = {**proof_context(started_ns), 'fixtures':pdf_rows(source, started_ns)}
+    flags = os.O_WRONLY | os.O_CREAT | os.O_EXCL | getattr(os, 'O_NOFOLLOW', 0)
+    fd = os.open(proof_path(), flags, 0o600)
+    with os.fdopen(fd, 'w', encoding='ascii') as output:
+        json.dump(payload, output, sort_keys=True)
+
+
+def fresh_pdf(source, started_ns):
+    proof = proof_path()
+    st = proof.lstat()
+    demand(proof.is_file() and not proof.is_symlink() and st.st_nlink == 1
+           and 0 < st.st_size <= 4096 and (st.st_mode & 0o077) == 0,
+           'pdf-proof-file-identity')
+    bound = read_json(proof)
+    expected = {**proof_context(started_ns),
+                'fixtures':pdf_rows(source, started_ns)}
+    demand(bound == expected, 'pdf-not-bound-to-verified-current-JVM-run')
+    files = [source/'app/build'/name for name in sorted(PDF_NAMES)]
     # The evaluator's own explicit checks survive Python -O.
     from subprocess import run
     pdf = Path(__file__).resolve().parent/'check-customer-pdf.py'
@@ -82,6 +140,13 @@ def main(argv):
     if mode == 'xml':
         raw = int(raw_exit)
         actual = raw_xml(source, started_ns, raw)
+        # Bind the genuine 3 synthetic ZIP byte identities to this JVM run.
+        # If fixtures are absent, keep the XML result independent but never
+        # produce PDF proof or green PDF later.
+        try:
+            bind_pdf_proof(source, started_ns)
+        except (Blocked, FileNotFoundError):
+            pass
         # Enables only independent PDF validation; current raw Gradle stays FAIL.
         output = os.environ.get('GITHUB_OUTPUT')
         if output:
