@@ -130,9 +130,12 @@ test('real Node test reporter rejects empty auto-PASS and requires exact EXTRA T
  const fixture=path.join(directory,'synthetic-extra.cjs');
  function run(source){
   fs.writeFileSync(fixture,source,{encoding:'utf8'});
+  // The parent is already a node:test worker. Run the synthetic nested fixture
+  // as an independent top-level test invocation, not a recursive test context.
+  const childEnv={...process.env,CI:'1'};delete childEnv.NODE_TEST_CONTEXT;
   const result=cp.spawnSync(process.execPath,['--test','--test-reporter='+reporter,fixture],
    {cwd:directory,encoding:'utf8',timeout:20000,maxBuffer:1024*1024,shell:false,
-    env:{...process.env,CI:'1'}});
+    env:childEnv});
   assert.equal(result.error,undefined,'synthetic reporter process failed');
   assert.equal(result.signal,null,'synthetic reporter signal');
   assert.equal(result.status,0,'synthetic reporter exit');
