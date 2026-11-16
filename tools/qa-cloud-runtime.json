@@ -1,0 +1,20 @@
+{
+  "schema": 1,
+  "runtimeApproved": false,
+  "trustModel": "trusted-host/change-detection",
+  "productSha": "3886fcf80213e4693464d3f30104885c1c58f53e",
+  "validatorSha": null,
+  "eventSha": null,
+  "imageOS": null,
+  "imageVersion": null,
+  "linuxUid": null,
+  "node": null,
+  "python": null,
+  "chromium": null,
+  "playwright": {
+    "root": null,
+    "files": {},
+    "archives": {}
+  },
+  "comment": "R/D does not yet exist: owner-approved hosted inventory and independent provenance review are mandatory; no install or fallback."
+}
