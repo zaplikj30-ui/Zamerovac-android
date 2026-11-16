@@ -45,7 +45,7 @@ concurrency:
 jobs:
   cloud-pr150:
     # Deliberately FALSE: authoring approval is NOT run/activation consent.
-    if: ${{ false && github.repository == 'zaplikj30-ui/Zamerovac-android' && github.event.repository.private == false && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && github.run_attempt == 1 && inputs.owner_approved == true && inputs.product_sha == '3886fcf80213e4693464d3f30104885c1c58f53e' }
+    if: ${{ false && github.repository == 'zaplikj30-ui/Zamerovac-android' && github.event.repository.private == false && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && github.run_attempt == 1 && inputs.owner_approved == true && inputs.product_sha == '3886fcf80213e4693464d3f30104885c1c58f53e' }}
     runs-on: ubuntu-latest
     timeout-minutes: 330
     env:
@@ -54,9 +54,9 @@ jobs:
       PYTHONOPTIMIZE: '0'
       GIT_CONFIG_NOSYSTEM: '1'
       GIT_CONFIG_GLOBAL: /dev/null
-      QA_PRODUCT_SHA: ${{ inputs.product_sha }
-      QA_VALIDATOR_SHA: ${{ inputs.validator_sha }
-      QA_EVENT_SHA: ${{ inputs.event_sha }
+      QA_PRODUCT_SHA: ${{ inputs.product_sha }}
+      QA_VALIDATOR_SHA: ${{ inputs.validator_sha }}
+      QA_EVENT_SHA: ${{ inputs.event_sha }}
     steps:
       - name: Strict precheckout owner/main/P/V/E/public metadata; no payload
         id: preflight
@@ -100,7 +100,7 @@ jobs:
         id: checkout_v
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ inputs.validator_sha }
+          ref: ${{ inputs.validator_sha }}
           path: validator
           clean: true
           fetch-depth: 1
@@ -109,7 +109,7 @@ jobs:
         id: checkout_p
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ inputs.product_sha }
+          ref: ${{ inputs.product_sha }}
           path: product
           clean: true
           fetch-depth: 1
@@ -126,13 +126,13 @@ jobs:
           test -z "$(git -C product status --porcelain --untracked-files=all)"
       - name: Node 24 exact major; no npm cache/install
         id: node_setup
-        if: ${{ !cancelled() && steps.pinned.outcome == 'success' }
+        if: ${{ !cancelled() && steps.pinned.outcome == 'success' }}
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '24'
       - name: QUICK – exact 74+1 Node families, 190 named TAP, 216+3 Python
         id: quick
-        if: ${{ !cancelled() && steps.pinned.outcome == 'success' && steps.node_setup.outcome == 'success' }
+        if: ${{ !cancelled() && steps.pinned.outcome == 'success' && steps.node_setup.outcome == 'success' }}
         working-directory: validator
         timeout-minutes: 22
         env:
@@ -147,22 +147,22 @@ jobs:
           python3 tools/qa_cloud_quick.py
       - name: STRICT Chromium – reviewed R required; no provisioning, no fallback
         id: strict_browser
-        if: ${{ !cancelled() && steps.quick.outcome == 'success' }
+        if: ${{ !cancelled() && steps.quick.outcome == 'success' }}
         working-directory: validator
         timeout-minutes: 210
         shell: bash
         env:
           ZAMEROVAC_QA_MODE: cloud
           ZAMEROVAC_CLOUD_TRUST: trusted-host/change-detection
-          ZAMEROVAC_EXPECTED_PRODUCT_SHA: ${{ inputs.product_sha }
-          ZAMEROVAC_CLOUD_REVIEWED_V_SHA: ${{ inputs.validator_sha }
-          ZAMEROVAC_CLOUD_EVENT_SHA: ${{ github.sha }
-          ZAMEROVAC_CLOUD_RUNTIME_SHA256: ${{ inputs.runtime_sha256 }
+          ZAMEROVAC_EXPECTED_PRODUCT_SHA: ${{ inputs.product_sha }}
+          ZAMEROVAC_CLOUD_REVIEWED_V_SHA: ${{ inputs.validator_sha }}
+          ZAMEROVAC_CLOUD_EVENT_SHA: ${{ github.sha }}
+          ZAMEROVAC_CLOUD_RUNTIME_SHA256: ${{ inputs.runtime_sha256 }}
           ZAMEROVAC_SOURCE_ROOT: ${{ github.workspace }}/product
           ZAMEROVAC_QA_RESULT_PARENT: ${{ runner.temp }}/zamerovac-cloud-browser
-          ZAMEROVAC_EXPECTED_QA_SHA: ${{ inputs.validator_sha }
-          ZAMEROVAC_PYTHON: ${{ inputs.python_path }
-          CHROMIUM_PATH: ${{ inputs.chromium_path }
+          ZAMEROVAC_EXPECTED_QA_SHA: ${{ inputs.validator_sha }}
+          ZAMEROVAC_PYTHON: ${{ inputs.python_path }}
+          CHROMIUM_PATH: ${{ inputs.chromium_path }}
         run: |
           set -euo pipefail
           set +e
@@ -188,21 +188,21 @@ jobs:
           exit "$raw"
       - name: Prepare JDK 17 after browser KNOWN_CLEAN only
         id: java_setup
-        if: ${{ !cancelled() && steps.pinned.outcome == 'success' && steps.quick.outcome == 'success' && steps.strict_browser.outputs.cleanup == 'KNOWN_CLEAN' }
+        if: ${{ !cancelled() && steps.pinned.outcome == 'success' && steps.quick.outcome == 'success' && steps.strict_browser.outputs.cleanup == 'KNOWN_CLEAN' }}
         uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3 # v4
         with:
           distribution: temurin
           java-version: '17'
       - name: Gradle 8.10.2 cache disabled
         id: gradle_setup
-        if: ${{ !cancelled() && steps.java_setup.outcome == 'success' }
+        if: ${{ !cancelled() && steps.java_setup.outcome == 'success' }}
         uses: gradle/actions/setup-gradle@ed408507eac070d1f99cc633dbcf757c94c7933a # v4.4.3
         with:
           gradle-version: '8.10.2'
           cache-disabled: true
       - name: Native Drive public config – offline only, no APK
         id: drive
-        if: ${{ !cancelled() && steps.gradle_setup.outcome == 'success' }
+        if: ${{ !cancelled() && steps.gradle_setup.outcome == 'success' }}
         timeout-minutes: 9
         shell: bash
         run: |
@@ -210,7 +210,7 @@ jobs:
           gradle --offline --no-daemon -p product/tools/drive-config-checks verify
       - name: RAW JVM 64/513 – retain 2 genuine #88 FAIL, no Gradle downloads
         id: jvm
-        if: ${{ !cancelled() && steps.gradle_setup.outcome == 'success' && steps.drive.outcome == 'success' }
+        if: ${{ !cancelled() && steps.gradle_setup.outcome == 'success' && steps.drive.outcome == 'success' }}
         timeout-minutes: 35
         working-directory: product
         shell: bash
@@ -225,7 +225,7 @@ jobs:
           exit "$code"
       - name: Strict fresh JVM XML – no count-only or false green
         id: strict_xml
-        if: ${{ !cancelled() && steps.jvm.outcome != 'skipped' && steps.jvm.outcome != 'cancelled' && steps.strict_browser.outputs.cleanup == 'KNOWN_CLEAN' }
+        if: ${{ !cancelled() && steps.jvm.outcome != 'skipped' && steps.jvm.outcome != 'cancelled' && steps.strict_browser.outputs.cleanup == 'KNOWN_CLEAN' }}
         working-directory: validator
         timeout-minutes: 5
         shell: bash
@@ -236,7 +236,7 @@ jobs:
           python3 tools/qa_cloud_native.py xml "$GITHUB_WORKSPACE/product" "$(cat "$RUNNER_TEMP/zamerovac-native-start")" "$(cat "$RUNNER_TEMP/zamerovac-raw-exit")"
       - name: Synthetic PDF – 3 fresh ZIP, no unapproved pip/apt/install
         id: pdf
-        if: ${{ !cancelled() && steps.strict_xml.outputs.jvm_verified == 'true' && steps.strict_browser.outputs.cleanup == 'KNOWN_CLEAN' }
+        if: ${{ !cancelled() && steps.strict_xml.outputs.jvm_verified == 'true' && steps.strict_browser.outputs.cleanup == 'KNOWN_CLEAN' }}
         working-directory: validator
         timeout-minutes: 9
         shell: bash
@@ -245,7 +245,7 @@ jobs:
           python3 -c "import pypdf,pymupdf"
           python3 tools/qa_cloud_native.py pdf "$GITHUB_WORKSPACE/product" "$(cat "$RUNNER_TEMP/zamerovac-native-start")" "$(cat "$RUNNER_TEMP/zamerovac-raw-exit")"
       - name: Final live P/V/E check, no stale HEAD or fake PASS
-        if: ${{ !cancelled() && steps.pinned.outcome == 'success' }
+        if: ${{ !cancelled() && steps.pinned.outcome == 'success' }}
         timeout-minutes: 2
         shell: bash
         run: |
