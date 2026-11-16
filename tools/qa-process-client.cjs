@@ -56,7 +56,8 @@ async function runOwned(command,cwd,env,log,token,timeoutMs=480000,signal,hardSt
    hardTimer=setTimeout(()=>{if(finished)return;hardTimedOut=true;cancel()},hardStopMs);
   }
   try{
-   child=spawn(transport?.executable||env.ZAMEROVAC_PYTHON||(process.platform==='win32'?'python':'python3'),transport?.args(configFile)||[supervisor,'--config',configFile],
+   child=spawn(transport?.executable||env.ZAMEROVAC_PYTHON||(process.platform==='win32'?'python':'python3'),transport?.args(configFile)||(env.ZAMEROVAC_QA_MODE==='cloud'?
+     ['-E','-s','-B',supervisor,'--config',configFile]:[supervisor,'--config',configFile]),
     {cwd:__dirname,env,windowsHide:true,stdio:['pipe','pipe','pipe']});
    child.stdin.on('error',()=>{});
    child.stdout.on('data',data=>{
