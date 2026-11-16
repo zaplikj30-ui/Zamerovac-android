@@ -54,3 +54,33 @@ test('hosted R manifest stays deliberately unapproved until independent inventor
  assert.equal(manifest.chromium,null);assert.equal(manifest.playwright.root,null);
  assert.equal(manifest.validatorSha,null);assert.equal(manifest.eventSha,null);
 });
+
+test('Playwright's own nested core resolution must match approved root core before import',()=>{
+ const script=fs.readFileSync(path.resolve(__dirname,'../tools/qa-cloud-runtime.cjs'),'utf8');
+ const start=script.indexOf('function loadPlaywright(){');
+ const end=script.indexOf('\nfunction cloudBrowserIdentity',start);
+ assert(start>=0&&end>start,'reviewed loader function must exist');
+ // Execute the actual reviewed loader function with a fake resolver; no real
+ // Playwright, Node child, Python supervisor or Chromium is loaded.
+ const factory=new Function('Module','path','approvedRuntime','need',
+  script.slice(start,end)+'\nreturn loadPlaywright;');
+ const original='/reviewed/node_modules/playwright/index.js';
+ const core='/reviewed/node_modules/playwright-core/index.js';
+ const shadow='/reviewed/node_modules/playwright/node_modules/playwright-core/index.js';
+ const runtime={playwright:{root:'/reviewed',files:{
+  'node_modules/playwright/index.js':'a'.repeat(64),
+  'node_modules/playwright-core/index.js':'b'.repeat(64)
+ }}};
+ for(const fake of [core,shadow]){
+  let actualImports=0;
+  const Module={createRequire(from){
+   const loader=()=>{actualImports++;return {chromium:'synthetic-only'}};
+   loader.resolve=name=>name==='playwright'?original:name==='playwright-core'?
+    from===original?fake:core:undefined;
+   return loader;
+  }};
+  const load=factory(Module,path,()=>runtime,ok=>{if(!ok)throw Error('R core resolver mismatch')});
+  if(fake===core){assert.equal(load().chromium,'synthetic-only');assert.equal(actualImports,1)}
+  else {assert.throws(load,/R core resolver mismatch/);assert.equal(actualImports,0)}
+ }
+});
