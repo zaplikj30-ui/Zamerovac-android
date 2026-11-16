@@ -34,7 +34,10 @@ function secure(source){
   'pip install','apt install','actions/upload-artifact','pull_request:', 'pull_request_target:',
   '--no-sandbox','chmod ','chown ','curl ','wget ', 'docker pull'
  ];
- return required.every(x=>source.includes(x))&&forbidden.every(x=>!source.includes(x));
+ return required.every(x=>source.includes(x))&&forbidden.every(x=>!source.includes(x))
+  &&(source.match(/persist-credentials: false/g)||[]).length===2
+  &&(source.match(/gradle --offline --no-daemon/g)||[]).length===2
+  &&source.includes("if: ${{ !cancelled() && steps.pinned.outcome == 'success' && steps.quick.outcome == 'success' && steps.strict_browser.outputs.cleanup == 'KNOWN_CLEAN' }}");
 }
 test('only inert owner/main public hosted dispatch with pinned P/V/E and no installs/outputs',()=>{
  assert(secure(workflow));
