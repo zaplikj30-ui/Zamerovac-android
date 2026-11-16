@@ -104,6 +104,23 @@ test('EXTRA Node exact TAP registry rejects every false-PASS mutation',()=>{
   }
   assert.throws(()=>checkExtraEnvelope('tests/not-approved.js',valid()),/QA CLOUD QUICK BLOCKED/);
  }
+ // Unit-level OS/result envelope faults: no child is spawned; verify the
+ // production runGroup rejects nonzero exit, signal, stderr and malformed JSON.
+ const cp=require('node:child_process'),quick=require('../tools/qa-cloud-quick.cjs');
+ const original=cp.spawnSync,file=files[0],names=EXTRA_CASES[file];
+ const passed={protocol:'home4-node-v1',complete:true,
+  cases:names.map(id=>({id,status:'PASS'})),counts:{PASS:names.length,FAIL:0,SKIP:0,TODO:0}};
+ const good={status:0,error:undefined,signal:null,stderr:'',stdout:JSON.stringify(passed)};
+ try{
+  for(const changed of [
+   {status:1},{signal:'SIGTERM'},{stderr:'private stderr must not be trusted'},
+   {error:new Error('synthetic spawn failure')},{stdout:'malformed protocol'},
+   {stdout:JSON.stringify({...passed,counts:{...passed.counts,PASS:0}})}
+  ]){
+   cp.spawnSync=()=>({...good,...changed});
+   assert.throws(()=>quick.runGroup(file));
+  }
+ }finally{cp.spawnSync=original}
 });
 test('real Node test reporter rejects empty auto-PASS and requires exact EXTRA TAP names',()=>{
  const {EXTRA_CASES,checkExtraEnvelope}=require('../tools/qa-cloud-quick.cjs');
