@@ -100,5 +100,68 @@ class CloudPDFOptimizeTests(unittest.TestCase):
         self.assertNotIn('OK:',out.stdout)
 
 
+    def native(self):
+        # SOURCE-only model: never start the native JVM/Android or browser.
+        import importlib.util
+        from unittest import mock
+        tools=SCRIPT.parent
+        sys.path.insert(0,str(tools))
+        self.addCleanup(lambda:sys.path.remove(str(tools)))
+        spec=importlib.util.spec_from_file_location('cloud_native_synthetic',tools/'qa_cloud_native.py')
+        module=importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        return module
+
+    def make_native_fixtures(self):
+        build=self.root/'product/app/build'
+        build.mkdir(parents=True)
+        for name in ('customer-pdf-1.zip','customer-pdf-3.zip','customer-pdf-multipage.zip'):
+            (build/name).write_bytes(b'synthetic ZIP byte identity fixture')
+        return self.root/'product',build
+
+    def test_bound_current_run_sha_and_modified_same_mtime_block(self):
+        import unittest.mock as mock
+        from types import SimpleNamespace
+        m=self.native()
+        source,build=self.make_native_fixtures()
+        started=1
+        env={'RUNNER_TEMP':str(self.root),'GITHUB_RUN_ATTEMPT':'1',
+             'GITHUB_RUN_ID':'123456','GITHUB_SHA':'c'*40,'QA_VALIDATOR_SHA':'b'*40}
+        with mock.patch.dict(os.environ,env), mock.patch('subprocess.run',
+                                                         return_value=SimpleNamespace(returncode=0)) as runner:
+            m.bind_pdf_proof(source,started)
+            self.assertEqual(m.fresh_pdf(source,started),3)
+            self.assertEqual(runner.call_count,1)
+            file=build/'customer-pdf-1.zip'
+            old=file.stat()
+            data=file.read_bytes()
+            file.write_bytes(data[:-1]+(b'X' if data[-1:] != b'X' else b'Y'))
+            os.utime(file,ns=(old.st_atime_ns,old.st_mtime_ns))
+            with self.assertRaises(m.Blocked):
+                m.fresh_pdf(source,started)
+            self.assertEqual(runner.call_count,1,'changed ZIP must fail before parser launch')
+
+    def test_missing_or_forged_run_proof_blocks_before_PDF(self):
+        import unittest.mock as mock
+        m=self.native()
+        source,_=self.make_native_fixtures()
+        env={'RUNNER_TEMP':str(self.root),'GITHUB_RUN_ATTEMPT':'1',
+             'GITHUB_RUN_ID':'123456','GITHUB_SHA':'c'*40,'QA_VALIDATOR_SHA':'b'*40}
+        with mock.patch.dict(os.environ,env), mock.patch('subprocess.run') as runner:
+            with self.assertRaises(FileNotFoundError):
+                m.fresh_pdf(source,1)
+            m.bind_pdf_proof(source,1)
+            with mock.patch.dict(os.environ,{'GITHUB_RUN_ID':'222'},clear=False):
+                with self.assertRaises(m.Blocked):
+                    m.fresh_pdf(source,1)
+            proof=self.root/'zamerovac-cloud-pdf-proof.json'
+            payload=__import__('json').loads(proof.read_text())
+            payload['fixtures'][0]['sha256']='0'*64
+            proof.write_text(__import__('json').dumps(payload))
+            with self.assertRaises(m.Blocked):
+                m.fresh_pdf(source,1)
+            runner.assert_not_called()
+
+
 if __name__=='__main__':
     unittest.main()
