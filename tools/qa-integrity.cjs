@@ -79,6 +79,27 @@ function checkedReport(report,suite,identity){
  demand(report.cases.every((c,i)=>c.name===expected[i]&&c.status==='passed'),'duplicate/renamed/reordered/failed case');
  return {scenarioNames:report.cases.map(c=>c.name),scenarioTotal:report.cases.length};
 }
+// A failing UI assertion is not an integrity failure: authorize independent
+// later JVM work ONLY when the full named test set is present and sandbox/P/V
+// evidence is genuine. Missing, stale, filtered or extra data always BLOCKED.
+function checkedFailedReport(report,suite,identity){
+ demand(report&&report.suite===suite&&report.sha===identity.sourceSha&&
+  report.validatorSha===identity.validatorSha&&report.runToken===identity.runToken&&
+  report.syntheticOnly===true&&report.filtered===false&&report.status==='FAIL',
+  'failing suite identity incomplete or unreviewed');
+ checkEvidence(report.sandbox,identity.platform||process.platform);
+ const profile=identity.mode==='cloud'?require('./qa-cloud-runtime.cjs').approvedRuntime().chromium:
+  profiles[identity.platform||process.platform];
+ demand(profile&&report.sandbox.binary?.path===profile.path&&
+  report.sandbox.binary?.sha256===profile.sha256,'failed suite browser mismatch');
+ const expected=manifest.cases[suite];
+ demand(expected&&Array.isArray(report.cases)&&report.cases.length===expected.length,
+  'failed suite partial named coverage');
+ demand(report.cases.every((entry,i)=>entry.name===expected[i]&&
+  (entry.status==='passed'||entry.status==='failed'))&&
+  report.cases.some(entry=>entry.status==='failed'),'not a genuine named test failure');
+ return {status:'KNOWN_TEST_FAILURE',cases:expected.length};
+}
 function complete(mode,records,identity,env=process.env){
  try{
   noFilter(env);const expected=modes[mode];demand(expected&&records.length===expected.length,'incomplete suite manifest');
@@ -94,4 +115,4 @@ function complete(mode,records,identity,env=process.env){
   return {status:'PASS',suites:records.length,cases:records.reduce((n,r)=>n+r.report.cases.length,0)};
  }catch(e){return {status:'BLOCKED',error:e.message}}
 }
-module.exports={manifest,modes,noFilter,executionIdentity,cloudIdentity,sourceSnapshot,checkedReport,complete,CLOUD_PRODUCT_SHA};
+module.exports={manifest,modes,noFilter,executionIdentity,cloudIdentity,sourceSnapshot,checkedReport,checkedFailedReport,complete,CLOUD_PRODUCT_SHA};
