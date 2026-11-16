@@ -9,20 +9,44 @@ const modes=Object.freeze({'--legacy-conflict':['legacy-conflict-persistence'],
  '--smoke':['drawing','quality-regressions','gallery-readability'],'--all':Object.keys(manifest.cases)});
 function demand(ok,message){if(!ok)throw blocked(message)}
 function noFilter(env=process.env){demand(!Object.hasOwn(env,'ZAMEROVAC_CASES'),'case filter forbidden in complete/smoke QA')}
-function executionIdentity(validatorSha,env=process.env){
- if(env.GITHUB_ACTIONS!=='true')return {runId:null,runAttempt:null};
- demand(env.GITHUB_REPOSITORY==='zaplikj30-ui/Zamerovac-android'&&env.GITHUB_ACTOR==='zaplikj30-ui'&&
-  env.GITHUB_TRIGGERING_ACTOR==='zaplikj30-ui'&&env.GITHUB_RUN_ATTEMPT==='1'&&
-  env.GITHUB_EVENT_NAME==='workflow_dispatch'&&env.GITHUB_REF==='refs/heads/main'&&
-  /^[a-f0-9]{40}$/.test(env.GITHUB_SHA||'')&&env.HOME4_APPROVED_MAIN_SHA===env.GITHUB_SHA&&
-  env.HOME4_SOURCE_SHA===manifest.sourceSha&&env.HOME4_VALIDATOR_SHA===validatorSha&&
-  env.ZAMEROVAC_EXPECTED_QA_SHA===validatorSha&&/^[1-9][0-9]{0,19}$/.test(env.GITHUB_RUN_ID||''),
-  'unapproved owner/ref/SHA/run attempt; no rerun or arbitrary PR/fork');
- return {runId:env.GITHUB_RUN_ID,runAttempt:1};
+// Product P is the unchanged PR150 content checkout; V is a *different* reviewed
+// validator checkout, and E is the owner-dispatched main workflow commit. The
+// historical manifest's 67 file pins are intentionally not rewritten.
+const CLOUD_PRODUCT_SHA='3886fcf80213e4693464d3f30104885c1c58f53e';
+function cloudIdentity(validatorSha,env){
+  const equals={GITHUB_ACTIONS:'true',GITHUB_REPOSITORY:'zaplikj30-ui/Zamerovac-android',
+    GITHUB_ACTOR:'zaplikj30-ui',GITHUB_TRIGGERING_ACTOR:'zaplikj30-ui',
+    GITHUB_EVENT_NAME:'workflow_dispatch',GITHUB_REF:'refs/heads/main',
+    GITHUB_RUN_ATTEMPT:'1',RUNNER_OS:'Linux',RUNNER_ENVIRONMENT:'github-hosted',
+    ZAMEROVAC_QA_MODE:'cloud',ZAMEROVAC_CLOUD_TRUST:'trusted-host/change-detection',
+    ZAMEROVAC_EXPECTED_PRODUCT_SHA:CLOUD_PRODUCT_SHA};
+  demand(Object.entries(equals).every(([key,value])=>env[key]===value),'cloud owner/ref/trust/product mismatch');
+  demand(Object.keys(env).every(key=>!key.startsWith('HOME4_')),'HOME mode/approval forbidden in cloud');
+  demand(/^[a-f0-9]{40}$/.test(validatorSha||'')&&
+    validatorSha===env.ZAMEROVAC_CLOUD_REVIEWED_V_SHA,'unreviewed cloud validator');
+  demand(/^[a-f0-9]{40}$/.test(env.ZAMEROVAC_CLOUD_EVENT_SHA||'')&&
+    env.ZAMEROVAC_CLOUD_EVENT_SHA===env.GITHUB_SHA,'unapproved event/main SHA');
+  demand(/^[1-9][0-9]{0,19}$/.test(env.GITHUB_RUN_ID||''),'invalid cloud run ID');
+  return {runId:env.GITHUB_RUN_ID,runAttempt:1,mode:'cloud',eventSha:env.GITHUB_SHA};
 }
-function sourceSnapshot(root){
+function executionIdentity(validatorSha,env=process.env){
+  if(env.ZAMEROVAC_QA_MODE==='cloud')return cloudIdentity(validatorSha,env);
+  if(env.GITHUB_ACTIONS!=='true')return {runId:null,runAttempt:null};
+  demand(env.ZAMEROVAC_QA_MODE===undefined||env.ZAMEROVAC_QA_MODE==='home',
+    'unrecognized QA mode');
+  demand(env.GITHUB_REPOSITORY==='zaplikj30-ui/Zamerovac-android'&&env.GITHUB_ACTOR==='zaplikj30-ui'&&
+   env.GITHUB_TRIGGERING_ACTOR==='zaplikj30-ui'&&env.GITHUB_RUN_ATTEMPT==='1'&&
+   env.GITHUB_EVENT_NAME==='workflow_dispatch'&&env.GITHUB_REF==='refs/heads/main'&&
+   /^[a-f0-9]{40}$/.test(env.GITHUB_SHA||'')&&env.HOME4_APPROVED_MAIN_SHA===env.GITHUB_SHA&&
+   env.HOME4_SOURCE_SHA===manifest.sourceSha&&env.HOME4_VALIDATOR_SHA===validatorSha&&
+   env.ZAMEROVAC_EXPECTED_QA_SHA===validatorSha&&/^[1-9][0-9]{0,19}$/.test(env.GITHUB_RUN_ID||''),
+   'unapproved owner/ref/SHA/run attempt; no rerun or arbitrary PR/fork');
+  return {runId:env.GITHUB_RUN_ID,runAttempt:1};
+}
+function sourceSnapshot(root,env=process.env){
  const git=args=>execFileSync('git',args,{cwd:root,encoding:'utf8',timeout:15000,windowsHide:true});
- demand(git(['rev-parse','HEAD']).trim()===manifest.sourceSha,'expected exact integrated source SHA');
+ const exact=env.ZAMEROVAC_QA_MODE==='cloud'?CLOUD_PRODUCT_SHA:manifest.sourceSha;
+  demand(git(['rev-parse','HEAD']).trim()===exact,'expected exact integrated source SHA');
  demand(!git(['status','--porcelain','--untracked-files=all']).trim(),'source checkout must be clean');
  const found=[];
  function walk(relative){
@@ -40,7 +64,7 @@ function sourceSnapshot(root){
   demand(stat.isFile()&&!stat.isSymbolicLink(),'source file redirected: '+name);
   demand(crypto.createHash('sha256').update(fs.readFileSync(file)).digest('hex')===expected,'source bytes changed: '+name);
  }
- return manifest.sourceSha;
+ return exact;
 }
 function checkedReport(report,suite,identity){
  demand(report&&report.suite===suite&&report.sha===identity.sourceSha&&
@@ -60,7 +84,8 @@ function complete(mode,records,identity,env=process.env){
   demand(!identity?.error,'run integrity failed');
   demand(identity?.finalized===true,'run has not completed final integrity/cleanup checks');
   demand(!identity?.platform||identity.platform===process.platform,'platform evidence cannot be inherited from another OS');
-  demand(identity?.sourceSha===manifest.sourceSha&&/^[a-f0-9]{40}$/.test(identity.validatorSha)&&/^[a-f0-9]{32}$/.test(identity.runToken),'missing run/source/validator identity');
+  demand((identity?.sourceSha===manifest.sourceSha ||
+      (identity?.mode==='cloud'&&identity.sourceSha===CLOUD_PRODUCT_SHA))&&/^[a-f0-9]{40}$/.test(identity.validatorSha)&&/^[a-f0-9]{32}$/.test(identity.runToken),'missing run/source/validator identity');
   records.forEach((r,i)=>{
    demand(r.suite===expected[i]&&r.status==='PASS'&&r.cleanupVerified===true,'suite missing/duplicate/failed cleanup');
    checkedReport(r.report,r.suite,identity);
@@ -68,4 +93,4 @@ function complete(mode,records,identity,env=process.env){
   return {status:'PASS',suites:records.length,cases:records.reduce((n,r)=>n+r.report.cases.length,0)};
  }catch(e){return {status:'BLOCKED',error:e.message}}
 }
-module.exports={manifest,modes,noFilter,executionIdentity,sourceSnapshot,checkedReport,complete};
+module.exports={manifest,modes,noFilter,executionIdentity,cloudIdentity,sourceSnapshot,checkedReport,complete,CLOUD_PRODUCT_SHA};
