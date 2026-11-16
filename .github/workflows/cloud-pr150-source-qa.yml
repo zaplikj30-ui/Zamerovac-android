@@ -22,7 +22,7 @@ jobs:
   cloud-pr150:
     name: Ubuntu standard - quick, strict Chromium, JVM and PDF
     # Intentionally inert at SOURCE review. No jobs execute even on a manual dispatch.
-    if: ${{ false && github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.run_attempt == 1 && inputs.owner_approved == true && inputs.source_sha == '3886fcf80213e4693464d3f30104885c1c58f53e' }}
+    if: ${{ false && github.event.repository.private == false && github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/main' && github.run_attempt == 1 && inputs.owner_approved == true && inputs.source_sha == '3886fcf80213e4693464d3f30104885c1c58f53e' }}
     runs-on: ubuntu-latest
     timeout-minutes: 75
     env:
@@ -48,7 +48,7 @@ jobs:
                    'RUNNER_ENVIRONMENT':'github-hosted'}
           if any(env.get(k) != v for k,v in exact.items()) or env.get('PR150_SHA') != want:
               raise SystemExit('BLOCKED identity/runner/sha; STOP NO RETRY')
-          if not re.fullmatch('[a-f0-9]{40}', env.get('GITHUB_SHA', '')):
+          if not re.fullmatch('[a-f0-9]{40}', env.get('GITHUB_SHA', '')) or not re.fullmatch('[1-9][0-9]{0,19}', env.get('GITHUB_RUN_ID', '')):
               raise SystemExit('BLOCKED event SHA; STOP NO RETRY')
           def get(resource):
               request = urllib.request.Request(
