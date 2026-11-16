@@ -67,3 +67,72 @@ test('negative mutations reject activation, native after UNKNOWN, install or oth
   workflow+" \n npm install playwright\n"
  ])assert(!secure(mutation));
 });
+
+
+test('EXTRA Node exact TAP registry rejects every false-PASS mutation',()=>{
+ const {EXTRA_CASES,checkExtraEnvelope}=require('../tools/qa-cloud-quick.cjs');
+ const files=Object.keys(EXTRA_CASES);
+ assert.equal(files.length,4);
+ assert.deepEqual(files.map(file=>EXTRA_CASES[file].length),[3,5,6,2]);
+ for(const file of files){
+  const names=EXTRA_CASES[file];
+  const valid=()=>({protocol:'home4-node-v1',complete:true,
+   cases:names.map(id=>({id,status:'PASS'})),
+   counts:{PASS:names.length,FAIL:0,SKIP:0,TODO:0}});
+  assert.deepEqual(checkExtraEnvelope(file,valid()),{passed:names.length,platformNotRun:0});
+  const mutations=[
+   v=>{v.cases=[];v.counts.PASS=0;}, // empty suite
+   v=>{v.cases.pop();v.counts.PASS--;}, // missing case
+   v=>{v.cases[0].id='renamed case';}, // renamed
+   v=>{v.cases[0].id=file;}, // Node auto file-level PASS
+   v=>{v.cases.push({id:'injected unexpected test',status:'PASS'});v.counts.PASS++;},
+   v=>{v.cases[1].id=v.cases[0].id;}, // duplicate name
+   v=>{v.cases[0].status='FAIL';v.counts.FAIL++;v.counts.PASS--;},
+   v=>{v.cases[0].status='SKIP';v.counts.SKIP++;v.counts.PASS--;},
+   v=>{v.cases[0].status='TODO';v.counts.TODO++;v.counts.PASS--;},
+   v=>{v.counts.PASS--;}, // contradictory count
+   v=>{v.counts.EXTRA=1;}, // unreviewed count field
+   v=>{v.counts=null;}, // missing summary
+   v=>{v.protocol='untrusted-reporter';},
+   v=>{v.complete=false;},
+   v=>{v.cases=null;},
+   v=>{v.cases[0].id=null;}
+  ];
+  for(const mutate of mutations){
+   const sample=valid();mutate(sample);
+   assert.throws(()=>checkExtraEnvelope(file,sample),/QA CLOUD QUICK BLOCKED/);
+  }
+  assert.throws(()=>checkExtraEnvelope('tests/not-approved.js',valid()),/QA CLOUD QUICK BLOCKED/);
+ }
+});
+test('real Node test reporter rejects empty auto-PASS and requires exact EXTRA TAP names',()=>{
+ const {EXTRA_CASES,checkExtraEnvelope}=require('../tools/qa-cloud-quick.cjs');
+ const os=require('node:os'),cp=require('node:child_process');
+ const directory=fs.mkdtempSync(path.join(os.tmpdir(),'qa-cloud-extra-'));
+ const reporter=path.resolve(__dirname,'../tools/qa/home4-node-reporter.cjs');
+ const fixture=path.join(directory,'synthetic-extra.cjs');
+ function run(source){
+  fs.writeFileSync(fixture,source,{encoding:'utf8'});
+  const result=cp.spawnSync(process.execPath,['--test','--test-reporter='+reporter,fixture],
+   {cwd:directory,encoding:'utf8',timeout:20000,maxBuffer:1024*1024,shell:false,
+    env:{...process.env,CI:'1'}});
+  assert.equal(result.error,undefined,'synthetic reporter process failed');
+  assert.equal(result.signal,null,'synthetic reporter signal');
+  assert.equal(result.status,0,'synthetic reporter exit');
+  assert.equal(result.stderr,'','unexpected synthetic stderr');
+  return JSON.parse(result.stdout.trim());
+ }
+ try{
+  for(const [file,names] of Object.entries(EXTRA_CASES)){
+   const source="'use strict';const {test}=require('node:test');\n"+
+    names.map(n=>'test('+JSON.stringify(n)+',()=>{});\n').join('');
+   const report=run(source);
+   assert.equal(report.cases.length,names.length);
+   assert.deepEqual(checkExtraEnvelope(file,report),{passed:names.length,platformNotRun:0});
+  }
+  const empty=run("'use strict';\n");
+  assert.equal(empty.complete,true,'Node auto file pass must reproduce');
+  assert.equal(empty.counts.PASS,1);
+  assert.throws(()=>checkExtraEnvelope(Object.keys(EXTRA_CASES)[0],empty),/QA CLOUD QUICK BLOCKED/);
+ }finally{fs.rmSync(directory,{recursive:true,force:true})}
+});
