@@ -78,7 +78,7 @@ def verified_runtime():
            e.get('ZAMEROVAC_CLOUD_TRUST') == 'trusted-host/change-detection')
     demand(not e.get('ZAMEROVAC_CLOUD_IMMUTABLE_CLAIM')
            and not e.get('NODE_OPTIONS') and not e.get('NODE_PATH'))
-    raw = checked(MANIFEST, 64 * 1024)
+    raw = checked(MANIFEST, 4 * 1024 * 1024)
     expected = e.get('ZAMEROVAC_CLOUD_RUNTIME_SHA256', '')
     demand(len(expected) == 64 and sha(raw) == expected)
     r = json.loads(raw)
