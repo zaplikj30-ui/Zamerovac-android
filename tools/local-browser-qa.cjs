@@ -120,6 +120,16 @@ async function execute(suite,env,log,maxDurationMs=480000,signal){
   let report;
   try{report=JSON.parse(fs.readFileSync(path.join(env.ZAMEROVAC_E2E_DIR,suite,'report.json'),'utf8'))}
   catch(_){throw blocked('missing current suite report; lifecycle='+JSON.stringify(life))}
+  // A full named assertion FAIL after verified OS cleanup is safe to report
+  // separately from identity tampering or UNKNOWN worker/process state.
+  if(life?.status==='BLOCKED'&&life.cleanupVerified===true&&
+     life.cleanupEvidence?.remainingProcesses===0&&report?.status==='FAIL'){
+   try{
+    integrity.checkedFailedReport(report,suite,identityFrom(env));
+    return {status:'FAIL',knownCaseFailure:true,cleanupVerified:true,
+      lifecycle:life,report,exitCode:life.exitCode};
+   }catch{} // Wrong case identity, sandbox or partial execution => BLOCKED.
+  }
   integrity.checkedReport(report,suite,identityFrom(env));
   if(life.status!=='PASS'||life.cleanupVerified!==true)throw blocked('owned process lifecycle failed: '+JSON.stringify(life));
   return {status:'PASS',report,cleanupVerified:true,lifecycle:life,exitCode:life.exitCode};
@@ -175,7 +185,7 @@ async function run(mode,externalSignal){
    statusReport(mode,records,dir,identity);
    console.log(records[i].status+' '+suite);
    if(records[i].status!=='PASS'){
-    cleanSuiteFailure=records[i].cleanupVerified===true;
+    cleanSuiteFailure=records[i].knownCaseFailure===true&&records[i].cleanupVerified===true;
     throw blocked('browser suite failed; owned process cleanup recorded');
    }
   }
