@@ -71,7 +71,8 @@ function checkedReport(report,suite,identity){
   report.validatorSha===identity.validatorSha&&report.runToken===identity.runToken&&
   report.syntheticOnly===true&&report.filtered===false&&report.status==='COMPLETE','stale/mismatched/filtered/incomplete suite identity');
  checkEvidence(report.sandbox,identity.platform||process.platform);
- const binary=profiles[identity.platform||process.platform];
+ const binary=identity.mode==='cloud'?require('./qa-cloud-runtime.cjs').approvedRuntime().chromium:
+   profiles[identity.platform||process.platform];
  demand(binary&&report.sandbox.binary?.path===binary.path&&report.sandbox.binary?.sha256===binary.sha256,'untrusted suite browser identity');
  const expected=manifest.cases[suite];
  demand(expected&&Array.isArray(report.cases)&&report.cases.length===expected.length,'missing/extra suite cases');
