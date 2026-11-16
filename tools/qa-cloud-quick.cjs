@@ -5,7 +5,7 @@
 const fs=require('node:fs'),path=require('node:path'),cp=require('node:child_process');
 const registry=require('./qa/home4-quick.json');
 const root=path.resolve(__dirname,'..');
-const EXTRA=['tests/qa_cloud_admission.js'];
+const EXTRA=['tests/qa_cloud_admission.js','tests/qa_cloud_workflow_policy.js','tests/qa_cloud_runtime_guard.js'];
 function demand(ok){if(!ok)throw Error('QA CLOUD QUICK BLOCKED: registry or case result');}
 function checkFiles(){
  const names=fs.readdirSync(path.join(root,'tests'),{withFileTypes:true})
