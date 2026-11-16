@@ -1,0 +1,433 @@
+name: Chromium hosted read-only inventory (INERT D1-R2)
+# Design: issue157#6930730693; independent DESIGN APPROVE: #6930841781.
+# Human authorization, NOT parsed/guaranteed by this workflow:
+# After separate owner-approved merge/activation and SOURCE review, the reviewer
+# records final E + this workflow blob + N=1 + P/V/Q in issue157. The owner then
+# separately approves ONE dispatch of exactly those values and verifies PUBLIC,
+# standard free compute, zero extra storage/services, and the 12 USD/month cap.
+# Coordinator must compare both external records and unconsumed N BEFORE dispatch.
+# Inputs/checkbox only bind identity/audit references; they do NOT prove approval.
+# Any spent N (even skipped/cancelled), drift, or unknown finance: STOP, no retry.
+# Never self-pin E in its own commit. Activation/removing false needs NEW review.
+on:
+  workflow_dispatch:
+    inputs:
+      expected_e:
+        description: 'Exact externally reviewed final main SHA; no self-pin'
+        required: true
+        type: string
+      owner_confirmed:
+        description: 'External reviewer and owner E/blob/N approvals checked; no new spend'
+        required: true
+        default: false
+        type: boolean
+      owner_approval:
+        description: 'Owner approval comment URL in issue157 (human-verified)'
+        required: true
+        type: string
+      review_approval:
+        description: 'Independent final E review comment URL in issue157 (human-verified)'
+        required: true
+        type: string
+permissions: {}
+concurrency:
+  group: chromium-hosted-readonly-once
+  cancel-in-progress: false
+jobs:
+  inventory:
+    if: >-
+      ${{ false && github.run_number == 1 && github.run_attempt == 1 &&
+          github.repository == 'zaplikj30-ui/Zamerovac-android' &&
+          github.repository_id == '1443475629' &&
+          github.event.repository.private == false &&
+          github.event.repository.owner.id == 351234773 &&
+          github.actor == 'zaplikj30-ui' && github.actor_id == '351234773' &&
+          github.triggering_actor == 'zaplikj30-ui' &&
+          github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' &&
+          github.workflow_ref == 'zaplikj30-ui/Zamerovac-android/.github/workflows/chromium-hosted-readonly-once.yml@refs/heads/main' &&
+          github.workflow_sha == github.sha && inputs.expected_e == github.sha &&
+          inputs.owner_confirmed == true }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    env:
+      BASH_ENV: ''
+      ENV: ''
+      LD_PRELOAD: ''
+      LD_LIBRARY_PATH: ''
+    steps:
+      - name: Bounded metadata only; no queried executable is launched
+        shell: /bin/bash --noprofile --norc -p {0}
+        env:
+          D1_EXPECTED_E: ${{ inputs.expected_e }}
+          D1_OWNER_CONFIRMED: ${{ inputs.owner_confirmed }}
+          D1_OWNER_APPROVAL: ${{ inputs.owner_approval }}
+          D1_REVIEW_APPROVAL: ${{ inputs.review_approval }}
+        run: |
+          # -p ignores BASH_ENV/ENV/SHELLOPTS startup injection; exec -c gives
+          # Python an EMPTY environment (no PATH/HOME/PYTHON*/LD*/proxy inputs).
+          # Quoted positional arguments carry only explicit allowlisted values.
+          exec -c /usr/bin/python3 -I -S -B - "$GITHUB_REPOSITORY" "$GITHUB_REPOSITORY_ID" "$GITHUB_REPOSITORY_OWNER_ID" "$GITHUB_ACTOR" "$GITHUB_ACTOR_ID" "$GITHUB_TRIGGERING_ACTOR" "$GITHUB_REF" "$GITHUB_EVENT_NAME" "$GITHUB_RUN_NUMBER" "$GITHUB_RUN_ATTEMPT" "$GITHUB_WORKFLOW_REF" "$GITHUB_SHA" "$GITHUB_WORKFLOW_SHA" "$GITHUB_RUN_ID" "$RUNNER_ENVIRONMENT" "$RUNNER_OS" "$RUNNER_ARCH" "$ImageOS" "$ImageVersion" "$D1_EXPECTED_E" "$D1_OWNER_CONFIRMED" "$D1_OWNER_APPROVAL" "$D1_REVIEW_APPROVAL" <<'D1_PY'
+          import base64
+          import hashlib
+          import json
+          import os
+          import posixpath
+          import queue
+          import re
+          import signal
+          import stat
+          import sys
+          import threading
+          import time
+          import urllib.request
+
+          REPO = 'zaplikj30-ui/Zamerovac-android'
+          WORKFLOW = REPO + '/.github/workflows/chromium-hosted-readonly-once.yml@refs/heads/main'
+          PINS = {150: '3886fcf80213e4693464d3f30104885c1c58f53e',
+                  155: '9f733b24194a7870fa1377b256076bca7a71eb5a',
+                  156: 'a8711c72a8c778d7f8b5e0f479b02833947388d4'}
+          KEYS = ('GITHUB_REPOSITORY', 'GITHUB_REPOSITORY_ID', 'GITHUB_REPOSITORY_OWNER_ID',
+                  'GITHUB_ACTOR', 'GITHUB_ACTOR_ID', 'GITHUB_TRIGGERING_ACTOR',
+                  'GITHUB_REF', 'GITHUB_EVENT_NAME', 'GITHUB_RUN_NUMBER', 'GITHUB_RUN_ATTEMPT',
+                  'GITHUB_WORKFLOW_REF', 'GITHUB_SHA', 'GITHUB_WORKFLOW_SHA', 'GITHUB_RUN_ID',
+                  'RUNNER_ENVIRONMENT', 'RUNNER_OS', 'RUNNER_ARCH', 'ImageOS', 'ImageVersion',
+                  'D1_EXPECTED_E', 'D1_OWNER_CONFIRMED', 'D1_OWNER_APPROVAL', 'D1_REVIEW_APPROVAL')
+          CANDIDATES = (
+              ('python', '/usr/bin/python3', 'binary'),
+              ('node_system', '/usr/bin/node', 'binary'),
+              ('node_local', '/usr/local/bin/node', 'binary'),
+              ('node_metadata', '/usr/share/doc/nodejs/package.json', 'nodejs'),
+              ('chromium_command', '/usr/bin/chromium', 'binary'),
+              ('chromium_browser', '/usr/bin/chromium-browser', 'binary'),
+              ('chromium_elf', '/usr/lib/chromium/chromium', 'binary'),
+              ('chrome_elf', '/opt/google/chrome/chrome', 'binary'),
+              ('chrome_metadata', '/opt/google/chrome/product_version', 'version'),
+              ('node_toolcache', '/opt/hostedtoolcache/node', 'directory'),
+              ('python_toolcache', '/opt/hostedtoolcache/Python', 'directory'),
+              ('playwright_local', '/usr/local/lib/node_modules/playwright/package.json', 'playwright'),
+              ('core_local', '/usr/local/lib/node_modules/playwright-core/package.json', 'playwright-core'),
+              ('playwright_system', '/usr/lib/node_modules/playwright/package.json', 'playwright'),
+              ('core_system', '/usr/lib/node_modules/playwright-core/package.json', 'playwright-core'),
+              ('playwright_archive', '/opt/playwright-1.62.1.tgz', 'archive'),
+              ('core_archive', '/opt/playwright-core-1.62.1.tgz', 'archive'),
+              ('os_release', '/etc/os-release', 'os'),
+          )
+          SRI = {
+              'playwright_archive': 'sha512-0M+L3LAD8/nm554LOla9Ayx0j0tmFZ0FBcoQ7F1VuVHpM/XpiC8RcDzBQB8W5+hA8L22THxELzeF+2WcUzvcLg==',
+              'core_archive': 'sha512-wPYSwEBJY9GHraISXqyqtx0na0LpO3XEX7jNDhntbex7tzUS7kLnZsOlFruFJB4Hi/rhDMjXGqHewDZ68nYZVw==',
+          }
+          ROOTS = ('/usr/bin', '/usr/local/bin', '/usr/lib', '/opt/google/chrome', '/opt/hostedtoolcache')
+          EXACT = frozenset(p for _, p, _ in CANDIDATES)
+          PROC = ('/proc/self/status', '/proc/sys/user/max_user_namespaces',
+                  '/proc/sys/kernel/unprivileged_userns_clone',
+                  '/proc/sys/kernel/apparmor_restrict_unprivileged_userns')
+          NAMESPACES = ('user', 'pid', 'net')
+          MAX_META = 65536
+          MAX_FILE = 16 * 1024 * 1024
+          MAX_TOTAL = 32 * 1024 * 1024
+          MAX_OUTPUT = 65536
+
+
+          class Blocked(Exception):
+              pass
+
+
+          def need(value, code):
+              if not value:
+                  raise Blocked(code)
+
+
+          def clean(value, pattern, maximum=256):
+              need(isinstance(value, str) and len(value) <= maximum and
+                   '\r' not in value and '\n' not in value and '::' not in value and
+                   re.fullmatch(pattern, value) is not None, 'INVALID_VALUE')
+              return value
+
+
+          def identity(env):
+              exact = dict(zip(KEYS[:11], (REPO, '1443475629', '351234773', 'zaplikj30-ui',
+                               '351234773', 'zaplikj30-ui', 'refs/heads/main',
+                               'workflow_dispatch', '1', '1', WORKFLOW)))
+              exact.update(RUNNER_ENVIRONMENT='github-hosted', RUNNER_OS='Linux', RUNNER_ARCH='X64',
+                           D1_OWNER_CONFIRMED='true', ImageOS='ubuntu24')
+              need(all(env.get(k) == v for k, v in exact.items()), 'IDENTITY')
+              e = clean(env.get('D1_EXPECTED_E'), '[a-f0-9]{40}')
+              need(env.get('GITHUB_SHA') == e == env.get('GITHUB_WORKFLOW_SHA'), 'SHA')
+              clean(env.get('GITHUB_RUN_ID'), '[1-9][0-9]{0,19}')
+              clean(env.get('ImageVersion'), '[0-9]+(?:\\.[0-9]+){1,4}', 64)
+              urls = [clean(env.get(k), r'https://github\.com/zaplikj30-ui/Zamerovac-android/issues/157#issuecomment-[1-9][0-9]{0,19}')
+                      for k in ('D1_OWNER_APPROVAL', 'D1_REVIEW_APPROVAL')]
+              need(urls[0] != urls[1], 'APPROVAL_REFERENCES')
+              # References and checkbox are NOT authorization. The owner/coordinator must
+              # compare external post-merge reviewer + owner E/blob/N/P/V/Q records first.
+              return e
+
+
+          def signature(s):
+              return (s.st_dev, s.st_ino, s.st_mode, s.st_uid, s.st_gid,
+                      s.st_nlink, s.st_size, s.st_mtime_ns, s.st_ctime_ns)
+
+
+          def attributes(s):
+              return dict(uid=s.st_uid, gid=s.st_gid, mode=stat.S_IMODE(s.st_mode),
+                          nlink=s.st_nlink, size=s.st_size)
+
+
+          def allowed(path):
+              return path in EXACT or any(path == r or path.startswith(r + '/') for r in ROOTS)
+
+
+          class Reader:
+              def __init__(self):
+                  self.total = 0
+                  self.deadline = time.monotonic() + 30
+
+              def check(self):
+                  need(time.monotonic() < self.deadline, 'TIMEOUT')
+
+              def read(self, fd, limit):
+                  data = bytearray()
+                  while True:
+                      self.check()
+                      room = min(65536, limit + 1 - len(data), MAX_TOTAL + 1 - self.total)
+                      need(room > 0, 'READ_LIMIT')
+                      block = os.read(fd, room)
+                      self.total += len(block)
+                      need(self.total <= MAX_TOTAL and len(data) + len(block) <= limit, 'READ_LIMIT')
+                      if not block:
+                          return bytes(data)
+                      data.extend(block)
+
+              def observe(self, cid, path, kind):
+                  self.check()
+                  need(path in EXACT, 'PATH')
+                  # Walk from held directory FDs. No symlink is followed by open(); every
+                  # symlink is read as data, bounded, validated, then traversal restarts.
+                  fds, edges, parents = [], [], []
+                  hops = 0
+                  current = path
+                  def verify():
+                      for parent, name, before in edges:
+                          need(signature(os.stat(name, dir_fd=parent, follow_symlinks=False)) == before, 'FILE_DRIFT')
+                  try:
+                      while True:
+                          self.check()
+                          root = os.open('/', os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC)
+                          fds.append(root)
+                          directory = root
+                          components = current.strip('/').split('/')
+                          restart = False
+                          for index, name in enumerate(components):
+                              self.check()
+                              s = os.stat(name, dir_fd=directory, follow_symlinks=False)
+                              edges.append((directory, name, signature(s)))
+                              if stat.S_ISLNK(s.st_mode):
+                                  hops += 1
+                                  need(hops <= 8, 'SYMLINK_LIMIT')
+                                  target = os.readlink(name, dir_fd=directory)
+                                  clean(target, r'[A-Za-z0-9_./+\-]+', 1024)
+                                  base = '/' + '/'.join(components[:index])
+                                  current = posixpath.normpath(posixpath.join(base, target, *components[index + 1:]))
+                                  need(allowed(current), 'SYMLINK_ESCAPE')
+                                  verify()
+                                  restart = True
+                                  break
+                              final = index == len(components) - 1
+                              if not final or kind == 'directory':
+                                  need(stat.S_ISDIR(s.st_mode), 'FILE_TYPE')
+                                  fd = os.open(name, os.O_RDONLY | os.O_DIRECTORY | os.O_NOFOLLOW | os.O_CLOEXEC, dir_fd=directory)
+                                  fds.append(fd)
+                                  need(signature(os.fstat(fd)) == signature(s), 'FILE_DRIFT')
+                                  parents.append(dict(attributes(s), writable=os.access(name, os.W_OK, dir_fd=directory, effective_ids=True, follow_symlinks=False)))
+                                  directory = fd
+                                  if not final:
+                                      continue
+                                  data = None
+                              else:
+                                  need(stat.S_ISREG(s.st_mode) and s.st_nlink == 1, 'FILE_TYPE')
+                                  fd = os.open(name, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC, dir_fd=directory)
+                                  fds.append(fd)
+                                  need(signature(os.fstat(fd)) == signature(s), 'FILE_DRIFT')
+                                  if kind == 'binary' and s.st_size > MAX_FILE:
+                                      data = os.read(fd, 4)
+                                      self.total += len(data)
+                                      need(self.total <= MAX_TOTAL, 'READ_LIMIT')
+                                  else:
+                                      need(s.st_size <= (MAX_FILE if kind in ('binary', 'archive') else MAX_META), 'FILE_LIMIT')
+                                      data = self.read(fd, MAX_FILE if kind in ('binary', 'archive') else MAX_META)
+                                  need(signature(os.fstat(fd)) == signature(s), 'FILE_DRIFT')
+                              verify()
+                              clean(current, r'/[A-Za-z0-9_./+\-]+', 1024)
+                              result = dict(candidateId=cid, status='PRESENT', canonicalPath=current,
+                                            stat=dict(attributes(s), writable=os.access('.' if kind == 'directory' else name, os.W_OK, dir_fd=directory, effective_ids=True, follow_symlinks=False)), parents=parents, magic=None, sha256=None,
+                                            sri=None, metadataVersion=None, versionSourceCandidateId=None,
+                                            reasonCode='OBSERVED_NOT_APPROVED')
+                              if data is not None:
+                                  if kind == 'binary':
+                                      result['magic'] = data[:4].hex()
+                                  if kind == 'binary' and s.st_size > MAX_FILE:
+                                      result['reasonCode'] = 'NOT_HASHED_BY_DESIGN'
+                                  else:
+                                      result['sha256'] = hashlib.sha256(data).hexdigest()
+                                  if kind == 'archive':
+                                      result['sri'] = 'sha512-' + base64.b64encode(hashlib.sha512(data).digest()).decode('ascii')
+                                      need(result['sri'] == SRI[cid], 'ARCHIVE_SRI')
+                                      result['reasonCode'] = 'ARCHIVE_SRI_MATCH_NOT_RUNTIME'
+                                  elif kind in ('nodejs', 'playwright', 'playwright-core'):
+                                      package = json.loads(data)
+                                      need(type(package) is dict and package.get('name') == kind, 'PACKAGE_SCHEMA')
+                                      result['metadataVersion'] = clean(package.get('version'), r'[0-9]+(?:\.[0-9]+){1,3}(?:-[A-Za-z0-9.\-]+)?', 64)
+                                      result['versionSourceCandidateId'] = cid
+                                  elif kind == 'os':
+                                      text = data.decode('ascii')
+                                      for key, expected in (('ID', 'ubuntu'), ('VERSION_ID', '24.04')):
+                                          values = re.findall(r'^' + key + r'=([^\r\n]+)$', text, re.MULTILINE)
+                                          need(len(values) == 1 and values[0] in (expected, '"' + expected + '"'), 'OS_IMAGE')
+                                  elif kind == 'version':
+                                      result['metadataVersion'] = clean(data.decode('ascii').removesuffix('\n'), r'[0-9]+(?:\.[0-9]+){1,3}', 64)
+                                      result['versionSourceCandidateId'] = cid
+                              verify()
+                              return result
+                          if not restart:
+                              raise Blocked('FILE_TYPE')
+                  except FileNotFoundError:
+                      verify()
+                      return dict(candidateId=cid, status='MISSING', canonicalPath=None, stat=None,
+                                  parents=[], magic=None, sha256=None, sri=None, metadataVersion=None,
+                                  versionSourceCandidateId=None, reasonCode='CANDIDATE_ABSENT_ONLY')
+                  finally:
+                      for fd in reversed(fds):
+                          os.close(fd)
+
+              def proc(self, path):
+                  need(path in PROC, 'PATH')
+                  self.check()
+                  # Explicit pseudo-file exception: /proc/self is the kernel's current
+                  # process link; no other process path or symlink target is accepted.
+                  try:
+                      fd = os.open(path, os.O_RDONLY | os.O_NOFOLLOW | os.O_NONBLOCK | os.O_CLOEXEC)
+                  except FileNotFoundError:
+                      return None
+                  try:
+                      need(stat.S_ISREG(os.fstat(fd).st_mode), 'PROC_TYPE')
+                      return self.read(fd, MAX_META).decode('ascii')
+                  finally:
+                      os.close(fd)
+
+
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self, req, fp, code, msg, headers, newurl):
+                  raise Blocked('API_REDIRECT')
+
+
+          def github(reader, resource):
+              need(resource in ('', '/branches/main', '/pulls/150', '/pulls/155', '/pulls/156'), 'API_PATH')
+              reader.check()
+              # Disable inherited proxy configuration as well as redirects/auth/cookies.
+              opener = urllib.request.build_opener(urllib.request.ProxyHandler({}), NoRedirect())
+              request = urllib.request.Request('https://api.github.com/repos/' + REPO + resource,
+                                               headers={'Accept': 'application/vnd.github+json', 'User-Agent': 'd1-r2-readonly'})
+              with opener.open(request, timeout=min(3, max(.001, reader.deadline - time.monotonic()))) as response:
+                  need(response.status == 200, 'API_STATUS')
+                  data = bytearray()
+                  while True:
+                      reader.check()
+                      block = response.read1(min(8192, MAX_META + 1 - len(data)))
+                      need(len(data) + len(block) <= MAX_META, 'API_LIMIT')
+                      if not block:
+                          break
+                      reader.total += len(block)
+                      need(reader.total <= MAX_TOTAL, 'READ_LIMIT')
+                      data.extend(block)
+              value = json.loads(data)
+              need(type(value) is dict, 'API_SCHEMA')
+              return value
+
+
+          def live(reader, e):
+              repo = github(reader, '')
+              need(repo.get('id') == 1443475629 and repo.get('full_name') == REPO and
+                   repo.get('private') is False and repo.get('visibility') == 'public' and
+                   repo.get('default_branch') == 'main' and repo.get('owner', {}).get('id') == 351234773,
+                   'LIVE_REPO')
+              need(github(reader, '/branches/main').get('commit', {}).get('sha') == e, 'LIVE_MAIN')
+              for number, sha in PINS.items():
+                  pr = github(reader, '/pulls/' + str(number))
+                  need(pr.get('state') == 'open' and pr.get('head', {}).get('sha') == sha and
+                       pr.get('head', {}).get('repo', {}).get('full_name') == REPO and
+                       pr.get('base', {}).get('repo', {}).get('full_name') == REPO, 'LIVE_PR')
+
+
+          def collect(env):
+              e = identity(env)
+              need(sys.platform == 'linux' and os.uname().machine == 'x86_64' and
+                   os.getuid() > 0 and os.geteuid() == os.getuid(), 'HOST')
+              reader = Reader()
+              live(reader, e)
+              need(len(CANDIDATES) + len(PROC) + len(NAMESPACES) + 1 <= 40, 'ITEM_LIMIT')
+              observations = [reader.observe(*item) for item in CANDIDATES]
+              executable = clean(os.readlink('/proc/self/exe'), r'/[A-Za-z0-9_./+\-]+', 1024)
+              need(allowed(executable) and observations[0]['canonicalPath'] == executable, 'PYTHON_IDENTITY')
+              observations[0]['metadataVersion'] = '.'.join(map(str, sys.version_info[:3]))
+              observations[0]['versionSourceCandidateId'] = 'python'
+              indicators = {}
+              raw = reader.proc(PROC[0])
+              if raw is None:
+                  raise Blocked('PROC_MISSING')
+              for key, pattern in (('NoNewPrivs', '[01]'), ('Seccomp', '[012]'), ('CapEff', '[a-fA-F0-9]{1,16}')):
+                  matches = re.findall(r'^' + key + r':\s*(' + pattern + r')\s*$', raw, re.MULTILINE)
+                  need(len(matches) == 1, 'PROC_SCHEMA')
+                  indicators[key] = int(matches[0], 16 if key == 'CapEff' else 10)
+              for path in PROC[1:]:
+                  value = reader.proc(path)
+                  indicators[path.rsplit('/', 1)[1]] = None if value is None else int(clean(value.removesuffix('\n'), '[0-9]{1,12}', 12))
+              for name in NAMESPACES:
+                  reader.check()
+                  try:
+                      indicators['namespace_' + name] = stat.S_ISLNK(os.lstat('/proc/self/ns/' + name).st_mode)
+                  except FileNotFoundError:
+                      indicators['namespace_' + name] = False
+              indicators.update(pidfd_open_api=hasattr(os, 'pidfd_open'),
+                                pidfd_send_signal_api=hasattr(signal, 'pidfd_send_signal'),
+                                subreaper='UNKNOWN', cleanup='NOT_RUN', sandbox='NOT_RUN')
+              live(reader, e)
+              reader.check()
+              return dict(schema=1, inventoryStatus='COMPLETE', runtimeStatus='NOT_RUN',
+                          reasonCode='METADATA_ONLY_NOT_RUNTIME_APPROVAL', E=e, workflowSHA=e,
+                          P=PINS[150], V=PINS[155], Q=PINS[156], runId=env['GITHUB_RUN_ID'],
+                          runNumber=1, runAttempt=1,
+                          runUrl='https://github.com/' + REPO + '/actions/runs/' + env['GITHUB_RUN_ID'],
+                          imageOS=env['ImageOS'], imageVersion=env['ImageVersion'], OS='Linux', arch='X64',
+                          uid=os.getuid(), euid=os.geteuid(), kernel=clean(os.uname().release, r'[A-Za-z0-9_.+\-]+', 128),
+                          observations=observations, indicators=indicators)
+
+
+          def run(env):
+              # Main thread is the only output writer. Daemon bounds DNS/filesystem hangs
+              # without signals, subprocesses, or an unbounded interpreter shutdown join.
+              result = queue.Queue(maxsize=1)
+              def worker():
+                  try:
+                      value = collect(env)
+                      encoded = json.dumps(value, ensure_ascii=True, separators=(',', ':'))
+                      need(len(encoded.encode('ascii')) <= MAX_OUTPUT and '\n' not in encoded and
+                           '\r' not in encoded and '::' not in encoded, 'OUTPUT_LIMIT')
+                      result.put((encoded, 0))
+                  except BaseException:
+                      result.put(('{"schema":1,"inventoryStatus":"BLOCKED","runtimeStatus":"NOT_RUN","reasonCode":"DIAGNOSTIC_BLOCKED"}', 78))
+              threading.Thread(target=worker, daemon=True).start()
+              try:
+                  return result.get(timeout=30)
+              except queue.Empty:
+                  return ('{"schema":1,"inventoryStatus":"INCOMPLETE","runtimeStatus":"NOT_RUN","reasonCode":"TIMEOUT_STOP_NO_RETRY"}', 78)
+
+
+          if __name__ == '__main__':
+              try:
+                  need(len(sys.argv) == len(KEYS) + 1, 'ARGUMENTS')
+                  output, code = run(dict(zip(KEYS, sys.argv[1:])))
+              except BaseException:
+                  output, code = '{"schema":1,"inventoryStatus":"BLOCKED","runtimeStatus":"NOT_RUN","reasonCode":"BOOTSTRAP_BLOCKED"}', 78
+              print(output, flush=True)
+              sys.exit(code)
+          D1_PY
