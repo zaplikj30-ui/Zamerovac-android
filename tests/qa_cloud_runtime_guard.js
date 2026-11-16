@@ -55,7 +55,7 @@ test('hosted R manifest stays deliberately unapproved until independent inventor
  assert.equal(manifest.validatorSha,null);assert.equal(manifest.eventSha,null);
 });
 
-test('Playwright's own nested core resolution must match approved root core before import',()=>{
+test("Playwright nested core resolution must match approved root core before import",()=>{
  const script=fs.readFileSync(path.resolve(__dirname,'../tools/qa-cloud-runtime.cjs'),'utf8');
  const start=script.indexOf('function loadPlaywright(){');
  const end=script.indexOf('\nfunction cloudBrowserIdentity',start);
