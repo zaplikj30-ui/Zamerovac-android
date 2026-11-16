@@ -1,4 +1,4 @@
-name: Chromium hosted read-only inventory (INERT D1-R2)
+name: Chromium hosted read-only inventory (manual D1-R2)
 # Design: issue157#6930730693; independent DESIGN APPROVE: #6930841781.
 # Human authorization, NOT parsed/guaranteed by this workflow:
 # After separate owner-approved merge/activation and SOURCE review, the reviewer
@@ -36,7 +36,7 @@ concurrency:
 jobs:
   inventory:
     if: >-
-      ${{ false && github.run_number == 1 && github.run_attempt == 1 &&
+      ${{ github.run_number == 1 && github.run_attempt == 1 &&
           github.repository == 'zaplikj30-ui/Zamerovac-android' &&
           github.repository_id == '1443475629' &&
           github.event.repository.private == false &&
