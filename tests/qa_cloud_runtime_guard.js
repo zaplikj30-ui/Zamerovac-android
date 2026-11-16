@@ -84,3 +84,56 @@ test("Playwright nested core resolution must match approved root core before imp
   else {assert.throws(load,/R core resolver mismatch/);assert.equal(actualImports,0)}
  }
 });
+
+test('B1 all four historical guards and exact 23 c7 suites resolve without git history',()=>{
+ const history=require('./helpers/qa-historical.cjs');
+ const manifest=require('../tools/qa-pr121-manifest.json'),proof=history.snapshot();
+ assert.equal(proof.history.baseline,'a3cc8eb3a14a9a6710664b73ba8a5c70ed1a340a');
+ assert.equal(Object.keys(proof.originalFiles).length,66);
+ assert.equal(Object.keys(proof.c7SuiteBlobs).length,23);
+ const old=JSON.parse(history.historicalBytes('manifest'));
+ assert.equal(old.sourceSha,proof.history.original);
+ assert(history.historicalBytes('integrity').toString().includes('executionIdentity'));
+ assert(history.historicalBytes('workflow').toString().includes('home_qa_version_preflight'));
+ assert(history.historicalBytes('fixtureGate').toString().includes('ownedWorker'));
+ for(const suite of Object.keys(manifest.cases)) {
+  const bytes=history.c7Suite(suite,manifest);
+  assert(bytes.includes("require('./harness.cjs')")||bytes.includes('require("./harness.cjs")'),suite);
+ }
+});
+
+test('B1 missing, wrong bytes, wrong tree SHA, symlink and hardlink cannot be historical PASS',()=>{
+ const history=require('./helpers/qa-historical.cjs'),os=require('node:os');
+ const root=fs.mkdtempSync(path.join(os.tmpdir(),'qa-b1-fixture-'));
+ const orig=path.resolve(__dirname,'fixtures/qa-history');
+ try {
+  assert.throws(()=>history.snapshot(root));
+  assert.throws(()=>history.historicalBytes('integrity',root));
+  assert.throws(()=>history.historicalBytes('unknown',orig));
+  fs.mkdirSync(path.join(root,'a3cc8eb3'),{recursive:true});
+  const p=path.join(root,'a3cc8eb3/qa-integrity.cjs.txt');
+  fs.copyFileSync(path.join(orig,'a3cc8eb3/qa-integrity.cjs.txt'),p);
+  assert.equal(history.historicalBytes('integrity',root).length,4776);
+  fs.appendFileSync(p,'\\nINVALID');
+  assert.throws(()=>history.historicalBytes('integrity',root));
+  fs.unlinkSync(p);
+  fs.symlinkSync(path.join(orig,'a3cc8eb3/qa-integrity.cjs.txt'),p);
+  assert.throws(()=>history.historicalBytes('integrity',root));
+  fs.unlinkSync(p);
+  fs.linkSync(path.join(orig,'a3cc8eb3/qa-integrity.cjs.txt'),p);
+  assert.throws(()=>history.historicalBytes('integrity',root));
+  fs.unlinkSync(p);
+  fs.copyFileSync(path.join(orig,'commit-blobs.json'),path.join(root,'commit-blobs.json'));
+  assert.equal(Object.keys(history.snapshot(root).c7SuiteBlobs).length,23);
+  fs.appendFileSync(path.join(root,'commit-blobs.json'),' ');
+  assert.throws(()=>history.snapshot(root));
+  // A product suite body changed with the same name must not be substituted.
+  const product=fs.mkdtempSync(path.join(os.tmpdir(),'qa-b1-product-'));
+  try {
+   const suiteDir=path.join(product,'tools/e2e');fs.mkdirSync(suiteDir,{recursive:true});
+   fs.writeFileSync(path.join(suiteDir,'drawing.cjs'),'fake code');
+   assert.throws(()=>history.c7Suite('drawing',require('../tools/qa-pr121-manifest.json'),product,orig));
+   assert.throws(()=>history.c7Suite('../unreviewed',require('../tools/qa-pr121-manifest.json')));
+  }finally{fs.rmSync(product,{recursive:true,force:true})}
+ }finally{fs.rmSync(root,{recursive:true,force:true})}
+});
