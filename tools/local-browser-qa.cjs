@@ -139,7 +139,7 @@ async function run(mode,externalSignal){
  if(externalSignal?.aborted)cancel();
  for(const sig of ['SIGINT','SIGTERM',...(process.platform==='win32'?[]:['SIGHUP'])])process.on(sig,cancel);
  let server,work,preflight,allClean=true,succeeded=false;
- const deadline=setTimeout(cancel,38*60*1000);
+ const deadline=setTimeout(cancel,(cloud?200:38)*60*1000);
  try{
   statusReport(mode,records,dir,identity);
   integrity.noFilter();identity.validatorSha=gateSnapshot();
@@ -195,7 +195,14 @@ async function run(mode,externalSignal){
  }
  identity.finalized=succeeded&&!identity.error&&allClean&&!controller.signal.aborted;
  const report=statusReport(mode,records,dir,identity);
- report.preflight=preflight||{status:'NOT RUN'};
+ // The workflow may continue with unrelated JVM tests ONLY if the actual
+ // preflight and every started worker proved owned process cleanup.
+ // Pre-spawn failure, protocol loss and unknown cleanup stay UNKNOWN/STOP.
+ const knownClean=!!preflight&&preflight.cleanupVerified===true&&allClean&&
+   records.every(r=>r.lifecycle==null||r.cleanupVerified===true);
+ report.cleanupVerdict=knownClean?'KNOWN_CLEAN':'UNKNOWN';
+ report.preflight=cloud?{status:preflight?.status||'NOT RUN',
+   cleanupVerified:preflight?.cleanupVerified===true}:preflight||{status:'NOT RUN'};
  if(identity.error)report.status='BLOCKED';
  fs.writeFileSync(path.join(dir,'results.json'),JSON.stringify(report,null,2)+'\n');
  console.log(cloud?'QA CLOUD: local private report not uploaded':'Current QA report: '+path.join(dir,'results.json'));
