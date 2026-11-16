@@ -1,7 +1,8 @@
 """Hold the reviewed executable against writes/replacement through worker exit.
 
 Windows FILE_SHARE_READ excludes write/delete while the native handle is held.
-Linux requires non-writable install file and directory chain, retains O_NOFOLLOW fd.
+Linux checks ordinary account write access and byte identity, retaining an fd.
+Cloud hosted sudo means those observations are NOT an immutability guarantee.
 """
 import ctypes
 import hashlib
@@ -15,7 +16,11 @@ class BrowserLock:
     def __init__(self):
         self.fd=None
         self.win_handles=[];self.kernel=None
-        profile=json.loads((Path(__file__).parent/'qa-browser-profiles.json').read_text())[sys.platform]
+        if os.environ.get('ZAMEROVAC_QA_MODE') == 'cloud':
+            from qa_cloud_runtime import verified_runtime
+            profile = verified_runtime()['chromium']
+        else:
+            profile=json.loads((Path(__file__).parent/'qa-browser-profiles.json').read_text())[sys.platform]
         file=Path(os.environ.get('CHROMIUM_PATH',''))
         if str(file)!=profile['path'] or not file.is_absolute():
             raise RuntimeError('unapproved browser lock path')
