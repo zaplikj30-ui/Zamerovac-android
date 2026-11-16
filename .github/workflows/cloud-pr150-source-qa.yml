@@ -153,6 +153,9 @@ jobs:
         shell: bash
         env:
           ZAMEROVAC_QA_MODE: cloud
+          NODE_OPTIONS: ''
+          NODE_PATH: ''
+          PYTHONPATH: ''
           ZAMEROVAC_CLOUD_TRUST: trusted-host/change-detection
           ZAMEROVAC_EXPECTED_PRODUCT_SHA: ${{ inputs.product_sha }}
           ZAMEROVAC_CLOUD_REVIEWED_V_SHA: ${{ inputs.validator_sha }}
