@@ -1,5 +1,5 @@
 'use strict';
-// Trusted QA checkout drives a separate immutable PR121 product checkout.
+// Reviewed V checkout drives separate, hash-pinned PR150 P; HOME behavior preserved.
 const fs=require('node:fs'),http=require('node:http'),path=require('node:path'),os=require('node:os');
 const crypto=require('node:crypto');
 const {execFileSync}=require('node:child_process');
@@ -54,7 +54,16 @@ function statusReport(mode,records,dir,identity={}){
  }
  const coverage=integrity.complete(mode,records,identity);
  const status=counts.BLOCKED?'BLOCKED':counts.FAIL?'FAIL':coverage.status;
- const report={schema:3,status,mode,identity,coverage,createdAt:new Date().toISOString(),counts,records,
+ const cloud=process.env.ZAMEROVAC_QA_MODE==='cloud';
+  const safeRecords=cloud?records.map(r=>({suite:r.suite,status:r.status,
+    cleanupVerified:r.cleanupVerified===true,
+    caseCount:Array.isArray(r.report?.cases)?r.report.cases.length:0})):records;
+  const safeIdentity=cloud?{sourceSha:identity.sourceSha,validatorSha:identity.validatorSha,
+    eventSha:identity.eventSha,mode:'cloud',finalized:identity.finalized===true}:identity;
+  // Never serialize paths, stack, DOM, tokens, media or raw trace into PUBLIC reports.
+  const report={schema:3,status,mode,identity:safeIdentity,
+   coverage:cloud?{status:coverage.status,suites:coverage.suites,cases:coverage.cases}:coverage,
+   createdAt:new Date().toISOString(),counts,records:safeRecords,
   scope:'Synthetic browser QA; Linux/Windows identity explicit, never Android or HOME acceptance by inheritance'};
  fs.writeFileSync(path.join(dir,'results.json'),JSON.stringify(report,null,2)+'\n');
  return report;
@@ -69,6 +78,8 @@ function gateSnapshot(){
  const names=['tools/local-browser-qa.cjs','tools/e2e/harness.cjs','tools/e2e/sandbox.cjs',
   'tools/qa-browser-identity.cjs','tools/qa-browser-profiles.json','tools/qa-pr121-manifest.json',
   'tools/qa-integrity.cjs','tools/qa-process-client.cjs','tools/qa-browser-worker.cjs',
+  'tools/qa-cloud-runtime.cjs','tools/qa_cloud_runtime.py','tools/qa-cloud-runtime.json',
+  'tools/qa-browser/package-lock.json',
   'tools/qa_owned_processes.py','tools/qa_process_supervisor.py','tools/qa_browser_lock.py'];
  const entries=git(['ls-tree','-rz','HEAD','--',...names]).split('\0').filter(Boolean);
  if(entries.length!==names.length)throw blocked('validator files missing from reviewed commit');
@@ -89,15 +100,23 @@ function stageProduct(work,source=root){
  for(const name of ['harness.cjs','sandbox.cjs'])fs.copyFileSync(path.join(__dirname,'e2e',name),path.join(stage,name),fs.constants.COPYFILE_EXCL);
  fs.copyFileSync(path.join(__dirname,'qa-browser-identity.cjs'),path.join(stage,'..','qa-browser-identity.cjs'),fs.constants.COPYFILE_EXCL);
  fs.copyFileSync(path.join(__dirname,'qa-browser-profiles.json'),path.join(stage,'..','qa-browser-profiles.json'),fs.constants.COPYFILE_EXCL);
+ if(process.env.ZAMEROVAC_QA_MODE==='cloud'){
+  for(const file of ['qa-cloud-runtime.cjs','qa-cloud-runtime.json'])
+   fs.copyFileSync(path.join(__dirname,file),path.join(stage,'..',file),fs.constants.COPYFILE_EXCL);
+  fs.mkdirSync(path.join(stage,'..','qa-browser'));
+  fs.copyFileSync(path.join(__dirname,'qa-browser','package-lock.json'),
+   path.join(stage,'..','qa-browser','package-lock.json'),fs.constants.COPYFILE_EXCL);
+ }
  return stage;
 }
-function identityFrom(env){return {sourceSha:env.ZAMEROVAC_SOURCE_SHA,validatorSha:env.ZAMEROVAC_QA_GATE_SHA,runToken:env.ZAMEROVAC_RUN_TOKEN,platform:process.platform}}
+function identityFrom(env){return {sourceSha:env.ZAMEROVAC_SOURCE_SHA,validatorSha:env.ZAMEROVAC_QA_GATE_SHA,runToken:env.ZAMEROVAC_RUN_TOKEN,platform:process.platform,mode:env.ZAMEROVAC_QA_MODE}}
 async function execute(suite,env,log,maxDurationMs=480000,signal){
  let life;
  try{
   integrity.noFilter(env);
   if(!Object.hasOwn(integrity.manifest.cases,suite)||!env.ZAMEROVAC_STAGED_E2E_DIR)throw blocked('unapproved/unstaged suite');
-  life=await ownedWorker([process.execPath,path.join(__dirname,'qa-browser-worker.cjs'),'suite',path.join(env.ZAMEROVAC_STAGED_E2E_DIR,suite+'.cjs')],root,env,log,env.ZAMEROVAC_RUN_TOKEN,maxDurationMs,signal);
+  life=await ownedWorker([process.execPath,path.join(__dirname,'qa-browser-worker.cjs'),'suite',path.join(env.ZAMEROVAC_STAGED_E2E_DIR,suite+'.cjs')],root,env,log,env.ZAMEROVAC_RUN_TOKEN,maxDurationMs,signal,0,
+   env.ZAMEROVAC_QA_MODE==='cloud'?{kind:'browser',browser:true}:null);
   let report;
   try{report=JSON.parse(fs.readFileSync(path.join(env.ZAMEROVAC_E2E_DIR,suite,'report.json'),'utf8'))}
   catch(_){throw blocked('missing current suite report; lifecycle='+JSON.stringify(life))}
@@ -110,7 +129,10 @@ async function run(mode,externalSignal){
  const parent=process.env.ZAMEROVAC_QA_RESULT_PARENT||path.join(process.env.LOCALAPPDATA||os.tmpdir(),'Zamerovac-QA','browser');
  fs.mkdirSync(parent,{recursive:true});
  const dir=fs.mkdtempSync(path.join(parent,'run-'));
- const identity={sourceSha:integrity.manifest.sourceSha,validatorSha:null,runToken:crypto.randomBytes(16).toString('hex'),platform:process.platform,finalized:false};
+ const cloud=process.env.ZAMEROVAC_QA_MODE==='cloud';
+ const identity={sourceSha:cloud?integrity.CLOUD_PRODUCT_SHA:integrity.manifest.sourceSha,
+  validatorSha:null,runToken:crypto.randomBytes(16).toString('hex'),platform:process.platform,
+  mode:cloud?'cloud':undefined,finalized:false};
  const records=modes[mode].map(suite=>({suite,status:'NOT RUN'}));
  const controller=new AbortController();const cancel=()=>controller.abort();
  externalSignal?.addEventListener('abort',cancel,{once:true});
@@ -123,7 +145,11 @@ async function run(mode,externalSignal){
   integrity.noFilter();identity.validatorSha=gateSnapshot();
   if(process.env.ZAMEROVAC_EXPECTED_QA_SHA&&process.env.ZAMEROVAC_EXPECTED_QA_SHA!==identity.validatorSha)throw blocked('approved validator SHA mismatch');
   Object.assign(identity,integrity.executionIdentity(identity.validatorSha));
-  integrity.sourceSnapshot(root);verifyBrowserIdentity(process.env.CHROMIUM_PATH);
+  integrity.sourceSnapshot(root);
+   const runtime=cloud?require('./qa-cloud-runtime.cjs').approvedRuntime():null;
+   if(cloud&&(process.env.ZAMEROVAC_PYTHON!==runtime.python.path||
+       process.execPath!==runtime.node.path))throw blocked('unapproved cloud Python/Node interpreter');
+   verifyBrowserIdentity(process.env.CHROMIUM_PATH);
   work=fs.mkdtempSync(path.join(dir,'owned-'));const stage=stageProduct(work);
   const env={...process.env,CI:'1',ZAMEROVAC_RUN_TOKEN:identity.runToken,ZAMEROVAC_QA_GATE_SHA:identity.validatorSha,
    ZAMEROVAC_SOURCE_SHA:identity.sourceSha,ZAMEROVAC_E2E_DIR:path.join(dir,'evidence'),ZAMEROVAC_STAGED_E2E_DIR:stage};
@@ -132,7 +158,8 @@ async function run(mode,externalSignal){
   env.XDG_CONFIG_HOME=path.join(work,'config');env.XDG_CACHE_HOME=path.join(work,'cache');
   env.LOCALAPPDATA=path.join(work,'localappdata');
   for(const name of [env.XDG_CONFIG_HOME,env.XDG_CACHE_HOME,env.LOCALAPPDATA])fs.mkdirSync(name);
-  preflight=await ownedWorker([process.execPath,path.join(__dirname,'qa-browser-worker.cjs'),'preflight',path.join(work,'sandbox.json')],root,env,path.join(dir,'sandbox.log'),identity.runToken,35000,controller.signal);
+  preflight=await ownedWorker([process.execPath,path.join(__dirname,'qa-browser-worker.cjs'),'preflight',path.join(work,'sandbox.json')],root,env,path.join(dir,'sandbox.log'),identity.runToken,35000,controller.signal,0,
+    cloud?{kind:'browser',browser:true}:null);
   allClean=preflight.cleanupVerified===true;
   if(preflight.status!=='PASS'||!allClean)throw blocked('sandbox preflight: '+JSON.stringify(preflight));
   const proof=JSON.parse(fs.readFileSync(path.join(work,'sandbox.json'),'utf8'));
@@ -155,7 +182,7 @@ async function run(mode,externalSignal){
   for(let i=0;i<records.length;i++)if(records[i].status==='NOT RUN')records[i]={...records[i],status:'BLOCKED',error:e.message};
   // If an integrity error follows all suites, preserve the failure independently.
   identity.error=e.message;
-  console.error('HOME BLOCKED: '+e.message);
+  console.error(cloud?'QA CLOUD BLOCKED: redacted admission/owner failure':'HOME BLOCKED: '+e.message);
  }finally{
   clearTimeout(deadline);
   externalSignal?.removeEventListener('abort',cancel);
@@ -171,7 +198,7 @@ async function run(mode,externalSignal){
  report.preflight=preflight||{status:'NOT RUN'};
  if(identity.error)report.status='BLOCKED';
  fs.writeFileSync(path.join(dir,'results.json'),JSON.stringify(report,null,2)+'\n');
- console.log('Current QA report: '+path.join(dir,'results.json'));
+ console.log(cloud?'QA CLOUD: local private report not uploaded':'Current QA report: '+path.join(dir,'results.json'));
  console.log(report.status+' '+JSON.stringify(report.counts));
  if(report.status!=='PASS')process.exitCode=1;
  return report;
@@ -195,4 +222,4 @@ async function main(){
  await run(mode);
 }
 if(require.main===module)main().catch(e=>{console.error('HOME BLOCKED: '+e.message);process.exitCode=1});
-module.exports={run,createStaticServer,statusReport,modes,execute,stageProduct};
+module.exports={run,createStaticServer,statusReport,modes,execute,stageProduct,gateSnapshot};
