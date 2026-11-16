@@ -6,6 +6,7 @@ No customer data, network install, APK, artifact upload or partial PASS.
 import hashlib
 import json
 import os
+import re
 from pathlib import Path
 import sys
 import time
@@ -61,9 +62,9 @@ PDF_PROOF = 'zamerovac-cloud-pdf-proof.json'
 def proof_context(started_ns):
     e = os.environ
     demand(e.get('GITHUB_RUN_ATTEMPT') == '1'
-           and (e.get('GITHUB_RUN_ID') or '').isdecimal()
-           and len(e.get('GITHUB_SHA') or '') == 40
-           and len(e.get('QA_VALIDATOR_SHA') or '') == 40,
+           and re.fullmatch(r'[1-9][0-9]{0,19}', e.get('GITHUB_RUN_ID') or '')
+           and re.fullmatch(r'[a-f0-9]{40}', e.get('GITHUB_SHA') or '')
+           and re.fullmatch(r'[a-f0-9]{40}', e.get('QA_VALIDATOR_SHA') or ''),
            'pdf-proof-event-identity')
     return {'runId':e['GITHUB_RUN_ID'], 'eventSha':e['GITHUB_SHA'],
             'validatorSha':e['QA_VALIDATOR_SHA'],
