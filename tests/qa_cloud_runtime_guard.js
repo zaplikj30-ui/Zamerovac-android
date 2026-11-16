@@ -120,9 +120,11 @@ test('B1 missing, wrong bytes, wrong tree SHA, symlink and hardlink cannot be hi
   fs.symlinkSync(path.join(orig,'a3cc8eb3/qa-integrity.cjs.txt'),p);
   assert.throws(()=>history.historicalBytes('integrity',root));
   fs.unlinkSync(p);
-  fs.linkSync(path.join(orig,'a3cc8eb3/qa-integrity.cjs.txt'),p);
+  fs.copyFileSync(path.join(orig,'a3cc8eb3/qa-integrity.cjs.txt'),p);
+  const sibling=path.join(root,'a3cc8eb3/hardlink-copy');
+  fs.linkSync(p,sibling); // same temp filesystem: no cross-device EXDEV
   assert.throws(()=>history.historicalBytes('integrity',root));
-  fs.unlinkSync(p);
+  fs.unlinkSync(sibling);fs.unlinkSync(p);
   fs.copyFileSync(path.join(orig,'commit-blobs.json'),path.join(root,'commit-blobs.json'));
   assert.equal(Object.keys(history.snapshot(root).c7SuiteBlobs).length,23);
   fs.appendFileSync(path.join(root,'commit-blobs.json'),' ');
