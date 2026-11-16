@@ -16,10 +16,25 @@ function safeFailure(value,fallback='owner-exit'){
  return {...diagnostic,errorType:safeErrorType(value?.errorType)};
 }
 const supervisor=path.join(__dirname,'qa_process_supervisor.py');
-async function runOwned(command,cwd,env,log,token,timeoutMs=480000,signal,hardStopMs=0,transport=null){
+async function runOwned(command,cwd,env,log,token,timeoutMs=480000,signal,hardStopMs=0,transport=null,policy=null){
+ let browser=command[1]===path.join(__dirname,'qa-browser-worker.cjs');
+ if(env.ZAMEROVAC_QA_MODE==='cloud'){
+  // The cloud must have a typed reviewed browser command. No command[1]
+  // inference, no Node flags/preloads, no unreviewed R or fallback.
+  const runtime=require('./qa-cloud-runtime.cjs').approvedRuntime(env);
+  const expected=path.join(__dirname,'qa-browser-worker.cjs');
+  if(policy?.browser!==true||policy.kind!=='browser'||transport!==null||
+     !Array.isArray(command)||command.length!==4||
+     command[0]!==runtime.node.path||command[1]!==expected||
+     !['preflight','suite'].includes(command[2])||
+     !path.isAbsolute(command[3])||
+     env.ZAMEROVAC_CLOUD_TRUST!=='trusted-host/change-detection')
+   throw Error('QA CLOUD BLOCKED: invalid reviewed browser command');
+  browser=true;
+ }
  const configFile=log+'.owner.json';
  fs.writeFileSync(configFile,JSON.stringify({command,cwd,log,token,timeout:timeoutMs/1000,heartbeatTimeout:5,
-  browser:command[1]===path.join(__dirname,'qa-browser-worker.cjs')}),{flag:'wx'});
+  browser}),{flag:'wx'});
  return new Promise(resolve=>{
   let stdout='',finished=false,protocolOverflow=false,channelWriteFailed=false,child,hardTimedOut=false,hardTimer;
   const finish=result=>{if(finished)return;finished=true;clearInterval(heartbeat);if(hardTimer)clearTimeout(hardTimer);signal?.removeEventListener('abort',cancel);resolve(result)};
@@ -105,7 +120,7 @@ async function runOwned(command,cwd,env,log,token,timeoutMs=480000,signal,hardSt
   }catch{finish({status:'BLOCKED',cleanupVerified:false,error:'OtherError',diagnostic:safeDiagnostic(null,'owner-launch')})}
  });
 }
-async function ownedWorker(command,cwd,env,log,token,timeoutMs=480000,signal,hardStopMs=0){return runOwned(command,cwd,env,log,token,timeoutMs,signal,hardStopMs)}
+async function ownedWorker(command,cwd,env,log,token,timeoutMs=480000,signal,hardStopMs=0,policy=null){return runOwned(command,cwd,env,log,token,timeoutMs,signal,hardStopMs,null,policy)}
 async function ownedWslWorker(cfg,env,log,token,group){
  const p=require('./qa/home4-policy.cjs');
  p.demand(process.platform==='win32'&&env.ZAMEROVAC_SCOPE==='windows-private-job'&&env.ZAMEROVAC_SUPERVISOR_PID===String(process.ppid),'wsl-outer-job');
