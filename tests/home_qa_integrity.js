@@ -284,7 +284,9 @@ test('real product registration and bytes agree with all 96 pinned scenario iden
  const sha=integrity.manifest.sourceSha,root=process.env.ZAMEROVAC_SOURCE_ROOT||path.resolve(__dirname,'..');
  const registered={};const pending=[];
  for(const suite of integrity.modes['--all']){
-  const source=execFileSync('git',['show',sha+':tools/e2e/'+suite+'.cjs'],{cwd:root,encoding:'utf8'});
+  const source=require('./helpers/qa-historical.cjs').c7Suite(suite,integrity.manifest);
+  // c7e source bodies are byte-identical to the reviewed current 23 suites;
+  // Git blob + PR121 SHA256 are both checked before VM registration.
   assert.equal(crypto.createHash('sha256').update(source).digest('hex'),integrity.manifest.files['tools/e2e/'+suite+'.cjs']);
   const harness=new Proxy({suite(name,body){registered[name]=[];const task=Promise.resolve(body(async title=>{registered[name].push(title)}));pending.push(task);return task},assert},
    {get(target,key){return target[key]||(()=>{throw Error('Unexpected pre-case work: '+String(key))})}});
@@ -304,27 +306,30 @@ test('separate product checkout is unchanged by QA staging; actual byte tamperin
  const source=path.join(dir,'product'),stage=path.join(dir,'scratch');
  const git=(args,cwd=source)=>execFileSync('git',args,{cwd,encoding:'utf8',stdio:['ignore','pipe','pipe']});
  try{
-  const localProduct=path.resolve(process.env.ZAMEROVAC_SOURCE_ROOT||path.resolve(__dirname,'..'));
+  const quick=process.env.ZAMEROVAC_CLOUD_QUICK==='1';
+  const localProduct=path.resolve(quick?process.env.ZAMEROVAC_CLOUD_QUICK_PRODUCT_ROOT||'':
+   process.env.ZAMEROVAC_SOURCE_ROOT||path.resolve(__dirname,'..'));
+  // The workflow supplies the independently checked-out, exact P (depth-1).
+  // This test must not fetch a historical commit absent from the shallow V.
+  const localSha=git(['rev-parse','HEAD'],localProduct).trim();
+  const approved=quick?integrity.CLOUD_PRODUCT_SHA:integrity.manifest.sourceSha;
+  assert.equal(localSha,approved,'a reviewed product checkout is mandatory; no historical fetch');
   git(['clone','--shared','--no-checkout',localProduct,source],dir);
-  // A shallow input clone does not advertise a previously fetched product
-  // commit as a branch. Transfer only the exact already-staged object locally;
-  // never download, change the source checkout, or substitute another product.
-  git(['fetch','--no-tags',localProduct,integrity.manifest.sourceSha]);
-  // The independent fixture checkout must preserve approved source bytes on Windows.
-  // Match the production actions/checkout process-local core.autocrlf=false.
-  git(['-c','core.autocrlf=false','checkout','--detach',integrity.manifest.sourceSha]);
-  assert.equal(integrity.sourceSnapshot(source),integrity.manifest.sourceSha);
+  // The independent fixture checkout must preserve approved bytes on Windows.
+  git(['-c','core.autocrlf=false','checkout','--detach',approved]);
+  const snapEnv=quick?{ZAMEROVAC_QA_MODE:'cloud'}:{};
+  assert.equal(integrity.sourceSnapshot(source,snapEnv),approved);
   fs.writeFileSync(path.join(source,'app/src/main/assets/ignored.apk'),'unexpected ignored bytes');
   assert.equal(git(['status','--porcelain']).trim(),'');
-  assert.throws(()=>integrity.sourceSnapshot(source),/extra\/missing source file/);
+  assert.throws(()=>integrity.sourceSnapshot(source,snapEnv),/extra\/missing source file/);
   fs.unlinkSync(path.join(source,'app/src/main/assets/ignored.apk'));
   fs.mkdirSync(stage);const staged=runner.stageProduct(stage,source);
   assert(fs.readFileSync(path.join(staged,'harness.cjs'),'utf8').includes('launchSandboxed'));
   assert(!fs.readFileSync(path.join(staged,'harness.cjs'),'utf8').includes("args:['--no-sandbox']"));
-  assert.equal(integrity.sourceSnapshot(source),integrity.manifest.sourceSha);
+  assert.equal(integrity.sourceSnapshot(source,snapEnv),integrity.manifest.sourceSha);
   git(['update-index','--assume-unchanged','app/src/main/assets/index.html']);
   fs.appendFileSync(path.join(source,'app/src/main/assets/index.html'),'tamper');
   assert.equal(git(['status','--porcelain']).trim(),'');
-  assert.throws(()=>integrity.sourceSnapshot(source),/source bytes changed/);
+  assert.throws(()=>integrity.sourceSnapshot(source,snapEnv),/source bytes changed/);
  }finally{fs.rmSync(dir,{recursive:true,force:true})}
 });
