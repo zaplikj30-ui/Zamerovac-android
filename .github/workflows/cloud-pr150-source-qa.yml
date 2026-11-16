@@ -97,6 +97,11 @@ jobs:
               raise SystemExit('BLOCKED stale PR150 before payload; STOP NO RETRY')
           print('PASS checked-out source identity (not test PASS)')
           PY
+      - name: Prepare Node 24 (same major as author Linux evidence), no npm cache
+        if: ${{ !cancelled() && steps.pinned.outcome == 'success' }}
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
+        with:
+          node-version: '24'
       - name: QUICK - exact PR150 JS syntax and existing Node/Python regression
         id: quick
         if: ${{ !cancelled() && steps.pinned.outcome == 'success' }}
