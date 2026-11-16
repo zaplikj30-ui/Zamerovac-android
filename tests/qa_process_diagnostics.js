@@ -17,7 +17,7 @@ test('diagnostic whitelist emits only a stage and a genuine typed Win32 code',()
  assert.equal(client.safeDiagnostic({stage:'worker-image-check',win32Error:122}).win32Error,null,'logical failures must not expose stale GetLastError');
 });
 
-async function protocol(message,{code=77,token='a'.repeat(32),noise=false,spawnError=false,ending='\n'}={}){
+async function protocol(message,{code=77,token='a'.repeat(32),noise=false,spawnError=false,ending='\n',onlyResult=false,readyOverride=null}={}){
  const module={exports:{}},child=new EventEmitter();
  child.stdin=Object.assign(new EventEmitter(),{writable:true,write(){},end(){this.writable=false}});
  child.stdout=new EventEmitter();child.stderr=new EventEmitter();
@@ -34,11 +34,30 @@ async function protocol(message,{code=77,token='a'.repeat(32),noise=false,spawnE
  if(spawnError)child.emit('error',Error(secret));
  else{
   child.stderr.emit('data',Buffer.from(secret));
-  child.stdout.emit('data',noise?Buffer.from(secret):Buffer.from(JSON.stringify({event:'ready',token})+ending+JSON.stringify(message)+ending));
+  const expectedReady={event:'ready',token,pid:23456,
+     backend:process.platform==='win32'?'windows-private-job':'linux-pidfd-subreaper',
+     ...(process.platform==='win32'?{creationTime:123456789}:{})};
+   child.stdout.emit('data',noise?Buffer.from(secret):Buffer.from(
+     (onlyResult?'':JSON.stringify(readyOverride||expectedReady)+ending)+JSON.stringify(message)+ending));
   child.emit('close',code,null);
  }
  return task;
 }
+test('result-only PASS and malformed ready never pass owner completion',async()=>{
+  const token='a'.repeat(32),done={event:'result',token,platform:process.platform,
+    status:'PASS',reason:'normal',exitCode:0,error:null,cleanupVerified:true,
+    cleanupEvidence:{remainingProcesses:0},diagnostic:null};
+  assert.equal((await protocol(done,{code:0,onlyResult:true})).status,'BLOCKED');
+  for(const readyOverride of [
+    {event:'ready',token,pid:0,backend:'linux-pidfd-subreaper'},
+    {event:'ready',token:'wrong',pid:123,backend:'linux-pidfd-subreaper'},
+    {event:'ready',token,pid:123,backend:'different-scope'}
+  ])assert.equal((await protocol(done,{code:0,readyOverride})).status,'BLOCKED');
+  const startup=await protocol({event:'result',token,platform:process.platform,
+    status:'BLOCKED',reason:'startup-error',cleanupVerified:false,diagnostic:null},{code:77,onlyResult:true});
+  assert.equal(startup.status,'BLOCKED');
+});
+
 test('a failed owner preserves a structured native stage/code without accepting PASS or parsing stderr',async()=>{
  const token='a'.repeat(32),d={stage:'AssignProcessToJobObject',win32Error:5};
  const result=await protocol({event:'result',token,platform:process.platform,status:'BLOCKED',cleanupVerified:false,error:secret,diagnostic:d});
