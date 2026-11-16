@@ -77,7 +77,10 @@ function verifyFile(file,profile,platform=process.platform){
  }finally{fs.closeSync(fd)}
 }
 function verifyBrowserIdentity(file){
- try{return verifyFile(file,profiles[process.platform])}
+ try{
+  const profile=process.env.ZAMEROVAC_QA_MODE==='cloud'?
+   require('./qa-cloud-runtime.cjs').approvedRuntime().chromium:profiles[process.platform];
+  return verifyFile(file,profile);}
  catch(e){if(e.code==='HOME_BLOCKED')throw e;fail('Chromium identity unavailable: '+e.message)}
 }
 module.exports={profiles,verifyBrowserIdentity,verifyFile,canonicalPathMatches};
