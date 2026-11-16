@@ -138,7 +138,7 @@ async function run(mode,externalSignal){
  externalSignal?.addEventListener('abort',cancel,{once:true});
  if(externalSignal?.aborted)cancel();
  for(const sig of ['SIGINT','SIGTERM',...(process.platform==='win32'?[]:['SIGHUP'])])process.on(sig,cancel);
- let server,work,preflight,allClean=true,succeeded=false;
+ let server,work,preflight,allClean=true,succeeded=false,cleanSuiteFailure=false;
  const deadline=setTimeout(cancel,(cloud?200:38)*60*1000);
  try{
   statusReport(mode,records,dir,identity);
@@ -174,7 +174,10 @@ async function run(mode,externalSignal){
    allClean=allClean&&records[i].cleanupVerified===true;
    statusReport(mode,records,dir,identity);
    console.log(records[i].status+' '+suite);
-   if(records[i].status!=='PASS')throw blocked(records[i].error);
+   if(records[i].status!=='PASS'){
+    cleanSuiteFailure=records[i].cleanupVerified===true;
+    throw blocked('browser suite failed; owned process cleanup recorded');
+   }
   }
   integrity.sourceSnapshot(root);if(gateSnapshot()!==identity.validatorSha)throw blocked('validator changed after tests');
   succeeded=true;
@@ -198,7 +201,8 @@ async function run(mode,externalSignal){
  // The workflow may continue with unrelated JVM tests ONLY if the actual
  // preflight and every started worker proved owned process cleanup.
  // Pre-spawn failure, protocol loss and unknown cleanup stay UNKNOWN/STOP.
- const knownClean=!!preflight&&preflight.cleanupVerified===true&&allClean&&
+ const knownClean=(succeeded||cleanSuiteFailure)&&!!preflight&&
+   preflight.cleanupVerified===true&&!controller.signal.aborted&&allClean&&
    records.every(r=>r.lifecycle==null||r.cleanupVerified===true);
  report.cleanupVerdict=knownClean?'KNOWN_CLEAN':'UNKNOWN';
  report.preflight=cloud?{status:preflight?.status||'NOT RUN',
