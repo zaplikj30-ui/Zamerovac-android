@@ -27,7 +27,7 @@ async function runCase(mutate=(_,base)=>base,ownerExit=0,enabled=true){
     status:'PASS',reason:'normal',exitCode:0,error:null,diagnostic:null,
     firstFailure:null,cleanupErrorType:null,privateTracebackWritten:false,
     cleanupVerified:true,cleanupEvidence:{remainingProcesses:0}};
-   child.stdout.emit('data',Buffer.from(JSON.stringify(mutate(cfg,baseline))+'\n'));
+   child.stdout.emit('data',Buffer.from(JSON.stringify({event:'ready',token:cfg.token,pid:123,backend:process.platform==='win32'?'windows-private-job':'linux-pidfd-subreaper',creationTime:1})+'\n'+JSON.stringify(mutate(cfg,baseline))+'\n'));
    child.emit('close',ownerExit,null);
   });
   return child;

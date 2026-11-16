@@ -102,7 +102,8 @@ def main():
 
 if __name__ == '__main__':
     try:
-        sys.exit(main())
+        code = main()
     except BaseException:
         print('BLOCKED cloud QUICK Python names/status/exit (redacted)', file=sys.stderr)
-        sys.exit(78)
+        code = 78
+    sys.exit(code)

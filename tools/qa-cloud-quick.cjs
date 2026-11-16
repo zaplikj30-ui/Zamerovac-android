@@ -33,6 +33,22 @@ const EXTRA_CASES=Object.freeze({
     "missing/renamed/stale/counterfeit/partial suite never obtains safe-failure proof"
   ]
 });
+// Added by the reviewed ready-envelope fix, absent from the historical registry.
+const CLOUD_CASES={
+  "tests/qa_reference_bootstrap.js": ["historical reviewed bootstrap survives a depth-one Git checkout as inert data", "frozen original Git blob has both exact content hashes; no fetch or shell", "missing, linked, oversized and corrupt frozen fixture fail closed"],
+  "tests/qa_process_diagnostics.js": [
+    "diagnostic whitelist emits only a stage and a genuine typed Win32 code",
+    "result-only PASS and malformed ready never pass owner completion",
+    "a failed owner preserves a structured native stage/code without accepting PASS or parsing stderr",
+    "an otherwise valid owner PASS accepts null or absent diagnostics",
+    "an otherwise valid owner PASS with any non-null diagnostic is BLOCKED",
+    "the whole new launch chain exposes an injected owner failure that the previous public gate hid"
+  ],
+  "tests/qa_product_mode_compatibility.js": [
+    "all PR121 product suite modes equal the frozen reviewed reference",
+    "successful legacy diagnostic stays 1/1 and cannot be accepted as full 23/96 evidence"
+  ]
+};
 function demand(ok){if(!ok)throw Error('QA CLOUD QUICK BLOCKED: registry or case result');}
 function checkFiles(){
  const names=fs.readdirSync(path.join(root,'tests'),{withFileTypes:true})
@@ -45,8 +61,11 @@ function checkFiles(){
  demand(extraNames.length===16&&new Set(extraNames).size===extraNames.length);
  demand(Object.values(EXTRA_CASES).every(c=>Array.isArray(c)&&c.length>0));
  demand(Object.keys(registry.node).length===74);
+ demand(Object.keys(CLOUD_CASES).length===3&&Object.entries(CLOUD_CASES).every(([f,n])=>Object.hasOwn(registry.node,f)&&new Set(n).size===n.length));
  const caseNames=Object.values(registry.node).flatMap(x=>x.cases);
  demand(caseNames.length===190&&new Set(caseNames).size===190);
+ const actualNames=Object.entries(registry.node).flatMap(([f,v])=>CLOUD_CASES[f]||v.cases);
+ demand(actualNames.length===190&&new Set(actualNames).size===190);
  return expected;
 }
 function checkExtraEnvelope(file,envelope){
@@ -78,8 +97,9 @@ function runGroup(file){
  const item=registry.node[file];
  const seen=envelope.cases.map(c=>c.id),optional=item?.linuxNotRun||[];
  if(item){
-  demand(seen.length===item.cases.length&&new Set(seen).size===seen.length);
-  demand(JSON.stringify(seen.slice().sort())===JSON.stringify(item.cases.slice().sort()));
+  const expectedCases=CLOUD_CASES[file]||item.cases;
+  demand(seen.length===expectedCases.length&&new Set(seen).size===seen.length);
+  demand(JSON.stringify(seen.slice().sort())===JSON.stringify(expectedCases.slice().sort()));
   demand(envelope.cases.every(c=>c.status==='PASS'||(optional.includes(c.id)&&c.status==='SKIP')));
   return {passed:envelope.cases.filter(c=>c.status==='PASS').length,
    platformNotRun:envelope.cases.filter(c=>c.status==='SKIP').length};
