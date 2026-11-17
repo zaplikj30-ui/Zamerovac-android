@@ -135,6 +135,12 @@ def locked_package(source):
     package_bytes = checked_file(package_path, 64 * 1024)
     require(git_blob_sha1(lock_bytes) == LOCK_BLOB and
             git_blob_sha1(package_bytes) == PACKAGE_BLOB)
+    return validate_lock(lock_bytes, package_bytes), lock_bytes, package_bytes
+
+
+def validate_lock(lock_bytes, package_bytes):
+    # Pure contract parser used by synthetic tests; production always verifies
+    # the two exact reviewed Git blobs before calling this parser.
     lock = json.loads(lock_bytes)
     package = json.loads(package_bytes)
     require(lock.get('lockfileVersion') == 3
@@ -153,7 +159,7 @@ def locked_package(source):
     require(lock['packages']['node_modules/fsevents'].get('os') == ['darwin']
             and lock['packages']['node_modules/playwright'].get('dependencies')
             == {'playwright-core': '1.62.1'})
-    return lock, lock_bytes, package_bytes
+    return lock
 
 
 def isolated_env(stage, env, path_value):
