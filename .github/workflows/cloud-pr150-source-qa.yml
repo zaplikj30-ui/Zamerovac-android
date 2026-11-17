@@ -31,7 +31,7 @@ concurrency:
 jobs:
   cloud-pr150:
     # Owner-authored exact marker on PR #160 or existing manual dispatch; never run on push.
-    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.event.repository.private == false && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && github.run_attempt == 1 && ((github.event_name == 'workflow_dispatch' && inputs.owner_approved == true && inputs.product_sha == '3886fcf80213e4693464d3f30104885c1c58f53e') || (github.event_name == 'issue_comment' && github.event.action == 'created' && github.event.issue.number == 160 && github.event.comment.user.login == 'zaplikj30-ui' && github.event.comment.body == format('ZAMEROVAC-CLOUD-RUN E={0} P=3886fcf80213e4693464d3f30104885c1c58f53e Q=ca6c23727f692e26811d9e7f3b346116533aa6b5', github.sha))) }}
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.event.repository.private == false && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && github.run_attempt == 1 && ((github.event_name == 'workflow_dispatch' && inputs.owner_approved == true && inputs.product_sha == '3886fcf80213e4693464d3f30104885c1c58f53e') || (github.event_name == 'issue_comment' && github.event.action == 'created' && github.event.issue.number == 160 && github.event.comment.user.login == 'zaplikj30-ui' && github.event.comment.body == format('ZAMEROVAC-CLOUD-RUN E={0} P=3886fcf80213e4693464d3f30104885c1c58f53e Q=d14a11d433715bacef07c6096ca164918991e5d9', github.sha))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 330
     env:
@@ -40,10 +40,10 @@ jobs:
       PYTHONOPTIMIZE: '0'
       GIT_CONFIG_NOSYSTEM: '1'
       GIT_CONFIG_GLOBAL: /dev/null
-      QA_APPROVED_Q: ${{ vars.CLOUD_DIAG_APPROVED_Q }}
+      QA_APPROVED_Q: ${{ github.event_name == 'issue_comment' && 'd14a11d433715bacef07c6096ca164918991e5d9' || vars.CLOUD_DIAG_APPROVED_Q }}
       QA_APPROVED_E: ${{ github.event_name == 'issue_comment' && github.sha || vars.CLOUD_DIAG_APPROVED_E }}
       QA_PRODUCT_SHA: ${{ github.event_name == 'issue_comment' && '3886fcf80213e4693464d3f30104885c1c58f53e' || inputs.product_sha }}
-      QA_VALIDATOR_SHA: ${{ github.event_name == 'issue_comment' && 'ca6c23727f692e26811d9e7f3b346116533aa6b5' || inputs.validator_sha }}
+      QA_VALIDATOR_SHA: ${{ github.event_name == 'issue_comment' && 'd14a11d433715bacef07c6096ca164918991e5d9' || inputs.validator_sha }}
       QA_EVENT_SHA: ${{ github.event_name == 'issue_comment' && github.sha || inputs.event_sha }}
     steps:
       - name: Strict precheckout owner/main/P/V/E/public metadata; no payload
@@ -96,8 +96,13 @@ jobs:
             return (pr.get('state')=='open' and (pr.get('head') or {}).get('sha')==sha
               and ((pr.get('head') or {}).get('repo') or {}).get('full_name')==e['GITHUB_REPOSITORY'])
           if not safe_pr(p,e['QA_PRODUCT_SHA']):block('moved P')
-          if not safe_pr(v,e['QA_VALIDATOR_SHA']):block('moved V')
+          if not safe_pr(v,'ca6c23727f692e26811d9e7f3b346116533aa6b5'):block('moved reviewed Q')
           if (v.get('base') or {}).get('ref')!='programator/cloud-qa-a1-a3-20261116':block('Q base')
+          if e['GITHUB_EVENT_NAME']=='issue_comment':
+            newq=get('pulls/163')
+            if not safe_pr(newq,e['QA_VALIDATOR_SHA']):block('moved new validator')
+            if (newq.get('base') or {}).get('ref')!='fix/quick155-real-regression-20261116':block('new Q base')
+          elif e['QA_VALIDATOR_SHA']!='ca6c23727f692e26811d9e7f3b346116533aa6b5':block('manual validator changed')
           if (p.get('base') or {}).get('ref')!='main':block('P base')
           print('PASS only precheckout metadata P/V/E/public; NOT test PASS')
           PY
@@ -167,6 +172,7 @@ jobs:
         timeout-minutes: 210
         shell: bash
         env:
+          QA_CLOUD_METADATA_TOKEN: ${{ github.token }}
           ZAMEROVAC_QA_MODE: cloud
           NODE_OPTIONS: ''
           NODE_PATH: ''
@@ -252,7 +258,9 @@ jobs:
           import json,os,urllib.request
           e=os.environ
           if not e.get('QA_CLOUD_METADATA_TOKEN'):raise SystemExit('BLOCKED missing metadata token')
-          for number,sha in ((150,e['QA_PRODUCT_SHA']),(155,'9f733b24194a7870fa1377b256076bca7a71eb5a'),(156,e['QA_VALIDATOR_SHA'])):
+          expected_prs=[(150,e['QA_PRODUCT_SHA']),(155,'9f733b24194a7870fa1377b256076bca7a71eb5a'),(156,'ca6c23727f692e26811d9e7f3b346116533aa6b5')]
+          if e['GITHUB_EVENT_NAME']=='issue_comment':expected_prs.append((163,e['QA_VALIDATOR_SHA']))
+          for number,sha in expected_prs:
             request=urllib.request.Request(
               'https://api.github.com/repos/zaplikj30-ui/Zamerovac-android/pulls/'+str(number),
               headers={'Accept':'application/vnd.github+json','User-Agent':'zamerovac-cloud-qa',
