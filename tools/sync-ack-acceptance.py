@@ -26,6 +26,13 @@ REQUIRED = {
     "cz.zamerovac.app.SyncAckReconciliationTest.driveLateDuplicateAckRestartBothAndRetryMustNotFalselyFinish",
     "cz.zamerovac.app.SyncAckReconciliationTest.safLateDuplicateAckRestartBothAndRetryMustNotFalselyFinish",
 }
+# Exact 513 classname.method IDs from independently preserved #116 JUnit XML (64 suites).
+# This is a TEST INVENTORY fingerprint, not a commit/ref SHA gate.
+# https://github.com/zaplikj30-ui/Zamerovac-android/pull/116#issuecomment-6838698456
+# https://github.com/zaplikj30-ui/Zamerovac-android/pull/116#issuecomment-6838705119
+EXPECTED_CASE_IDS_SHA256 = "e4897bcee1daec5a1e319ab0a9854fa915d2ee81d7501f3987ac4e89bad8c8a7"
+EXPECTED_CASE_COUNT = 513
+
 TEST_DIGESTS = {
     "provider-and-helpers": "69297e7750a3e5e774211ff2406c9dadcbe9694ff525edbaeb1f872e9725b088",
     "original-two-diagnostics": "3770b50aa1b10076015640dcc25832e30a9ba9b8b27fc083ffa3be801e02ba67",
@@ -94,6 +101,18 @@ def classify(cases, gradle_exit):
                                    "problems": problems}}
 
 
+def inventory_problems(cases):
+    """Reject removed/replaced/extra JVM method IDs, even when the total stays 513."""
+    ids = [case["id"] for case in cases]
+    problems = []
+    if len(ids) != EXPECTED_CASE_COUNT:
+        problems.append(f"Expected {EXPECTED_CASE_COUNT} JVM method IDs, got {len(ids)}")
+    digest = hashlib.sha256(json.dumps(sorted(ids), separators=(",", ":"), ensure_ascii=True).encode("ascii")).hexdigest()
+    if digest != EXPECTED_CASE_IDS_SHA256:
+        problems.append("Missing/replaced/unexpected JVM method ID versus reviewed 513-method baseline (#116)")
+    return problems
+
+
 def git(*args):
     return subprocess.check_output(["git", *args], cwd=ROOT, text=True).strip()
 
@@ -118,9 +137,11 @@ def run():
         process = subprocess.run(command, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, check=False)
     directory = ROOT / "app/build/test-results/testPreviewUnitTest"
     files = list(directory.glob("TEST-*.xml"))
-    result = classify(read_cases(directory), process.returncode)
+    cases = read_cases(directory)
+    result = classify(cases, process.returncode)
     problems = result["product_acceptance"]["problems"]
-    if len(files) < 64 or len(read_cases(directory)) < 513:
+    problems.extend(inventory_problems(cases))
+    if len(files) < 64 or len(cases) < EXPECTED_CASE_COUNT:
         problems.append("Incomplete full JVM suite; a targeted run cannot satisfy the final gate")
     if not files or any(file.stat().st_mtime_ns < started for file in files):
         problems.append("Missing or stale JUnit XML: compilation failure/old reports cannot satisfy the gate")
