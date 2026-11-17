@@ -1,76 +1,174 @@
-name: Zaměřovač - jednoduché Chromium (bez APK)
-# No run is authorized just by merging this workflow. Run only after owner RUN GO.
+name: Zaměřovač - původní jednoduché QUICK + Chromium + Android (bez APK)
+# Current existing tests, original November-style GitHub-hosted execution.
+# No cloud run without a separate owner RUN GO and budget check.
 on:
   workflow_dispatch:
     inputs:
       scope:
-        description: 'drawing first; all stays BLOCKED until compatible app/tests'
+        description: 'quick / drawing (17) / available (87 E2E + QUICK + native) / android / all (blocked)'
         type: choice
-        options: [drawing, all]
-        default: drawing
+        options: [quick, drawing, available, android, all]
+        default: quick
         required: true
-  # Fallback for GitHub integrations that can commit but cannot dispatch Actions.
-  # Create this request branch only after the workflow has been reviewed/merged.
+  # Fallback for GitHub integrations without workflow dispatch.
+  # A request file change requires prior owner RUN GO; not part of this PR.
   push:
     branches: [qa/chromium-request]
     paths: [qa/chromium-request.txt]
 permissions:
   contents: read
 jobs:
-  chromium:
+  tests:
     runs-on: ubuntu-24.04
-    timeout-minutes: 45
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
         with:
           persist-credentials: false
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-      - name: Install existing Playwright and Chromium
-        run: |
-          npm ci --prefix tools/qa-browser
-          tools/qa-browser/node_modules/.bin/playwright install --with-deps chromium
-      - name: Test drawing through original E2E suite
+      - name: Select requested tests
         shell: bash
         env:
-          NODE_PATH: ${{ github.workspace }}/tools/qa-browser/node_modules
-          ZAMEROVAC_SIMPLE_CHROMIUM: '1'
-          REQUESTED_SCOPE: ${{ inputs.scope }}
+          DISPATCH_SCOPE: ${{ inputs.scope }}
         run: |
           set -euo pipefail
-          scope="${REQUESTED_SCOPE:-drawing}"
+          scope="$DISPATCH_SCOPE"
           if [[ "$GITHUB_EVENT_NAME" == push ]]; then
             scope="$(head -n 1 qa/chromium-request.txt | tr -d '[:space:]')"
           fi
           case "$scope" in
-            drawing) ;;
-            all) echo 'BLOCKED: full 23/96 requires approved compatible product and all tests'; exit 2 ;;
-            *) echo 'Invalid test scope'; exit 2 ;;
+            quick|drawing|available|android) ;;
+            all) echo 'BLOCKED: FULL 23/96 requires compatible product and missing suites'; exit 2 ;;
+            *) echo 'FAIL: unknown test scope'; exit 2 ;;
           esac
-          unset ZAMEROVAC_CASES ZAMEROVAC_SOURCE_SHA ZAMEROVAC_QA_GATE_SHA ZAMEROVAC_RUN_TOKEN
-          python3 -m http.server 8765 --bind 127.0.0.1 --directory app/src/main/assets > /tmp/zamerovac-chromium.log 2>&1 &
+          echo "QA_SCOPE=$scope" >> "$GITHUB_ENV"
+          echo "Selected $scope"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
+        if: ${{ env.QA_SCOPE == 'quick' || env.QA_SCOPE == 'available' || env.QA_SCOPE == 'android' }}
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: QUICK current source JS, Python and regressions
+        if: ${{ env.QA_SCOPE == 'quick' || env.QA_SCOPE == 'available' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in app/src/main/assets/*.js sync/*.js; do node --check "$f"; done
+          node --check tools/e2e/harness.cjs
+          node tools/qa/audit.cjs
+          node tools/check-android-window.cjs
+          for f in tests/*.js; do node "$f"; done
+          python3 -m unittest discover -s tests -p 'test_*.py' -v
+          node --test tests/qa-simple-chromium.test.cjs
+      - name: Install pinned Playwright 1.62.1 and Chromium
+        if: ${{ env.QA_SCOPE == 'quick' || env.QA_SCOPE == 'drawing' || env.QA_SCOPE == 'available' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci --prefix tools/qa-browser
+          tools/qa-browser/node_modules/.bin/playwright install --with-deps chromium
+      - name: QUICK Chromium - seven current browser checks
+        if: ${{ env.QA_SCOPE == 'quick' || env.QA_SCOPE == 'available' }}
+        shell: bash
+        env:
+          NODE_PATH: ${{ github.workspace }}/tools/qa-browser/node_modules
+        run: |
+          set -euo pipefail
+          python3 -m http.server 8765 --bind 127.0.0.1 --directory app/src/main/assets > /tmp/zamerovac-quick.log 2>&1 &
           server_pid=$!
           trap 'kill "$server_pid" 2>/dev/null || true' EXIT
-          rm -f test-artifacts/drawing/report.json
-          timeout --signal=TERM --kill-after=5s 20m node tools/e2e/drawing.cjs
-          node - <<'NODE'
-          const fs = require('node:fs');
-          const p = 'test-artifacts/drawing/report.json';
-          if (!fs.existsSync(p)) throw Error('FAIL: drawing report missing');
-          const r = JSON.parse(fs.readFileSync(p,'utf8'));
-          if (r.suite !== 'drawing' || r.status !== 'COMPLETE' || r.filtered ||
-              !Array.isArray(r.cases) || r.cases.length !== 17 ||
-              new Set(r.cases.map(c => c.name)).size !== 17 ||
-              r.cases.some(c => c.status !== 'passed')) {
-            throw Error('FAIL: drawing is not 17 complete PASS scenarios');
+          export CHROMIUM_PATH="$(node -p "require('playwright').chromium.executablePath()")"
+          for f in tools/check-*-browser.cjs; do
+            echo "RUN QUICK browser $f"
+            timeout --signal=TERM --kill-after=5s 5m node "$f"
+          done
+      - name: Chromium drawing or all 21 current available E2E suites
+        if: ${{ env.QA_SCOPE == 'drawing' || env.QA_SCOPE == 'available' }}
+        shell: bash
+        env:
+          NODE_PATH: ${{ github.workspace }}/tools/qa-browser/node_modules
+          ZAMEROVAC_SIMPLE_CHROMIUM: '1'
+        run: |
+          set -euo pipefail
+          unset ZAMEROVAC_CASES ZAMEROVAC_SOURCE_SHA ZAMEROVAC_QA_GATE_SHA ZAMEROVAC_RUN_TOKEN
+          python3 -m http.server 8765 --bind 127.0.0.1 --directory app/src/main/assets > /tmp/zamerovac-e2e.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          suites=(
+            'drawing:17'
+            'gallery-visual:1'
+            'workflows:6'
+            'interactions:3'
+            'zoom-grid:2'
+            'update39:4'
+            'gallery-state:5'
+            'peer-sync:4'
+            'drive-accounts:5'
+            'sync-cadence:2'
+            'backup-history:1'
+            'read-only-sync:1'
+            'sync-edit-guard:3'
+            'note-sync:6'
+            'web-content-policy:1'
+            'media-import:4'
+            'help:2'
+            'release-history:2'
+            'latency:6'
+            'quality-regressions:8'
+            'gallery-readability:4'
+          )
+          if [[ "$QA_SCOPE" == drawing ]]; then suites=('drawing:17'); fi
+          total=0
+          for item in "${suites[@]}"; do
+            suite="${item%%:*}"
+            expected="${item##*:}"
+            mkdir -p "test-artifacts/$suite"
+            rm -f "test-artifacts/$suite/report.json"
+            echo "RUN E2E $suite ($expected scenarios)"
+            timeout --signal=TERM --kill-after=5s 15m node "tools/e2e/$suite.cjs"
+            node - "$suite" "$expected" <<'NODE'
+          'use strict';
+          const fs=require('node:fs');
+          const [suite,count]=process.argv.slice(2);
+          const file='test-artifacts/'+suite+'/report.json';
+          if(!fs.existsSync(file))throw Error('FAIL: report missing: '+suite);
+          const r=JSON.parse(fs.readFileSync(file,'utf8'));
+          const names=Array.isArray(r.cases)?r.cases.map(c=>c.name):[];
+          if(r.suite!==suite||r.status!=='COMPLETE'||r.filtered||
+             names.length!==Number(count)||new Set(names).size!==names.length||
+             r.cases.some(c=>c.status!=='passed')){
+            throw Error('FAIL: incomplete/non-PASS suite '+suite+' expected '+count);
           }
-          console.log('PASS: drawing, 17/17 actually executed in Chromium');
+          console.log('PASS '+suite+' '+names.length+'/'+count);
           NODE
+            total=$((total + expected))
+          done
+          if [[ "$QA_SCOPE" == drawing && "$total" -ne 17 ]]; then exit 1; fi
+          if [[ "$QA_SCOPE" == available && "$total" -ne 87 ]]; then exit 1; fi
+          echo "PASS $total actually executed E2E scenarios; FULL 23/96 still BLOCKED"
+      - uses: gradle/actions/setup-gradle@v4
+        if: ${{ env.QA_SCOPE == 'android' || env.QA_SCOPE == 'available' }}
+        with:
+          gradle-version: '8.10.2'
+      - name: Android native Java, Drive and PDF checks - no APK
+        if: ${{ env.QA_SCOPE == 'android' || env.QA_SCOPE == 'available' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon -p tools/drive-config-checks verify
+          gradle --no-daemon :app:verifyDriveRegistration :app:compilePreviewJavaWithJavac :app:testPreviewUnitTest -PdriveRequireConfigured=true
+          python3 -m pip install 'pypdf[image]>=5,<7' 'pymupdf>=1.24,<2'
+          python3 tools/check-customer-pdf.py app/build/customer-pdf-1.zip app/build/customer-pdf-3.zip app/build/customer-pdf-multipage.zip
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: chromium-drawing-diagnostics
-          path: test-artifacts/
+          name: simple-current-tests-diagnostics
+          path: |
+            test-artifacts/
+            app/build/test-results/testPreviewUnitTest/
+            app/build/reports/drive-registration.json
+            app/build/customer-pdf-*.zip
           if-no-files-found: ignore
           retention-days: 7
