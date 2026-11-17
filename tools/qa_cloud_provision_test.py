@@ -71,6 +71,47 @@ class ProvisionTests(unittest.TestCase):
         self.assertEqual(child['NPM_CONFIG_USERCONFIG'], '/dev/null')
         self.assertEqual(child['NPM_CONFIG_REGISTRY'], 'https://registry.npmjs.org/')
 
+    def test_real_preflight_identifies_each_gate_without_npm_or_writes(self):
+        source = self.root / 'validator'
+        target = source / 'tools/qa-browser'
+        target.mkdir(parents=True)
+        for name in ('package.json', 'package-lock.json'):
+            (target / name).write_bytes((Path(__file__).parent / 'qa-browser' / name).read_bytes())
+        (source / '.git').mkdir()
+        (source / '.git/HEAD').write_text('b' * 40)
+        env = {'RUNNER_TEMP': str(self.root), 'PATH': os.environ['PATH'],
+               'ZAMEROVAC_QA_VALIDATOR_ROOT': str(source),
+               'ZAMEROVAC_CLOUD_REVIEWED_V_SHA': 'b' * 40,
+               'ZAMEROVAC_CLOUD_EVENT_SHA': 'c' * 40,
+               'ZAMEROVAC_EXPECTED_PRODUCT_SHA': q.P_SHA,
+               'ZAMEROVAC_CLOUD_DEADLINE': str(int((time.time()+600)*1000))}
+        with mock.patch.object(q.subprocess, 'Popen', side_effect=AssertionError('npm must not run')) as spawn:
+            before = set(self.root.iterdir())
+            result = q.preflight(env)
+            self.assertEqual(result[0], self.root / q.STAGE)
+            self.assertEqual(set(self.root.iterdir()), before)
+            for changed, phase in [
+                ({'RUNNER_TEMP': str(self.root / 'absent')}, 'ADMISSION_RUNNER'),
+                ({'ZAMEROVAC_EXPECTED_PRODUCT_SHA': 'd'*40}, 'ADMISSION_CHECKOUT'),
+                ({'ZAMEROVAC_CLOUD_REVIEWED_V_SHA': 'd'*40}, 'ADMISSION_CHECKOUT'),
+                ({'ZAMEROVAC_CLOUD_EVENT_SHA': 'invalid'}, 'ADMISSION_CHECKOUT'),
+                ({'ZAMEROVAC_CLOUD_DEADLINE': '0'}, 'ADMISSION_DEADLINE'),
+                ({'PATH': ''}, 'ADMISSION_TOOLS')]:
+                with self.subTest(phase=phase), self.assertRaises(q.Blocked) as error:
+                    q.preflight({**env, **changed})
+                self.assertEqual(error.exception.args, (phase,))
+            stage = self.root / q.STAGE
+            stage.mkdir(mode=0o700)
+            with self.assertRaises(q.Blocked) as error:
+                q.preflight(env)
+            self.assertEqual(error.exception.args, ('ADMISSION_STAGE',))
+            stage.rmdir()
+            (target / 'package-lock.json').write_text('{}')
+            with self.assertRaises(q.Blocked) as error:
+                q.preflight(env)
+            self.assertEqual(error.exception.args, ('ADMISSION_LOCK',))
+            spawn.assert_not_called()
+
     def test_phase_diagnostic_is_fixed_and_never_exception_text(self):
         import contextlib
         import io
@@ -90,30 +131,27 @@ class ProvisionTests(unittest.TestCase):
         with self.assertRaises(q.Blocked):
             q.provision_step('SECRET_TOKEN', lambda: None)
 
-    def test_distinct_private_npm_config_real_offline_ci(self):
-        # Real npm config resolution and ci, no registry/network or dependency.
-        # This catches npm's double-loading rejection that mocked Popen missed.
+    def test_distinct_private_npm_config_real_cli(self):
+        # Real config initialization only: synthetic hosted step never installs.
         import shutil
         import subprocess
         npm = shutil.which('npm')
         if npm is None:
             self.skipTest('real npm unavailable')
         child = q.isolated_env(self.stage, {}, os.environ['PATH'])
-        global_config = Path(child['NPM_CONFIG_GLOBALCONFIG'])
-        self.assertNotEqual(child['NPM_CONFIG_USERCONFIG'], str(global_config))
-        self.assertEqual(global_config.read_bytes(), b'')
+        config = Path(child['NPM_CONFIG_GLOBALCONFIG'])
+        self.assertNotEqual(child['NPM_CONFIG_USERCONFIG'], str(config))
+        self.assertEqual(config.read_bytes(), b'')
+        self.assertEqual(stat.S_IMODE(config.stat().st_mode), 0o600)
         self.assertEqual(child['NPM_CONFIG_FETCH_RETRIES'], '0')
-        self.assertEqual(stat.S_IMODE(global_config.stat().st_mode), 0o600)
-        deps = self.stage / 'empty-package'
-        deps.mkdir(mode=0o700)
-        (deps / 'package.json').write_text('{"name":"offline-fixture","version":"1.0.0"}')
-        (deps / 'package-lock.json').write_text('{"name":"offline-fixture","version":"1.0.0","lockfileVersion":3,"packages":{"":{"name":"offline-fixture","version":"1.0.0"}}}')
+        command = [npm, 'config', 'get', 'registry']
         old = dict(child, NPM_CONFIG_GLOBALCONFIG='/dev/null')
-        failed = subprocess.run([npm, 'ci', '--offline', '--ignore-scripts', '--no-audit', '--no-fund'], cwd=deps, env=old, capture_output=True, timeout=15)
+        failed = subprocess.run(command, cwd=self.stage, env=old, capture_output=True, timeout=15)
         self.assertNotEqual(failed.returncode, 0)
         self.assertIn(b'double-loading config', failed.stderr)
-        self.assertTrue(q.run_group([npm, 'ci', '--offline', '--ignore-scripts', '--no-audit', '--no-fund'], deps, child, (time.time()+35)*1000, self.log))
-        self.assertEqual(global_config.read_bytes(), b'')
+        self.assertTrue(q.run_group(command, self.stage, child, (time.time()+35)*1000, self.log))
+        self.assertEqual(self.log.read_text().strip(), 'https://registry.npmjs.org/')
+        self.assertEqual(config.read_bytes(), b'')
 
     def test_symlink_hardlink_and_world_writable_file_rejected(self):
         file = self.stage / 'input'

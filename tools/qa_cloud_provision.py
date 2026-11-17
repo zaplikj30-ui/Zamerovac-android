@@ -422,7 +422,9 @@ def resolved_browser(stage, node, childenv, lock):
     return name, revision, ffmpeg, ffmpeg_binary
 
 
-PHASES = frozenset(('NPM_CI', 'NPM_TREE', 'ARCHIVES', 'MODULES', 'TARBALLS',
+PHASES = frozenset(('ADMISSION_HOST', 'ADMISSION_RUNNER', 'ADMISSION_STAGE',
+                    'ADMISSION_CHECKOUT', 'ADMISSION_DEADLINE', 'ADMISSION_LOCK',
+                    'ADMISSION_TOOLS', 'NPM_CI', 'NPM_TREE', 'ARCHIVES', 'MODULES', 'TARBALLS',
                     'BROWSER_INSTALL', 'BROWSER_LAYOUT', 'BROWSER_TREE'))
 
 
@@ -436,28 +438,48 @@ def provision_step(code, operation, *args):
         raise Blocked(code) from None
 
 
-def prepare(env=None):
-    env = dict(os.environ if env is None else env)
-    require(sys.platform == 'linux' and os.geteuid() > 0)
-    runner = runner_directory(env['RUNNER_TEMP'])
-    stage = runner / STAGE
-    require(not stage.exists() and not stage.is_symlink())
+def checkout_source(env):
     source = Path(env['ZAMEROVAC_QA_VALIDATOR_ROOT']).resolve(strict=True)
     require((source / '.git').exists() and source.is_dir()
             and re.fullmatch('[a-f0-9]{40}', env.get('ZAMEROVAC_CLOUD_REVIEWED_V_SHA', ''))
             and re.fullmatch('[a-f0-9]{40}', env.get('ZAMEROVAC_CLOUD_EVENT_SHA', ''))
             and env.get('ZAMEROVAC_EXPECTED_PRODUCT_SHA') == P_SHA)
-    # checkout@exact-commit is detached; reject changed HEAD before npm.
     require(checked_file(source / '.git/HEAD', 1024).decode().strip()
             == env['ZAMEROVAC_CLOUD_REVIEWED_V_SHA'])
-    deadline_ms = int(env['ZAMEROVAC_CLOUD_DEADLINE'])
-    require(time.time() * 1000 < deadline_ms < (time.time() + 200 * 60) * 1000 + 20000)
-    lock, lock_data, package_data = locked_package(source)
+    return source
+
+
+def checked_deadline(env):
+    deadline = int(env['ZAMEROVAC_CLOUD_DEADLINE'])
+    require(time.time() * 1000 < deadline < (time.time() + 200 * 60) * 1000 + 20000)
+    return deadline
+
+
+def checked_tools(env):
     node = shutil.which('node', path=env['PATH'])
     npm = shutil.which('npm', path=env['PATH'])
     require(node is not None and npm is not None)
     node, npm = str(Path(node).resolve(strict=True)), str(Path(npm).resolve(strict=True))
     require(Path(node).is_file() and Path(npm).is_file())
+    return node, npm
+
+
+def preflight(env):
+    """Read-only admission; no npm, child process, staging writes or network."""
+    provision_step('ADMISSION_HOST', require, sys.platform == 'linux' and os.geteuid() > 0)
+    runner = provision_step('ADMISSION_RUNNER', runner_directory, env.get('RUNNER_TEMP', ''))
+    stage = runner / STAGE
+    provision_step('ADMISSION_STAGE', require, not stage.exists() and not stage.is_symlink())
+    source = provision_step('ADMISSION_CHECKOUT', checkout_source, env)
+    deadline_ms = provision_step('ADMISSION_DEADLINE', checked_deadline, env)
+    lock, lock_data, package_data = provision_step('ADMISSION_LOCK', locked_package, source)
+    node, npm = provision_step('ADMISSION_TOOLS', checked_tools, env)
+    return stage, deadline_ms, lock, lock_data, package_data, node, npm
+
+
+def prepare(env=None):
+    env = dict(os.environ if env is None else env)
+    stage, deadline_ms, lock, lock_data, package_data, node, npm = preflight(env)
     stage.mkdir(mode=0o700)
     private_directory(stage)
     deps = stage / 'deps'
