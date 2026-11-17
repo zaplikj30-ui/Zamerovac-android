@@ -122,7 +122,7 @@ jobs:
         run: |
           set -euo pipefail
           npm ci --prefix tools/qa-browser
-          tools/qa-browser/node_modules/.bin/playwright install --with-deps chromium
+          node tools/qa-browser/node_modules/playwright/cli.js install --with-deps chromium
       - name: Chromium - current QUICK 7 and available E2E 21/87
         working-directory: product
         if: ${{ env.QA_SCOPE == 'quick' || env.QA_SCOPE == 'drawing' || env.QA_SCOPE == 'available' }}
