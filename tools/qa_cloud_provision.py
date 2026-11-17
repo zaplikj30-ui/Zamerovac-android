@@ -23,6 +23,9 @@ STAGE = 'zamerovac-cloud-stage'
 FINAL = 'zamerovac-cloud-final'
 LOCK_PACKAGES = {'', 'node_modules/playwright', 'node_modules/playwright-core', 'node_modules/fsevents'}
 REQUIRED = ('playwright', 'playwright-core')
+LOCK_BLOB = '2901dfe9699efa4edbeab7e9655f4462228c39e9'
+PACKAGE_BLOB = 'cd80df5950316c233785c4c96768d836689c79f5'
+P_SHA = '3886fcf80213e4693464d3f30104885c1c58f53e'
 MAX_REPORT = 8 * 1024 * 1024
 MAX_LOG = 1024 * 1024
 MAX_FILES = 20000
@@ -120,12 +123,18 @@ def exact_tree(root, allowed_roots):
     return records
 
 
+def git_blob_sha1(data):
+    return hashlib.sha1(b'blob ' + str(len(data)).encode('ascii') + b'\0' + data).hexdigest()
+
+
 def locked_package(source):
     root = Path(source).resolve(strict=True)
     lock_path = root / 'tools/qa-browser/package-lock.json'
     package_path = root / 'tools/qa-browser/package.json'
     lock_bytes = checked_file(lock_path, 64 * 1024)
     package_bytes = checked_file(package_path, 64 * 1024)
+    require(git_blob_sha1(lock_bytes) == LOCK_BLOB and
+            git_blob_sha1(package_bytes) == PACKAGE_BLOB)
     lock = json.loads(lock_bytes)
     package = json.loads(package_bytes)
     require(lock.get('lockfileVersion') == 3
@@ -380,7 +389,10 @@ def prepare(env=None):
     require((source / '.git').exists() and source.is_dir()
             and re.fullmatch('[a-f0-9]{40}', env.get('ZAMEROVAC_CLOUD_REVIEWED_V_SHA', ''))
             and re.fullmatch('[a-f0-9]{40}', env.get('ZAMEROVAC_CLOUD_EVENT_SHA', ''))
-            and re.fullmatch('[a-f0-9]{40}', env.get('ZAMEROVAC_EXPECTED_PRODUCT_SHA', '')))
+            and env.get('ZAMEROVAC_EXPECTED_PRODUCT_SHA') == P_SHA)
+    # checkout@exact-commit is detached; reject changed HEAD before npm.
+    require(checked_file(source / '.git/HEAD', 1024).decode().strip()
+            == env['ZAMEROVAC_CLOUD_REVIEWED_V_SHA'])
     deadline_ms = int(env['ZAMEROVAC_CLOUD_DEADLINE'])
     require(time.time() * 1000 < deadline_ms < (time.time() + 200 * 60) * 1000 + 20000)
     lock, lock_data, package_data = locked_package(source)
