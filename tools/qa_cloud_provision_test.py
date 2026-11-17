@@ -4,6 +4,7 @@ import hashlib
 import json
 import os
 import platform
+import subprocess
 from pathlib import Path
 import signal
 import stat
@@ -14,6 +15,130 @@ import time
 import unittest
 from unittest import mock
 import qa_cloud_provision as q
+
+# A private subprocess becomes a temporary subreaper solely for this test.
+# It owns the known grandchild independently of the host PID1 reaping policy.
+_ORPHAN_SURVIVOR_FIXTURE = r'''
+import ctypes
+import json
+import os
+from pathlib import Path
+import signal
+import subprocess
+import sys
+import threading
+import time
+sys.path.insert(0, sys.argv[1])
+import qa_cloud_provision as q
+root = Path(sys.argv[2])
+mode = sys.argv[3]
+ready = root / ('grandchild-' + mode + '.json')
+release = root / ('release-' + mode)
+log = root / ('group-' + mode + '.log')
+leader_ok = root / ('leader-ok-' + mode)
+assert sys.platform == 'linux'
+assert ctypes.CDLL(None, use_errno=True).prctl(36, 1, 0, 0, 0) == 0
+# The grandchild closes inherited supervisor PIPEs before signalling readiness.
+child_code = r"""
+import json,os,sys,time
+path=sys.argv[1]
+entry={'pid':os.getpid(),'pgid':os.getpgrp()}
+with open(path+'.part','x') as f:
+ json.dump(entry,f);f.flush();os.fsync(f.fileno())
+os.replace(path+'.part',path)
+time.sleep(30)
+"""
+leader_code = r"""
+import os,subprocess,sys,time
+from pathlib import Path
+subprocess.Popen([sys.executable,'-B','-c',sys.argv[1],sys.argv[2]],
+ stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,
+ close_fds=True,start_new_session=False)
+deadline=time.monotonic()+8
+while not os.path.exists(sys.argv[3]):
+ if time.monotonic()>deadline:raise SystemExit(89)
+ time.sleep(.01)
+if Path(sys.argv[3]).read_text()!='confirmed-live':raise SystemExit(88)
+Path(sys.argv[4]).write_text('successful-leader-exit')
+os._exit(0)
+"""
+state = {}
+errors = []
+reaped = threading.Event()
+def reap_known():
+    # Exercise prompt and deferred reaping; never reap unrelated children.
+    if mode == 'deferred':
+        time.sleep(.5)
+    expiry = time.monotonic() + 10
+    while time.monotonic() < expiry:
+        try:
+            pid, _ = os.waitpid(state['pid'], os.WNOHANG)
+            if pid == state['pid']:
+                reaped.set()
+                return
+        except ChildProcessError:
+            # Still owned by leader until it exits.
+            pass
+        time.sleep(.01 if mode == 'prompt' else .05)
+def gate():
+    expiry = time.monotonic() + 8
+    while time.monotonic() < expiry:
+        if ready.exists():
+            try:
+                info = json.loads(ready.read_text())
+                pid, pgid = info['pid'], info['pgid']
+                state.update(pid=pid, pgid=pgid)
+                os.kill(pid, 0)
+                assert pid != pgid and os.getpgid(pid) == pgid
+                assert Path('/proc/%d/stat' % pid).read_text().split()[2] != 'Z'
+                worker = threading.Thread(target=reap_known, daemon=True)
+                state['reaper_started'] = True
+                worker.start()
+                release.write_text('confirmed-live')
+                return
+            except (ValueError, KeyError, FileNotFoundError, ProcessLookupError):
+                pass
+            except AssertionError as exc:
+                errors.append(str(exc) or 'grandchild identity/liveness')
+                release.write_text('fixture-error')
+                return
+        time.sleep(.01)
+    errors.append('grandchild never confirmed alive')
+    release.write_text('fixture-error')
+gate_thread = threading.Thread(target=gate, daemon=True)
+gate_thread.start()
+blocked = False
+try:
+    try:
+        q.run_group([sys.executable, '-B', '-c', leader_code, child_code,
+                     str(ready), str(release), str(leader_ok)],
+                    root, {}, (time.time() + 40) * 1000, log)
+    except q.Blocked:
+        blocked = True
+finally:
+    gate_thread.join(timeout=9)
+    if 'pgid' in state:
+        # A failed readiness assertion must still reap its known descendant.
+        if 'pid' in state and not state.get('reaper_started'):
+            threading.Thread(target=reap_known, daemon=True).start()
+        try:
+            os.killpg(state['pgid'], signal.SIGTERM)
+        except ProcessLookupError:
+            pass
+        if not reaped.wait(4):
+            try:
+                os.killpg(state['pgid'], signal.SIGKILL)
+            except ProcessLookupError:
+                pass
+        reaped.wait(3)
+assert not errors, errors
+assert leader_ok.read_text() == 'successful-leader-exit', 'leader failed to exit zero'
+assert blocked, 'live descendant survivor incorrectly reported PASS'
+assert reaped.is_set(), 'known descendant was not reaped by fixture owner'
+assert not Path('/proc/%d' % state['pid']).exists(), 'known descendant still exists'
+assert not q.group_exists(state['pgid']), 'known process group still exists'
+print('PASS ' + mode + ': live survivor blocked, PID reaped, group absent')
+'''
 
 
 class ProvisionTests(unittest.TestCase):
@@ -39,10 +164,37 @@ class ProvisionTests(unittest.TestCase):
             self.launch('raise SystemExit(77)')
 
     def test_orphan_descendant_rejected_not_false_pass(self):
-        child = ('import subprocess,sys;subprocess.Popen([sys.executable,"-c",'
-                 '"import time;time.sleep(5)"],start_new_session=False)')
-        with self.assertRaises(q.Blocked):
-            self.launch(child)
+        # Do not wait for inherited PIPE EOF or for a host-dependent zombie.
+        # Each isolated Linux helper reaps exactly its own known grandchild.
+        for mode in ('prompt', 'deferred'):
+            with self.subTest(reaping=mode), tempfile.TemporaryDirectory(
+                    prefix='qa-c-orphan-reap-') as temp:
+                command = [sys.executable, '-B', '-c', _ORPHAN_SURVIVOR_FIXTURE,
+                           str(Path(__file__).resolve().parent), temp, mode]
+                worker = subprocess.Popen(
+                    command, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
+                    text=True, close_fds=True,
+                    env={'PATH': os.environ.get('PATH', '')})
+                try:
+                    output, error = worker.communicate(timeout=20)
+                except subprocess.TimeoutExpired:
+                    # Test-only emergency cleanup for a hung fixture helper.
+                    marker = Path(temp) / ('grandchild-' + mode + '.json')
+                    if marker.is_file():
+                        try:
+                            details = json.loads(marker.read_text())
+                            pid, pgid = details['pid'], details['pgid']
+                            if os.getpgid(pid) == pgid and pgid != os.getpgrp():
+                                os.killpg(pgid, signal.SIGKILL)
+                        except (ValueError, KeyError, FileNotFoundError,
+                                ProcessLookupError):
+                            pass
+                    worker.kill()
+                    worker.communicate(timeout=5)
+                    self.fail(mode + ': fixture timed out, forced cleanup attempted')
+                self.assertEqual(worker.returncode, 0,
+                                 f'{mode}: stdout={output}, stderr={error}')
+                self.assertIn('PASS ' + mode, output)
 
     def test_cancel_sigterm_reaps_group(self):
         def cancel():
