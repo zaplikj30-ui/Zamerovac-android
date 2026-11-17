@@ -46,6 +46,8 @@ function checkedHash(file,limit=1024*1024*1024){
  }finally{fs.closeSync(fd)}
 }
 function exactlyFiles(root,expected,requiredPrefix){
+ const approved=Array.isArray(requiredPrefix)?requiredPrefix:[requiredPrefix];
+ need(approved.every(p=>typeof p==='string'&&p.includes('/')));
  need(expected&&typeof expected==='object'&&!Array.isArray(expected));
  const names=Object.keys(expected);
  need(names.length>10&&names.length<=20000);
@@ -65,7 +67,7 @@ function exactlyFiles(root,expected,requiredPrefix){
  need(JSON.stringify(actual.sort())===JSON.stringify(names.sort()));
  let size=0;
  for(const relative of names){
-  need(relative.startsWith(requiredPrefix)&&
+  need(approved.some(prefix=>relative.startsWith(prefix))&&
    !relative.split('/').includes('..')&&!relative.split('/').includes('.')&&
    !relative.startsWith('/'));
   const spec=expected[relative];
@@ -98,14 +100,18 @@ function checkPrepared(finalRoot,manifest,env){
   need('sha512-'+crypto.createHash('sha512').update(bytes).digest('base64')===archive.integrity);
  }
  const revision=manifest.chromium?.revision;
- need(/^[0-9]{3,7}$/.test(revision||''));
+ const ffmpeg=manifest.chromium?.ffmpegRevision;
+ need(/^[0-9]{3,7}$/.test(revision||'')&&/^[0-9]{3,7}$/.test(ffmpeg||''));
  const expectedExe='browsers/chromium-'+revision+'/chrome-linux64/chrome';
  need(manifest.chromium.relative===expectedExe&&
   /^[a-f0-9]{64}$/.test(manifest.chromium.sha256));
  const spec=JSON.parse(runtime.checked(path.join(deps,'node_modules/playwright-core/browsers.json')));
- need(spec.browsers.find(e=>e.name==='chromium')?.revision===revision);
+ need(spec.browsers.find(e=>e.name==='chromium')?.revision===revision&&
+  spec.browsers.find(e=>e.name==='ffmpeg')?.revision===ffmpeg);
+ const roots=fs.readdirSync(path.join(finalRoot,'browsers')).sort();
+ need(JSON.stringify(roots)===JSON.stringify(['chromium-'+revision,'ffmpeg-'+ffmpeg].sort()));
  exactlyFiles(path.join(finalRoot,'browsers'),manifest.chromium.files,
-  'chromium-'+revision+'/');
+  ['chromium-'+revision+'/','ffmpeg-'+ffmpeg+'/']);
  const chromium=path.join(finalRoot,expectedExe);
  need(checkedHash(chromium).sha256===manifest.chromium.sha256);
  const fd=fs.openSync(chromium,'r');try{
