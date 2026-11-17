@@ -2,6 +2,7 @@ name: Zaměřovač – PR150 P/V/E strict CLOUD source QA (INERT DRAFT)
 # A1-A3 approved for implementation only. Owner has NOT authorized dispatch,
 # inventory, provisioning, merge, APK, uploads or any HOME operation.
 # This workflow MUST remain inert until separate SOURCE/SECURITY + owner GO.
+# Hosted variant C is staged here only; main E pin/activation remains owner-governed.
 on:
   workflow_dispatch:
     inputs:
@@ -146,9 +147,31 @@ jobs:
           node tools/check-android-window.cjs
           node tools/qa-cloud-quick.cjs
           python3 tools/qa_cloud_quick.py
-      - name: STRICT Chromium – reviewed R required; no provisioning, no fallback
-        id: strict_browser
+      - name: Start one shared 200 minute deadline after QUICK
+        id: cloud_deadline
         if: ${{ !cancelled() && steps.quick.outcome == 'success' }}
+        timeout-minutes: 1
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "ZAMEROVAC_CLOUD_DEADLINE=$(( $(date +%s)*1000 + 12000000 ))" >> "$GITHUB_ENV"
+      - name: One credential-free hosted Chromium provisioning, fail closed
+        id: provision
+        if: ${{ !cancelled() && steps.cloud_deadline.outcome == 'success' }}
+        timeout-minutes: 16
+        working-directory: validator
+        shell: bash
+        env:
+          ZAMEROVAC_QA_VALIDATOR_ROOT: ${{ github.workspace }}/validator
+          ZAMEROVAC_EXPECTED_PRODUCT_SHA: ${{ env.QA_PRODUCT_SHA }}
+          ZAMEROVAC_CLOUD_REVIEWED_V_SHA: ${{ env.QA_VALIDATOR_SHA }}
+          ZAMEROVAC_CLOUD_EVENT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          python3 tools/qa_cloud_provision.py --prepare
+      - name: STRICT Chromium – one-root handoff, no second npm or fallback
+        id: strict_browser
+        if: ${{ !cancelled() && steps.quick.outcome == 'success' && steps.provision.outcome == 'success' }}
         working-directory: validator
         timeout-minutes: 210
         shell: bash
@@ -158,6 +181,9 @@ jobs:
           NODE_PATH: ''
           PYTHONPATH: ''
           ZAMEROVAC_CLOUD_TRUST: trusted-host/change-detection
+          ZAMEROVAC_CLOUD_STAGE: ${{ runner.temp }}/zamerovac-cloud-stage
+          ZAMEROVAC_CLOUD_SCRATCH: ${{ runner.temp }}/zamerovac-cloud-final
+          ZAMEROVAC_CLOUD_INVENTORY_SHA256: ${{ steps.provision.outputs.inventory_sha256 }}
           ZAMEROVAC_EXPECTED_PRODUCT_SHA: ${{ inputs.product_sha }}
           ZAMEROVAC_CLOUD_REVIEWED_V_SHA: ${{ inputs.validator_sha }}
           ZAMEROVAC_CLOUD_EVENT_SHA: ${{ github.sha }}
