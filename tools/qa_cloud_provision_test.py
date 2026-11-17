@@ -186,5 +186,47 @@ class ArchiveBinding(unittest.TestCase):
             q.verify_tarball_contents(self.root, self.files)
 
 
+
+class BrowserRevision(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(prefix='qa-c-browser-registry-')
+        self.addCleanup(self.tmp.cleanup)
+        self.stage = Path(self.tmp.name) / 'stage'
+        self.stage.mkdir(mode=0o700)
+        self.core = self.stage / 'deps/node_modules/playwright-core'
+        self.core.mkdir(parents=True)
+        self.browsers = self.stage / 'browsers'
+        self.browsers.mkdir()
+        (self.core / 'browsers.json').write_text(json.dumps({
+            'browsers':[{'name':'chromium','revision':'1234'},
+                        {'name':'ffmpeg','revision':'1011'}]}))
+        self.chrome = self.browsers / 'chromium-1234/chrome-linux64/chrome'
+        self.chrome.parent.mkdir(parents=True)
+        self.chrome.write_bytes(b'\\x7fELF' + b'not runnable - synthetic')
+        self.ffmpeg = self.browsers / 'ffmpeg-1011'
+        self.ffmpeg.mkdir()
+
+    def test_reviewed_chromium_and_ffmpeg_companion_only(self):
+        binary, revision, ffmpeg = q.resolved_browser(self.stage, None, {}, {})
+        self.assertEqual(binary, self.chrome)
+        self.assertEqual((revision, ffmpeg), ('1234', '1011'))
+
+    def test_missing_extra_and_wrong_ffmpeg_revision_block(self):
+        self.ffmpeg.rmdir()
+        with self.assertRaises(q.Blocked):
+            q.resolved_browser(self.stage, None, {}, {})
+        self.ffmpeg.mkdir()
+        extra = self.browsers / 'unapproved-1234'
+        extra.mkdir()
+        with self.assertRaises(q.Blocked):
+            q.resolved_browser(self.stage, None, {}, {})
+        extra.rmdir()
+        data = json.loads((self.core / 'browsers.json').read_text())
+        data['browsers'][1]['revision'] = '1012'
+        (self.core / 'browsers.json').write_text(json.dumps(data))
+        with self.assertRaises(q.Blocked):
+            q.resolved_browser(self.stage, None, {}, {})
+
+
 if __name__ == '__main__':
     unittest.main()
