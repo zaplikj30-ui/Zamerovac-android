@@ -37,6 +37,31 @@ class SyncAckAcceptanceTest(unittest.TestCase):
         for cases, code in (([], 1), (self.baseline() + self.baseline(), 1), (self.baseline(), 0), (self.baseline(), 2)):
             self.assertEqual("FAIL", gate.classify(cases, code)["product_acceptance"]["status"])
 
+    def test_online_option_only_changes_gradle_dependency_resolution(self):
+        import sys
+        import tempfile
+        from unittest.mock import patch
+
+        def fake_git(*args):
+            return "a" * 40 if args[0] == "rev-parse" else ""
+
+        for online in (False, True):
+            with self.subTest(online=online), tempfile.TemporaryDirectory() as output:
+                argv = ["sync-ack-acceptance.py", "--output", output]
+                if online:
+                    argv.append("--online-dependencies")
+                with (patch.object(sys, "argv", argv),
+                      patch.object(gate, "git", side_effect=fake_git),
+                      patch.object(gate, "preserved_tests", return_value=gate.TEST_DIGESTS),
+                      patch.object(gate.subprocess, "run", side_effect=RuntimeError("captured")) as runner):
+                    with self.assertRaisesRegex(RuntimeError, "captured"):
+                        gate.run()
+                    command = runner.call_args.args[0]
+                self.assertEqual("--offline" in command, not online)
+                self.assertIn(":app:testPreviewUnitTest", command)
+                self.assertIn("--rerun", command)
+                self.assertIn("--no-daemon", command)
+
     def test_original_diagnostics_helpers_and_e2e_are_byte_preserved(self):
         self.assertEqual(gate.TEST_DIGESTS, gate.preserved_tests())
 
