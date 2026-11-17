@@ -35,7 +35,20 @@ function prepare(){
  for(const [k,v] of Object.entries(lock.packages))if(k)need(v.resolved?.startsWith('https://registry.npmjs.org/')&&/^sha512-/.test(v.integrity));
  const env={...e,npm_config_cache:path.join(root,'npm-cache'),npm_config_registry:'https://registry.npmjs.org/',PLAYWRIGHT_BROWSERS_PATH:path.join(root,'browsers')};
  process.env.PLAYWRIGHT_BROWSERS_PATH=env.PLAYWRIGHT_BROWSERS_PATH;
- function run(exe,args,timeout){const r=cp.spawnSync(exe,args,{cwd:deps,env,encoding:'utf8',timeout,maxBuffer:2*1024*1024});if(r.status!==0||r.error||r.signal){const old=JSON.parse(fs.readFileSync(path.join(root,'preparation.json')));fs.writeFileSync(path.join(root,'preparation.json'),JSON.stringify({...old,status:'FAIL',exit:r.status,signal:r.signal||null}));need(false)}}
+ function run(exe,args,timeout){
+  const r=cp.spawnSync(exe,args,{cwd:deps,env,encoding:'utf8',timeout,maxBuffer:2*1024*1024});
+  if(r.status!==0||r.error||r.signal){
+   const old=JSON.parse(fs.readFileSync(path.join(root,'preparation.json')));
+   // Retain only an allowlisted error code, never npm stdout/stderr or file paths.
+   const allowed=new Set(['EUSAGE','ENOENT','EACCES','EPERM','ENOTFOUND','EAI_AGAIN','ECONNRESET',
+    'ECONNREFUSED','ETIMEDOUT','ETARGET','EINTEGRITY','E404','ENOTCACHED','ELOCKVERIFY','EINVALIDPACKAGENAME']);
+   const match=String(r.stderr||'').match(/\bnpm\s+(?:error|ERR!)\s+code\s+([A-Z0-9_]+)\b/i);
+   const candidate=(match?.[1]||r.error?.code||'').toUpperCase();
+   const npmCode=allowed.has(candidate)?candidate:null;
+   fs.writeFileSync(path.join(root,'preparation.json'),JSON.stringify({...old,status:'FAIL',exit:r.status,signal:r.signal||null,npmCode}));
+   need(false);
+  }
+ }
  run('npm',['ci','--ignore-scripts','--no-audit','--no-fund'],180000);
  checkpoint('archives');const archives={};fs.mkdirSync(path.join(root,'archives'));
  for(const name of ['playwright','playwright-core']){
@@ -126,16 +139,19 @@ async function main(){
   // Parent reads only the child's fixed-stage result, not its private stderr/log.
   const prepStateFile=path.join(home,'preparation.json');
   const allowedPrepStages=new Set(['npm-ci','archives','module-tree','browser-install','browser-identity','profile-write','complete']);
-  let prepStage='missing',prepStatus='unknown',prepExit=null;
+  let prepStage='missing',prepStatus='unknown',prepExit=null,prepNpmCode=null;
   if(fs.existsSync(prepStateFile)){
     try{
       const state=JSON.parse(fs.readFileSync(prepStateFile,'utf8'));
       prepStage=allowedPrepStages.has(state.stage)?state.stage:'unknown';
       prepStatus=['RUNNING','FAIL','PASS'].includes(state.status)?state.status:'unknown';
       prepExit=Number.isInteger(state.exit)&&state.exit>=0&&state.exit<=255?state.exit:null;
+      const allowedNpm=new Set(['EUSAGE','ENOENT','EACCES','EPERM','ENOTFOUND','EAI_AGAIN','ECONNRESET',
+        'ECONNREFUSED','ETIMEDOUT','ETARGET','EINTEGRITY','E404','ENOTCACHED','ELOCKVERIFY','EINVALIDPACKAGENAME']);
+      prepNpmCode=allowedNpm.has(state.npmCode)?state.npmCode:null;
     }catch{prepStage='unreadable'}
   }
-  console.log('CLOUD-DIAG preparation telemetry '+JSON.stringify({stage:prepStage,status:prepStatus,exitCode:prepExit}));
+  console.log('CLOUD-DIAG preparation telemetry '+JSON.stringify({stage:prepStage,status:prepStatus,exitCode:prepExit,npmCode:prepNpmCode}));
   known=life.cleanupVerified===true;if(known&&fs.existsSync(path.join(home,'preparation.json')))fs.copyFileSync(path.join(home,'preparation.json'),path.join(evidence,'preparation.json'),fs.constants.COPYFILE_EXCL);need(life.status==='PASS'&&known);
   console.log('CLOUD-DIAG prepare and cleanup PASS');
   env.ZAMEROVAC_CLOUD_RUNTIME_FILE=path.join(home,'runtime.json');env.ZAMEROVAC_CLOUD_RUNTIME_SHA256=hash(fs.readFileSync(env.ZAMEROVAC_CLOUD_RUNTIME_FILE));
