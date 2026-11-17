@@ -178,6 +178,11 @@ jobs:
           ZAMEROVAC_CLOUD_EVENT_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
+          # QUICK must not have dirtied either checkout before provisioning.
+          test "$(git rev-parse HEAD)" = "$QA_VALIDATOR_SHA"
+          test "$(git -C ../product rev-parse HEAD)" = "$QA_PRODUCT_SHA"
+          test -z "$(git status --porcelain --untracked-files=all)"
+          test -z "$(git -C ../product status --porcelain --untracked-files=all)"
           # The provisioning INTERPRETER receives only these reviewed inputs.
           # No automatic Actions/OIDC/REST token, proxy, npmrc or Node preload.
           env -i PATH="$PATH" LANG=C.UTF-8 \
