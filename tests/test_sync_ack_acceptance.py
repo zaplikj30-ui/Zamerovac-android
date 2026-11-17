@@ -62,6 +62,36 @@ class SyncAckAcceptanceTest(unittest.TestCase):
                 self.assertIn("--rerun", command)
                 self.assertIn("--no-daemon", command)
 
+    def test_full_inventory_rejects_replaced_method_with_same_count(self):
+        import hashlib
+        import json
+        from unittest.mock import patch
+
+        # 513 distinct methods including the two unchanged raw #88 FAIL cases.
+        cases = self.baseline() + [
+            {"id": f"cz.zamerovac.app.SyntheticTest.method{i:03d}",
+             "status": "PASS", "message": ""}
+            for i in range(gate.EXPECTED_CASE_COUNT - len(self.baseline()))
+        ]
+        ids = sorted(case["id"] for case in cases)
+        digest = hashlib.sha256(json.dumps(ids, separators=(",", ":"), ensure_ascii=True).encode("ascii")).hexdigest()
+        with patch.object(gate, "EXPECTED_CASE_IDS_SHA256", digest):
+            self.assertEqual([], gate.inventory_problems(cases))
+            self.assertEqual("FAIL", gate.classify(cases, 1)["gradle"]["status"])
+            self.assertEqual("PASS", gate.classify(cases, 1)["product_acceptance"]["status"])
+
+            replaced = [dict(case) for case in cases]
+            missing_id = replaced[-1]["id"]
+            replaced[-1]["id"] = "cz.zamerovac.app.SyntheticTest.unexpectedReplacement"
+            self.assertEqual(gate.EXPECTED_CASE_COUNT, len(replaced))
+            self.assertNotIn(missing_id, {case["id"] for case in replaced})
+            self.assertTrue(gate.inventory_problems(replaced),
+                            "A different PASS must not replace a required method")
+            self.assertTrue(gate.inventory_problems(cases[:-1]),
+                            "Missing method without replacement must fail")
+            self.assertTrue(gate.inventory_problems(cases + [dict(cases[-1])]),
+                            "Extra/duplicate method must fail")
+
     def test_original_diagnostics_helpers_and_e2e_are_byte_preserved(self):
         self.assertEqual(gate.TEST_DIGESTS, gate.preserved_tests())
 
