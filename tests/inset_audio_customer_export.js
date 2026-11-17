@@ -1,0 +1,117 @@
+'use strict';
+// #47 customer PDF/ZIP: execute the real export renderer with synthetic canvas/media.
+// This asserts exported canvas coordinates, not final raster pixels or native PDF.
+const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
+const insetSource=fs.readFileSync('app/src/main/assets/inset-workspace.js','utf8');
+const customerSource=fs.readFileSync('app/src/main/assets/customer-export.js','utf8');
+module.exports=async function run(){
+ const cases=[
+  {name:'unchanged-photo-no-note',notes:false,expectWidth:800,expectHeight:600},
+  {name:'note-without-photo-is-not-inset',noDetail:true,expectWidth:800,expectHeight:600},
+  {name:'detail-at-right-extends-customer-page',x:700,y:200},
+  {name:'detail-below-extends-customer-page',x:400,y:570},
+  {name:'detail-at-left-extends-customer-page',x:-75,y:190},
+  {name:'stacked-rotated-rectangular-detail',x:710,y:480,count:3,rotation:34},
+  // Source review QA-114-02: a fixed 13+7px icon is NOT scaled with an 8000px photograph.
+  {name:'hires-8000x6000-right-edge',mainW:8000,mainH:6000,x:7900,y:200,text:''},
+  {name:'hires-8000x6000-left-edge',mainW:8000,mainH:6000,x:-145,y:220,text:''},
+  {name:'hires-12000x9000-top-edge',mainW:12000,mainH:9000,x:370,y:-135,text:''},
+  {name:'hires-8000x6000-rotated-stack',mainW:8000,mainH:6000,x:7710,y:5570,count:3,rotation:32},
+  {name:'notes-disabled-really-hides-existing-inset',notes:false,expectWidth:800,expectHeight:600},
+  {name:'nonfinite-bounds-rejected',boundsFault:true,reject:/bezpečné meze/},
+  {name:'unsettled-bounds-rejected',unsettled:true,reject:/bezpečně umístit/},
+  {name:'extreme-inset-is-clamped-without-mutating-data',width:1e12},
+ ];
+ for(const t of cases){
+  const mainW=t.mainW||800,mainH=t.mainH||600;
+  const created=[],imageSize={main:[mainW,mainH],detail:[200,75]};
+  class FakeImage{
+   constructor(){this.naturalWidth=0;this.naturalHeight=0;this.complete=false}
+   set src(url){
+    const id=String(url).split(':').pop();
+    [this.naturalWidth,this.naturalHeight]=imageSize[id==='main'?'main':'detail'];
+    this.complete=true;this.onload?.();
+   }
+  }
+  function canvas(){
+   const result={width:1,height:1,ctx:null,toDataURL(){return 'data:image/png;base64,ZmFrZQ=='}};
+   result.ctx={canvas:result,markers:[],captions:[],draws:[],
+    save(){},restore(){},translate(){},rotate(){},beginPath(){},moveTo(){},
+    lineTo(){},closePath(){},fill(){},stroke(){},arc(){},setLineDash(){},
+    strokeRect(){},fillRect(x,y,w,h){if(this.fillStyle==='rgba(23,24,27,.8)')this.captions.push({x,y,w,h})},
+    drawImage(image,...args){this.draws.push({image,args})},
+    fillText(value,x,y){if(value==='🎙')this.markers.push({x,y})},
+    measureText(value){return {width:String(value).length*9}}
+   };
+   result.getContext=()=>result.ctx;created.push(result);return result;
+  }
+  const note={id:'n',type:'note',a:{x:30,y:30},text:t.text??'Detail s hlasem',
+   media:t.noDetail?[]:Array.from({length:t.count||1},(_,i)=>'detail-'+(i+1)),
+   audioMedia:['voice-unchanged'],insetX:t.x??100,insetY:t.y??130,
+   insetWidth:t.width??130,insetRotation:t.rotation||0};
+  const record={id:'p',kind:'photo',media:['main'],items:[note]};
+  const before=JSON.stringify(record);
+  const window={__detailPhotoCache:{},isRecordLocked:()=>false};
+  const s={
+   window,Image:FakeImage,document:{createElement:type=>{assert.equal(type,'canvas');return canvas()}},
+   URL:{revokeObjectURL(){}},setTimeout:()=>1,clearTimeout(){},
+   assetUrl:async id=>'fixture:'+id,native:true,Native:{getMediaMime:()=> 'image/png'},
+   state:{records:[record]},prefs:{fontSize:17,layerVisible:{dimensions:true,drawing:true,notes:true}},
+   photoSize:{w:mainW,h:mainH},view:{zoom:1,dx:0,dy:0},
+   stageCanvas:{clientWidth:420,clientHeight:700,addEventListener(){}},
+   current:record,screen:'editor',mode:'select',selected:null,
+   fitImage(){},exportPng(){},paint(){},notify(){},
+   worldToScreen:p=>({...p}),
+   annotationProjectPoint:(p,v)=>({x:p.x*v.zoom+v.dx,y:p.y*v.zoom+v.dy}),
+   annotationRenderContext:(c,opts)=>opts,
+   drawItem(c,item,render){
+    const image=window.__detailPhotoCache?.[item.media?.[0]];
+    if(image?.complete&&image.naturalWidth)window.renderPhotoInset(c,item,image,()=>{},render);
+   },
+   folderContains:()=>false,recordActions(){},showEditorOverflow(){},closeMenus(){},
+   finishPendingPath(){},recById(){return record},modal(){},escapeHtml:x=>x,
+   $(){return {}}
+  };
+  vm.createContext(s);
+  vm.runInContext(insetSource,s,{filename:'inset-workspace.js'});
+  vm.runInContext(customerSource,s,{filename:'customer-export.js'});
+  if(t.boundsFault)window.insetAnnotationBounds=()=>({minX:NaN,minY:0,maxX:800,maxY:600});
+  if(t.unsettled){let n=0;window.insetAnnotationBounds=()=>({minX:0,minY:0,maxX:800+(++n)*1000,maxY:600})}
+  const options={notes:t.notes!==false,dimensions:true,drawing:true};
+  if(t.reject){
+   await assert.rejects(window.__customerExport.render(record,options),t.reject,t.name);
+   assert.equal(JSON.stringify(record),before,t.name+': rejected export mutated source');
+   continue;
+  }
+  await window.__customerExport.render(record,options);
+  const page=created.find(c=>c.ctx.draws.some(d=>d.image.naturalWidth===mainW&&d.image.naturalHeight===mainH));
+  assert(page,t.name+': customer page not rendered');
+  assert.equal(JSON.stringify(record),before,t.name+': project record mutated');
+  if(mainW>2400||mainH>2400)assert(Math.max(page.width,page.height)<=2400,
+   t.name+': 2400px export cap must remain enforced');
+  if(t.expectWidth)assert.equal(page.width,t.expectWidth,t.name+': unexpected width');
+  if(t.expectHeight)assert.equal(page.height,t.expectHeight,t.name+': unexpected height');
+  if(!t.expectWidth){
+   if(mainW<=2400&&mainH<=2400)assert(page.width>mainW||page.height>mainH,
+    t.name+': out-of-image inset still cropped');
+   assert.equal(page.ctx.markers.length,1,t.name+': voice marker missing');
+   const marker=page.ctx.markers[0];
+   assert(marker.x>=13&&marker.y>=13&&marker.x+13<page.width&&marker.y+13<page.height,
+    t.name+': customer PDF/ZIP canvas clips the marker');
+   for(const box of page.ctx.captions)
+    assert(box.x>=0&&box.y>=0&&box.x+box.w<=page.width&&box.y+box.h<=page.height,
+     t.name+': customer export clips the caption');
+  }
+  if(t.notes===false)assert.equal(page.ctx.markers.length,0,
+   'Unselected private notes must not render voice markers');
+  // Actual PDF page-generation path shares the same renderCanvas.
+  if(t.name==='detail-at-right-extends-customer-page'){
+   const pages=window.__customerExport.pages(record,options);
+   const first=await pages.next();
+   assert.equal(first.done,false,'customer PDF appendix did not yield a page');
+   assert.equal(typeof first.value,'string','customer PDF page must be encoded');
+  }
+ }
+ console.log('PASS: #47 '+cases.length+' customer PDF/ZIP synthetic render and bounds scenarios');
+};
+if(require.main===module)module.exports().catch(e=>{console.error(e);process.exitCode=1});

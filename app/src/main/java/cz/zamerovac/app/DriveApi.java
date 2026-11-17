@@ -14,12 +14,12 @@ final class DriveApi {
     final DriveHttp http;
     DriveApi(DriveHttp http){this.http=http;}
     static String encoded(String value){try{return URLEncoder.encode(value,"UTF-8");}catch(UnsupportedEncodingException impossible){throw new AssertionError(impossible);}}
-    private static Map<String,String> headers(String... fields){Map<String,String> result=new HashMap<>();for(int i=0;i<fields.length;i+=2)result.put(fields[i],fields[i+1]);return result;}
+    static Map<String,String> headers(String... fields){Map<String,String> result=new HashMap<>();for(int i=0;i<fields.length;i+=2)result.put(fields[i],fields[i+1]);return result;}
     static void path(String path)throws IOException{if(path!=null&&path.startsWith("sync/"))SyncStore.parts(path);else BackupStore.parts(path);}
-    private static ObjectFile object(JSONObject object)throws Exception{
-        String id=object.getString("id"),path=object.getString("name"),size=object.getString("size");path(path);if(!id.matches("[A-Za-z0-9_-]{1,200}")||!size.matches("0|[1-9][0-9]{0,10}")||Long.parseLong(size)>PeerSnapshot.MAX_MEDIA||!"application/octet-stream".equals(object.getString("mimeType")))throw new IOException("Disk vrátil neplatný datový blok");return new ObjectFile(id,path,Long.parseLong(size));
+    static ObjectFile object(JSONObject object)throws Exception{
+        String id=object.getString("id"),path=object.getString("name"),size=object.getString("size");path(path);if(!id.matches("[A-Za-z0-9_-]{1,200}")||!size.matches("0|[1-9][0-9]{0,15}")||Long.parseLong(size)>PeerSnapshot.MAX_MEDIA||!"application/octet-stream".equals(object.getString("mimeType")))throw new IOException("Disk vrátil neplatný datový blok");return new ObjectFile(id,path,Long.parseLong(size));
     }
-    private static JSONObject json(DriveHttp.Response response)throws Exception{return JsonInput.object(CloudFiles.read(response.body,JSON_LIMIT));}
+    static JSONObject json(DriveHttp.Response response)throws Exception{return JsonInput.object(CloudFiles.read(response.body,JSON_LIMIT));}
     List<ObjectFile> list(String directory)throws Exception{path(directory);return query("name contains '"+directory+"/'",directory+"/",false);}
     List<ObjectFile> exact(String path)throws Exception{path(path);return query("name = '"+path+"'",path,true);}
     private List<ObjectFile> query(String condition,String wanted,boolean exact)throws Exception{

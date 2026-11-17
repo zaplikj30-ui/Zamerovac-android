@@ -88,24 +88,36 @@ public class Audit39SafetyTest {
             assertEquals(before,LocalDatabase.read(context.getFilesDir()));assertEquals(0,prefs.getAll().size());
         }finally{release.countDown();}
     }
-    @Test public void exportRejectsTotalOverTwoGiBBeforeWritingAndBudgetIncludesMetadata()throws Exception{
-        File media=new File(context.getFilesDir(),"media");media.mkdirs();try(RandomAccessFile file=new RandomAccessFile(new File(media,"sparse-media"),"rw")){file.setLength(ArchiveLimits.MAX_BYTES);}
+    @Test public void exportStreamsThreeGiBAndBudgetIncludesMetadata()throws Exception{
+         // Production initializes the DB before media recording/import.
+         LocalDatabase.write(context.getFilesDir(),"{\"schema\":1,\"records\":[]}");
+        File media=new File(context.getFilesDir(),"media");media.mkdirs();try(RandomAccessFile file=new RandomAccessFile(new File(media,"sparse-media"),"rw")){file.setLength(3L*1024*1024*1024);}
         LocalDatabase.write(context.getFilesDir(),db(new JSONObject().put("id","large").put("media",new JSONArray().put("sparse-media"))).toString());
         ByteArrayOutputStream out=new ByteArrayOutputStream();java.lang.reflect.Method export=MainActivity.class.getDeclaredMethod("exportArchive",OutputStream.class,String.class);export.setAccessible(true);
-        try{export.invoke(activity,out,null);fail("Metadata plus 2 GiB exceeds importer budget");}catch(java.lang.reflect.InvocationTargetException expected){assertTrue(expected.getCause() instanceof IOException);}assertEquals(0,out.size());
+        export.invoke(activity,out,null);
+        long restored=0;java.security.MessageDigest actual=ArchiveIntegrity.digest();
+        try(java.util.zip.ZipInputStream zip=new java.util.zip.ZipInputStream(new ByteArrayInputStream(out.toByteArray()))){java.util.zip.ZipEntry entry;byte[] chunk=new byte[65536];while((entry=zip.getNextEntry())!=null){int n;while((n=zip.read(chunk))!=-1)if(entry.getName().startsWith("media/")){restored+=n;actual.update(chunk,0,n);}}}
+        assertEquals(3L*1024*1024*1024,restored);assertEquals(PeerMedia.inspect(new File(media,"sparse-media")).getString("hash"),ArchiveIntegrity.hex(actual.digest()));
+        System.out.println("THREE_GIB_ZIP_EXACT_BYTES="+restored+" HEAP_LIMIT="+Runtime.getRuntime().maxMemory());
         assertEquals(ArchiveLimits.MAX_BYTES,ArchiveLimits.add(ArchiveLimits.MAX_BYTES-1,1));try{ArchiveLimits.add(ArchiveLimits.MAX_BYTES,1);fail();}catch(IOException expected){}
         ArchiveLimits.entries(ArchiveLimits.MAX_ENTRIES);try{ArchiveLimits.entries(ArchiveLimits.MAX_ENTRIES+1);fail();}catch(IOException expected){}
         ArchiveLimits.json(ArchiveLimits.MAX_JSON);try{ArchiveLimits.json(ArchiveLimits.MAX_JSON+1L);fail();}catch(IOException expected){}
     }
     @Test public void purgeProtectsLiveAudioHistoryAndSeparateImmutableBackup()throws Exception{
+         // Production initializes the DB before media recording/import.
+         LocalDatabase.write(context.getFilesDir(),"{\"schema\":1,\"records\":[]}");
         File media=new File(context.getFilesDir(),"media");media.mkdirs();for(String id:new String[]{"shared-audio","shared-history","exclusive"})Files.write(new File(media,id).toPath(),new byte[]{7});
         File immutable=new File(context.getFilesDir(),"Zamerovac-zalohy/backups/v2/blobs/exclusive");immutable.getParentFile().mkdirs();Files.write(immutable.toPath(),new byte[]{9});
         JSONObject deleted=new JSONObject().put("id","deleted").put("deleted",true).put("audioMedia",new JSONArray().put("shared-audio").put("exclusive")).put("versionHistory",new JSONArray().put(new JSONObject().put("items","[{\"media\":[\"shared-history\"]}]")));
         JSONObject live=new JSONObject().put("id","live").put("audioMedia",new JSONArray().put("shared-audio")).put("versionHistory",new JSONArray().put(new JSONObject().put("items","[{\"audioMedia\":[\"shared-history\"]}]")));
         String before=db(deleted,live).toString();LocalDatabase.write(context.getFilesDir(),before);new TrashPurger(context,prefs).purge(before,before,new JSONArray().put("deleted"),text->LocalDatabase.write(context.getFilesDir(),text));
-        assertFalse(new File(media,"exclusive").exists());assertTrue(new File(media,"shared-audio").isFile());assertTrue(new File(media,"shared-history").isFile());assertArrayEquals(new byte[]{9},Files.readAllBytes(immutable.toPath()));
+        assertArrayEquals("P1 hold must retain even exclusive original bytes",new byte[]{7},Files.readAllBytes(new File(media,"exclusive").toPath()));
+        assertTrue(new ProtectedRevisions(context,prefs).pins().containsAll(Set.of("exclusive","shared-audio","shared-history")));
+        assertTrue(new File(media,"shared-audio").isFile());assertTrue(new File(media,"shared-history").isFile());assertArrayEquals(new byte[]{9},Files.readAllBytes(immutable.toPath()));
     }
     @Test public void maximumEntryArchiveRoundTripsWithAllThreeMetadataEntries()throws Exception{
+         // Production initializes the DB before media recording/import.
+         LocalDatabase.write(context.getFilesDir(),"{\"schema\":1,\"records\":[]}");
         File media=new File(context.getFilesDir(),"media");media.mkdirs();JSONArray ids=new JSONArray();
         for(int i=0;i<ArchiveLimits.MAX_ENTRIES-3;i++){String id="boundary-media-"+i;ids.put(id);Files.write(new File(media,id).toPath(),new byte[]{42});}
         LocalDatabase.write(context.getFilesDir(),db(new JSONObject().put("id","boundary").put("media",ids).put("measure","1585,800001000000000123")).toString());
@@ -119,8 +131,8 @@ public class Audit39SafetyTest {
     @Test public void streamingBudgetRejectsGrowthAndOversizedJsonWithoutWritingExcessByte()throws Exception{
         final long[] written={0};OutputStream sink=new OutputStream(){public void write(int b){written[0]++;}public void write(byte[] b,int off,int length){written[0]+=length;}};
         ArchiveLimits.Budget budget=new ArchiveLimits.Budget();byte[] block=new byte[1024*1024];OutputStream data=budget.output(sink,false);
-        for(int i=0;i<2048;i++)data.write(block);assertEquals(ArchiveLimits.MAX_BYTES,written[0]);
-        try{budget.output(sink,true).write(1);fail("Metadata byte beyond 2 GiB accepted");}catch(IOException expected){}assertEquals(ArchiveLimits.MAX_BYTES,written[0]);
+        org.robolectric.util.ReflectionHelpers.setField(budget,"total",ArchiveLimits.MAX_BYTES-block.length);data.write(block);assertEquals(block.length,written[0]);
+        try{budget.output(sink,true).write(1);fail("Metadata byte beyond the exact-format budget accepted");}catch(IOException expected){}assertEquals(block.length,written[0]);
         written[0]=0;OutputStream json=new ArchiveLimits.Budget().output(sink,true);for(int i=0;i<20;i++)json.write(block);
         try{json.write(1);fail("Oversized metadata accepted");}catch(IOException expected){}assertEquals(ArchiveLimits.MAX_JSON,written[0]);
     }

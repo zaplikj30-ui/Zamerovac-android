@@ -51,7 +51,11 @@ class BigUpdateSmokeTest(unittest.TestCase):
         self.assertIn('PeerSnapshot.references(record)', main)
         self.assertIn('rewriteAll(rec,mediaIds,0)', restore)
         self.assertIn('BackupImporter.restoreZip(this,origin,settings)', main)
-        self.assertIn('LocalDatabase.write(ctx.getFilesDir(),result.data.toString())', restore)
+        # The Context overload carries both files/ and no_backup recovery evidence.
+        # Requiring the obsolete File-only overload would weaken B16 protection.
+        self.assertIn('LocalDatabase.readForCas(ctx)', restore)
+        self.assertIn('LocalDatabase.write(ctx,result.data.toString())', restore)
+        self.assertNotIn('LocalDatabase.write(ctx.getFilesDir(),result.data.toString())', restore)
 
     def test_photo_notes_contain_editable_detail(self):
         editor = (ASSETS / 'editor.js').read_text(encoding='utf-8')

@@ -15,7 +15,7 @@ final class CloudFiles {
  }
  static String put(SyncStore store,String hash,long size,Source source)throws Exception{try{return find(store,hash,size);}catch(FileNotFoundException missing){}
   // An interrupted upload is an orphan. Retry under a fresh immutable name; never truncate an existing block.
-  String path=blob(hash)+"-"+java.util.UUID.randomUUID();
+  String path=store.uploadPath(blob(hash)+"-"+java.util.UUID.randomUUID(),hash,size);SyncStore.parts(path);
   try(InputStream in=source.open();OutputStream out=store.create(path)){JSONObject actual=copy(in,out,size);out.flush();if(actual.getLong("size")!=size||!hash.equals(actual.getString("sha256")))throw new IOException("Přenášený originál se změnil");ImmutableStore.complete(out);}verify(store,path,hash,size);return path;
  }
  static String publish(SyncStore store,String directory,String hash,JSONObject envelope)throws Exception{byte[] bytes=CloudProof.bytes(envelope);String path=directory+"/"+hash+"-"+java.util.UUID.randomUUID()+".json";try(OutputStream out=store.create(path)){out.write(bytes);out.flush();ImmutableStore.complete(out);}verify(store,path,PeerWire.hash(bytes),bytes.length);return path;}

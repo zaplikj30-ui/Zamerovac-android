@@ -1,0 +1,784 @@
+package cz.zamerovac.app;
+
+import android.content.Context;
+import org.json.*;
+import java.io.*;
+import java.nio.channels.FileChannel;
+import java.nio.ByteBuffer;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.*;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.security.MessageDigest;
+import java.util.*;
+
+/**
+ * B16 stage 2: isolated, byte-exact preservation of AVAILABLE recovery evidence.
+ * This is NOT an import, a recovery promotion, or permission to acknowledge sync.
+ * The "COMPLETE" marker only certifies the archived bytes; sourceComplete may
+ * still be false (missing photos, invalid DB, missing recovery evidence).
+ */
+final class RecoveryProtectionArchive {
+    private static final String ROOT="recovery-protection-v1";
+    private static final String FORMAT="cz.zamerovac.recovery.protection";
+    private static final long MAX_META=LocalDatabase.MAX_BYTES;
+    private static final long MAX_MEDIA=PeerSnapshot.MAX_MEDIA;
+    private static final long RESERVE=8L*1024*1024;
+    private static final int MAX_FILES=20000;
+    private static final String MARKER="zamerovac-install-state-v1.marker";
+
+    interface Space {long available(File directory)throws IOException;}
+    interface Checkpoint {void check()throws IOException;}
+    private RecoveryProtectionArchive(){}
+
+    static JSONObject create(Context context)throws Exception {
+        return create(context.getFilesDir(),context.getNoBackupFilesDir());
+    }
+    static JSONObject create(File home,File noBackup)throws Exception {
+        return create(home,noBackup,File::getUsableSpace,()->{});
+    }
+    /** Test seams inject a full disk or interruption without touching source bytes. */
+    static JSONObject create(File home,File noBackup,Space space,Checkpoint checkpoint)throws Exception {
+        if(home==null||noBackup==null||space==null||checkpoint==null)
+            throw new IOException("Chybí zdroj ochranné kopie");
+        synchronized(TrashPurger.LOCK){
+            safeDirectory(home,true);safeDirectory(noBackup,true);
+            checkpoint.check();
+            JSONObject manifest=manifest(home,noBackup);
+            byte[] encoded=canonical(manifest);
+            if(encoded.length>MAX_META)throw new IOException("Manifest je příliš velký");
+            String id=PeerWire.hash(encoded);
+            File root=new File(noBackup,ROOT),finalDir=new File(root,"snapshot-"+id);
+            // Verify an existing copy BEFORE consuming any new disk space.
+            if(exists(finalDir)){
+                JSONObject checked=verifyInternal(finalDir,id,false);
+                // Interrupted after atomic publication but before COMPLETE:
+                // Never publish the marker if the LIVE evidence changed since
+                // the first manifest, even when archived bytes remain valid.
+                if(!checked.getBoolean("complete")){
+                    if(!checked.getBoolean("payloadVerified"))
+                        throw new IOException("Dřívější ochranná kopie je neúplná; nepřepisovat");
+                    checkpoint.check();
+                    requireUnchangedSources(home,noBackup,encoded);
+                    finish(finalDir,id);
+                    checked=verifyInternal(finalDir,id,true);
+                }
+                // The archive verifier checks archived bytes only. A peer/queue
+                // writer or media import may alter originals outside TrashPurger.LOCK.
+                // Re-enumerate and hash sources before reporting a current reuse.
+                checkpoint.check();
+                requireUnchangedSources(home,noBackup,encoded);
+                return checked.put("reused",true);
+            }
+            long required=RESERVE+3L*encoded.length;
+            JSONArray files=manifest.getJSONArray("files");
+            if(files.length()>MAX_FILES)throw new IOException("Příliš mnoho podkladů obnovy");
+            for(int i=0;i<files.length();i++)
+                required=Math.addExact(required,files.getJSONObject(i).getLong("size"));
+            long free=space.available(noBackup);
+            if(free<0||free<required)
+                throw new IOException("Nedostatek místa pro ochrannou kopii");
+            safeDirectory(root,false);
+            if(!root.exists()){
+                Files.createDirectory(root.toPath());syncDirectory(noBackup);
+            }
+            safeDirectory(root,true);
+            checkpoint.check();
+            File stage=Files.createTempDirectory(root.toPath(),".staging-").toFile();
+            // Orphaned staging directories are intentionally NEVER accepted as
+            // completed archives. Do not delete possible evidence after failure.
+            File payload=new File(stage,"payload");
+            Files.createDirectory(payload.toPath());
+            for(int i=0;i<files.length();i++){
+                JSONObject entry=files.getJSONObject(i);
+                String path=entry.getString("path");
+                File destination=new File(payload,path);
+                File parent=destination.getParentFile();
+                createDirectoriesChecked(stage,parent);
+                if(path.equals("no_backup/sync-ledger-v1.export.json")||SyncLedger.exportPath(path)){
+                    byte[] projection;if(path.equals("no_backup/sync-ledger-v1.export.json"))projection=ledgerProjection(noBackup);else try(SyncLedger ledger=SyncLedger.open(noBackup)){projection=ledger.exportFile(path);}
+                    if(projection.length!=entry.getLong("size")||!PeerWire.hash(projection).equals(entry.getString("sha256")))throw new IOException("Evidence přenosů se během archivace změnila");writeSynced(destination,projection);
+                }else copyExact(stage,source(home,noBackup,path),destination,entry,checkpoint);
+            }
+            byte[] after=canonical(manifest(home,noBackup));
+            if(!Arrays.equals(encoded,after))
+                throw new IOException("Původní zdroje se během archivace změnily");
+            File metadata=new File(stage,"manifest.json");
+            writeSynced(metadata,encoded);
+            syncTreeDirectories(stage);
+            if(!payloadVerified(stage,id))
+                throw new IOException("Ochrannou kopii nelze ověřit");
+            DirectoryChain stageChain=new DirectoryChain(noBackup,stage);
+            checkpoint.check();
+            stageChain.check();
+            if(exists(finalDir)) // must not replace even an incomplete prior copy
+                throw new IOException("Cílová kopie již existuje, nic nebylo přepsáno");
+            try{
+                Files.move(stage.toPath(),finalDir.toPath(),StandardCopyOption.ATOMIC_MOVE);
+            }catch(AtomicMoveNotSupportedException unsupported){
+                throw new IOException("Souborový systém nepodporuje atomické potvrzení ochranné kopie",unsupported);
+            }
+            syncDirectory(root);
+            checkpoint.check();
+            finish(finalDir,id);
+            return verifyInternal(finalDir,id,true).put("reused",false);
+        }
+    }
+
+    /** Reopen after process death; invalid/incomplete archives fail CLOSED. */
+    static JSONObject verify(File noBackup,String id)throws Exception{
+        if(noBackup==null||id==null||!id.matches("[a-f0-9]{64}"))
+            throw new IOException("Neplatná identita kopie");
+        safeDirectory(noBackup,true);
+        File root=new File(noBackup,ROOT);safeDirectory(root,true);
+        File archive=new File(root,"snapshot-"+id);
+        JSONObject result=verifyInternal(archive,id,true);
+        if(!result.getBoolean("complete"))
+            throw new IOException("Kopie nemá potvrzenou úplnost");
+        return result;
+    }
+
+    /** Strict source fingerprint; hash media too, never trust mtime/size alone. */
+    private static void requireUnchangedSources(File home,File noBackup,byte[] expected)throws Exception{
+        if(!Arrays.equals(expected,canonical(manifest(home,noBackup))))
+            throw new IOException("Původní podklady se během opakovaného použití změnily");
+    }
+
+    private static JSONObject manifest(File home,File noBackup)throws Exception{
+        JSONObject inventory=RecoveryInventory.inspect(home,noBackup);
+        TreeMap<String,JSONObject> sources=new TreeMap<>();
+        JSONArray missing=new JSONArray();
+        boolean sourceComplete=true;
+        for(String section:new String[]{"candidates","evidence","media"}){
+            JSONArray entries=inventory.getJSONArray(section);
+            for(int i=0;i<entries.length();i++){
+                JSONObject entry=entries.getJSONObject(i);
+                String path=entry.getString("path"),status=entry.getString("state");
+                validatePath(path);
+                if("MISSING".equals(status)){
+                    if("files/projects.json".equals(path))sourceComplete=false;
+                    continue; // optional backup/journal/metadata files may be absent
+                }
+                if("MISSING_OR_UNSAFE".equals(status)){
+                    missing.put(new JSONObject().put("path",path).put("reason",status));
+                    sourceComplete=false;
+                    continue;
+                }
+                if("UNSAFE".equals(status)||"UNSAFE_NAME".equals(status)||
+                    "UNREADABLE".equals(status)||"TOO_LARGE".equals(status)||
+                    "CHANGED".equals(status))
+                    throw new IOException("Nebezpečný nebo nedostupný podklad: "+path);
+                if(!entry.has("sha256")||!entry.has("size"))
+                    throw new IOException("Podklad bez úplné kontroly: "+path);
+                if("PRESENT".equals(status)&&"evidence".equals(section)&&entry.optBoolean("unconfirmed"))
+                    status="UNCONFIRMED";
+                if(!"VALID".equals(status)&&!"PRESENT".equals(status))
+                    sourceComplete=false; // Preserve incomplete or unconfirmed evidence without promoting it.
+                putSource(sources,path,entry.getLong("size"),entry.getString("sha256"),status);
+            }
+        }
+        // P1 immutable exact revisions are a separate source of truth from today's DB.
+        // Omitting their catalogs could falsely certify an old snapshot as complete.
+        JSONObject protectedState=protectedEvidence(home,noBackup,sources);
+        if(!protectedState.getBoolean("sourceComplete"))sourceComplete=false;
+        JSONArray absentProtected=protectedState.getJSONArray("missingMedia");
+        for(int i=0;i<absentProtected.length();i++)missing.put(new JSONObject()
+            .put("path",absentProtected.getString(i)).put("reason","MISSING_PROTECTED_ORIGINAL"));
+        // Preserve pending immutable peer snapshots and namespace-specific
+        // cloud receipts; never include this archive's own root recursively.
+        File outbox=new File(noBackup,"sync-v2-outbox");
+        if(safeDirectory(outbox,false)){
+            File[] items=outbox.listFiles();
+            if(items==null||items.length>MAX_FILES)throw new IOException("Nepřístupné původní přenosy");
+            for(File item:items){
+                if(!item.getName().matches("[a-f0-9]{64}\\.json(\\.bak|\\.new)?"))
+                    throw new IOException("Neznámý soubor v důkazech synchronizace");
+                String path="no_backup/sync-v2-outbox/"+item.getName();
+                JSONObject evidence=inspectExtra(item,path);
+                putSource(sources,path,evidence.getLong("size"),evidence.getString("sha256"),"PRESENT");
+            }
+        }
+        File[] top=noBackup.listFiles();
+        if(top==null)throw new IOException("Nedostupné synchronizační doklady");
+        for(File item:top){
+            if(!item.getName().matches("sync-(inbox|scan|publications)-v2-[a-f0-9-]{36}-[a-f0-9]{64}\\.json(\\.bak|\\.new)?"))
+                continue;
+            String path="no_backup/"+item.getName();
+            JSONObject evidence=inspectExtra(item,path);
+            putSource(sources,path,evidence.getLong("size"),evidence.getString("sha256"),"PRESENT");
+        }
+        if(exists(new File(noBackup,"sync-ledger-v1.install"))||exists(new File(noBackup,"sync-ledger-v1.sqlite"))){
+            byte[] projection=ledgerProjection(noBackup);if(projection.length>MAX_META)throw new IOException("Přenosná evidence přenosů je příliš velká");
+            putSource(sources,"no_backup/sync-ledger-v1.export.json",projection.length,PeerWire.hash(projection),"PRESENT");
+            JSONArray exported=new JSONObject(JsonInput.decode(projection)).getJSONArray("files");for(int i=0;i<exported.length();i++){JSONObject entry=exported.getJSONObject(i);String path=entry.getString("path");if(!SyncLedger.exportPath(path)||entry.getLong("size")>MAX_META)throw new IOException("Neplatný přenositelný podklad");putSource(sources,path,entry.getLong("size"),entry.getString("hash"),"PRESENT");}
+        }
+        File audioJournal=new File(home,"pending-audio-v1");
+        if(safeDirectory(audioJournal,false)){
+            File[] audioFiles=audioJournal.listFiles();if(audioFiles==null)throw new IOException("Hlasové doklady nelze archivovat");
+            for(File file:audioFiles){if(!file.getName().matches("[a-f0-9-]{36}\\.json(\\.bak|\\.new)?"))throw new IOException("Neznámá hlasová evidence");String path="files/pending-audio-v1/"+file.getName();JSONObject info=inspectExtra(file,path);boolean pending=file.getName().endsWith(".bak")||file.getName().endsWith(".new");if(pending)sourceComplete=false;putSource(sources,path,info.getLong("size"),info.getString("sha256"),pending?"UNCONFIRMED":"PRESENT");}
+        }
+        File[] audioSources=new File(home,"media").listFiles();
+        if(audioSources!=null)for(File file:audioSources)if(file.getName().matches("\\.audio-[a-zA-Z0-9_-]{3,120}--[a-f0-9-]{36}\\.tmp")){
+            String path="files/media/"+file.getName();JSONObject info=inspectExtra(file,path);putSource(sources,path,info.getLong("size"),info.getString("sha256"),"UNCONFIRMED");sourceComplete=false;
+        }
+        // MainActivity persists original media MIME/name settings in
+        // shared_prefs/zamerovac.xml, outside files/ and no_backup/.
+        // Preserve it byte-for-byte when present; never reconstruct it.
+        File parent=home.getParentFile();
+        if(parent!=null&&parent.equals(noBackup.getParentFile())){
+            safeDirectory(parent,true);
+            File prefsDir=new File(parent,"shared_prefs");
+            if(safeDirectory(prefsDir,false)){
+                File prefsFile=new File(prefsDir,"zamerovac.xml");
+                if(exists(prefsFile)){
+                    String path="shared_prefs/zamerovac.xml";
+                    JSONObject evidence=inspectExtra(prefsFile,path);
+                    putSource(sources,path,evidence.getLong("size"),
+                        evidence.getString("sha256"),"PRESENT");
+                }
+            }
+        }
+        if(sources.isEmpty())throw new IOException("Nejsou dostupné žádné původní soubory");
+        if(sources.size()>MAX_FILES)throw new IOException("Příliš mnoho souborů ochranné kopie");
+        JSONArray listed=new JSONArray();
+        for(JSONObject entry:sources.values())listed.put(entry);
+        return new JSONObject().put("format",FORMAT).put("version",1)
+            // Even inside a fully copied staging directory this manifest
+            // never claims completion: only a verified durable COMPLETE marker
+            // permits verify() to report a finished archive.
+            .put("copyComplete",false).put("canPromote",false)
+            .put("sourceComplete",sourceComplete).put("protectedEvidence",protectedState)
+            .put("files",listed)
+            .put("missing",missing)
+            .put("undoRedo","ONLY_DURABLY_STORED_HISTORY")
+            .put("externalProviderHistory","NOT_INCLUDED")
+            .put("purpose","BYTE_EXACT_PROTECTION_ONLY");
+    }
+
+    /** Read-only P1 evidence scan. Never repair catalogs or promote protected JSON. */
+    private static JSONObject protectedEvidence(File home,File noBackup,
+            TreeMap<String,JSONObject> files)throws IOException{
+        try{return scanProtectedEvidence(home,noBackup,files);}
+        catch(IOException failure){throw failure;}
+        catch(Exception failure){throw new IOException("Historickou ochranu P1 nelze ověřit",failure);}
+    }
+    private static JSONObject scanProtectedEvidence(File home,File noBackup,
+            TreeMap<String,JSONObject> files)throws Exception{
+        File directory=new File(home,"protected-revisions");
+        boolean hasDirectory=safeDirectory(directory,false);
+        File witness=new File(noBackup,"protected-revisions.json");
+        boolean hasWitness=exists(witness)||exists(new File(witness+".bak"))||
+            exists(new File(witness+".new"));
+        if(!hasDirectory&&!hasWitness)
+            // No local proof distinguishes a genuinely pre-P1 installation
+            // from deletion of BOTH catalogs and the entire P1 directory.
+            // Copy available bytes but never certify lost historical coverage.
+            return new JSONObject().put("state","UNPROVEN_ABSENCE").put("holds",0)
+                .put("files",0).put("sourceComplete",false).put("missingMedia",new JSONArray());
+        File catalog=new File(directory,"catalog.json");
+        if(!hasDirectory||!exists(catalog)||!exists(witness))
+            throw new IOException("Chybí katalog nebo nezávislý svědek ochrany P1");
+        // Every P1 file, including AtomicFile sidecars, is part of recovery evidence.
+        File[] entries=directory.listFiles();
+        if(entries==null||entries.length>MAX_FILES)
+            throw new IOException("Chráněné revize nelze bezpečně vypsat");
+        Set<String> manifestIds=new TreeSet<>();
+        boolean complete=true;
+        int count=0;
+        for(File file:entries){
+            String name=file.getName();
+            if(!name.matches("([a-f0-9]{64}|catalog)\\.json(\\.bak|\\.new)?"))
+                throw new IOException("Neznámý soubor v ochraně P1");
+            if(name.matches("[a-f0-9]{64}\\.json"))manifestIds.add(name.substring(0,64));
+            String path="files/protected-revisions/"+name;
+            JSONObject inspected=inspectExtra(file,path);
+            putSource(files,path,inspected.getLong("size"),inspected.getString("sha256"),
+                name.endsWith(".new")?"UNCONFIRMED":"PRESENT");
+            if(name.endsWith(".new")||name.endsWith(".bak"))complete=false;
+            count++;
+        }
+        for(String suffix:new String[]{"",".bak",".new"}){
+            File file=new File(noBackup,"protected-revisions.json"+suffix);
+            if(!exists(file))continue;
+            String path="no_backup/protected-revisions.json"+suffix;
+            JSONObject inspected=inspectExtra(file,path);
+            putSource(files,path,inspected.getLong("size"),inspected.getString("sha256"),
+                suffix.isEmpty()?"PRESENT":"UNCONFIRMED");
+            if(!suffix.isEmpty())complete=false;
+            count++;
+        }
+        Set<String> left=catalogIds(catalog),right=catalogIds(witness);
+        if(!left.equals(right)||!left.equals(manifestIds))
+            throw new IOException("Katalogy a historické revize P1 nejsou úplné");
+        Map<String,JSONObject> mediaPins=new TreeMap<>();
+        for(String id:left){
+            File file=new File(directory,id+".json");
+            byte[] raw=readChecked(file,3L*MAX_META);
+            if(!id.equals(PeerWire.hash(raw)))
+                throw new IOException("Historická revize P1 má nesprávný hash");
+            JSONObject hold=JsonInput.object(raw);
+            if(!"cz.zamerovac.protected.revision".equals(hold.getString("format"))||
+               hold.getInt("version")!=1)
+                throw new IOException("Neznámý formát ochrany P1");
+            String exact=hold.getString("metadata");
+            if(!hold.getString("sourceHash").equals(
+                PeerWire.hash(exact.getBytes(StandardCharsets.UTF_8))))
+                throw new IOException("Poškozená přesná historie P1");
+            JSONObject database=new JSONObject(exact);
+            String kind=hold.getString("kind");
+            if("snapshot".equals(kind))database=database.getJSONObject("data");
+            else if(!"database".equals(kind))
+                throw new IOException("Neznámá historická revize P1");
+            LocalDatabase.validate(database.toString());
+            JSONArray items=hold.getJSONArray("media");
+            Set<String> names=new HashSet<>();
+            for(int i=0;i<items.length();i++){
+                JSONObject item=items.getJSONObject(i);
+                String mediaId=item.getString("id");
+                if(!PeerSnapshot.validMediaId(mediaId)||!names.add(mediaId))
+                    throw new IOException("Neplatný pin historie P1");
+                String sha=item.getString("hash");
+                long size=PeerSnapshot.integer(item,"size",MAX_MEDIA);
+                boolean missing="MISSING".equals(item.optString("state"));
+                if(missing){
+                    complete=false;
+                    if("snapshot".equals(kind))throw new IOException("Neúplný sync snapshot P1");
+                }else if(!"VERIFIED".equals(item.getString("state"))||
+                        size<=0||!sha.matches("[0-9a-f]{64}"))
+                    throw new IOException("Neověřitelný originál historie P1");
+                if(!PeerSnapshot.validMime(item.getString("mime"))||
+                   item.getString("name").length()>256)
+                    throw new IOException("Neplatná metadata originálu P1");
+                JSONObject prior=mediaPins.putIfAbsent(mediaId,item);
+                if(prior!=null&&(!prior.getString("hash").equals(sha)||
+                    prior.getLong("size")!=size))
+                    throw new IOException("Rozporné historické piny originálu");
+            }
+            Set<String> required="snapshot".equals(kind)
+                ?PeerSnapshot.references(database.getJSONArray("records"))
+                :PeerSnapshot.cleanupReferences(database.getJSONArray("records"));
+            if(!names.containsAll(required))throw new IOException("Neúplné reference P1");
+            if(!hold.optBoolean("sourceComplete",false))complete=false;
+        }
+        JSONArray missing=new JSONArray();
+        File mediaDir=new File(home,"media");
+        for(Map.Entry<String,JSONObject> pin:mediaPins.entrySet()){
+            String mediaId=pin.getKey();
+            JSONObject info=pin.getValue();
+            File source=new File(mediaDir,mediaId);
+            boolean absent=!exists(source);
+            if(absent){
+                complete=false;missing.put("files/media/"+mediaId);
+            }else if(!"MISSING".equals(info.optString("state"))&&
+                     (attributes(source).size()!=info.getLong("size")||
+                      !hashStable(source,MAX_MEDIA).equals(info.getString("hash"))))
+                throw new IOException("Originál neodpovídá historickému pinu P1");
+        }
+        return new JSONObject().put("state","VERIFIED").put("holds",left.size())
+            .put("files",count).put("sourceComplete",complete).put("missingMedia",missing);
+    }
+    private static Set<String> catalogIds(File file)throws Exception{
+        JSONObject catalog=JsonInput.object(readChecked(file));
+        if(!"cz.zamerovac.protection.catalog".equals(catalog.getString("format"))||
+            catalog.getInt("version")!=1)
+            throw new IOException("Neplatný katalog historie P1");
+        JSONArray ids=catalog.getJSONArray("holds");
+        if(ids.length()>MAX_FILES)throw new IOException("Příliš mnoho revizí P1");
+        Set<String> result=new TreeSet<>();
+        for(int i=0;i<ids.length();i++){
+            String id=ids.getString(i);
+            if(!id.matches("[0-9a-f]{64}")||!result.add(id))
+                throw new IOException("Duplicitní nebo neplatný historický pin P1");
+        }
+        return result;
+    }
+
+    private static void putSource(TreeMap<String,JSONObject> sources,String path,
+                                  long size,String hash,String status)throws Exception{
+        validatePath(path);
+        if(size<0||size>limit(path)||!hash.matches("[0-9a-f]{64}"))
+            throw new IOException("Neplatné údaje zdroje "+path);
+        if(sources.put(path,new JSONObject().put("path",path).put("size",size)
+            .put("sha256",hash).put("state",status))!=null)
+            throw new IOException("Duplicitní původní soubor: "+path);
+    }
+    private static JSONObject inspectExtra(File path,String name)throws Exception{
+        BasicFileAttributes attrs=attributes(path);
+        if(attrs==null||!attrs.isRegularFile()||attrs.isSymbolicLink()||
+           attrs.size()>limit(name))throw new IOException("Neplatný soubor synchronizace");
+        String hash=hashStable(path,limit(name));
+        return new JSONObject().put("size",attrs.size()).put("sha256",hash);
+    }
+    private static byte[] ledgerProjection(File noBackup)throws Exception{try(SyncLedger ledger=SyncLedger.open(noBackup)){return canonical(ledger.portable());}}
+
+    private static void validatePath(String path)throws IOException{
+        boolean prefs="shared_prefs/zamerovac.xml".equals(path);
+        boolean db=path.matches("files/(projects\\.json(\\.bak)?|projects\\.bak|projects\\.tmp|projects\\.backup\\.tmp)");
+        boolean journal=path.matches("files/(projects\\.recovery-v1\\.json(\\.bak|\\.new)?|trash-cleanup\\.json(\\.bak|\\.new)?|projects\\.bak(\\.bak|\\.new)|zamerovac-install-state-v1\\.marker(\\.bak|\\.new)?)");
+        boolean media=path.startsWith("files/media/")&&
+            (PeerSnapshot.validMediaId(path.substring("files/media/".length()))||path.matches("files/media/\\.audio-[a-zA-Z0-9_-]{3,120}--[a-f0-9-]{36}\\.tmp"));
+        boolean ledger=path.equals("no_backup/sync-ledger-v1.export.json")||SyncLedger.exportPath(path)||path.matches("files/pending-audio-v1/[a-f0-9-]{36}\\.json(\\.bak|\\.new)?");
+        boolean nativeEvidence=path.matches("no_backup/(zamerovac-install-state-v1\\.marker(\\.bak|\\.new)?|sync-peers-v2\\.json(\\.bak|\\.new)?|sync-queue-v2\\.json(\\.bak|\\.new)?)");
+        boolean other=path.matches("no_backup/sync-(inbox|scan|publications)-v2-[a-f0-9-]{36}-[a-f0-9]{64}\\.json(\\.bak|\\.new)?");
+        boolean queued=path.matches("no_backup/sync-v2-outbox/[a-f0-9]{64}\\.json(\\.bak|\\.new)?");
+        boolean protectedFile=path.matches("files/protected-revisions/([a-f0-9]{64}\\.json|catalog\\.json)(\\.bak|\\.new)?");
+        boolean protectedWitness=path.matches("no_backup/protected-revisions\\.json(\\.bak|\\.new)?");
+        if(!db&&!journal&&!media&&!nativeEvidence&&!other&&!queued&&!prefs&&!protectedFile&&!protectedWitness&&!ledger)
+            throw new IOException("Nepovolená cesta ochranné kopie");
+    }
+    private static long limit(String path)throws IOException{
+        validatePath(path);
+        if(path.startsWith("files/media/"))return MAX_MEDIA;
+        if(path.startsWith("files/protected-revisions/")&&!path.contains("catalog."))return 3L*MAX_META;
+        if(path.startsWith("files/projects.recovery-v1"))return 4096;
+        return MAX_META;
+    }
+    private static File source(File home,File noBackup,String path)throws IOException{
+        validatePath(path);
+        if(path.startsWith("shared_prefs/")){
+            File parent=home.getParentFile();
+            if(parent==null||!parent.equals(noBackup.getParentFile()))
+                throw new IOException("Neplatné umístění nastavení");
+            safeDirectory(new File(parent,"shared_prefs"),true);
+            return new File(parent,path);
+        }
+        return path.startsWith("files/")?
+            new File(home,path.substring(6)):new File(noBackup,path.substring(10));
+    }
+    private static BasicFileAttributes attributes(File file)throws IOException{
+        try{return Files.readAttributes(file.toPath(),BasicFileAttributes.class,LinkOption.NOFOLLOW_LINKS);}
+        catch(NoSuchFileException missing){return null;}
+    }
+    private static boolean exists(File file)throws IOException{return attributes(file)!=null;}
+    private static boolean safeDirectory(File file,boolean required)throws IOException{
+        BasicFileAttributes attrs=attributes(file);
+        if(attrs==null){if(required)throw new IOException("Adresář ochranné kopie chybí");return false;}
+        if(!attrs.isDirectory()||attrs.isSymbolicLink())
+            throw new IOException("Nebezpečný adresář ochranné kopie");
+        new DirectoryChain(file).check();
+        return true;
+    }
+
+    /**
+     * Path-based Android NIO cannot make a whole traversal atomic. Reject links
+     * in every ancestor from the checked application/archive anchor and detect observed directory replacement across I/O.
+     * A swap-and-restore entirely between checks still needs descriptor-relative
+     * openat traversal; these checks do not claim that stronger guarantee.
+     */
+    private static final class DirectoryChain {
+        final LinkedHashMap<Path,BasicFileAttributes> directories=new LinkedHashMap<>();
+        DirectoryChain(File directory)throws IOException{this(directory,directory);}
+        DirectoryChain(File anchor,File directory)throws IOException{
+            Path base=anchor.toPath().toAbsolutePath().normalize();
+            Path path=directory.toPath().toAbsolutePath().normalize();
+            if(!path.startsWith(base))throw new IOException("Cesta opustila kořen ochranné kopie");
+            Path current=base;
+            remember(current);
+            if(!base.equals(path))for(Path component:base.relativize(path)){
+                current=current.resolve(component);remember(current);
+            }
+            check();
+        }
+        private void remember(Path path)throws IOException{
+            BasicFileAttributes a=attributes(path.toFile());
+            if(a==null||!a.isDirectory()||a.isSymbolicLink()||a.fileKey()==null)
+                throw new IOException("Neověřitelný adresář ochranné kopie: "+path);
+            directories.put(path,a);
+        }
+        void check()throws IOException{
+            // Android may return mtime as creationTime when birthtime is unavailable.
+            // Adding children changes that time, not directory identity. Require the
+            // same non-null fileKey and a real directory, read with NOFOLLOW_LINKS.
+            for(Map.Entry<Path,BasicFileAttributes> entry:directories.entrySet()){
+                BasicFileAttributes a=attributes(entry.getKey().toFile()),before=entry.getValue();
+                if(a==null||!a.isDirectory()||a.isSymbolicLink()||
+                   !Objects.equals(before.fileKey(),a.fileKey()))
+                    throw new IOException("Adresář se během archivace změnil");
+            }
+        }
+    }
+    private static void createDirectoriesChecked(File anchor,File directory)throws IOException{
+        File absolute=directory.getAbsoluteFile();
+        if(!exists(absolute)){
+            File parent=absolute.getParentFile();
+            if(parent==null)throw new IOException("Chybí kořen adresáře");
+            createDirectoriesChecked(anchor,parent);
+            DirectoryChain chain=new DirectoryChain(anchor,parent);
+            Files.createDirectory(absolute.toPath());
+            chain.check();
+        }
+        new DirectoryChain(anchor,absolute).check();
+    }
+    private static DirectoryChain parents(File file)throws IOException{
+        return new DirectoryChain(file.getAbsoluteFile().getParentFile());
+    }
+    /**
+     * Both manifest reads are capped even if an already-open file grows.
+     * Observe at most MAX_META+1 bytes (the extra byte only detects overflow),
+     * then require the same regular file, size, mtime and identity.
+     */
+    private static byte[] readChecked(File file)throws IOException{
+        return readChecked(file,MAX_META);
+    }
+    private static byte[] readChecked(File file,long max)throws IOException{
+        DirectoryChain chain=parents(file);
+        BasicFileAttributes before=attributes(file);
+        if(before==null||!before.isRegularFile()||before.isSymbolicLink()||
+           before.size()<0||before.size()>max)
+            throw new IOException("Manifest překročil limit nebo není bezpečně čitelný");
+        byte[] bytes;
+        long total=0;
+        try(InputStream in=Files.newInputStream(file.toPath(),LinkOption.NOFOLLOW_LINKS);
+            ByteArrayOutputStream out=new ByteArrayOutputStream()){
+            byte[] block=new byte[8192];int n;
+            while((n=in.read(block,0,(int)Math.min(block.length,max+1L-total)))!=-1){
+                if(n==0)throw new IOException("Čtení manifestu nepostupuje");
+                total+=n;
+                if(total>max)throw new IOException("Manifest překročil limit");
+                out.write(block,0,n);
+            }
+            bytes=out.toByteArray();
+        }
+        BasicFileAttributes after=attributes(file);
+        if(after==null||!after.isRegularFile()||after.isSymbolicLink()||
+           before.size()!=total||after.size()!=total||
+           !before.lastModifiedTime().equals(after.lastModifiedTime())||
+           !Objects.equals(before.fileKey(),after.fileKey()))
+            throw new IOException("Manifest se mezi ověřeními změnil (během čtení)");
+        chain.check();return bytes;
+    }
+
+    /**
+     * COMPLETE is exactly 64 lowercase ASCII hash bytes followed by LF.
+     * Never allocate from untrusted file length: read at most 65 + one
+     * overflow byte, including when another writer grows an open file.
+     */
+    private static byte[] readCompleteMarker(File file)throws IOException{
+        DirectoryChain chain=parents(file);
+        BasicFileAttributes before=attributes(file);
+        if(before==null||!before.isRegularFile()||before.isSymbolicLink()||
+           before.size()!=65)
+            throw new IOException("Neplatná délka nebo typ potvrzení ochranné kopie");
+        byte[] stamp=new byte[65];
+        try(InputStream in=Files.newInputStream(file.toPath(),LinkOption.NOFOLLOW_LINKS)){
+            int used=0;
+            while(used<stamp.length){
+                int n=in.read(stamp,used,stamp.length-used);
+                if(n<=0)throw new IOException("Neúplné potvrzení ochranné kopie");
+                used+=n;
+            }
+            // Detect a file that gained bytes between the length check and EOF.
+            if(in.read()!=-1)
+                throw new IOException("Příliš dlouhé potvrzení ochranné kopie");
+        }
+        chain.check();
+        BasicFileAttributes after=attributes(file);
+        if(after==null||!after.isRegularFile()||after.isSymbolicLink()||
+           after.size()!=65||!Objects.equals(before.fileKey(),after.fileKey())||
+           !before.lastModifiedTime().equals(after.lastModifiedTime()))
+            throw new IOException("Potvrzení ochranné kopie se během čtení změnilo");
+        return stamp;
+    }
+
+    private static String hashStable(File file,long max)throws Exception{
+        DirectoryChain chain=parents(file);
+        BasicFileAttributes before=attributes(file);
+        if(before==null||!before.isRegularFile()||before.isSymbolicLink()||
+           before.size()>max)throw new IOException("Soubor nelze bezpečně přečíst");
+        MessageDigest sha=ArchiveIntegrity.digest();long count=0;
+        try(InputStream in=Files.newInputStream(file.toPath(),LinkOption.NOFOLLOW_LINKS)){
+            byte[] block=new byte[65536];int n;
+            while((n=in.read(block))!=-1){
+                if(Thread.currentThread().isInterrupted())throw new InterruptedIOException("Archivace přerušena");
+                if(n==0)throw new IOException("Čtení zdroje nepostupuje");
+                count+=n;if(count>max)throw new IOException("Zdroj překročil limit");
+                sha.update(block,0,n);
+            }
+        }
+        chain.check();
+        BasicFileAttributes after=attributes(file);
+        if(after==null||!after.isRegularFile()||after.isSymbolicLink()||
+           count!=before.size()||after.size()!=before.size()||
+           !before.lastModifiedTime().equals(after.lastModifiedTime())||
+           !Objects.equals(before.fileKey(),after.fileKey()))
+            throw new IOException("Zdroj se během kontroly změnil");
+        return ArchiveIntegrity.hex(sha.digest());
+    }
+    private static void copyExact(File stage,File source,File destination,JSONObject expected,
+                                  Checkpoint checkpoint)throws Exception{
+        long size=expected.getLong("size"),max=limit(expected.getString("path"));
+        String hash=expected.getString("sha256");
+        DirectoryChain sourceChain=parents(source),
+            destinationChain=new DirectoryChain(stage,destination.getParentFile());
+        BasicFileAttributes before=attributes(source);
+        if(before==null||!before.isRegularFile()||before.isSymbolicLink()||before.size()!=size)
+            throw new IOException("Zdroj kopie zmizel nebo změnil velikost");
+        MessageDigest digest=ArchiveIntegrity.digest();long copied=0;
+        try(InputStream in=Files.newInputStream(source.toPath(),LinkOption.NOFOLLOW_LINKS);
+            FileChannel out=FileChannel.open(destination.toPath(),StandardOpenOption.WRITE,
+                StandardOpenOption.CREATE_NEW,LinkOption.NOFOLLOW_LINKS)){
+            byte[] block=new byte[65536];int n;
+            while((n=in.read(block))!=-1){
+                checkpoint.check();
+                if(Thread.currentThread().isInterrupted())throw new InterruptedIOException("Kopírování přerušeno");
+                if(n==0)throw new IOException("Zdroj nepostupuje");
+                copied+=n;
+                if(copied>size||copied>max)throw new IOException("Zdroj změnil délku");
+                sourceChain.check();destinationChain.check();
+                ByteBuffer buffer=ByteBuffer.wrap(block,0,n);
+                while(buffer.hasRemaining())out.write(buffer);
+                digest.update(block,0,n);
+            }
+            checkpoint.check();sourceChain.check();destinationChain.check();out.force(true);
+        }
+        sourceChain.check();destinationChain.check();
+        BasicFileAttributes after=attributes(source);
+        if(after==null||!after.isRegularFile()||after.isSymbolicLink()||
+           copied!=size||after.size()!=size||
+           !before.lastModifiedTime().equals(after.lastModifiedTime())||
+           !Objects.equals(before.fileKey(),after.fileKey())||
+           !hash.equals(ArchiveIntegrity.hex(digest.digest()))||
+           !hash.equals(hashStable(destination,max)))
+            throw new IOException("Původní bajty se během archivace změnily");
+    }
+    private static byte[] canonical(JSONObject object)throws Exception{
+        return CausalClock.canonical(object).getBytes(StandardCharsets.UTF_8);
+    }
+    private static void writeSynced(File file,byte[] bytes)throws IOException{
+        DirectoryChain chain=parents(file);
+        try(FileChannel out=FileChannel.open(file.toPath(),StandardOpenOption.WRITE,
+                StandardOpenOption.CREATE_NEW,LinkOption.NOFOLLOW_LINKS)){
+            ByteBuffer buffer=ByteBuffer.wrap(bytes);
+            while(buffer.hasRemaining())out.write(buffer);
+            out.force(true);
+        }
+        chain.check();
+    }
+    private static void syncDirectory(File dir)throws IOException{
+        safeDirectory(dir,true);
+        try(FileChannel channel=FileChannel.open(dir.toPath(),StandardOpenOption.READ)){
+            channel.force(true);
+        }
+    }
+    private static void syncTreeDirectories(File stage)throws IOException{
+        // Durability is checked from leaves towards the staging root.
+        File payload=new File(stage,"payload");
+        for(File area:new File[]{new File(payload,"files/media"),
+                new File(payload,"files/protected-revisions"),
+                new File(payload,"files/pending-audio-v1"),
+                new File(payload,"no_backup/sync-ledger-documents"),
+                new File(payload,"no_backup/sync-ledger-revisions"),
+                new File(payload,"no_backup/sync-ledger-legacy"),
+                new File(payload,"no_backup/sync-v2-outbox"),new File(payload,"files"),
+                new File(payload,"no_backup"),new File(payload,"shared_prefs"),
+                payload,stage}){
+            if(exists(area))syncDirectory(area);
+        }
+    }
+    private static boolean payloadVerified(File archive,String id)throws Exception{
+        return payloadVerified(archive,id,new ArrayList<>());
+    }
+    private static boolean payloadVerified(File archive,String id,List<DirectoryChain> checkedPaths)throws Exception{
+        DirectoryChain archiveChain=new DirectoryChain(archive.getParentFile().getParentFile(),archive);
+        checkedPaths.add(archiveChain);
+        File manifestFile=new File(archive,"manifest.json");
+        if(!exists(manifestFile))return false;
+        BasicFileAttributes a=attributes(manifestFile);
+        if(!a.isRegularFile()||a.isSymbolicLink()||a.size()>MAX_META)return false;
+        byte[] bytes=readChecked(manifestFile);
+        if(!id.equals(PeerWire.hash(bytes)))return false;
+        JSONObject manifest=JsonInput.object(bytes);
+        if(!FORMAT.equals(manifest.optString("format"))||manifest.optInt("version")!=1||
+           manifest.optBoolean("copyComplete")||manifest.optBoolean("canPromote"))
+            return false;
+        File payload=new File(archive,"payload");
+        safeDirectory(payload,true);
+        JSONArray listed=manifest.getJSONArray("files");
+        if(listed.length()>MAX_FILES)return false;
+        Set<String> seen=new HashSet<>();
+        for(int i=0;i<listed.length();i++){
+            JSONObject entry=listed.getJSONObject(i);
+            String path=entry.getString("path");
+            validatePath(path);
+            if(!seen.add(path))return false;
+            File candidate=new File(payload,path);
+            DirectoryChain chain=new DirectoryChain(archive,candidate.getParentFile());
+            checkedPaths.add(chain);
+            long size=entry.getLong("size");
+            if(size<0||size>limit(path)||!entry.getString("sha256").equals(hashStable(candidate,limit(path))))
+                return false;
+            if(attributes(candidate).size()!=size)return false;
+        }
+        for(DirectoryChain chain:checkedPaths)chain.check();
+        archiveChain.check();
+        return true;
+    }
+    private static JSONObject verifyInternal(File dir,String id,boolean requireMarker)throws Exception{
+        DirectoryChain chain=new DirectoryChain(dir.getParentFile().getParentFile(),dir);
+        if(!exists(dir)||!safeDirectory(dir,true))
+            throw new IOException("Ochranná kopie není dostupná");
+        List<DirectoryChain> checkedPaths=new ArrayList<>();
+        boolean content=payloadVerified(dir,id,checkedPaths);
+        if(!content)throw new IOException("Obsah ochranné kopie je poškozený");
+        File manifestFile=new File(dir,"manifest.json");
+        // The metadata returned to callers must be authenticated just like the
+        // manifest used to verify payloads. A concurrent swap can replace it
+        // between the two reads; never expose unchecked sourceComplete/files/missing.
+        byte[] metadata=readChecked(manifestFile);
+        if(!id.equals(PeerWire.hash(metadata)))
+            throw new IOException("Manifest se mezi ověřeními změnil");
+        JSONObject manifest=JsonInput.object(metadata);
+        // Also check the cross-file P1 contract. Hashing listed files alone
+        // cannot detect a manifest that omitted a catalog or historical hold.
+        File payload=new File(dir,"payload");
+        TreeMap<String,JSONObject> protectedFiles=new TreeMap<>();
+        JSONObject coverage=protectedEvidence(new File(payload,"files"),
+            new File(payload,"no_backup"),protectedFiles);
+        JSONObject declared=manifest.optJSONObject("protectedEvidence");
+        boolean coverageDeclared=declared!=null;
+        if(coverageDeclared&&!Arrays.equals(canonical(coverage),canonical(declared)))
+            throw new IOException("Archiv nemá shodné doklady ochrany P1");
+        Set<String> included=new HashSet<>();
+        JSONArray listed=manifest.getJSONArray("files");
+        for(int i=0;i<listed.length();i++){
+            JSONObject item=listed.getJSONObject(i);
+            String path=item.getString("path");
+            if(protectedFiles.containsKey(path)){
+                JSONObject actual=protectedFiles.get(path);
+                if(!actual.getString("sha256").equals(item.getString("sha256"))||
+                   actual.getLong("size")!=item.getLong("size"))
+                    throw new IOException("Archivovaný doklad P1 neodpovídá manifestu");
+                included.add(path);
+            }
+        }
+        if(!included.equals(protectedFiles.keySet()))
+            throw new IOException("V archivu chybí chráněný historický podklad");
+        File complete=new File(dir,"COMPLETE");
+        boolean marked=false;
+        if(exists(complete)){
+            if(!attributes(complete).isRegularFile()||attributes(complete).isSymbolicLink())
+                throw new IOException("Neplatné potvrzení ochranné kopie");
+            byte[] stamp=readCompleteMarker(complete);
+            marked=Arrays.equals(stamp,(id+"\n").getBytes(StandardCharsets.US_ASCII));
+            if(!marked)throw new IOException("Potvrzení ochranné kopie nesouhlasí");
+        }
+        if(requireMarker&&!marked)throw new IOException("Ochranná kopie nebyla potvrzena");
+        for(DirectoryChain checked:checkedPaths)checked.check();
+        chain.check();
+        return new JSONObject().put("id",id).put("complete",marked)
+            .put("payloadVerified",content)
+            .put("sourceComplete",coverageDeclared&&coverage.getBoolean("sourceComplete")&&manifest.optBoolean("sourceComplete"))
+            .put("canPromote",false).put("files",manifest.getJSONArray("files"))
+            .put("missing",manifest.getJSONArray("missing"));
+    }
+    private static void finish(File dir,String id)throws Exception{
+        if(!payloadVerified(dir,id))
+            throw new IOException("Poškozený obsah nelze potvrdit");
+        File complete=new File(dir,"COMPLETE");
+        if(exists(complete))throw new IOException("Kopie je již potvrzená");
+        File tmp=new File(dir,".complete-"+UUID.randomUUID()+".tmp");
+        writeSynced(tmp,(id+"\n").getBytes(StandardCharsets.US_ASCII));
+        Files.move(tmp.toPath(),complete.toPath(),StandardCopyOption.ATOMIC_MOVE);
+        syncDirectory(dir);
+        syncDirectory(dir.getParentFile());
+    }
+}
