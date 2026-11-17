@@ -1,0 +1,208 @@
+name: Zaměřovač - původní jednoduché QUICK + Chromium + Android (bez APK)
+# Current existing tests, original November-style GitHub-hosted execution.
+# No cloud run without a separate owner RUN GO and budget check.
+on:
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: 'quick / drawing (17) / available (81 E2E + QUICK + native) / android / all (blocked)'
+        type: choice
+        options: [quick, drawing, available, android, all]
+        default: quick
+        required: true
+      target_sha:
+        description: 'Optional exact product commit (40 lowercase hex); blank means dispatch ref commit'
+        type: string
+        required: false
+        default: ''
+  # Fallback for GitHub integrations without workflow dispatch.
+  # A request file change requires prior owner RUN GO; not part of this PR.
+  push:
+    branches: [qa/chromium-request]
+    paths: [qa/chromium-request.txt]
+permissions:
+  contents: read
+jobs:
+  tests:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    steps:
+      # Keep the event revision as the test runner, separate from the product.
+      - name: Checkout test runner
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.sha }}
+          persist-credentials: false
+      - name: Select requested tests and product commit
+        shell: bash
+        env:
+          DISPATCH_SCOPE: ${{ inputs.scope }}
+          DISPATCH_TARGET_SHA: ${{ inputs.target_sha }}
+          EVENT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [[ "$GITHUB_EVENT_NAME" == push ]]; then
+            mapfile -t request < qa/chromium-request.txt
+            if [[ "${#request[@]}" -ne 2 ]]; then
+              echo 'FAIL: request must have exactly two lines (scope and 40-character product SHA)'
+              exit 2
+            fi
+            scope="${request[0]}"
+            target="${request[1]}"
+          elif [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]; then
+            scope="$DISPATCH_SCOPE"
+            target="${DISPATCH_TARGET_SHA:-$EVENT_SHA}"
+          else
+            echo 'FAIL: unsupported trigger'
+            exit 2
+          fi
+          case "$scope" in
+            quick|drawing|available|android) ;;
+            all) echo 'BLOCKED: FULL 23/96 requires compatible product and missing suites'; exit 2 ;;
+            *) echo 'FAIL: unknown test scope'; exit 2 ;;
+          esac
+          if [[ ! "$target" =~ ^[0-9a-f]{40}$ ]]; then
+            echo 'FAIL: product commit must be 40 lowercase hexadecimal characters'
+            exit 2
+          fi
+          echo "QA_SCOPE=$scope" >> "$GITHUB_ENV"
+          echo "QA_TARGET_SHA=$target" >> "$GITHUB_ENV"
+          echo "Request: scope=$scope, product commit=$target"
+      # Older products must not replace the current runner/harness.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.QA_TARGET_SHA }}
+          path: product
+          persist-credentials: false
+      - name: Verify checked-out revision
+        working-directory: product
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          echo "Requested product SHA: $QA_TARGET_SHA"
+          echo "Checked-out product SHA (git rev-parse HEAD): $actual"
+          if [[ "$actual" != "$QA_TARGET_SHA" ]]; then
+            echo 'FAIL: checkout is not the requested product commit'
+            exit 1
+          fi
+          printf '### QA revision\nScope: `%s`  Product: `%s` (checked out)  Runner: `%s`\n\n' "$QA_SCOPE" "$actual" "$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
+        if: ${{ env.QA_SCOPE == 'quick' || env.QA_SCOPE == 'available' || env.QA_SCOPE == 'android' }}
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Test current runner
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check tools/e2e/harness.cjs
+          node --test tests/qa-simple-chromium.test.cjs
+          python3 -m unittest discover -s tests -p 'test_chromium_revision.py' -v
+      - name: QUICK current source JS, Python and regressions
+        if: ${{ env.QA_SCOPE == 'quick' || env.QA_SCOPE == 'available' }}
+        shell: bash
+        working-directory: product
+        run: |
+          set -euo pipefail
+          # Existing QUICK tests require these historical reference objects;
+          # fetch data only, without checking out or running their workflows.
+          git fetch --no-tags origin 1d6a786c77aa2a797bf7bd75f9977a3ae6613459 ae3b4df53c25557f28b4a25ccb65adc2abdff639
+          for f in app/src/main/assets/*.js sync/*.js; do node --check "$f"; done
+          node tools/qa/audit.cjs
+          node tools/check-android-window.cjs
+          for f in tests/*.js; do node "$f"; done
+          python3 -m unittest discover -s tests -p 'test_*.py' -v
+      - name: Install pinned Playwright 1.62.1 and Chromium
+        if: ${{ env.QA_SCOPE == 'quick' || env.QA_SCOPE == 'drawing' || env.QA_SCOPE == 'available' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          npm ci --prefix tools/qa-browser
+          node tools/qa-browser/node_modules/playwright/cli.js install --with-deps chromium
+      - name: Chromium - current QUICK 7 and available E2E 21/81
+        working-directory: product
+        if: ${{ env.QA_SCOPE == 'quick' || env.QA_SCOPE == 'drawing' || env.QA_SCOPE == 'available' }}
+        shell: bash
+        env:
+          NODE_PATH: ${{ github.workspace }}/tools/qa-browser/node_modules
+        run: |
+          set -euo pipefail
+          python3 -m http.server 8765 --bind 127.0.0.1 --directory app/src/main/assets > /tmp/zamerovac-browser.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          if [[ "$QA_SCOPE" == quick || "$QA_SCOPE" == available ]]; then
+            export CHROMIUM_PATH="$(node -p "require('playwright').chromium.executablePath()")"
+            done_count=0
+            for f in "$GITHUB_WORKSPACE"/tools/check-*-browser.cjs; do
+              echo "RUN QUICK browser $f"
+              timeout --signal=TERM --kill-after=5s 5m node "$f"
+              done_count=$((done_count + 1))
+            done
+            if [[ "$done_count" -ne 7 ]]; then echo 'FAIL: expected seven current browser checks'; exit 1; fi
+            echo "PASS QUICK Chromium: $done_count/7 completed browser scripts" | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+          if [[ "$QA_SCOPE" == drawing || "$QA_SCOPE" == available ]]; then
+            unset ZAMEROVAC_CASES ZAMEROVAC_SOURCE_SHA ZAMEROVAC_QA_GATE_SHA ZAMEROVAC_RUN_TOKEN
+            suites=(drawing:17 gallery-visual:1 workflows:6 interactions:3 zoom-grid:2 update39:4
+              gallery-state:2 peer-sync:4 drive-accounts:3 sync-cadence:2 backup-history:1
+              read-only-sync:1 sync-edit-guard:3 note-sync:6 web-content-policy:1 media-import:3
+              help:2 release-history:2 latency:6 quality-regressions:8 gallery-readability:4)
+            if [[ "$QA_SCOPE" == drawing ]]; then suites=('drawing:17'); fi
+            total=0
+            for item in "${suites[@]}"; do
+              suite="${item%%:*}"
+              expected="${item##*:}"
+              mkdir -p "test-artifacts/$suite"
+              rm -f "test-artifacts/$suite/report.json"
+              echo "RUN E2E $suite ($expected scenarios)"
+              ZAMEROVAC_SIMPLE_CHROMIUM=1 timeout --signal=TERM --kill-after=5s 15m node "$GITHUB_WORKSPACE/tools/e2e/$suite.cjs"
+              node - "$suite" "$expected" <<'NODE'
+          'use strict';
+          const fs=require('node:fs');
+          const [suite,count]=process.argv.slice(2);
+          const file='test-artifacts/'+suite+'/report.json';
+          if(!fs.existsSync(file))throw Error('FAIL: report missing: '+suite);
+          const r=JSON.parse(fs.readFileSync(file,'utf8'));
+          const names=Array.isArray(r.cases)?r.cases.map(c=>c.name):[];
+          if(r.suite!==suite||r.sha!==process.env.QA_TARGET_SHA||r.status!=='COMPLETE'||r.filtered||
+             names.length!==Number(count)||new Set(names).size!==names.length||
+             r.cases.some(c=>c.status!=='passed')){
+            throw Error('FAIL: incomplete/non-PASS suite '+suite+' expected '+count);
+          }
+          console.log('PASS '+suite+' '+names.length+'/'+count);
+          NODE
+              total=$((total + expected))
+            done
+            if [[ "$QA_SCOPE" == drawing && "$total" -ne 17 ]]; then exit 1; fi
+            if [[ "$QA_SCOPE" == available && "$total" -ne 81 ]]; then exit 1; fi
+            echo "PASS $total actually executed E2E scenarios; FULL 23/96 still BLOCKED" | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+      - uses: gradle/actions/setup-gradle@v4
+        if: ${{ env.QA_SCOPE == 'android' || env.QA_SCOPE == 'available' }}
+        with:
+          gradle-version: '8.10.2'
+      - name: Android native Java, Drive and PDF checks - no APK
+        working-directory: product
+        if: ${{ env.QA_SCOPE == 'android' || env.QA_SCOPE == 'available' }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon -p tools/drive-config-checks verify
+          gradle --no-daemon :app:verifyDriveRegistration :app:compilePreviewJavaWithJavac :app:testPreviewUnitTest -PdriveRequireConfigured=true
+          python3 -m pip install 'pypdf[image]>=5,<7' 'pymupdf>=1.24,<2'
+          python3 tools/check-customer-pdf.py app/build/customer-pdf-1.zip app/build/customer-pdf-3.zip app/build/customer-pdf-multipage.zip
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: simple-current-tests-diagnostics
+          path: |
+            product/test-artifacts/
+            product/app/build/test-results/testPreviewUnitTest/
+            product/app/build/reports/drive-registration.json
+            product/app/build/customer-pdf-*.zip
+          if-no-files-found: ignore
+          retention-days: 7

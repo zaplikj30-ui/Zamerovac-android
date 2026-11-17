@@ -10,7 +10,9 @@ async function suite(name,body){
  const sha=require('node:child_process').execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim();
  if(process.env.ZAMEROVAC_SOURCE_SHA&&sha!==process.env.ZAMEROVAC_SOURCE_SHA)throw Error('HOME BLOCKED: source SHA changed before launch');
  let launched;
- try{launched=await launchSandboxed(chromium,launchOptions(process.env.CHROMIUM_PATH))}
+ try{launched=process.env.ZAMEROVAC_SIMPLE_CHROMIUM==='1'
+  ? {browser:await chromium.launch({headless:true,timeout:15000}),evidence:{method:'standard-playwright'}}
+  : await launchSandboxed(chromium,launchOptions(process.env.CHROMIUM_PATH))}
  catch(error){fs.writeFileSync(path.join(directory,'report.json'),JSON.stringify({suite:name,sha,status:'BLOCKED',error:error.message,cases:[]},null,2));throw error}
  const {browser,evidence:sandbox}=launched;
  const report={suite:name,sha,sandbox,validatorSha:process.env.ZAMEROVAC_QA_GATE_SHA,
