@@ -186,6 +186,7 @@ jobs:
         if: ${{ env.QA_SCOPE == 'android' || env.QA_SCOPE == 'available' }}
         with:
           gradle-version: '8.10.2'
+          cache-read-only: ${{ github.event_name != 'push' || github.ref != 'refs/heads/qa/chromium-request' }}
       - name: Android native Java and Drive checks - no APK
         working-directory: product
         if: ${{ env.QA_SCOPE == 'android' || env.QA_SCOPE == 'available' }}
