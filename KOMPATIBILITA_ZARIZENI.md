@@ -3,6 +3,10 @@
 **Založeno 4. 11. 2026.** Pracovní registr pro širokou podporu různých značek telefonů a tabletů Android. **Tento soubor sám o sobě nedokládá provedení nového testu.** 
 Podrobná pravidla viz [VIZE_A_PLAN.md](VIZE_A_PLAN.md), část *Široká kompatibilita Android telefonů a tabletů*. V budoucnu lze rozšířit testy i na Windows a případně iOS/iPadOS, **ale tyto aplikace teď neexistují jako ověřené platformy**.
 
+## Bosch laser a obecné ovládání – ověření není předpoklad
+
+Implementace `app/src/main/java/cz/zamerovac/app/BoschClassicReader.java` je podle dokumentovaného stavu **experimentální**. Úspěšný build, mock Bluetooth ani obecná kompatibilita Androidu **nepotvrzuje** konkrétní laser. Pro skutečné PASS vždy zaznamenej **model Bosch, firmware, model/Android telefonu, povolená oprávnění, přerušení/odpojení** a ověř skutečnou uloženou hodnotu a jednotku; ruční zadávání musí fungovat i bez BT. Prst je základní způsob ovládání bez závislosti na S Pen; kompatibilitu pera jiné značky, dotyku nebo myši uváděj až po příslušném testu. Tyto body jsou testovací kontrakt, nikoli nová podpora zařízení.
+
 ## Význam stavů
 
 - **Ověřeno – konkrétní scénář:** existuje důkaz o testu s modelem, verzí Androidu, verzí APK a výsledkem; **neplatí automaticky pro celou aplikaci**.
