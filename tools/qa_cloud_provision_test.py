@@ -71,6 +71,50 @@ class ProvisionTests(unittest.TestCase):
         self.assertEqual(child['NPM_CONFIG_USERCONFIG'], '/dev/null')
         self.assertEqual(child['NPM_CONFIG_REGISTRY'], 'https://registry.npmjs.org/')
 
+    def test_phase_diagnostic_is_fixed_and_never_exception_text(self):
+        import contextlib
+        import io
+        def fail():
+            raise RuntimeError('SECRET_TOKEN /private/path https://secret.invalid')
+        for phase in sorted(q.PHASES):
+            with self.assertRaises(q.Blocked) as result:
+                q.provision_step(phase, fail)
+            self.assertEqual(result.exception.args, (phase,))
+            output = io.StringIO()
+            with mock.patch.object(q.sys, 'argv', ['provision', '--prepare']), mock.patch.object(q, 'prepare', side_effect=result.exception), contextlib.redirect_stderr(output):
+                with self.assertRaises(SystemExit) as exit_result:
+                    q.main()
+            self.assertEqual(exit_result.exception.code, 78)
+            self.assertIn('phase='+phase, output.getvalue())
+            self.assertNotIn('SECRET', output.getvalue())
+        with self.assertRaises(q.Blocked):
+            q.provision_step('SECRET_TOKEN', lambda: None)
+
+    def test_distinct_private_npm_config_real_offline_ci(self):
+        # Real npm config resolution and ci, no registry/network or dependency.
+        # This catches npm's double-loading rejection that mocked Popen missed.
+        import shutil
+        import subprocess
+        npm = shutil.which('npm')
+        if npm is None:
+            self.skipTest('real npm unavailable')
+        child = q.isolated_env(self.stage, {}, os.environ['PATH'])
+        global_config = Path(child['NPM_CONFIG_GLOBALCONFIG'])
+        self.assertNotEqual(child['NPM_CONFIG_USERCONFIG'], str(global_config))
+        self.assertEqual(global_config.read_bytes(), b'')
+        self.assertEqual(child['NPM_CONFIG_FETCH_RETRIES'], '0')
+        self.assertEqual(stat.S_IMODE(global_config.stat().st_mode), 0o600)
+        deps = self.stage / 'empty-package'
+        deps.mkdir(mode=0o700)
+        (deps / 'package.json').write_text('{"name":"offline-fixture","version":"1.0.0"}')
+        (deps / 'package-lock.json').write_text('{"name":"offline-fixture","version":"1.0.0","lockfileVersion":3,"packages":{"":{"name":"offline-fixture","version":"1.0.0"}}}')
+        old = dict(child, NPM_CONFIG_GLOBALCONFIG='/dev/null')
+        failed = subprocess.run([npm, 'ci', '--offline', '--ignore-scripts', '--no-audit', '--no-fund'], cwd=deps, env=old, capture_output=True, timeout=15)
+        self.assertNotEqual(failed.returncode, 0)
+        self.assertIn(b'double-loading config', failed.stderr)
+        self.assertTrue(q.run_group([npm, 'ci', '--offline', '--ignore-scripts', '--no-audit', '--no-fund'], deps, child, (time.time()+35)*1000, self.log))
+        self.assertEqual(global_config.read_bytes(), b'')
+
     def test_symlink_hardlink_and_world_writable_file_rejected(self):
         file = self.stage / 'input'
         file.write_bytes(b'synthetic')

@@ -93,7 +93,7 @@ test('no second npm or browser CLI exists inside Q orchestrator or handoff',()=>
  const provision=fs.readFileSync(path.join(__dirname,'qa_cloud_provision.py'),'utf8');
  assert(!diag.includes("run('npm'")&&!diag.includes('spawnSync(exe,args'));
  assert(!source.includes('npm ci')&&!source.includes('playwright/cli.js'));
- assert.equal((provision.match(/run_group\(\[npm, 'ci'/g)||[]).length,1);
+ assert.equal((provision.match(/provision_step\('NPM_CI', run_group, \[npm, 'ci'/g)||[]).length,1);
  assert.equal((provision.match(/'install', 'chromium', '--no-shell'/g)||[]).length,1);
 });
 test('token must not cross into Python verifier environment',()=>{

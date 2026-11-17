@@ -170,15 +170,21 @@ def isolated_env(stage, env, path_value):
               'TMPDIR': str(root / 'tmp'), 'TMP': str(root / 'tmp'),
               'TEMP': str(root / 'tmp'), 'LANG': 'C.UTF-8',
               'NPM_CONFIG_USERCONFIG': '/dev/null',
-              'NPM_CONFIG_GLOBALCONFIG': '/dev/null',
+              'NPM_CONFIG_GLOBALCONFIG': str(root / 'home/global.npmrc'),
               'NPM_CONFIG_CACHE': str(root / 'npm-cache'),
               'NPM_CONFIG_REGISTRY': 'https://registry.npmjs.org/',
               'NPM_CONFIG_AUDIT': 'false', 'NPM_CONFIG_FUND': 'false',
               'NPM_CONFIG_UPDATE_NOTIFIER': 'false',
+              'NPM_CONFIG_FETCH_RETRIES': '0',
               'PLAYWRIGHT_BROWSERS_PATH': str(root / 'browsers')}
     for folder in ('home', 'tmp', 'npm-cache', 'browsers'):
         (root / folder).mkdir(mode=0o700)
         private_directory(root / folder)
+    # npm rejects one path loaded as both user and global config. Keep two
+    # distinct sources without inheriting a host npmrc or writing outside stage.
+    config = root / 'home/global.npmrc'
+    fd = os.open(config, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    os.close(fd)
     require(not any(k.startswith(('GITHUB_', 'ACTIONS_', 'RUNNER_', 'QA_CLOUD_', 'NODE_',
                                    'GH_', 'INPUT_', 'CI_', 'HTTP_', 'HTTPS_', 'ALL_',
                                    'NO_', 'npm_config_')) for k in result))
@@ -416,6 +422,20 @@ def resolved_browser(stage, node, childenv, lock):
     return name, revision, ffmpeg, ffmpeg_binary
 
 
+PHASES = frozenset(('NPM_CI', 'NPM_TREE', 'ARCHIVES', 'MODULES', 'TARBALLS',
+                    'BROWSER_INSTALL', 'BROWSER_LAYOUT', 'BROWSER_TREE'))
+
+
+def provision_step(code, operation, *args):
+    require(code in PHASES)
+    try:
+        return operation(*args)
+    except Exception:
+        # Never expose npm output, URLs, paths or exception messages publicly.
+        # Stage identification is NOT proof of cleanup or a retry authorization.
+        raise Blocked(code) from None
+
+
 def prepare(env=None):
     env = dict(os.environ if env is None else env)
     require(sys.platform == 'linux' and os.geteuid() > 0)
@@ -451,18 +471,18 @@ def prepare(env=None):
     os.chmod(log, 0o600)
     try:
         # Exactly one npm ci. No retry, nested npm, npx or install fallback.
-        run_group([npm, 'ci', '--ignore-scripts', '--no-audit', '--no-fund'],
+        provision_step('NPM_CI', run_group, [npm, 'ci', '--ignore-scripts', '--no-audit', '--no-fund'],
                   deps, childenv, min(deadline_ms, int((time.time() + 420) * 1000)), log)
-        normalize_npm_tree(deps)
-        archives = approved_archives(stage, lock)
-        files = verified_modules(stage, lock)
-        verify_tarball_contents(stage, files)
+        provision_step('NPM_TREE', normalize_npm_tree, deps)
+        archives = provision_step('ARCHIVES', approved_archives, stage, lock)
+        files = provision_step('MODULES', verified_modules, stage, lock)
+        provision_step('TARBALLS', verify_tarball_contents, stage, files)
         # CLI is invoked directly and only after the pinned integrity checks.
-        run_group([node, str(deps / 'node_modules/playwright/cli.js'),
+        provision_step('BROWSER_INSTALL', run_group, [node, str(deps / 'node_modules/playwright/cli.js'),
                    'install', 'chromium', '--no-shell'], deps, childenv,
                   min(deadline_ms, int((time.time() + 420) * 1000)), log)
-        browser, revision, ffmpeg_revision, ffmpeg_binary = resolved_browser(stage, node, childenv, lock)
-        browser_files = exact_tree(stage / 'browsers', ('chromium-' + revision,
+        browser, revision, ffmpeg_revision, ffmpeg_binary = provision_step('BROWSER_LAYOUT', resolved_browser, stage, node, childenv, lock)
+        browser_files = provision_step('BROWSER_TREE', exact_tree, stage / 'browsers', ('chromium-' + revision,
                                                        'ffmpeg-' + ffmpeg_revision))
         require(browser.relative_to(stage / 'browsers').as_posix() in browser_files)
         ffmpeg_relative = ffmpeg_binary.relative_to(stage / 'browsers').as_posix()
@@ -502,12 +522,13 @@ def prepare(env=None):
 
 
 def main():
-    require(sys.argv[1:] == ['--prepare'])
     try:
+        require(sys.argv[1:] == ['--prepare'])
         prepare()
         print('PASS CLOUD provisioning integrity + known-group cleanup; browser NOT RUN')
-    except BaseException:
-        print('BLOCKED CLOUD provisioning; STOP NO RETRY; Chromium NOT RUN', file=sys.stderr)
+    except BaseException as error:
+        code = error.args[0] if isinstance(error, Blocked) and len(error.args) == 1 and isinstance(error.args[0], str) and error.args[0] in PHASES else 'ADMISSION_OR_INVENTORY'
+        print('BLOCKED CLOUD provisioning; phase=' + code + '; STOP NO RETRY; Chromium NOT RUN', file=sys.stderr)
         raise SystemExit(78)
 
 
