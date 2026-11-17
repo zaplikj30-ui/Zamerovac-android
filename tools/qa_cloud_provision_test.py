@@ -111,6 +111,27 @@ class ProvisionTests(unittest.TestCase):
         with self.assertRaises(q.Blocked):
             q.exact_tree(modules, ('playwright','playwright-core'))
 
+    def test_wrong_P_Q_E_or_missing_lock_block_before_any_installer(self):
+        source = self.root / 'validator'
+        source.mkdir()
+        (source / '.git').mkdir()
+        (source / '.git/HEAD').write_text('b' * 40)
+        env = {'RUNNER_TEMP':str(self.root), 'ZAMEROVAC_QA_VALIDATOR_ROOT':str(source),
+               'ZAMEROVAC_CLOUD_REVIEWED_V_SHA':'b' * 40,
+               'ZAMEROVAC_CLOUD_EVENT_SHA':'c' * 40,
+               'ZAMEROVAC_EXPECTED_PRODUCT_SHA':q.P_SHA,
+               'ZAMEROVAC_CLOUD_DEADLINE':str(int((time.time() + 600) * 1000))}
+        with mock.patch.object(q.subprocess, 'Popen', side_effect=AssertionError('no npm')) as starts:
+            for altered in [
+                {**env, 'ZAMEROVAC_EXPECTED_PRODUCT_SHA':'d' * 40},
+                {**env, 'ZAMEROVAC_CLOUD_REVIEWED_V_SHA':'e' * 40},
+                {**env, 'ZAMEROVAC_CLOUD_EVENT_SHA':'nonhex'},
+                env  # missing package-lock must also stop before npm
+            ]:
+                with self.assertRaises((q.Blocked, FileNotFoundError)):
+                    q.prepare(altered)
+            starts.assert_not_called()
+
     def test_lock_sri_version_registry_extra_and_dependency_mutations(self):
         target = self.stage / 'tools/qa-browser'
         target.mkdir(parents=True)
