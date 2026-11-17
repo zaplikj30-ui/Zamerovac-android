@@ -131,7 +131,7 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '24'
-      - name: QUICK – exact 74+4 Node families, 190 named TAP, 216+7 Python
+      - name: QUICK – exact 74+4 Node families, 190 named TAP, 216+5 Python
         id: quick
         if: ${{ !cancelled() && steps.pinned.outcome == 'success' && steps.node_setup.outcome == 'success' }}
         working-directory: validator
@@ -178,7 +178,17 @@ jobs:
           ZAMEROVAC_CLOUD_EVENT_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          python3 tools/qa_cloud_provision.py --prepare
+          # The provisioning INTERPRETER receives only these reviewed inputs.
+          # No automatic Actions/OIDC/REST token, proxy, npmrc or Node preload.
+          env -i PATH="$PATH" LANG=C.UTF-8 \
+            RUNNER_TEMP="$RUNNER_TEMP" GITHUB_OUTPUT="$GITHUB_OUTPUT" \
+            GITHUB_SHA="$GITHUB_SHA" \
+            ZAMEROVAC_QA_VALIDATOR_ROOT="$ZAMEROVAC_QA_VALIDATOR_ROOT" \
+            ZAMEROVAC_EXPECTED_PRODUCT_SHA="$ZAMEROVAC_EXPECTED_PRODUCT_SHA" \
+            ZAMEROVAC_CLOUD_REVIEWED_V_SHA="$ZAMEROVAC_CLOUD_REVIEWED_V_SHA" \
+            ZAMEROVAC_CLOUD_EVENT_SHA="$ZAMEROVAC_CLOUD_EVENT_SHA" \
+            ZAMEROVAC_CLOUD_DEADLINE="$ZAMEROVAC_CLOUD_DEADLINE" \
+            python3 tools/qa_cloud_provision.py --prepare
       - name: STRICT Chromium – one-root handoff, no second npm or fallback
         id: strict_browser
         if: ${{ !cancelled() && steps.quick.outcome == 'success' && steps.provision.outcome == 'success' }}
