@@ -96,7 +96,7 @@ Toto je **architektonická mapa existujícího systému**, ne příkaz k refakto
 
 ### 8.1 Úsporné řízení vývoje – rozdělení ChatGPT / Codex / Work (7. 11. 2026)
 
-Uživatel schválil nové rozdělení práce kvůli rychlému vyčerpání týdenního limitu Codexu a nejistým nákladům na další kredity. Cíl je efektivita **bez kompromisu v přesnosti, bezpečném ukládání, automatických testech a kvalitě**. Trvalé prováděcí pravidlo: [AGENTS.md](AGENTS.md#úsporné-rozdělení-práce-a-ochrana-limitů-codexu-rozhodnutí-7-11-2026).
+Uživatel schválil nové rozdělení práce kvůli rychlému vyčerpání týdenního limitu Codexu a nejistým nákladům na další kredity. Cíl je efektivita **bez kompromisu v přesnosti, bezpečném ukládání, automatických testech a kvalitě**. Trvalé prováděcí pravidlo: [AGENTS.md](AGENTS.md#modely-náklady-a-efektivita).
 
 | Práce | Výchozí odpovědnost |
 | --- | --- |
