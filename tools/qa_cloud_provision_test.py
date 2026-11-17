@@ -92,6 +92,7 @@ def gate():
                 assert pid != pgid and os.getpgid(pid) == pgid
                 assert Path('/proc/%d/stat' % pid).read_text().split()[2] != 'Z'
                 worker = threading.Thread(target=reap_known, daemon=True)
+                state['reaper_started'] = True
                 worker.start()
                 release.write_text('confirmed-live')
                 return
@@ -117,6 +118,9 @@ try:
 finally:
     gate_thread.join(timeout=9)
     if 'pgid' in state:
+        # A failed readiness assertion must still reap its known descendant.
+        if 'pid' in state and not state.get('reaper_started'):
+            threading.Thread(target=reap_known, daemon=True).start()
         try:
             os.killpg(state['pgid'], signal.SIGTERM)
         except ProcessLookupError:
