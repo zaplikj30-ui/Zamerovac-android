@@ -15,6 +15,9 @@ function secure(source){
   "if: ${{ !cancelled() && steps.quick.outcome == 'success' && steps.provision.outcome == 'success' }}",
   "ZAMEROVAC_CLOUD_DEADLINE=$(( $(date +%s)*1000 + 12000000 ))",
   "python3 tools/qa_cloud_provision.py --prepare",
+  "python3 tools/qa_cloud_provision_test.py",
+  "node --test tools/qa-cloud-handoff-test.cjs",
+  "if: ${{ !cancelled() && steps.cloud_c_tests.outcome == 'success' }}",
   "ZAMEROVAC_CLOUD_INVENTORY_SHA256: ${{ steps.provision.outputs.inventory_sha256 }}",
   "ZAMEROVAC_CLOUD_STAGE: ${{ runner.temp }}/zamerovac-cloud-stage",
   "ZAMEROVAC_CLOUD_SCRATCH: ${{ runner.temp }}/zamerovac-cloud-final",
@@ -59,7 +62,7 @@ test('only inert owner/main public hosted dispatch with pinned P/V/E and no inst
  assert(!workflow.includes('on:\n  push:'));
 });
 test('time arithmetic fits job without shrinking 23/96 or cleanup time',()=>{
- const stageMax=22+1+16+210+9+35+5+9+2+2;
+ const stageMax=22+1+3+16+210+9+35+5+9+2+2;
  assert(stageMax<=330);
  assert(workflow.includes('23x8min')===false,'budget is code-owned by runner');
 });
@@ -72,6 +75,8 @@ test('negative mutations reject activation, native after UNKNOWN, install or oth
   workflow.replace("persist-credentials: false","persist-credentials: true"),
   workflow.replace("timeout-minutes: 330","timeout-minutes: 30"),
   workflow.replace("python3 tools/qa_cloud_provision.py --prepare","echo FALSE PASS"),
+  workflow.replace("python3 tools/qa_cloud_provision_test.py","echo FALSE PASS"),
+  workflow.replace("steps.cloud_c_tests.outcome == 'success'","steps.quick.outcome == 'success'"),
   workflow.replace("steps.provision.outcome == 'success'","steps.quick.outcome == 'success'"),
   workflow.replace("12000000","24000000"),
   workflow.replace("steps.provision.outputs.inventory_sha256","'unreviewed'"),
