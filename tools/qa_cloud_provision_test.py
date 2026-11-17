@@ -143,5 +143,46 @@ class ProvisionTests(unittest.TestCase):
                 q.locked_package(self.stage)
 
 
+
+class ArchiveBinding(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory(prefix='qa-c-tar-synthetic-')
+        self.addCleanup(self.tmp.cleanup)
+        self.root = Path(self.tmp.name) / 'private'
+        self.root.mkdir(mode=0o700)
+        (self.root / 'archives').mkdir(mode=0o700)
+        self.files = {}
+        for name in q.REQUIRED:
+            data = {f'f{n}.js': (name + str(n)).encode() for n in range(6)}
+            self.write_tgz(name, data)
+            for file, content in data.items():
+                self.files['node_modules/' + name + '/' + file] = q.sha(content)
+
+    def write_tgz(self, name, contents, wrong_type=False):
+        import io
+        import tarfile
+        archive = self.root / 'archives' / (name + '.tgz')
+        with tarfile.open(archive, 'w:gz') as tar:
+            for file, content in contents.items():
+                info = tarfile.TarInfo('package/' + file)
+                info.size = len(content)
+                if wrong_type:
+                    info.type = tarfile.SYMTYPE
+                    info.linkname = 'unreviewed'
+                tar.addfile(info, io.BytesIO(content) if not wrong_type else None)
+
+    def test_tarball_bytes_match_installed_tree(self):
+        q.verify_tarball_contents(self.root, self.files)
+
+    def test_tampered_installed_hash_or_archive_symlink_is_blocked(self):
+        wrong = dict(self.files)
+        wrong['node_modules/playwright/f0.js'] = '0' * 64
+        with self.assertRaises(q.Blocked):
+            q.verify_tarball_contents(self.root, wrong)
+        self.write_tgz('playwright', {'bad.js':b'evil'}, wrong_type=True)
+        with self.assertRaises(q.Blocked):
+            q.verify_tarball_contents(self.root, self.files)
+
+
 if __name__ == '__main__':
     unittest.main()
