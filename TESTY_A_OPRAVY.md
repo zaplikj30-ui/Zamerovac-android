@@ -94,9 +94,11 @@
 
 ## Trvalý kontrakt regresních a chybových testů (přesun z AGENTS)
 
-Každý významný zásah testuj podle rizika nejen pozitivně, ale **negativně, chybově, kombinovaně a po obnovení**: skutečné tlačítko/gesto/úhopy/dvojdotyk, pixely a viditelnost čar/kót; neplatné či hraniční hodnoty a jednotky; Bluetooth/Bosch odpojení; uložit → zavřít → znovu otevřít → export/import a Undo/Redo; přesnost uložených čísel i původní bajty médií. U importu, ZIP, zálohy, koše a synchronizace testuj plný disk, poškozené/neúplné soubory, oprávnění, offline/výpadky, dlouhé přenosy, souběžné konflikty a callback po změně stavu. Nikdy při FAIL neohlašuj falešný úspěch ani nepřepiš novější data.
+Každý zásah testuj podle rizika: **i u malých oprav cílené testy a kontrola syntaxe změněných souborů**; významné změny ověř **pozitivně, negativně, chybově, kombinovaně a po obnovení**: skutečné tlačítko/gesto/úhopy/dvojdotyk, pixely a viditelnost čar/kót; neplatné či hraniční hodnoty a jednotky; Bluetooth/Bosch odpojení; uložit → zavřít → znovu otevřít → export/import a Undo/Redo; přesnost uložených čísel i původní bajty médií. U importu, ZIP, zálohy, koše a synchronizace testuj plný disk, poškozené/neúplné soubory, oprávnění, offline/výpadky, dlouhé přenosy, souběžné konflikty a callback po změně stavu. Nikdy při FAIL neohlašuj falešný úspěch ani nepřepiš novější data.
 
 Ke změně existující funkce oprav relevantní regresní test v [#28](https://github.com/zaplikj30-ui/Zamerovac-android/issues/28), u rozsáhlých změn přidej kombinovaný test sousedních funkcí, včetně měření odezvy a UI. Zaznamenávej přesné SHA/prostředí, původní FAIL a retesty, PASS/FAIL/SKIP/NOT RUN/BLOCKED a fyzická omezení; starý PASS neprokazuje nový SHA. Cloud/Chromium, JVM, emulator a fyzický telefon/S Pen/Bosch či Google Drive jsou **odlišné důkazy**. Před jedinou společnou APK proveď širší relevantní regresi, ne však všechny náročné scénáře po každé drobné opravě. Kritické vady ztráty dat a chybného měření před ostrým použitím nepřehlížej.
+
+**Bezpečnostní kontrola relevantní změny:** samostatně posuď **nedůvěryhodné vstupy, cizí HTML/webový obsah, oprávnění, citlivé údaje a zpřístupněná rozhraní WebView/JavaScript ↔ nativní Android bridge**. Podle rizika ověř pozitivní i negativní scénáře přístupu a chyb; zaznamenej výsledky, omezení a neprovedené kontroly se SHA. **Úspěšný build, běžný funkční PASS nebo CI ≠ bezpečnostní review**; zdrojové review bez běhových testů není runtime PASS.
 
 ## Kde co hledat
 - [START_ZDE.md](START_ZDE.md) – aktuální stav a odkazy
