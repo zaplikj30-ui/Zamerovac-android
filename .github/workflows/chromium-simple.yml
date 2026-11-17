@@ -186,14 +186,31 @@ jobs:
         if: ${{ env.QA_SCOPE == 'android' || env.QA_SCOPE == 'available' }}
         with:
           gradle-version: '8.10.2'
-      - name: Android native Java, Drive and PDF checks - no APK
+      - name: Android native Java and Drive checks - no APK
         working-directory: product
         if: ${{ env.QA_SCOPE == 'android' || env.QA_SCOPE == 'available' }}
         shell: bash
         run: |
           set -euo pipefail
           gradle --no-daemon -p tools/drive-config-checks verify
-          gradle --no-daemon :app:verifyDriveRegistration :app:compilePreviewJavaWithJavac :app:testPreviewUnitTest -PdriveRequireConfigured=true
+          gradle --no-daemon :app:verifyDriveRegistration :app:compilePreviewJavaWithJavac -PdriveRequireConfigured=true
+      - name: Full JVM - raw FAIL and strict ACK product acceptance
+        working-directory: product
+        if: ${{ env.QA_SCOPE == 'android' || env.QA_SCOPE == 'available' }}
+        shell: bash
+        env:
+          ORG_GRADLE_PROJECT_driveRequireConfigured: 'true'
+        run: |
+          set -euo pipefail
+          # Allow dependency download on a fresh hosted runner; the existing
+          # acceptance script still runs every JVM method and reports raw FAIL.
+          python3 tools/sync-ack-acceptance.py --online-dependencies
+      - name: Independent customer PDF and ZIP regression
+        working-directory: product
+        if: ${{ env.QA_SCOPE == 'android' || env.QA_SCOPE == 'available' }}
+        shell: bash
+        run: |
+          set -euo pipefail
           python3 -m pip install 'pypdf[image]>=5,<7' 'pymupdf>=1.24,<2'
           python3 tools/check-customer-pdf.py app/build/customer-pdf-1.zip app/build/customer-pdf-3.zip app/build/customer-pdf-multipage.zip
       - uses: actions/upload-artifact@v4
@@ -203,6 +220,7 @@ jobs:
           path: |
             product/test-artifacts/
             product/app/build/test-results/testPreviewUnitTest/
+            product/app/build/reports/syncAckAcceptance/
             product/app/build/reports/drive-registration.json
             product/app/build/customer-pdf-*.zip
           if-no-files-found: ignore
