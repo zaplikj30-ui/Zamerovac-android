@@ -41,7 +41,7 @@ test('explicit simple switch uses ordinary Chromium, closes browser, records cas
  process.env.ZAMEROVAC_SIMPLE_CHROMIUM='1';delete process.env.ZAMEROVAC_CASES;
  const ctx=loaded(),{result,file}=await run(ctx);await result;
  assert.deepEqual(ctx.stats(),{launched:1,sandboxed:0,closed:1,contextsClosed:1});
- const r=JSON.parse(fs.readFileSync(file));assert.equal(r.status,'COMPLETE');assert.deepEqual(r.cases.map(c=>[c.name,c.status]),[['dimension','passed']]);
+ const r=JSON.parse(fs.readFileSync(file));assert.equal(r.sha,require('node:child_process').execFileSync('git',['rev-parse','HEAD'],{encoding:'utf8'}).trim());assert.equal(r.status,'COMPLETE');assert.deepEqual(r.cases.map(c=>[c.name,c.status]),[['dimension','passed']]);
 });
 test('generic CI and GITHUB_ACTIONS never select new mode; default is original sandbox',async()=>{
  delete process.env.ZAMEROVAC_SIMPLE_CHROMIUM;process.env.CI='true';process.env.GITHUB_ACTIONS='true';

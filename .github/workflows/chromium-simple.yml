@@ -27,9 +27,8 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
-      # The request branch is read only to obtain scope + product commit.
-      - name: Read fallback request commit
-        if: ${{ github.event_name == 'push' }}
+      # Keep the event revision as the test runner, separate from the product.
+      - name: Checkout test runner
         uses: actions/checkout@v4
         with:
           ref: ${{ github.sha }}
@@ -69,12 +68,14 @@ jobs:
           echo "QA_SCOPE=$scope" >> "$GITHUB_ENV"
           echo "QA_TARGET_SHA=$target" >> "$GITHUB_ENV"
           echo "Request: scope=$scope, product commit=$target"
-      # Checkout the PRODUCT under test, not the fallback request branch.
+      # Older products must not replace the current runner/harness.
       - uses: actions/checkout@v4
         with:
           ref: ${{ env.QA_TARGET_SHA }}
+          path: product
           persist-credentials: false
       - name: Verify checked-out revision
+        working-directory: product
         shell: bash
         run: |
           set -euo pipefail
@@ -85,7 +86,7 @@ jobs:
             echo 'FAIL: checkout is not the requested product commit'
             exit 1
           fi
-          printf '### QA revision\nScope: `%s`  Product: `%s` (checked out)\n\n' "$QA_SCOPE" "$actual" >> "$GITHUB_STEP_SUMMARY"
+          printf '### QA revision\nScope: `%s`  Product: `%s` (checked out)  Runner: `%s`\n\n' "$QA_SCOPE" "$actual" "$(git -C "$GITHUB_WORKSPACE" rev-parse HEAD)" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -94,18 +95,27 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - name: QUICK current source JS, Python and regressions
-        if: ${{ env.QA_SCOPE == 'quick' || env.QA_SCOPE == 'available' }}
+      - name: Test current runner
         shell: bash
         run: |
           set -euo pipefail
-          for f in app/src/main/assets/*.js sync/*.js; do node --check "$f"; done
           node --check tools/e2e/harness.cjs
+          node --test tests/qa-simple-chromium.test.cjs
+          python3 -m unittest discover -s tests -p 'test_chromium_revision.py' -v
+      - name: QUICK current source JS, Python and regressions
+        if: ${{ env.QA_SCOPE == 'quick' || env.QA_SCOPE == 'available' }}
+        shell: bash
+        working-directory: product
+        run: |
+          set -euo pipefail
+          # Existing QUICK tests require these historical reference objects;
+          # fetch data only, without checking out or running their workflows.
+          git fetch --no-tags origin 1d6a786c77aa2a797bf7bd75f9977a3ae6613459 ae3b4df53c25557f28b4a25ccb65adc2abdff639
+          for f in app/src/main/assets/*.js sync/*.js; do node --check "$f"; done
           node tools/qa/audit.cjs
           node tools/check-android-window.cjs
           for f in tests/*.js; do node "$f"; done
           python3 -m unittest discover -s tests -p 'test_*.py' -v
-          node --test tests/qa-simple-chromium.test.cjs
       - name: Install pinned Playwright 1.62.1 and Chromium
         if: ${{ env.QA_SCOPE == 'quick' || env.QA_SCOPE == 'drawing' || env.QA_SCOPE == 'available' }}
         shell: bash
@@ -114,6 +124,7 @@ jobs:
           npm ci --prefix tools/qa-browser
           tools/qa-browser/node_modules/.bin/playwright install --with-deps chromium
       - name: Chromium - current QUICK 7 and available E2E 21/87
+        working-directory: product
         if: ${{ env.QA_SCOPE == 'quick' || env.QA_SCOPE == 'drawing' || env.QA_SCOPE == 'available' }}
         shell: bash
         env:
@@ -126,7 +137,7 @@ jobs:
           if [[ "$QA_SCOPE" == quick || "$QA_SCOPE" == available ]]; then
             export CHROMIUM_PATH="$(node -p "require('playwright').chromium.executablePath()")"
             done_count=0
-            for f in tools/check-*-browser.cjs; do
+            for f in "$GITHUB_WORKSPACE"/tools/check-*-browser.cjs; do
               echo "RUN QUICK browser $f"
               timeout --signal=TERM --kill-after=5s 5m node "$f"
               done_count=$((done_count + 1))
@@ -148,7 +159,7 @@ jobs:
               mkdir -p "test-artifacts/$suite"
               rm -f "test-artifacts/$suite/report.json"
               echo "RUN E2E $suite ($expected scenarios)"
-              ZAMEROVAC_SIMPLE_CHROMIUM=1 timeout --signal=TERM --kill-after=5s 15m node "tools/e2e/$suite.cjs"
+              ZAMEROVAC_SIMPLE_CHROMIUM=1 timeout --signal=TERM --kill-after=5s 15m node "$GITHUB_WORKSPACE/tools/e2e/$suite.cjs"
               node - "$suite" "$expected" <<'NODE'
           'use strict';
           const fs=require('node:fs');
@@ -175,6 +186,7 @@ jobs:
         with:
           gradle-version: '8.10.2'
       - name: Android native Java, Drive and PDF checks - no APK
+        working-directory: product
         if: ${{ env.QA_SCOPE == 'android' || env.QA_SCOPE == 'available' }}
         shell: bash
         run: |
@@ -188,9 +200,9 @@ jobs:
         with:
           name: simple-current-tests-diagnostics
           path: |
-            test-artifacts/
-            app/build/test-results/testPreviewUnitTest/
-            app/build/reports/drive-registration.json
-            app/build/customer-pdf-*.zip
+            product/test-artifacts/
+            product/app/build/test-results/testPreviewUnitTest/
+            product/app/build/reports/drive-registration.json
+            product/app/build/customer-pdf-*.zip
           if-no-files-found: ignore
           retention-days: 7
