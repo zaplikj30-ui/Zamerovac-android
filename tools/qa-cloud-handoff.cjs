@@ -176,7 +176,7 @@ function acceptPrepared(env=process.env){
   ZAMEROVAC_CLOUD_REVIEWED_V_SHA:env.ZAMEROVAC_CLOUD_REVIEWED_V_SHA,
   ZAMEROVAC_CLOUD_EVENT_SHA:env.ZAMEROVAC_CLOUD_EVENT_SHA};
  cp.execFileSync(python,[ '-E','-s','-B','-c',
-  'import sys;sys.path.insert(0,sys.argv[1]);from qa_cloud_runtime import verified_runtime;verified_runtime()',
+  'import sys;from pathlib import Path;sys.path.insert(0,sys.argv[1]);from qa_cloud_runtime import verified_runtime;from qa_cloud_provision import verify_tarball_contents;r=verified_runtime();verify_tarball_contents(Path(r["scratch"]),r["playwright"]["files"])',
   __dirname],{cwd:__dirname,env:pyEnv,encoding:'utf8',timeout:60000,
   maxBuffer:8192,stdio:['ignore','pipe','pipe']});
  return {scratch:finalRoot,runtimeFile,runtimeSha:digest,
