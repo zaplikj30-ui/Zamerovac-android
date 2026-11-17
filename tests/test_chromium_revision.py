@@ -21,7 +21,7 @@ def step_script(name):
     block = []
     in_run = False
     for line in lines[start + 1:]:
-        if line.startswith('      - '):
+        if line.startswith('      - ') or line.startswith('      #'):
             break
         if line == '        run: |':
             in_run = True
