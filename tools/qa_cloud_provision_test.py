@@ -230,17 +230,65 @@ class BrowserRevision(unittest.TestCase):
         self.chrome.write_bytes(b'\x7fELF' + b'not runnable - synthetic')
         self.ffmpeg = self.browsers / 'ffmpeg-1011'
         self.ffmpeg.mkdir()
+        self.ffmpeg_binary = self.ffmpeg / 'ffmpeg-linux'
+        self.ffmpeg_binary.write_bytes(b'\x7fELF' + b'synthetic-ffmpeg-identity')
+        self.ffmpeg_binary.chmod(0o700)
 
     def test_reviewed_chromium_and_ffmpeg_companion_only(self):
-        binary, revision, ffmpeg = q.resolved_browser(self.stage, None, {}, {})
+        binary, revision, ffmpeg, companion = q.resolved_browser(self.stage, None, {}, {})
         self.assertEqual(binary, self.chrome)
         self.assertEqual((revision, ffmpeg), ('1234', '1011'))
+        self.assertEqual(companion, self.ffmpeg_binary)
+        self.assertEqual(q.required_ffmpeg(self.stage, '1011')[1], q.hash_file(companion))
+
+    def test_empty_ffmpeg_directory_or_missing_executable_block(self):
+        self.ffmpeg_binary.unlink()
+        with self.assertRaises((q.Blocked, FileNotFoundError)):
+            q.resolved_browser(self.stage, None, {}, {})
+        with self.assertRaises((q.Blocked, FileNotFoundError)):
+            q.required_ffmpeg(self.stage, '1011')
+
+    def test_ffmpeg_symlink_bad_elf_not_executable_and_hardlink_block(self):
+        with tempfile.TemporaryDirectory() as outside:
+            target = Path(outside) / 'different'
+            target.write_bytes(b'\x7fELF' + b'outside')
+            self.ffmpeg_binary.unlink()
+            self.ffmpeg_binary.symlink_to(target)
+            with self.assertRaises(q.Blocked):
+                q.resolved_browser(self.stage, None, {}, {})
+            self.ffmpeg_binary.unlink()
+        self.ffmpeg_binary.write_bytes(b'NOPE' + b'bad header')
+        self.ffmpeg_binary.chmod(0o700)
+        with self.assertRaises(q.Blocked):
+            q.resolved_browser(self.stage, None, {}, {})
+        self.ffmpeg_binary.write_bytes(b'\x7fELF' + b'fixed')
+        self.ffmpeg_binary.chmod(0o600)
+        with self.assertRaises(q.Blocked):
+            q.resolved_browser(self.stage, None, {}, {})
+        self.ffmpeg_binary.chmod(0o700)
+        link = self.ffmpeg / 'hardlink-copy'
+        os.link(self.ffmpeg_binary, link)
+        try:
+            with self.assertRaises(q.Blocked):
+                q.resolved_browser(self.stage, None, {}, {})
+        finally:
+            link.unlink()
+
+    def test_ffmpeg_mutated_hash_and_revision_block(self):
+        _, old = q.required_ffmpeg(self.stage, '1011')
+        self.ffmpeg_binary.write_bytes(b'\x7fELF' + b'tampered')
+        self.assertNotEqual(q.hash_file(self.ffmpeg_binary), old)
+        with self.assertRaises((q.Blocked, FileNotFoundError)):
+            q.required_ffmpeg(self.stage, '1012')
 
     def test_missing_extra_and_wrong_ffmpeg_revision_block(self):
+        self.ffmpeg_binary.unlink()
         self.ffmpeg.rmdir()
         with self.assertRaises(q.Blocked):
             q.resolved_browser(self.stage, None, {}, {})
         self.ffmpeg.mkdir()
+        self.ffmpeg_binary.write_bytes(b'\x7fELF' + b'fixture')
+        self.ffmpeg_binary.chmod(0o700)
         extra = self.browsers / 'unapproved-1234'
         extra.mkdir()
         with self.assertRaises(q.Blocked):

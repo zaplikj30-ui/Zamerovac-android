@@ -14,6 +14,32 @@ function privateDir(folder){
   (s.mode&0o777)===0o700);
  return s;
 }
+// Never hand a redirected HOME/TMP/npm-cache to Python or browser children.
+// Top-level homes are exactly 0700; descendants must be same-UID, non-writable
+// by others, regular files (one link) or canonical directories on the same FS.
+function privateSubtree(root,name){
+ const parent=privateDir(root),folder=path.join(root,name);
+ need(['home','tmp','npm-cache'].includes(name)&&path.dirname(folder)===root);
+ const top=privateDir(folder);
+ need(top.dev===parent.dev);
+ let visited=0;
+ const walk=base=>{
+  for(const entry of fs.readdirSync(base,{withFileTypes:true})){
+   need(++visited<=50000);
+   const file=path.join(base,entry.name),s=fs.lstatSync(file);
+   const relative=path.relative(folder,file);
+   need(relative&&!relative.startsWith('..'+path.sep)&&relative!=='..'&&
+    !path.isAbsolute(relative)&&s.uid===process.getuid()&&s.dev===parent.dev&&
+    (s.mode&0o022)===0&&!s.isSymbolicLink()&&
+    fs.realpathSync.native(file)===file);
+   if(s.isDirectory()){
+    need((s.mode&0o700)===0o700);
+    walk(file);
+   }else need(s.isFile()&&s.nlink===1);
+  }
+ };
+ walk(folder);
+}
 function presentNoFollow(file){
  try{fs.lstatSync(file);return true}
  catch(error){if(error?.code==='ENOENT')return false;throw error}
@@ -78,12 +104,38 @@ function exactlyFiles(root,expected,requiredPrefix){
   size+=found.size;need(size<=2*1024*1024*1024);
  }
 }
+function verifyFfmpeg(finalRoot,manifest,revision){
+ need(/^[0-9]{3,7}$/.test(revision||''));
+ // Playwright 1.62.1 registry/index.ts Linux x64/arm64 FFmpeg executable.
+ const ffmpegRel='ffmpeg-'+revision+'/ffmpeg-linux';
+ const ffmpegEntry=manifest.chromium.files?.[ffmpegRel];
+ const ffmpegProfile=manifest.ffmpeg;
+ need(ffmpegProfile?.relative==='browsers/'+ffmpegRel&&
+  ffmpegProfile.revision===revision&&ffmpegProfile.magic==='7f454c46'&&
+  /^[a-f0-9]{64}$/.test(ffmpegProfile.sha256||'')&&
+  Number.isSafeInteger(ffmpegProfile.size)&&ffmpegProfile.size>4&&
+  ffmpegEntry?.sha256===ffmpegProfile.sha256&&
+  ffmpegEntry?.size===ffmpegProfile.size);
+ const ffmpegExe=path.join(finalRoot,'browsers',ffmpegRel);
+ const ffmpegStat=fs.lstatSync(ffmpegExe);
+ need(ffmpegStat.isFile()&&!ffmpegStat.isSymbolicLink()&&
+  ffmpegStat.nlink===1&&ffmpegStat.uid===process.getuid()&&
+  (ffmpegStat.mode&0o100)===0o100);
+ const ffmpegHash=checkedHash(ffmpegExe);
+ need(ffmpegHash.sha256===ffmpegProfile.sha256&&
+  ffmpegHash.size===ffmpegProfile.size);
+ const ffmpegFd=fs.openSync(ffmpegExe,fs.constants.O_RDONLY|(fs.constants.O_NOFOLLOW||0));
+ try{const elf=Buffer.alloc(4);need(fs.readSync(ffmpegFd,elf,0,4,0)===4&&
+   elf.toString('hex')==='7f454c46')}finally{fs.closeSync(ffmpegFd)}
+ return {path:ffmpegExe,...ffmpegHash,magic:'7f454c46',revision};
+}
 function checkPrepared(finalRoot,manifest,env){
  privateDir(finalRoot);
  const top=fs.readdirSync(finalRoot).sort();
  need(JSON.stringify(top)===JSON.stringify([
   'archives','browsers','deps','home','inventory.json','npm-cache',
   'provision.log','tmp'].sort()));
+ for(const name of ['home','tmp','npm-cache'])privateSubtree(finalRoot,name);
  const locked=fs.readFileSync(path.join(__dirname,'qa-browser/package-lock.json'));
  const pkg=fs.readFileSync(path.join(__dirname,'qa-browser/package.json'));
  need(sha(locked)===manifest.lockSha256&&sha(pkg)===manifest.packageSha256);
@@ -112,6 +164,7 @@ function checkPrepared(finalRoot,manifest,env){
  need(JSON.stringify(roots)===JSON.stringify(['chromium-'+revision,'ffmpeg-'+ffmpeg].sort()));
  exactlyFiles(path.join(finalRoot,'browsers'),manifest.chromium.files,
   ['chromium-'+revision+'/','ffmpeg-'+ffmpeg+'/']);
+ const ffmpegVerified=verifyFfmpeg(finalRoot,manifest,ffmpeg);
  const chromium=path.join(finalRoot,expectedExe);
  need(checkedHash(chromium).sha256===manifest.chromium.sha256);
  const fd=fs.openSync(chromium,'r');try{
@@ -132,6 +185,7 @@ function checkPrepared(finalRoot,manifest,env){
   node:{path:node,...nodeBinary},python:{path:python,...pythonBinary},
   chromium:{path:chromium,...checkedHash(chromium),magic:'7f454c46',
    revision,identity:strings},
+  ffmpeg:ffmpegVerified,
   playwright:{root:deps,files:manifest.playwright.files,
    archives:Object.fromEntries(['playwright','playwright-core'].map(n=>[n,{
     path:path.join(finalRoot,'archives',n+'.tgz'),
@@ -192,4 +246,4 @@ function acceptPrepared(env=process.env){
  return {scratch:finalRoot,runtimeFile,runtimeSha:digest,
   chromium:r.chromium.path};
 }
-module.exports={acceptPrepared,checkedHash,exactlyFiles,privateDir};
+module.exports={acceptPrepared,checkedHash,exactlyFiles,privateDir,privateSubtree,checkPrepared,verifyFfmpeg};

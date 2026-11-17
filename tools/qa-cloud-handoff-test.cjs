@@ -102,3 +102,115 @@ test('token must not cross into Python verifier environment',()=>{
  assert(!source.includes('ACTIONS_RUNTIME_TOKEN'));
  assert(!source.includes('GITHUB_TOKEN'));
 });
+
+// S1/S2: these use the REAL Linux filesystem after rename, unlike the earlier
+// six model tests. They never install npm or run Chromium.
+function actualVerifier(fsOverride=fs){
+ const mod={exports:{}};
+ vm.runInNewContext(source,{module:mod,__dirname:'/tools',process,Buffer,Date,
+  require(k){if(k==='node:fs')return fsOverride;if(k==='node:path')return path;
+   if(k==='node:crypto')return crypto;
+   if(k==='node:child_process')return require('node:child_process');
+   if(k==='./qa-cloud-runtime.cjs'||k==='./qa-browser/package-lock.json')return{};
+   throw Error('Unexpected dependency '+k);
+  }});
+ return mod.exports;
+}
+function realFixture(){
+ const temp=fs.mkdtempSync(path.join(require('node:os').tmpdir(),'qa-c-real-'));
+ const stage=path.join(temp,'stage'),finalRoot=path.join(temp,'final');
+ fs.mkdirSync(stage,{mode:0o700});
+ for(const n of ['home','tmp','npm-cache'])fs.mkdirSync(path.join(stage,n),{mode:0o700});
+ fs.renameSync(stage,finalRoot); // ACTUAL one-root same-device rename
+ return {temp,finalRoot,close(){fs.rmSync(temp,{recursive:true,force:true})}};
+}
+test('S1 real post-rename HOME/TMP/npm-cache rejects symlink and path escape',()=>{
+ const f=realFixture(),v=actualVerifier();
+ try{
+  for(const n of ['home','tmp','npm-cache'])v.privateSubtree(f.finalRoot,n);
+  const outside=path.join(f.temp,'outside');fs.mkdirSync(outside,{mode:0o700});
+  for(const n of ['home','tmp','npm-cache']){
+   const p=path.join(f.finalRoot,n);fs.rmdirSync(p);fs.symlinkSync(outside,p);
+   assert.throws(()=>v.privateSubtree(f.finalRoot,n));fs.unlinkSync(p);fs.mkdirSync(p,{mode:0o700});
+  }
+  const nested=path.join(f.finalRoot,'home','escape');fs.symlinkSync(outside,nested);
+  assert.throws(()=>v.privateSubtree(f.finalRoot,'home'));fs.unlinkSync(nested);
+ }finally{f.close()}
+});
+test('S1 real post-rename rejects wrong mode, hardlink and simulated wrong UID',()=>{
+ const f=realFixture(),v=actualVerifier();
+ try{
+  const h=path.join(f.finalRoot,'home'),t=path.join(f.finalRoot,'tmp');
+  fs.chmodSync(h,0o777);assert.throws(()=>v.privateSubtree(f.finalRoot,'home'));fs.chmodSync(h,0o700);
+  fs.chmodSync(t,0o755);assert.throws(()=>v.privateSubtree(f.finalRoot,'tmp'));fs.chmodSync(t,0o700);
+  const p=path.join(h,'a');fs.writeFileSync(p,'content',{mode:0o600});
+  const l=path.join(h,'hardlink');fs.linkSync(p,l);
+  assert.throws(()=>v.privateSubtree(f.finalRoot,'home'));fs.unlinkSync(l);
+  const fsAlien=Object.create(fs);
+  fsAlien.lstatSync=filename=>{const st=fs.lstatSync(filename);
+   if(filename===h){const modified=Object.create(st);modified.uid=process.getuid()+1;return modified}
+   return st};
+  assert.throws(()=>actualVerifier(fsAlien).privateSubtree(f.finalRoot,'home'));
+  v.privateSubtree(f.finalRoot,'home');
+ }finally{f.close()}
+});
+function ffFixture(){
+ const f=realFixture(),dir=path.join(f.finalRoot,'browsers','ffmpeg-1011');
+ fs.mkdirSync(dir,{recursive:true,mode:0o700});
+ const binary=path.join(dir,'ffmpeg-linux'),bytes=Buffer.from([127,69,76,70,1,2,3,4]);
+ fs.writeFileSync(binary,bytes,{mode:0o700});fs.chmodSync(binary,0o700);
+ const hash=crypto.createHash('sha256').update(bytes).digest('hex');
+ const inventory={chromium:{files:{'ffmpeg-1011/ffmpeg-linux':{sha256:hash,size:bytes.length}}},
+   ffmpeg:{relative:'browsers/ffmpeg-1011/ffmpeg-linux',revision:'1011',magic:'7f454c46',sha256:hash,size:bytes.length}};
+ return {...f,dir,binary,hash,inventory};
+}
+test('S2 real FFmpeg executable/ELF/inventory rejects missing, empty, symlink, mode, hash, revision',()=>{
+ const f=ffFixture(),v=actualVerifier();
+ try{
+  assert.equal(v.verifyFfmpeg(f.finalRoot,f.inventory,'1011').sha256,f.hash);
+  for(const mut of [m=>m.ffmpeg.sha256='0'.repeat(64),m=>m.ffmpeg.size++,
+   m=>m.ffmpeg.relative='browsers/ffmpeg-1011/other',m=>m.ffmpeg.revision='1012',
+   m=>m.chromium.files['ffmpeg-1011/ffmpeg-linux'].sha256='0'.repeat(64)]){
+   const bad=structuredClone(f.inventory);mut(bad);
+   assert.throws(()=>v.verifyFfmpeg(f.finalRoot,bad,'1011'));
+  }
+  assert.throws(()=>v.verifyFfmpeg(f.finalRoot,f.inventory,'1012'));
+  fs.chmodSync(f.binary,0o600);
+  assert.throws(()=>v.verifyFfmpeg(f.finalRoot,f.inventory,'1011'));fs.chmodSync(f.binary,0o700);
+  const link=path.join(f.dir,'hard');fs.linkSync(f.binary,link);
+  assert.throws(()=>v.verifyFfmpeg(f.finalRoot,f.inventory,'1011'));fs.unlinkSync(link);
+  fs.writeFileSync(f.binary,'not an ELF');
+  // Even a self-consistent hash/size inventory must not authorize non-ELF bytes.
+  const invalid=structuredClone(f.inventory),bad=fs.readFileSync(f.binary);
+  const badHash=crypto.createHash('sha256').update(bad).digest('hex');
+  invalid.ffmpeg.sha256=badHash;invalid.ffmpeg.size=bad.length;
+  invalid.chromium.files['ffmpeg-1011/ffmpeg-linux']={sha256:badHash,size:bad.length};
+  assert.throws(()=>v.verifyFfmpeg(f.finalRoot,invalid,'1011'));
+  fs.unlinkSync(f.binary); // empty FFmpeg folder
+  assert.throws(()=>v.verifyFfmpeg(f.finalRoot,f.inventory,'1011'));
+  const other=path.join(f.temp,'outside');fs.writeFileSync(other,'fake');fs.symlinkSync(other,f.binary);
+  assert.throws(()=>v.verifyFfmpeg(f.finalRoot,f.inventory,'1011'));
+ }finally{f.close()}
+});
+test('S1/S2 positive REAL Node rename -> Python subprocess validates bytes/paths -> Node rechecks',()=>{
+ const f=ffFixture(),v=actualVerifier(),cp=require('node:child_process');
+ const python=`import os,sys,hashlib,stat,json
+root,expected=sys.argv[1:]
+for name in ('home','tmp','npm-cache'):
+ p=os.path.join(root,name); s=os.lstat(p)
+ assert stat.S_ISDIR(s.st_mode) and stat.S_IMODE(s.st_mode)==0o700
+ assert os.path.realpath(p)==p and s.st_uid==os.getuid()
+p=os.path.join(root,'browsers','ffmpeg-1011','ffmpeg-linux')
+s=os.lstat(p); b=open(p,'rb').read()
+assert stat.S_ISREG(s.st_mode) and s.st_nlink==1 and s.st_mode&0o100
+assert b[:4]==b'\\x7fELF' and hashlib.sha256(b).hexdigest()==expected
+print(json.dumps({'pythonVerified':True,'size':len(b)}))`;
+ try{
+  for(const name of ['home','tmp','npm-cache'])v.privateSubtree(f.finalRoot,name);
+  assert.equal(v.verifyFfmpeg(f.finalRoot,f.inventory,'1011').sha256,f.hash);
+  const output=JSON.parse(cp.execFileSync('python3',['-c',python,f.finalRoot,f.hash],
+   {encoding:'utf8',timeout:12000,env:{PATH:process.env.PATH}}));
+  assert.deepEqual(output,{pythonVerified:true,size:8});
+  assert.equal(v.verifyFfmpeg(f.finalRoot,f.inventory,'1011').sha256,f.hash);
+ }finally{f.close()}
+});

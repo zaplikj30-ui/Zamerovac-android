@@ -358,6 +358,23 @@ def verify_tarball_contents(stage, files):
         require(observed == expected and len(expected) > 1)
 
 
+def required_ffmpeg(stage, revision):
+    # Playwright 1.62.1 registry/index.ts maps linux-x64/linux-arm64 to
+    # ffmpeg-<browsers.json revision>/ffmpeg-linux (never an arbitrary file).
+    stage = private_directory(stage)
+    require(isinstance(revision, str) and re.fullmatch(r'[0-9]{3,7}', revision))
+    binary = stage / 'browsers' / ('ffmpeg-' + revision) / 'ffmpeg-linux'
+    st = binary.lstat()  # NO follow: a symlink cannot stand in for this binary.
+    require(stat.S_ISREG(st.st_mode) and st.st_nlink == 1 and
+            st.st_uid == os.geteuid() and stat.S_IMODE(st.st_mode) & stat.S_IXUSR and
+            (st.st_mode & 0o022) == 0 and st.st_size > 4 and
+            str(binary.resolve(strict=True)) == str(binary))
+    require(checked_file(binary, 128 * 1024 * 1024)[:4] == b'\x7fELF')
+    digest = hash_file(binary, 128 * 1024 * 1024)
+    require(digest['size'] == st.st_size)
+    return binary, digest
+
+
 def resolved_browser(stage, node, childenv, lock):
     stage = private_directory(stage)
     deps = stage / 'deps'
@@ -387,7 +404,8 @@ def resolved_browser(stage, node, childenv, lock):
     # Permit exactly the two browser.json revisions, not arbitrary extra bins.
     require(set(p.name for p in browser_root.iterdir())
             == {'chromium-' + revision, 'ffmpeg-' + ffmpeg})
-    return name, revision, ffmpeg
+    ffmpeg_binary, _ = required_ffmpeg(stage, ffmpeg)
+    return name, revision, ffmpeg, ffmpeg_binary
 
 
 def prepare(env=None):
@@ -435,10 +453,14 @@ def prepare(env=None):
         run_group([node, str(deps / 'node_modules/playwright/cli.js'),
                    'install', 'chromium', '--no-shell'], deps, childenv,
                   min(deadline_ms, int((time.time() + 420) * 1000)), log)
-        browser, revision, ffmpeg_revision = resolved_browser(stage, node, childenv, lock)
+        browser, revision, ffmpeg_revision, ffmpeg_binary = resolved_browser(stage, node, childenv, lock)
         browser_files = exact_tree(stage / 'browsers', ('chromium-' + revision,
                                                        'ffmpeg-' + ffmpeg_revision))
         require(browser.relative_to(stage / 'browsers').as_posix() in browser_files)
+        ffmpeg_relative = ffmpeg_binary.relative_to(stage / 'browsers').as_posix()
+        require(ffmpeg_relative in browser_files)
+        ffmpeg_info = hash_file(ffmpeg_binary, 128 * 1024 * 1024)
+        require(browser_files[ffmpeg_relative] == ffmpeg_info)
         output = {
             'schema': 1, 'complete': True,
             'lockSha256': sha(lock_data), 'packageSha256': sha(package_data),
@@ -450,6 +472,9 @@ def prepare(env=None):
                          'revision': revision, 'ffmpegRevision': ffmpeg_revision,
                          'sha256': hash_file(browser)['sha256'],
                          'files': browser_files},
+            'ffmpeg': {'relative': ffmpeg_binary.relative_to(stage).as_posix(),
+                       'revision': ffmpeg_revision, 'magic': '7f454c46',
+                       'sha256': ffmpeg_info['sha256'], 'size': ffmpeg_info['size']},
         }
         # Manifest stored inside the ONE root that will be atomically renamed.
         inventory = stage / 'inventory.json'
