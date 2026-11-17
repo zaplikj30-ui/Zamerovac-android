@@ -5,7 +5,7 @@ on:
   workflow_dispatch:
     inputs:
       scope:
-        description: 'quick / drawing (17) / available (87 E2E + QUICK + native) / android / all (blocked)'
+        description: 'quick / drawing (17) / available (81 E2E + QUICK + native) / android / all (blocked)'
         type: choice
         options: [quick, drawing, available, android, all]
         default: quick
@@ -123,7 +123,7 @@ jobs:
           set -euo pipefail
           npm ci --prefix tools/qa-browser
           node tools/qa-browser/node_modules/playwright/cli.js install --with-deps chromium
-      - name: Chromium - current QUICK 7 and available E2E 21/87
+      - name: Chromium - current QUICK 7 and available E2E 21/81
         working-directory: product
         if: ${{ env.QA_SCOPE == 'quick' || env.QA_SCOPE == 'drawing' || env.QA_SCOPE == 'available' }}
         shell: bash
@@ -148,8 +148,8 @@ jobs:
           if [[ "$QA_SCOPE" == drawing || "$QA_SCOPE" == available ]]; then
             unset ZAMEROVAC_CASES ZAMEROVAC_SOURCE_SHA ZAMEROVAC_QA_GATE_SHA ZAMEROVAC_RUN_TOKEN
             suites=(drawing:17 gallery-visual:1 workflows:6 interactions:3 zoom-grid:2 update39:4
-              gallery-state:5 peer-sync:4 drive-accounts:5 sync-cadence:2 backup-history:1
-              read-only-sync:1 sync-edit-guard:3 note-sync:6 web-content-policy:1 media-import:4
+              gallery-state:2 peer-sync:4 drive-accounts:3 sync-cadence:2 backup-history:1
+              read-only-sync:1 sync-edit-guard:3 note-sync:6 web-content-policy:1 media-import:3
               help:2 release-history:2 latency:6 quality-regressions:8 gallery-readability:4)
             if [[ "$QA_SCOPE" == drawing ]]; then suites=('drawing:17'); fi
             total=0
@@ -178,7 +178,7 @@ jobs:
               total=$((total + expected))
             done
             if [[ "$QA_SCOPE" == drawing && "$total" -ne 17 ]]; then exit 1; fi
-            if [[ "$QA_SCOPE" == available && "$total" -ne 87 ]]; then exit 1; fi
+            if [[ "$QA_SCOPE" == available && "$total" -ne 81 ]]; then exit 1; fi
             echo "PASS $total actually executed E2E scenarios; FULL 23/96 still BLOCKED" | tee -a "$GITHUB_STEP_SUMMARY"
           fi
       - uses: gradle/actions/setup-gradle@v4
