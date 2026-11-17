@@ -113,70 +113,43 @@ jobs:
           set -euo pipefail
           npm ci --prefix tools/qa-browser
           tools/qa-browser/node_modules/.bin/playwright install --with-deps chromium
-      - name: QUICK Chromium - seven current browser checks
-        if: ${{ env.QA_SCOPE == 'quick' || env.QA_SCOPE == 'available' }}
+      - name: Chromium - current QUICK 7 and available E2E 21/87
+        if: ${{ env.QA_SCOPE == 'quick' || env.QA_SCOPE == 'drawing' || env.QA_SCOPE == 'available' }}
         shell: bash
         env:
           NODE_PATH: ${{ github.workspace }}/tools/qa-browser/node_modules
         run: |
           set -euo pipefail
-          python3 -m http.server 8765 --bind 127.0.0.1 --directory app/src/main/assets > /tmp/zamerovac-quick.log 2>&1 &
+          python3 -m http.server 8765 --bind 127.0.0.1 --directory app/src/main/assets > /tmp/zamerovac-browser.log 2>&1 &
           server_pid=$!
           trap 'kill "$server_pid" 2>/dev/null || true' EXIT
-          export CHROMIUM_PATH="$(node -p "require('playwright').chromium.executablePath()")"
-          done_count=0
-          for f in tools/check-*-browser.cjs; do
-            echo "RUN QUICK browser $f"
-            timeout --signal=TERM --kill-after=5s 5m node "$f"
-            done_count=$((done_count + 1))
-          done
-          if [[ "$done_count" -ne 7 ]]; then echo 'FAIL: expected seven current browser checks'; exit 1; fi
-          echo "PASS QUICK Chromium: $done_count/7 completed browser scripts" | tee -a "$GITHUB_STEP_SUMMARY"
-      - name: Chromium drawing or all 21 current available E2E suites
-        if: ${{ env.QA_SCOPE == 'drawing' || env.QA_SCOPE == 'available' }}
-        shell: bash
-        env:
-          NODE_PATH: ${{ github.workspace }}/tools/qa-browser/node_modules
-          ZAMEROVAC_SIMPLE_CHROMIUM: '1'
-        run: |
-          set -euo pipefail
-          unset ZAMEROVAC_CASES ZAMEROVAC_SOURCE_SHA ZAMEROVAC_QA_GATE_SHA ZAMEROVAC_RUN_TOKEN
-          python3 -m http.server 8765 --bind 127.0.0.1 --directory app/src/main/assets > /tmp/zamerovac-e2e.log 2>&1 &
-          server_pid=$!
-          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
-          suites=(
-            'drawing:17'
-            'gallery-visual:1'
-            'workflows:6'
-            'interactions:3'
-            'zoom-grid:2'
-            'update39:4'
-            'gallery-state:5'
-            'peer-sync:4'
-            'drive-accounts:5'
-            'sync-cadence:2'
-            'backup-history:1'
-            'read-only-sync:1'
-            'sync-edit-guard:3'
-            'note-sync:6'
-            'web-content-policy:1'
-            'media-import:4'
-            'help:2'
-            'release-history:2'
-            'latency:6'
-            'quality-regressions:8'
-            'gallery-readability:4'
-          )
-          if [[ "$QA_SCOPE" == drawing ]]; then suites=('drawing:17'); fi
-          total=0
-          for item in "${suites[@]}"; do
-            suite="${item%%:*}"
-            expected="${item##*:}"
-            mkdir -p "test-artifacts/$suite"
-            rm -f "test-artifacts/$suite/report.json"
-            echo "RUN E2E $suite ($expected scenarios)"
-            timeout --signal=TERM --kill-after=5s 15m node "tools/e2e/$suite.cjs"
-            node - "$suite" "$expected" <<'NODE'
+          if [[ "$QA_SCOPE" == quick || "$QA_SCOPE" == available ]]; then
+            export CHROMIUM_PATH="$(node -p "require('playwright').chromium.executablePath()")"
+            done_count=0
+            for f in tools/check-*-browser.cjs; do
+              echo "RUN QUICK browser $f"
+              timeout --signal=TERM --kill-after=5s 5m node "$f"
+              done_count=$((done_count + 1))
+            done
+            if [[ "$done_count" -ne 7 ]]; then echo 'FAIL: expected seven current browser checks'; exit 1; fi
+            echo "PASS QUICK Chromium: $done_count/7 completed browser scripts" | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
+          if [[ "$QA_SCOPE" == drawing || "$QA_SCOPE" == available ]]; then
+            unset ZAMEROVAC_CASES ZAMEROVAC_SOURCE_SHA ZAMEROVAC_QA_GATE_SHA ZAMEROVAC_RUN_TOKEN
+            suites=(drawing:17 gallery-visual:1 workflows:6 interactions:3 zoom-grid:2 update39:4
+              gallery-state:5 peer-sync:4 drive-accounts:5 sync-cadence:2 backup-history:1
+              read-only-sync:1 sync-edit-guard:3 note-sync:6 web-content-policy:1 media-import:4
+              help:2 release-history:2 latency:6 quality-regressions:8 gallery-readability:4)
+            if [[ "$QA_SCOPE" == drawing ]]; then suites=('drawing:17'); fi
+            total=0
+            for item in "${suites[@]}"; do
+              suite="${item%%:*}"
+              expected="${item##*:}"
+              mkdir -p "test-artifacts/$suite"
+              rm -f "test-artifacts/$suite/report.json"
+              echo "RUN E2E $suite ($expected scenarios)"
+              ZAMEROVAC_SIMPLE_CHROMIUM=1 timeout --signal=TERM --kill-after=5s 15m node "tools/e2e/$suite.cjs"
+              node - "$suite" "$expected" <<'NODE'
           'use strict';
           const fs=require('node:fs');
           const [suite,count]=process.argv.slice(2);
@@ -191,11 +164,12 @@ jobs:
           }
           console.log('PASS '+suite+' '+names.length+'/'+count);
           NODE
-            total=$((total + expected))
-          done
-          if [[ "$QA_SCOPE" == drawing && "$total" -ne 17 ]]; then exit 1; fi
-          if [[ "$QA_SCOPE" == available && "$total" -ne 87 ]]; then exit 1; fi
-          echo "PASS $total actually executed E2E scenarios; FULL 23/96 still BLOCKED" | tee -a "$GITHUB_STEP_SUMMARY"
+              total=$((total + expected))
+            done
+            if [[ "$QA_SCOPE" == drawing && "$total" -ne 17 ]]; then exit 1; fi
+            if [[ "$QA_SCOPE" == available && "$total" -ne 87 ]]; then exit 1; fi
+            echo "PASS $total actually executed E2E scenarios; FULL 23/96 still BLOCKED" | tee -a "$GITHUB_STEP_SUMMARY"
+          fi
       - uses: gradle/actions/setup-gradle@v4
         if: ${{ env.QA_SCOPE == 'android' || env.QA_SCOPE == 'available' }}
         with:
