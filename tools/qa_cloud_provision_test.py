@@ -35,6 +35,7 @@ mode = sys.argv[3]
 ready = root / ('grandchild-' + mode + '.json')
 release = root / ('release-' + mode)
 log = root / ('group-' + mode + '.log')
+leader_ok = root / ('leader-ok-' + mode)
 assert sys.platform == 'linux'
 assert ctypes.CDLL(None, use_errno=True).prctl(36, 1, 0, 0, 0) == 0
 # The grandchild closes inherited supervisor PIPEs before signalling readiness.
@@ -49,6 +50,7 @@ time.sleep(30)
 """
 leader_code = r"""
 import os,subprocess,sys,time
+from pathlib import Path
 subprocess.Popen([sys.executable,'-B','-c',sys.argv[1],sys.argv[2]],
  stdin=subprocess.DEVNULL,stdout=subprocess.DEVNULL,stderr=subprocess.DEVNULL,
  close_fds=True,start_new_session=False)
@@ -56,6 +58,9 @@ deadline=time.monotonic()+8
 while not os.path.exists(sys.argv[3]):
  if time.monotonic()>deadline:raise SystemExit(89)
  time.sleep(.01)
+if Path(sys.argv[3]).read_text()!='confirmed-live':raise SystemExit(88)
+Path(sys.argv[4]).write_text('successful-leader-exit')
+os._exit(0)
 """
 state = {}
 errors = []
@@ -105,7 +110,7 @@ blocked = False
 try:
     try:
         q.run_group([sys.executable, '-B', '-c', leader_code, child_code,
-                     str(ready), str(release)],
+                     str(ready), str(release), str(leader_ok)],
                     root, {}, (time.time() + 40) * 1000, log)
     except q.Blocked:
         blocked = True
@@ -123,6 +128,7 @@ finally:
                 pass
         reaped.wait(3)
 assert not errors, errors
+assert leader_ok.read_text() == 'successful-leader-exit', 'leader failed to exit zero'
 assert blocked, 'live descendant survivor incorrectly reported PASS'
 assert reaped.is_set(), 'known descendant was not reaped by fixture owner'
 assert not Path('/proc/%d' % state['pid']).exists(), 'known descendant still exists'
