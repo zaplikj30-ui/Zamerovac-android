@@ -74,19 +74,25 @@ jobs:
               return json.load(response)
           repo=get('')
           p=get('pulls/150')
-          v=get('pulls/156')
-          parent=get('pulls/155')
-          if (parent.get('head') or {}).get('sha')!='9f733b24194a7870fa1377b256076bca7a71eb5a':block('moved V parent')
+          v=get('pulls/155')
+          parent_q=get('pulls/156')
+          q=get('pulls/163')
           if (get('git/ref/heads/main').get('object') or {}).get('sha')!=e['QA_EVENT_SHA']:block('moved main')
+          if (get('git/ref/heads/fix/cloud-validator-owner-comment-live-20261117').get('object') or {}).get('sha')!=e['QA_VALIDATOR_SHA']:block('moved Q branch')
           if repo.get('private') is not False or repo.get('visibility')!='public':block('billing/private')
           def safe_pr(pr,sha):
             return (pr.get('state')=='open' and (pr.get('head') or {}).get('sha')==sha
               and ((pr.get('head') or {}).get('repo') or {}).get('full_name')==e['GITHUB_REPOSITORY'])
           if not safe_pr(p,e['QA_PRODUCT_SHA']):block('moved P')
-          if not safe_pr(v,e['QA_VALIDATOR_SHA']):block('moved V')
-          if (v.get('base') or {}).get('ref')!='programator/cloud-qa-a1-a3-20261116':block('Q base')
+          if not safe_pr(v,'9f733b24194a7870fa1377b256076bca7a71eb5a'):block('moved V')
+          if not safe_pr(parent_q,'ca6c23727f692e26811d9e7f3b346116533aa6b5'):block('moved Q parent')
+          if not safe_pr(q,e['QA_VALIDATOR_SHA']):block('moved Q')
           if (p.get('base') or {}).get('ref')!='main':block('P base')
-          print('PASS only precheckout metadata P/V/E/public; NOT test PASS')
+          if (v.get('base') or {}).get('ref')!='implement/home4-p1-p4-20261115':block('V base')
+          if (parent_q.get('base') or {}).get('ref')!='programator/cloud-qa-a1-a3-20261116':block('Q parent base')
+          if ((q.get('base') or {}).get('ref')!='fix/quick155-real-regression-20261116'
+              or (q.get('head') or {}).get('ref')!='fix/cloud-validator-owner-comment-live-20261117'):block('Q branch/base')
+          print('PASS only precheckout P/V/Q-parent/Q/E/public metadata; NOT test PASS')
           PY
       - name: Checkout exact reviewed validator V, no persisted credentials
         id: checkout_v
@@ -286,16 +292,26 @@ jobs:
           python3 - <<'PY'
           import json,os,urllib.request
           e=os.environ
-          for number,sha in ((150,e['QA_PRODUCT_SHA']),(155,'9f733b24194a7870fa1377b256076bca7a71eb5a'),(156,e['QA_VALIDATOR_SHA'])):
+          reviewed=((150,e['QA_PRODUCT_SHA'],'main'),
+                    (155,'9f733b24194a7870fa1377b256076bca7a71eb5a','implement/home4-p1-p4-20261115'),
+                    (156,'ca6c23727f692e26811d9e7f3b346116533aa6b5','programator/cloud-qa-a1-a3-20261116'),
+                    (163,e['QA_VALIDATOR_SHA'],'fix/quick155-real-regression-20261116'))
+          for number,sha,base in reviewed:
             request=urllib.request.Request(
               'https://api.github.com/repos/zaplikj30-ui/Zamerovac-android/pulls/'+str(number),
               headers={'Accept':'application/vnd.github+json','User-Agent':'zamerovac-cloud-qa'})
             with urllib.request.urlopen(request,timeout=12) as response: pr=json.load(response)
-            if pr.get('state')!='open' or (pr.get('head') or {}).get('sha')!=sha:
-              raise SystemExit('BLOCKED stale P/V; STOP / NO RETRY')
+            head=pr.get('head') or {}
+            if (pr.get('state')!='open' or head.get('sha')!=sha
+                or (head.get('repo') or {}).get('full_name')!='zaplikj30-ui/Zamerovac-android'
+                or (pr.get('base') or {}).get('ref')!=base
+                or (number==163 and head.get('ref')!='fix/cloud-validator-owner-comment-live-20261117')):
+              raise SystemExit('BLOCKED stale P/V/Q-parent/Q; STOP / NO RETRY')
           if e['QA_EVENT_SHA']!=e['GITHUB_SHA'] or e['QA_EVENT_SHA']!=e.get('GITHUB_WORKFLOW_SHA'):raise SystemExit('BLOCKED stale E')
-          request=urllib.request.Request('https://api.github.com/repos/zaplikj30-ui/Zamerovac-android/git/ref/heads/main',headers={'User-Agent':'zamerovac-cloud-qa'})
-          with urllib.request.urlopen(request,timeout=12) as response: live_main=json.load(response)
-          if (live_main.get('object') or {}).get('sha')!=e['QA_EVENT_SHA']:raise SystemExit('BLOCKED moved main')
-          print('Final P/V/E still exactly reviewed; individual test results remain raw')
+          def live_ref(branch):
+            request=urllib.request.Request('https://api.github.com/repos/zaplikj30-ui/Zamerovac-android/git/ref/heads/'+branch,headers={'User-Agent':'zamerovac-cloud-qa'})
+            with urllib.request.urlopen(request,timeout=12) as response: return json.load(response)
+          if (live_ref('main').get('object') or {}).get('sha')!=e['QA_EVENT_SHA']:raise SystemExit('BLOCKED moved main')
+          if (live_ref('fix/cloud-validator-owner-comment-live-20261117').get('object') or {}).get('sha')!=e['QA_VALIDATOR_SHA']:raise SystemExit('BLOCKED moved Q branch')
+          print('Final P/V/Q-parent/Q/E still exactly reviewed; individual test results remain raw')
           PY

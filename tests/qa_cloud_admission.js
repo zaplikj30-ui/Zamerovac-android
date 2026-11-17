@@ -51,7 +51,7 @@ test('CLOUD-DIAG live approved P Q E rejects fork drift closed PR and API failur
  const {live}=require('../tools/qa-cloud-diag.cjs');
  const env={ZAMEROVAC_EXPECTED_PRODUCT_SHA:'p',ZAMEROVAC_CLOUD_REVIEWED_V_SHA:'q',ZAMEROVAC_CLOUD_EVENT_SHA:'e'};
  const data={'':{private:false},'git/ref/heads/main':{object:{sha:'e'}},'git/ref/heads/fix/cloud-validator-owner-comment-live-20261117':{object:{sha:'q'}}};
- for(const [n,sha,ref] of [[150,'p','main'],[155,'9f733b24194a7870fa1377b256076bca7a71eb5a','implement/home4-p1-p4-20261115'],[156,'ca6c23727f692e26811d9e7f3b346116533aa6b5','programator/cloud-qa-a1-a3-20261116']])data['pulls/'+n]={state:'open',head:{sha,repo:{full_name:'zaplikj30-ui/Zamerovac-android'}},base:{ref}};
+ for(const [n,sha,ref] of [[150,'p','main'],[155,'9f733b24194a7870fa1377b256076bca7a71eb5a','implement/home4-p1-p4-20261115'],[156,'ca6c23727f692e26811d9e7f3b346116533aa6b5','programator/cloud-qa-a1-a3-20261116'],[163,'q','fix/quick155-real-regression-20261116']])data['pulls/'+n]={state:'open',head:{sha,repo:{full_name:'zaplikj30-ui/Zamerovac-android'},ref:n===163?'fix/cloud-validator-owner-comment-live-20261117':undefined},base:{ref}};
  const request=rows=>async (url,opts)=>{
   const resource=url.split('Zamerovac-android')[1]?.replace(/^\//,'');
   assert.equal(url,'https://api.github.com/repos/zaplikj30-ui/Zamerovac-android'+(resource?'/'+resource:''));
@@ -61,6 +61,6 @@ test('CLOUD-DIAG live approved P Q E rejects fork drift closed PR and API failur
  };
  await live({...env,QA_CLOUD_METADATA_TOKEN:'test-token'},request(data));
  await live(env,request(data));
- for(const edit of [r=>r[''].private=true,r=>r['git/ref/heads/main'].object.sha='wrong',r=>r['git/ref/heads/fix/cloud-validator-owner-comment-live-20261117'].object.sha='wrong',r=>r['pulls/156'].head.sha='wrong',r=>r['pulls/150'].state='closed',r=>r['pulls/156'].head.repo.full_name='fork',r=>r['pulls/156'].base.ref='main']){const rows=structuredClone(data);edit(rows);await assert.rejects(live(env,request(rows)))}
+ for(const edit of [r=>r[''].private=true,r=>r['git/ref/heads/main'].object.sha='wrong',r=>r['git/ref/heads/fix/cloud-validator-owner-comment-live-20261117'].object.sha='wrong',r=>r['pulls/156'].head.sha='wrong',r=>r['pulls/163'].head.sha='wrong',r=>r['pulls/163'].head.repo.full_name='fork',r=>r['pulls/163'].head.ref='unsafe-branch',r=>r['pulls/163'].base.ref='main',r=>r['pulls/163'].state='closed',r=>r['pulls/150'].state='closed',r=>r['pulls/156'].head.repo.full_name='fork',r=>r['pulls/156'].base.ref='main']){const rows=structuredClone(data);edit(rows);await assert.rejects(live(env,request(rows)))}
  await assert.rejects(live(env,async()=>({ok:false})));
 });

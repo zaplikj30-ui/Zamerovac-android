@@ -44,8 +44,11 @@ async function live(env,request=fetch){
  const main=await get('git/ref/heads/main');need(main.object?.sha===env.ZAMEROVAC_CLOUD_EVENT_SHA);
  const validatorBranch=await get('git/ref/heads/fix/cloud-validator-owner-comment-live-20261117');
  need(validatorBranch.object?.sha===env.ZAMEROVAC_CLOUD_REVIEWED_V_SHA);
- for(const [n,sha,base] of [[150,env.ZAMEROVAC_EXPECTED_PRODUCT_SHA,'main'],[155,'9f733b24194a7870fa1377b256076bca7a71eb5a','implement/home4-p1-p4-20261115'],[156,'ca6c23727f692e26811d9e7f3b346116533aa6b5','programator/cloud-qa-a1-a3-20261116']]){
-  const pr=await get('pulls/'+n);need(pr.state==='open'&&pr.head?.sha===sha&&pr.head?.repo?.full_name==='zaplikj30-ui/Zamerovac-android'&&pr.base?.ref===base);
+ for(const [n,sha,base] of [[150,env.ZAMEROVAC_EXPECTED_PRODUCT_SHA,'main'],[155,'9f733b24194a7870fa1377b256076bca7a71eb5a','implement/home4-p1-p4-20261115'],[156,'ca6c23727f692e26811d9e7f3b346116533aa6b5','programator/cloud-qa-a1-a3-20261116'],[163,env.ZAMEROVAC_CLOUD_REVIEWED_V_SHA,'fix/quick155-real-regression-20261116']]){
+  const pr=await get('pulls/'+n);
+  need(pr.state==='open'&&pr.head?.sha===sha&&
+   pr.head?.repo?.full_name==='zaplikj30-ui/Zamerovac-android'&&pr.base?.ref===base&&
+   (n!==163||pr.head?.ref==='fix/cloud-validator-owner-comment-live-20261117'));
  }
 }
 async function main(){
