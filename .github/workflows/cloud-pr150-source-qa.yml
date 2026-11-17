@@ -51,6 +51,8 @@ jobs:
         id: preflight
         shell: bash
         timeout-minutes: 2
+        env:
+          QA_CLOUD_METADATA_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           python3 - <<'PY'
@@ -77,8 +79,10 @@ jobs:
           if e['GITHUB_SHA']!=e['QA_EVENT_SHA'] or e.get('GITHUB_WORKFLOW_SHA')!=e['QA_EVENT_SHA']:block('stale E')
           if e.get('QA_APPROVED_Q')!=e['QA_VALIDATOR_SHA'] or e.get('QA_APPROVED_E')!=e['QA_EVENT_SHA']:block('external approval missing')
           def get(resource):
-            req=urllib.request.Request('https://api.github.com/repos/zaplikj30-ui/Zamerovac-android/'+resource,
-              headers={'Accept':'application/vnd.github+json','User-Agent':'zamerovac-cloud-qa'})
+            if not e.get('QA_CLOUD_METADATA_TOKEN'):block('metadata token unavailable')
+            req=urllib.request.Request('https://api.github.com/repos/zaplikj30-ui/Zamerovac-android'+('/'+resource if resource else ''),
+              headers={'Accept':'application/vnd.github+json','User-Agent':'zamerovac-cloud-qa',
+                'Authorization':'Bearer '+e['QA_CLOUD_METADATA_TOKEN']})
             with urllib.request.urlopen(req,timeout=12) as response:
               if response.status!=200:block('API status')
               return json.load(response)
@@ -217,6 +221,7 @@ jobs:
         timeout-minutes: 210
         shell: bash
         env:
+          QA_CLOUD_METADATA_TOKEN: ${{ github.token }}
           ZAMEROVAC_QA_MODE: cloud
           NODE_OPTIONS: ''
           NODE_PATH: ''
@@ -296,12 +301,15 @@ jobs:
       - name: Final live P/V/E check, no stale HEAD or fake PASS
         if: ${{ !cancelled() && steps.strict_browser.outputs.full_verified == 'true' }}
         timeout-minutes: 2
+        env:
+          QA_CLOUD_METADATA_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           import json,os,urllib.request
           e=os.environ
+          if not e.get('QA_CLOUD_METADATA_TOKEN'):raise SystemExit('BLOCKED missing metadata token')
           reviewed=((150,e['QA_PRODUCT_SHA'],'main'),
                     (155,'9f733b24194a7870fa1377b256076bca7a71eb5a','implement/home4-p1-p4-20261115'),
                     (156,'ca6c23727f692e26811d9e7f3b346116533aa6b5','programator/cloud-qa-a1-a3-20261116'),
@@ -309,7 +317,8 @@ jobs:
           for number,sha,base in reviewed:
             request=urllib.request.Request(
               'https://api.github.com/repos/zaplikj30-ui/Zamerovac-android/pulls/'+str(number),
-              headers={'Accept':'application/vnd.github+json','User-Agent':'zamerovac-cloud-qa'})
+              headers={'Accept':'application/vnd.github+json','User-Agent':'zamerovac-cloud-qa',
+                'Authorization':'Bearer '+e['QA_CLOUD_METADATA_TOKEN']})
             with urllib.request.urlopen(request,timeout=12) as response: pr=json.load(response)
             head=pr.get('head') or {}
             if (pr.get('state')!='open' or head.get('sha')!=sha
@@ -319,7 +328,8 @@ jobs:
               raise SystemExit('BLOCKED stale P/V/Q-parent/Q; STOP / NO RETRY')
           if e['QA_EVENT_SHA']!=e['GITHUB_SHA'] or e['QA_EVENT_SHA']!=e.get('GITHUB_WORKFLOW_SHA'):raise SystemExit('BLOCKED stale E')
           def live_ref(branch):
-            request=urllib.request.Request('https://api.github.com/repos/zaplikj30-ui/Zamerovac-android/git/ref/heads/'+branch,headers={'User-Agent':'zamerovac-cloud-qa'})
+            request=urllib.request.Request('https://api.github.com/repos/zaplikj30-ui/Zamerovac-android/git/ref/heads/'+branch,
+              headers={'User-Agent':'zamerovac-cloud-qa','Authorization':'Bearer '+e['QA_CLOUD_METADATA_TOKEN']})
             with urllib.request.urlopen(request,timeout=12) as response: return json.load(response)
           if (live_ref('main').get('object') or {}).get('sha')!=e['QA_EVENT_SHA']:raise SystemExit('BLOCKED moved main')
           if (live_ref('fix/cloud-validator-owner-comment-live-20261117').get('object') or {}).get('sha')!=e['QA_VALIDATOR_SHA']:raise SystemExit('BLOCKED moved Q branch')
