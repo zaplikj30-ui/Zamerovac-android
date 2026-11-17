@@ -52,10 +52,10 @@ function runnerDir(folder){
   (st.mode&0o022)===0);
  return st;
 }
-function checkedHash(file,limit=1024*1024*1024){
+function checkedHash(file,limit=1024*1024*1024,allowEmpty=false){
  const s=fs.lstatSync(file);
  need(s.isFile()&&!s.isSymbolicLink()&&s.nlink===1&&
-  s.size>0&&s.size<=limit&&(s.mode&0o022)===0&&
+  s.size>=(allowEmpty?0:1)&&s.size<=limit&&(s.mode&0o022)===0&&
   fs.realpathSync.native(file)===file);
  const fd=fs.openSync(file,fs.constants.O_RDONLY|(fs.constants.O_NOFOLLOW||0));
  try{
@@ -98,8 +98,10 @@ function exactlyFiles(root,expected,requiredPrefix){
    !relative.startsWith('/'));
   const spec=expected[relative];
   need(spec&&typeof spec==='object'&&/^[a-f0-9]{64}$/.test(spec.sha256)&&
-   Number.isSafeInteger(spec.size)&&spec.size>0);
-  const found=checkedHash(path.join(root,relative));
+   Number.isSafeInteger(spec.size)&&spec.size>=0);
+  // This is the browser DATA closure, including empty vendor markers. All
+  // executable and metadata readers retain their nonempty default contract.
+  const found=checkedHash(path.join(root,relative),1024*1024*1024,true);
   need(found.sha256===spec.sha256&&found.size===spec.size);
   size+=found.size;need(size<=2*1024*1024*1024);
  }

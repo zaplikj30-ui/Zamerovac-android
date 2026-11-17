@@ -79,11 +79,12 @@ def sha(data):
     return hashlib.sha256(data).hexdigest()
 
 
-def hash_file(p, limit=1024 * 1024 * 1024):
+def hash_file(p, limit=1024 * 1024 * 1024, *, allow_empty=False):
     p = Path(p)
     s = p.lstat()
     require(p.is_absolute() and str(p.resolve(strict=True)) == str(p)
-            and stat.S_ISREG(s.st_mode) and s.st_nlink == 1 and 0 < s.st_size <= limit
+            and stat.S_ISREG(s.st_mode) and s.st_nlink == 1
+            and (0 if allow_empty else 1) <= s.st_size <= limit
             and (s.st_mode & 0o022) == 0)
     d = hashlib.sha256()
     with p.open('rb') as f:
@@ -98,7 +99,7 @@ def hash_file(p, limit=1024 * 1024 * 1024):
     return {'sha256': d.hexdigest(), 'size': s.st_size}
 
 
-def exact_tree(root, allowed_roots):
+def exact_tree(root, allowed_roots, *, allow_empty=False):
     root = Path(root)
     require(str(root.resolve(strict=True)) == str(root))
     records = {}
@@ -118,10 +119,17 @@ def exact_tree(root, allowed_roots):
                         and '..' not in Path(rel).parts and rel not in records)
                 total += st.st_size
                 require(total <= MAX_TOTAL)
-                records[rel] = hash_file(item)
+                records[rel] = hash_file(item, allow_empty=allow_empty)
     visit(root)
     require(0 < len(records) <= MAX_FILES)
     return records
+
+
+def browser_data_tree(root, allowed_roots):
+    # Vendor markers and other DATA may be empty; existence, size and SHA256
+    # are still exact. Executables are independently checked with strict APIs.
+    # The npm module tree retains exact_tree's nonempty default.
+    return exact_tree(root, allowed_roots, allow_empty=True)
 
 
 def git_blob_sha1(data):
@@ -504,7 +512,7 @@ def prepare(env=None):
                    'install', 'chromium', '--no-shell'], deps, childenv,
                   min(deadline_ms, int((time.time() + 420) * 1000)), log)
         browser, revision, ffmpeg_revision, ffmpeg_binary = provision_step('BROWSER_LAYOUT', resolved_browser, stage, node, childenv, lock)
-        browser_files = provision_step('BROWSER_TREE', exact_tree, stage / 'browsers', ('chromium-' + revision,
+        browser_files = provision_step('BROWSER_TREE', browser_data_tree, stage / 'browsers', ('chromium-' + revision,
                                                        'ffmpeg-' + ffmpeg_revision))
         require(browser.relative_to(stage / 'browsers').as_posix() in browser_files)
         ffmpeg_relative = ffmpeg_binary.relative_to(stage / 'browsers').as_posix()

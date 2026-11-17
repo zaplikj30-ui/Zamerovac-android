@@ -195,6 +195,85 @@ class ProvisionTests(unittest.TestCase):
         with self.assertRaises(q.Blocked):
             q.exact_tree(modules, ('playwright','playwright-core'))
 
+    def test_browser_data_zero_byte_markers_have_exact_hash_and_size(self):
+        browsers = self.stage / 'browsers'
+        folder = browsers / 'chromium-1234'
+        folder.mkdir(parents=True)
+        for name in ('INSTALLATION_COMPLETE', 'DEPENDENCIES_VALIDATED', 'empty-data'):
+            (folder / name).touch(mode=0o600)
+        files = q.browser_data_tree(browsers, ('chromium-1234',))
+        self.assertEqual(len(files), 3)
+        for spec in files.values():
+            self.assertEqual(spec, {'size': 0, 'sha256': hashlib.sha256(b'').hexdigest()})
+        # Default APIs used for executable, metadata and module inputs stay strict.
+        for read in (q.hash_file, q.checked_file):
+            with self.assertRaises(q.Blocked):
+                read(folder / 'empty-data')
+        with self.assertRaises(q.Blocked):
+            q.exact_tree(browsers, ('chromium-1234',))
+
+    def test_browser_data_keeps_links_modes_limits_and_prefix_checks(self):
+        browsers = self.stage / 'browsers'
+        folder = browsers / 'chromium-1234'
+        folder.mkdir(parents=True)
+        file = folder / 'INSTALLATION_COMPLETE'
+        file.touch(mode=0o600)
+        def verify():
+            return q.browser_data_tree(browsers, ('chromium-1234',))
+        verify()
+        with mock.patch.object(q, 'MAX_FILES', 0), self.assertRaises(q.Blocked):
+            verify()
+        file.write_bytes(b'changed')
+        with mock.patch.object(q, 'MAX_TOTAL', 0), self.assertRaises(q.Blocked):
+            verify()
+        with self.assertRaises(q.Blocked):
+            q.hash_file(file, 1, allow_empty=True)
+        file.write_bytes(b'')
+        file.chmod(0o666)
+        with self.assertRaises(q.Blocked):
+            verify()
+        file.chmod(0o600)
+        alias = folder / 'alias'
+        os.link(file, alias)
+        with self.assertRaises(q.Blocked):
+            verify()
+        alias.unlink()
+        file.unlink()
+        file.symlink_to(self.log)
+        with self.assertRaises(q.Blocked):
+            verify()
+        file.unlink()
+        folder.rmdir()
+        folder.symlink_to(self.stage)
+        with self.assertRaises(q.Blocked):
+            verify()
+        folder.unlink()
+        folder.mkdir()
+        file.touch(mode=0o600)
+        (browsers / 'foreign').touch(mode=0o600)
+        with self.assertRaises(q.Blocked):
+            verify()
+
+    def test_empty_data_hash_detects_mutation_during_read(self):
+        file = self.stage / 'empty-data'
+        file.touch(mode=0o600)
+        original_open = Path.open
+        def changed_open(p, *args, **kwargs):
+            if p == file:
+                with original_open(p, 'wb') as writer:
+                    writer.write(b'tampered')
+            return original_open(p, *args, **kwargs)
+        with mock.patch.object(Path, 'open', changed_open), self.assertRaises(q.Blocked):
+            q.hash_file(file, allow_empty=True)
+
+    def test_empty_metadata_manifest_and_archive_are_still_blocked(self):
+        for name in ('inventory.json', 'package.json', 'archive.tgz'):
+            file = self.stage / name
+            file.touch(mode=0o600)
+            with self.assertRaises(q.Blocked):
+                q.checked_file(file)
+
+
     def test_wrong_P_Q_E_or_missing_lock_block_before_any_installer(self):
         source = self.root / 'validator'
         source.mkdir()
@@ -339,6 +418,17 @@ class BrowserRevision(unittest.TestCase):
             q.resolved_browser(self.stage, None, {}, {})
         with self.assertRaises((q.Blocked, FileNotFoundError)):
             q.required_ffmpeg(self.stage, '1011')
+
+    def test_empty_chromium_and_ffmpeg_never_become_data_approved_executables(self):
+        for executable in (self.chrome, self.ffmpeg_binary):
+            original = executable.read_bytes()
+            executable.write_bytes(b'')
+            # DATA closure may record it, executable validation must reject it.
+            files = q.browser_data_tree(self.browsers, ('chromium-1234', 'ffmpeg-1011'))
+            self.assertEqual(files[executable.relative_to(self.browsers).as_posix()]['size'], 0)
+            with self.assertRaises(q.Blocked):
+                q.resolved_browser(self.stage, None, {}, {})
+            executable.write_bytes(original)
 
     def test_ffmpeg_symlink_bad_elf_not_executable_and_hardlink_block(self):
         with tempfile.TemporaryDirectory() as outside:

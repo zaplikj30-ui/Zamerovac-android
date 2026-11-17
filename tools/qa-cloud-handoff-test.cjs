@@ -217,3 +217,82 @@ print(json.dumps({'pythonVerified':True,'size':len(b)}))`;
   assert.equal(v.verifyFfmpeg(f.finalRoot,f.inventory,'1011').sha256,f.hash);
  }finally{f.close()}
 });
+
+function dataFixture(){
+ const temp=fs.mkdtempSync(path.join(require('node:os').tmpdir(),'qa-c-data-'));
+ const stage=path.join(temp,'stage'),finalRoot=path.join(temp,'final');
+ const browser=path.join(stage,'chromium-1234');
+ fs.mkdirSync(browser,{recursive:true,mode:0o700});
+ for(let i=0;i<11;i++)fs.writeFileSync(path.join(browser,'data-'+i),'data',{mode:0o600});
+ for(const name of ['INSTALLATION_COMPLETE','DEPENDENCIES_VALIDATED','empty-data'])
+  fs.writeFileSync(path.join(browser,name),'',{mode:0o600});
+ // Execute the actual producer, without npm, Playwright, browser or network.
+ const script=`import sys,json
+sys.path.insert(0,sys.argv[1])
+import qa_cloud_provision as q
+print(json.dumps(q.browser_data_tree(sys.argv[2],('chromium-1234',))))`;
+ try{
+  const records=JSON.parse(require('node:child_process').execFileSync('python3',
+   ['-I','-S','-B','-c',script,__dirname,stage],
+   {encoding:'utf8',timeout:12000,env:{PATH:process.env.PATH}}));
+  fs.renameSync(stage,finalRoot);
+  return {temp,finalRoot,records,marker:path.join(finalRoot,'chromium-1234/INSTALLATION_COMPLETE'),
+   close(){fs.rmSync(temp,{recursive:true,force:true})}};
+ }catch(error){fs.rmSync(temp,{recursive:true,force:true});throw error}
+}
+test('D actual Python DATA inventory -> atomic rename -> Node exact closure accepts empty vendor markers',()=>{
+ const f=dataFixture(),v=actualVerifier();
+ try{
+  v.exactlyFiles(f.finalRoot,f.records,'chromium-1234/');
+  const spec=f.records['chromium-1234/INSTALLATION_COMPLETE'];
+  assert.deepEqual(spec,{size:0,sha256:crypto.createHash('sha256').update('').digest('hex')});
+  // All executable/metadata APIs retain nonempty defaults.
+  assert.throws(()=>v.checkedHash(f.marker));
+  assert.throws(()=>require('./qa-cloud-runtime.cjs').checked(f.marker));
+  assert.equal(v.checkedHash(f.marker,1024,true).size,0);
+ }finally{f.close()}
+});
+test('D empty DATA rejects forged hash/size, tamper, missing/extra, link escape, unsafe mode and limits',()=>{
+ const f=dataFixture(),v=actualVerifier(),key='chromium-1234/INSTALLATION_COMPLETE';
+ const check=records=>v.exactlyFiles(f.finalRoot,records||f.records,'chromium-1234/');
+ try{
+  for(const change of [x=>x[key].sha256='0'.repeat(64),x=>x[key].size=1,
+   x=>x[key].size=-1,x=>x[key].size=0.5,x=>x[key].size=Number.MAX_SAFE_INTEGER+1,
+   x=>delete x[key],x=>x['chromium-1234/../escape']=x[key]]){
+   const bad=structuredClone(f.records);change(bad);assert.throws(()=>check(bad));
+  }
+  fs.writeFileSync(f.marker,'changed');assert.throws(()=>check());
+  assert.throws(()=>v.checkedHash(f.marker,1,true));fs.writeFileSync(f.marker,'');
+  fs.chmodSync(f.marker,0o666);assert.throws(()=>check());fs.chmodSync(f.marker,0o600);
+  const other=path.join(f.temp,'other');fs.linkSync(f.marker,other);
+  assert.throws(()=>check());fs.unlinkSync(other);
+  fs.unlinkSync(f.marker);assert.throws(()=>check());
+  fs.writeFileSync(other,'',{mode:0o600});fs.symlinkSync(other,f.marker);
+  assert.throws(()=>check());fs.unlinkSync(f.marker);
+  fs.writeFileSync(f.marker,'',{mode:0o600});
+  const extra=path.join(f.finalRoot,'chromium-1234/extra');fs.writeFileSync(extra,'');
+  assert.throws(()=>check());fs.unlinkSync(extra);
+  check();
+ }finally{f.close()}
+});
+test('D empty FFmpeg with self-consistent DATA inventory remains blocked as executable',()=>{
+ const f=ffFixture(),v=actualVerifier();
+ try{
+  fs.writeFileSync(f.binary,'');
+  const empty={size:0,sha256:crypto.createHash('sha256').update('').digest('hex')};
+  f.inventory.chromium.files['ffmpeg-1011/ffmpeg-linux']=empty;
+  Object.assign(f.inventory.ffmpeg,empty);
+  assert.throws(()=>v.verifyFfmpeg(f.finalRoot,f.inventory,'1011'));
+  assert.throws(()=>v.checkedHash(f.binary));
+ }finally{f.close()}
+});
+test('D empty DATA hash detects mutation after descriptor admission',()=>{
+ const f=dataFixture(),changedFs=Object.create(fs);
+ let changed=false;
+ changedFs.readSync=(fd,...args)=>{
+  if(!changed){changed=true;fs.writeFileSync(f.marker,'tampered')}
+  return fs.readSync(fd,...args);
+ };
+ try{assert.throws(()=>actualVerifier(changedFs).checkedHash(f.marker,1024,true))}
+ finally{f.close()}
+});
