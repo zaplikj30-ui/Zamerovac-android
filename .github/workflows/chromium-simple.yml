@@ -198,6 +198,8 @@ jobs:
         working-directory: product
         if: ${{ env.QA_SCOPE == 'android' || env.QA_SCOPE == 'available' }}
         shell: bash
+        env:
+          ORG_GRADLE_PROJECT_driveRequireConfigured: 'true'
         run: |
           set -euo pipefail
           # Allow dependency download on a fresh hosted runner; the existing
