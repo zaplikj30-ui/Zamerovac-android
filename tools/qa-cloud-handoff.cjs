@@ -14,6 +14,10 @@ function privateDir(folder){
   (s.mode&0o777)===0o700);
  return s;
 }
+function presentNoFollow(file){
+ try{fs.lstatSync(file);return true}
+ catch(error){if(error?.code==='ENOENT')return false;throw error}
+}
 function runnerDir(folder){
  need(typeof folder==='string'&&path.isAbsolute(folder)&&
   fs.realpathSync.native(folder)===folder);
@@ -135,7 +139,7 @@ function acceptPrepared(env=process.env){
   stage===path.join(temp,'zamerovac-cloud-stage')&&
   finalRoot===path.join(temp,'zamerovac-cloud-final'));
  const runner=runnerDir(temp),src=privateDir(stage);
- need(runner.dev===src.dev&&src.nlink>=2&&!fs.existsSync(finalRoot));
+ need(runner.dev===src.dev&&src.nlink>=2&&!presentNoFollow(finalRoot));
  need(/^[a-f0-9]{64}$/.test(env.ZAMEROVAC_CLOUD_INVENTORY_SHA256||''));
  need(/^[a-f0-9]{40}$/.test(env.ZAMEROVAC_EXPECTED_PRODUCT_SHA||'')&&
   /^[a-f0-9]{40}$/.test(env.ZAMEROVAC_CLOUD_REVIEWED_V_SHA||'')&&
@@ -152,10 +156,10 @@ function acceptPrepared(env=process.env){
   manifest.eventSha===env.ZAMEROVAC_CLOUD_EVENT_SHA);
  // One rename of the whole prepared root. EXDEV/collision = STOP; no copy.
  const before=fs.lstatSync(stage);
- need(before.dev===runner.dev&&!fs.existsSync(finalRoot));
+ need(before.dev===runner.dev&&!presentNoFollow(finalRoot));
  fs.renameSync(stage,finalRoot);
  const after=privateDir(finalRoot);
- need(after.dev===before.dev&&after.ino===before.ino&&!fs.existsSync(stage));
+ need(after.dev===before.dev&&after.ino===before.ino&&!presentNoFollow(stage));
  const r=checkPrepared(finalRoot,manifest,env);
  const runtimeFile=path.join(finalRoot,'runtime.json');
  fs.writeFileSync(runtimeFile,JSON.stringify(r),{flag:'wx',mode:0o600});
