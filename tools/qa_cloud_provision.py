@@ -5,6 +5,7 @@ The standard workflow invokes --prepare exactly once after QUICK and before Q.
 """
 import base64
 import hashlib
+import io
 import json
 import os
 from pathlib import Path
@@ -15,6 +16,7 @@ import signal
 import stat
 import subprocess
 import sys
+import tarfile
 import time
 
 STAGE = 'zamerovac-cloud-stage'
@@ -312,6 +314,35 @@ def verified_modules(stage, lock):
     return rels
 
 
+def verify_tarball_contents(stage, files):
+    # Lockfile SRI alone is insufficient: prove that the installed JS byte tree
+    # is precisely the contents of the verified npm tarballs before CLI executes.
+    stage = private_directory(stage)
+    require(isinstance(files, dict) and len(files) > 10)
+    for name in REQUIRED:
+        archive = checked_file(stage / 'archives' / (name + '.tgz'), 64 * 1024 * 1024)
+        observed = {}
+        total = 0
+        with tarfile.open(fileobj=io.BytesIO(archive), mode='r:gz') as tar:
+            for member in tar:
+                require(member.name == 'package' or member.name.startswith('package/'))
+                relative = member.name[len('package/'):].strip('/') if member.name != 'package' else ''
+                require(relative == '' or all(p not in ('', '.', '..') for p in relative.split('/')))
+                if member.isdir():
+                    continue
+                require(member.isfile() and relative)
+                key = 'node_modules/' + name + '/' + relative
+                require(key not in observed and 0 <= member.size <= 128 * 1024 * 1024)
+                total += member.size
+                require(total <= MAX_TOTAL and len(observed) < MAX_FILES)
+                content = tar.extractfile(member).read(member.size + 1)
+                require(len(content) == member.size)
+                observed[key] = sha(content)
+        expected = {key: value for key, value in files.items()
+                    if key.startswith('node_modules/' + name + '/')}
+        require(observed == expected and len(expected) > 1)
+
+
 def resolved_browser(stage, node, childenv, lock):
     stage = private_directory(stage)
     deps = stage / 'deps'
@@ -376,6 +407,7 @@ def prepare(env=None):
         normalize_npm_tree(deps)
         archives = approved_archives(stage, lock)
         files = verified_modules(stage, lock)
+        verify_tarball_contents(stage, files)
         # CLI is invoked directly and only after the pinned integrity checks.
         run_group([node, str(deps / 'node_modules/playwright/cli.js'),
                    'install', 'chromium', '--no-shell'], deps, childenv,
