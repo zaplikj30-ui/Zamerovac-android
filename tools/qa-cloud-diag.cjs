@@ -123,6 +123,19 @@ async function main(){
     supervisorExit:Number.isInteger(life.supervisorExit)?life.supervisorExit:null
   };
   console.log('CLOUD-DIAG supervisor telemetry '+JSON.stringify(telemetry));
+  // Parent reads only the child's fixed-stage result, not its private stderr/log.
+  const prepStateFile=path.join(home,'preparation.json');
+  const allowedPrepStages=new Set(['npm-ci','archives','module-tree','browser-install','browser-identity','profile-write','complete']);
+  let prepStage='missing',prepStatus='unknown',prepExit=null;
+  if(fs.existsSync(prepStateFile)){
+    try{
+      const state=JSON.parse(fs.readFileSync(prepStateFile,'utf8'));
+      prepStage=allowedPrepStages.has(state.stage)?state.stage:'unknown';
+      prepStatus=['RUNNING','FAIL','PASS'].includes(state.status)?state.status:'unknown';
+      prepExit=Number.isInteger(state.exit)&&state.exit>=0&&state.exit<=255?state.exit:null;
+    }catch{prepStage='unreadable'}
+  }
+  console.log('CLOUD-DIAG preparation telemetry '+JSON.stringify({stage:prepStage,status:prepStatus,exitCode:prepExit}));
   known=life.cleanupVerified===true;if(known&&fs.existsSync(path.join(home,'preparation.json')))fs.copyFileSync(path.join(home,'preparation.json'),path.join(evidence,'preparation.json'),fs.constants.COPYFILE_EXCL);need(life.status==='PASS'&&known);
   console.log('CLOUD-DIAG prepare and cleanup PASS');
   env.ZAMEROVAC_CLOUD_RUNTIME_FILE=path.join(home,'runtime.json');env.ZAMEROVAC_CLOUD_RUNTIME_SHA256=hash(fs.readFileSync(env.ZAMEROVAC_CLOUD_RUNTIME_FILE));
