@@ -202,7 +202,7 @@ class BrowserRevision(unittest.TestCase):
                         {'name':'ffmpeg','revision':'1011'}]}))
         self.chrome = self.browsers / 'chromium-1234/chrome-linux64/chrome'
         self.chrome.parent.mkdir(parents=True)
-        self.chrome.write_bytes(b'\\x7fELF' + b'not runnable - synthetic')
+        self.chrome.write_bytes(b'\x7fELF' + b'not runnable - synthetic')
         self.ffmpeg = self.browsers / 'ffmpeg-1011'
         self.ffmpeg.mkdir()
 
