@@ -11,6 +11,13 @@ function secure(source){
   "timeout-minutes: 330",
   "timeout-minutes: 210",
   "if: ${{ !cancelled() && steps.quick.outcome == 'success' }}",
+  "if: ${{ !cancelled() && steps.cloud_deadline.outcome == 'success' }}",
+  "if: ${{ !cancelled() && steps.quick.outcome == 'success' && steps.provision.outcome == 'success' }}",
+  "ZAMEROVAC_CLOUD_DEADLINE=$(( $(date +%s)*1000 + 12000000 ))",
+  "python3 tools/qa_cloud_provision.py --prepare",
+  "ZAMEROVAC_CLOUD_INVENTORY_SHA256: ${{ steps.provision.outputs.inventory_sha256 }}",
+  "ZAMEROVAC_CLOUD_STAGE: ${{ runner.temp }}/zamerovac-cloud-stage",
+  "ZAMEROVAC_CLOUD_SCRATCH: ${{ runner.temp }}/zamerovac-cloud-final",
   "steps.strict_browser.outputs.cleanup == 'KNOWN_CLEAN'",
   "ref: ${{ inputs.product_sha }}",
   "ref: ${{ inputs.validator_sha }}",
@@ -43,6 +50,7 @@ function secure(source){
  return required.every(x=>source.includes(x))&&forbidden.every(x=>!source.includes(x))
   &&(source.match(/persist-credentials: false/g)||[]).length===2
   &&(source.match(/gradle --offline --no-daemon/g)||[]).length===2
+  &&(source.match(/python3 tools\/qa_cloud_provision.py --prepare/g)||[]).length===1
   &&source.includes("if: ${{ !cancelled() && steps.pinned.outcome == 'success' && steps.quick.outcome == 'success' && steps.strict_browser.outputs.cleanup == 'KNOWN_CLEAN' }}");
 }
 test('only inert owner/main public hosted dispatch with pinned P/V/E and no installs/outputs',()=>{
@@ -51,7 +59,7 @@ test('only inert owner/main public hosted dispatch with pinned P/V/E and no inst
  assert(!workflow.includes('on:\n  push:'));
 });
 test('time arithmetic fits job without shrinking 23/96 or cleanup time',()=>{
- const stageMax=22+210+9+35+5+9+2+2;
+ const stageMax=22+1+16+210+9+35+5+9+2+2;
  assert(stageMax<=330);
  assert(workflow.includes('23x8min')===false,'budget is code-owned by runner');
 });
@@ -63,6 +71,10 @@ test('negative mutations reject activation, native after UNKNOWN, install or oth
   workflow.replace("gradle --offline --no-daemon","gradle --no-daemon"),
   workflow.replace("persist-credentials: false","persist-credentials: true"),
   workflow.replace("timeout-minutes: 330","timeout-minutes: 30"),
+  workflow.replace("python3 tools/qa_cloud_provision.py --prepare","echo FALSE PASS"),
+  workflow.replace("steps.provision.outcome == 'success'","steps.quick.outcome == 'success'"),
+  workflow.replace("12000000","24000000"),
+  workflow.replace("steps.provision.outputs.inventory_sha256","'unreviewed'"),
   workflow.replace("node tools/qa-cloud-diag.cjs",
   "QA_APPROVED_Q: ${{ vars.CLOUD_DIAG_APPROVED_Q }}",
   "QA_APPROVED_E: ${{ vars.CLOUD_DIAG_APPROVED_E }}","removed_runtime:"),
