@@ -26,15 +26,16 @@ function prepare(){
  const e=process.env,root=e.ZAMEROVAC_CLOUD_SCRATCH;
  need(e.ZAMEROVAC_DIAG_PREPARE==='1'&&e.ZAMEROVAC_SUPERVISOR_PID===String(process.ppid)&&e.ZAMEROVAC_SCOPE==='linux-pidfd-subreaper');
  need(root&&fs.realpathSync(root)===root&&fs.statSync(root).uid===process.getuid());
- const deps=path.join(root,'deps');fs.mkdirSync(deps);
+ const checkpoint=stage=>fs.writeFileSync(path.join(root,'preparation.json'),JSON.stringify({stage,status:'RUNNING'}),{mode:0o600});
+ checkpoint('npm-ci');const deps=path.join(root,'deps');fs.mkdirSync(deps);
  for(const name of ['package.json','package-lock.json'])fs.copyFileSync(path.join(__dirname,'qa-browser',name),path.join(deps,name),fs.constants.COPYFILE_EXCL);
  const lock=JSON.parse(fs.readFileSync(path.join(deps,'package-lock.json')));
  need(Object.keys(lock.packages).every(k=>['','node_modules/playwright','node_modules/playwright-core','node_modules/fsevents'].includes(k)));
  for(const [k,v] of Object.entries(lock.packages))if(k)need(v.resolved?.startsWith('https://registry.npmjs.org/')&&/^sha512-/.test(v.integrity));
  const env={...e,npm_config_cache:path.join(root,'npm-cache'),npm_config_registry:'https://registry.npmjs.org/',PLAYWRIGHT_BROWSERS_PATH:path.join(root,'browsers')};
- function run(exe,args,timeout){const r=cp.spawnSync(exe,args,{cwd:deps,env,encoding:'utf8',timeout,maxBuffer:2*1024*1024});need(r.status===0&&!r.error&&!r.signal)}
+ function run(exe,args,timeout){const r=cp.spawnSync(exe,args,{cwd:deps,env,encoding:'utf8',timeout,maxBuffer:2*1024*1024});if(r.status!==0||r.error||r.signal){const old=JSON.parse(fs.readFileSync(path.join(root,'preparation.json')));fs.writeFileSync(path.join(root,'preparation.json'),JSON.stringify({...old,status:'FAIL',exit:r.status,signal:r.signal||null}));need(false)}}
  run('npm',['ci','--ignore-scripts','--no-audit','--no-fund'],180000);
- const archives={};fs.mkdirSync(path.join(root,'archives'));
+ checkpoint('archives');const archives={};fs.mkdirSync(path.join(root,'archives'));
  for(const name of ['playwright','playwright-core']){
   const item=lock.packages['node_modules/'+name];need(item.version==='1.62.1');
   const hex=Buffer.from(item.integrity.slice(7),'base64').toString('hex');
@@ -45,18 +46,18 @@ function prepare(){
  // npm-generated launch symlink/metadata are not executable dependency inputs.
  const bin=path.join(deps,'node_modules/.bin');if(fs.existsSync(bin)){for(const n of fs.readdirSync(bin)){need(['playwright','playwright-core'].includes(n)&&fs.lstatSync(path.join(bin,n)).isSymbolicLink());fs.unlinkSync(path.join(bin,n))}fs.rmdirSync(bin)}
  fs.unlinkSync(path.join(deps,'node_modules/.package-lock.json'));
- const files={};function walk(d){for(const n of fs.readdirSync(d)){const f=path.join(d,n),s=fs.lstatSync(f);need(!s.isSymbolicLink());if(s.isDirectory())walk(f);else{need(s.isFile()&&s.nlink===1);files[path.relative(deps,f)]=hash(fs.readFileSync(f))}}}walk(path.join(deps,'node_modules'));
+ checkpoint('module-tree');const files={};function walk(d){for(const n of fs.readdirSync(d)){const f=path.join(d,n),s=fs.lstatSync(f);need(!s.isSymbolicLink());if(s.isDirectory())walk(f);else{need(s.isFile()&&s.nlink===1);files[path.relative(deps,f)]=hash(fs.readFileSync(f))}}}walk(path.join(deps,'node_modules'));
  runtime.exactlyTree(deps,files);
  const loader=require('node:module').createRequire(path.join(deps,'entry.cjs'));
  const entry=loader.resolve('playwright'),core=loader.resolve('playwright-core');need(require('node:module').createRequire(entry).resolve('playwright-core')===core);
- run(process.execPath,[path.join(deps,'node_modules/playwright/cli.js'),'install','chromium','--no-shell'],240000);
- const browserPath=loader('playwright').chromium.executablePath();need(fs.realpathSync(browserPath)===browserPath);
+ checkpoint('browser-install');run(process.execPath,[path.join(deps,'node_modules/playwright/cli.js'),'install','chromium','--no-shell'],240000);
+ checkpoint('browser-identity');const browserPath=loader('playwright').chromium.executablePath();need(fs.realpathSync(browserPath)===browserPath);
  const revision=JSON.parse(fs.readFileSync(path.join(deps,'node_modules/playwright-core/browsers.json'))).browsers.find(b=>b.name==='chromium').revision;
  need(browserPath.includes('chromium-'+revision+path.sep));
  const binary=file=>({path:file,sha256:hash(runtime.checked(file,1024*1024*1024))});
  const chromium={...binary(browserPath),magic:'7f454c46',identity:identity(browserPath),revision};need(runtime.checked(browserPath,1024*1024*1024).subarray(0,4).toString('hex')===chromium.magic);
  const r={schema:2,runtimeApproved:true,trustModel:'trusted-host/change-detection',scratch:root,productSha:e.ZAMEROVAC_EXPECTED_PRODUCT_SHA,validatorSha:e.ZAMEROVAC_CLOUD_REVIEWED_V_SHA,eventSha:e.ZAMEROVAC_CLOUD_EVENT_SHA,imageOS:e.ImageOS,imageVersion:e.ImageVersion,linuxUid:process.getuid(),node:binary(fs.realpathSync(process.execPath)),python:binary(fs.realpathSync(e.ZAMEROVAC_PYTHON)),chromium,playwright:{root:deps,files,archives},lockSha256:hash(fs.readFileSync(path.join(__dirname,'qa-browser/package-lock.json')))};
- fs.writeFileSync(path.join(root,'runtime.json'),JSON.stringify(r),{flag:'wx',mode:0o600});
+ checkpoint('profile-write');fs.writeFileSync(path.join(root,'runtime.json'),JSON.stringify(r),{flag:'wx',mode:0o600});
 }
 async function live(env,request=fetch){
  const get=async suffix=>{const r=await request('https://api.github.com/repos/zaplikj30-ui/Zamerovac-android/'+suffix,{headers:{'User-Agent':'zamerovac-cloud-diag'},signal:AbortSignal.timeout(12000)});need(r.ok);return r.json()};
@@ -77,17 +78,17 @@ async function main(){
  const env=childEnv(process.env,home);env.ZAMEROVAC_CLOUD_SCRATCH=home;env.ZAMEROVAC_CLOUD_DEADLINE=String(Date.now()+200*60000);
  const {ownedWorker}=require('./qa-process-client.cjs');const token=crypto.randomBytes(16).toString('hex');
  const prepEnv={...env,ZAMEROVAC_DIAG_PREPARE:'1'};delete prepEnv.ZAMEROVAC_QA_MODE;
- const output=process.env.GITHUB_OUTPUT;const summary={smoke:'NOT RUN',full:'NOT RUN',status:'BLOCKED',cleanup:'UNKNOWN'};let success=false;
+ const output=process.env.GITHUB_OUTPUT;const summary={smoke:'NOT RUN',full:'NOT RUN',status:'BLOCKED',cleanup:'UNKNOWN',stage:'prepare'};let success=false;
  let known=false;
  try{
   const life=await ownedWorker([process.execPath,__filename,'--prepare'],root,prepEnv,path.join(home,'prepare.log'),token,480000);
-  known=life.cleanupVerified===true;need(life.status==='PASS'&&known);
+  known=life.cleanupVerified===true;if(known&&fs.existsSync(path.join(home,'preparation.json')))fs.copyFileSync(path.join(home,'preparation.json'),path.join(evidence,'preparation.json'),fs.constants.COPYFILE_EXCL);need(life.status==='PASS'&&known);
   env.ZAMEROVAC_CLOUD_RUNTIME_FILE=path.join(home,'runtime.json');env.ZAMEROVAC_CLOUD_RUNTIME_SHA256=hash(fs.readFileSync(env.ZAMEROVAC_CLOUD_RUNTIME_FILE));
   const r=runtime.approvedRuntime(env);env.CHROMIUM_PATH=r.chromium.path;
   for(const key of Object.keys(process.env))delete process.env[key];Object.assign(process.env,env); // run() creates only allowlisted descendants.
   const runner=require('./local-browser-qa.cjs');
   for(const [folder,mode] of [['smoke','--drawing-diagnostic'],['full','--all']]){
-   await live(env);process.env.ZAMEROVAC_QA_RESULT_PARENT=path.join(home,folder);
+   summary.stage=folder;await live(env);process.env.ZAMEROVAC_QA_RESULT_PARENT=path.join(home,folder);
    known=false;const report=await runner.run(mode);known=report.cleanupVerdict==='KNOWN_CLEAN';summary[folder]=report.status;fs.writeFileSync(path.join(evidence,folder+'.json'),JSON.stringify(report),{flag:'wx',mode:0o600});if(report.status==='FAIL'&&known){const error=Error('CLOUD named failure');error.code='CLOUD_TEST_FAIL';summary.status='FAIL';throw error}verifyStage(report,mode);
   }
   await live(env);success=true;

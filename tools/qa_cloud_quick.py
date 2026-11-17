@@ -97,6 +97,11 @@ def main():
     with contextlib.redirect_stdout(sink), contextlib.redirect_stderr(sink):
         unittest.TestSuite(tests).run(out)
     demand(len(out.cases) == len(expected) and len({case[0] for case in out.cases}) == len(expected))
+    if not all(status == 'PASS' for _, status in out.cases) or not out.wasSuccessful():
+        # IDs have already been checked against the reviewed registry. Never
+        # expose exception messages, raw streams or private filesystem paths.
+        failed = [(name, status) for name, status in out.cases if status != 'PASS']
+        print('BLOCKED Python reviewed case outcomes: ' + json.dumps(failed[:8]))
     demand(all(status == 'PASS' for _, status in out.cases) and out.wasSuccessful())
     print('PASS Python exact QUICK: 216 reviewed + 7 cloud PDF/runtime model cases, no FAIL/SKIP/ERROR')
     return 0

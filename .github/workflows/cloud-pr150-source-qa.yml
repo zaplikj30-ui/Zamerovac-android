@@ -227,7 +227,7 @@ jobs:
           python3 -c "import pypdf,pymupdf"
           python3 tools/qa_cloud_native.py pdf "$GITHUB_WORKSPACE/product" "$(cat "$RUNNER_TEMP/zamerovac-native-start")" "$(cat "$RUNNER_TEMP/zamerovac-raw-exit")"
       - name: Final live P/V/E check, no stale HEAD or fake PASS
-        if: ${{ !cancelled() && steps.pinned.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.strict_browser.outputs.full_verified == 'true' }}
         timeout-minutes: 2
         shell: bash
         run: |
@@ -235,13 +235,16 @@ jobs:
           python3 - <<'PY'
           import json,os,urllib.request
           e=os.environ
-          for number,sha in ((150,e['QA_PRODUCT_SHA']),(156,e['QA_VALIDATOR_SHA'])):
+          for number,sha in ((150,e['QA_PRODUCT_SHA']),(155,'9f733b24194a7870fa1377b256076bca7a71eb5a'),(156,e['QA_VALIDATOR_SHA'])):
             request=urllib.request.Request(
               'https://api.github.com/repos/zaplikj30-ui/Zamerovac-android/pulls/'+str(number),
               headers={'Accept':'application/vnd.github+json','User-Agent':'zamerovac-cloud-qa'})
             with urllib.request.urlopen(request,timeout=12) as response: pr=json.load(response)
             if pr.get('state')!='open' or (pr.get('head') or {}).get('sha')!=sha:
               raise SystemExit('BLOCKED stale P/V; STOP / NO RETRY')
-          if e['QA_EVENT_SHA']!=e['GITHUB_SHA']:raise SystemExit('BLOCKED stale E')
+          if e['QA_EVENT_SHA']!=e['GITHUB_SHA'] or e['QA_EVENT_SHA']!=e.get('GITHUB_WORKFLOW_SHA'):raise SystemExit('BLOCKED stale E')
+          request=urllib.request.Request('https://api.github.com/repos/zaplikj30-ui/Zamerovac-android/git/ref/heads/main',headers={'User-Agent':'zamerovac-cloud-qa'})
+          with urllib.request.urlopen(request,timeout=12) as response: live_main=json.load(response)
+          if (live_main.get('object') or {}).get('sha')!=e['QA_EVENT_SHA']:raise SystemExit('BLOCKED moved main')
           print('Final P/V/E still exactly reviewed; individual test results remain raw')
           PY
