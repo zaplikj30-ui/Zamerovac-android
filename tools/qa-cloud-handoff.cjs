@@ -14,6 +14,14 @@ function privateDir(folder){
   (s.mode&0o777)===0o700);
  return s;
 }
+function runnerDir(folder){
+ need(typeof folder==='string'&&path.isAbsolute(folder)&&
+  fs.realpathSync.native(folder)===folder);
+ const st=fs.lstatSync(folder);
+ need(st.isDirectory()&&!st.isSymbolicLink()&&st.uid===process.getuid()&&
+  (st.mode&0o022)===0);
+ return st;
+}
 function checkedHash(file,limit=1024*1024*1024){
  const s=fs.lstatSync(file);
  need(s.isFile()&&!s.isSymbolicLink()&&s.nlink===1&&
@@ -126,7 +134,7 @@ function acceptPrepared(env=process.env){
  need(typeof temp==='string'&&path.isAbsolute(temp)&&
   stage===path.join(temp,'zamerovac-cloud-stage')&&
   finalRoot===path.join(temp,'zamerovac-cloud-final'));
- const runner=privateDir(temp),src=privateDir(stage);
+ const runner=runnerDir(temp),src=privateDir(stage);
  need(runner.dev===src.dev&&src.nlink>=2&&!fs.existsSync(finalRoot));
  need(/^[a-f0-9]{64}$/.test(env.ZAMEROVAC_CLOUD_INVENTORY_SHA256||''));
  need(/^[a-f0-9]{40}$/.test(env.ZAMEROVAC_EXPECTED_PRODUCT_SHA||'')&&
