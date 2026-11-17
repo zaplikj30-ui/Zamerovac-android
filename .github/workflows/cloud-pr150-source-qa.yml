@@ -31,7 +31,7 @@ concurrency:
 jobs:
   cloud-pr150:
     # Owner-authored exact marker on PR #160 or existing manual dispatch; never run on push.
-    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.event.repository.private == false && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && github.run_attempt == 1 && ((github.event_name == 'workflow_dispatch' && inputs.owner_approved == true && inputs.product_sha == '3886fcf80213e4693464d3f30104885c1c58f53e') || (github.event_name == 'issue_comment' && github.event.action == 'created' && github.event.issue.number == 160 && github.event.comment.user.login == 'zaplikj30-ui' && github.event.comment.body == format('ZAMEROVAC-CLOUD-RUN E={0} P=3886fcf80213e4693464d3f30104885c1c58f53e Q=0e823a2cb8a1ed4e6d94776d47429a25d64eba1a', github.sha))) }}
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.event.repository.private == false && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && github.run_attempt == 1 && ((github.event_name == 'workflow_dispatch' && inputs.owner_approved == true && inputs.product_sha == '3886fcf80213e4693464d3f30104885c1c58f53e') || (github.event_name == 'issue_comment' && github.event.action == 'created' && github.event.issue.number == 160 && github.event.comment.user.login == 'zaplikj30-ui' && github.event.comment.body == format('ZAMEROVAC-CLOUD-RUN E={0} P=3886fcf80213e4693464d3f30104885c1c58f53e Q=cae65c76a94b83cfcb2448d75e69b6ff61cbde22', github.sha))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 330
     env:
@@ -40,10 +40,10 @@ jobs:
       PYTHONOPTIMIZE: '0'
       GIT_CONFIG_NOSYSTEM: '1'
       GIT_CONFIG_GLOBAL: /dev/null
-      QA_APPROVED_Q: ${{ github.event_name == 'issue_comment' && '0e823a2cb8a1ed4e6d94776d47429a25d64eba1a' || vars.CLOUD_DIAG_APPROVED_Q }}
+      QA_APPROVED_Q: ${{ github.event_name == 'issue_comment' && 'cae65c76a94b83cfcb2448d75e69b6ff61cbde22' || vars.CLOUD_DIAG_APPROVED_Q }}
       QA_APPROVED_E: ${{ github.event_name == 'issue_comment' && github.sha || vars.CLOUD_DIAG_APPROVED_E }}
       QA_PRODUCT_SHA: ${{ github.event_name == 'issue_comment' && '3886fcf80213e4693464d3f30104885c1c58f53e' || inputs.product_sha }}
-      QA_VALIDATOR_SHA: ${{ github.event_name == 'issue_comment' && '0e823a2cb8a1ed4e6d94776d47429a25d64eba1a' || inputs.validator_sha }}
+      QA_VALIDATOR_SHA: ${{ github.event_name == 'issue_comment' && 'cae65c76a94b83cfcb2448d75e69b6ff61cbde22' || inputs.validator_sha }}
       QA_EVENT_SHA: ${{ github.event_name == 'issue_comment' && github.sha || inputs.event_sha }}
     steps:
       - name: Strict precheckout owner/main/P/V/E/public metadata; no payload
