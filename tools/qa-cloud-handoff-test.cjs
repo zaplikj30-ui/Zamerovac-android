@@ -17,6 +17,9 @@ function harness(opts={}){
   lstatSync(p){
    if(p===root)return {isDirectory:()=>true,isSymbolicLink:()=>false,
     uid:1001,dev:10,ino:11,mode:0o040755,nlink:2};
+   if(p===stage&&moved)throw Object.assign(Error('gone'),{code:'ENOENT'});
+   if(p===finalRoot&&!moved&&!opts.collision&&!opts.dangling)
+    throw Object.assign(Error('absent'),{code:'ENOENT'});
    if(p===stage||p===finalRoot)return {isDirectory:()=>true,
     isSymbolicLink:()=>false,uid:opts.wrongUid?1:1001,dev:10,ino:12,
     mode:opts.badMode?0o040777:0o040700,nlink:2};
@@ -72,7 +75,7 @@ test('wrong P/Q/E, attempt, expired deadline and unapproved inventory all stop b
  }
 });
 test('foreign owner, unsafe mode and preexisting target collision never overwrite',()=>{
- for(const cfg of [{wrongUid:true},{badMode:true},{collision:true}]){
+ for(const cfg of [{wrongUid:true},{badMode:true},{collision:true},{dangling:true}]){
   const h=harness(cfg);assert.throws(()=>h.accept(h.env));
   assert.deepEqual(h.stats(),{rename:0,python:0,moved:false});
  }
