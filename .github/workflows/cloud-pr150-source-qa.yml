@@ -1,7 +1,6 @@
-name: Zaměřovač – PR150 P/V/E strict CLOUD source QA (INERT DRAFT)
-# Separate approval only for draft preparation; NOT for merge, dispatch,
-# inventory, provisioning, merge, APK, uploads or any HOME operation.
-# This draft remains blocked by main-only ref; independent review + owner GO needed.
+name: Zaměřovač – PR150 strict CLOUD source QA (manual / owner comment)
+# Cloud-only, no push trigger. Owner comment must match the exact reviewed P/Q/E.
+# All other comments skip the job. HOME, release and APK are not enabled.
 on:
   workflow_dispatch:
     inputs:
@@ -22,6 +21,8 @@ on:
         type: boolean
         required: true
         default: false
+  issue_comment:
+    types: [created]
 permissions:
   contents: read
 concurrency:
@@ -29,8 +30,8 @@ concurrency:
   cancel-in-progress: false
 jobs:
   cloud-pr150:
-    # Activation candidate on isolated branch only; owner merge/RUN GO not granted.
-    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.event.repository.private == false && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && github.run_attempt == 1 && inputs.owner_approved == true && inputs.product_sha == '3886fcf80213e4693464d3f30104885c1c58f53e' }}
+    # Owner-authored exact marker on PR #160 or existing manual dispatch; never run on push.
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.event.repository.private == false && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && github.run_attempt == 1 && ((github.event_name == 'workflow_dispatch' && inputs.owner_approved == true && inputs.product_sha == '3886fcf80213e4693464d3f30104885c1c58f53e') || (github.event_name == 'issue_comment' && github.event.action == 'created' && github.event.issue.number == 160 && github.event.comment.user.login == 'zaplikj30-ui' && github.event.comment.body == format('ZAMEROVAC-CLOUD-RUN E={0} P=3886fcf80213e4693464d3f30104885c1c58f53e Q=ca6c23727f692e26811d9e7f3b346116533aa6b5', github.sha))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 330
     env:
@@ -40,10 +41,10 @@ jobs:
       GIT_CONFIG_NOSYSTEM: '1'
       GIT_CONFIG_GLOBAL: /dev/null
       QA_APPROVED_Q: ${{ vars.CLOUD_DIAG_APPROVED_Q }}
-      QA_APPROVED_E: ${{ vars.CLOUD_DIAG_APPROVED_E }}
-      QA_PRODUCT_SHA: ${{ inputs.product_sha }}
-      QA_VALIDATOR_SHA: ${{ inputs.validator_sha }}
-      QA_EVENT_SHA: ${{ inputs.event_sha }}
+      QA_APPROVED_E: ${{ github.event_name == 'issue_comment' && github.sha || vars.CLOUD_DIAG_APPROVED_E }}
+      QA_PRODUCT_SHA: ${{ github.event_name == 'issue_comment' && '3886fcf80213e4693464d3f30104885c1c58f53e' || inputs.product_sha }}
+      QA_VALIDATOR_SHA: ${{ github.event_name == 'issue_comment' && 'ca6c23727f692e26811d9e7f3b346116533aa6b5' || inputs.validator_sha }}
+      QA_EVENT_SHA: ${{ github.event_name == 'issue_comment' && github.sha || inputs.event_sha }}
     steps:
       - name: Strict precheckout owner/main/P/V/E/public metadata; no payload
         id: preflight
@@ -56,10 +57,19 @@ jobs:
           e=os.environ
           expected={'GITHUB_REPOSITORY':'zaplikj30-ui/Zamerovac-android',
             'GITHUB_ACTOR':'zaplikj30-ui','GITHUB_TRIGGERING_ACTOR':'zaplikj30-ui',
-            'GITHUB_EVENT_NAME':'workflow_dispatch','GITHUB_REF':'refs/heads/main',
+            'GITHUB_REF':'refs/heads/main',
             'GITHUB_RUN_ATTEMPT':'1','RUNNER_OS':'Linux','RUNNER_ENVIRONMENT':'github-hosted'}
           def block(message):raise SystemExit('BLOCKED cloud precheckout: '+message)
           if any(e.get(k)!=v for k,v in expected.items()):block('actor/ref/runner')
+          if e.get('GITHUB_EVENT_NAME') not in ('workflow_dispatch','issue_comment'):block('event')
+          if e['GITHUB_EVENT_NAME']=='issue_comment':
+            with open(e['GITHUB_EVENT_PATH'],encoding='utf-8') as source: event=json.load(source)
+            issue=event.get('issue') or {}
+            comment=event.get('comment') or {}
+            expected_comment='ZAMEROVAC-CLOUD-RUN E='+e['QA_EVENT_SHA']+' P='+e['QA_PRODUCT_SHA']+' Q='+e['QA_VALIDATOR_SHA']
+            if (event.get('action')!='created' or issue.get('number')!=160 or
+                (comment.get('user') or {}).get('login')!='zaplikj30-ui' or
+                comment.get('body')!=expected_comment):block('owner approval comment')
           if e.get('QA_PRODUCT_SHA')!='3886fcf80213e4693464d3f30104885c1c58f53e':block('unreviewed P')
           for k in ('QA_VALIDATOR_SHA','QA_EVENT_SHA','GITHUB_SHA'):
             if not re.fullmatch('[0-9a-f]{40}',e.get(k,'')):block('missing SHA')
@@ -91,7 +101,7 @@ jobs:
         id: checkout_v
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ inputs.validator_sha }}
+          ref: ${{ env.QA_VALIDATOR_SHA }}
           path: validator
           clean: true
           fetch-depth: 1
@@ -100,7 +110,7 @@ jobs:
         id: checkout_p
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
         with:
-          ref: ${{ inputs.product_sha }}
+          ref: ${{ env.QA_PRODUCT_SHA }}
           path: product
           clean: true
           fetch-depth: 1
@@ -158,12 +168,12 @@ jobs:
           NODE_PATH: ''
           PYTHONPATH: ''
           ZAMEROVAC_CLOUD_TRUST: trusted-host/change-detection
-          ZAMEROVAC_EXPECTED_PRODUCT_SHA: ${{ inputs.product_sha }}
-          ZAMEROVAC_CLOUD_REVIEWED_V_SHA: ${{ inputs.validator_sha }}
+          ZAMEROVAC_EXPECTED_PRODUCT_SHA: ${{ env.QA_PRODUCT_SHA }}
+          ZAMEROVAC_CLOUD_REVIEWED_V_SHA: ${{ env.QA_VALIDATOR_SHA }}
           ZAMEROVAC_CLOUD_EVENT_SHA: ${{ github.sha }}
           ZAMEROVAC_SOURCE_ROOT: ${{ github.workspace }}/product
           ZAMEROVAC_QA_RESULT_PARENT: ${{ runner.temp }}/zamerovac-cloud-browser
-          ZAMEROVAC_EXPECTED_QA_SHA: ${{ inputs.validator_sha }}
+          ZAMEROVAC_EXPECTED_QA_SHA: ${{ env.QA_VALIDATOR_SHA }}
         run: |
           set -euo pipefail
           export ZAMEROVAC_PYTHON="$(realpath "$(command -v python3)")"
