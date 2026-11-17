@@ -168,5 +168,10 @@ test('CLOUD-DIAG context blocks WS external HTTP DNS IPv6 and external redirects
 test('CLOUD-DIAG preparation requires owned preexec scope before any install',()=>{
  const {prepare}=require('../tools/qa-cloud-diag.cjs');const saved=process.env.ZAMEROVAC_DIAG_PREPARE;delete process.env.ZAMEROVAC_DIAG_PREPARE;
  const cp=require('node:child_process'),old=cp.spawnSync;let starts=0;cp.spawnSync=()=>{starts++;throw Error('must not spawn')};
- try{assert.throws(prepare);assert.equal(starts,0)}finally{cp.spawnSync=old;if(saved!==undefined)process.env.ZAMEROVAC_DIAG_PREPARE=saved}
+ try{
+  assert.throws(prepare);assert.equal(starts,0);
+  const source=fs.readFileSync(path.resolve(__dirname,'../tools/qa-cloud-diag.cjs'),'utf8');
+  assert(!source.includes("run('npm'")&&!source.includes('spawnSync(exe,args'));
+  assert(!source.includes("process.argv[2]==='--prepare'"));
+ }finally{cp.spawnSync=old;if(saved!==undefined)process.env.ZAMEROVAC_DIAG_PREPARE=saved}
 });
