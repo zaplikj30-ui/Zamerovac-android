@@ -14,3 +14,5 @@ __pycache__/
 /emulator-results/
 
 /tools/drive-config-checks/build/
+# Generated from the tracked .p12.b64 for local/CI preview builds.
+/tools/debug-signing.p12
