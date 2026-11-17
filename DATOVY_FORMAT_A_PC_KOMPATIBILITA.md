@@ -52,6 +52,10 @@ Zdroj: [BackupImporter.java](app/src/main/java/cz/zamerovac/app/BackupImporter.j
 9. **Oddělené UI:** Windows může nabídnout klávesové zkratky a panely, Android dotyk a S Pen. Oba editory musí měnit stejné datové vlastnosti, nikoli vytvářet nekompatibilní exporty.
 10. **Oddělené nastavení aplikace:** výchozí barvy, poloha ovládacích prvků, velikost dialogu, jazyk a další `prefs` nemusí být totožné na Windows a Androidu. Při budoucí výměně projektu **nesmí import automaticky přepsat preference cílového zařízení**, pokud to není výslovně zamýšlené.
 
+### Budoucí vazba na samostatný Převaděč spojitosti
+
+Zaměřovač, Konfigurátor–Nářezák a **Převaděč spojitosti zůstávají oddělenými aplikacemi/repozitáři**. Již schváleným směrem je otevřený, dokumentovaný vlastní výměnný formát, který v budoucnu dovolí přesně předat naměřené hodnoty, jednotky, geometrii, ID objektů a odkazy na originální média mimo Android, případně do samostatného PC programu Převaděč spojitosti. **Nejde o schválení současného propojení, přepisu aplikací, synchronizačního protokolu ani exportu bez editovatelných dat.** Verzi, migraci a nezměněné původní hodnoty a bajty musí při skutečné integraci chránit smluvní testy; starší aplikace nemusí umět otevřít novější schéma a downgrade nelze slibovat.
+
 ## 3. Otázky k rozhodnutí až při skutečném zahájení PC fáze
 
 | Otázka | Nynější postavení |

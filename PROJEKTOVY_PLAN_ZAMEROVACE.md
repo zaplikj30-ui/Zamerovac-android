@@ -96,7 +96,7 @@ Toto je **architektonická mapa existujícího systému**, ne příkaz k refakto
 
 ### 8.1 Úsporné řízení vývoje – rozdělení ChatGPT / Codex / Work (7. 11. 2026)
 
-Uživatel schválil nové rozdělení práce kvůli rychlému vyčerpání týdenního limitu Codexu a nejistým nákladům na další kredity. Cíl je efektivita **bez kompromisu v přesnosti, bezpečném ukládání, automatických testech a kvalitě**. Trvalé prováděcí pravidlo: [AGENTS.md](AGENTS.md#úsporné-rozdělení-práce-a-ochrana-limitů-codexu-rozhodnutí-7-11-2026).
+Uživatel schválil nové rozdělení práce kvůli rychlému vyčerpání týdenního limitu Codexu a nejistým nákladům na další kredity. Cíl je efektivita **bez kompromisu v přesnosti, bezpečném ukládání, automatických testech a kvalitě**. Trvalé prováděcí pravidlo: [AGENTS.md](AGENTS.md#modely-náklady-a-efektivita).
 
 | Práce | Výchozí odpovědnost |
 | --- | --- |
@@ -110,6 +110,16 @@ Uživatel schválil nové rozdělení práce kvůli rychlému vyčerpání týde
 **Před předáním Codexu** ChatGPT nejprve posoudí, zda může danou opravu samo naprogramovat a otestovat; jinak zkontroluje aktuální repozitář a rozpracovanou práci a připraví jediné konkrétní české zadání s odkazy a akceptačními testy. Požadovat dokončitelnou etapu, ne opakované široké audity. Codex před změnou sám ověří aktuální HEAD a pravidla. Výsledky, skutečnou spotřebu kreditů (pokud je dostupná) a testy využít k dalšímu rozdělení. Kreditový ceník **není zárukou ceny celé aktualizace**.
 
 **Checkpoint 7. 11. 2026:** týdenní limit Codexu uživatele vyčerpán; nákup resetu nebyl nabídnut v dostupném rozhraní, placené kredity jsou alternativou, ale žádný nákup ani automatické dobíjení nejsou schválené. [Draft PR #51](https://github.com/zaplikj30-ui/Zamerovac-android/pull/51) zůstává rozpracované a **nebylo sloučeno**; N4 stále FAIL a Android emulátorový průchod neprokázal úplnou fyzickou akceptaci. Pokračovat nezávislou koordinací a bezpečnými úpravami mimo rozpracovanou větev; Codex naváže po dostupnosti limitu, pokud by nebyl schválen nákup. **Nevydávat další APK nyní.**
+
+## 8.2 Závazná rozhodovací brána pro změny technologie a kolize (přesun z AGENTS)
+
+**Před návrhem podstatného přepisu, změny editoru či platformy** nejprve ověř aktuální GitHub stav, kód, schválené požadavky, testy a výkon slabších zařízení. **Vždy porovnej a věcně odůvodni** nejméně: A) cílená oprava stávající Java + JavaScript/WebView; B) Kotlin + WebView; C) Kotlin + nativní editor/vykreslování; D) přenositelný přístup, pouze je-li doložen konkrétní přínos. Navíc porovnej částečnou přestavbu a nový základ, včetně ceny, verzované migrace, přenositelnosti Android/Windows/iOS, bezpečného zachování médií, Bluetooth a přesnosti. Modernější jazyk sám kvalitu negarantuje. Vlastník schvaluje rozsah, technologii a zásadní migraci **před zadáním implementace**, nikoli až na hotovém PR. Doložený závěr a varianty patří do existujícího [#42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42). Staré rozhodnutí „varianta B“ ani staré #51 není automatická volba pro příští změny.
+
+**Před významnou funkcí a po dokončené etapě** zkontroluj celý relevantní pracovní řetězec: editor a jednotky, vrstvy/souřadnice, S Pen/prst, soubory a galerie, média, Undo/Redo, koš, import/export, sync/offline, Bosch a oprávnění. Navrhni modulární rozhraní a otestuj **kombinace nová + sousední funkce**, uložení/obnovu, přerušení, dvě změny proti sobě, jednotky i originály. Výsledky do [#28](https://github.com/zaplikj30-ui/Zamerovac-android/issues/28), rozhodnutí o architektuře do #42. Zkušenost z funkční referenční aplikace je podklad, ne důkaz správnosti její vnitřní implementace. U opakovaných blokérů přehodnoť postup a výslovně porovnej A) cílenou opravu, B) jiné AI/prostředí/poskytovatele a C) jinou cestu; při negativním poměru přínos/rizika/navazujících nákladů doporuč STOP.
+
+**Pokud je větší změna schválená:** nejprve reprezentativní malý prototyp, poté postupné nahrazování s měřením před/po, bezpečným návratem a testovanou migrací. Vlastnictví dat patří do jedné transakčně chráněné vrstvy, renderer nesmí vlastnit hodnoty měření; nezaváděj hypotetické pluginy ani multiplatformní framework předčasně. Přenositelná data a výpočty ano, komplexní infrastruktura teprve při skutečné potřebě. Skutečné emulátory nenahrazují fyzický Android/Bosch/S Pen.
+
+**Postup šetrný ke kreditům:** koordinátor podle dostupnosti nástrojů vybere skutečně dostupný konkrétní model/verzi/uvažování/prostředí pro jeden celek; ChatGPT obvykle GitHub/koordinace/menší ověřitelné změny, Codex obtížnější kódování s testy, Work jen s konkrétní výhodou v dlouhém souborovém úkolu. Výsledek hodnotit celkově včetně předání, chybných pokusů a retestů; výpočet „levných kreditů“ bez měření nedokazuje úsporu. Zvolený nástroj sám neuděluje přístup ani povolení ke spuštění. **Odpovědnost vlastníka za schvalování, merge a výdaje je zachována.**
 
 ## 9. Co již nyní považujeme za dohodnuté
 

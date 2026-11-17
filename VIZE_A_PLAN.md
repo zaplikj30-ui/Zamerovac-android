@@ -49,7 +49,7 @@ Pro budoucí návrh řešit výběr cíle, náhled stránky, správné formáty 
 | **Univerzální sdílení** | Výslovně vybraný výstup přes systémovou nabídku do jiné aplikace; bez přibalování interních dat či záměny zálohy za zákaznické PDF. | Vysoká |
 | **Další měřicí přístroje a způsoby připojení** | Jiné značky laserů, případně USB a další protokoly. Společná pravidla jednotek, rozměrů a historie bez závislosti na konkrétním výrobci. | Střední |
 | **Volitelné biometrické zabezpečení** | Odemknutí aplikace nebo zakázky otiskem či obličejem podle systému, se záložní možností přístupu. Nenahrazuje šifrování ani zálohy. | Střední |
-| **QR kódy a fotoaparát** | Např. rychlé otevření konkrétní zakázky či dokumentu ve výrobě; bez zveřejnění osobních údajů a přístupových klíčů. | Nízká |
+| **QR kódy a fotoaparát** | Např. rychlé otevření konkrétní zakázky či dokumentu ve výrobě; bez zveřejnění osobních údajů a přístupových klíčů. **Načítaný obsah validovat**; samotný QR nikdy neuděluje přístup. | Nízká |
 
 **Další čtyři technické oblasti, které je vhodné mít připravené:**
 1. **Rozšiřitelné způsoby komunikace:** promítání, tisk, měřidla a přenos zakázek lze časem doplnit nebo vyměnit, aniž by to změnilo geometrii či ukládání. Žádné předčasné složité univerzální vrstvy.
@@ -499,6 +499,12 @@ Tato část **zpřesňuje již existující požadavek**, nezakládá druhé nez
 | **9. Automatizované testování** | **SCHVÁLENÉ PRŮBĚŽNÉ VÝVOJOVÉ PRAVIDLO**; reálná kompatibilita Android zařízení a konkrétního laseru potvrdit jen fyzickým testem. | [Audit 28 testů](AUDIT_KODU_PROTI_28_TESTUM.md), sekce Google Play níže |
 
 **Aktuální vývojový rozsah:** domluvené opravy a testy Zaměřovače podle [rekonstrukce 28 testů](START_ZDE.md), plus již schválená česká první fáze lokalizace. **Všechny ostatní uvedené cíle se nyní jen dokumentují a technicky zohledňují tam, kde to dává smysl.** Nezačínat PC aplikaci, sloučení projektů, cloudovou synchronizaci ani průvodce zaměřením bez dalšího schválení.
+
+## Výslovně zachované ergonomické a funkční podmínky (přesun z AGENTS, 17. 11. 2026)
+
+**ImageMeter je pouze funkční reference:** primárně uživatelem dodaná **26.6.1 XAPK**, doplňkově **Pro 26.5.0 APK**, starší **3.9.15** jen pro technické principy. Při rozporu referenčních verzí má přednost 26.6.1. APK/XAPK jsou uživatelské reference v ChatGPT Library `/Zamerovac/reference/ImageMeter/`, nikoli soubory k nahrání do GitHubu. Posuzuj pozorované chování zvlášť od dohadů, bez kopírování cizího kódu, grafiky, obchodní identity či slibu identického UI. Schválené odchylky Zaměřovače mají přednost. Při opravě lupy/kót začni reprodukcí souřadnic a gest, ne kosmetickým posunem; ověř levou/pravou stranu, zoom a orientaci. **Bez velkých teček na koncích kót, bez zelené záře vybrané kóty**; použitelné neviditelné dotykové cíle zůstávají. Ve zvětšení zobraz konec skutečné kótovací čáry. Původní schválený vzhled bez souhlasu neměň. [Původní rozhodnutí a reference](https://github.com/zaplikj30-ui/Zamerovac-android/blob/e068945f99c6ae1856d0b635b7d6229a6d694135/AGENTS.md#priorita-verzí-referenčního-imagemeteru).
+
+**Pět výslovně vyřazených funkcí reference:** referenční měřítko; perspektivní reference; perspektivní délka; počítadlo objektů; výsledková listina. Vyřazení neznamená odstranění ostatních dříve schválených funkcí. Zachovat organizaci zákazníků/složek/místností, fotografie/PDF/video, editovatelné kóty, čáry/tvary/úhly/řetězce, přichytávání/rastr, poznámky, přílohy, Bosch ruční/BT hodnoty, offline ukládání a schválené přenosy/exporty. Konkrétní stav implementace vždy ověřit v kódu; tento seznam ji nedokazuje.
 
 ## 5. Aktuálně zaznamenané otevřené body a testování
 - Podrobný kontrolní seznam 49 úprav: [Issue #12](https://github.com/zaplikj30-ui/Zamerovac-android/issues/12).

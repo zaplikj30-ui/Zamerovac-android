@@ -32,6 +32,10 @@ python tools\home_qa_gate.py lint-workflow .github\workflows\home-qa-one-shot.ym
 
 Ověření verze není totéž co ověření SHA256 instalovaného Gradle/JDK; původ binárek zůstává odpovědností důvěryhodné domácí infrastruktury.
 
+## Dočasné pozastavení HOME – platné dokud vlastník nerozhodne jinak
+
+**Doložený stav k 16. 11. 2026:** `Zamerovac-Win11-QA` OFFLINE, Windows služba STOP/Disabled a workflow `windows-self-hosted-qa.yml` / `windows-home-apk-release.yml` Disabled. Nejde o povolení spustit cokoliv z níže uvedeného historického postupu: HOME bez nového výslovného schválení neaktivovat, na runneru nic neinstalovat, nestahovat a neměnit systém/práva; nedůvěryhodná PR nikdy na HOME. Jednorázový `render-workflow`/strict lint je jen **podmíněná šablona pro schválenou důvěryhodnou owner-only větev a SHA**, není univerzální ochrana ani příkaz oživit staré workflow. Před případným návratem nové bezpečnostní review, správná větev+SHA, timeout/cancel/unknown a cleanup, GitHub stav a owner GO. Historické QA PASS ≠ současné HOME 4/4.
+
 ## Hranice
 
 **Nejde o univerzální GitHub bezpečnostní pravidlo.** Zcela novému workflow, které schválenou šablonu nepoužije, tento skript sám nezabrání ve spuštění. Musí ho zastavit review změn workflows a koordinátor/branch policy. Ani stávající main workflow ani PR #61 nejsou tímto jednoúčelovým linterem automaticky certifikované či upravované.
