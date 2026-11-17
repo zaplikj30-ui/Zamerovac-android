@@ -50,6 +50,8 @@ jobs:
         id: preflight
         shell: bash
         timeout-minutes: 2
+        env:
+          QA_CLOUD_METADATA_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           python3 - <<'PY'
@@ -76,8 +78,10 @@ jobs:
           if e['GITHUB_SHA']!=e['QA_EVENT_SHA'] or e.get('GITHUB_WORKFLOW_SHA')!=e['QA_EVENT_SHA']:block('stale E')
           if e.get('QA_APPROVED_Q')!=e['QA_VALIDATOR_SHA'] or e.get('QA_APPROVED_E')!=e['QA_EVENT_SHA']:block('external approval missing')
           def get(resource):
+            if not e.get('QA_CLOUD_METADATA_TOKEN'):block('metadata token unavailable')
             req=urllib.request.Request('https://api.github.com/repos/zaplikj30-ui/Zamerovac-android'+('/'+resource if resource else ''),
-              headers={'Accept':'application/vnd.github+json','User-Agent':'zamerovac-cloud-qa'})
+              headers={'Accept':'application/vnd.github+json','User-Agent':'zamerovac-cloud-qa',
+                'Authorization':'Bearer '+e['QA_CLOUD_METADATA_TOKEN']})
             with urllib.request.urlopen(req,timeout=12) as response:
               if response.status!=200:block('API status')
               return json.load(response)
@@ -239,21 +243,25 @@ jobs:
       - name: Final live P/V/E check, no stale HEAD or fake PASS
         if: ${{ !cancelled() && steps.strict_browser.outputs.full_verified == 'true' }}
         timeout-minutes: 2
+        env:
+          QA_CLOUD_METADATA_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           import json,os,urllib.request
           e=os.environ
+          if not e.get('QA_CLOUD_METADATA_TOKEN'):raise SystemExit('BLOCKED missing metadata token')
           for number,sha in ((150,e['QA_PRODUCT_SHA']),(155,'9f733b24194a7870fa1377b256076bca7a71eb5a'),(156,e['QA_VALIDATOR_SHA'])):
             request=urllib.request.Request(
               'https://api.github.com/repos/zaplikj30-ui/Zamerovac-android/pulls/'+str(number),
-              headers={'Accept':'application/vnd.github+json','User-Agent':'zamerovac-cloud-qa'})
+              headers={'Accept':'application/vnd.github+json','User-Agent':'zamerovac-cloud-qa',
+                'Authorization':'Bearer '+e['QA_CLOUD_METADATA_TOKEN']})
             with urllib.request.urlopen(request,timeout=12) as response: pr=json.load(response)
             if pr.get('state')!='open' or (pr.get('head') or {}).get('sha')!=sha:
               raise SystemExit('BLOCKED stale P/V; STOP / NO RETRY')
           if e['QA_EVENT_SHA']!=e['GITHUB_SHA'] or e['QA_EVENT_SHA']!=e.get('GITHUB_WORKFLOW_SHA'):raise SystemExit('BLOCKED stale E')
-          request=urllib.request.Request('https://api.github.com/repos/zaplikj30-ui/Zamerovac-android/git/ref/heads/main',headers={'User-Agent':'zamerovac-cloud-qa'})
+          request=urllib.request.Request('https://api.github.com/repos/zaplikj30-ui/Zamerovac-android/git/ref/heads/main',headers={'User-Agent':'zamerovac-cloud-qa','Authorization':'Bearer '+e['QA_CLOUD_METADATA_TOKEN']})
           with urllib.request.urlopen(request,timeout=12) as response: live_main=json.load(response)
           if (live_main.get('object') or {}).get('sha')!=e['QA_EVENT_SHA']:raise SystemExit('BLOCKED moved main')
           print('Final P/V/E still exactly reviewed; individual test results remain raw')
