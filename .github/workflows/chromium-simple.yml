@@ -10,6 +10,11 @@ on:
         options: [quick, drawing, available, android, all]
         default: quick
         required: true
+      target_sha:
+        description: 'Optional exact product commit (40 lowercase hex); blank means dispatch ref commit'
+        type: string
+        required: false
+        default: ''
   # Fallback for GitHub integrations without workflow dispatch.
   # A request file change requires prior owner RUN GO; not part of this PR.
   push:
@@ -22,26 +27,65 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@v4
+      # The request branch is read only to obtain scope + product commit.
+      - name: Read fallback request commit
+        if: ${{ github.event_name == 'push' }}
+        uses: actions/checkout@v4
         with:
+          ref: ${{ github.sha }}
           persist-credentials: false
-      - name: Select requested tests
+      - name: Select requested tests and product commit
         shell: bash
         env:
           DISPATCH_SCOPE: ${{ inputs.scope }}
+          DISPATCH_TARGET_SHA: ${{ inputs.target_sha }}
+          EVENT_SHA: ${{ github.sha }}
         run: |
           set -euo pipefail
-          scope="$DISPATCH_SCOPE"
           if [[ "$GITHUB_EVENT_NAME" == push ]]; then
-            scope="$(head -n 1 qa/chromium-request.txt | tr -d '[:space:]')"
+            mapfile -t request < qa/chromium-request.txt
+            if [[ "${#request[@]}" -ne 2 ]]; then
+              echo 'FAIL: request must have exactly two lines (scope and 40-character product SHA)'
+              exit 2
+            fi
+            scope="${request[0]}"
+            target="${request[1]}"
+          elif [[ "$GITHUB_EVENT_NAME" == workflow_dispatch ]]; then
+            scope="$DISPATCH_SCOPE"
+            target="${DISPATCH_TARGET_SHA:-$EVENT_SHA}"
+          else
+            echo 'FAIL: unsupported trigger'
+            exit 2
           fi
           case "$scope" in
             quick|drawing|available|android) ;;
             all) echo 'BLOCKED: FULL 23/96 requires compatible product and missing suites'; exit 2 ;;
             *) echo 'FAIL: unknown test scope'; exit 2 ;;
           esac
+          if [[ ! "$target" =~ ^[0-9a-f]{40}$ ]]; then
+            echo 'FAIL: product commit must be 40 lowercase hexadecimal characters'
+            exit 2
+          fi
           echo "QA_SCOPE=$scope" >> "$GITHUB_ENV"
-          echo "Selected $scope"
+          echo "QA_TARGET_SHA=$target" >> "$GITHUB_ENV"
+          echo "Request: scope=$scope, product commit=$target"
+      # Checkout the PRODUCT under test, not the fallback request branch.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ env.QA_TARGET_SHA }}
+          persist-credentials: false
+      - name: Verify checked-out revision
+        shell: bash
+        run: |
+          set -euo pipefail
+          actual="$(git rev-parse HEAD)"
+          echo "Requested product SHA: $QA_TARGET_SHA"
+          echo "Checked-out product SHA (git rev-parse HEAD): $actual"
+          if [[ "$actual" != "$QA_TARGET_SHA" ]]; then
+            echo 'FAIL: checkout is not the requested product commit'
+            exit 1
+          fi
+          printf '### QA revision\nScope: `%s`  Product: `%s` (checked out)\n\n' "$QA_SCOPE" "$actual" >> "$GITHUB_STEP_SUMMARY"
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
@@ -80,10 +124,14 @@ jobs:
           server_pid=$!
           trap 'kill "$server_pid" 2>/dev/null || true' EXIT
           export CHROMIUM_PATH="$(node -p "require('playwright').chromium.executablePath()")"
+          done_count=0
           for f in tools/check-*-browser.cjs; do
             echo "RUN QUICK browser $f"
             timeout --signal=TERM --kill-after=5s 5m node "$f"
+            done_count=$((done_count + 1))
           done
+          if [[ "$done_count" -ne 7 ]]; then echo 'FAIL: expected seven current browser checks'; exit 1; fi
+          echo "PASS QUICK Chromium: $done_count/7 completed browser scripts" | tee -a "$GITHUB_STEP_SUMMARY"
       - name: Chromium drawing or all 21 current available E2E suites
         if: ${{ env.QA_SCOPE == 'drawing' || env.QA_SCOPE == 'available' }}
         shell: bash
@@ -136,7 +184,7 @@ jobs:
           if(!fs.existsSync(file))throw Error('FAIL: report missing: '+suite);
           const r=JSON.parse(fs.readFileSync(file,'utf8'));
           const names=Array.isArray(r.cases)?r.cases.map(c=>c.name):[];
-          if(r.suite!==suite||r.status!=='COMPLETE'||r.filtered||
+          if(r.suite!==suite||r.sha!==process.env.QA_TARGET_SHA||r.status!=='COMPLETE'||r.filtered||
              names.length!==Number(count)||new Set(names).size!==names.length||
              r.cases.some(c=>c.status!=='passed')){
             throw Error('FAIL: incomplete/non-PASS suite '+suite+' expected '+count);
@@ -147,7 +195,7 @@ jobs:
           done
           if [[ "$QA_SCOPE" == drawing && "$total" -ne 17 ]]; then exit 1; fi
           if [[ "$QA_SCOPE" == available && "$total" -ne 87 ]]; then exit 1; fi
-          echo "PASS $total actually executed E2E scenarios; FULL 23/96 still BLOCKED"
+          echo "PASS $total actually executed E2E scenarios; FULL 23/96 still BLOCKED" | tee -a "$GITHUB_STEP_SUMMARY"
       - uses: gradle/actions/setup-gradle@v4
         if: ${{ env.QA_SCOPE == 'android' || env.QA_SCOPE == 'available' }}
         with:
