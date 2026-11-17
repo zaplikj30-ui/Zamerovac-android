@@ -542,3 +542,17 @@ Tyto body jsou rozdělené podle původního kontextu; **nesmí se automaticky v
 - **K opravě/ověření:** pohyb volné kresby, úchopy kruhu a elipsy, lupa s vycentrovaným bodem, černá plocha při hlášení chyby, import ZIP.
 - **Plánovaný test:** obousměrná synchronizace Google Disk, reálný offline provoz a navazující test 29.
 - Podrobné výsledky podle čísel jsou v [rekonstrukci 1–28](START_ZDE.md) a statická kontrola současného kódu je v [auditu](AUDIT_KODU_PROTI_28_TESTUM.md); ani jedno nenahrazuje test nové APK.
+
+## Referenční chování, schválené detaily a výslovné výjimky (přetříděno z AGENTS.md, 17. 11. 2026)
+
+Tato část uchovává **produktová rozhodnutí a uživatelské preference**, nikoli technický pokyn ke změně aplikace. Při případném rozporu ověř nejnovější schválení v relevantním issue/PR a [#42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42).
+
+**ImageMeter je výhradně funkční reference, nikoli návrh ke kopírování identity či vzhledu.** Při pozorování chování dávej přednost uživatelem dodané referenci **ImageMeter 26.6.1 (XAPK)**; doplňkově **ImageMeter Pro 26.5.0 (APK)**; starší **3.9.15** je jen pomocný zdroj. Funkci nejprve porovnej se současným Zaměřovačem a s uživatelským očekáváním. Přebírat smysluplný princip lze, chráněný cizí kód, grafiku, ikonové soubory, obchodní identitu ani licenci nikoli. Referenční binární soubory nepatří do GitHub repozitáře a samotná existence APK/XAPK nedokazuje provedený runtime test.
+
+**Závazná ergonomie kót a lupy:** vlastní moderní profesionální vzhled Zaměřovače; schválené tvary a vzhled kót, čar, hrotů, šipek, úchopů a lupy neměnit bez souhlasu. Na koncích kót **žádné velké tečky/úchyty**, přitom zachovat dostatečně velké neviditelné dotykové cíle; **žádná zelená záře** u vybrané kóty. Ve zvětšovací lupě musí být správně viditelný konec skutečně vykreslené kótovací čáry. Polohu, velikost, zoom a chování dotyku porovnávat na reprezentativních stranách/orientacích, ne odhadem; správnost ověřit reálnou interakcí, pixely a na zařízení tam, kde je potřeba. Základní ovládání prstem nesmí záviset na konkrétním peru či značce.
+
+**Výslovně vyřazené funkce:** referenční měřítko, perspektivní reference, perspektivní délka, počítadlo objektů a výsledková listina. Nevracet je bez nového rozhodnutí.
+
+**Schválené produktové hranice:** skutečné rozměry se zadávají ručně nebo přes podporovaný laser, nikoli odhadem z pixelů. Editovatelné kóty, originální média, přesné jednotky, zákaznické složky, galerie, poznámky/přílohy, historie, Undo/Redo, import/export, offline provoz a bezpečný konfliktový přenos jsou součástí cílového produktu. Zaměřovač, Konfigurátor–Nářezák a Převaděč spojitosti jsou nyní samostatné; jejich případné propojení je budoucí záměr, ne schválené sloučení.
+
+**Stav nápadů je závazné rozlišení, nikoli automatické zadání:** požadovaná budoucí schopnost / otevřená možnost k posouzení / schválená implementace / skutečně hotová a ověřená funkce. Nápad „později“ není zamítnutý ani schválený k okamžitému vývoji; při návrhu rozšiřitelnosti s ním počítej přiměřeně, nevyvíjej spekulativní infrastrukturu.
