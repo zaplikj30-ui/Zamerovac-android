@@ -366,7 +366,9 @@ def resolved_browser(stage, node, childenv, lock):
     # No unowned Node subprocess or second install during verification.
     browsers_json = json.loads(checked_file(deps / 'node_modules/playwright-core/browsers.json'))
     revision = next((x['revision'] for x in browsers_json['browsers'] if x['name'] == 'chromium'), None)
-    require(re.fullmatch('[0-9]{3,7}', str(revision)))
+    ffmpeg = next((x['revision'] for x in browsers_json['browsers'] if x['name'] == 'ffmpeg'), None)
+    require(re.fullmatch('[0-9]{3,7}', str(revision))
+            and re.fullmatch('[0-9]{3,7}', str(ffmpeg)))
     name = stage / 'browsers' / ('chromium-' + revision) / 'chrome-linux64/chrome'
     require(name.is_file() and name.is_relative_to(stage / 'browsers')
             and checked_file(name, 1024 * 1024 * 1024)[:4] == b'\x7fELF')
@@ -381,8 +383,11 @@ def resolved_browser(stage, node, childenv, lock):
             require(stat.S_ISREG(st.st_mode) and st.st_nlink == 1)
             item.unlink()
         links.rmdir()
-    require(set(p.name for p in browser_root.iterdir()) == {'chromium-' + revision})
-    return name, revision
+    # The reviewed Playwright CLI also downloads its pinned ffmpeg companion.
+    # Permit exactly the two browser.json revisions, not arbitrary extra bins.
+    require(set(p.name for p in browser_root.iterdir())
+            == {'chromium-' + revision, 'ffmpeg-' + ffmpeg})
+    return name, revision, ffmpeg
 
 
 def prepare(env=None):
@@ -430,8 +435,9 @@ def prepare(env=None):
         run_group([node, str(deps / 'node_modules/playwright/cli.js'),
                    'install', 'chromium', '--no-shell'], deps, childenv,
                   min(deadline_ms, int((time.time() + 420) * 1000)), log)
-        browser, revision = resolved_browser(stage, node, childenv, lock)
-        browser_files = exact_tree(stage / 'browsers', ('chromium-' + revision,))
+        browser, revision, ffmpeg_revision = resolved_browser(stage, node, childenv, lock)
+        browser_files = exact_tree(stage / 'browsers', ('chromium-' + revision,
+                                                       'ffmpeg-' + ffmpeg_revision))
         require(browser.relative_to(stage / 'browsers').as_posix() in browser_files)
         output = {
             'schema': 1, 'complete': True,
@@ -441,7 +447,8 @@ def prepare(env=None):
             'eventSha': env['ZAMEROVAC_CLOUD_EVENT_SHA'],
             'playwright': {'files': files, 'archives': archives},
             'chromium': {'relative': browser.relative_to(stage).as_posix(),
-                         'revision': revision, 'sha256': hash_file(browser)['sha256'],
+                         'revision': revision, 'ffmpegRevision': ffmpeg_revision,
+                         'sha256': hash_file(browser)['sha256'],
                          'files': browser_files},
         }
         # Manifest stored inside the ONE root that will be atomically renamed.
