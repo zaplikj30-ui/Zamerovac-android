@@ -1,7 +1,10 @@
-name: Zaměřovač – PR150 strict CLOUD source QA (manual / owner comment)
-# Cloud-only, no push trigger. Owner comment must match the exact reviewed P/Q/E.
-# All other comments skip the job. HOME, release and APK are not enabled.
+name: Zaměřovač – PR150 strict CLOUD Chromium C (owner-only one-shot)
+# Owner-approved GitHub-hosted one-shot via exact owner comment on PR #160.
+# No push trigger, no HOME, no release, no APK. Unrelated comments skip the job.
+# Q=independently SOURCE-reviewed PR163; all P/V/Q-parent/Q/E gates remain.
 on:
+  issue_comment:
+    types: [created]
   workflow_dispatch:
     inputs:
       product_sha:
@@ -9,7 +12,7 @@ on:
         type: string
         required: true
       validator_sha:
-        description: 'Exact independently reviewed PR156 Q validator commit'
+        description: 'Exact independently reviewed PR163 Q validator commit'
         type: string
         required: true
       event_sha:
@@ -17,12 +20,10 @@ on:
         type: string
         required: true
       owner_approved:
-        description: 'Separately approved one cloud-only run (not approved yet)'
+        description: 'Explicitly approved one cloud-only run'
         type: boolean
         required: true
         default: false
-  issue_comment:
-    types: [created]
 permissions:
   contents: read
 concurrency:
@@ -30,8 +31,8 @@ concurrency:
   cancel-in-progress: false
 jobs:
   cloud-pr150:
-    # Owner-authored exact marker on PR #160 or existing manual dispatch; never run on push.
-    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.event.repository.private == false && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && github.run_attempt == 1 && ((github.event_name == 'workflow_dispatch' && inputs.owner_approved == true && inputs.product_sha == '3886fcf80213e4693464d3f30104885c1c58f53e') || (github.event_name == 'issue_comment' && github.event.action == 'created' && github.event.issue.number == 160 && github.event.comment.user.login == 'zaplikj30-ui' && github.event.comment.body == format('ZAMEROVAC-CLOUD-RUN E={0} P=3886fcf80213e4693464d3f30104885c1c58f53e Q=cae65c76a94b83cfcb2448d75e69b6ff61cbde22', github.sha))) }}
+    # Only exact owner approval comment on PR160 or separately approved manual dispatch.
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.event.repository.private == false && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && github.run_attempt == 1 && ((github.event_name == 'workflow_dispatch' && inputs.owner_approved == true && inputs.product_sha == '3886fcf80213e4693464d3f30104885c1c58f53e') || (github.event_name == 'issue_comment' && github.event.action == 'created' && github.event.issue.number == 160 && github.event.comment.user.login == 'zaplikj30-ui' && github.event.comment.body == format('ZAMEROVAC-CLOUD-RUN E={0} P=3886fcf80213e4693464d3f30104885c1c58f53e Q=bdf08826d82d729977a4ed11295f224c2e07303e', github.sha))) }}
     runs-on: ubuntu-latest
     timeout-minutes: 330
     env:
@@ -40,18 +41,16 @@ jobs:
       PYTHONOPTIMIZE: '0'
       GIT_CONFIG_NOSYSTEM: '1'
       GIT_CONFIG_GLOBAL: /dev/null
-      QA_APPROVED_Q: ${{ github.event_name == 'issue_comment' && 'cae65c76a94b83cfcb2448d75e69b6ff61cbde22' || vars.CLOUD_DIAG_APPROVED_Q }}
+      QA_APPROVED_Q: ${{ github.event_name == 'issue_comment' && 'bdf08826d82d729977a4ed11295f224c2e07303e' || vars.CLOUD_DIAG_APPROVED_Q }}
       QA_APPROVED_E: ${{ github.event_name == 'issue_comment' && github.sha || vars.CLOUD_DIAG_APPROVED_E }}
       QA_PRODUCT_SHA: ${{ github.event_name == 'issue_comment' && '3886fcf80213e4693464d3f30104885c1c58f53e' || inputs.product_sha }}
-      QA_VALIDATOR_SHA: ${{ github.event_name == 'issue_comment' && 'cae65c76a94b83cfcb2448d75e69b6ff61cbde22' || inputs.validator_sha }}
+      QA_VALIDATOR_SHA: ${{ github.event_name == 'issue_comment' && 'bdf08826d82d729977a4ed11295f224c2e07303e' || inputs.validator_sha }}
       QA_EVENT_SHA: ${{ github.event_name == 'issue_comment' && github.sha || inputs.event_sha }}
     steps:
       - name: Strict precheckout owner/main/P/V/E/public metadata; no payload
         id: preflight
         shell: bash
         timeout-minutes: 2
-        env:
-          QA_CLOUD_METADATA_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           python3 - <<'PY'
@@ -78,33 +77,32 @@ jobs:
           if e['GITHUB_SHA']!=e['QA_EVENT_SHA'] or e.get('GITHUB_WORKFLOW_SHA')!=e['QA_EVENT_SHA']:block('stale E')
           if e.get('QA_APPROVED_Q')!=e['QA_VALIDATOR_SHA'] or e.get('QA_APPROVED_E')!=e['QA_EVENT_SHA']:block('external approval missing')
           def get(resource):
-            if not e.get('QA_CLOUD_METADATA_TOKEN'):block('metadata token unavailable')
-            req=urllib.request.Request('https://api.github.com/repos/zaplikj30-ui/Zamerovac-android'+('/'+resource if resource else ''),
-              headers={'Accept':'application/vnd.github+json','User-Agent':'zamerovac-cloud-qa',
-                'Authorization':'Bearer '+e['QA_CLOUD_METADATA_TOKEN']})
+            req=urllib.request.Request('https://api.github.com/repos/zaplikj30-ui/Zamerovac-android/'+resource,
+              headers={'Accept':'application/vnd.github+json','User-Agent':'zamerovac-cloud-qa'})
             with urllib.request.urlopen(req,timeout=12) as response:
               if response.status!=200:block('API status')
               return json.load(response)
           repo=get('')
           p=get('pulls/150')
-          v=get('pulls/156')
-          parent=get('pulls/155')
-          if (parent.get('head') or {}).get('sha')!='9f733b24194a7870fa1377b256076bca7a71eb5a':block('moved V parent')
+          v=get('pulls/155')
+          parent_q=get('pulls/156')
+          q=get('pulls/163')
           if (get('git/ref/heads/main').get('object') or {}).get('sha')!=e['QA_EVENT_SHA']:block('moved main')
+          if (get('git/ref/heads/fix/cloud-validator-owner-comment-live-20261117').get('object') or {}).get('sha')!=e['QA_VALIDATOR_SHA']:block('moved Q branch')
           if repo.get('private') is not False or repo.get('visibility')!='public':block('billing/private')
           def safe_pr(pr,sha):
             return (pr.get('state')=='open' and (pr.get('head') or {}).get('sha')==sha
               and ((pr.get('head') or {}).get('repo') or {}).get('full_name')==e['GITHUB_REPOSITORY'])
           if not safe_pr(p,e['QA_PRODUCT_SHA']):block('moved P')
-          if not safe_pr(v,'ca6c23727f692e26811d9e7f3b346116533aa6b5'):block('moved reviewed Q')
-          if (v.get('base') or {}).get('ref')!='programator/cloud-qa-a1-a3-20261116':block('Q base')
-          if e['GITHUB_EVENT_NAME']=='issue_comment':
-            newq=get('pulls/163')
-            if not safe_pr(newq,e['QA_VALIDATOR_SHA']):block('moved new validator')
-            if (newq.get('base') or {}).get('ref')!='fix/quick155-real-regression-20261116':block('new Q base')
-          elif e['QA_VALIDATOR_SHA']!='ca6c23727f692e26811d9e7f3b346116533aa6b5':block('manual validator changed')
+          if not safe_pr(v,'9f733b24194a7870fa1377b256076bca7a71eb5a'):block('moved V')
+          if not safe_pr(parent_q,'ca6c23727f692e26811d9e7f3b346116533aa6b5'):block('moved Q parent')
+          if not safe_pr(q,e['QA_VALIDATOR_SHA']):block('moved Q')
           if (p.get('base') or {}).get('ref')!='main':block('P base')
-          print('PASS only precheckout metadata P/V/E/public; NOT test PASS')
+          if (v.get('base') or {}).get('ref')!='implement/home4-p1-p4-20261115':block('V base')
+          if (parent_q.get('base') or {}).get('ref')!='programator/cloud-qa-a1-a3-20261116':block('Q parent base')
+          if ((q.get('base') or {}).get('ref')!='fix/quick155-real-regression-20261116'
+              or (q.get('head') or {}).get('ref')!='fix/cloud-validator-owner-comment-live-20261117'):block('Q branch/base')
+          print('PASS only precheckout P/V/Q-parent/Q/E/public metadata; NOT test PASS')
           PY
       - name: Checkout exact reviewed validator V, no persisted credentials
         id: checkout_v
@@ -165,19 +163,68 @@ jobs:
           node tools/check-android-window.cjs
           node tools/qa-cloud-quick.cjs
           python3 tools/qa_cloud_quick.py
-      - name: STRICT Chromium – reviewed R required; no provisioning, no fallback
-        id: strict_browser
+      - name: Start one shared 200 minute deadline after QUICK
+        id: cloud_deadline
         if: ${{ !cancelled() && steps.quick.outcome == 'success' }}
+        timeout-minutes: 1
+        shell: bash
+        run: |
+          set -euo pipefail
+          echo "ZAMEROVAC_CLOUD_DEADLINE=$(( $(date +%s)*1000 + 12000000 ))" >> "$GITHUB_ENV"
+      - name: CLOUD-C synthetic provision + handoff negative regression (no install)
+        id: cloud_c_tests
+        if: ${{ !cancelled() && steps.cloud_deadline.outcome == 'success' }}
+        timeout-minutes: 3
+        working-directory: validator
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/qa_cloud_provision_test.py
+          node --test tools/qa-cloud-handoff-test.cjs
+      - name: One credential-free hosted Chromium provisioning, fail closed
+        id: provision
+        if: ${{ !cancelled() && steps.cloud_c_tests.outcome == 'success' }}
+        timeout-minutes: 16
+        working-directory: validator
+        shell: bash
+        env:
+          ZAMEROVAC_QA_VALIDATOR_ROOT: ${{ github.workspace }}/validator
+          ZAMEROVAC_EXPECTED_PRODUCT_SHA: ${{ env.QA_PRODUCT_SHA }}
+          ZAMEROVAC_CLOUD_REVIEWED_V_SHA: ${{ env.QA_VALIDATOR_SHA }}
+          ZAMEROVAC_CLOUD_EVENT_SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          # QUICK must not have dirtied either checkout before provisioning.
+          test "$(git rev-parse HEAD)" = "$QA_VALIDATOR_SHA"
+          test "$(git -C ../product rev-parse HEAD)" = "$QA_PRODUCT_SHA"
+          test -z "$(git status --porcelain --untracked-files=all)"
+          test -z "$(git -C ../product status --porcelain --untracked-files=all)"
+          # The provisioning INTERPRETER receives only these reviewed inputs.
+          # No automatic Actions/OIDC/REST token, proxy, npmrc or Node preload.
+          env -i PATH="$PATH" LANG=C.UTF-8 \
+            RUNNER_TEMP="$RUNNER_TEMP" GITHUB_OUTPUT="$GITHUB_OUTPUT" \
+            GITHUB_SHA="$GITHUB_SHA" \
+            ZAMEROVAC_QA_VALIDATOR_ROOT="$ZAMEROVAC_QA_VALIDATOR_ROOT" \
+            ZAMEROVAC_EXPECTED_PRODUCT_SHA="$ZAMEROVAC_EXPECTED_PRODUCT_SHA" \
+            ZAMEROVAC_CLOUD_REVIEWED_V_SHA="$ZAMEROVAC_CLOUD_REVIEWED_V_SHA" \
+            ZAMEROVAC_CLOUD_EVENT_SHA="$ZAMEROVAC_CLOUD_EVENT_SHA" \
+            ZAMEROVAC_CLOUD_DEADLINE="$ZAMEROVAC_CLOUD_DEADLINE" \
+            python3 tools/qa_cloud_provision.py --prepare
+      - name: STRICT Chromium – one-root handoff, no second npm or fallback
+        id: strict_browser
+        if: ${{ !cancelled() && steps.quick.outcome == 'success' && steps.provision.outcome == 'success' }}
         working-directory: validator
         timeout-minutes: 210
         shell: bash
         env:
-          QA_CLOUD_METADATA_TOKEN: ${{ github.token }}
           ZAMEROVAC_QA_MODE: cloud
           NODE_OPTIONS: ''
           NODE_PATH: ''
           PYTHONPATH: ''
           ZAMEROVAC_CLOUD_TRUST: trusted-host/change-detection
+          ZAMEROVAC_CLOUD_STAGE: ${{ runner.temp }}/zamerovac-cloud-stage
+          ZAMEROVAC_CLOUD_SCRATCH: ${{ runner.temp }}/zamerovac-cloud-final
+          ZAMEROVAC_CLOUD_INVENTORY_SHA256: ${{ steps.provision.outputs.inventory_sha256 }}
           ZAMEROVAC_EXPECTED_PRODUCT_SHA: ${{ env.QA_PRODUCT_SHA }}
           ZAMEROVAC_CLOUD_REVIEWED_V_SHA: ${{ env.QA_VALIDATOR_SHA }}
           ZAMEROVAC_CLOUD_EVENT_SHA: ${{ github.sha }}
@@ -249,28 +296,32 @@ jobs:
       - name: Final live P/V/E check, no stale HEAD or fake PASS
         if: ${{ !cancelled() && steps.strict_browser.outputs.full_verified == 'true' }}
         timeout-minutes: 2
-        env:
-          QA_CLOUD_METADATA_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
           python3 - <<'PY'
           import json,os,urllib.request
           e=os.environ
-          if not e.get('QA_CLOUD_METADATA_TOKEN'):raise SystemExit('BLOCKED missing metadata token')
-          expected_prs=[(150,e['QA_PRODUCT_SHA']),(155,'9f733b24194a7870fa1377b256076bca7a71eb5a'),(156,'ca6c23727f692e26811d9e7f3b346116533aa6b5')]
-          if e['GITHUB_EVENT_NAME']=='issue_comment':expected_prs.append((163,e['QA_VALIDATOR_SHA']))
-          for number,sha in expected_prs:
+          reviewed=((150,e['QA_PRODUCT_SHA'],'main'),
+                    (155,'9f733b24194a7870fa1377b256076bca7a71eb5a','implement/home4-p1-p4-20261115'),
+                    (156,'ca6c23727f692e26811d9e7f3b346116533aa6b5','programator/cloud-qa-a1-a3-20261116'),
+                    (163,e['QA_VALIDATOR_SHA'],'fix/quick155-real-regression-20261116'))
+          for number,sha,base in reviewed:
             request=urllib.request.Request(
               'https://api.github.com/repos/zaplikj30-ui/Zamerovac-android/pulls/'+str(number),
-              headers={'Accept':'application/vnd.github+json','User-Agent':'zamerovac-cloud-qa',
-                'Authorization':'Bearer '+e['QA_CLOUD_METADATA_TOKEN']})
+              headers={'Accept':'application/vnd.github+json','User-Agent':'zamerovac-cloud-qa'})
             with urllib.request.urlopen(request,timeout=12) as response: pr=json.load(response)
-            if pr.get('state')!='open' or (pr.get('head') or {}).get('sha')!=sha:
-              raise SystemExit('BLOCKED stale P/V; STOP / NO RETRY')
+            head=pr.get('head') or {}
+            if (pr.get('state')!='open' or head.get('sha')!=sha
+                or (head.get('repo') or {}).get('full_name')!='zaplikj30-ui/Zamerovac-android'
+                or (pr.get('base') or {}).get('ref')!=base
+                or (number==163 and head.get('ref')!='fix/cloud-validator-owner-comment-live-20261117')):
+              raise SystemExit('BLOCKED stale P/V/Q-parent/Q; STOP / NO RETRY')
           if e['QA_EVENT_SHA']!=e['GITHUB_SHA'] or e['QA_EVENT_SHA']!=e.get('GITHUB_WORKFLOW_SHA'):raise SystemExit('BLOCKED stale E')
-          request=urllib.request.Request('https://api.github.com/repos/zaplikj30-ui/Zamerovac-android/git/ref/heads/main',headers={'User-Agent':'zamerovac-cloud-qa','Authorization':'Bearer '+e['QA_CLOUD_METADATA_TOKEN']})
-          with urllib.request.urlopen(request,timeout=12) as response: live_main=json.load(response)
-          if (live_main.get('object') or {}).get('sha')!=e['QA_EVENT_SHA']:raise SystemExit('BLOCKED moved main')
-          print('Final P/V/E still exactly reviewed; individual test results remain raw')
+          def live_ref(branch):
+            request=urllib.request.Request('https://api.github.com/repos/zaplikj30-ui/Zamerovac-android/git/ref/heads/'+branch,headers={'User-Agent':'zamerovac-cloud-qa'})
+            with urllib.request.urlopen(request,timeout=12) as response: return json.load(response)
+          if (live_ref('main').get('object') or {}).get('sha')!=e['QA_EVENT_SHA']:raise SystemExit('BLOCKED moved main')
+          if (live_ref('fix/cloud-validator-owner-comment-live-20261117').get('object') or {}).get('sha')!=e['QA_VALIDATOR_SHA']:raise SystemExit('BLOCKED moved Q branch')
+          print('Final P/V/Q-parent/Q/E still exactly reviewed; individual test results remain raw')
           PY
