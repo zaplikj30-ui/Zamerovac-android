@@ -57,7 +57,7 @@ function statusReport(mode,records,dir,identity={}){
  const cloud=process.env.ZAMEROVAC_QA_MODE==='cloud';
   const safeRecords=cloud?records.map(r=>({suite:r.suite,status:r.status,
     cleanupVerified:r.cleanupVerified===true,
-    caseCount:Array.isArray(r.report?.cases)?r.report.cases.length:0})):records;
+    caseCount:Array.isArray(r.report?.cases)?r.report.cases.length:0,cases:r.report?.cases?.map(c=>({name:c.name,status:c.status}))})):records;
   const safeIdentity=cloud?{sourceSha:identity.sourceSha,validatorSha:identity.validatorSha,
     eventSha:identity.eventSha,mode:'cloud',finalized:identity.finalized===true}:identity;
   // Never serialize paths, stack, DOM, tokens, media or raw trace into PUBLIC reports.
@@ -78,8 +78,8 @@ function gateSnapshot(){
  const names=['tools/local-browser-qa.cjs','tools/e2e/harness.cjs','tools/e2e/sandbox.cjs',
   'tools/qa-browser-identity.cjs','tools/qa-browser-profiles.json','tools/qa-pr121-manifest.json',
   'tools/qa-integrity.cjs','tools/qa-process-client.cjs','tools/qa-browser-worker.cjs',
-  'tools/qa-cloud-runtime.cjs','tools/qa_cloud_runtime.py','tools/qa-cloud-runtime.json',
-  'tools/qa-browser/package-lock.json',
+  'tools/qa-cloud-network.cjs','tools/qa-cloud-runtime.cjs','tools/qa-cloud-diag.cjs','tools/qa_cloud_runtime.py','tools/qa-cloud-runtime.json',
+  'tools/qa-browser/package-lock.json','tools/qa-browser/package.json','tools/qa-process-diagnostic.json',
   'tools/qa_owned_processes.py','tools/qa_process_supervisor.py','tools/qa_browser_lock.py'];
  const entries=git(['ls-tree','-rz','HEAD','--',...names]).split('\0').filter(Boolean);
  if(entries.length!==names.length)throw blocked('validator files missing from reviewed commit');
@@ -101,7 +101,7 @@ function stageProduct(work,source=root){
  fs.copyFileSync(path.join(__dirname,'qa-browser-identity.cjs'),path.join(stage,'..','qa-browser-identity.cjs'),fs.constants.COPYFILE_EXCL);
  fs.copyFileSync(path.join(__dirname,'qa-browser-profiles.json'),path.join(stage,'..','qa-browser-profiles.json'),fs.constants.COPYFILE_EXCL);
  if(process.env.ZAMEROVAC_QA_MODE==='cloud'){
-  for(const file of ['qa-cloud-runtime.cjs','qa-cloud-runtime.json'])
+  for(const file of ['qa-cloud-network.cjs','qa-cloud-runtime.cjs','qa-cloud-runtime.json'])
    fs.copyFileSync(path.join(__dirname,file),path.join(stage,'..',file),fs.constants.COPYFILE_EXCL);
   fs.mkdirSync(path.join(stage,'..','qa-browser'));
   fs.copyFileSync(path.join(__dirname,'qa-browser','package-lock.json'),
@@ -149,9 +149,12 @@ async function run(mode,externalSignal){
  if(externalSignal?.aborted)cancel();
  for(const sig of ['SIGINT','SIGTERM',...(process.platform==='win32'?[]:['SIGHUP'])])process.on(sig,cancel);
  let server,work,preflight,allClean=true,succeeded=false,cleanSuiteFailure=false;
- const deadline=setTimeout(cancel,(cloud?200:38)*60*1000);
+ const remaining=cloud&&process.env.ZAMEROVAC_CLOUD_DEADLINE?Number(process.env.ZAMEROVAC_CLOUD_DEADLINE)-Date.now():(cloud?200:38)*60000;
+ const deadline=setTimeout(cancel,Math.max(1,remaining));
  try{
   statusReport(mode,records,dir,identity);
+  if(remaining<=0||!Number.isFinite(remaining))throw blocked('expired overall deadline');
+  if(mode==='--drawing-diagnostic'&&!cloud)throw blocked('cloud-only diagnostic');
   integrity.noFilter();identity.validatorSha=gateSnapshot();
   if(process.env.ZAMEROVAC_EXPECTED_QA_SHA&&process.env.ZAMEROVAC_EXPECTED_QA_SHA!==identity.validatorSha)throw blocked('approved validator SHA mismatch');
   Object.assign(identity,integrity.executionIdentity(identity.validatorSha));
@@ -161,7 +164,7 @@ async function run(mode,externalSignal){
        process.execPath!==runtime.node.path))throw blocked('unapproved cloud Python/Node interpreter');
    verifyBrowserIdentity(process.env.CHROMIUM_PATH);
   work=fs.mkdtempSync(path.join(dir,'owned-'));const stage=stageProduct(work);
-  const env={...process.env,CI:'1',ZAMEROVAC_RUN_TOKEN:identity.runToken,ZAMEROVAC_QA_GATE_SHA:identity.validatorSha,
+  const env={...(cloud?require('./qa-cloud-diag.cjs').childEnv(process.env,work):process.env),CHROMIUM_PATH:process.env.CHROMIUM_PATH,CI:'1',ZAMEROVAC_RUN_TOKEN:identity.runToken,ZAMEROVAC_QA_GATE_SHA:identity.validatorSha,
    ZAMEROVAC_SOURCE_SHA:identity.sourceSha,ZAMEROVAC_E2E_DIR:path.join(dir,'evidence'),ZAMEROVAC_STAGED_E2E_DIR:stage};
   const temp=path.join(work,'temp');fs.mkdirSync(temp);
   for(const key of ['TMPDIR','TMP','TEMP'])env[key]=temp;
@@ -180,7 +183,7 @@ async function run(mode,externalSignal){
   for(let i=0;i<records.length;i++){
    if(controller.signal.aborted)throw blocked('QA cancelled or overall timeout');
    integrity.sourceSnapshot(root);if(gateSnapshot()!==identity.validatorSha)throw blocked('validator changed');
-   const suite=records[i].suite;records[i]= {suite,...await execute(suite,env,path.join(dir,suite+'.log'),480000,controller.signal)};
+   const suite=records[i].suite;records[i]= {suite,...await execute(suite,env,path.join(dir,suite+'.log'),Math.min(480000,Math.max(100,Number(process.env.ZAMEROVAC_CLOUD_DEADLINE||Infinity)-Date.now())),controller.signal)};
    allClean=allClean&&records[i].cleanupVerified===true;
    statusReport(mode,records,dir,identity);
    console.log(records[i].status+' '+suite);
@@ -208,7 +211,7 @@ async function run(mode,externalSignal){
     verifyBrowserIdentity(process.env.CHROMIUM_PATH);
    }catch(_){cleanSuiteFailure=false;identity.error='post-failure identity unverified';}
   }
-  for(let i=0;i<records.length;i++)if(records[i].status==='NOT RUN')records[i]={...records[i],status:'BLOCKED',error:e.message};
+  for(let i=0;i<records.length;i++)if(!cloud&&records[i].status==='NOT RUN')records[i]={...records[i],status:'BLOCKED',error:e.message};
   // If an integrity error follows all suites, preserve the failure independently.
   identity.error=e.message;
   console.error(cloud?'QA CLOUD BLOCKED: redacted admission/owner failure':'HOME BLOCKED: '+e.message);
@@ -233,7 +236,7 @@ async function run(mode,externalSignal){
  report.cleanupVerdict=knownClean?'KNOWN_CLEAN':'UNKNOWN';
  report.preflight=cloud?{status:preflight?.status||'NOT RUN',
    cleanupVerified:preflight?.cleanupVerified===true}:preflight||{status:'NOT RUN'};
- if(identity.error)report.status='BLOCKED';
+ if(identity.error)report.status=cloud&&cleanSuiteFailure?'FAIL':'BLOCKED';
  fs.writeFileSync(path.join(dir,'results.json'),JSON.stringify(report,null,2)+'\n');
  console.log(cloud?'QA CLOUD: local private report not uploaded':'Current QA report: '+path.join(dir,'results.json'));
  console.log(report.status+' '+JSON.stringify(report.counts));

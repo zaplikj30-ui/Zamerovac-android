@@ -6,6 +6,7 @@ const {checkEvidence,blocked}=require('./e2e/sandbox.cjs');
 const {profiles}=require('./qa-browser-identity.cjs');
 // Preserve PR121's explicit diagnostic mode; it is never full --all coverage.
 const modes=Object.freeze({'--legacy-conflict':['legacy-conflict-persistence'],
+ '--drawing-diagnostic':['drawing'],
  '--smoke':['drawing','quality-regressions','gallery-readability'],'--all':Object.keys(manifest.cases)});
 function demand(ok,message){if(!ok)throw blocked(message)}
 function noFilter(env=process.env){demand(!Object.hasOwn(env,'ZAMEROVAC_CASES'),'case filter forbidden in complete/smoke QA')}
@@ -102,6 +103,7 @@ function checkedFailedReport(report,suite,identity){
 }
 function complete(mode,records,identity,env=process.env){
  try{
+  if(mode==='--drawing-diagnostic')demand(identity?.mode==='cloud','drawing diagnostic is cloud-only');
   noFilter(env);const expected=modes[mode];demand(expected&&records.length===expected.length,'incomplete suite manifest');
   demand(!identity?.error,'run integrity failed');
   demand(identity?.finalized===true,'run has not completed final integrity/cleanup checks');

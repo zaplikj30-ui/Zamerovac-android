@@ -78,11 +78,17 @@ def verified_runtime():
            e.get('ZAMEROVAC_CLOUD_TRUST') == 'trusted-host/change-detection')
     demand(not e.get('ZAMEROVAC_CLOUD_IMMUTABLE_CLAIM')
            and not e.get('NODE_OPTIONS') and not e.get('NODE_PATH'))
-    raw = checked(MANIFEST, 4 * 1024 * 1024)
+    temporary = e.get('ZAMEROVAC_CLOUD_RUNTIME_FILE')
+    if temporary:
+        folder = Path(e.get('ZAMEROVAC_CLOUD_SCRATCH', ''))
+        demand(folder.is_absolute() and folder.resolve() == folder and
+               folder.stat().st_uid == os.geteuid() and stat.S_IMODE(folder.stat().st_mode) == 0o700
+               and str(folder / 'runtime.json') == temporary)
+    raw = checked(temporary or MANIFEST, 4 * 1024 * 1024)
     expected = e.get('ZAMEROVAC_CLOUD_RUNTIME_SHA256', '')
     demand(len(expected) == 64 and sha(raw) == expected)
     r = json.loads(raw)
-    demand(r.get('schema') == 1 and r.get('runtimeApproved') is True
+    demand(r.get('schema') == (2 if temporary else 1) and r.get('runtimeApproved') is True
            and r.get('trustModel') == 'trusted-host/change-detection')
     demand(r.get('productSha') == '3886fcf80213e4693464d3f30104885c1c58f53e'
            and r.get('validatorSha') == e.get('ZAMEROVAC_CLOUD_REVIEWED_V_SHA')
@@ -96,7 +102,7 @@ def verified_runtime():
         demand(isinstance(binary, dict) and
                len(binary.get('sha256', '')) == 64)
         if name == 'python':
-            demand(Path(sys.executable) == Path(binary['path']))
+            demand(Path(sys.executable).resolve() == Path(binary['path']))
         demand(sha(checked(binary['path'])) == binary['sha256'])
     chromium = r.get('chromium')
     demand(isinstance(chromium, dict)
@@ -118,4 +124,16 @@ def verified_runtime():
         demand('sha512-' + digest == archive['integrity'])
         package = Path(pw['root']) / 'node_modules' / name / 'package.json'
         demand(json.loads(checked(package))['version'] == '1.62.1')
+    if temporary:
+        demand(r.get('scratch') == str(folder) and pw['root'] == str(folder / 'deps'))
+        demand(r.get('lockSha256') == sha(checked(LOCK, 64 * 1024)))
+        spec = json.loads(checked(Path(pw['root']) / 'node_modules/playwright-core/browsers.json'))
+        revision = next(b['revision'] for b in spec['browsers'] if b['name'] == 'chromium')
+        demand(chromium.get('revision') == revision and
+               Path(chromium['path']).is_relative_to(folder / 'browsers') and
+               ('chromium-' + revision) in Path(chromium['path']).parts)
+        st = Path(chromium['path']).stat()
+        identity = {'dev':str(st.st_dev), 'ino':str(st.st_ino), 'size':str(st.st_size),
+                    'mtimeNs':str(st.st_mtime_ns), 'mode':str(st.st_mode)}
+        demand(chromium.get('identity') == identity)
     return r

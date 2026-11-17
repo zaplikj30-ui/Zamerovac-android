@@ -1,4 +1,4 @@
-"""Cloud exact named Python QUICK: 216 original registry + approved X1 tests.
+"""Cloud exact named Python QUICK: 216 original registry + X1 and CLOUD-DIAG tests.
 
 Captures test stdout/stderr privately; public logs contain counts only.
 No HOME4 runner use or external downloads.
@@ -14,6 +14,8 @@ import unittest
 ROOT = Path(__file__).resolve().parent.parent
 REGISTRY = ROOT/'tools/qa/home4-quick.json'
 EXTRAS = {
+    'test_cloud_pdf_validation.CloudRuntimeContractTests.test_cloud_lock_change_detection_retains_fd_and_home_write_guard',
+    'test_cloud_pdf_validation.CloudRuntimeContractTests.test_cloud_checked_file_rejects_aliases_and_links_before_execution',
     'test_cloud_pdf_validation.CloudPDFOptimizeTests.test_positive_mock_interface_for_one_synthetic_raster',
     'test_cloud_pdf_validation.CloudPDFOptimizeTests.test_invalid_zip_is_blocked_under_python_O',
     'test_cloud_pdf_validation.CloudPDFOptimizeTests.test_no_args_or_symlink_cannot_claim_PASS_under_python_O',
@@ -72,9 +74,9 @@ class Outcome(unittest.TestResult):
 def main():
     demand(os.environ.get('ZAMEROVAC_CLOUD_QUICK') == '1' and sys.platform == 'linux')
     manifest = json.loads(REGISTRY.read_text(encoding='utf8'))
-    demand(len(manifest['python']['cases']) == 216 and len(EXTRAS) == 5)
+    demand(len(manifest['python']['cases']) == 216 and len(EXTRAS) == 7)
     expected = set(manifest['python']['cases']) | EXTRAS
-    demand(len(expected) == 221)
+    demand(len(expected) == 223)
     # Test collection is redirected as it may print exception paths/data.
     with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(io.StringIO()):
         tests = collect()
@@ -96,7 +98,7 @@ def main():
         unittest.TestSuite(tests).run(out)
     demand(len(out.cases) == len(expected) and len({case[0] for case in out.cases}) == len(expected))
     demand(all(status == 'PASS' for _, status in out.cases) and out.wasSuccessful())
-    print('PASS Python exact QUICK: 216 reviewed + 5 cloud PDF/X1 synthetic cases, no FAIL/SKIP/ERROR')
+    print('PASS Python exact QUICK: 216 reviewed + 7 cloud PDF/runtime model cases, no FAIL/SKIP/ERROR')
     return 0
 
 

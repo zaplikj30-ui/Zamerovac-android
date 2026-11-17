@@ -10,28 +10,13 @@ on:
         type: string
         required: true
       validator_sha:
-        description: 'Exact independently reviewed PR155 validator commit'
+        description: 'Exact independently reviewed PR156 Q validator commit'
         type: string
         required: true
       event_sha:
         description: 'Exact owner-approved event/main commit'
         type: string
         required: true
-      runtime_sha256:
-        description: 'Approved complete R/D JSON sha256; empty means BLOCKED'
-        type: string
-        required: false
-        default: ''
-      python_path:
-        description: 'Preapproved absolute hosted Python path; no fallback'
-        type: string
-        required: false
-        default: ''
-      chromium_path:
-        description: 'Preapproved absolute Chromium ELF path; no fallback'
-        type: string
-        required: false
-        default: ''
       owner_approved:
         description: 'Separately approved one cloud-only run (not approved yet)'
         type: boolean
@@ -54,6 +39,8 @@ jobs:
       PYTHONOPTIMIZE: '0'
       GIT_CONFIG_NOSYSTEM: '1'
       GIT_CONFIG_GLOBAL: /dev/null
+      QA_APPROVED_Q: ${{ vars.CLOUD_DIAG_APPROVED_Q }}
+      QA_APPROVED_E: ${{ vars.CLOUD_DIAG_APPROVED_E }}
       QA_PRODUCT_SHA: ${{ inputs.product_sha }}
       QA_VALIDATOR_SHA: ${{ inputs.validator_sha }}
       QA_EVENT_SHA: ${{ inputs.event_sha }}
@@ -76,7 +63,8 @@ jobs:
           if e.get('QA_PRODUCT_SHA')!='3886fcf80213e4693464d3f30104885c1c58f53e':block('unreviewed P')
           for k in ('QA_VALIDATOR_SHA','QA_EVENT_SHA','GITHUB_SHA'):
             if not re.fullmatch('[0-9a-f]{40}',e.get(k,'')):block('missing SHA')
-          if e['GITHUB_SHA']!=e['QA_EVENT_SHA']:block('stale E')
+          if e['GITHUB_SHA']!=e['QA_EVENT_SHA'] or e.get('GITHUB_WORKFLOW_SHA')!=e['QA_EVENT_SHA']:block('stale E')
+          if e.get('QA_APPROVED_Q')!=e['QA_VALIDATOR_SHA'] or e.get('QA_APPROVED_E')!=e['QA_EVENT_SHA']:block('external approval missing')
           def get(resource):
             req=urllib.request.Request('https://api.github.com/repos/zaplikj30-ui/Zamerovac-android/'+resource,
               headers={'Accept':'application/vnd.github+json','User-Agent':'zamerovac-cloud-qa'})
@@ -85,14 +73,17 @@ jobs:
               return json.load(response)
           repo=get('')
           p=get('pulls/150')
-          v=get('pulls/155')
+          v=get('pulls/156')
+          parent=get('pulls/155')
+          if (parent.get('head') or {}).get('sha')!='9f733b24194a7870fa1377b256076bca7a71eb5a':block('moved V parent')
+          if (get('git/ref/heads/main').get('object') or {}).get('sha')!=e['QA_EVENT_SHA']:block('moved main')
           if repo.get('private') is not False or repo.get('visibility')!='public':block('billing/private')
           def safe_pr(pr,sha):
             return (pr.get('state')=='open' and (pr.get('head') or {}).get('sha')==sha
               and ((pr.get('head') or {}).get('repo') or {}).get('full_name')==e['GITHUB_REPOSITORY'])
           if not safe_pr(p,e['QA_PRODUCT_SHA']):block('moved P')
           if not safe_pr(v,e['QA_VALIDATOR_SHA']):block('moved V')
-          if (v.get('base') or {}).get('ref')!='implement/home4-p1-p4-20261115':block('V base')
+          if (v.get('base') or {}).get('ref')!='programator/cloud-qa-a1-a3-20261116':block('Q base')
           if (p.get('base') or {}).get('ref')!='main':block('P base')
           print('PASS only precheckout metadata P/V/E/public; NOT test PASS')
           PY
@@ -170,35 +161,13 @@ jobs:
           ZAMEROVAC_EXPECTED_PRODUCT_SHA: ${{ inputs.product_sha }}
           ZAMEROVAC_CLOUD_REVIEWED_V_SHA: ${{ inputs.validator_sha }}
           ZAMEROVAC_CLOUD_EVENT_SHA: ${{ github.sha }}
-          ZAMEROVAC_CLOUD_RUNTIME_SHA256: ${{ inputs.runtime_sha256 }}
           ZAMEROVAC_SOURCE_ROOT: ${{ github.workspace }}/product
           ZAMEROVAC_QA_RESULT_PARENT: ${{ runner.temp }}/zamerovac-cloud-browser
           ZAMEROVAC_EXPECTED_QA_SHA: ${{ inputs.validator_sha }}
-          ZAMEROVAC_PYTHON: ${{ inputs.python_path }}
-          CHROMIUM_PATH: ${{ inputs.chromium_path }}
         run: |
           set -euo pipefail
-          set +e
-          node tools/local-browser-qa.cjs --all
-          raw=$?
-          set -e
-          python3 - <<'PY'
-          import json,os
-          from pathlib import Path
-          root=Path(os.environ['ZAMEROVAC_QA_RESULT_PARENT'])
-          try:
-            found=list(root.glob('run-*/results.json'))
-            if len(found)!=1:raise ValueError('missing private report')
-            data=json.loads(found[0].read_text())
-            if data.get('cleanupVerdict')!='KNOWN_CLEAN':raise ValueError('cleanup UNKNOWN')
-            if data.get('mode')!='--all':raise ValueError('wrong mode')
-            with open(os.environ['GITHUB_OUTPUT'],'a',encoding='ascii') as out:
-              out.write('cleanup=KNOWN_CLEAN\n')
-            print('Browser known cleanup proof; raw case result retained separately')
-          except Exception:
-            raise SystemExit('BLOCKED browser cleanup UNKNOWN / STOP / NO RETRY')
-          PY
-          exit "$raw"
+          export ZAMEROVAC_PYTHON="$(realpath "$(command -v python3)")"
+          node tools/qa-cloud-diag.cjs
       - name: Prepare JDK 17 after browser KNOWN_CLEAN only
         id: java_setup
         if: ${{ !cancelled() && steps.pinned.outcome == 'success' && steps.quick.outcome == 'success' && steps.strict_browser.outputs.cleanup == 'KNOWN_CLEAN' }}
@@ -266,7 +235,7 @@ jobs:
           python3 - <<'PY'
           import json,os,urllib.request
           e=os.environ
-          for number,sha in ((150,e['QA_PRODUCT_SHA']),(155,e['QA_VALIDATOR_SHA'])):
+          for number,sha in ((150,e['QA_PRODUCT_SHA']),(156,e['QA_VALIDATOR_SHA'])):
             request=urllib.request.Request(
               'https://api.github.com/repos/zaplikj30-ui/Zamerovac-android/pulls/'+str(number),
               headers={'Accept':'application/vnd.github+json','User-Agent':'zamerovac-cloud-qa'})

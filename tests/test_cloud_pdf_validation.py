@@ -165,3 +165,36 @@ class CloudPDFOptimizeTests(unittest.TestCase):
 
 if __name__=='__main__':
     unittest.main()
+
+
+class CloudRuntimeContractTests(unittest.TestCase):
+    def test_cloud_lock_change_detection_retains_fd_and_home_write_guard(self):
+        import importlib.util
+        from unittest import mock
+        import types
+        tools = SCRIPT.parent
+        spec = importlib.util.spec_from_file_location('diag_lock_under_test', tools/'qa_browser_lock.py')
+        module = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(module)
+        import hashlib
+        with tempfile.TemporaryDirectory(prefix='diag-lock-model-') as d:
+            file = Path(d)/'model';file.write_bytes(b'\x7fELF-not-executed')
+            profile = {'path':str(file),'sha256':hashlib.sha256(file.read_bytes()).hexdigest()}
+            fake = types.SimpleNamespace(verified_runtime=lambda:{'chromium':profile})
+            with mock.patch.dict(sys.modules, {'qa_cloud_runtime':fake}), mock.patch.dict(os.environ, {'ZAMEROVAC_QA_MODE':'cloud','ZAMEROVAC_CLOUD_RUNTIME_FILE':str(Path(d)/'runtime.json'),'CHROMIUM_PATH':str(file)}):
+                lock=module.BrowserLock();self.assertIsNotNone(lock.fd);lock.close();self.assertIsNone(lock.fd)
+                del os.environ['ZAMEROVAC_CLOUD_RUNTIME_FILE']
+                with self.assertRaises(RuntimeError):module.BrowserLock()
+
+    def test_cloud_checked_file_rejects_aliases_and_links_before_execution(self):
+        import importlib.util
+        spec=importlib.util.spec_from_file_location('diag_runtime_under_test', SCRIPT.parent/'qa_cloud_runtime.py')
+        module=importlib.util.module_from_spec(spec);spec.loader.exec_module(module)
+        with tempfile.TemporaryDirectory(prefix='diag-runtime-files-') as d:
+            p=Path(d)/'entry';p.write_bytes(b'original')
+            self.assertEqual(module.checked(p),b'original')
+            link=Path(d)/'link';link.symlink_to(p)
+            with self.assertRaises(RuntimeError):module.checked(link)
+            hard=Path(d)/'hard';os.link(p,hard)
+            with self.assertRaises(RuntimeError):module.checked(p)
+            self.assertEqual(p.read_bytes(),b'original')

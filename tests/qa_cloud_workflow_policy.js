@@ -26,7 +26,9 @@ function secure(source){
   "python3 tools/qa_cloud_quick.py",
   "node tools/qa-cloud-quick.cjs",
   "gradle --offline --no-daemon",
-  "runtime_sha256:",
+  "node tools/qa-cloud-diag.cjs",
+  "QA_APPROVED_Q: ${{ vars.CLOUD_DIAG_APPROVED_Q }}",
+  "QA_APPROVED_E: ${{ vars.CLOUD_DIAG_APPROVED_E }}",
   "ZAMEROVAC_CLOUD_TRUST: trusted-host/change-detection",
   'ZAMEROVAC_CLOUD_QUICK_PRODUCT_ROOT: ${{ github.workspace }}/product',
   'for product_path in app sync config gradle build.gradle gradle.properties settings.gradle;',
@@ -61,7 +63,9 @@ test('negative mutations reject activation, native after UNKNOWN, install or oth
   workflow.replace("gradle --offline --no-daemon","gradle --no-daemon"),
   workflow.replace("persist-credentials: false","persist-credentials: true"),
   workflow.replace("timeout-minutes: 330","timeout-minutes: 30"),
-  workflow.replace("runtime_sha256:","removed_runtime:"),
+  workflow.replace("node tools/qa-cloud-diag.cjs",
+  "QA_APPROVED_Q: ${{ vars.CLOUD_DIAG_APPROVED_Q }}",
+  "QA_APPROVED_E: ${{ vars.CLOUD_DIAG_APPROVED_E }}","removed_runtime:"),
   workflow.replace('ZAMEROVAC_CLOUD_QUICK_PRODUCT_ROOT: ${{ github.workspace }}/product', 'ZAMEROVAC_CLOUD_QUICK_PRODUCT_ROOT: ${{ github.workspace }}/validator'),
   workflow.replace("for product_path in app sync config gradle build.gradle gradle.properties settings.gradle;","for product_path in;"),
   workflow+" \n npm install playwright\n"
@@ -73,7 +77,7 @@ test('EXTRA Node exact TAP registry rejects every false-PASS mutation',()=>{
  const {EXTRA_CASES,checkExtraEnvelope}=require('../tools/qa-cloud-quick.cjs');
  const files=Object.keys(EXTRA_CASES);
  assert.equal(files.length,4);
- assert.deepEqual(files.map(file=>EXTRA_CASES[file].length),[3,5,6,2]);
+ assert.deepEqual(files.map(file=>EXTRA_CASES[file].length),[4,5,10,2]);
  for(const file of files){
   const names=EXTRA_CASES[file];
   const valid=()=>({protocol:'home4-node-v1',complete:true,

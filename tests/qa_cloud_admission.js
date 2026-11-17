@@ -46,3 +46,13 @@ test('cloud original 67-pin manifest and all 23/96 content names are unchanged',
   const ids=Object.values(qa.manifest.cases).flat();
   assert.equal(ids.length,96);assert.equal(new Set(ids).size,96);
 });
+test('CLOUD-DIAG live approved P Q E rejects fork drift closed PR and API failure',async()=>{
+ const {live}=require('../tools/qa-cloud-diag.cjs');
+ const env={ZAMEROVAC_EXPECTED_PRODUCT_SHA:'p',ZAMEROVAC_CLOUD_REVIEWED_V_SHA:'q',ZAMEROVAC_CLOUD_EVENT_SHA:'e'};
+ const data={'':{private:false},'git/ref/heads/main':{object:{sha:'e'}}};
+ for(const [n,sha,ref] of [[150,'p','main'],[155,'9f733b24194a7870fa1377b256076bca7a71eb5a','implement/home4-p1-p4-20261115'],[156,'q','programator/cloud-qa-a1-a3-20261116']])data['pulls/'+n]={state:'open',head:{sha,repo:{full_name:'zaplikj30-ui/Zamerovac-android'}},base:{ref}};
+ const request=rows=>async url=>({ok:true,json:async()=>rows[url.split('Zamerovac-android/')[1]]});
+ await live(env,request(data));
+ for(const edit of [r=>r[''].private=true,r=>r['git/ref/heads/main'].object.sha='wrong',r=>r['pulls/156'].head.sha='wrong',r=>r['pulls/150'].state='closed',r=>r['pulls/156'].head.repo.full_name='fork',r=>r['pulls/156'].base.ref='main']){const rows=structuredClone(data);edit(rows);await assert.rejects(live(env,request(rows)))}
+ await assert.rejects(live(env,async()=>({ok:false})));
+});

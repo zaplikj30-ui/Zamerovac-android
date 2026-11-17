@@ -48,11 +48,13 @@ function exactlyTree(root,files){
 function approvedRuntime(env=process.env){
   need(env.ZAMEROVAC_QA_MODE==='cloud'&&env.ZAMEROVAC_CLOUD_TRUST==='trusted-host/change-detection');
   need(!env.ZAMEROVAC_CLOUD_IMMUTABLE_CLAIM&&!env.NODE_OPTIONS&&!env.NODE_PATH);
-  const bytes=checked(file,4*1024*1024);
+  const ephemeral=env.ZAMEROVAC_CLOUD_RUNTIME_FILE;
+  if(ephemeral){need(ephemeral===path.join(env.ZAMEROVAC_CLOUD_SCRATCH||'', 'runtime.json'));const st=fs.statSync(env.ZAMEROVAC_CLOUD_SCRATCH);need(st.uid===process.getuid()&&(st.mode&511)===448&&fs.realpathSync.native(env.ZAMEROVAC_CLOUD_SCRATCH)===env.ZAMEROVAC_CLOUD_SCRATCH)}
+  const bytes=checked(ephemeral||file,4*1024*1024);
   need(/^[a-f0-9]{64}$/.test(env.ZAMEROVAC_CLOUD_RUNTIME_SHA256||'')&&
     sha(bytes)===env.ZAMEROVAC_CLOUD_RUNTIME_SHA256);
   const r=JSON.parse(bytes.toString('utf8'));
-  need(r.schema===1&&r.runtimeApproved===true&&r.trustModel==='trusted-host/change-detection');
+  need(r.schema===(ephemeral?2:1)&&r.runtimeApproved===true&&r.trustModel==='trusted-host/change-detection');
   need(r.productSha==='3886fcf80213e4693464d3f30104885c1c58f53e'&&
     r.validatorSha===env.ZAMEROVAC_CLOUD_REVIEWED_V_SHA&&
     r.eventSha===env.ZAMEROVAC_CLOUD_EVENT_SHA);
@@ -79,6 +81,14 @@ function approvedRuntime(env=process.env){
     const packageFile=path.join(pw.root,'node_modules',packageName,'package.json');
     need(JSON.parse(checked(packageFile).toString('utf8')).version==='1.62.1');
   }
+  if(ephemeral){
+    need(r.scratch===env.ZAMEROVAC_CLOUD_SCRATCH&&r.playwright.root===path.join(r.scratch,'deps'));
+    need(r.lockSha256===sha(fs.readFileSync(path.join(__dirname,'qa-browser/package-lock.json'))));
+    const spec=JSON.parse(checked(path.join(pw.root,'node_modules/playwright-core/browsers.json'))).browsers.find(x=>x.name==='chromium');
+    need(spec?.revision===browser.revision&&browser.path.startsWith(path.join(r.scratch,'browsers')+path.sep)&&browser.path.includes('chromium-'+browser.revision+path.sep));
+    const st=fs.statSync(browser.path,{bigint:true});need(Object.entries(browser.identity||{}).length===5&&Object.entries(browser.identity).every(([k,v])=>String(st[k==='mtimeNs'?'mtimeNs':k])===v));
+    need(checked(browser.path,1024*1024*1024).subarray(0,4).toString('hex')===browser.magic&&sha(checked(browser.path,1024*1024*1024))===browser.sha256);
+  }
   return r;
 }
 function loadPlaywright(){
@@ -101,4 +111,4 @@ function cloudBrowserIdentity(filename){
   const {verifyFile}=require('./qa-browser-identity.cjs');
   return verifyFile(filename,r.chromium,'linux');
 }
-module.exports={approvedRuntime,loadPlaywright,cloudBrowserIdentity};
+module.exports={approvedRuntime,loadPlaywright,cloudBrowserIdentity,checked,exactlyTree};

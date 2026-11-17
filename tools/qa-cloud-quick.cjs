@@ -11,7 +11,8 @@ const EXTRA_CASES=Object.freeze({
   "tests/qa_cloud_admission.js": [
     "cloud model uses reviewed P/V/E without inheriting HOME guard",
     "all owner/ref/event/P/V/E/sudo-trust negative mutations fail before any launch",
-    "cloud original 67-pin manifest and all 23/96 content names are unchanged"
+    "cloud original 67-pin manifest and all 23/96 content names are unchanged",
+    "CLOUD-DIAG live approved P Q E rejects fork drift closed PR and API failure"
   ],
   "tests/qa_cloud_workflow_policy.js": [
     "only inert owner/main public hosted dispatch with pinned P/V/E and no installs/outputs",
@@ -26,7 +27,11 @@ const EXTRA_CASES=Object.freeze({
     "hosted R manifest stays deliberately unapproved until independent inventory",
     "Playwright nested core resolution must match approved root core before import",
     "B1 all four historical guards and exact 23 c7 suites resolve without git history",
-    "B1 missing, wrong bytes, wrong tree SHA, symlink and hardlink cannot be historical PASS"
+    "B1 missing, wrong bytes, wrong tree SHA, symlink and hardlink cannot be historical PASS",
+    "CLOUD-DIAG child allowlist excludes credentials proxy npmrc and preload sentinels",
+    "CLOUD-DIAG drawing17 and full96 require independent complete named reports",
+    "CLOUD-DIAG context blocks WS external HTTP DNS IPv6 and external redirects",
+    "CLOUD-DIAG preparation requires owned preexec scope before any install"
   ],
   "tests/qa_cloud_cleanup_gate.js": [
     "full reviewed failure is a real FAIL, never a 23/96 PASS",
@@ -58,7 +63,7 @@ function checkFiles(){
  demand(JSON.stringify(names)===JSON.stringify(expected));
  demand(JSON.stringify(Object.keys(EXTRA_CASES).sort())===JSON.stringify(EXTRA.slice().sort()));
  const extraNames=Object.values(EXTRA_CASES).flat();
- demand(extraNames.length===16&&new Set(extraNames).size===extraNames.length);
+ demand(extraNames.length===21&&new Set(extraNames).size===extraNames.length);
  demand(Object.values(EXTRA_CASES).every(c=>Array.isArray(c)&&c.length>0));
  demand(Object.keys(registry.node).length===74);
  demand(Object.keys(CLOUD_CASES).length===3&&Object.entries(CLOUD_CASES).every(([f,n])=>Object.hasOwn(registry.node,f)&&new Set(n).size===n.length));
