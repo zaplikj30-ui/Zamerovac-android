@@ -113,7 +113,7 @@ function verifyFfmpeg(finalRoot,manifest,revision){
  need(ffmpegProfile?.relative==='browsers/'+ffmpegRel&&
   ffmpegProfile.revision===revision&&ffmpegProfile.magic==='7f454c46'&&
   /^[a-f0-9]{64}$/.test(ffmpegProfile.sha256||'')&&
-  Number.isSafeInteger(ffmpegProfile.size)&&ffmpegProfile.size>4&&
+  Number.isSafeInteger(ffmpegProfile.size)&&ffmpegProfile.size>=64&&
   ffmpegEntry?.sha256===ffmpegProfile.sha256&&
   ffmpegEntry?.size===ffmpegProfile.size);
  const ffmpegExe=path.join(finalRoot,'browsers',ffmpegRel);
@@ -125,8 +125,12 @@ function verifyFfmpeg(finalRoot,manifest,revision){
  need(ffmpegHash.sha256===ffmpegProfile.sha256&&
   ffmpegHash.size===ffmpegProfile.size);
  const ffmpegFd=fs.openSync(ffmpegExe,fs.constants.O_RDONLY|(fs.constants.O_NOFOLLOW||0));
- try{const elf=Buffer.alloc(4);need(fs.readSync(ffmpegFd,elf,0,4,0)===4&&
-   elf.toString('hex')==='7f454c46')}finally{fs.closeSync(ffmpegFd)}
+ try{
+  const elf=Buffer.alloc(64),machine=process.arch==='x64'?62:process.arch==='arm64'?183:null;
+  need(machine!==null&&fs.readSync(ffmpegFd,elf,0,64,0)===64&&
+   elf.subarray(0,7).toString('hex')==='7f454c46020101'&&
+   [2,3].includes(elf.readUInt16LE(16))&&elf.readUInt16LE(18)===machine);
+ }finally{fs.closeSync(ffmpegFd)}
  return {path:ffmpegExe,...ffmpegHash,magic:'7f454c46',revision};
 }
 function checkPrepared(finalRoot,manifest,env){

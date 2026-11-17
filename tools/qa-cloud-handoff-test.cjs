@@ -157,7 +157,10 @@ test('S1 real post-rename rejects wrong mode, hardlink and simulated wrong UID',
 function ffFixture(){
  const f=realFixture(),dir=path.join(f.finalRoot,'browsers','ffmpeg-1011');
  fs.mkdirSync(dir,{recursive:true,mode:0o700});
- const binary=path.join(dir,'ffmpeg-linux'),bytes=Buffer.from([127,69,76,70,1,2,3,4]);
+ const binary=path.join(dir,'ffmpeg-linux'),bytes=Buffer.alloc(80);
+ bytes.set([127,69,76,70,2,1,1],0);
+ bytes.writeUInt16LE(2,16);
+ bytes.writeUInt16LE(process.arch==='arm64'?183:62,18);
  fs.writeFileSync(binary,bytes,{mode:0o700});fs.chmodSync(binary,0o700);
  const hash=crypto.createHash('sha256').update(bytes).digest('hex');
  const inventory={chromium:{files:{'ffmpeg-1011/ffmpeg-linux':{sha256:hash,size:bytes.length}}},
@@ -210,7 +213,7 @@ print(json.dumps({'pythonVerified':True,'size':len(b)}))`;
   assert.equal(v.verifyFfmpeg(f.finalRoot,f.inventory,'1011').sha256,f.hash);
   const output=JSON.parse(cp.execFileSync('python3',['-c',python,f.finalRoot,f.hash],
    {encoding:'utf8',timeout:12000,env:{PATH:process.env.PATH}}));
-  assert.deepEqual(output,{pythonVerified:true,size:8});
+  assert.deepEqual(output,{pythonVerified:true,size:80});
   assert.equal(v.verifyFfmpeg(f.finalRoot,f.inventory,'1011').sha256,f.hash);
  }finally{f.close()}
 });

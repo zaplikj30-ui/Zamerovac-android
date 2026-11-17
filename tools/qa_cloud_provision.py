@@ -8,6 +8,7 @@ import hashlib
 import io
 import json
 import os
+import platform
 from pathlib import Path
 import re
 import select
@@ -369,7 +370,14 @@ def required_ffmpeg(stage, revision):
             st.st_uid == os.geteuid() and stat.S_IMODE(st.st_mode) & stat.S_IXUSR and
             (st.st_mode & 0o022) == 0 and st.st_size > 4 and
             str(binary.resolve(strict=True)) == str(binary))
-    require(checked_file(binary, 128 * 1024 * 1024)[:4] == b'\x7fELF')
+    header = checked_file(binary, 128 * 1024 * 1024)[:64]
+    machines = {'x86_64': 62, 'aarch64': 183}
+    expected_machine = machines.get(platform.machine())
+    require(st.st_size >= 64 and len(header) == 64 and
+            header[:7] == b'\x7fELF\x02\x01\x01' and
+            int.from_bytes(header[16:18], 'little') in (2, 3) and
+            expected_machine is not None and
+            int.from_bytes(header[18:20], 'little') == expected_machine)
     digest = hash_file(binary, 128 * 1024 * 1024)
     require(digest['size'] == st.st_size)
     return binary, digest

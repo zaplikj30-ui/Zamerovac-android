@@ -3,6 +3,7 @@ import base64
 import hashlib
 import json
 import os
+import platform
 from pathlib import Path
 import signal
 import stat
@@ -209,6 +210,15 @@ class ArchiveBinding(unittest.TestCase):
 
 
 
+def linux_elf_fixture(payload=b'synthetic'):
+    data = bytearray(64 + len(payload))
+    data[:7] = b'\x7fELF\x02\x01\x01'
+    data[16:18] = (2).to_bytes(2, 'little')
+    data[18:20] = (62 if platform.machine() == 'x86_64' else 183).to_bytes(2, 'little')
+    data[64:] = payload
+    return bytes(data)
+
+
 class BrowserRevision(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(prefix='qa-c-browser-registry-')
@@ -231,7 +241,7 @@ class BrowserRevision(unittest.TestCase):
         self.ffmpeg = self.browsers / 'ffmpeg-1011'
         self.ffmpeg.mkdir()
         self.ffmpeg_binary = self.ffmpeg / 'ffmpeg-linux'
-        self.ffmpeg_binary.write_bytes(b'\x7fELF' + b'synthetic-ffmpeg-identity')
+        self.ffmpeg_binary.write_bytes(linux_elf_fixture(b'synthetic-ffmpeg-identity'))
         self.ffmpeg_binary.chmod(0o700)
 
     def test_reviewed_chromium_and_ffmpeg_companion_only(self):
@@ -261,7 +271,7 @@ class BrowserRevision(unittest.TestCase):
         self.ffmpeg_binary.chmod(0o700)
         with self.assertRaises(q.Blocked):
             q.resolved_browser(self.stage, None, {}, {})
-        self.ffmpeg_binary.write_bytes(b'\x7fELF' + b'fixed')
+        self.ffmpeg_binary.write_bytes(linux_elf_fixture(b'fixed'))
         self.ffmpeg_binary.chmod(0o600)
         with self.assertRaises(q.Blocked):
             q.resolved_browser(self.stage, None, {}, {})
@@ -276,7 +286,7 @@ class BrowserRevision(unittest.TestCase):
 
     def test_ffmpeg_mutated_hash_and_revision_block(self):
         _, old = q.required_ffmpeg(self.stage, '1011')
-        self.ffmpeg_binary.write_bytes(b'\x7fELF' + b'tampered')
+        self.ffmpeg_binary.write_bytes(linux_elf_fixture(b'tampered'))
         self.assertNotEqual(q.hash_file(self.ffmpeg_binary), old)
         with self.assertRaises((q.Blocked, FileNotFoundError)):
             q.required_ffmpeg(self.stage, '1012')
@@ -287,7 +297,7 @@ class BrowserRevision(unittest.TestCase):
         with self.assertRaises(q.Blocked):
             q.resolved_browser(self.stage, None, {}, {})
         self.ffmpeg.mkdir()
-        self.ffmpeg_binary.write_bytes(b'\x7fELF' + b'fixture')
+        self.ffmpeg_binary.write_bytes(linux_elf_fixture(b'fixture'))
         self.ffmpeg_binary.chmod(0o700)
         extra = self.browsers / 'unapproved-1234'
         extra.mkdir()
