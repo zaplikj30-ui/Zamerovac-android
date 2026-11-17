@@ -147,11 +147,11 @@ class ChromiumRevisionTests(unittest.TestCase):
         self.assertIn('path: product', checkouts[1])
         self.assertIn('ref: ${{ env.QA_TARGET_SHA }}', checkouts[1])
         for name in ('Verify checked-out revision', 'QUICK current source JS, Python and regressions',
-                     'Chromium - current QUICK 7 and available E2E 21/81',
+                     'Chromium - current QUICK 7 and available E2E 23/96',
                      'Android native Java, Drive and PDF checks - no APK'):
             block = workflow.split('      - name: ' + name + '\n')[1].split('      - ')[0]
             self.assertIn('        working-directory: product\n', block)
-        browser = step_script('Chromium - current QUICK 7 and available E2E 21/81')
+        browser = step_script('Chromium - current QUICK 7 and available E2E 23/96')
         self.assertIn('"$GITHUB_WORKSPACE"/tools/check-*-browser.cjs', browser)
         self.assertIn('"$GITHUB_WORKSPACE/tools/e2e/$suite.cjs"', browser)
         self.assertIn('--directory app/src/main/assets', browser)
