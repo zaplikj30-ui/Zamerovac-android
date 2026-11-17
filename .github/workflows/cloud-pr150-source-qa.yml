@@ -131,7 +131,7 @@ jobs:
         uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4
         with:
           node-version: '24'
-      - name: QUICK – exact 74+4 Node families, 190 named TAP, 216+5 Python
+      - name: QUICK – exact 74+4 Node families, 190 named TAP, 216+7 Python
         id: quick
         if: ${{ !cancelled() && steps.pinned.outcome == 'success' && steps.node_setup.outcome == 'success' }}
         working-directory: validator
@@ -155,9 +155,19 @@ jobs:
         run: |
           set -euo pipefail
           echo "ZAMEROVAC_CLOUD_DEADLINE=$(( $(date +%s)*1000 + 12000000 ))" >> "$GITHUB_ENV"
+      - name: CLOUD-C synthetic provision + handoff negative regression (no install)
+        id: cloud_c_tests
+        if: ${{ !cancelled() && steps.cloud_deadline.outcome == 'success' }}
+        timeout-minutes: 3
+        working-directory: validator
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 tools/qa_cloud_provision_test.py
+          node --test tools/qa-cloud-handoff-test.cjs
       - name: One credential-free hosted Chromium provisioning, fail closed
         id: provision
-        if: ${{ !cancelled() && steps.cloud_deadline.outcome == 'success' }}
+        if: ${{ !cancelled() && steps.cloud_c_tests.outcome == 'success' }}
         timeout-minutes: 16
         working-directory: validator
         shell: bash
