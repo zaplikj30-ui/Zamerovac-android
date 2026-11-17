@@ -45,6 +45,17 @@ def private_directory(p):
     return p
 
 
+def runner_directory(p):
+    # RUNNER_TEMP itself can be 0755 on standard hosted Ubuntu; only our child
+    # staging area is required to be mode 0700. Never accept a writable parent.
+    p = Path(p)
+    st = p.lstat()
+    require(p.is_absolute() and str(p.resolve(strict=True)) == str(p)
+            and stat.S_ISDIR(st.st_mode) and st.st_uid == os.geteuid()
+            and (st.st_mode & 0o022) == 0)
+    return p
+
+
 def checked_file(p, limit=128 * 1024 * 1024):
     p = Path(p)
     s = p.lstat()
@@ -326,7 +337,7 @@ def resolved_browser(stage, node, childenv, lock):
 def prepare(env=None):
     env = dict(os.environ if env is None else env)
     require(sys.platform == 'linux' and os.geteuid() > 0)
-    runner = private_directory(env['RUNNER_TEMP'])
+    runner = runner_directory(env['RUNNER_TEMP'])
     stage = runner / STAGE
     require(not stage.exists() and not stage.is_symlink())
     source = Path(env['ZAMEROVAC_QA_VALIDATOR_ROOT']).resolve(strict=True)
