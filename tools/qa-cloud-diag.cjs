@@ -42,10 +42,24 @@ function prepare(){
    // Retain only an allowlisted error code, never npm stdout/stderr or file paths.
    const allowed=new Set(['EUSAGE','ENOENT','EACCES','EPERM','ENOTFOUND','EAI_AGAIN','ECONNRESET',
     'ECONNREFUSED','ETIMEDOUT','ETARGET','EINTEGRITY','E404','ENOTCACHED','ELOCKVERIFY','EINVALIDPACKAGENAME']);
-   const match=String(r.stderr||'').match(/\bnpm\s+(?:error|ERR!)\s+code\s+([A-Z0-9_]+)\b/i);
+   const stdout=String(r.stdout||''),stderr=String(r.stderr||''),detail=stderr+'\n'+stdout;
+   const match=detail.match(/\bnpm\s+(?:error|ERR!)\s+code\s+([A-Z0-9_]+)\b/i);
    const candidate=(match?.[1]||r.error?.code||'').toUpperCase();
    const npmCode=allowed.has(candidate)?candidate:null;
-   fs.writeFileSync(path.join(root,'preparation.json'),JSON.stringify({...old,status:'FAIL',exit:r.status,signal:r.signal||null,npmCode}));
+   const classes=[
+    ['LOCK',/npm ci can only install|package-lock.*in sync|Missing:.*from lock|Invalid:.*from lock/i],
+    ['PERMISSION',/permission denied|EACCES|EPERM/i],
+    ['AUTH',/401 Unauthorized|403 Forbidden|E401|E403|authentication required/i],
+    ['CERT',/certificate|SELF_SIGNED|UNABLE_TO_VERIFY_LEAF_SIGNATURE/i],
+    ['NETWORK',/ENOTFOUND|EAI_AGAIN|ECONNRESET|ETIMEDOUT|ECONNREFUSED|network request failed/i],
+    ['CACHE',/ENOTCACHED|cache corruption|cache entry/i],
+    ['FILE',/ENOENT|no such file or directory/i],
+    ['RUNTIME',/Cannot find module|MODULE_NOT_FOUND|TypeError|SyntaxError|ReferenceError/i],
+    ['USAGE',/EUSAGE|npm usage/i]
+   ];
+   const errorClass=classes.find(([,pattern])=>pattern.test(detail))?.[0]||'OTHER';
+   const stderrBytes=Math.min(stderr.length,1000000),stdoutBytes=Math.min(stdout.length,1000000);
+   fs.writeFileSync(path.join(root,'preparation.json'),JSON.stringify({...old,status:'FAIL',exit:r.status,signal:r.signal||null,npmCode,errorClass,stderrBytes,stdoutBytes}));
    need(false);
   }
  }
@@ -139,7 +153,7 @@ async function main(){
   // Parent reads only the child's fixed-stage result, not its private stderr/log.
   const prepStateFile=path.join(home,'preparation.json');
   const allowedPrepStages=new Set(['npm-ci','archives','module-tree','browser-install','browser-identity','profile-write','complete']);
-  let prepStage='missing',prepStatus='unknown',prepExit=null,prepNpmCode=null;
+  let prepStage='missing',prepStatus='unknown',prepExit=null,prepNpmCode=null,prepErrorClass=null,prepStderrBytes=null,prepStdoutBytes=null;
   if(fs.existsSync(prepStateFile)){
     try{
       const state=JSON.parse(fs.readFileSync(prepStateFile,'utf8'));
@@ -149,9 +163,13 @@ async function main(){
       const allowedNpm=new Set(['EUSAGE','ENOENT','EACCES','EPERM','ENOTFOUND','EAI_AGAIN','ECONNRESET',
         'ECONNREFUSED','ETIMEDOUT','ETARGET','EINTEGRITY','E404','ENOTCACHED','ELOCKVERIFY','EINVALIDPACKAGENAME']);
       prepNpmCode=allowedNpm.has(state.npmCode)?state.npmCode:null;
+      const allowedClasses=new Set(['LOCK','PERMISSION','AUTH','CERT','NETWORK','CACHE','FILE','RUNTIME','USAGE','OTHER']);
+      prepErrorClass=allowedClasses.has(state.errorClass)?state.errorClass:null;
+      prepStderrBytes=Number.isInteger(state.stderrBytes)&&state.stderrBytes>=0&&state.stderrBytes<=1000000?state.stderrBytes:null;
+      prepStdoutBytes=Number.isInteger(state.stdoutBytes)&&state.stdoutBytes>=0&&state.stdoutBytes<=1000000?state.stdoutBytes:null;
     }catch{prepStage='unreadable'}
   }
-  console.log('CLOUD-DIAG preparation telemetry '+JSON.stringify({stage:prepStage,status:prepStatus,exitCode:prepExit,npmCode:prepNpmCode}));
+  console.log('CLOUD-DIAG preparation telemetry '+JSON.stringify({stage:prepStage,status:prepStatus,exitCode:prepExit,npmCode:prepNpmCode,errorClass:prepErrorClass,stderrBytes:prepStderrBytes,stdoutBytes:prepStdoutBytes}));
   known=life.cleanupVerified===true;if(known&&fs.existsSync(path.join(home,'preparation.json')))fs.copyFileSync(path.join(home,'preparation.json'),path.join(evidence,'preparation.json'),fs.constants.COPYFILE_EXCL);need(life.status==='PASS'&&known);
   console.log('CLOUD-DIAG prepare and cleanup PASS');
   env.ZAMEROVAC_CLOUD_RUNTIME_FILE=path.join(home,'runtime.json');env.ZAMEROVAC_CLOUD_RUNTIME_SHA256=hash(fs.readFileSync(env.ZAMEROVAC_CLOUD_RUNTIME_FILE));
