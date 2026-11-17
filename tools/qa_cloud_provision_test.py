@@ -197,6 +197,9 @@ class BrowserRevision(unittest.TestCase):
         self.core.mkdir(parents=True)
         self.browsers = self.stage / 'browsers'
         self.browsers.mkdir()
+        cli = self.stage / 'deps/node_modules/playwright/cli.js'
+        cli.parent.mkdir(parents=True)
+        cli.write_bytes(b'synthetic CLI, never executed')
         (self.core / 'browsers.json').write_text(json.dumps({
             'browsers':[{'name':'chromium','revision':'1234'},
                         {'name':'ffmpeg','revision':'1011'}]}))
