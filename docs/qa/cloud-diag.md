@@ -43,8 +43,7 @@ DOM/trace/pixel/log upload; unknown scratch is retained, never automatically res
 GITHUB_OUTPUT is emitted only after final identity checks AND scratch cleanup.
 
 Browser contexts block service workers and WS/WSS before pages/popups. Only the
-exact loopback HTTP origin is routed. Fetch has maxRedirects0 and denies external
-Location; IPv6/DNS/external origins are rejected. Reviewed synthetic route.fulfill
+exact loopback HTTP origin is routed. Fetch has maxRedirects0 and denies all Location redirects; IPv6/DNS/external origins are rejected. Reviewed synthetic route.fulfill
 fixtures remain possible. These routes are NOT an OS firewall for native Node,
 which runs independently SOURCE-reviewed code under a trusted host assumption.
 

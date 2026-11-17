@@ -142,8 +142,8 @@ test('B1 missing, wrong bytes, wrong tree SHA, symlink and hardlink cannot be hi
 
 test('CLOUD-DIAG child allowlist excludes credentials proxy npmrc and preload sentinels',()=>{
  const {childEnv}=require('../tools/qa-cloud-diag.cjs');
- const e=childEnv({PATH:'/safe',GITHUB_SHA:'a'.repeat(40),GH_TOKEN:'PRIVATE',GITHUB_TOKEN:'PRIVATE',ACTIONS_RUNTIME_TOKEN:'PRIVATE',HTTPS_PROXY:'PRIVATE',NODE_PATH:'PRIVATE',NODE_OPTIONS:'PRIVATE',npm_config_userconfig:'PRIVATE'},'/scratch');
- assert.equal(e.PATH,'/safe');assert.equal(e.HOME,'/scratch');assert(!JSON.stringify(e).includes('PRIVATE'));
+ const e=childEnv({ZAMEROVAC_CLOUD_SCRATCH:'/scratch-runtime',PLAYWRIGHT_BROWSERS_PATH:'PRIVATE',PATH:'/safe',GITHUB_SHA:'a'.repeat(40),GH_TOKEN:'PRIVATE',GITHUB_TOKEN:'PRIVATE',ACTIONS_RUNTIME_TOKEN:'PRIVATE',HTTPS_PROXY:'PRIVATE',NODE_PATH:'PRIVATE',NODE_OPTIONS:'PRIVATE',npm_config_userconfig:'PRIVATE'},'/scratch');
+ assert.equal(e.PLAYWRIGHT_BROWSERS_PATH,'/scratch-runtime/browsers');assert.equal(e.PATH,'/safe');assert.equal(e.HOME,'/scratch');assert(!JSON.stringify(e).includes('PRIVATE'));
  assert.equal(e.NPM_CONFIG_USERCONFIG,'/dev/null');assert.equal(e.NPM_CONFIG_GLOBALCONFIG,'/dev/null');
 });
 test('CLOUD-DIAG drawing17 and full96 require independent complete named reports',()=>{
@@ -160,7 +160,7 @@ test('CLOUD-DIAG drawing17 and full96 require independent complete named reports
 test('CLOUD-DIAG context blocks WS external HTTP DNS IPv6 and external redirects',async()=>{
  const policy=require('../tools/qa-cloud-network.cjs');let handler,ws,closed=0;
  await policy.install({async routeWebSocket(_,fn){ws=fn},async route(_,fn){handler=fn}},'http://127.0.0.1:8081');ws({close(){closed++}});assert.equal(closed,1);
- for(const [url,redirect,expected] of [['http://127.0.0.1:8081/a',null,'fulfilled'],['http://127.0.0.1:8081/a','/b','fulfilled'],['http://127.0.0.1:8081/a','https://external.invalid','aborted'],['https://external.invalid',null,'aborted'],['http://localhost:8081',null,'aborted'],['http://[::1]:8081',null,'aborted'],['ws://127.0.0.1:8081',null,'aborted']]){
+ for(const [url,redirect,expected] of [['http://127.0.0.1:8081/a',null,'fulfilled'],['http://127.0.0.1:8081/a','/b','aborted'],['http://127.0.0.1:8081/a','https://external.invalid','aborted'],['https://external.invalid',null,'aborted'],['http://localhost:8081',null,'aborted'],['http://[::1]:8081',null,'aborted'],['ws://127.0.0.1:8081',null,'aborted']]){
   let state,fetches=0;await handler({request:()=>({url:()=>url}),abort(){state='aborted'},async fetch(opts){fetches++;assert.equal(opts.maxRedirects,0);return {headers:()=>redirect?{location:redirect}:{}}},fulfill(){state='fulfilled'}});assert.equal(state,expected);if(!policy.local(url,'http://127.0.0.1:8081'))assert.equal(fetches,0);
  }
  const src=fs.readFileSync(path.join(__dirname,'../tools/e2e/harness.cjs'),'utf8');assert(src.includes("serviceWorkers:'block'"));assert(src.indexOf('qa-cloud-network.cjs')<src.indexOf('const page=await context.newPage()'));

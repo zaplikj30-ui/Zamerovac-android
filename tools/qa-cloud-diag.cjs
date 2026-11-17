@@ -10,6 +10,7 @@ function childEnv(source,home){
  const keys=['PATH','LANG','LC_ALL','ImageOS','ImageVersion','CI','GITHUB_ACTIONS','GITHUB_REPOSITORY','GITHUB_ACTOR','GITHUB_TRIGGERING_ACTOR','GITHUB_EVENT_NAME','GITHUB_REF','GITHUB_RUN_ATTEMPT','GITHUB_RUN_ID','GITHUB_SHA','GITHUB_WORKFLOW_SHA','RUNNER_OS','RUNNER_ENVIRONMENT'];
  const env={};for(const k of keys)if(source[k]!==undefined)env[k]=source[k];
  for(const [k,v] of Object.entries(source))if(k.startsWith('ZAMEROVAC_')&&['ZAMEROVAC_QA_MODE','ZAMEROVAC_CLOUD_TRUST','ZAMEROVAC_EXPECTED_PRODUCT_SHA','ZAMEROVAC_CLOUD_REVIEWED_V_SHA','ZAMEROVAC_CLOUD_EVENT_SHA','ZAMEROVAC_SOURCE_ROOT','ZAMEROVAC_EXPECTED_QA_SHA','ZAMEROVAC_PYTHON','ZAMEROVAC_CLOUD_RUNTIME_FILE','ZAMEROVAC_CLOUD_RUNTIME_SHA256','ZAMEROVAC_CLOUD_SCRATCH','ZAMEROVAC_CLOUD_DEADLINE'].includes(k))env[k]=v;
+ if(source.ZAMEROVAC_CLOUD_SCRATCH)env.PLAYWRIGHT_BROWSERS_PATH=path.join(source.ZAMEROVAC_CLOUD_SCRATCH,'browsers');
  return {...env,HOME:home,TMPDIR:home,TMP:home,TEMP:home,PYTHONDONTWRITEBYTECODE:'1',PYTHONNOUSERSITE:'1',GIT_CONFIG_NOSYSTEM:'1',GIT_CONFIG_GLOBAL:'/dev/null',NPM_CONFIG_USERCONFIG:'/dev/null',NPM_CONFIG_GLOBALCONFIG:'/dev/null'};
 }
 function verifyStage(report,mode,env=process.env){
@@ -33,6 +34,7 @@ function prepare(){
  need(Object.keys(lock.packages).every(k=>['','node_modules/playwright','node_modules/playwright-core','node_modules/fsevents'].includes(k)));
  for(const [k,v] of Object.entries(lock.packages))if(k)need(v.resolved?.startsWith('https://registry.npmjs.org/')&&/^sha512-/.test(v.integrity));
  const env={...e,npm_config_cache:path.join(root,'npm-cache'),npm_config_registry:'https://registry.npmjs.org/',PLAYWRIGHT_BROWSERS_PATH:path.join(root,'browsers')};
+ process.env.PLAYWRIGHT_BROWSERS_PATH=env.PLAYWRIGHT_BROWSERS_PATH;
  function run(exe,args,timeout){const r=cp.spawnSync(exe,args,{cwd:deps,env,encoding:'utf8',timeout,maxBuffer:2*1024*1024});if(r.status!==0||r.error||r.signal){const old=JSON.parse(fs.readFileSync(path.join(root,'preparation.json')));fs.writeFileSync(path.join(root,'preparation.json'),JSON.stringify({...old,status:'FAIL',exit:r.status,signal:r.signal||null}));need(false)}}
  run('npm',['ci','--ignore-scripts','--no-audit','--no-fund'],180000);
  checkpoint('archives');const archives={};fs.mkdirSync(path.join(root,'archives'));
@@ -58,6 +60,7 @@ function prepare(){
  const chromium={...binary(browserPath),magic:'7f454c46',identity:identity(browserPath),revision};need(runtime.checked(browserPath,1024*1024*1024).subarray(0,4).toString('hex')===chromium.magic);
  const r={schema:2,runtimeApproved:true,trustModel:'trusted-host/change-detection',scratch:root,productSha:e.ZAMEROVAC_EXPECTED_PRODUCT_SHA,validatorSha:e.ZAMEROVAC_CLOUD_REVIEWED_V_SHA,eventSha:e.ZAMEROVAC_CLOUD_EVENT_SHA,imageOS:e.ImageOS,imageVersion:e.ImageVersion,linuxUid:process.getuid(),node:binary(fs.realpathSync(process.execPath)),python:binary(fs.realpathSync(e.ZAMEROVAC_PYTHON)),chromium,playwright:{root:deps,files,archives},lockSha256:hash(fs.readFileSync(path.join(__dirname,'qa-browser/package-lock.json')))};
  checkpoint('profile-write');fs.writeFileSync(path.join(root,'runtime.json'),JSON.stringify(r),{flag:'wx',mode:0o600});
+ fs.writeFileSync(path.join(root,'preparation.json'),JSON.stringify({stage:'complete',status:'PASS'}),{mode:0o600});
 }
 async function live(env,request=fetch){
  const get=async suffix=>{const r=await request('https://api.github.com/repos/zaplikj30-ui/Zamerovac-android/'+suffix,{headers:{'User-Agent':'zamerovac-cloud-diag'},signal:AbortSignal.timeout(12000)});need(r.ok);return r.json()};

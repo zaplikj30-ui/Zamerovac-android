@@ -7,7 +7,8 @@ async function install(context,base){
   try{
    const url=route.request().url();if(!local(url,base))return route.abort();
    const response=await route.fetch({maxRedirects:0});const target=response.headers()['location'];
-   if(target&&!local(new URL(target,url).href,base))return route.abort();
+   // Never let Chromium auto-follow a redirect outside interception.
+   if(target)return route.abort();
    return route.fulfill({response});
   }catch{return route.abort()}
  });
