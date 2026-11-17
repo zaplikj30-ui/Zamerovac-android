@@ -98,6 +98,16 @@ Každý zásah testuj podle rizika: **i u malých oprav cílené testy a kontrol
 
 Ke změně existující funkce oprav relevantní regresní test v [#28](https://github.com/zaplikj30-ui/Zamerovac-android/issues/28), u rozsáhlých změn přidej kombinovaný test sousedních funkcí, včetně měření odezvy a UI. Zaznamenávej přesné SHA/prostředí, původní FAIL a retesty, PASS/FAIL/SKIP/NOT RUN/BLOCKED a fyzická omezení; starý PASS neprokazuje nový SHA. Cloud/Chromium, JVM, emulator a fyzický telefon/S Pen/Bosch či Google Drive jsou **odlišné důkazy**. Před jedinou společnou APK proveď širší relevantní regresi, ne však všechny náročné scénáře po každé drobné opravě. Kritické vady ztráty dat a chybného měření před ostrým použitím nepřehlížej.
 
+### Postup pro nové fyzicky nahlášené chyby
+
+**Závazné při každé nové opravě:** chyba z telefonu/tabletu se **neopravuje jen změnou kódu bez průkazného ověření**. Využij stávající testy a záznamy [#13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13) a [#28](https://github.com/zaplikj30-ui/Zamerovac-android/issues/28), nikoli další testovací infrastrukturu.
+
+1. **Ihned eviduj nález:** verzi APK/commit, zařízení a Android (jsou-li známy), přesné kroky, očekávaný a skutečný výsledek, četnost, dopad, snímek/video, stav **FAKT / NEOVĚŘENO**. U větší vady založ konkrétní issue; na veřejný GitHub nikdy neukládej cizí zákaznické fotografie, obsah zakázek nebo přístupové údaje.
+2. **Před opravou reprodukuj:** programátor nejprve ověří chybu ve vadné verzi. Je-li to technicky možné a úměrné riziku, přidá ve **stejném opravovacím PR automatický regresní test** skutečného chování, uložených dat nebo pixelů, který na vadném stavu prokazatelně **FAIL** a po opravě **PASS**. Nepostačí změnit očekávání, přidat trvale ignorovaný test nebo označit známý FAIL jako opravený.
+3. **Po opravě zopakuj** nový test a související regresi podle rizika: kóty/jednotky, gesto/úchop, Undo/Redo, uložit → zavřít → obnovit, export/import, média, synchronizace. Zapiš přesné SHA, prostředí, **PASS/FAIL/SKIP/NOT RUN** a důkazy. Regresní test ponech v existující sadě, aby zachytil opakování vady.
+4. **Jestli automatizace nestačí** (reálný Android/WebView, S Pen, Bosch, živý Drive/SAF, zařízení závislé na čase): popiš proč a co zvládne nejbližší automatický test; výslovně požaduj cílený **fyzický retest**. Dokud neproběhne, stav je **NOT RUN / NEOVĚŘENO**, ne „opraveno na zařízení“. Neopakovat bezdůvodně cloudové testy ani nevydávat APK bez samostatného souhlasu.
+5. **HOTOVO:** doložená oprava, cílený a související test, vlastní review, případné nezávislé review a podle rizika skutečný retest na zařízení. Nahlášení chyby **samo automatický test nevytvoří**; jeho vytvoření je součást následného zadání programátorovi a opravy.
+
 **Bezpečnostní kontrola relevantní změny:** samostatně posuď **nedůvěryhodné vstupy, cizí HTML/webový obsah, oprávnění, citlivé údaje a zpřístupněná rozhraní WebView/JavaScript ↔ nativní Android bridge**. Podle rizika ověř pozitivní i negativní scénáře přístupu a chyb; zaznamenej výsledky, omezení a neprovedené kontroly se SHA. **Úspěšný build, běžný funkční PASS nebo CI ≠ bezpečnostní review**; zdrojové review bez běhových testů není runtime PASS.
 
 ## Kde co hledat
