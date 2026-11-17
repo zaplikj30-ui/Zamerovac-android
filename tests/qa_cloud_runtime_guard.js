@@ -142,7 +142,7 @@ test('B1 missing, wrong bytes, wrong tree SHA, symlink and hardlink cannot be hi
 
 test('CLOUD-DIAG child allowlist excludes credentials proxy npmrc and preload sentinels',()=>{
  const {childEnv}=require('../tools/qa-cloud-diag.cjs');
- const e=childEnv({ZAMEROVAC_CLOUD_SCRATCH:'/scratch-runtime',PLAYWRIGHT_BROWSERS_PATH:'PRIVATE',PATH:'/safe',GITHUB_SHA:'a'.repeat(40),GH_TOKEN:'PRIVATE',GITHUB_TOKEN:'PRIVATE',ACTIONS_RUNTIME_TOKEN:'PRIVATE',HTTPS_PROXY:'PRIVATE',NODE_PATH:'PRIVATE',NODE_OPTIONS:'PRIVATE',npm_config_userconfig:'PRIVATE'},'/scratch');
+ const e=childEnv({ZAMEROVAC_CLOUD_SCRATCH:'/scratch-runtime',PLAYWRIGHT_BROWSERS_PATH:'PRIVATE',PATH:'/safe',GITHUB_SHA:'a'.repeat(40),GH_TOKEN:'PRIVATE',QA_CLOUD_METADATA_TOKEN:'PRIVATE',GITHUB_TOKEN:'PRIVATE',ACTIONS_RUNTIME_TOKEN:'PRIVATE',HTTPS_PROXY:'PRIVATE',NODE_PATH:'PRIVATE',NODE_OPTIONS:'PRIVATE',npm_config_userconfig:'PRIVATE'},'/scratch');
  assert.equal(e.PLAYWRIGHT_BROWSERS_PATH,'/scratch-runtime/browsers');assert.equal(e.PATH,'/safe');assert.equal(e.HOME,'/scratch');assert(!JSON.stringify(e).includes('PRIVATE'));
  assert.equal(e.NPM_CONFIG_USERCONFIG,'/dev/null');assert.equal(e.NPM_CONFIG_GLOBALCONFIG,'/dev/null');
 });
