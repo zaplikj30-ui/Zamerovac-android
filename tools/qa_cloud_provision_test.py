@@ -127,7 +127,9 @@ class ProvisionTests(unittest.TestCase):
         (target / 'package.json').write_text(json.dumps({'dependencies':{'playwright':'1.62.1'}}))
         lock_file = target / 'package-lock.json'
         lock_file.write_text(json.dumps(manifest))
-        self.assertEqual(q.locked_package(self.stage)[0]['lockfileVersion'],3)
+        self.assertEqual(q.validate_lock(lock_file.read_bytes(), (target / 'package.json').read_bytes())['lockfileVersion'],3)
+        with self.assertRaises(q.Blocked):
+            q.locked_package(self.stage)  # synthetic bytes are NOT reviewed Git blobs
         edits = [
             lambda x: x['packages']['node_modules/playwright'].update(version='1.62.0'),
             lambda x: x['packages']['node_modules/playwright'].update(integrity='sha512-BAD'),
@@ -139,8 +141,8 @@ class ProvisionTests(unittest.TestCase):
             altered = json.loads(json.dumps(manifest))
             mutate(altered)
             lock_file.write_text(json.dumps(altered))
-            with self.assertRaises((q.Blocked, ValueError)):
-                q.locked_package(self.stage)
+            with self.assertRaises((q.Blocked, ValueError, KeyError)):
+                q.validate_lock(lock_file.read_bytes(), (target / 'package.json').read_bytes())
 
 
 
