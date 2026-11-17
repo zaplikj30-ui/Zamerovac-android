@@ -63,19 +63,32 @@ function prepare(){
  fs.writeFileSync(path.join(root,'preparation.json'),JSON.stringify({stage:'complete',status:'PASS'}),{mode:0o600});
 }
 async function live(env,request=fetch){
- const get=async suffix=>{const r=await request('https://api.github.com/repos/zaplikj30-ui/Zamerovac-android/'+suffix,{headers:{'User-Agent':'zamerovac-cloud-diag'},signal:AbortSignal.timeout(12000)});need(r.ok);return r.json()};
+ const token=env.QA_CLOUD_METADATA_TOKEN||'';
+ if(request===fetch)need(token.length>0);
+ const get=async suffix=>{
+  const url='https://api.github.com/repos/zaplikj30-ui/Zamerovac-android'+(suffix?'/'+suffix:'');
+  const headers={'User-Agent':'zamerovac-cloud-diag'};
+  if(token)headers.Authorization='Bearer '+token;
+  const r=await request(url,{headers,signal:AbortSignal.timeout(12000)});
+  need(r.ok);return r.json();
+ };
  const repo=await get('');need(repo.private===false);
  const main=await get('git/ref/heads/main');need(main.object?.sha===env.ZAMEROVAC_CLOUD_EVENT_SHA);
- for(const [n,sha,base] of [[150,env.ZAMEROVAC_EXPECTED_PRODUCT_SHA,'main'],[155,'9f733b24194a7870fa1377b256076bca7a71eb5a','implement/home4-p1-p4-20261115'],[156,env.ZAMEROVAC_CLOUD_REVIEWED_V_SHA,'programator/cloud-qa-a1-a3-20261116']]){
+ const validatorBranch=await get('git/ref/heads/fix/cloud-validator-owner-comment-live-20261117');
+ need(validatorBranch.object?.sha===env.ZAMEROVAC_CLOUD_REVIEWED_V_SHA);
+ for(const [n,sha,base] of [[150,env.ZAMEROVAC_EXPECTED_PRODUCT_SHA,'main'],[155,'9f733b24194a7870fa1377b256076bca7a71eb5a','implement/home4-p1-p4-20261115'],[156,'ca6c23727f692e26811d9e7f3b346116533aa6b5','programator/cloud-qa-a1-a3-20261116']]){
   const pr=await get('pulls/'+n);need(pr.state==='open'&&pr.head?.sha===sha&&pr.head?.repo?.full_name==='zaplikj30-ui/Zamerovac-android'&&pr.base?.ref===base);
  }
 }
 async function main(){
  const root=path.resolve(__dirname,'..'),integrity=require('./qa-integrity.cjs');
  const q=require('./local-browser-qa.cjs').gateSnapshot();integrity.cloudIdentity(q,process.env);integrity.sourceSnapshot(process.env.ZAMEROVAC_SOURCE_ROOT);
+ const metadataToken=process.env.QA_CLOUD_METADATA_TOKEN;
+ need(metadataToken);
+ const approvedLive=env=>live({...env,QA_CLOUD_METADATA_TOKEN:metadataToken});
  need(process.env.GITHUB_WORKFLOW_SHA===process.env.GITHUB_SHA);
  need(process.env.QA_APPROVED_Q===q&&process.env.QA_APPROVED_E===process.env.GITHUB_SHA);
- await live(process.env);
+ await approvedLive(process.env);
  const home=fs.mkdtempSync(path.join(require('node:os').tmpdir(),'zamerovac-diag-'));fs.chmodSync(home,0o700);
  const evidence=fs.mkdtempSync(path.join(require('node:os').tmpdir(),'zamerovac-diag-evidence-'));fs.chmodSync(evidence,0o700);
  const env=childEnv(process.env,home);env.ZAMEROVAC_CLOUD_SCRATCH=home;env.ZAMEROVAC_CLOUD_DEADLINE=String(Date.now()+200*60000);
@@ -91,10 +104,10 @@ async function main(){
   for(const key of Object.keys(process.env))delete process.env[key];Object.assign(process.env,env); // run() creates only allowlisted descendants.
   const runner=require('./local-browser-qa.cjs');
   for(const [folder,mode] of [['smoke','--drawing-diagnostic'],['full','--all']]){
-   summary.stage=folder;await live(env);process.env.ZAMEROVAC_QA_RESULT_PARENT=path.join(home,folder);
+   summary.stage=folder;await approvedLive(env);process.env.ZAMEROVAC_QA_RESULT_PARENT=path.join(home,folder);
    known=false;const report=await runner.run(mode);known=report.cleanupVerdict==='KNOWN_CLEAN';summary[folder]=report.status;fs.writeFileSync(path.join(evidence,folder+'.json'),JSON.stringify(report),{flag:'wx',mode:0o600});if(report.status==='FAIL'&&known){const error=Error('CLOUD named failure');error.code='CLOUD_TEST_FAIL';summary.status='FAIL';throw error}verifyStage(report,mode);
   }
-  await live(env);success=true;
+  await approvedLive(env);success=true;
  }finally{
   try{if(known)fs.rmSync(home,{recursive:true})}catch(error){known=false;throw error}
   finally{summary.cleanup=known?'KNOWN_CLEAN':'UNKNOWN';if(success&&known)summary.status='PASS';fs.writeFileSync(path.join(evidence,'summary.json'),JSON.stringify(summary),{flag:'wx',mode:0o600})}
