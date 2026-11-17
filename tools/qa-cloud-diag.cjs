@@ -23,72 +23,9 @@ function verifyStage(report,mode,env=process.env){
  need(report.records?.length===suites.length&&report.records.every((r,i)=>r.suite===suites[i]&&r.status==='PASS'&&r.cleanupVerified===true&&r.caseCount===cases[r.suite].length&&r.cases?.length===cases[r.suite].length&&r.cases.every((c,j)=>c.name===cases[r.suite][j]&&c.status==='passed')));
  return true;
 }
-function prepare(){
- const e=process.env,root=e.ZAMEROVAC_CLOUD_SCRATCH;
- need(e.ZAMEROVAC_DIAG_PREPARE==='1'&&e.ZAMEROVAC_SUPERVISOR_PID===String(process.ppid)&&e.ZAMEROVAC_SCOPE==='linux-pidfd-subreaper');
- need(root&&fs.realpathSync(root)===root&&fs.statSync(root).uid===process.getuid());
- const checkpoint=stage=>fs.writeFileSync(path.join(root,'preparation.json'),JSON.stringify({stage,status:'RUNNING'}),{mode:0o600});
- checkpoint('npm-ci');const deps=path.join(root,'deps');fs.mkdirSync(deps);
- for(const name of ['package.json','package-lock.json'])fs.copyFileSync(path.join(__dirname,'qa-browser',name),path.join(deps,name),fs.constants.COPYFILE_EXCL);
- const lock=JSON.parse(fs.readFileSync(path.join(deps,'package-lock.json')));
- need(Object.keys(lock.packages).every(k=>['','node_modules/playwright','node_modules/playwright-core','node_modules/fsevents'].includes(k)));
- for(const [k,v] of Object.entries(lock.packages))if(k)need(v.resolved?.startsWith('https://registry.npmjs.org/')&&/^sha512-/.test(v.integrity));
- const env={...e,npm_config_cache:path.join(root,'npm-cache'),npm_config_registry:'https://registry.npmjs.org/',PLAYWRIGHT_BROWSERS_PATH:path.join(root,'browsers')};
- process.env.PLAYWRIGHT_BROWSERS_PATH=env.PLAYWRIGHT_BROWSERS_PATH;
- function run(exe,args,timeout){
-  const r=cp.spawnSync(exe,args,{cwd:deps,env,encoding:'utf8',timeout,maxBuffer:2*1024*1024});
-  if(r.status!==0||r.error||r.signal){
-   const old=JSON.parse(fs.readFileSync(path.join(root,'preparation.json')));
-   // Retain only an allowlisted error code, never npm stdout/stderr or file paths.
-   const allowed=new Set(['EUSAGE','ENOENT','EACCES','EPERM','ENOTFOUND','EAI_AGAIN','ECONNRESET',
-    'ECONNREFUSED','ETIMEDOUT','ETARGET','EINTEGRITY','E404','ENOTCACHED','ELOCKVERIFY','EINVALIDPACKAGENAME']);
-   const stdout=String(r.stdout||''),stderr=String(r.stderr||''),detail=stderr+'\n'+stdout;
-   const match=detail.match(/\bnpm\s+(?:error|ERR!)\s+code\s+([A-Z0-9_]+)\b/i);
-   const candidate=(match?.[1]||r.error?.code||'').toUpperCase();
-   const npmCode=allowed.has(candidate)?candidate:null;
-   const classes=[
-    ['LOCK',/npm ci can only install|package-lock.*in sync|Missing:.*from lock|Invalid:.*from lock/i],
-    ['PERMISSION',/permission denied|EACCES|EPERM/i],
-    ['AUTH',/401 Unauthorized|403 Forbidden|E401|E403|authentication required/i],
-    ['CERT',/certificate|SELF_SIGNED|UNABLE_TO_VERIFY_LEAF_SIGNATURE/i],
-    ['NETWORK',/ENOTFOUND|EAI_AGAIN|ECONNRESET|ETIMEDOUT|ECONNREFUSED|network request failed/i],
-    ['CACHE',/ENOTCACHED|cache corruption|cache entry/i],
-    ['FILE',/ENOENT|no such file or directory/i],
-    ['RUNTIME',/Cannot find module|MODULE_NOT_FOUND|TypeError|SyntaxError|ReferenceError/i],
-    ['USAGE',/EUSAGE|npm usage/i]
-   ];
-   const errorClass=classes.find(([,pattern])=>pattern.test(detail))?.[0]||'OTHER';
-   const stderrBytes=Math.min(stderr.length,1000000),stdoutBytes=Math.min(stdout.length,1000000);
-   fs.writeFileSync(path.join(root,'preparation.json'),JSON.stringify({...old,status:'FAIL',exit:r.status,signal:r.signal||null,npmCode,errorClass,stderrBytes,stdoutBytes}));
-   need(false);
-  }
- }
- run('npm',['ci','--ignore-scripts','--no-audit','--no-fund'],180000);
- checkpoint('archives');const archives={};fs.mkdirSync(path.join(root,'archives'));
- for(const name of ['playwright','playwright-core']){
-  const item=lock.packages['node_modules/'+name];need(item.version==='1.62.1');
-  const hex=Buffer.from(item.integrity.slice(7),'base64').toString('hex');
-  const bytes=fs.readFileSync(path.join(env.npm_config_cache,'_cacache/content-v2/sha512',hex.slice(0,2),hex.slice(2,4),hex.slice(4)));
-  need('sha512-'+crypto.createHash('sha512').update(bytes).digest('base64')===item.integrity);
-  const file=path.join(root,'archives',name+'.tgz');fs.writeFileSync(file,bytes,{flag:'wx',mode:0o600});archives[name]={path:file,integrity:item.integrity};
- }
- // npm-generated launch symlink/metadata are not executable dependency inputs.
- const bin=path.join(deps,'node_modules/.bin');if(fs.existsSync(bin)){for(const n of fs.readdirSync(bin)){need(['playwright','playwright-core'].includes(n)&&fs.lstatSync(path.join(bin,n)).isSymbolicLink());fs.unlinkSync(path.join(bin,n))}fs.rmdirSync(bin)}
- fs.unlinkSync(path.join(deps,'node_modules/.package-lock.json'));
- checkpoint('module-tree');const files={};function walk(d){for(const n of fs.readdirSync(d)){const f=path.join(d,n),s=fs.lstatSync(f);need(!s.isSymbolicLink());if(s.isDirectory())walk(f);else{need(s.isFile()&&s.nlink===1);files[path.relative(deps,f)]=hash(fs.readFileSync(f))}}}walk(path.join(deps,'node_modules'));
- runtime.exactlyTree(deps,files);
- const loader=require('node:module').createRequire(path.join(deps,'entry.cjs'));
- const entry=loader.resolve('playwright'),core=loader.resolve('playwright-core');need(require('node:module').createRequire(entry).resolve('playwright-core')===core);
- checkpoint('browser-install');run(process.execPath,[path.join(deps,'node_modules/playwright/cli.js'),'install','chromium','--no-shell'],240000);
- checkpoint('browser-identity');const browserPath=loader('playwright').chromium.executablePath();need(fs.realpathSync(browserPath)===browserPath);
- const revision=JSON.parse(fs.readFileSync(path.join(deps,'node_modules/playwright-core/browsers.json'))).browsers.find(b=>b.name==='chromium').revision;
- need(browserPath.includes('chromium-'+revision+path.sep));
- const binary=file=>({path:file,sha256:hash(runtime.checked(file,1024*1024*1024))});
- const chromium={...binary(browserPath),magic:'7f454c46',identity:identity(browserPath),revision};need(runtime.checked(browserPath,1024*1024*1024).subarray(0,4).toString('hex')===chromium.magic);
- const r={schema:2,runtimeApproved:true,trustModel:'trusted-host/change-detection',scratch:root,productSha:e.ZAMEROVAC_EXPECTED_PRODUCT_SHA,validatorSha:e.ZAMEROVAC_CLOUD_REVIEWED_V_SHA,eventSha:e.ZAMEROVAC_CLOUD_EVENT_SHA,imageOS:e.ImageOS,imageVersion:e.ImageVersion,linuxUid:process.getuid(),node:binary(fs.realpathSync(process.execPath)),python:binary(fs.realpathSync(e.ZAMEROVAC_PYTHON)),chromium,playwright:{root:deps,files,archives},lockSha256:hash(fs.readFileSync(path.join(__dirname,'qa-browser/package-lock.json')))};
- checkpoint('profile-write');fs.writeFileSync(path.join(root,'runtime.json'),JSON.stringify(r),{flag:'wx',mode:0o600});
- fs.writeFileSync(path.join(root,'preparation.json'),JSON.stringify({stage:'complete',status:'PASS'}),{mode:0o600});
-}
+// Provisioning is owned exclusively by the preceding token-free cloud step.
+// No npm/Playwright CLI is reachable from the Q browser orchestrator.
+function prepare(){need(false)}
 async function live(env,request=fetch){
  const token=env.QA_CLOUD_METADATA_TOKEN||'';
  if(request===fetch)need(token.length>0);
@@ -128,53 +65,26 @@ async function main(){
  console.log('CLOUD-DIAG external SHA consent PASS');
  await approvedLive(process.env);
  console.log('CLOUD-DIAG live metadata PASS');
- const home=fs.mkdtempSync(path.join(require('node:os').tmpdir(),'zamerovac-diag-'));fs.chmodSync(home,0o700);
  const evidence=fs.mkdtempSync(path.join(require('node:os').tmpdir(),'zamerovac-diag-evidence-'));fs.chmodSync(evidence,0o700);
- const env=childEnv(process.env,home);env.ZAMEROVAC_CLOUD_SCRATCH=home;env.ZAMEROVAC_CLOUD_DEADLINE=String(Date.now()+200*60000);
- const {ownedWorker}=require('./qa-process-client.cjs');const token=crypto.randomBytes(16).toString('hex');
- const prepEnv={...env,ZAMEROVAC_DIAG_PREPARE:'1'};delete prepEnv.ZAMEROVAC_QA_MODE;
- const output=process.env.GITHUB_OUTPUT;const summary={smoke:'NOT RUN',full:'NOT RUN',status:'BLOCKED',cleanup:'UNKNOWN',stage:'prepare'};let success=false;
- let known=false;
+ const output=process.env.GITHUB_OUTPUT;
+ const summary={smoke:'NOT RUN',full:'NOT RUN',status:'BLOCKED',cleanup:'UNKNOWN',stage:'handoff'};
+ let success=false,known=false,home=null,env=null;
  try{
-  console.log('CLOUD-DIAG prepare START');
-  const life=await ownedWorker([process.execPath,__filename,'--prepare'],root,prepEnv,path.join(home,'prepare.log'),token,480000);
-  // Only allowlisted technical status/stage/type, no raw stdout, stderr, token or paths.
-  const {safeDiagnostic,safeErrorType}=require('./qa-process-client.cjs');
-  const telemetry={
-    status:life.status==='PASS'?'PASS':'BLOCKED',
-    cleanupVerified:life.cleanupVerified===true,
-    stage:safeDiagnostic(life.diagnostic).stage,
-    firstFailureStage:life.firstFailure?safeDiagnostic(life.firstFailure).stage:null,
-    errorType:life.error?safeErrorType(life.error):null,
-    cleanupErrorType:life.cleanupErrorType?safeErrorType(life.cleanupErrorType):null,
-    supervisorExit:Number.isInteger(life.supervisorExit)?life.supervisorExit:null
-  };
-  console.log('CLOUD-DIAG supervisor telemetry '+JSON.stringify(telemetry));
-  // Parent reads only the child's fixed-stage result, not its private stderr/log.
-  const prepStateFile=path.join(home,'preparation.json');
-  const allowedPrepStages=new Set(['npm-ci','archives','module-tree','browser-install','browser-identity','profile-write','complete']);
-  let prepStage='missing',prepStatus='unknown',prepExit=null,prepNpmCode=null,prepErrorClass=null,prepStderrBytes=null,prepStdoutBytes=null;
-  if(fs.existsSync(prepStateFile)){
-    try{
-      const state=JSON.parse(fs.readFileSync(prepStateFile,'utf8'));
-      prepStage=allowedPrepStages.has(state.stage)?state.stage:'unknown';
-      prepStatus=['RUNNING','FAIL','PASS'].includes(state.status)?state.status:'unknown';
-      prepExit=Number.isInteger(state.exit)&&state.exit>=0&&state.exit<=255?state.exit:null;
-      const allowedNpm=new Set(['EUSAGE','ENOENT','EACCES','EPERM','ENOTFOUND','EAI_AGAIN','ECONNRESET',
-        'ECONNREFUSED','ETIMEDOUT','ETARGET','EINTEGRITY','E404','ENOTCACHED','ELOCKVERIFY','EINVALIDPACKAGENAME']);
-      prepNpmCode=allowedNpm.has(state.npmCode)?state.npmCode:null;
-      const allowedClasses=new Set(['LOCK','PERMISSION','AUTH','CERT','NETWORK','CACHE','FILE','RUNTIME','USAGE','OTHER']);
-      prepErrorClass=allowedClasses.has(state.errorClass)?state.errorClass:null;
-      prepStderrBytes=Number.isInteger(state.stderrBytes)&&state.stderrBytes>=0&&state.stderrBytes<=1000000?state.stderrBytes:null;
-      prepStdoutBytes=Number.isInteger(state.stdoutBytes)&&state.stdoutBytes>=0&&state.stdoutBytes<=1000000?state.stdoutBytes:null;
-    }catch{prepStage='unreadable'}
-  }
-  console.log('CLOUD-DIAG preparation telemetry '+JSON.stringify({stage:prepStage,status:prepStatus,exitCode:prepExit,npmCode:prepNpmCode,errorClass:prepErrorClass,stderrBytes:prepStderrBytes,stdoutBytes:prepStdoutBytes}));
-  known=life.cleanupVerified===true;if(known&&fs.existsSync(path.join(home,'preparation.json')))fs.copyFileSync(path.join(home,'preparation.json'),path.join(evidence,'preparation.json'),fs.constants.COPYFILE_EXCL);need(life.status==='PASS'&&known);
-  console.log('CLOUD-DIAG prepare and cleanup PASS');
-  env.ZAMEROVAC_CLOUD_RUNTIME_FILE=path.join(home,'runtime.json');env.ZAMEROVAC_CLOUD_RUNTIME_SHA256=hash(fs.readFileSync(env.ZAMEROVAC_CLOUD_RUNTIME_FILE));
-  const r=runtime.approvedRuntime(env);env.CHROMIUM_PATH=r.chromium.path;
-  for(const key of Object.keys(process.env))delete process.env[key];Object.assign(process.env,env); // run() creates only allowlisted descendants.
+  // Stage was independently provisioned ONCE after QUICK; only a single
+  // whole-root rename and full runtime revalidation are allowed here.
+  const accepted=require('./qa-cloud-handoff.cjs').acceptPrepared(process.env);
+  home=accepted.scratch;
+  env=childEnv(process.env,path.join(home,'home'));
+  env.ZAMEROVAC_CLOUD_SCRATCH=home;
+  env.ZAMEROVAC_CLOUD_RUNTIME_FILE=accepted.runtimeFile;
+  env.ZAMEROVAC_CLOUD_RUNTIME_SHA256=accepted.runtimeSha;
+  env.CHROMIUM_PATH=accepted.chromium;
+  need(/^[1-9][0-9]*$/.test(env.ZAMEROVAC_CLOUD_DEADLINE||'')&&
+       Number(env.ZAMEROVAC_CLOUD_DEADLINE)-Date.now()>30000);
+  // Repeat live P/Q/E/main SHA validation after transfer, before any browser.
+  await approvedLive(env);
+  for(const key of Object.keys(process.env))delete process.env[key];
+  Object.assign(process.env,env); // only childEnv() allowlisted browser descendants.
   const runner=require('./local-browser-qa.cjs');
   for(const [folder,mode] of [['smoke','--drawing-diagnostic'],['full','--all']]){
    summary.stage=folder;await approvedLive(env);process.env.ZAMEROVAC_QA_RESULT_PARENT=path.join(home,folder);
@@ -182,11 +92,11 @@ async function main(){
   }
   await approvedLive(env);success=true;
  }finally{
-  try{if(known)fs.rmSync(home,{recursive:true})}catch(error){known=false;throw error}
+  try{if(known&&home)fs.rmSync(home,{recursive:true})}catch(error){known=false;throw error}
   finally{summary.cleanup=known?'KNOWN_CLEAN':'UNKNOWN';if(success&&known)summary.status='PASS';fs.writeFileSync(path.join(evidence,'summary.json'),JSON.stringify(summary),{flag:'wx',mode:0o600})}
  }
  if(output)fs.appendFileSync(output,'cleanup=KNOWN_CLEAN\nfull_verified=true\n');
  console.log('PASS CLOUD-DIAG drawing17 and FULL23/96; KNOWN_CLEAN');
 }
-if(require.main===module){if(process.argv[2]==='--prepare'){try{prepare()}catch{process.exitCode=78}}else main().catch(error=>{console.error(error.code==='CLOUD_TEST_FAIL'?'FAIL CLOUD-DIAG named assertions; no further payload':'BLOCKED CLOUD-DIAG; STOP NO RETRY');process.exitCode=error.code==='CLOUD_TEST_FAIL'?1:78})}
+if(require.main===module)main().catch(error=>{console.error(error.code==='CLOUD_TEST_FAIL'?'FAIL CLOUD-DIAG named assertions; no further payload':'BLOCKED CLOUD-DIAG; STOP NO RETRY');process.exitCode=error.code==='CLOUD_TEST_FAIL'?1:78});
 module.exports={childEnv,verifyStage,identity,prepare,live};
