@@ -208,8 +208,11 @@ def run_group(command, cwd, env, deadline_ms, log_file):
     remain = deadline_ms / 1000.0 - time.time()
     require(remain > 30)
     before = time.monotonic()
-    def cancel(_signal, _frame):
-        raise Blocked('provisioning cancelled')
+    cancelled = []
+    def cancel(sig, _frame):
+        # Never interrupt Popen halfway through start: preserve its process
+        # handle, then terminate/reap the entire known group in finally.
+        cancelled.append(sig)
     old_term, old_int = signal.getsignal(signal.SIGTERM), signal.getsignal(signal.SIGINT)
     signal.signal(signal.SIGTERM, cancel)
     signal.signal(signal.SIGINT, cancel)
@@ -230,6 +233,7 @@ def run_group(command, cwd, env, deadline_ms, log_file):
             fd = process.stdout.fileno()
             eof = False
             while not eof or process.poll() is None:
+                require(not cancelled)
                 require(time.monotonic() - before < remain - 10)
                 ready, _, _ = select.select([fd], [], [], .2) if not eof else ([], [], [])
                 if ready:
@@ -240,6 +244,7 @@ def run_group(command, cwd, env, deadline_ms, log_file):
                         private_log.write(chunk)
                     else:
                         eof = True
+            require(not cancelled)
             child_status = process.wait(timeout=1)
             outstanding = group_exists(process.pid)
         # An orphan in the group is NEVER success, even if it can be killed.
