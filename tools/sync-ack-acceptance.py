@@ -101,6 +101,8 @@ def git(*args):
 def run():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=ROOT / "app/build/reports/syncAckAcceptance")
+    parser.add_argument("--online-dependencies", action="store_true",
+                        help="Allow Gradle dependency downloads on fresh hosted runners; offline remains default")
     args = parser.parse_args()
     if git("status", "--porcelain"):
         raise ValueError("A final SHA gate requires a clean committed worktree")
@@ -109,7 +111,8 @@ def run():
     output = args.output.resolve()
     output.mkdir(parents=True, exist_ok=True)
     command = (["cmd.exe", "/d", "/c", "gradle.bat"] if os.name == "nt" else ["gradle"])
-    command += ["--offline", "--no-daemon", "--max-workers=2", ":app:testPreviewUnitTest", "--rerun"]
+    command += ([] if args.online_dependencies else ["--offline"])
+    command += ["--no-daemon", "--max-workers=2", ":app:testPreviewUnitTest", "--rerun"]
     started = time.time_ns()
     with (output / "gradle-full.log").open("w", encoding="utf-8") as log:
         process = subprocess.run(command, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, check=False)
