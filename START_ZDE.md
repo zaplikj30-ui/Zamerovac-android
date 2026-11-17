@@ -1,39 +1,25 @@
-# Zaměřovač – START ZDE (živý rozcestník)
+# START ZDE – živý rozcestník Zaměřovače
 
-> **Platná pravidla a brány:** [AGENTS.md](AGENTS.md), [projektový plán](PROJEKTOVY_PLAN_ZAMEROVACE.md) a poslední rozhodnutí v [issue #42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42). Tento krátký soubor nenahrazuje historii ani důkazy. **Před vývojovou prací vždy ověř aktuální HEAD, relevantní issues a komentáře, PR, CI, dotčené soubory a Releases.** Před zápisem ověř HEAD a kolize znovu.
+**Účel:** kde hledat právě platná pravidla, požadavky a důkazy. Tento rozcestník **neobsahuje historická SHA, výsledky minulých běhů ani samostatná technická zadání**. Před prací ověř aktuální [main](https://github.com/zaplikj30-ui/Zamerovac-android/commits/main), [otevřená PR](https://github.com/zaplikj30-ui/Zamerovac-android/pulls), [#42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42), [Actions](https://github.com/zaplikj30-ui/Zamerovac-android/actions) a [Releases](https://github.com/zaplikj30-ui/Zamerovac-android/releases). Nevěř starému údaji „aktuálně“ bez nového ověření.
 
-## AKTUÁLNÍ PROVOZ – 16. 11. 2026 (dočasná změna)
+## Kdy číst který dokument
 
-- Repozitář **dočasně PUBLIC** kvůli bezplatnému standardnímu GitHub-hosted CLOUD QA; vlastník chce po obnovení měsíčního limitu prověřit aktuální vyúčtování a vrátit jej na **PRIVATE**. Neautomatizovat přepnutí, žádný nákup ani automatické dobíjení; placený strop **12 USD/měsíc**.
-- **Domácí runner `Zamerovac-Win11-QA` je odstavený**: dle potvrzení vlastníka Windows služba Zastavená/Zakázaná, na doložených snímcích GitHub runner Offline a obě HOME QA/release workflow ručně Disabled. **Neaktivovat, nespouštět, nezapínat HOME ani nezměkčovat guardy.** O jeho případném návratu rozhodne vlastník odděleně.
-- Práce pokračuje na [PR #150](https://github.com/zaplikj30-ui/Zamerovac-android/pull/150) (draft; poslední ověřený HEAD `3886fcf80213e4693464d3f30104885c1c58f53e`, base `a3cc8eb3a14a9a6710664b73ba8a5c70ed1a340a`; vždy znovu ověřit). Připravit CLOUD-ONLY QA s přesným checkout SHA: rychlé, Chromium/pixely, JVM/Robolectric/PDF; plné 23/96 PASS jen po skutečné kontrole identity. Historické raw #88 2 FAIL nezamlčet. Bez merge, spuštění testů či vydání APK bez příslušné brány.
-- **Koordinátor musí při opakovaném blokéru aktivně hledat jinou cestu** a kriticky porovnat opravu, jiné prostředí/poskytovatele a změnu procesu. Nepřitakávat automaticky. Viz [doplnění AGENTS.md](AGENTS.md#aktuální-dočasný-režim-a-aktivní-hledání-alternativ-16-11-2026) a [#42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42#issuecomment-6913282802).
+| Potřeba | Zdroj pravdy |
+|---|---|
+| Práce AI, role, souhlasy, testovací důkazy, HOME/rozpočet | [AGENTS.md](AGENTS.md) |
+| Cílové funkce, ergonomie, vyloučené funkce, nápady a jejich stav | [VIZE_A_PLAN.md](VIZE_A_PLAN.md) a [rozhodnutí z testů](ROZHODNUTI_A_NAPADY_Z_TESTU.md) |
+| Architektura, etapy, technologie a srovnání variant | [PROJEKTOVY_PLAN_ZAMEROVACE.md](PROJEKTOVY_PLAN_ZAMEROVACE.md) |
+| Originální média, editovatelné hodnoty, ZIP, platformy, migrace | [DATOVY_FORMAT_A_PC_KOMPATIBILITA.md](DATOVY_FORMAT_A_PC_KOMPATIBILITA.md) |
+| Konkrétní Android/laser/stylus a fyzické důkazy | [KOMPATIBILITA_ZARIZENI.md](KOMPATIBILITA_ZARIZENI.md) |
+| Jazykové klíče, první další jazyk angličtina | [LOKALIZACE_PLAN.md](LOKALIZACE_PLAN.md), [#14](https://github.com/zaplikj30-ui/Zamerovac-android/issues/14) |
+| Testy funkcí a negativní scénáře | [TESTY_A_OPRAVY.md](TESTY_A_OPRAVY.md), [#28](https://github.com/zaplikj30-ui/Zamerovac-android/issues/28), [#13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13) |
+| HOME procesní hranice (jen s novým owner GO) | [docs/HOME_QA_PREFLIGHT.md](docs/HOME_QA_PREFLIGHT.md) |
+| Sync / Google Disk | [#88](https://github.com/zaplikj30-ui/Zamerovac-android/issues/88), [cloud-sync-v2](docs/cloud-sync-v2.md), [Drive API](docs/drive-api-integration.md) |
+| APK, podpis, versionCode, changelog a offline nápověda | [docs/verzovani.md](docs/verzovani.md) |
+| Historie a důkazy předchozího stavu | Git log, původní issues/PR, [archiv rozcestníku](START_ZDE_ARCHIV_DO_2026-11-11.md) |
 
-**Níže následuje historický přehled z 11. 11.; jeho tehdejší HOME priority a staré odkazy nejsou dnešním provozním příkazem.**
+## Aktuálně platné hranice (před použitím znovu ověř)
 
-## Poslední ověřený přehled (11. 11. 2026, historický snapshot)
+**Zaměřovač nyní Android**, projekty Konfigurátor–Nářezák a Převaděč spojitosti jsou oddělené. Repo je dočasně PUBLIC pro schválené GitHub-hosted cloud QA; **HOME runner a jeho dvě workflow zůstávají bez nového výslovného souhlasu vypnuté**. Nespouštěj Actions, nevracej PRIVATE, neslučuj ani nevydávej APK pouze podle historického stavu nebo tohoto textu. Strop placených GitHub Actions **12 USD/měsíc**. Oprávnění a aktuální Q/P/E/CI vždy potvrď v GitHubu.
 
-- `main` při této revizi: `c604860db4fddeefc077e27411bc1941815f7d94`. **Není zaručeno, že je to dnešní nejnovější HEAD.**
-- **Pracovní priority**: bezpečné HOME QA na Windows 11/16 GB, ochrana dat a přesných hodnot, stabilizace/editor. Úplné aktuální pořadí, rozhodnutí a předání: [#42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42). [Souhrn nových pravidel](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42#issuecomment-6808420454).
-- **Souběžné návrhy**: [otevřená PR](https://github.com/zaplikj30-ui/Zamerovac-android/pulls?q=is%3Apr+is%3Aopen). V době této revize jsou relevantní [#104](https://github.com/zaplikj30-ui/Zamerovac-android/pull/104), [#105](https://github.com/zaplikj30-ui/Zamerovac-android/pull/105), [#107](https://github.com/zaplikj30-ui/Zamerovac-android/pull/107), [#110](https://github.com/zaplikj30-ui/Zamerovac-android/pull/110) (přílohy, ukládání a testy); [#108](https://github.com/zaplikj30-ui/Zamerovac-android/pull/108) (samostatné zpřesnění ImageMeteru) a [#109](https://github.com/zaplikj30-ui/Zamerovac-android/pull/109) (HOME QA). Jejich stav a SHA před rozhodnutím **ověř znovu**.
-- **Otevřená datová rizika**: [QA-107-03](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42#issuecomment-6807481158) – při selhání zápisu může být ztracena dokončená hlasová nahrávka. [Synchronizace #88](https://github.com/zaplikj30-ui/Zamerovac-android/issues/88) – dvě známé chyby vyžadují ucelené posouzení včetně Joplin, WorkManager a oficiálního Drive API, bez slepého řetězení záplat.
-- **Testy**: čti skutečné výsledky z relevantních PR, [#28](https://github.com/zaplikj30-ui/Zamerovac-android/issues/28), [#42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42) a [Actions](https://github.com/zaplikj30-ui/Zamerovac-android/actions). Cloud PASS ≠ HOME PASS; starý SHA ≠ nový SHA; zdrojové review není běh na zařízení.
-- **Poslední vydání** vždy ověř přímo v [Releases](https://github.com/zaplikj30-ui/Zamerovac-android/releases). Historický checkpoint k 8. 11. uváděl 1.3.0 / `versionCode 1154`; nelze to bez nové kontroly vydávat za aktuální poslední vydání. Žádná nová společná APK bez celé bezpečnostní/testovací brány a výslovného souhlasu vlastníka.
-
-## Trvalý postup pro další chat i Codex
-
-1. Stručně ověř AGENTS, tento rozcestník, #42, HEAD, aktivní PR, plán a CI; urči aktuální pracovní celek. Podrobně prozkoumej právě tento úkol a všechny jeho souvislosti napříč historií a kódem, nikoli nesouvisející PR. Před zápisem znovu ověř HEAD a kolize. Důkazy, SHA, testy a rozhodnutí zapisuj do existujících issues/PR; merge ani zásadní změny bez souhlasu.
-2. **Každou dotčenou funkci testuj přiměřeně riziku**, aby automatika zachytila i jednoduché chyby: skutečné tlačítko/gesto, kreslení/pixely, viditelnost kót/čar/tvarů, galerie, poznámky a návaznosti. U ukládání, obnovy, přesných hodnot, médií, importu/exportu a synchronizace také negativní scénáře a původní bajty. Před jednou společnou APK širší regrese. PASS jen pro skutečně provedené testy na uvedeném SHA a prostředí.
-3. **Domácí QA a vydání jsou odlišné kroky.** Technické sestavení APK není publikace; GitHub Actions účet do 12 USD/měsíc, žádné automatické platby, nedůvěryhodné PR nikdy na domácím runneru. Fyzický Android/S Pen/Bosch a reálný Drive neoznačuj PASS bez testování na daném zařízení/službě.
-4. **ImageMeter je funkční reference, ne vizuální předloha.** Vlastní moderní profesionální design Zaměřovače je priorita; schválená podoba kót/úchopů/lupy se mění jen se souhlasem. Angličtina je první další jazyk před budoucím mezinárodním vydáním; nyní připravovat texty pro lokalizaci bez plošného překladu ([#14](https://github.com/zaplikj30-ui/Zamerovac-android/issues/14)).
-5. **Nespouštěj sestavení změnou `.github/apk-build-request.txt`.** Tento soubor je historický; aktuální `build-apk.yml` je ruční, s vlastníkovým schválením. Před jakýmkoli workflow ověř živé podmínky, triggery, skutečný stav QA a poslední publikovanou verzi.
-
-**Závazné pořadí rolí (15. 11. 2026):** Koordinátor → jeden autor (ChatGPT programátor / Codex) včetně úplných testů a vlastní hluboké kontroly → oddělený nezávislý kontrolor → koordinátor a jeho rozhodnutí. Opravitelné chyby vrací kontrolor původnímu autorovi; checkpoint není hotové předání, neprovedené testy jsou NOT RUN/BLOCKED. Merge/APK jen se souhlasem vlastníka. [Úplné závazné podmínky v AGENTS.md](AGENTS.md#závazné-role-a-předání-dokončeného-celku-rozhodnutí-vlastníka-15-11-2026).
-
-**Dlouhodobá návaznost na výrobu:** Zaměřování zakázkového nábytku je významný výchozí obor; Zaměřovač je však použitelný i pro další řemesla. [Konfigurátor–Nářezák](https://github.com/zaplikj30-ui/Konfigurator-Narezak-Android) zůstává **samostatnou aplikací a repozitářem**. Budoucí propojení je dlouhodobý cíl, nikoli nynější implementace: chránit možnost verzovaného předání přesných hodnot, jednotek a identit; nikdy tiše nepřepočítávat schválené výrobní podklady. Podrobnosti: [projektový plán](PROJEKTOVY_PLAN_ZAMEROVACE.md) a [vize](VIZE_A_PLAN.md).
-
-## Historie bez ztráty podkladů
-
-**[Úplný původní START_ZDE.md, archiv do 11. 11. 2026](START_ZDE_ARCHIV_DO_2026-11-11.md)** zachovává **doslovně celý původní text** včetně historických checkpointů, testů 1–28, SHA, výsledků a odkazů. Výrazy „aktuálně“ a „další krok“ v archivu znamenají tehdejší stav, ne dnešní úkol.
-
-**Archivace neruší platné požadavky ani rozhodnutí.** U relevantní funkce dohledat původní schválení a pozdější upřesnění v [#13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13), [#28](https://github.com/zaplikj30-ui/Zamerovac-android/issues/28), [#42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42) a navazujících issues/PR. Další trvalé zdroje: [vize](VIZE_A_PLAN.md), [plán](PROJEKTOVY_PLAN_ZAMEROVACE.md) a [lokalizace](LOKALIZACE_PLAN.md).
+**Pracovní tok:** koordinátor → jeden autor s retesty a úplným self-review → jiný nezávislý kontrolor → koordinátor/rozhodnutí vlastníka. Důkazy patří do PR/issue, ne sem. Dokumentační aktualizace **nespouští build**. Schválené funkce a budoucí náměty nejsou totéž; pokud novější důkaz změní směr, aktualizuj živý dokument a v PR dolož proč.

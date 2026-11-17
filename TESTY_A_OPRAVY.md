@@ -92,6 +92,12 @@
 - **Stav opravy / verze APK:**
 - **Další krok:**
 
+## Trvalý kontrakt regresních a chybových testů (přesun z AGENTS)
+
+Každý významný zásah testuj podle rizika nejen pozitivně, ale **negativně, chybově, kombinovaně a po obnovení**: skutečné tlačítko/gesto/úhopy/dvojdotyk, pixely a viditelnost čar/kót; neplatné či hraniční hodnoty a jednotky; Bluetooth/Bosch odpojení; uložit → zavřít → znovu otevřít → export/import a Undo/Redo; přesnost uložených čísel i původní bajty médií. U importu, ZIP, zálohy, koše a synchronizace testuj plný disk, poškozené/neúplné soubory, oprávnění, offline/výpadky, dlouhé přenosy, souběžné konflikty a callback po změně stavu. Nikdy při FAIL neohlašuj falešný úspěch ani nepřepiš novější data.
+
+Ke změně existující funkce oprav relevantní regresní test v [#28](https://github.com/zaplikj30-ui/Zamerovac-android/issues/28), u rozsáhlých změn přidej kombinovaný test sousedních funkcí, včetně měření odezvy a UI. Zaznamenávej přesné SHA/prostředí, původní FAIL a retesty, PASS/FAIL/SKIP/NOT RUN/BLOCKED a fyzická omezení; starý PASS neprokazuje nový SHA. Cloud/Chromium, JVM, emulator a fyzický telefon/S Pen/Bosch či Google Drive jsou **odlišné důkazy**. Před jedinou společnou APK proveď širší relevantní regresi, ne však všechny náročné scénáře po každé drobné opravě. Kritické vady ztráty dat a chybného měření před ostrým použitím nepřehlížej.
+
 ## Kde co hledat
 - [START_ZDE.md](START_ZDE.md) – aktuální stav a odkazy
 - [Issue #13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13) – deník a dosavadní předběžná rekonstrukce

@@ -16,4 +16,10 @@
 
 **Zbývá fyzicky ověřit:** instalaci přes 1.2.153, originální fotografie, přesné editovatelné kóty, zálohy a synchronizaci na telefonu/tabletu. Automatické testy ≠ skutečné testy na zařízení.
 
+## Changelog, offline nápověda a rozdíl mezi buildem a vydáním
+
+Při **každé funkční změně aplikace** aktualizuj českou offline `app/src/main/assets/help.js` spolu s popisy ovládání, chyb, kompatibility, odkazy a vyhledávacími výrazy; zkontroluj `tests/help_guide.js` a podle potřeby `tools/e2e/help.cjs`. Neplatí pro čistě technickou CI dokumentaci bez dopadu na uživatelské chování — tuto nerelevanci v PR vysvětli. V nápovědě dokumentuj jen skutečně fungující chování, ne budoucí nápad. **Dvě lupy jsou různé:** globální hledá zakázky/soubory/poznámky, lupa nápovědy jen kapitoly; offline nápověda nesmí číst ani odesílat zákaznické údaje ([#29](https://github.com/zaplikj30-ui/Zamerovac-android/issues/29), [PR30](https://github.com/zaplikj30-ui/Zamerovac-android/pull/30)).
+
+**Offline changelog** `app/src/main/assets/release-history.js` je v menu a Nastavení, odráží jen skutečně vydanou verzi a ověřené funkce/opravy/vylepšení. Nezavádět budoucí verze, nevymýšlet historické záznamy, nepřejmenovávat starší novinky na aktuální číslo. Před jednou společnou APK ověř shodu čísla s výsledným workflow a testy `tests/release_history.js` a `tools/e2e/release-history.cjs`. Release, technický build, úspěšné CI a fyzické ověření instalace jsou rozdílné stavy. Nikdy nepoužívat staré `.github/apk-build-request.txt` jako trigger; před skutečným vydáním ověř aktuální workflow a explicitní souhlas vlastníka.
+
 **Rozsah:** jen Zaměřovač, nikoli Konfigurátor–Nářezák; nedotýkat se schémat dat, zakázek, fyziky měření ani synchronizačních pravidel.
