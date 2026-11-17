@@ -1,0 +1,76 @@
+name: Zaměřovač - jednoduché Chromium (bez APK)
+# No run is authorized just by merging this workflow. Run only after owner RUN GO.
+on:
+  workflow_dispatch:
+    inputs:
+      scope:
+        description: 'drawing first; all stays BLOCKED until compatible app/tests'
+        type: choice
+        options: [drawing, all]
+        default: drawing
+        required: true
+  # Fallback for GitHub integrations that can commit but cannot dispatch Actions.
+  # Create this request branch only after the workflow has been reviewed/merged.
+  push:
+    branches: [qa/chromium-request]
+    paths: [qa/chromium-request.txt]
+permissions:
+  contents: read
+jobs:
+  chromium:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Install existing Playwright and Chromium
+        run: |
+          npm ci --prefix tools/qa-browser
+          tools/qa-browser/node_modules/.bin/playwright install --with-deps chromium
+      - name: Test drawing through original E2E suite
+        shell: bash
+        env:
+          NODE_PATH: ${{ github.workspace }}/tools/qa-browser/node_modules
+          ZAMEROVAC_SIMPLE_CHROMIUM: '1'
+          REQUESTED_SCOPE: ${{ inputs.scope }}
+        run: |
+          set -euo pipefail
+          scope="${REQUESTED_SCOPE:-drawing}"
+          if [[ "$GITHUB_EVENT_NAME" == push ]]; then
+            scope="$(head -n 1 qa/chromium-request.txt | tr -d '[:space:]')"
+          fi
+          case "$scope" in
+            drawing) ;;
+            all) echo 'BLOCKED: full 23/96 requires approved compatible product and all tests'; exit 2 ;;
+            *) echo 'Invalid test scope'; exit 2 ;;
+          esac
+          unset ZAMEROVAC_CASES ZAMEROVAC_SOURCE_SHA ZAMEROVAC_QA_GATE_SHA ZAMEROVAC_RUN_TOKEN
+          python3 -m http.server 8765 --bind 127.0.0.1 --directory app/src/main/assets > /tmp/zamerovac-chromium.log 2>&1 &
+          server_pid=$!
+          trap 'kill "$server_pid" 2>/dev/null || true' EXIT
+          rm -f test-artifacts/drawing/report.json
+          timeout --signal=TERM --kill-after=5s 20m node tools/e2e/drawing.cjs
+          node - <<'NODE'
+          const fs = require('node:fs');
+          const p = 'test-artifacts/drawing/report.json';
+          if (!fs.existsSync(p)) throw Error('FAIL: drawing report missing');
+          const r = JSON.parse(fs.readFileSync(p,'utf8'));
+          if (r.suite !== 'drawing' || r.status !== 'COMPLETE' || r.filtered ||
+              !Array.isArray(r.cases) || r.cases.length !== 17 ||
+              new Set(r.cases.map(c => c.name)).size !== 17 ||
+              r.cases.some(c => c.status !== 'passed')) {
+            throw Error('FAIL: drawing is not 17 complete PASS scenarios');
+          }
+          console.log('PASS: drawing, 17/17 actually executed in Chromium');
+          NODE
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: chromium-drawing-diagnostics
+          path: test-artifacts/
+          if-no-files-found: ignore
+          retention-days: 7
