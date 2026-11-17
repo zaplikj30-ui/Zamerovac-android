@@ -70,7 +70,11 @@ async function live(env,request=fetch){
   const headers={'User-Agent':'zamerovac-cloud-diag'};
   if(token)headers.Authorization='Bearer '+token;
   const r=await request(url,{headers,signal:AbortSignal.timeout(12000)});
-  need(r.ok);return r.json();
+  // Log only a fixed resource path and status; never response body, URL query or auth header.
+  if(!r.ok)console.error('CLOUD-DIAG metadata BLOCKED '+(suffix||'repository')+' HTTP '+r.status);
+  need(r.ok);
+  console.log('CLOUD-DIAG metadata HTTP PASS '+(suffix||'repository'));
+  return r.json();
  };
  const repo=await get('');need(repo.private===false);
  const main=await get('git/ref/heads/main');need(main.object?.sha===env.ZAMEROVAC_CLOUD_EVENT_SHA);
@@ -82,13 +86,21 @@ async function live(env,request=fetch){
 }
 async function main(){
  const root=path.resolve(__dirname,'..'),integrity=require('./qa-integrity.cjs');
- const q=require('./local-browser-qa.cjs').gateSnapshot();integrity.cloudIdentity(q,process.env);integrity.sourceSnapshot(process.env.ZAMEROVAC_SOURCE_ROOT);
+ console.log('CLOUD-DIAG gateSnapshot START');
+ const q=require('./local-browser-qa.cjs').gateSnapshot();
+ console.log('CLOUD-DIAG gateSnapshot PASS');
+ integrity.cloudIdentity(q,process.env);
+ console.log('CLOUD-DIAG cloudIdentity PASS');
+ integrity.sourceSnapshot(process.env.ZAMEROVAC_SOURCE_ROOT);
+ console.log('CLOUD-DIAG sourceSnapshot PASS');
  const metadataToken=process.env.QA_CLOUD_METADATA_TOKEN;
  need(metadataToken);
  const approvedLive=env=>live({...env,QA_CLOUD_METADATA_TOKEN:metadataToken});
  need(process.env.GITHUB_WORKFLOW_SHA===process.env.GITHUB_SHA);
  need(process.env.QA_APPROVED_Q===q&&process.env.QA_APPROVED_E===process.env.GITHUB_SHA);
+ console.log('CLOUD-DIAG external SHA consent PASS');
  await approvedLive(process.env);
+ console.log('CLOUD-DIAG live metadata PASS');
  const home=fs.mkdtempSync(path.join(require('node:os').tmpdir(),'zamerovac-diag-'));fs.chmodSync(home,0o700);
  const evidence=fs.mkdtempSync(path.join(require('node:os').tmpdir(),'zamerovac-diag-evidence-'));fs.chmodSync(evidence,0o700);
  const env=childEnv(process.env,home);env.ZAMEROVAC_CLOUD_SCRATCH=home;env.ZAMEROVAC_CLOUD_DEADLINE=String(Date.now()+200*60000);
@@ -97,8 +109,10 @@ async function main(){
  const output=process.env.GITHUB_OUTPUT;const summary={smoke:'NOT RUN',full:'NOT RUN',status:'BLOCKED',cleanup:'UNKNOWN',stage:'prepare'};let success=false;
  let known=false;
  try{
+  console.log('CLOUD-DIAG prepare START');
   const life=await ownedWorker([process.execPath,__filename,'--prepare'],root,prepEnv,path.join(home,'prepare.log'),token,480000);
   known=life.cleanupVerified===true;if(known&&fs.existsSync(path.join(home,'preparation.json')))fs.copyFileSync(path.join(home,'preparation.json'),path.join(evidence,'preparation.json'),fs.constants.COPYFILE_EXCL);need(life.status==='PASS'&&known);
+  console.log('CLOUD-DIAG prepare and cleanup PASS');
   env.ZAMEROVAC_CLOUD_RUNTIME_FILE=path.join(home,'runtime.json');env.ZAMEROVAC_CLOUD_RUNTIME_SHA256=hash(fs.readFileSync(env.ZAMEROVAC_CLOUD_RUNTIME_FILE));
   const r=runtime.approvedRuntime(env);env.CHROMIUM_PATH=r.chromium.path;
   for(const key of Object.keys(process.env))delete process.env[key];Object.assign(process.env,env); // run() creates only allowlisted descendants.
