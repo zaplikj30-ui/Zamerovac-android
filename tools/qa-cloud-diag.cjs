@@ -111,6 +111,18 @@ async function main(){
  try{
   console.log('CLOUD-DIAG prepare START');
   const life=await ownedWorker([process.execPath,__filename,'--prepare'],root,prepEnv,path.join(home,'prepare.log'),token,480000);
+  // Only allowlisted technical status/stage/type, no raw stdout, stderr, token or paths.
+  const {safeDiagnostic,safeErrorType}=require('./qa-process-client.cjs');
+  const telemetry={
+    status:life.status==='PASS'?'PASS':'BLOCKED',
+    cleanupVerified:life.cleanupVerified===true,
+    stage:safeDiagnostic(life.diagnostic).stage,
+    firstFailureStage:life.firstFailure?safeDiagnostic(life.firstFailure).stage:null,
+    errorType:life.error?safeErrorType(life.error):null,
+    cleanupErrorType:life.cleanupErrorType?safeErrorType(life.cleanupErrorType):null,
+    supervisorExit:Number.isInteger(life.supervisorExit)?life.supervisorExit:null
+  };
+  console.log('CLOUD-DIAG supervisor telemetry '+JSON.stringify(telemetry));
   known=life.cleanupVerified===true;if(known&&fs.existsSync(path.join(home,'preparation.json')))fs.copyFileSync(path.join(home,'preparation.json'),path.join(evidence,'preparation.json'),fs.constants.COPYFILE_EXCL);need(life.status==='PASS'&&known);
   console.log('CLOUD-DIAG prepare and cleanup PASS');
   env.ZAMEROVAC_CLOUD_RUNTIME_FILE=path.join(home,'runtime.json');env.ZAMEROVAC_CLOUD_RUNTIME_SHA256=hash(fs.readFileSync(env.ZAMEROVAC_CLOUD_RUNTIME_FILE));
