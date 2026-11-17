@@ -17,11 +17,12 @@ const CLOUD_PRODUCT_SHA='3886fcf80213e4693464d3f30104885c1c58f53e';
 function cloudIdentity(validatorSha,env){
   const equals={GITHUB_ACTIONS:'true',GITHUB_REPOSITORY:'zaplikj30-ui/Zamerovac-android',
     GITHUB_ACTOR:'zaplikj30-ui',GITHUB_TRIGGERING_ACTOR:'zaplikj30-ui',
-    GITHUB_EVENT_NAME:'workflow_dispatch',GITHUB_REF:'refs/heads/main',
+    GITHUB_REF:'refs/heads/main',
     GITHUB_RUN_ATTEMPT:'1',RUNNER_OS:'Linux',RUNNER_ENVIRONMENT:'github-hosted',
     ZAMEROVAC_QA_MODE:'cloud',ZAMEROVAC_CLOUD_TRUST:'trusted-host/change-detection',
     ZAMEROVAC_EXPECTED_PRODUCT_SHA:CLOUD_PRODUCT_SHA};
   demand(Object.entries(equals).every(([key,value])=>env[key]===value),'cloud owner/ref/trust/product mismatch');
+  demand(['workflow_dispatch','issue_comment'].includes(env.GITHUB_EVENT_NAME),'cloud launch event not approved');
   demand(Object.keys(env).every(key=>!key.startsWith('HOME4_')),'HOME mode/approval forbidden in cloud');
   demand(/^[a-f0-9]{40}$/.test(validatorSha||'')&&
     validatorSha===env.ZAMEROVAC_CLOUD_REVIEWED_V_SHA,'unreviewed cloud validator');
