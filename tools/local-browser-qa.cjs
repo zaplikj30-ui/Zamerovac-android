@@ -78,7 +78,7 @@ function gateSnapshot(){
  const names=['tools/local-browser-qa.cjs','tools/e2e/harness.cjs','tools/e2e/sandbox.cjs',
   'tools/qa-browser-identity.cjs','tools/qa-browser-profiles.json','tools/qa-pr121-manifest.json',
   'tools/qa-integrity.cjs','tools/qa-process-client.cjs','tools/qa-browser-worker.cjs',
-  'tools/qa-cloud-network.cjs','tools/qa-cloud-runtime.cjs','tools/qa-cloud-diag.cjs','tools/qa_cloud_runtime.py','tools/qa-cloud-runtime.json',
+  'tools/qa-cloud-network.cjs','tools/qa-cloud-runtime.cjs','tools/qa-cloud-diag.cjs','tools/qa-cloud-handoff.cjs','tools/qa_cloud_provision.py','tools/qa_cloud_runtime.py','tools/qa-cloud-runtime.json',
   'tools/qa-browser/package-lock.json','tools/qa-browser/package.json','tools/qa-process-diagnostic.json',
   'tools/qa_owned_processes.py','tools/qa_process_supervisor.py','tools/qa_browser_lock.py'];
  const entries=git(['ls-tree','-rz','HEAD','--',...names]).split('\0').filter(Boolean);
