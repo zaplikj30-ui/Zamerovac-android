@@ -1,31 +1,179 @@
-name: Sestavit a vydat Zaměřovač (testovací verze)
-# Emergency cloud fallback, explicit owner approval only; NO auto cloud build.
-# Publishing needs explicit owner dispatch with publish_release=true.
-# Manual-only: never build or publish without explicit owner approval.
+name: Zaměřovač - oddělený PILOT / BUILD / RELEASE
+# Only the ordinary owner issue #183 or a separately approved manual dispatch.
 on:
+  issue_comment:
+    types: [created]
   workflow_dispatch:
     inputs:
-      cloud_run_approved:
-        description: 'Placený cloud jen s výslovným souhlasem vlastníka (limit 12 USD/měsíc)'
+      operation:
+        description: 'Explicit phase: pilot/build/release'
+        type: choice
+        options: [pilot, build, release]
         required: true
-        type: boolean
-        default: false
-      publish_release:
-        description: 'Explicitni souhlas se zverejnenim (vyzaduje predepsane kontroly)'
-        required: true
-        type: boolean
-        default: false
-concurrency:
-  group: zamerovac-test-apk-${{ github.ref }}
-  cancel-in-progress: true
+      target_sha:
+        description: 'Current main SHA for BUILD'
+        required: false
+        type: string
+      build_run_id:
+        description: 'Successful BUILD run ID for RELEASE'
+        required: false
+        type: string
+      apk_sha256:
+        description: 'SHA256 of actual APK bytes for RELEASE'
+        required: false
+        type: string
+permissions:
+  contents: read
 jobs:
-  android:
-    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.cloud_run_approved == true && inputs.publish_release == true }}
-    runs-on: ubuntu-latest
+  authorize:
+    # Reject unrelated PUBLIC comments before allocating any runner.
+    if: >-
+      ${{
+        github.repository == 'zaplikj30-ui/Zamerovac-android' &&
+        github.ref == 'refs/heads/main' &&
+        github.actor == 'zaplikj30-ui' &&
+        github.triggering_actor == 'zaplikj30-ui' &&
+        github.run_attempt == 1 &&
+        (
+          (github.event_name == 'issue_comment' && github.event.action == 'created' &&
+           github.event.issue.number == 183 && !github.event.issue.pull_request &&
+           github.event.comment.user.id == 351234773 &&
+           github.event.comment.user.login == 'zaplikj30-ui' &&
+           (github.event.comment.body == 'ZAMEROVAC PILOT' ||
+            startsWith(github.event.comment.body, 'ZAMEROVAC BUILD ') ||
+            startsWith(github.event.comment.body, 'ZAMEROVAC RELEASE '))) ||
+          (github.event_name == 'workflow_dispatch' &&
+           contains(fromJSON('["pilot","build","release"]'), inputs.operation))
+        )
+      }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
     permissions:
-      contents: write
+      contents: read
+    concurrency:
+      group: zamerovac-apk-owner-commands
+      cancel-in-progress: false
+      queue: max
+    outputs:
+      operation: ${{ steps.auth.outputs.operation }
+      source_sha: ${{ steps.auth.outputs.source_sha }
+      run_id: ${{ steps.auth.outputs.run_id }
+      apk_hash: ${{ steps.auth.outputs.apk_hash }
+      comment_id: ${{ steps.auth.outputs.comment_id }
+    steps:
+      - name: Verify owner, unchanged comment, exact grammar and current main (PILOT only)
+        id: auth
+        env:
+          GH_TOKEN: ${{ github.token }
+        shell: bash
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json,os,re,urllib.request
+          from urllib.error import HTTPError,URLError
+          repo='zaplikj30-ui/Zamerovac-android'
+          uid=351234773
+          pat40=r'[0-9a-f]{40}'
+          pat64=r'[0-9a-f]{64}'
+          patid=r'[1-9][0-9]{0,18}'
+          e=os.environ
+          def stop(reason):raise SystemExit('STOP owner auth: '+reason)
+          def get(path):
+              url='https://api.github.com/repos/'+repo+path
+              req=urllib.request.Request(url,headers={
+                  'Authorization':'Bearer '+e['GH_TOKEN'],
+                  'Accept':'application/vnd.github+json','User-Agent':'zamerovac-apk-owner'})
+              try:
+                  with urllib.request.urlopen(req,timeout=20) as res:
+                      if res.url!=url:stop('redirect')
+                      data=res.read(1048577)
+                      if len(data)>1048576:stop('oversize')
+                      return json.loads(data)
+              except (HTTPError,URLError,ValueError):stop('API unavailable')
+          with open(e['GITHUB_EVENT_PATH'],encoding='utf-8') as f:event=json.load(f)
+          if (e['GITHUB_REPOSITORY']!=repo or e['GITHUB_REF']!='refs/heads/main' or
+              e['GITHUB_ACTOR']!='zaplikj30-ui' or e['GITHUB_TRIGGERING_ACTOR']!='zaplikj30-ui' or
+              e['GITHUB_RUN_ATTEMPT']!='1' or
+              e['GITHUB_WORKFLOW_REF']!=repo+'/.github/workflows/build-apk.yml@refs/heads/main'):
+              stop('actor/ref/attempt/workflow')
+          main=get('/git/ref/heads/main').get('object',{}).get('sha')
+          if main!=e['GITHUB_SHA'] or not re.fullmatch(pat40,main or ''):stop('main drift')
+          if event.get('repository',{}).get('full_name')!=repo:stop('repo')
+          if e['GITHUB_EVENT_NAME']=='issue_comment':
+              issue=event.get('issue') or {}
+              comment=event.get('comment') or {}
+              owner=comment.get('user') or {}
+              if (event.get('action')!='created' or issue.get('number')!=183 or
+                  'pull_request' in issue or owner.get('id')!=uid or owner.get('login')!='zaplikj30-ui' or
+                  (event.get('sender') or {}).get('id')!=uid or
+                  type(comment.get('id')) is not int or comment['id']<1 or
+                  comment.get('created_at')!=comment.get('updated_at')):
+                  stop('owner/issue/edited')
+              cid=comment['id']
+              live=get('/issues/comments/'+str(cid))
+              if (live.get('id')!=cid or
+                  live.get('issue_url')!='https://api.github.com/repos/'+repo+'/issues/183' or
+                  (live.get('user') or {}).get('id')!=uid or
+                  live.get('created_at')!=live.get('updated_at') or
+                  live.get('body')!=comment.get('body')):
+                  stop('changed/deleted comment')
+              body=comment.get('body','')
+              if not isinstance(body,str) or not body.isascii():stop('nonascii')
+              if body=='ZAMEROVAC PILOT':
+                  op,sha,run,digest='pilot',main,'0',''
+              elif m:=re.fullmatch(r'ZAMEROVAC BUILD ('+pat40+r')',body):
+                  op,sha,run,digest='build',m.group(1),'0',''
+              elif m:=re.fullmatch(r'ZAMEROVAC RELEASE ('+patid+r') ('+pat64+r')',body):
+                  op,sha,run,digest='release',main,m.group(1),m.group(2)
+              else:stop('exact command syntax')
+          elif e['GITHUB_EVENT_NAME']=='workflow_dispatch':
+              if (event.get('sender') or {}).get('id')!=uid:stop('manual sender')
+              inp=event.get('inputs') or {}
+              op=inp.get('operation')
+              target=inp.get('target_sha') or ''
+              run=inp.get('build_run_id') or ''
+              digest=inp.get('apk_sha256') or ''
+              cid=0
+              if op=='pilot' and not any((target,run,digest)):sha,run=main,'0'
+              elif op=='build' and re.fullmatch(pat40,target) and not any((run,digest)):sha,run=target,'0'
+              elif op=='release' and not target and re.fullmatch(patid,run) and re.fullmatch(pat64,digest):sha=main
+              else:stop('manual parameters')
+          else:stop('event')
+          if sha!=main:stop('unapproved main SHA')
+          if op=='release' and int(run)>(1<<63)-1:stop('run ID overflow')
+          with open(e['GITHUB_OUTPUT'],'a',encoding='utf-8') as output:
+              for k,v in dict(operation=op,source_sha=sha,run_id=run,apk_hash=digest,comment_id=cid).items():
+                  if not re.fullmatch('[a-z_]+',k) or not re.fullmatch('[0-9a-z]*',str(v)):stop('bad output')
+                  output.write(k+'='+str(v)+'\n')
+          print('PASS trusted owner '+op+'; NO APK or Release in authorize/PILOT')
+          PY
+  build:
+    name: build-only
+    needs: authorize
+    if: ${{ needs.authorize.result == 'success' && needs.authorize.outputs.operation == 'build' }
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    permissions:
+      contents: read
+      actions: read
+    concurrency:
+      group: zamerovac-apk-owner-commands
+      cancel-in-progress: false
+      queue: max
     steps:
       - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.authorize.outputs.source_sha }
+          fetch-depth: 1
+          persist-credentials: false
+          submodules: false
+      - name: Verify trusted source and version
+        env:
+          APPROVED_SHA: ${{ needs.authorize.outputs.source_sha }
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = "$APPROVED_SHA"
+          node tools/release/versioning.js --release
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -33,147 +181,129 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.10.2'
-      - name: PŘED sestavením ověřit poslední vydanou APK, podpis a vyšší versionCode
-        shell: bash
+          cache-read-only: true
+      - name: Check latest APK signer/version and duplicate BUILD
+        id: prepare
         env:
-          GH_TOKEN: ${{ github.token }}
+          GH_TOKEN: ${{ github.token }
+          APPROVED_SHA: ${{ needs.authorize.outputs.source_sha }
+          APPROVAL_COMMENT_ID: ${{ needs.authorize.outputs.comment_id }
+          APPROVED_OPERATION: build
+        run: python3 tools/release/apk_gate.py build-preflight
+      - name: Existing JS/Python/Drive regressions
         run: |
           set -euo pipefail
-          APP_VERSION="$(node tools/release/versioning.js --release)"
-          if gh release view "test-v${APP_VERSION}" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            echo "STOP: vydání této verze již existuje." >&2
-            exit 1
-          fi
-          PREVIOUS_TAG="$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq '.tagName')"
-          if [[ ! "$PREVIOUS_TAG" =~ ^test-v[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
-            echo "STOP: nelze bezpečně určit poslední testovací release." >&2
-            exit 1
-          fi
-          node - "$APP_VERSION" "${PREVIOUS_TAG#test-v}" <<'NODE'
-          const [next, previous] = process.argv.slice(2).map(s => s.split('.').map(Number));
-          if (![next, previous].every(v => v.length === 3 && v.every(Number.isSafeInteger))) process.exit(1);
-          for (let i = 0; i < 3; i++) {
-            if (next[i] !== previous[i]) process.exit(next[i] > previous[i] ? 0 : 1);
-          }
-          process.exit(1);
-          NODE
-          mkdir -p previous
-          gh release download "$PREVIOUS_TAG" --repo "$GITHUB_REPOSITORY" --pattern '*.apk' --dir previous
-          mapfile -t MATCHES < <(find previous -maxdepth 1 -type f -name '*.apk')
-          if (( ${#MATCHES[@]} != 1 )); then
-            echo "STOP: poslední vydání nemá právě jednu APK." >&2
-            exit 1
-          fi
-          PREVIOUS_APK="${MATCHES[0]}"
-          AAPT="$(find "${ANDROID_HOME}/build-tools" -type f -name aapt | sort -V | tail -n 1)"
-          SIGNER="$(find "${ANDROID_HOME}/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
-          test -x "$AAPT" && test -x "$SIGNER"
-          PREVIOUS_SIGN="$("$SIGNER" verify --min-sdk-version 26 --print-certs "$PREVIOUS_APK")"
-          printf '%s\n' "$PREVIOUS_SIGN" | grep -Fqi 'c828c96739e554e8da4f5851913356134f1359a98d5013772ad5587e74a2d229'
-          BADGING="$("$AAPT" dump badging "$PREVIOUS_APK")"
-          PREVIOUS_INFO="${BADGING%%$'\n'*}"
-          printf '%s\n' "$PREVIOUS_INFO" | grep -Fq "name='cz.zamerovac.app.preview'"
-          PREVIOUS_CODE="$(printf '%s\n' "$PREVIOUS_INFO" | grep -oE "versionCode='[0-9]+'" | cut -d "'" -f 2)"
-          if [[ ! "$PREVIOUS_CODE" =~ ^[0-9]+$ ]] || (( PREVIOUS_CODE < 1001 || PREVIOUS_CODE >= 2147483646 )); then
-            echo "STOP: neplatné či nepoužitelné číslo poslední vydané APK." >&2
-            exit 1
-          fi
-          NEW_CODE=$((PREVIOUS_CODE + 1))
-          echo "APP_VERSION=$APP_VERSION" >> "$GITHUB_ENV"
-          echo "PREVIOUS_TAG=$PREVIOUS_TAG" >> "$GITHUB_ENV"
-          echo "PREVIOUS_VERSION_CODE=$PREVIOUS_CODE" >> "$GITHUB_ENV"
-          echo "RELEASE_VERSION_CODE=$NEW_CODE" >> "$GITHUB_ENV"
-          echo "VERSION_WORKFLOW_OFFSET=$((NEW_CODE - 1000))" >> "$GITHUB_ENV"
-          echo "PASS: vydaná APK code=$PREVIOUS_CODE; nový code=$NEW_CODE, totožný podpis."
-      - name: Kontrola JavaScriptu a struktury projektu
-        run: |
-          node --check app/src/main/assets/app.js
-          node --check app/src/main/assets/editor.js
-          node --check app/src/main/assets/upgrade.js
-          node --check app/src/main/assets/rich-notes.js
-          node --check app/src/main/assets/sketch.js
-          node --check app/src/main/assets/address-correction.js
-          node --check app/src/main/assets/inset-workspace.js
-          node tests/inset_workspace_interaction.js
-          node tests/note_leader_interaction.js
-          node --check app/src/main/assets/editor-extra-toolbar.js
-          node --check app/src/main/assets/laser-autofill.js
-          node --check app/src/main/assets/feedback-reports.js
-          node tests/feedback_report_structure.js
-          node tests/laser_tap_interaction.js
-          node tests/laser_auto_interaction.js
-          node tests/extra_toolbar_interaction.js
-          python3 -m unittest discover -s tests -p "test_*.py" -v
-      - name: Sestavit testovací variantu aplikace Zaměřovač
-        shell: bash
+          for f in app/src/main/assets/*.js sync/*.js; do node --check "$f"; done
+          node tools/qa/audit.cjs
+          node tools/check-android-window.cjs
+          for file in tests/*.js; do node "$file"; done
+          python3 -m unittest discover -s tests -p 'test_*.py' -v
+          gradle --no-daemon -p tools/drive-config-checks verify
+      - name: Assemble ONLY preview APK
+        env:
+          BUILD_CODE_OFFSET: ${{ steps.prepare.outputs.offset }
         run: |
           set -euo pipefail
-          # GITHUB_* nejde přepsat přes GITHUB_ENV; pouze pro subprocess Gradlu.
-          export GITHUB_RUN_NUMBER="$VERSION_WORKFLOW_OFFSET"
+          export GITHUB_RUN_NUMBER="$BUILD_CODE_OFFSET"
           gradle --no-daemon :app:verifyDriveRegistration assemblePreview -PdriveRequireConfigured=true
-      - name: Ověřit podpis a jednoznačnou verzi testovací APK
-        shell: bash
+      - name: Verify APK bytes, signature, package, versionCode, SHA, main
+        id: verify
         env:
-          GH_TOKEN: ${{ github.token }}
-        run: |
-          set -euo pipefail
-          APK=app/build/outputs/apk/preview/app-preview.apk
-          SIGNER="$(find "${ANDROID_HOME}/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
-          if [ ! -f "$APK" ] || [ ! -x "$SIGNER" ]; then
-            echo "Chybí testovací APK nebo nástroj apksigner." >&2
-            exit 1
-          fi
-          VERIFY_OUTPUT="$("$SIGNER" verify --min-sdk-version 26 --print-certs "$APK")"
-          echo "$VERIFY_OUTPUT"
-          # Pin the same development signing certificate across all app updates.
-          echo "$VERIFY_OUTPUT" | grep -qi 'c828c96739e554e8da4f5851913356134f1359a98d5013772ad5587e74a2d229'
-          AAPT="$(find "${ANDROID_HOME}/build-tools" -type f -name aapt | sort -V | tail -n 1)"
-          test -x "$AAPT"
-          PACKAGE_INFO="$("$AAPT" dump badging "$APK" | head -n 1)"
-          echo "$PACKAGE_INFO"
-          echo "$PACKAGE_INFO" | grep -q "name='cz.zamerovac.app.preview'"
-          echo "$PACKAGE_INFO" | grep -q "versionCode='${RELEASE_VERSION_CODE}'"
-          echo "$PACKAGE_INFO" | grep -q "versionName='${APP_VERSION}-test'"
-          if (( RELEASE_VERSION_CODE <= PREVIOUS_VERSION_CODE )); then
-            echo "STOP: nevzestupný versionCode." >&2
-            exit 1
-          fi
-          CURRENT_PREVIOUS_TAG="$(gh release view --repo "$GITHUB_REPOSITORY" --json tagName --jq '.tagName')"
-          if [ "$CURRENT_PREVIOUS_TAG" != "$PREVIOUS_TAG" ]; then
-            echo "STOP: během sestavení se změnilo poslední vydání, nutná nová kontrola." >&2
-            exit 1
-          fi
-          mkdir -p dist
-          cp "$APK" "dist/Zamerovac-v${APP_VERSION}.apk"
-          sha256sum dist/*.apk
+          GH_TOKEN: ${{ github.token }
+          APPROVED_SHA: ${{ needs.authorize.outputs.source_sha }
+          APPROVAL_COMMENT_ID: ${{ needs.authorize.outputs.comment_id }
+          APPROVED_OPERATION: build
+          APP_VERSION: ${{ steps.prepare.outputs.version }
+          PREVIOUS_RELEASE_ID: ${{ steps.prepare.outputs.previous_release_id }
+          PREVIOUS_CODE: ${{ steps.prepare.outputs.previous_code }
+          NEW_CODE: ${{ steps.prepare.outputs.new_code }
+        run: python3 tools/release/apk_gate.py build-postflight
       - uses: actions/upload-artifact@v4
         with:
-          name: Zamerovac-testovaci-APK
+          name: Zamerovac-preview-APK-${{ github.run_id }-${{ github.run_attempt }-${{ needs.authorize.outputs.source_sha }-${{ needs.authorize.outputs.comment_id }
           path: dist/*.apk
+          if-no-files-found: error
           retention-days: 30
-      - name: Vydat APK přímo do GitHub Releases (bez ZIP)
-        if: ${{ github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.publish_release == true }}
-        shell: bash
+          compression-level: 0
+      - name: BUILD summary, no RELEASE
         env:
-          GH_TOKEN: ${{ github.token }}
+          APK_HASH: ${{ steps.verify.outputs.apk_hash }
+        run: |
+          printf 'PASS BUILD only; run=%s, attempt=%s, actual APK sha256=%s; RELEASE NOT RUN\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$APK_HASH" >> "$GITHUB_STEP_SUMMARY"
+  release:
+    name: release-only
+    needs: authorize
+    if: ${{ needs.authorize.result == 'success' && needs.authorize.outputs.operation == 'release' }
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    permissions:
+      contents: write
+      actions: read
+    concurrency:
+      group: zamerovac-apk-owner-commands
+      cancel-in-progress: false
+      queue: max
+    steps:
+      - name: Fetch only trusted release gate from exact main SHA, no product checkout
+        env:
+          GH_TOKEN: ${{ github.token }
         run: |
           set -euo pipefail
-          TAG="test-v${APP_VERSION}"
-          FILE="dist/Zamerovac-v${APP_VERSION}.apk"
-          for attempt in 1 2 3; do
-            if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-              echo "Vydání této verze již existuje; nelze jej přepsat." >&2
-              exit 1
-            fi
-            if gh release create "$TAG" "$FILE" \
-                --repo "$GITHUB_REPOSITORY" \
-                --target "$GITHUB_SHA" \
-                --title "Zaměřovač ${APP_VERSION}" \
-                --notes "Testovací Zaměřovač ${APP_VERSION}. Aktuální změny a opravy popisuje historie změn přímo v aplikaci. Jde o aktualizaci stávající testovací aplikace, nikoliv o novou aplikaci. Fyzické ověření po instalaci je samostatný krok." \
-                --latest; then
-              exit 0
-            fi
-            echo "GitHub odmítl vydání, pokus $attempt ze 3." >&2
-            sleep $((attempt * 5))
-          done
-          exit 1
+          python3 - <<'PY'
+          import base64,json,os,pathlib,urllib.request
+          repo='zaplikj30-ui/Zamerovac-android'
+          url='https://api.github.com/repos/'+repo+'/contents/tools/release/apk_gate.py?ref='+os.environ['GITHUB_SHA']
+          req=urllib.request.Request(url,headers={
+              'Authorization':'Bearer '+os.environ['GH_TOKEN'],
+              'Accept':'application/vnd.github+json','User-Agent':'zamerovac-apk-release'})
+          with urllib.request.urlopen(req,timeout=30) as res:
+              if res.url!=url:raise SystemExit('STOP trusted source redirect')
+              info=json.loads(res.read(1048576))
+          if info.get('path')!='tools/release/apk_gate.py' or info.get('encoding')!='base64':
+              raise SystemExit('STOP wrong source path')
+          code=base64.b64decode(info['content'])
+          if len(code)>1048576:raise SystemExit('STOP oversize script')
+          path=pathlib.Path(os.environ['RUNNER_TEMP'])/'apk_gate.py'
+          path.write_bytes(code)
+          path.chmod(0o600)
+          PY
+      - name: Check exact BUILD provenance, ZIP safety, APK signature/version/hash
+        id: verify
+        env:
+          GH_TOKEN: ${{ github.token }
+          BUILD_RUN_ID: ${{ needs.authorize.outputs.run_id }
+          APPROVED_APK_HASH: ${{ needs.authorize.outputs.apk_hash }
+          APPROVAL_COMMENT_ID: ${{ needs.authorize.outputs.comment_id }
+          APPROVED_OPERATION: release
+        run: python3 "$RUNNER_TEMP/apk_gate.py" release-preflight
+      - name: Recheck latest/main/tag, publish same bytes ONCE, never retry UNKNOWN
+        env:
+          GH_TOKEN: ${{ github.token }
+          SOURCE_SHA: ${{ steps.verify.outputs.source_sha }
+          RELEASE_TAG: ${{ steps.verify.outputs.tag }
+          RELEASE_VERSION: ${{ steps.verify.outputs.version }
+          APPROVED_FILE: ${{ steps.verify.outputs.approved_file }
+          EXPECTED_HASH: ${{ steps.verify.outputs.expected_hash }
+          PREVIOUS_RELEASE_ID: ${{ steps.verify.outputs.previous_release_id }
+          BUILD_RUN_ID: ${{ needs.authorize.outputs.run_id }
+          APPROVED_APK_HASH: ${{ needs.authorize.outputs.apk_hash }
+          APPROVAL_COMMENT_ID: ${{ needs.authorize.outputs.comment_id }
+          APPROVED_OPERATION: release
+        run: |
+          set -euo pipefail
+          python3 "$RUNNER_TEMP/apk_gate.py" release-recheck
+          gh release create "$RELEASE_TAG" "$APPROVED_FILE#Zamerovac-v$RELEASE_VERSION.apk" \
+            --repo "$GITHUB_REPOSITORY" --target "$SOURCE_SHA" \
+            --title "Zaměřovač $RELEASE_VERSION" \
+            --notes "Testovací APK z BUILD run $BUILD_RUN_ID; fyzické Android/Drive/S Pen/Bosch NOT RUN." \
+            --latest
+      - name: Download published release asset; verify exact original SHA256
+        env:
+          GH_TOKEN: ${{ github.token }
+          RELEASE_TAG: ${{ steps.verify.outputs.tag }
+          RELEASE_VERSION: ${{ steps.verify.outputs.version }
+          EXPECTED_HASH: ${{ steps.verify.outputs.expected_hash }
+        run: |
+          set -euo pipefail
+          python3 "$RUNNER_TEMP/apk_gate.py" release-post
+          echo 'PASS release same APK bytes; physical test NOT RUN' >> "$GITHUB_STEP_SUMMARY"
