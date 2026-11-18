@@ -19,6 +19,14 @@ for(const phrase of [
  'pozdní dokončení jiné editační relace',
  'ACK synchronizace ochranu neruší'
 ])assert(notes14.includes(phrase),'Missing historic 1.4.0 release note: '+phrase);
+// 1.4.1 is only a prepared technical version until an explicit BUILD/RELEASE.
+const proposed=history.releases.find(x=>x.version==='1.4.1');
+assert(proposed&&proposed.groups.length,'Candidate release must have specific notes');
+assert(JSON.stringify(proposed).includes('odděluje sestavení APK'),'Candidate notes must describe the actual release-path work');
+assert(!JSON.stringify(proposed).includes('Nové funkce'),'Do not invent product features for a technical release');
+assert.equal(history.forVersion('1.4.1-test')[0]?.version,'1.4.1');
+assert(!history.forVersion('1.4.0-test').some(x=>x.version==='1.4.1'),
+ 'Already installed 1.4.0 must not see unpublished 1.4.1 notes');
 const versions=history.releases.map(x=>x.version);
 const recorded=['1.4.0','1.3.0','1.2.153','1.2.152','1.2.151','1.2.150','1.2.149','1.2.148','1.2.147','1.2','1.1'];
 assert.deepEqual(versions.slice(-recorded.length),recorded,'Historical releases may not be removed, reordered or relabeled');

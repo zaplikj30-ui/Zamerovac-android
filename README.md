@@ -26,7 +26,7 @@ Projekt neobsahuje cizí APK, grafiku ani zdrojový kód ImageMeteru.
 
 ## Omezení a stav ověření
 
-Toto je **zdrojový projekt, nikoli zkompilovaná a na zařízení otestovaná APK**. V tomto prostředí nebyly k dispozici Android SDK ani fyzické měřidlo. JavaScript prošel syntaktickou kontrolou.
+Jde o zdrojový projekt. Poslední skutečně publikovaná **testovací APK je [1.4.0](https://github.com/zaplikj30-ui/Zamerovac-android/releases/tag/test-v1.4.0)**. Build, publikace a fyzické ověření na telefonu jsou oddělené kroky; tento README sám žádný fyzický PASS nedokládá.
 
 - Bluetooth je třeba ověřit s přesným modelem a firmwarem Bosch; rozměry vždy potvrď před použitím ve výrobě. BLE implementace není kompletní pro všechny výrobní protokoly.
 - Google Disk přes systémový výběr složky vyžaduje, aby jeho Android poskytovatel podporoval zapisovatelný SAF strom. V opačném případě je potřeba integrace Google Drive API + OAuth.
@@ -41,7 +41,7 @@ Toto je **zdrojový projekt, nikoli zkompilovaná a na zařízení otestovaná A
 2. Použij JDK 17 a synchronizaci Gradle.
 3. Zvol **Build > Build APK(s)**. Očekávaný výstup je `app/build/outputs/apk/debug/app-debug.apk`.
 4. APK nainstaluj na testovací zařízení. Před produkčním použitím otestuj lokální ukládání, opětovné otevření projektu, média a cloud.
-5. APK se sestavuje **jen na vyžádání**. Uživatel může říct ChatGPT „pusť se do aktualizace“, „udělej aktualizaci“ nebo „sestav APK“; po dokončení změn ChatGPT spustí jeden testovací build přes vyhrazený soubor v GitHubu. Alternativou zůstává **Actions → Sestavit a vydat Zaměřovač TEST → Run workflow**. Běžné uložení kódu build nespouští.
+5. Testovací APK sestavuj **jen po výslovném BUILD GO** na schváleném current-main SHA v [GitHub Actions – PILOT / BUILD / RELEASE](https://github.com/zaplikj30-ui/Zamerovac-android/actions/workflows/build-apk.yml), přes owner příkaz v [issue #183](https://github.com/zaplikj30-ui/Zamerovac-android/issues/183) nebo samostatně schválený ruční Run workflow. BUILD pouze vytvoří ověřený artifact, **nevydává APK**; samostatné RELEASE GO musí výslovně určit build run ID a SHA256 APK. Běžné uložení kódu nic nespouští.
 
 ## Google Disk
 
@@ -63,11 +63,11 @@ Datový model je zamýšlen jako budoucí vstup PC modulu. Editovatelné kóty j
 
 **Aktuální APK ke stažení: [GitHub Releases – poslední vydání](https://github.com/zaplikj30-ui/Zamerovac-android/releases/latest)**.
 
-Novou APK zařizuje ChatGPT po dokončení požadované aktualizace změnou `.github/apk-build-request.txt` nebo se dá výjimečně spustit přes [Actions – Sestavit a vydat Zaměřovač TEST](https://github.com/zaplikj30-ui/Zamerovac-android/actions/workflows/build-apk.yml) tlačítkem **Run workflow**. Běžné úpravy kódu APK nevyrábějí. Při vydání se sestavuje jen testovací varianta, proběhnou zdrojové testy a kontrola podpisu.
+**Skutečně poslední vydání:** `test-v1.4.0`. Zdrojová příprava čísla `1.4.1` ještě **není vydaná APK**. Zastaralý soubor `.github/apk-build-request.txt` již žádný build nespouští. [Workflow PILOT / BUILD / RELEASE](https://github.com/zaplikj30-ui/Zamerovac-android/actions/workflows/build-apk.yml) nejprve odděleně sestaví a zkontroluje APK po vlastním schváleném BUILD GO, potom ji může po dalším **RELEASE GO** publikovat *beze změny bajtů*. Bez obou souhlasů nevzniká nové vydání.
 
-- Každé úspěšné sestavení **na vyžádání** z větve `main` vytvoří číslované vydání obsahující přímo soubor `Zamerovac-v1.2.N.apk` (bez ZIP).
+- **BUILD-only nic nevydává.** Až samostatně schválený RELEASE může vytvořit nový neměnný tag `test-vX.Y.Z` a přímo soubor `Zamerovac-vX.Y.Z.apk` (bez ZIP); nepřepisuje existující tag/asset.
 - Na telefonu otevři odkaz, přihlas se ke svému GitHub účtu, vyber soubor `.apk`, otevři jej přes **Moje soubory → Stažené** a potvrď **Aktualizovat**. ChatGPT odkazy na dočasné soubory k instalaci nepoužívej.
-- Vývojová aplikace zůstává pod názvem **Zaměřovač** a má identifikátor `cz.zamerovac.app.preview` a stálý testovací podpis v `tools/debug-signing.p12.b64`. Všechny běhy workflow používají tento podpis a postupně rostoucí `versionCode` `1000 + GITHUB_RUN_NUMBER`. Aktualizace by proto neměla mazat data.
+- Testovací aplikace zůstává **Zaměřovač** s balíčkem `cz.zamerovac.app.preview` a existujícím interním podpisem. Výchozí Gradle výraz `1000 + GITHUB_RUN_NUMBER` **sám nezaručuje** vyšší instalační číslo: BUILD preflight ho určí podle skutečně poslední vydané a podepsané APK, postflight ho ověří. Zachování dat při aktualizaci vyžaduje také stejný podpis/package a skutečnou fyzickou zkoušku; vývojový podpis není produkční.
 - Původní ostrá varianta (cz.zamerovac.app) a testovací varianta (cz.zamerovac.app.preview) jsou dvě **odlišné aplikace** a data se mezi nimi nepřenášejí automaticky.
 - Certifikát v repozitáři je pouze **vývojový/testovací**. Pro budoucí ostré vydání je nutné vytvořit soukromý produkční podpis a zacházet s ním jako s tajemstvím; tenhle testovací klíč nelze považovat za bezpečný pro veřejnou distribuci.
 - Upozornění: Android může instalaci blokovat z jiných důvodů (například zákaz instalace z daného zdroje). Bez instalačního protokolu nelze potvrdit, proč konkrétní historická aktualizace selhala. Starou aplikaci nemaž bez zálohy.

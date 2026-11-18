@@ -62,6 +62,14 @@ const releaseChanges={issue:39,version:'1.2.153',groups:[{kind:'Nové funkce',it
 // Release notes 1.4.0: založené na implementovaných změnách; publikace tagu je samostatný krok.
 // Záznam se neznačí jako dočasný stav, aby po vydání APK nelhal.
 const releases=[
+  // Candidate next test APK; these are verified changes in the distribution
+  // process, not claims about new Android functionality or a published tag.
+  {version:'1.4.1',
+   title:'Technická příprava bezpečného testovacího vydání',
+   groups:[{kind:'Informace',items:[
+    {text:'Příprava testovacího vydání odděluje sestavení APK od jejího pozdějšího zveřejnění. Kontroluje původ sestavení, podpis, číslo instalace a shodu skutečných bajtů APK se samostatně schváleným vydáním.'},
+    {text:'Toto technické vydání nepřidává nové ovládací prvky ani nemění formát zakázek, fotografie nebo editovatelné kóty. Nová APK a její instalace podléhají samostatnému schválení a ověření.'}
+   ]}]},
   {version:'1.4.0',
    title:'Ochrana originálů, editace a přesných kót',groups:unreleasedChanges.groups},
   {
