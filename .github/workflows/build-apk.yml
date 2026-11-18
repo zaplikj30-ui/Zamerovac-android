@@ -71,6 +71,9 @@ jobs:
           python3 - <<'PY'
           import json,os,re,urllib.request
           from urllib.error import HTTPError,URLError
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self,req,fp,code,msg,headers,url):return None
+          opener=urllib.request.build_opener(NoRedirect)
           repo='zaplikj30-ui/Zamerovac-android'
           uid=351234773
           pat40=r'[0-9a-f]{40}'
@@ -84,7 +87,7 @@ jobs:
                   'Authorization':'Bearer '+e['GH_TOKEN'],
                   'Accept':'application/vnd.github+json','User-Agent':'zamerovac-apk-owner'})
               try:
-                  with urllib.request.urlopen(req,timeout=20) as res:
+                  with opener.open(req,timeout=20) as res:
                       if res.url!=url:stop('redirect')
                       data=res.read(1048577)
                       if len(data)>1048576:stop('oversize')
@@ -251,12 +254,15 @@ jobs:
           set -euo pipefail
           python3 - <<'PY'
           import base64,json,os,pathlib,urllib.request
+          class NoRedirect(urllib.request.HTTPRedirectHandler):
+              def redirect_request(self,req,fp,code,msg,headers,url):return None
+          opener=urllib.request.build_opener(NoRedirect)
           repo='zaplikj30-ui/Zamerovac-android'
           url='https://api.github.com/repos/'+repo+'/contents/tools/release/apk_gate.py?ref='+os.environ['GITHUB_SHA']
           req=urllib.request.Request(url,headers={
               'Authorization':'Bearer '+os.environ['GH_TOKEN'],
               'Accept':'application/vnd.github+json','User-Agent':'zamerovac-apk-release'})
-          with urllib.request.urlopen(req,timeout=30) as res:
+          with opener.open(req,timeout=30) as res:
               if res.url!=url:raise SystemExit('STOP trusted source redirect')
               info=json.loads(res.read(1048576))
           if info.get('path')!='tools/release/apk_gate.py' or info.get('encoding')!='base64':
