@@ -5,6 +5,9 @@
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const app=fs.readFileSync('app/src/main/assets/app.js','utf8');
+const html=fs.readFileSync('app/src/main/assets/index.html','utf8');
+assert(html.includes('id="galleryBtn" title="Vybrat média a soubory" aria-label="Vybrat média a soubory"'),
+ 'M2: startup shortcut also opens mixed media picker; HTML title/ARIA must be truthful');
 const from=app.indexOf('// #194: session-only last confirmed add action.');
 const to=app.indexOf('function showNewMenu(){',from);
 assert(from>=0&&to>from,'Quick-action production boundary changed');
