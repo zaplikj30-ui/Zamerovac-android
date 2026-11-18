@@ -7,7 +7,7 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const source=fs.readFileSync('app/src/main/assets/pending-audio.js','utf8');
-function scene(entries=[]){
+function scene(entries=[],nativeJournal){
  const elements=new Map(),warnings=[];let scans=0;
  const document={
   createElement(tag){return {tag,remove(){elements.delete(this.id)}}},
@@ -18,7 +18,7 @@ function scene(entries=[]){
  const env={
   window:{ZamerovacI18n:{t:key=>key}},
   native:true,
-  Native:{pendingAudio(){scans++;return JSON.stringify(entries)}},
+  Native:{pendingAudio(){scans++;return nativeJournal?nativeJournal():JSON.stringify(entries)}},
   document,renderNoteAttachments(){},
   notify:msg=>warnings.push(msg),
   $:id=>elements.get(id)||null,
@@ -60,4 +60,32 @@ assert.equal(unknown.scans,2,'Explicit user action may refresh the journal');
 const restarted=scene([{state:'needs-review',available:false}]);
 restarted.api.saved({ok:true,audioPending:true});
 assert.equal(notices(restarted),1,'Warning recurs once after a fresh session');
+// F1: an explicitly empty, valid Native journal must clear the cached alert state.
+// A newly retained recording with the same count is a genuinely new warning.
+const entries=[{id:'first',state:'needs-review',available:true}];
+const cycle=scene(entries);
+cycle.api.saved({ok:true,audioPending:true,pendingAudioCount:1});
+assert.equal(notices(cycle),1);
+entries.splice(0); // Native now confirms that the old recording is resolved.
+cycle.api.refresh();
+assert(!cycle.elements.has('pendingAudioBanner'),'Explicit empty Native refresh must clear the banner');
+entries.push({id:'second',state:'needs-review',available:true});
+for(let i=0;i<5;i++)cycle.api.saved({ok:true,audioPending:true,pendingAudioCount:1});
+assert.equal(notices(cycle),2,'New pending recording after a confirmed empty refresh must warn again exactly once');
+assert(cycle.elements.has('pendingAudioBanner'),'New recording must display the warning banner');
+// A readable non-empty journal is not equivalent to confirmed resolution.
+const ongoing=scene([{issue:'journal-uncertain',state:'needs-review',available:false}]);
+ongoing.api.saved({ok:true,audioPending:true,pendingAudioCount:1});
+ongoing.api.refresh();
+ongoing.api.saved({ok:true,audioPending:true,pendingAudioCount:1});
+assert.equal(notices(ongoing),1,'Uncertain journal refresh must not reset warning deduplication');
+assert(ongoing.elements.has('pendingAudioBanner'));
+// A failing/unreadable Native journal is represented as needs-review, never empty.
+const invalid=scene([],()=>'{this-is-not-JSON');
+invalid.api.saved({ok:true,audioPending:true,pendingAudioCount:1});
+invalid.api.refresh();
+assert.equal(notices(invalid),1);
+invalid.api.saved({ok:true,audioPending:true,pendingAudioCount:1});
+assert.equal(notices(invalid),1,'Unreadable journal must not be treated as confirmed empty');
+assert(invalid.elements.has('pendingAudioBanner'));
 console.log('PASS #190: counted/uncertain recovery, status transitions, banner, restart and explicit failure');
