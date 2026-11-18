@@ -50,6 +50,7 @@ jobs:
     timeout-minutes: 5
     permissions:
       contents: read
+      issues: read
     concurrency:
       group: zamerovac-apk-owner-commands
       cancel-in-progress: false
@@ -159,6 +160,7 @@ jobs:
     permissions:
       contents: read
       actions: read
+      issues: read
     concurrency:
       group: zamerovac-apk-owner-commands
       cancel-in-progress: false
@@ -242,6 +244,7 @@ jobs:
     permissions:
       contents: write
       actions: read
+      issues: read
     concurrency:
       group: zamerovac-apk-owner-commands
       cancel-in-progress: false
