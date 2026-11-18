@@ -531,12 +531,16 @@ window.onNativeSync=(text)=>{
    if(screen==='browser')showFolder();
   }
   const conflicts=result.data?state.records.filter(r=>r.conflict).length:0;
-  if(result.transport==='cloud-v2'&&window.ZamerovacSyncStatus?.cloud?.(result)){
-   // A non-authoritative toast/DOM error must not revoke an already
-   // confirmed native sync save or trigger a misleading retry.
+  if(result.transport==='cloud-v2'&&typeof window.ZamerovacSyncStatus?.cloud==='function'){
+   // The Native CAS above already confirmed the received data. A status
+   // presenter/toast exception must not turn that durable ACK into failure
+   // or skip the independent retained-conflicts update.
+   let handled=false;
+   try{handled=window.ZamerovacSyncStatus.cloud(result)===true}
+   catch(error){handled=true;console.warn('Synchronizační stav mraku nelze zobrazit')}
    if(result.data)try{window.ZamerovacSyncStatus?.conflicts?.(state.records.filter(r=>r&&r.conflict===true))}
    catch(error){console.warn('Synchronizační upozornění na konflikty nelze zobrazit')}
-   return true;
+   if(handled)return true;
   }
   notify((result.message||'Synchronizace dokončena')+(conflicts?' · zachované konfliktní kopie: '+conflicts:''));return true;
  }catch(e){notify('Synchronizace: '+e.message);return false}
