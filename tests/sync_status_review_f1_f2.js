@@ -13,7 +13,9 @@ function extract(start,end){
  assert(a>=0&&b>a,'Production boundary changed: '+start);
  return app.slice(a,b);
 }
-const product=extract('function save(){','function notify(msg){')+'\n'+
+const saveStart=app.includes('function invalidateSyncBadgeAfterSave(){')?
+ 'function invalidateSyncBadgeAfterSave(){':'function save(){';
+const product=extract(saveStart,'function notify(msg){')+'\n'+
  extract('window.onNativeSync=(text)=>{','window.onLaserValue=')+
  '\nwindow.__save=save;window.__getSnapshot=()=>persistedSnapshot;window.__setState=value=>{state=value};';
 const clone=v=>JSON.parse(JSON.stringify(v));
