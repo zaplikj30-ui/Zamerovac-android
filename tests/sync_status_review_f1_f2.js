@@ -1,4 +1,4 @@
-/* #192 F1/F2 independent review regressions. Execute the actual app.js save()
+/* #192 F1/F2/F3 independent review regressions. Execute the actual app.js save()
  * and native-sync callback with the real sync-status.js presenter.
  * Native CAS/ledger and DOM are synthetic: not physical Android/Drive.
  */
@@ -150,4 +150,81 @@ if(mode==='f2'||mode==='all'){
  assert.equal(s.disk.records.filter(r=>r.conflict).length,3,'Confirmed conflict records must stay durable');
  s.window.ZamerovacSyncStatus=originalStatus;
  console.log('PASS F2: new cloud-v2 conflict, deduplicated repeat, second conflict, persistent detail, rejected save');
+}
+
+
+if(mode==='f3'||mode==='all'){
+ const conflict=id=>({id,kind:'note',title:'Zachovaná konfliktní kopie',
+  conflict:true,conflictSource:'source-'+id,media:['original-conflict-audio-'+id],
+  items:[{measure:'55,000000001',laserMeasuredMm:'55.000000001',unit:'mm'}]});
+ const receive=(s,records,pending=true,message='Synchronizace čeká na spojení')=>{
+  const disk=clone(s.old);disk.records.push(...records);s.disk=disk;
+  return s.window.onNativeSync(JSON.stringify({
+   transport:'cloud-v2',pending,message,data:disk
+  }));
+ };
+ // F3: the real Native CAS has confirmed the disk, but a cloud pending
+ // status toast throws. That presentation error cannot revoke ACK or
+ // prevent a separately retained conflict warning.
+ const s=scene();s.api.peerState({peers:{trusted:{}}});
+ let injected=0;
+ s.env.notify=msg=>{
+  if(msg.includes('Změny jsou místně uložené')&&injected++===0)
+   throw Error('synthetic UI toast unavailable');
+  s.notices.push(msg);
+ };
+ assert.equal(receive(s,[conflict('copy-postack')]),true,
+  'F3: cloud pending toast exception after confirmed disk ACK must not cause sync=false');
+ assert.equal(injected,1,'F3: actual pending presenter was not fault-injected');
+ assert.equal(s.calls.length,1,'F3: expected one confirmed native CAS invocation');
+ assert.equal(s.disk.records.filter(r=>r.conflict).length,1,'F3: native committed conflict copy missing');
+ assert.equal(JSON.parse(s.window.__getSnapshot()).records.filter(r=>r.conflict).length,1,
+  'F3: durable snapshot missing copied record');
+ assert.equal(s.api.status().phase,'pending','F3: waiting sync must not turn green');
+ assert.equal(s.notices.filter(x=>/zachované konfliktní kopie/i.test(x)).length,1,
+  'F3: newly retained copy must be announced after failing cloud pending toast');
+ s.api.show();
+ assert.match(s.node('syncStatusDetails').textContent,/Zachované konfliktní kopie: 1/,
+  'F3: retained copy detail must stay accessible on status tap');
+ assert.equal(receive(s,[conflict('copy-postack')]),true);
+ assert.equal(s.notices.filter(x=>/zachované konfliktní kopie/i.test(x)).length,1,
+  'F3: repeat must not flood the UI');
+ assert.equal(s.disk.records[0].media[0],'original-audio');
+ assert.equal(s.disk.records[0].items[0].measure,'1324,00000123');
+ // If the toast mechanism itself is broken, retain the details and
+ // retry a once-per-ID conflict alert when notification becomes possible.
+ const offline=scene();offline.api.peerState({peers:{trusted:{}}});
+ offline.env.notify=()=>{throw Error('synthetic missing toast node')};
+ assert.equal(receive(offline,[conflict('copy-toast-retry')]),true,
+  'F3: all toast failures after ACK must not create false sync failure');
+ offline.api.show();
+ assert.match(offline.node('syncStatusDetails').textContent,/Zachované konfliktní kopie: 1/,
+  'F3: detail must persist even without a toast');
+ offline.env.notify=msg=>offline.notices.push(msg);
+ assert.equal(receive(offline,[conflict('copy-toast-retry')]),true);
+ assert.equal(offline.notices.filter(x=>/zachované konfliktní kopie/i.test(x)).length,1,
+  'F3: failed conflict toast must be retried when UI is restored');
+ // If a severe sync error occurs, a conflict remains accessible but must not
+ // overwrite the critical warning; deferred conflict may notify on recovery.
+ const danger=scene();danger.api.peerState({peers:{trusted:{}}});
+ const severe='Synchronizace hlásí chybu: Poškozená data';
+ assert.equal(receive(danger,[conflict('copy-critical')],false,severe),true);
+ assert.equal(danger.api.status().phase,'failed');
+ assert.equal(danger.notices.filter(x=>/zachované konfliktní kopie/i.test(x)).length,0,
+  'F3: conflict must not hide critical sync error');
+ danger.api.show();
+ assert.match(danger.node('syncStatusDetails').textContent,/Zachované konfliktní kopie: 1/,
+  'F3: critical detail must still show the retained copy');
+ assert.equal(receive(danger,[conflict('copy-critical')]),true);
+ assert.equal(danger.notices.filter(x=>/zachované konfliktní kopie/i.test(x)).length,1,
+  'F3: deferred critical conflict must appear after warning clears');
+ // Pre-ACK refusal must stay false and must NOT leak a new conflict as saved.
+ const refused=scene();refused.api.peerState({peers:{trusted:{}}});refused.refuse=true;
+ assert.equal(receive(refused,[conflict('copy-uncommitted')]),false);
+ assert.equal(refused.disk.records.filter(r=>r.conflict).length,1,
+  'F3: test intentionally emulates a peer-written disk, not our rejected CAS');
+ refused.api.show();
+ assert.doesNotMatch(refused.node('syncStatusDetails').textContent,/Zachované konfliktní kopie/,
+  'F3: pre-ACK refused data must not become a confirmed conflict notice');
+ console.log('PASS F3: durable ACK, transient/persistent presenter failures, retry, critical priority, pre-ACK refusal');
 }
