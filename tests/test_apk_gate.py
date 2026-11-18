@@ -199,5 +199,125 @@ class TestApkGateOffline(unittest.TestCase):
             ast.parse(code, filename="workflow-inline-python-" + str(index))
 
 
+    def test_real_binary_metadata_gate_with_synthetic_apksigner_aapt_outputs(self):
+        from types import SimpleNamespace
+        def fake(cmd, **kwargs):
+            if cmd[0] == "apksigner":
+                return SimpleNamespace(stdout="Signer #1 certificate SHA-256 digest: " + gate.SIGNER)
+            return SimpleNamespace(stdout="package: name='" + gate.PACKAGE +
+                                   "' versionCode='1156' versionName='1.4.1-test'\n")
+        with tempfile.TemporaryDirectory() as td:
+            file = Path(td) / "synthetic.apk"
+            file.write_bytes(b"FAKE")
+            with mock.patch.object(gate, "tools", return_value=("aapt", "apksigner")), \
+                    mock.patch.object(gate.subprocess, "run", side_effect=fake):
+                meta = gate.inspect_apk(file, "1.4.1")
+                self.assertEqual(meta["version_code"], 1156)
+            wrong_signer = lambda cmd, **kw: type("R", (), {"stdout":
+                ("Signer SHA-256 digest: " + "f"*64) if cmd[0]=="apksigner" else
+                "package: name='" + gate.PACKAGE + "' versionCode='1156' versionName='1.4.1-test'"})()
+            with mock.patch.object(gate, "tools", return_value=("aapt", "apksigner")), \
+                    mock.patch.object(gate.subprocess, "run", side_effect=wrong_signer):
+                with self.assertRaisesRegex(RuntimeError, "signer"):
+                    gate.inspect_apk(file, "1.4.1")
+            wrong_pkg = lambda cmd, **kw: type("R", (), {"stdout":
+                ("Signer SHA-256 digest: " + gate.SIGNER) if cmd[0]=="apksigner" else
+                "package: name='evil.other' versionCode='1156' versionName='1.4.1-test'"})()
+            with mock.patch.object(gate, "tools", return_value=("aapt", "apksigner")), \
+                    mock.patch.object(gate.subprocess, "run", side_effect=wrong_pkg):
+                with self.assertRaisesRegex(RuntimeError, "package"):
+                    gate.inspect_apk(file, "1.4.1")
+            with mock.patch.object(gate, "tools", return_value=("aapt", "apksigner")), \
+                    mock.patch.object(gate.subprocess, "run", side_effect=fake):
+                with self.assertRaisesRegex(RuntimeError, "versionName"):
+                    gate.inspect_apk(file, "1.4.2")
+
+    def test_404_is_only_allowed_absence_for_exact_release_and_tag_checks(self):
+        import urllib.error
+        class NotFound:
+            def __init__(self, code): self.code = code
+            def open(self, request, timeout):
+                raise urllib.error.HTTPError(request.full_url, self.code, "synthetic", {}, None)
+        api = gate.GitHubAPI("synthetic-token", opener=NotFound(404))
+        self.assertIsNone(api.request("/git/ref/tags/test-v1.4.1", allow_404=True))
+        with self.assertRaisesRegex(RuntimeError, "HTTP 404"):
+            api.request("/git/ref/tags/test-v1.4.1")
+        unavailable = gate.GitHubAPI("synthetic-token", opener=NotFound(500))
+        with self.assertRaisesRegex(RuntimeError, "HTTP 500"):
+            unavailable.request("/git/ref/tags/test-v1.4.1", allow_404=True)
+
+    def test_release_provenance_and_apk_hash_synthetic_api_fixtures(self):
+        from unittest.mock import patch
+        run_id = 43210
+        artifact_id = 9876
+        approved_data = b"FAKE APK ONLY FOR SYNTHETIC UNIT TESTS"
+        digest = gate.hashlib.sha256(approved_data).hexdigest()
+        workflow_id, repo_id = 777, 888
+        archive_data = archive([(NAME, approved_data)])
+        run = {
+            "id": run_id, "workflow_id": workflow_id, "path": gate.WORKFLOW,
+            "run_attempt": 1, "status": "completed", "conclusion": "success",
+            "head_sha": SHA, "head_branch": "main", "event": "workflow_dispatch",
+            "actor": {"id": gate.OWNER_ID}, "triggering_actor": {"id": gate.OWNER_ID},
+            "repository": {"id": repo_id}, "head_repository": {"id": repo_id}
+        }
+        artifact = {
+            "id": artifact_id, "name": gate.artifact_name(run_id, SHA, 0),
+            "expired": False, "workflow_run": {"id": run_id, "head_sha": SHA}
+        }
+        class FakeReleaseAPI:
+            def request(self, path, **kwargs):
+                if path == "/actions/runs/" + str(run_id): return run
+                if path == "/actions/workflows/build-apk.yml": return {"id": workflow_id}
+                if path == "": return {"id": repo_id}
+                if path == "/actions/artifacts/" + str(artifact_id) + "/zip": return archive_data
+                if path == "/releases/latest":
+                    return {"id": 9, "tag_name": "test-v1.4.0",
+                            "assets": [{"id": 10, "name": "Zamerovac-v1.4.0.apk"}]}
+                if path.startswith("/git/ref/tags/") or path.startswith("/releases/tags/"):
+                    return None
+                raise AssertionError("UNEXPECTED " + path)
+            def pages(self, path, key):
+                if path.endswith("/jobs"): return [{"name": "build-only",
+                                                      "run_attempt": 1, "conclusion": "success"}]
+                if path.endswith("/artifacts"): return [artifact]
+                raise AssertionError("UNEXPECTED " + path)
+        with tempfile.TemporaryDirectory() as td:
+            out = Path(td) / "outputs"
+            approved = Path(td) / "zamerovac-approved.apk"
+            env = {
+                "BUILD_RUN_ID": str(run_id), "APPROVED_APK_HASH": digest,
+                "RUNNER_TEMP": td, "GITHUB_OUTPUT": str(out)
+            }
+            mocks = (
+                patch.object(gate, "api_client", return_value=FakeReleaseAPI()),
+                patch.object(gate, "revalidate_current_approval"),
+                patch.object(gate, "main_sha", return_value=SHA),
+                patch.object(gate, "current_version", return_value="1.4.1"),
+                patch.object(gate, "previous", return_value=(
+                    {"id": 9, "tag_name": "test-v1.4.0"}, "1.4.0",
+                    {"version_code": 1155})),
+                patch.object(gate, "inspect_apk", return_value={
+                    "version_code": 1156, "sha256": digest}),
+            )
+            with mock.patch.dict(os.environ, env), contextlib.ExitStack() as stack:
+                for m in mocks: stack.enter_context(m)
+                gate.release_preflight()
+                self.assertEqual(approved.read_bytes(), approved_data)
+                self.assertIn("expected_hash=" + digest, out.read_text())
+                approved.unlink()
+                os.environ["APPROVED_APK_HASH"] = "f" * 64
+                with self.assertRaisesRegex(RuntimeError, "SHA256 mismatch"):
+                    gate.release_preflight()
+                os.environ["APPROVED_APK_HASH"] = digest
+                run["actor"] = {"id": 12}
+                with self.assertRaisesRegex(RuntimeError, "identity"):
+                    gate.release_preflight()
+                run["actor"] = {"id": gate.OWNER_ID}
+                artifact["expired"] = True
+                with self.assertRaisesRegex(RuntimeError, "artifact"):
+                    gate.release_preflight()
+
+
 if __name__ == "__main__":
     unittest.main()
