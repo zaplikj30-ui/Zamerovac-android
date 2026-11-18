@@ -1,114 +1,108 @@
-"""Offline regression for GitHub bearer credentials during release asset redirects.
+"""Retained security regression after HOME retirement (#186).
 
-No network, no APK and no real token. Parse the exact embedded Python
-from the Windows release workflow and run only the redirect handler.
+Test the *active* cloud RELEASE gate's bearer-token isolation. Fully offline:
+no GitHub credentials, external requests, APK build or publishing.
 """
-import ast
+import importlib.util
 from pathlib import Path
-import sys
-import unittest
-from unittest import mock
 import urllib.error
-import urllib.parse
 import urllib.request
+import unittest
+
+ROOT = Path(__file__).resolve().parents[1]
+SPEC = importlib.util.spec_from_file_location("active_apk_gate", ROOT / "tools/release/apk_gate.py")
+GATE = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(GATE)
+
+TOKEN = "FAKE_LOCAL_TEST_TOKEN"
+CDN = "https://release-assets.githubusercontent.com/signed-asset"
 
 
-YAML = (Path(__file__).resolve().parents[1] /
-        ".github/workflows/windows-home-apk-release.yml").read_text(encoding="utf-8")
+class Response:
+    def __init__(self, payload=b"synthetic-APK-archive"):
+        self.payload = payload
+        self.headers = {}
+    def __enter__(self):
+        return self
+    def __exit__(self, *args):
+        return False
+    def read(self, length):
+        return self.payload[:length]
 
 
-def extract_release_python():
-    lines = YAML.splitlines()
-    start = lines.index(
-        "      - name: Validate real home QA run and previous released APK versionCode and signer"
-    )
-    run_start = next(i for i in range(start + 1, len(lines))
-                     if lines[i] == "        run: |")
-    body = []
-    for line in lines[run_start + 1:]:
-        if line.startswith("          "):
-            body.append(line[10:])
-        elif not line.strip():
-            body.append("")
-        else:
-            break
-    return "\n".join(body) + "\n"
+class RedirectingOpener:
+    def __init__(self, location, repeated=False):
+        self.location = location
+        self.repeated = repeated
+        self.requests = []
+    def open(self, request, timeout):
+        self.requests.append(request)
+        if (self.repeated or len(self.requests) == 1):
+            raise urllib.error.HTTPError(request.full_url, 302, "Found",
+                                         {"Location": self.location}, None)
+        return Response()
 
 
-CODE = extract_release_python()
-AST = ast.parse(CODE)
-HANDLER_NODE = next(n for n in AST.body if isinstance(n, ast.ClassDef)
-                    and n.name == "VerifiedReleaseAssetRedirect")
-REQUEST_NODE = next(n for n in AST.body if isinstance(n, ast.FunctionDef)
-                    and n.name == "request")
+class ReleaseAssetRedirectSecurity(unittest.TestCase):
+    def test_default_python_redirect_would_forward_token(self):
+        request = urllib.request.Request("https://api.github.com/repos/" + GATE.REPO + "/releases/assets/4",
+                                         headers={"Authorization": "Bearer " + TOKEN})
+        forwarded = urllib.request.HTTPRedirectHandler().redirect_request(
+            request, None, 302, "Found", {}, CDN)
+        self.assertIsNotNone(forwarded)
+        self.assertIn("Authorization", forwarded.headers)
 
-CONTEXT = {
-    "urllib": urllib, "sys": sys, "token": "FAKE_DO_NOT_USE_REAL_TOKEN"
-}
-exec(compile(ast.Module(body=[HANDLER_NODE, REQUEST_NODE], type_ignores=[]),
-             "<embedded-home-release-python>", "exec"), CONTEXT)
+    def test_active_gate_rejects_automatic_authenticated_redirect(self):
+        request = urllib.request.Request("https://api.github.com/repos/" + GATE.REPO + "/releases/assets/4",
+                                         headers={"Authorization": "Bearer " + TOKEN})
+        self.assertIsNone(GATE.NoRedirect().redirect_request(
+            request, None, 302, "Found", {}, CDN))
 
+    def test_valid_binary_api_redirect_uses_tokenless_cdn_request(self):
+        opener = RedirectingOpener(CDN)
+        data = GATE.GitHubAPI(TOKEN, opener=opener).request("/releases/assets/4", binary=True)
+        self.assertEqual(data, b"synthetic-APK-archive")
+        self.assertEqual(len(opener.requests), 2)
+        self.assertEqual(opener.requests[0].get_header("Authorization"), "Bearer " + TOKEN)
+        second = opener.requests[1]
+        self.assertEqual(second.full_url, CDN)
+        self.assertIsNone(second.get_header("Authorization"))
+        self.assertFalse(any(k.lower() in ("authorization", "cookie") for k in second.headers))
 
-class ReleaseRedirectSecurity(unittest.TestCase):
-    def setUp(self):
-        self.original = urllib.request.Request(
-            "https://api.github.com/repos/zaplikj30-ui/Zamerovac-android/releases/assets/123",
-            headers={"Authorization": "Bearer FAKE_DO_NOT_USE_REAL_TOKEN",
-                     "X-GitHub-Api-Version": "2022-11-28"}
-        )
-        self.handler = CONTEXT["VerifiedReleaseAssetRedirect"]()
+    def test_untrusted_redirect_locations_stop_without_second_request(self):
+        for address in (
+            "http://release-assets.githubusercontent.com/asset",
+            "https://release-assets.githubusercontent.com.evil.invalid/asset",
+            "https://evil.invalid/asset",
+            "https://user:secret@release-assets.githubusercontent.com/asset",
+            "https://release-assets.githubusercontent.com/asset#fragment",
+        ):
+            with self.subTest(address=address):
+                opener = RedirectingOpener(address)
+                with self.assertRaisesRegex(RuntimeError, "untrusted asset redirect"):
+                    GATE.GitHubAPI(TOKEN, opener=opener).request("/releases/assets/4", binary=True)
+                self.assertEqual(len(opener.requests), 1)
 
-    def redirect(self, target):
-        return self.handler.redirect_request(
-            self.original, None, 302, "Found", {}, target
-        )
+    def test_repeated_cdn_redirects_stop_after_bounded_attempts(self):
+        opener = RedirectingOpener(CDN, repeated=True)
+        with self.assertRaisesRegex(RuntimeError, "too many CDN redirects"):
+            GATE.GitHubAPI(TOKEN, opener=opener).request("/releases/assets/4", binary=True)
+        self.assertEqual(len(opener.requests), 6)
 
-    def test_plain_python_would_forward_fake_token(self):
-        standard = urllib.request.HTTPRedirectHandler().redirect_request(
-            self.original, None, 302, "Found", {},
-            "https://release-assets.githubusercontent.com/signed-asset"
-        )
-        self.assertIn("Authorization", standard.headers)
+    def test_json_api_redirect_not_allowed(self):
+        opener = RedirectingOpener(CDN)
+        with self.assertRaisesRegex(RuntimeError, "GitHub API HTTP 302"):
+            GATE.GitHubAPI(TOKEN, opener=opener).request("/releases/tags/test-v1.4.1")
+        self.assertEqual(len(opener.requests), 1)
 
-    def test_cross_host_signed_asset_never_receives_token(self):
-        req = self.redirect("https://release-assets.githubusercontent.com/signed-asset")
-        self.assertNotIn("Authorization", req.headers)
-        self.assertNotIn("X-github-api-version", req.headers)
-        self.assertEqual(req.full_url, "https://release-assets.githubusercontent.com/signed-asset")
+    def test_invalid_git_api_path_rejected_without_network(self):
+        opener = RedirectingOpener(CDN)
+        with self.assertRaisesRegex(RuntimeError, "invalid GitHub API path"):
+            GATE.GitHubAPI(TOKEN, opener=opener).request("https://evil.invalid/asset", binary=True)
+        self.assertFalse(opener.requests)
 
-    def test_other_https_host_also_never_receives_token(self):
-        req = self.redirect("https://untrusted.invalid/path")
-        self.assertNotIn("Authorization", req.headers)
-
-    def test_same_origin_github_api_retains_token(self):
-        req = self.redirect(
-            "https://api.github.com/repos/zaplikj30-ui/Zamerovac-android/releases/assets/124"
-        )
-        self.assertEqual(req.get_header("Authorization"),
-                         "Bearer FAKE_DO_NOT_USE_REAL_TOKEN")
-
-    def test_insecure_http_redirect_is_rejected(self):
-        with self.assertRaisesRegex(ValueError, "insecure"):
-            self.redirect("http://release-assets.githubusercontent.com/signed-asset")
-
-    def test_request_rejects_non_api_origin_before_network(self):
-        with self.assertRaises(SystemExit):
-            CONTEXT["request"](
-                "https://api.github.com.evil.invalid/repos/zaplikj30-ui/Zamerovac-android/releases/assets/123"
-            )
-
-    def test_request_rejects_wrong_repo_before_network(self):
-        with self.assertRaises(SystemExit):
-            CONTEXT["request"]("https://api.github.com/repos/other/repo/releases/assets/5")
-
-    def test_workflow_stays_owner_only_and_manual(self):
-        self.assertIn("  workflow_dispatch:", YAML)
-        self.assertNotIn("  pull_request:", YAML)
-        self.assertNotIn("  push:", YAML)
-        self.assertIn("github.actor == 'zaplikj30-ui'", YAML)
-        self.assertIn("inputs.publish_release == true", YAML)
-        self.assertIn("with release_asset_opener.open(req, timeout=80)", CODE)
-        self.assertIn("VerifiedReleaseAssetRedirect()", CODE)
+    def test_obsolete_home_release_workflow_is_absent(self):
+        self.assertFalse((ROOT / ".github/workflows/windows-home-apk-release.yml").exists())
 
 
 if __name__ == "__main__":

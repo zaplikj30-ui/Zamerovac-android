@@ -339,25 +339,24 @@ class GateUnitTest(unittest.TestCase):
                     with self.assertRaises(GATE.GateError):
                         GATE.check_wsl(gradle, resolve, "Linux", env, "microsoft-WSL2")
 
-    def test_current_trusted_home_workflows_are_safe_from_wsl_node_discovery(self):
-        # Existing main workflows predate this narrower canonical one-shot
-        # contract. They are not certified by this test as whole YAML.
-        for path in (ROOT / ".github/workflows/windows-self-hosted-qa.yml",
-                     ROOT / ".github/workflows/windows-home-apk-release.yml"):
-            with self.subTest(path=path):
-                text = path.read_text(encoding="utf-8")
-                self.assertIn("self-hosted, Windows, X64, zamerovac-qa", text)
-                self.assertIn("persist-credentials: false", text)
-                self.assertNotIn("python3 -m unittest discover", text)
+    def test_retired_home_workflows_cannot_be_dispatched(self):
+        # The historical HOME gate below is retained as a synthetic contract.
+        # Owner decision #6978003077 retires actual HOME workflow entrypoints.
+        active = ROOT / ".github" / "workflows"
+        for name in ("windows-self-hosted-qa.yml", "windows-home-apk-release.yml"):
+            with self.subTest(name=name):
+                self.assertFalse((active / name).exists(), "retired HOME workflow reappeared")
 
-    def test_all_home_workflows_never_run_node_python_unittest_inside_wsl(self):
-        for path in (ROOT / ".github/workflows").glob("*.yml"):
-            text = path.read_text(encoding="utf-8")
-            if "self-hosted" not in text:
-                continue
+    def test_all_active_workflows_exclude_home_runner_and_wsl(self):
+        # This must inspect every active YAML, not silently PASS on an empty loop.
+        files = sorted((ROOT / ".github" / "workflows").glob("*.yml"))
+        self.assertTrue(files, "no workflows found; invalid test checkout")
+        for path in files:
             with self.subTest(path=path.name):
+                text = path.read_text(encoding="utf-8")
+                self.assertNotIn("runs-on: [self-hosted", text)
+                self.assertNotIn("zamerovac-qa]", text)
                 self.assertNotIn("wsl.exe --exec python3 -m unittest discover", text)
-                self.assertNotIn("python3 -m unittest discover -s tests", text)
 
 
 if __name__ == "__main__":

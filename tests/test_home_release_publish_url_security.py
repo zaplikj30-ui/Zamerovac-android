@@ -1,120 +1,129 @@
-"""Offline tests of actual embedded home APK publishing Python.
+"""Retained publish safety tests after removing legacy HOME release workflow.
 
-No real GitHub token, no requests, no Android build and no release publishing.
+All cases test the active GitHub-hosted RELEASE-only source/metadata contract.
+No HTTP, live tokens, GitHub Actions, APK publishing or external hosts.
 """
-import ast
+import hashlib
+import importlib.util
+import os
 from pathlib import Path
-import re
+import tempfile
 import unittest
-import urllib.parse
-import urllib.request
+from unittest import mock
 
-YAML = (Path(__file__).resolve().parents[1] /
-        ".github/workflows/windows-home-apk-release.yml").read_text(encoding="utf-8")
-
-
-def publication_nodes():
-    lines = YAML.splitlines()
-    start = lines.index("      - name: Publish only explicitly approved RELEASE after passing every gate")
-    begin = next(i for i in range(start + 1, len(lines)) if lines[i] == "        run: |")
-    body = []
-    for line in lines[begin + 1:]:
-        if line.startswith("          "):
-            body.append(line[10:])
-        elif not line.strip():
-            body.append("")
-        else:
-            break
-    tree = ast.parse("\n".join(body) + "\n")
-    funcs = [node for node in tree.body
-             if isinstance(node, (ast.FunctionDef, ast.ClassDef))
-             and node.name in ("trusted_publish_url", "RejectAuthenticatedRedirect")]
-    if len(funcs) != 2:
-        raise ValueError("Missing real publish guards")
-    return funcs
+ROOT = Path(__file__).resolve().parents[1]
+SPEC = importlib.util.spec_from_file_location("apk_release_gate_under_test", ROOT / "tools/release/apk_gate.py")
+GATE = importlib.util.module_from_spec(SPEC)
+SPEC.loader.exec_module(GATE)
+WORKFLOW = (ROOT / ".github/workflows/build-apk.yml").read_text(encoding="utf-8")
+SOURCE = (ROOT / "tools/release/apk_gate.py").read_text(encoding="utf-8")
+SHA = "a" * 40
 
 
-sandbox = {
-    "repo": "zaplikj30-ui/Zamerovac-android",
-    "urllib": urllib,
-    "re": re,
-}
-exec(compile(ast.Module(body=publication_nodes(), type_ignores=[]),
-             "<actual-publish-workflow>", "exec"), sandbox)
-verify = sandbox["trusted_publish_url"]
-base = "https://api.github.com/repos/zaplikj30-ui/Zamerovac-android/releases"
-upload = "https://uploads.github.com/repos/zaplikj30-ui/Zamerovac-android/releases/42/assets"
+class FakeReleaseAPI:
+    def __init__(self, tag_exists=False, release_exists=False, error=False, payload=b"APPROVED"):
+        self.tag_exists = tag_exists
+        self.release_exists = release_exists
+        self.error = error
+        self.payload = payload
+        self.visited = []
+
+    def request(self, path, **kwargs):
+        self.visited.append((path, kwargs))
+        if self.error:
+            raise RuntimeError("STOP: synthetic API unavailable")
+        if path == "/releases/latest":
+            return {"id": 98, "tag_name": "test-v1.4.0",
+                    "assets": [{"id": 120, "name": "Zamerovac-v1.4.0.apk"}]}
+        if path == "/git/ref/tags/test-v1.4.1":
+            return {"ref": path} if self.tag_exists else None
+        if path == "/releases/tags/test-v1.4.1":
+            return {"tag_name": "test-v1.4.1", "id": 99, "assets": [
+                {"id": 200, "name": "Zamerovac-v1.4.1.apk"}]} if self.release_exists else None
+        if path == "/releases/assets/200":
+            return self.payload
+        raise AssertionError("Unexpected API request " + path)
 
 
-class ReleasePublishingSecurity(unittest.TestCase):
-    def test_expected_release_api_calls_allowed(self):
-        for address, method in [
-            (base, "POST"),
-            (base + "/tags/test-v1.3.1", "GET"),
-            (base + "/42", "PATCH"),
-        ]:
-            with self.subTest(address=address):
-                self.assertIsNone(verify(address, method))
+class ActiveReleasePublishingSecurity(unittest.TestCase):
+    def setUp(self):
+        self.saved = tempfile.TemporaryDirectory()
+        self.addCleanup(self.saved.cleanup)
+        self.file = Path(self.saved.name) / "approved.apk"
+        self.file.write_bytes(b"APPROVED")
+        self.digest = hashlib.sha256(self.file.read_bytes()).hexdigest()
+        self.vars = {
+            "SOURCE_SHA": SHA, "RELEASE_TAG": "test-v1.4.1",
+            "RELEASE_VERSION": "1.4.1", "PREVIOUS_RELEASE_ID": "98",
+            "APPROVED_FILE": str(self.file), "EXPECTED_HASH": self.digest,
+        }
 
-    def test_exact_upload_endpoint_and_name_allowed(self):
-        self.assertIsNone(verify(upload + "?name=Zamerovac-v1.3.1.apk", "POST"))
+    def recheck(self, client):
+        with mock.patch.dict(os.environ, self.vars), \
+                mock.patch.object(GATE, "api_client", return_value=client), \
+                mock.patch.object(GATE, "revalidate_current_approval"), \
+                mock.patch.object(GATE, "main_sha", return_value=SHA):
+            GATE.release_recheck()
 
-    def test_wrong_hosts_ports_paths_and_schemes_rejected(self):
-        addresses = [
-            "http://api.github.com/repos/zaplikj30-ui/Zamerovac-android/releases",
-            "https://api.github.com.evil.invalid/repos/zaplikj30-ui/Zamerovac-android/releases",
-            "https://other.invalid/repos/zaplikj30-ui/Zamerovac-android/releases",
-            "https://api.github.com:444/repos/zaplikj30-ui/Zamerovac-android/releases",
-            "https://api.github.com/repos/other/repo/releases",
-            "https://api.github.com/repos/zaplikj30-ui/Zamerovac-android/releases-fake",
-            "https://username:password@api.github.com/repos/zaplikj30-ui/Zamerovac-android/releases",
-            base + "#fragment",
-            base + "?redirect=evil.invalid",
-        ]
-        for address in addresses:
-            with self.subTest(address=address):
-                with self.assertRaises(ValueError):
-                    verify(address, "POST")
+    def test_existing_tag_fails_before_any_publication(self):
+        client = FakeReleaseAPI(tag_exists=True)
+        with self.assertRaisesRegex(RuntimeError, "tag already exists"):
+            self.recheck(client)
+        self.assertFalse(any(x[0] == "/releases/assets/200" for x in client.visited))
 
-    def test_upload_host_cannot_be_used_for_arbitrary_paths(self):
-        for address, method in [
-            (upload + "?name=Zamerovac-v1.3.1.apk", "GET"),
-            (upload.replace("/42/", "/foo/") + "?name=Zamerovac-v1.3.1.apk", "POST"),
-            (upload + "?name=../../x.apk", "POST"),
-            (upload + "?name=Zamerovac-v1.3.1.apk&evil=1", "POST"),
-            (upload + "?name=Zamerovac-v1.3.1.apk&name=other.apk", "POST"),
-            (upload + "?name=", "POST"),
-        ]:
-            with self.subTest(address=address, method=method):
-                with self.assertRaises(ValueError):
-                    verify(address, method)
+    def test_existing_release_fails_even_when_ref_missing(self):
+        client = FakeReleaseAPI(release_exists=True)
+        with self.assertRaisesRegex(RuntimeError, "release already exists"):
+            self.recheck(client)
 
-    def test_all_authenticated_redirects_refused(self):
-        guard = sandbox["RejectAuthenticatedRedirect"]()
-        original = urllib.request.Request(
-            base, headers={"Authorization": "Bearer FAKE_NOT_A_REAL_TOKEN"})
-        for destination in ["https://uploads.github.com/somewhere",
-                            "https://evil.invalid/steal",
-                            "http://api.github.com/unsafe"]:
-            with self.subTest(destination=destination):
-                with self.assertRaisesRegex(ValueError, "must not redirect"):
-                    guard.redirect_request(original, None, 302, "Found", {}, destination)
+    def test_unknown_api_result_fails_closed_without_retry(self):
+        client = FakeReleaseAPI(error=True)
+        with self.assertRaisesRegex(RuntimeError, "synthetic API unavailable"):
+            self.recheck(client)
+        self.assertEqual(len(client.visited), 1)
 
-    def test_workflow_requires_owner_main_and_approved_release(self):
-        self.assertIn("  workflow_dispatch:", YAML)
-        self.assertNotIn("\n  pull_request:", YAML)
-        self.assertNotIn("\n  push:", YAML)
-        self.assertIn("github.actor == 'zaplikj30-ui'", YAML)
-        self.assertIn("github.ref == 'refs/heads/main'", YAML)
-        self.assertIn("inputs.publish_release == true", YAML)
-        self.assertIn("qa_run_id", YAML)
+    def test_modified_approved_apk_stops_before_gh_release(self):
+        self.file.write_bytes(b"TAMPERED")
+        with self.assertRaisesRegex(RuntimeError, "mutated"):
+            self.recheck(FakeReleaseAPI())
 
-    def test_publish_uses_restrictive_opener_not_default_urlopen(self):
-        block = YAML.split("      - name: Publish only explicitly approved RELEASE")[1]
-        block = block.split("      - name: Clean only local signed APK")[0]
-        self.assertIn("trusted_publish_url(url, method)", block)
-        self.assertIn("publish_opener.open(req, timeout=120)", block)
-        self.assertNotIn("urllib.request.urlopen(req, timeout=120)", block)
+    def test_safe_fully_verified_recheck_is_read_only(self):
+        client = FakeReleaseAPI()
+        self.recheck(client)
+        self.assertEqual([p for p, _ in client.visited], [
+            "/releases/latest", "/git/ref/tags/test-v1.4.1", "/releases/tags/test-v1.4.1"
+        ])
+
+    def test_published_asset_hash_is_checked_against_approved_bytes(self):
+        client = FakeReleaseAPI(release_exists=True, payload=b"APPROVED")
+        with mock.patch.dict(os.environ, self.vars), \
+                mock.patch.object(GATE, "api_client", return_value=client):
+            GATE.release_post()
+        client.payload = b"CHANGED"
+        with mock.patch.dict(os.environ, self.vars), \
+                mock.patch.object(GATE, "api_client", return_value=client):
+            with self.assertRaisesRegex(RuntimeError, "SHA256 mismatch"):
+                GATE.release_post()
+
+    def test_cloud_release_only_one_create_no_clobber_and_owner_gate(self):
+        self.assertFalse((ROOT / ".github/workflows/windows-home-apk-release.yml").exists())
+        release = WORKFLOW.split("\n  release:", 1)[1]
+        self.assertEqual(release.count("gh release create"), 1)
+        self.assertNotIn("--clobber", release)
+        self.assertNotIn("--force", release)
+        self.assertNotIn("actions/checkout", release)
+        self.assertNotIn("assemblePreview", release)
+        self.assertIn("--repo \"$GITHUB_REPOSITORY\" --target \"$SOURCE_SHA\"", release)
+        self.assertIn("release-recheck", release)
+        self.assertIn("release-post", release)
+        self.assertEqual(WORKFLOW.count("contents: write"), 1)
+
+    def test_bearer_only_used_with_pinned_github_api_host(self):
+        self.assertIn('"https://api.github.com/repos/" + REPO + path', SOURCE)
+        self.assertIn('class NoRedirect(urllib.request.HTTPRedirectHandler)', SOURCE)
+        self.assertIn('"objects.githubusercontent.com"', SOURCE)
+        self.assertIn('"release-assets.githubusercontent.com"', SOURCE)
+        self.assertNotIn("uploads.github.com", SOURCE)
 
 
 if __name__ == "__main__":

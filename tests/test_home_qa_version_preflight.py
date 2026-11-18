@@ -101,17 +101,20 @@ class HomeQaCodePreflight(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     v.api_read(url, "FAKE_TOKEN")
 
-    def test_workflow_requires_exact_dynamic_preflight(self):
-        workflow = (Path(__file__).resolve().parents[1] /
-                    ".github/workflows/windows-self-hosted-qa.yml").read_text("utf-8")
-        self.assertIn("home_qa_version_preflight import main", workflow)
-        self.assertIn('set "GITHUB_RUN_NUMBER=%QA_PREVIEW_BUILD_OFFSET%"', workflow)
-        self.assertIn("versionCode='%QA_PREVIEW_EXPECTED_CODE%'", workflow)
-        self.assertIn("versionName='%QA_PREVIEW_EXPECTED_VERSION_NAME%'", workflow)
+    def test_current_cloud_build_preserves_dynamic_published_apk_preflight(self):
+        # Owner decision retires the HOME workflow; retain the reusable safety
+        # contract that versionCode comes from the last *published* signed APK.
+        root = Path(__file__).resolve().parents[1]
+        workflow = (root / ".github/workflows/build-apk.yml").read_text("utf-8")
+        gate = (root / "tools/release/apk_gate.py").read_text("utf-8")
+        self.assertIn("python3 tools/release/apk_gate.py build-preflight", workflow)
+        self.assertIn("python3 tools/release/apk_gate.py build-postflight", workflow)
+        self.assertIn('new_code = old["version_code"] + 1', gate)
+        self.assertIn('if semver(version) <= semver(old_version)', gate)
+        self.assertIn('if meta["version_code"] != int(os.environ["NEW_CODE"])', gate)
+        self.assertIn("verifyDriveRegistration assemblePreview", workflow)
         self.assertNotIn('set "GITHUB_RUN_NUMBER=155"', workflow)
-        self.assertNotIn("versionCode='1155'", workflow)
-        self.assertIn("if: always()", workflow)
-        self.assertIn('del /f /q "app\\build\\outputs\\apk\\preview\\app-preview.apk"', workflow)
+        self.assertFalse((root / ".github/workflows/windows-self-hosted-qa.yml").exists())
 
 
 if __name__ == "__main__":
