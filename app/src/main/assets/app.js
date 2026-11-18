@@ -141,7 +141,22 @@ function save(){
    const text=JSON.stringify({...candidate,syncProtocol:2});
    if(!native){localStorage.setItem('zamerovac-data',text);state.syncProtocol=2;persistedSnapshot=text;return reportSaveResult(true)}
    const result=JSON.parse(Native.saveDataChecked(text,expected));
-   if(result?.ok===true){if(candidate!==state)applySavedState(candidate);state.syncProtocol=2;persistedSnapshot=text;window.PendingAudio?.saved?.(result);return reportSaveResult(true)}
+   if(result?.ok===true){
+    if(candidate!==state)applySavedState(candidate);
+    state.syncProtocol=2;persistedSnapshot=text;
+    // A confirmed Native CAS is durable. Never report failure or roll back
+    // the attached media merely because a subsequent UI update throws.
+    let presentationFailed=false;
+    try{window.PendingAudio?.saved?.(result)}catch(error){
+     presentationFailed=true;
+     try{window.PendingAudio?.refresh?.()}catch(ignored){}
+    }
+    try{reportSaveResult(true)}catch(error){presentationFailed=true}
+    if(presentationFailed)try{
+     notify('Uloženo, ale přehled nebo upozornění se nepodařilo aktualizovat. Vrať se do přehledu a zkontroluj jej.');
+    }catch(ignored){}
+    return true;
+   }
    if(result?.ok!==false)throw new Error('Neplatné potvrzení zápisu');
    if(typeof result.current!=='string')throw new Error(result.error||'Zápis nebyl potvrzen');
    const disk=JSON.parse(result.current),base=expected?JSON.parse(expected):initial;
