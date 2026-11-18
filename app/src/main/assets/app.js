@@ -132,6 +132,12 @@ function reportSaveResult(ok){
  }
  return false;
 }
+// UI badge invalidation must not turn an already durable ACK into a false
+// save failure if the presenter/DOM unexpectedly throws.
+function invalidateSyncBadgeAfterSave(){
+ try{window.ZamerovacSyncStatus?.localSaved?.()}
+ catch(error){console.warn('Synchronizační stav ikony se nepodařilo aktualizovat')}
+}
 function save(){
  if(dataLoadFailed){notify('Zakázky nelze načíst. Zápis je zablokovaný, původní data zůstávají chráněná.');return reportSaveResult(false)}
  try{
@@ -139,9 +145,9 @@ function save(){
   let candidate=state,expected=persistedSnapshot;
   for(let attempt=0;attempt<3;attempt++){
    const text=JSON.stringify({...candidate,syncProtocol:2});
-   if(!native){localStorage.setItem('zamerovac-data',text);state.syncProtocol=2;persistedSnapshot=text;return reportSaveResult(true)}
+   if(!native){localStorage.setItem('zamerovac-data',text);state.syncProtocol=2;persistedSnapshot=text;invalidateSyncBadgeAfterSave();return reportSaveResult(true)}
    const result=JSON.parse(Native.saveDataChecked(text,expected));
-   if(result?.ok===true){if(candidate!==state)applySavedState(candidate);state.syncProtocol=2;persistedSnapshot=text;window.PendingAudio?.saved?.(result);return reportSaveResult(true)}
+   if(result?.ok===true){if(candidate!==state)applySavedState(candidate);state.syncProtocol=2;persistedSnapshot=text;invalidateSyncBadgeAfterSave();window.PendingAudio?.saved?.(result);return reportSaveResult(true)}
    if(result?.ok!==false)throw new Error('Neplatné potvrzení zápisu');
    if(typeof result.current!=='string')throw new Error(result.error||'Zápis nebyl potvrzen');
    const disk=JSON.parse(result.current),base=expected?JSON.parse(expected):initial;
@@ -525,7 +531,10 @@ window.onNativeSync=(text)=>{
    if(screen==='browser')showFolder();
   }
   const conflicts=result.data?state.records.filter(r=>r.conflict).length:0;
-  if(result.transport==='cloud-v2'&&window.ZamerovacSyncStatus?.cloud?.(result))return true;
+  if(result.transport==='cloud-v2'&&window.ZamerovacSyncStatus?.cloud?.(result)){
+   if(result.data)window.ZamerovacSyncStatus?.conflicts?.(state.records.filter(r=>r&&r.conflict===true));
+   return true;
+  }
   notify((result.message||'Synchronizace dokončena')+(conflicts?' · zachované konfliktní kopie: '+conflicts:''));return true;
  }catch(e){notify('Synchronizace: '+e.message);return false}
 };
