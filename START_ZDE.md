@@ -13,7 +13,7 @@
 | Konkrétní Android/laser/stylus a fyzické důkazy | [KOMPATIBILITA_ZARIZENI.md](KOMPATIBILITA_ZARIZENI.md) |
 | Jazykové klíče, první další jazyk angličtina | [LOKALIZACE_PLAN.md](LOKALIZACE_PLAN.md), [#14](https://github.com/zaplikj30-ui/Zamerovac-android/issues/14) |
 | Testy funkcí a negativní scénáře | [TESTY_A_OPRAVY.md](TESTY_A_OPRAVY.md), [#28](https://github.com/zaplikj30-ui/Zamerovac-android/issues/28), [#13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13) |
-| HOME procesní hranice (jen s novým owner GO) | [docs/HOME_QA_PREFLIGHT.md](docs/HOME_QA_PREFLIGHT.md) |
+| HOME RETIRED – pouze historické bezpečnostní podklady; neobnovovat aktivní workflow | [docs/HOME_QA_PREFLIGHT.md](docs/HOME_QA_PREFLIGHT.md) |
 | Sync / Google Disk | [#88](https://github.com/zaplikj30-ui/Zamerovac-android/issues/88), [cloud-sync-v2](docs/cloud-sync-v2.md), [Drive API](docs/drive-api-integration.md) |
 | APK, podpis, versionCode, changelog a offline nápověda | [docs/verzovani.md](docs/verzovani.md) |
 | Historie a důkazy předchozího stavu | Git log, původní issues/PR, [archiv rozcestníku](START_ZDE_ARCHIV_DO_2026-11-11.md) |
