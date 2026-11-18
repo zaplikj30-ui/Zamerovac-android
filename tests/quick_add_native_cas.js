@@ -55,7 +55,10 @@ function scene(snapshot=seed){
   promptText:()=>{},closeMenus:()=>{}
  };
  vm.createContext(env);
- vm.runInContext(production,env,{filename:'app-194-cas-media.js'});
+ vm.runInContext(production+'\nwindow.__qa194={newRecord,addRecord,createTextNote,pickMedia,repeatQuickAdd};',env,{filename:'app-194-cas-media.js'});
+ // Expose the product's actual functions also to simplified V8 test harnesses;
+ // on Node's own vm global scope they are already available.
+ Object.assign(env,env.window.__qa194);
  return {
   env,button,requests,notices,locks,views,
   get saved(){return copy(JSON.parse(disk))},
