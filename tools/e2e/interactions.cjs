@@ -28,15 +28,27 @@ async function setup(page){await createCanvas(page,'Gesta – syntetická');awai
     b.id=uid();b.a={x:a.a.x+18/view.zoom,y:a.a.y};
     b.b={x:a.b.x+18/view.zoom,y:a.b.y};
     b.measure='3250,000000009876543';b.unit='mm';
+    const extras=[];
+    for(let i=1;i<=3;i++){
+     const other=JSON.parse(JSON.stringify(a));other.id=uid();
+     other.a={x:a.a.x,y:a.a.y+70*i/view.zoom};
+     other.b={x:a.b.x,y:a.b.y+70*i/view.zoom};
+     extras.push(other);
+    }
     const c={x:(a.a.x+a.b.x)/2,y:(a.a.y+a.b.y)/2+35/view.zoom};
-    current.items.push(b,{id:uid(),type:'note',a:c,b:{...c},text:'',
+    current.items.push(b,...extras,{id:uid(),type:'note',a:c,b:{...c},text:'',
       media:[],color:prefs.color,fontSize:prefs.fontSize,width:prefs.lineWidth});
     if(save()!==true)throw Error('Synthetic fixture was not confirmed saved');
     paint();
     return {aId:a.id,bId:b.id,a:a.a,b:b.a,bEnd:b.b,
+      extras:extras.map(item=>({id:item.id,a:item.a})),
       firstMeasure:a.measure,secondMeasure:b.measure};
    });
    await tool(page,'select');
+   for(const extra of fixture.extras){
+    await clickAt(page,await projected(page,extra.a));await dismiss(page);
+    assert.equal(await page.evaluate(()=>selected),extra.id,'A separate dimension must be selectable');
+   }
    await clickAt(page,await projected(page,fixture.a));await dismiss(page);
    assert.equal(await page.evaluate(()=>selected),fixture.aId,'First dimension must be selected');
    await clickAt(page,await projected(page,fixture.b));await dismiss(page);
@@ -61,7 +73,7 @@ async function setup(page){await createCanvas(page,'Gesta – syntetická');awai
    await redo(page);
    assert.equal(await page.evaluate(id=>current.items.find(i=>i.id===id).b.x,fixture.bId),moved.b.x);
    await page.click('#editorBack');await page.reload();await page.locator('.entry-title').click();
-   assert.equal(await page.evaluate(()=>current.items.length),3);
+   assert.equal(await page.evaluate(()=>current.items.length),6,'Five dimensions and an empty note must persist');
    assert.equal(await page.evaluate(id=>current.items.find(i=>i.id===id).measure,fixture.aId),fixture.firstMeasure);
    assert.equal(await page.evaluate(id=>current.items.find(i=>i.id===id).b.x,fixture.bId),moved.b.x);
    assert.equal(await page.evaluate(()=>current.items.find(i=>i.type==='note')?.text),'');
