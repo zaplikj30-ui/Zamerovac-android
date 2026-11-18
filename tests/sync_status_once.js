@@ -19,7 +19,7 @@ function scene(){
   if(!elements.has(id))elements.set(id,{id,hidden:false,textContent:'',
    dataset:{},title:'',attributes:{},classList:{
     remove(...names){for(const name of names)classes.delete(name)},
-    add(...names){for(const name of names)classes.add(name)
+    add(...names){for(const name of names)classes.add(name)}
    },setAttribute(name,value){this.attributes[name]=value},onclick:null});
   return elements.get(id)
  }
