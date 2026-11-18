@@ -8,7 +8,7 @@ const app=fs.readFileSync('app/src/main/assets/app.js','utf8');
 const peer=fs.readFileSync('app/src/main/assets/peer-sync.js','utf8');
 const html=fs.readFileSync('app/src/main/assets/index.html','utf8');
 assert(app.includes('window.ZamerovacSyncStatus?.error?.(message)'),'Native sync errors must reach status');
-assert(app.includes('window.ZamerovacSyncStatus?.cloud?.(result)'),'Cloud results must reach status');
+assert(app.includes('typeof window.ZamerovacSyncStatus?.cloud')&&app.includes('window.ZamerovacSyncStatus.cloud(result)'),'Cloud results must reach guarded status');
 assert(peer.includes('root.ZamerovacSyncStatus?.peerState?.(state)'),'Peer state must reach status');
 assert(peer.includes('root.ZamerovacSyncStatus?.peerProblem?.(state.problem)'),'Peer problems must reach status');
 assert(html.includes('<script src="sync-status.js"></script>'),'Status presenter not loaded');
