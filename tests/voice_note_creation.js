@@ -32,6 +32,7 @@ function scene(options={}){
  const dom=new Map(),notice=[],menuButtons=Array.from({length:8},(_,i)=>({dataset:{i:String(i)}}));
  let disk=JSON.stringify(options.data||baseline),writes=0,starts=0,stops=0,retained=0,
   failWrites=0,locked=!!options.locked,uidCount=0,folderRenders=0;
+ const audioBytes=new Map(),audioFixture=Uint8Array.from([0,255,1,77,80,52,33,128,90]);
  function element(id){
   if(!dom.has(id)){
    dom.set(id,{id,hidden:true,textContent:'',value:'',dataset:{},
@@ -65,8 +66,8 @@ function scene(options={}){
     if(failWrites>0){failWrites--;return JSON.stringify({ok:false,error:'synthetic disk full'})}
     disk=payload;return JSON.stringify({ok:true,pendingAudioCount:0})
    },
-   startAudio(){starts++;return options.startWorks!==false},
-   stopAudio(){stops++;return options.stopWorks!==false}
+   startAudio(id){starts++;if(options.throwStart)throw new Error('synthetic recorder start error');return options.startWorks!=='retry'?options.startWorks!==false:starts>1},
+   stopAudio(){stops++;if(options.throwStop)throw new Error('synthetic recorder stop error');if(options.stopWorks===false)return false;audioBytes.set(env.window.recording,Uint8Array.from(audioFixture));return true}
   }
  };
  vm.createContext(env);vm.runInContext(production,env,{filename:'production-voice-note.js'});
@@ -78,7 +79,8 @@ function scene(options={}){
   set failWrites(n){failWrites=n},set locked(value){locked=value},
   get disk(){return JSON.parse(disk)},get rawDisk(){return disk},
   get writes(){return writes},get starts(){return starts},get stops(){return stops},
-  get retained(){return retained},get folderRenders(){return folderRenders}
+  get retained(){return retained},get folderRenders(){return folderRenders},
+  get audioBytes(){return audioBytes},get audioFixture(){return audioFixture}
  };
 }
 function voiceNotes(s){return s.env.state.records.filter(r=>r.kind==='note')}
@@ -106,6 +108,7 @@ function assertOldPhoto(s){
  assert.equal(s.stops,1);assert.equal(voiceNotes(s)[0].media.length,1);
  const audioId=voiceNotes(s)[0].media[0];
  assert.equal(s.disk.records.find(r=>r.kind==='note').media[0],audioId);
+ assert.deepEqual([...s.audioBytes.get(audioId)],[...s.audioFixture],'Synthetic original audio bytes mutated');
  assert.match(s.element('recordAudio').textContent,/Spustit/);
  s.element('saveNote').onclick();
  assert.equal(s.env.noteActive,null,'Uložit did not close note');
@@ -160,6 +163,8 @@ function assertOldPhoto(s){
  assert.equal(s.disk.records.find(r=>r.kind==='note').media.length,0);
  assert.equal(s.env.save(),true);
  assert.equal(s.disk.records.find(r=>r.kind==='note').media.length,0,'later save committed rejected audio');
+ assert.equal(s.audioBytes.size,1,'Failed CAS deleted retained original fixture');
+ assert.deepEqual([...s.audioBytes.values().next().value],[...s.audioFixture],'Retained audio fixture was modified');
  assertOldPhoto(s);
 }
 {
@@ -173,4 +178,50 @@ function assertOldPhoto(s){
  assert.equal(original.media.length,1,'existing note lost recording');
  assert.equal(s.disk.records.find(r=>r.id==='existing-note').media[0],original.media[0]);
 }
-console.log('PASS #197: menu/folder/root, explicit start-stop-save, restart, lock, denied mic, failed stop/CAS, original media/precision, existing note');
+
+{
+ const s=scene({startWorks:'retry'});s.openVoice();
+ s.element('recordAudio').onclick();
+ assert.equal(s.starts,1);assert(!s.env.window.recording,'Denied-first start cannot be active');
+ assert.equal(typeof s.env.window.__audioPermissionRetry,'function','Permission retry callback missing');
+ s.env.window.__audioPermissionRetry();
+ assert.equal(s.starts,2);assert(s.env.window.recording,'Explicit permission-grant retry did not start');
+ assert.equal(s.env.window.__audioPermissionRetry,null,'Successful permission retry callback not cleared');
+ s.element('recordAudio').onclick();assert.equal(s.stops,1);
+}
+{
+ const s=scene({startWorks:'retry'});s.openVoice();
+ s.element('recordAudio').onclick();s.locked=true;
+ s.env.window.__audioPermissionRetry();
+ assert.equal(s.starts,1,'Permission callback started inside locked note');
+ assert(!s.env.window.recording);
+ assert.equal(s.env.window.__audioPermissionRetry,null,'Stale permission callback not cleared');
+}
+{
+ const s=scene({throwStart:true});s.openVoice();s.element('recordAudio').onclick();
+ assert.equal(s.starts,1);assert(!s.env.window.recording);
+ assert.equal(voiceNotes(s)[0].media.length,0);
+ assert(s.notice.some(x=>/Mikrofon: nahrávání/.test(x)));
+}
+{
+ const s=scene({throwStop:true});s.openVoice();s.element('recordAudio').onclick();
+ s.element('recordAudio').onclick();
+ assert.equal(s.stops,1);assert.equal(s.retained,1);
+ assert.equal(voiceNotes(s)[0].media.length,0,'Throwing native stop attached invalid media');
+}
+{
+ const s=scene();s.openVoice();s.element('recordAudio').onclick();
+ assert.equal(s.element('saveNote').onclick(),true,'Save while recording should stop and commit first');
+ assert.equal(s.stops,1);
+ assert.equal(s.disk.records.find(r=>r.kind==='note').media.length,1);
+ assert.equal(s.env.noteActive,null);
+}
+{
+ const s=scene();s.openVoice();s.element('recordAudio').onclick();s.failWrites=1;
+ assert.equal(s.element('saveNote').onclick(),false,'Failed audio CAS must keep note view open');
+ assert.equal(s.env.noteActive,voiceNotes(s)[0]);
+ assert.equal(voiceNotes(s)[0].media.length,0);
+ assert.equal(s.retained,1);
+ assert.equal(s.audioBytes.size,1,'Failed close discarded retained audio fixture');
+}
+console.log('PASS #197: voice creation, permission retry/denial, native exceptions, stop-on-save, CAS/disk-full, lock, restart, owner, original media/precision');
