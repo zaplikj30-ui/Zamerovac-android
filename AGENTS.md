@@ -10,6 +10,14 @@ Repo `zaplikj30-ui/Zamerovac-android`; Převaděč spojitosti a Konfigurátor–
 - **NEZÁVISLÝ KONTROLOR** není autor, kontroluje současný SHA/base, kumulativní diff, kontrakty, bezpečnost i skutečná testovací data; neopravuje. Nález vrací autorovi k novému cyklu a následnému review. **Self-review ≠ nezávislé review; SOURCE review ≠ runtime test.**
 - **VLASTNÍK** schvaluje zásadní změny, technologii, merge, vydání a výdaje. Schválení vázej na konkrétní SHA/rozsah. Koordinátor po nezávislé kontrole ověřuje evidenci a určí další krok. Jeden celek dokončuje jeden autor.
 
+### Přímé předávání bez zbytečných mezikroků
+
+- Po dokončení vlastních testů a kumulativního self-review **programátor předá PR přímo určenému nezávislému kontrolorovi**; nemusí žádat koordinátora o přeposlání. Kontrolor ověří přesné HEAD/base, diff, bezpečnost a důkazy. **Běžný opravitelný nález vrací přímo stejnému autorovi**, který opraví, retestuje, zapíše nové SHA a znovu předá nezávislé kontrole. Kontrolor kód sám neopravuje.
+- **KOORDINÁTOROVI okamžitě:** nejasný/blokující nález, vysoké riziko pro data či bezpečnost, nevyřešitelný FAIL, střet autorů, nutná změna zadání/architektury/technologie, chybějící schválení či zásadní rozhodnutí. **Po dvou neúspěšných opravných cyklech téže vady** eskalovat místo třetího automatického pokusu. Koordinátor porovná malou opravu, jiné prostředí/AI a změnu technické cesty a rozhodne POKRAČOVAT / ZMĚNIT SMĚR / ZASTAVIT.
+- **KOORDINÁTOROVI po dokončení:** nezávislý verdikt pro poslední SHA včetně otevřených NOT RUN/BLOCKED; SOURCE APPROVE bez nutných runtime důkazů neznamená hotovo ani MERGE GO. Schvalování Actions, významného rozsahu, merge, APK a výdajů zůstává u vlastníka podle dosavadních pravidel.
+- **Každé uživatelské předání krátce a adresně:** `KOMU: [konkrétní chat/role] · CO: [jedna věta – výsledek či požadovaný krok] · ODKAZ: [přímá URL na PR, nejlépe na konkrétní komentář/review]`. Celé zadání, SHA, testy, nalezené chyby a další krok musí být **předem zapsány v GitHub PR/issue**; stejný dlouhý text nekopírovat do každého chatu. Příjemce odkaz opravdu otevře a ověří aktuálnost. Pokud nemá přístup k podkladům, přiložit potřebný obsah, nevyvozovat jej z názvu odkazu. Chaty si úkoly **nepředávají automaticky**: krátký text/odkaz uživatel doručí správnému chatu.
+
+
 ## GitHub, důkazy a komunikace
 
 - Před prací/zápisem/merge ověř [AGENTS](AGENTS.md), [START](START_ZDE.md), [#42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42), relevantní issues/PR/komentáře, kód, HEAD/base, větve, CI a Releases. Při kolizi/SHA driftu **STOP**; izolovaná větev/draft PR, žádný přepis cizí práce ani opakovaný audit beze změny.
