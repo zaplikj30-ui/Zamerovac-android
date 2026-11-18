@@ -1,5 +1,5 @@
 'use strict';
-const {suite,assert,createCanvas,tool,drag,clickAt,editSelected,record,projected}=require('./harness.cjs');
+const {suite,assert,createCanvas,tool,drag,clickAt,editSelected,record,projected,redo}=require('./harness.cjs');
 async function dismiss(page){if(await page.locator('#modal').isVisible())await page.click('#cancelModal')}
 async function setup(page){await createCanvas(page,'Gesta – syntetická');await tool(page,'dimension');await drag(page,{x:100,y:180},{x:470,y:360});await editSelected(page);await page.fill('#measureInput','1250,000000123');await page.fill('#dimensionCaption','Český <script>window.__xss=1</script> 😀');await page.click('#okModal');return record(page)}
 (async()=>suite('interactions',async test=>{
@@ -20,6 +20,54 @@ async function setup(page){await createCanvas(page,'Gesta – syntetická');awai
    await page.waitForTimeout(80);evidence(await page.evaluate(()=>({events:__events,pointers:[...pointers.keys()],magnifierPoint,hidden:document.querySelector('#loupe').hidden})));await page.waitForFunction(()=>pointers.size===0&&document.querySelector('#loupe').hidden);assert.deepEqual(await record(page),original);await cdp.detach();
   });
   await page.click('#editorBack');await page.reload();await page.locator('.entry-title').click();assert.deepEqual(await record(page),original);assert.equal(await page.evaluate(()=>window.__xss),undefined);evidence({taps:[1,2,3],endpoints:2,jitterPx:.5,touchCancel:true});
+  await step('Two nearby dimension grips and an empty note: real mouse clicks, exact saved values',async()=>{
+   // Synthetic fixture is staged through the production save; selection and
+   // dragging below use actual trusted Chromium pointer events, not stageDown().
+   const fixture=await page.evaluate(()=>{
+    const a=current.items[0],b=JSON.parse(JSON.stringify(a));
+    b.id=uid();b.a={x:a.a.x+18/view.zoom,y:a.a.y};
+    b.b={x:a.b.x+18/view.zoom,y:a.b.y};
+    b.measure='3250,000000009876543';b.unit='mm';
+    const c={x:(a.a.x+a.b.x)/2,y:(a.a.y+a.b.y)/2+35/view.zoom};
+    current.items.push(b,{id:uid(),type:'note',a:c,b:{...c},text:'',
+      media:[],color:prefs.color,fontSize:prefs.fontSize,width:prefs.lineWidth});
+    if(save()!==true)throw Error('Synthetic fixture was not confirmed saved');
+    paint();
+    return {aId:a.id,bId:b.id,a:a.a,b:b.a,bEnd:b.b,
+      firstMeasure:a.measure,secondMeasure:b.measure};
+   });
+   await tool(page,'select');
+   await clickAt(page,await projected(page,fixture.a));await dismiss(page);
+   assert.equal(await page.evaluate(()=>selected),fixture.aId,'First dimension must be selected');
+   await clickAt(page,await projected(page,fixture.b));await dismiss(page);
+   assert.equal(await page.evaluate(()=>selected),fixture.bId,
+    'A closer overlapping endpoint must beat the previously selected grip');
+   const midpoint={x:(fixture.a.x+fixture.b.x)/2,y:(fixture.a.y+fixture.b.y)/2};
+   const beforeTap=await page.evaluate(()=>JSON.stringify(current.items));
+   await clickAt(page,await projected(page,midpoint));await dismiss(page);
+   assert.equal(await page.evaluate(()=>selected),fixture.bId,
+    'At equally close endpoints the already-selected dimension should remain active');
+   assert.equal(await page.evaluate(()=>JSON.stringify(current.items)),beforeTap,
+    'Tapping must never change precise geometry or media');
+   const end=await projected(page,fixture.bEnd);
+   await drag(page,end,{x:end.x+27,y:end.y+17});
+   const moved=await page.evaluate(id=>JSON.parse(JSON.stringify(current.items.find(i=>i.id===id))),fixture.bId);
+   assert(moved&&moved.b.x!==fixture.bEnd.x,'Drag must move the chosen endpoint');
+   assert.equal(moved.measure,fixture.secondMeasure);
+   assert.equal(moved.unit,'mm');
+   assert.equal(await page.evaluate(id=>current.items.find(i=>i.id===id).measure,fixture.aId),fixture.firstMeasure);
+   await page.click('#undo');
+   assert.equal(await page.evaluate(id=>current.items.find(i=>i.id===id).b.x,fixture.bId),fixture.bEnd.x);
+   await redo(page);
+   assert.equal(await page.evaluate(id=>current.items.find(i=>i.id===id).b.x,fixture.bId),moved.b.x);
+   await page.click('#editorBack');await page.reload();await page.locator('.entry-title').click();
+   assert.equal(await page.evaluate(()=>current.items.length),3);
+   assert.equal(await page.evaluate(id=>current.items.find(i=>i.id===id).measure,fixture.aId),fixture.firstMeasure);
+   assert.equal(await page.evaluate(id=>current.items.find(i=>i.id===id).b.x,fixture.bId),moved.b.x);
+   assert.equal(await page.evaluate(()=>current.items.find(i=>i.type==='note')?.text),'');
+   evidence({nativeModel:false,syntheticFixture:true,physicalEvents:true,
+    endpointDistancePx:18,overlappingNote:true,undoRedo:true,reopen:true});
+  });
  });
  await test('pan_zoom_fit_and_repeated_reopen',async({page,step,evidence})=>{
   const original=await setup(page),before=await page.evaluate(()=>({...view}));
