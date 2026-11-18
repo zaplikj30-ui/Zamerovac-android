@@ -11,6 +11,7 @@ Tato složka je **rozcestník**, nikoli druhá databáze chyb. **Zdroj pravdy js
 | P2 | Opakované hlášení o spárování/synchronizaci. Příčina **NEOVĚŘENA**. | [#192](https://github.com/zaplikj30-ui/Zamerovac-android/issues/192) |
 | P2 | Rychlé tlačítko vlevo dole zůstává na fotografii místo poslední akce. V aktuální cestě kódu **neimplementováno**. | [#194](https://github.com/zaplikj30-ui/Zamerovac-android/issues/194) |
 | P2 | Uživatel hlásí prodlevu při vytváření složky; příčina/latence **NEOVĚŘENA**. | [#195](https://github.com/zaplikj30-ui/Zamerovac-android/issues/195) |
+| P2 (UX) | Schválené zpřehlednění nastavení do 5 kategorií, **bez Bosch jako hlavní kategorie**. **Neimplementováno.** | [#196](https://github.com/zaplikj30-ui/Zamerovac-android/issues/196) |
 
 **Schválený návrh UX, ne implementace:** stavové ikony synchronizace a omezení rušivých toastů: [#38 – rozhodnutí](https://github.com/zaplikj30-ui/Zamerovac-android/issues/38#issuecomment-6987009110). Stav selhání = zřetelný křížek/vykřičník a slovní popis, ne pouhá tečka.
 
@@ -25,6 +26,8 @@ K 18. 11. 2026 bylo pro původní hlášení #190–#192 v chatu zpracováno **5
 
 
 **Novější video k #194–#195:** `1000095380.mp4` (23,06 s) je v chatu; pro zkratku byl připraven úsporný výřez spodní lišty `shortcut-evidence-2026-11-18.jpg` (150 511 B, SHA256 `4db62c624b2ede0871b474df59f1aef079f7b37d38a84ebe595ad8e6fcdbd33f`). Ani tyto binární soubory zatím nejsou na GitHubu. Chybné původní tvrzení, že se ikona správně změnila na složku, bylo po kontrolním prohlédnutí videa a současného kódu výslovně opraveno.
+
+**Novější video k #196:** `1000095381.mp4` (~6,35 s, 8,4 MB) bylo v chatu zmenšeno bez metadat na `nastaveni-neprehledne.mp4` (400 250 B, SHA256 `b92f5040b52e9e30022b23a8f3da97be74b5b0ccb92a17e043f4b6de0f8a70e7`), samostatný snímek `nastaveni-snim.jpg` (~58 kB). Úsporné přílohy jsou pouze v chatu; **nejsou nahrané na GitHub**. Jde o schválený směr navigace a ergonomie, nikoli o výsledek testu nebo změnu fungování aplikace.
 
 ## Jak evidovat nové chyby
 
