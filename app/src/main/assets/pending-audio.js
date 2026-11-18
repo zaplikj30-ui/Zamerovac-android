@@ -51,7 +51,12 @@
   if(!banner){banner=document.createElement('button');banner.id='pendingAudioBanner';banner.type='button';banner.className='outline';banner.onclick=show;document.querySelector('#browserView')?.prepend(banner)}
   banner.textContent=t('title');
  }
- function refresh(){if(native&&typeof Native.pendingAudio==='function')bannerCount(list().length)}
+ function refresh(){
+  if(!native||typeof Native.pendingAudio!=='function')return;
+  const count=list().length; // list() retains a needs-review entry on unreadable journals.
+  bannerCount(count);
+  if(count===0)lastSavedWarning=null; // A confirmed empty journal starts a new warning cycle.
+ }
  // A native save already checked the audio journal. Warn only when the
  // reported pending state changes; keep the persistent banner visible.
  let lastSavedWarning=null;
