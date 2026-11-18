@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = (ROOT / '.github/workflows/build-apk.yml').read_text(encoding='utf-8')
 GATE = (ROOT / 'tools/release/apk_gate.py').read_text(encoding='utf-8')
 DESIGN = (ROOT / 'docs/qa/CHATGPT_APK_DISPATCH_DESIGN.md').read_text(encoding='utf-8')
+CHROMIUM = (ROOT / '.github/workflows/chromium-simple.yml').read_text(encoding='utf-8')
 
 
 def job(name):
@@ -59,6 +60,21 @@ class CloudReleaseSafetyGateTest(unittest.TestCase):
         self.assertIn('assemblePreview', build)
         self.assertIn('upload-artifact@v4', build)
         self.assertNotIn('gh release create', build)
+
+    def test_build_stages_historical_qa_objects_before_js(self):
+        # Build and QUICK must stage identical reviewed reference objects.
+        build = job('build')
+        marker = '      - name: Existing JS/Python/Drive regressions\n'
+        self.assertEqual(build.count(marker), 1)
+        step = build.split(marker, 1)[1].split('      - name:', 1)[0]
+        expected = [line.strip() for line in CHROMIUM.splitlines()
+                    if line.strip().startswith('git fetch --no-tags origin ')]
+        self.assertEqual(len(expected), 1)
+        self.assertEqual(step.count(expected[0]), 1)
+        self.assertLess(step.index('set -euo pipefail'), step.index(expected[0]))
+        self.assertLess(step.index(expected[0]), step.index('for file in tests/*.js'))
+        self.assertNotIn('|| true', step)
+        self.assertNotIn('git checkout', step)
 
     def test_previous_published_apk_determines_next_version_code(self):
         for snippet in ('def previous(', 'def inspect_apk(', 'SIGNER =', 'PACKAGE =',
