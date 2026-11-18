@@ -524,7 +524,22 @@ function hitAnnotation(point){
  // Endpoint grips take priority over captions and the move area, even on
  // first selection. In short segments the middle 40% remains a move zone.
  const activeItem=(current?.items||[]).find(item=>item.id===selected);
- const grip=(activeItem&&nearestHandle(point,activeItem))||nearestHandle(point);
+ const closestGrip=nearestHandle(point);
+ let grip=closestGrip;
+ // A clearly closer grip must not be stolen by a previously selected item.
+ // Only compare the active grip when the nearest grip belongs elsewhere.
+ if(activeItem&&closestGrip&&closestGrip.item!==activeItem){
+  const activeGrip=nearestHandle(point,activeItem);
+  if(activeGrip){
+   const screenDistance=handle=>{
+    const p=worldToScreen(handle.point);
+    return Math.hypot(point.x-p.x,point.y-p.y);
+   };
+   // Seven screen pixels is the existing drag-jitter threshold: in a
+   // truly ambiguous overlap retain the active grip, not the distant one.
+   if(screenDistance(activeGrip)<=screenDistance(closestGrip)+7)grip=activeGrip;
+  }
+ }
  if(grip)return grip.item;
  const label=nearestLabel(point);
  if(label?.item)return label.item;
