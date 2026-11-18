@@ -28,6 +28,82 @@ suite('latency',async test=>{
   });
   await page.reload();assert.equal(await page.evaluate(()=>state.records.length),51);
   evidence({platform:'Linux Chromium/localStorage; synthetic hierarchy and exact editable dimensions',samples});
+
+  // Real Chromium UI click/commit/render/readback. Browser localStorage is not Android disk.
+  const folderUi=[];
+  await page.evaluate(()=>{
+   window.__folderProbe={saves:[],renders:[]};
+   const save0=window.save,render0=window.showFolder;
+   if(typeof save0!=='function'||typeof render0!=='function')throw Error('Missing app save/render functions');
+   window.save=function(...a){
+    const start=performance.now(),ok=save0.apply(this,a);
+    __folderProbe.saves.push({ms:performance.now()-start,ok});return ok;
+   };
+   window.showFolder=function(...a){
+    const start=performance.now(),result=render0.apply(this,a);
+    __folderProbe.renders.push(performance.now()-start);return result;
+   };
+  });
+  for(let i=0;i<3;i++){
+   const title='Složka UI '+i;
+   await page.click('#createBtn');
+   await page.locator('#newMenu .choice').filter({hasText:'Nová složka'}).click();
+   await page.fill('#promptValue',title);
+   await page.click('#okModal');
+   assert.equal(await page.locator('.entry-title',{hasText:title}).count(),1);
+   const info=await page.evaluate(name=>{
+    const records=JSON.parse(localStorage.getItem('zamerovac-data')).records;
+    return {count:records.filter(r=>r.title===name).length,save:__folderProbe.saves.at(-1),paint:__folderProbe.renders.at(-1)};
+   },title);
+   assert.equal(info.count,1,'Folder was displayed but not saved');
+   assert.equal(info.save.ok,true,'Save was not acknowledged');
+   folderUi.push({case:i,saveJsMs:info.save.ms,showFolderJsMs:info.paint});
+  }
+  // Two synthetic DOM click dispatches during the same modal must not duplicate a record.
+  await page.click('#createBtn');
+  await page.locator('#newMenu .choice').filter({hasText:'Nová složka'}).click();
+  await page.fill('#promptValue','Složka dvojklik');
+  await page.evaluate(()=>{const button=document.querySelector('#okModal');button.click();button.click()});
+  assert.equal(await page.locator('.entry-title',{hasText:'Složka dvojklik'}).count(),1);
+  assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('zamerovac-data')).records.filter(r=>r.title==='Složka dvojklik').length),1);
+  await page.reload();
+  for(const title of ['Složka UI 0','Složka UI 1','Složka UI 2','Složka dvojklik'])
+   assert.equal(await page.locator('.entry-title',{hasText:title}).count(),1,'Folder missing after real browser reload');
+  evidence({platform:'Chromium localStorage (no Android I/O)',folderUi,doubleDomClick:true,reload:true});
+  // A separate synthetic native CAS bridge: negative failure must leave the modal and disk unchanged.
+  await nativeStorage(page);
+  await page.evaluate(()=>{
+   window.__folderBridge={calls:[],pendingRequests:0};
+   Native.pendingAudio=()=>{__folderBridge.pendingRequests++;return JSON.stringify([{issue:'journal-uncertain',state:'needs-review',available:false}])};
+   const saved=Native.saveDataChecked;
+   Native.saveDataChecked=function(text,expected){
+    const t=performance.now(),response=JSON.parse(saved.call(this,text,expected));
+    __folderBridge.calls.push({ok:response.ok,bridgeModelMs:performance.now()-t});
+    return JSON.stringify(response.ok?{...response,audioPending:true,pendingAudioCount:1}:response);
+   };
+  });
+  await page.click('#createBtn');
+  await page.locator('#newMenu .choice').filter({hasText:'Nová složka'}).click();
+  await page.fill('#promptValue','Složka chyba disku');
+  await page.evaluate(()=>{syntheticWriteFailure=true});
+  await page.click('#okModal');
+  assert.equal(await page.locator('#modal').isVisible(),true,'Disk failure closed folder form');
+  assert.equal(await page.evaluate(()=>state.records.some(r=>r.title==='Složka chyba disku')),false,'Rejected folder escaped into live state');
+  await page.evaluate(()=>{syntheticWriteFailure=false});
+  await page.click('#okModal');
+  assert.equal(await page.locator('.entry-title',{hasText:'Složka chyba disku'}).count(),1);
+  const bridge=await page.evaluate(()=>({
+   calls:__folderBridge.calls,
+   pendingRequests:__folderBridge.pendingRequests,
+   diskCount:JSON.parse(syntheticDisk).records.length,
+   pendingVisible:!!document.querySelector('#pendingAudioBanner')
+  }));
+  assert.equal(bridge.calls.length,2,'Expected one failed and one accepted model CAS');
+  assert.equal(bridge.calls[0].ok,false);assert.equal(bridge.calls[1].ok,true);
+  assert.equal(bridge.diskCount,1,'Retry created duplicate folder');
+  assert(bridge.pendingVisible,'Uncertain audio warning must remain visible');
+  evidence({platform:'Chromium + mock Native CAS/audio (NOT Android)',bridge});
+
  });
  for(const size of [[1200,800],[6000,4000]])await test('photo_and_gallery_'+size.join('x'),async({page,evidence,directory})=>{
   const bytes=await png(page,...size),samples=[];
