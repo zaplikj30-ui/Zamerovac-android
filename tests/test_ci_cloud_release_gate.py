@@ -98,9 +98,22 @@ class CloudReleaseSafetyGateTest(unittest.TestCase):
         self.assertEqual(WORKFLOW.count('github.run_attempt == 1'), 3)
         self.assertNotIn('cancel-in-progress: true', WORKFLOW)
 
-    def test_home_legacy_bypass_documented_as_merge_blocker(self):
-        self.assertIn('windows-home-apk-release.yml', DESIGN)
-        self.assertIn('MERGE STOP', DESIGN)
+    def test_home_workflow_retired_and_no_active_legacy_release_bypass(self):
+        # Explicit owner decision #6978003077: both HOME workflows are gone.
+        # Historical design discussion is retained; only active YAML may run.
+        workflows = ROOT / ".github" / "workflows"
+        for path in ('windows-home-apk-release.yml', 'windows-self-hosted-qa.yml'):
+            self.assertFalse((workflows / path).exists(), 'retired HOME entrypoint reappeared')
+        active = list(workflows.glob('*.yml'))
+        self.assertTrue(active, 'no active workflow files found')
+        for path in active:
+            with self.subTest(path=path.name):
+                text = path.read_text(encoding='utf-8')
+                self.assertNotIn('runs-on: [self-hosted', text)
+                self.assertNotIn('zamerovac-qa]', text)
+                if 'gh release create' in text:
+                    self.assertEqual(path.name, 'build-apk.yml')
+        self.assertIn('HOME RETIRED', DESIGN)
 
 
 if __name__ == '__main__':
