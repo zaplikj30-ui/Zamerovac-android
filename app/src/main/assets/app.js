@@ -461,19 +461,31 @@ function finishNoteRecording(){
  let recorded=false;
  try{recorded=Native.stopAudio()===true}catch(error){notify('Nahrávání se nepodařilo bezpečně ukončit. Originál zůstává k prověření.')}
  window.recording=null;noteRecordingOwner=null;$('recordAudio').textContent='▶ Spustit nahrávání';
- if(!recorded){if(window.PendingAudio)window.PendingAudio.retained();else notify('Záznam hlasu nebyl bezpečně uložen. Poznámka zůstává otevřená.');return false}
+ // Refresh the existing native recovery inventory for every unattached recording.
+ const showRetainedAudio=()=>{
+  if(typeof window.PendingAudio?.retained==='function')window.PendingAudio.retained();
+  else{window.PendingAudio?.refresh?.();notify('Hlas nebyl připojen. Původní nahrávku zkontroluj v Uchovaných hlasových nahrávkách.')}
+ };
+ if(!recorded){showRetainedAudio();return false}
  const target=owner&&state.records.find(r=>r===owner);
- if(!target||target.deleted||target.kind!=='note'||window.isRecordLocked?.(target)){notify('Původní poznámka není dostupná nebo je uzamčená; hlas nebyl připojen k jiné poznámce.');return false}
- // The native journal retains the original bytes. Never let a later unrelated
- // save publish an attachment rejected by the durable CAS writer.
- const previous={media:[...(target.media||[])],rev:target.rev,updatedAt:target.updatedAt,syncClock:target.syncClock,hierarchyConflict:target.hierarchyConflict};
- const hadHierarchyConflict=Object.hasOwn(target,'hierarchyConflict');
- if(!target.media.includes(id)){target.media.push(id);touch(target)}
- if(!save()){
-  target.media=previous.media;target.rev=previous.rev;target.updatedAt=previous.updatedAt;target.syncClock=previous.syncClock;
-  if(hadHierarchyConflict)target.hierarchyConflict=previous.hierarchyConflict;else delete target.hierarchyConflict;
-  window.PendingAudio?.retained?.();
-  return false;
+ if(!target||target.deleted||target.kind!=='note'||window.isRecordLocked?.(target)){
+  notify('Původní poznámka není dostupná nebo je uzamčená; hlas nebyl připojen k jiné poznámce.');
+  showRetainedAudio();return false;
+ }
+ // A rejected or throwing touch/CAS must not publish this ID in any later save.
+ // Preserve property presence as well as values (touch deletes hierarchyConflict).
+ const fields=['media','rev','updatedAt','syncClock','hierarchyConflict'];
+ const previous=fields.map(key=>({key,had:Object.hasOwn(target,key),value:key==='media'&&Array.isArray(target.media)?[...target.media]:target[key]}));
+ let confirmed=false,problem=null;
+ try{
+  if(!Array.isArray(target.media))throw new Error('Neplatný seznam příloh poznámky');
+  if(!target.media.includes(id)){target.media.push(id);touch(target)}
+  confirmed=save()===true;
+ }catch(error){problem=error}
+ if(!confirmed){
+  for(const {key,had,value} of previous){if(had)target[key]=value;else delete target[key]}
+  if(problem)notify('Připojení nahrávky se nepodařilo bezpečně dokončit.');
+  showRetainedAudio();return false;
  }
  if(noteActive===target)renderNoteAttachments();return true;
 }
