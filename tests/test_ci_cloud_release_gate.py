@@ -14,8 +14,9 @@ DESIGN = (ROOT / 'docs/qa/CHATGPT_APK_DISPATCH_DESIGN.md').read_text(encoding='u
 
 def job(name):
     start = WORKFLOW.index('  ' + name + ':\n')
-    end = WORKFLOW.find('\n  ', start + 3)
-    return WORKFLOW[start:end if end >= 0 else None]
+    following = WORKFLOW[start + 3:]
+    next_job = re.search(r'(?m)^  [a-z][a-z_-]*:', following)
+    return WORKFLOW[start:start + 3 + next_job.start() if next_job else None]
 
 
 class CloudReleaseSafetyGateTest(unittest.TestCase):
