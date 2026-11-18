@@ -1,6 +1,6 @@
 # DESIGN #183 + #184: ChatGPT → SESTAVIT → VYDAT → fyzicky otestovat
 
-**STAV: OPRAVENÝ NÁVRH K NEZÁVISLÉMU DESIGN/SECURITY RE-REVIEW; NEIMPLEMENTOVÁNO.** Jediný společný [PR #186](https://github.com/zaplikj30-ui/Zamerovac-android/pull/186) pro [#183](https://github.com/zaplikj30-ui/Zamerovac-android/issues/183) (spuštění z běžného ChatGPT) a [#184](https://github.com/zaplikj30-ui/Zamerovac-android/issues/184) (oddělené BUILD, RELEASE a fyzické ověření). ChatGPT Work je **zakázán**. Dokument **není** souhlas ke spuštění, implementaci, merge ani vydání.
+**STAV: DESIGN SCHVÁLEN na `ce92628f3dfa052ff4bbaf69fd9b7104a6e48015`; implementační návrh v témže draft PR #186, SOURCE/SECURITY RE-REVIEW a živý RUN dosud NOT RUN.** Jediný společný [PR #186](https://github.com/zaplikj30-ui/Zamerovac-android/pull/186) pro [#183](https://github.com/zaplikj30-ui/Zamerovac-android/issues/183) (spuštění z běžného ChatGPT) a [#184](https://github.com/zaplikj30-ui/Zamerovac-android/issues/184) (oddělené BUILD, RELEASE a fyzické ověření). ChatGPT Work je **zakázán**. Dokument **není** souhlas ke spuštění, implementaci, merge ani vydání.
 
 ## 0. Skutečný základ a hranice
 
@@ -133,3 +133,11 @@ Pro ruční workflow_dispatch: repo/main, github.actor a github.triggering_actor
 - [GitHub REST – artifacts](https://docs.github.com/en/rest/actions/artifacts).
 - [GitHub REST – workflow runs](https://docs.github.com/en/rest/actions/workflow-runs).
 - Skutečný main **.github/workflows/build-apk.yml**, **.github/workflows/windows-home-apk-release.yml**, **config/app-version.properties**, **AGENTS.md**, **START_ZDE.md**, [#42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42).
+
+## Stav implementace po schválení DESIGN (18. 11. 2026)
+
+Nezávislé [APPROVE DESIGN](https://github.com/zaplikj30-ui/Zamerovac-android/pull/186#pullrequestreview-5954205381) autorizovalo pouze implementaci, ne její spuštění ani merge. V témže PR #186 je nyní navržena změna `.github/workflows/build-apk.yml` a pomocné soubory `tools/release/apk_gate.py`, `tests/test_apk_gate.py` bez zásahu do produktových funkcí, package ID a podpisu. **Pouze SOURCE / offline kontrola**, nikoli prokázaný běh GitHub Actions. Finální SHA, cílené testy a rizika jsou uvedeny v navazujícím PR komentáři.
+
+**BLOCKED před merge:** `.github/workflows/windows-home-apk-release.yml` stále obsahuje starou možnost přímého sestavení a vydání z HOME. Vlastník výslovně zakázal soubor bez zvláštního souhlasu měnit či mazat. HOME necháváme OFF a beze změn. Dokud není vydávací bypass technicky uzavřený samostatně schválenou změnou, **MERGE STOP**. Samotné nastavení OFF nenahrazuje zrušení vydávací cesty.
+
+**PILOT/BUILD/RELEASE/Android fyzický test NOT RUN**. Poslední reálná APK `test-v1.4.0` nedotčena. Žádné nové spouštění, merge ani automatický release.
