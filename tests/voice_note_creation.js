@@ -49,7 +49,7 @@ function scene(options={}){
  const env={
   document,$:element,window:{isRecordLocked:()=>locked,
    PendingAudio:{saved(){},retained(){retained++}}},
-  native:true,currentFolder:options.currentFolder??'folder-main',
+  native:true,currentFolder:Object.hasOwn(options,'currentFolder')?options.currentFolder:'folder-main',
   current:null,noteActive:null,screen:'browser',state:JSON.parse(disk),
   initial:JSON.parse(JSON.stringify(baseline)),dataLoadFailed:false,
   persistedSnapshot:disk,syncDeviceId:'00000000-0000-4000-8000-000000000001',
