@@ -9,6 +9,8 @@ Tato složka je **rozcestník**, nikoli druhá databáze chyb. **Zdroj pravdy js
 | P1 | Opakované varování na uchované hlasové nahrávky. Příčina **NEOVĚŘENA**. | [#190](https://github.com/zaplikj30-ui/Zamerovac-android/issues/190) |
 | P1 | Zasekávání editoru a nespolehlivé uchopení kót. Příčina **NEOVĚŘENA**. | [#191](https://github.com/zaplikj30-ui/Zamerovac-android/issues/191) |
 | P2 | Opakované hlášení o spárování/synchronizaci. Příčina **NEOVĚŘENA**. | [#192](https://github.com/zaplikj30-ui/Zamerovac-android/issues/192) |
+| P2 | Rychlé tlačítko vlevo dole zůstává na fotografii místo poslední akce. V aktuální cestě kódu **neimplementováno**. | [#194](https://github.com/zaplikj30-ui/Zamerovac-android/issues/194) |
+| P2 | Uživatel hlásí prodlevu při vytváření složky; příčina/latence **NEOVĚŘENA**. | [#195](https://github.com/zaplikj30-ui/Zamerovac-android/issues/195) |
 
 **Schválený návrh UX, ne implementace:** stavové ikony synchronizace a omezení rušivých toastů: [#38 – rozhodnutí](https://github.com/zaplikj30-ui/Zamerovac-android/issues/38#issuecomment-6987009110). Stav selhání = zřetelný křížek/vykřičník a slovní popis, ne pouhá tečka.
 
@@ -16,10 +18,13 @@ Tato složka je **rozcestník**, nikoli druhá databáze chyb. **Zdroj pravdy js
 
 ### Přiložené důkazy a omezení
 
-K 18. 11. 2026 bylo v chatu zpracováno **5 zmenšených JPG + 1 přibližně 11,6s MP4** s překrytím viditelné adresy/e-mailu a bez metadat. Balíček má 356 809 B; SHA256:
+K 18. 11. 2026 bylo pro původní hlášení #190–#192 v chatu zpracováno **5 zmenšených JPG + 1 přibližně 11,6s MP4** s překrytím viditelné adresy/e-mailu a bez metadat. Balíček má 356 809 B; SHA256:
 `789462ca572942b35ed92e879e60d8475717858b36c37fc1b50beac9cc56c5cd`.
 
 **NEOVĚŘENO NA GITHUBU:** samotné binární přílohy nebyly v době zápisu nahrané do repozitáře ani do issue. Jsou předané uživateli jako `Zamerovac-chyby-2026-11-18-dukazy.zip` v původním chatu; nelze na ně z GitHubu trvale odkazovat, dokud není doložen funkční upload. SHA256 jednotlivých souborů jsou uvedeny u #190–#192. Do té doby nesmí být issue uzavřeno na základě nedostupného videa. Nepublikovat původní soubory s GPS, adresou, e-mailem ani neveřejnými zakázkami; použití redigovaného interiéru uživatel odsouhlasil.
+
+
+**Novější video k #194–#195:** `1000095380.mp4` (23,06 s) je v chatu; pro zkratku byl připraven úsporný výřez spodní lišty `shortcut-evidence-2026-11-18.jpg` (150 511 B, SHA256 `4db62c624b2ede0871b474df59f1aef079f7b37d38a84ebe595ad8e6fcdbd33f`). Ani tyto binární soubory zatím nejsou na GitHubu. Chybné původní tvrzení, že se ikona správně změnila na složku, bylo po kontrolním prohlédnutí videa a současného kódu výslovně opraveno.
 
 ## Jak evidovat nové chyby
 
