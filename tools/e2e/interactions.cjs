@@ -45,6 +45,26 @@ async function setup(page){await createCanvas(page,'Gesta – syntetická');awai
       firstMeasure:a.measure,secondMeasure:b.measure};
    });
    await tool(page,'select');
+   // Browser-only timing: from a real pointerdown to first completed canvas
+   // paint, plus editor commit. Native WebView/IO is not measured here.
+   await page.evaluate(()=>{
+    const timings=window.__annotationTiming={downAt:null,paintAfterDownMs:[],commitMs:[]};
+    const oldPaint=paint,oldCommit=commitEditor;
+    window.paint=function(...args){
+     const result=oldPaint.apply(this,args);
+     if(timings.downAt!==null){
+      timings.paintAfterDownMs.push(performance.now()-timings.downAt);
+      timings.downAt=null;
+     }
+     return result;
+    };
+    window.commitEditor=function(...args){
+     const at=performance.now();
+     try{return oldCommit.apply(this,args)}
+     finally{timings.commitMs.push(performance.now()-at)}
+    };
+    stageCanvas.addEventListener('pointerdown',()=>{timings.downAt=performance.now()},true);
+   });
    for(const extra of fixture.extras){
     await clickAt(page,await projected(page,extra.a));await dismiss(page);
     assert.equal(await page.evaluate(()=>selected),extra.id,'A separate dimension must be selectable');
@@ -72,13 +92,24 @@ async function setup(page){await createCanvas(page,'Gesta – syntetická');awai
    assert.equal(await page.evaluate(id=>current.items.find(i=>i.id===id).b.x,fixture.bId),fixture.bEnd.x);
    await redo(page);
    assert.equal(await page.evaluate(id=>current.items.find(i=>i.id===id).b.x,fixture.bId),moved.b.x);
+   const capturedTimings=await page.evaluate(()=>({
+    paintAfterDownMs:__annotationTiming.paintAfterDownMs,
+    commitMs:__annotationTiming.commitMs
+   }));
+   assert(capturedTimings.paintAfterDownMs.length>=4,
+    'Real pointerdown did not reach a measured canvas paint');
+   assert(capturedTimings.commitMs.length>=1,
+    'A completed endpoint drag must invoke commitEditor');
    await page.click('#editorBack');await page.reload();await page.locator('.entry-title').click();
    assert.equal(await page.evaluate(()=>current.items.length),6,'Five dimensions and an empty note must persist');
    assert.equal(await page.evaluate(id=>current.items.find(i=>i.id===id).measure,fixture.aId),fixture.firstMeasure);
    assert.equal(await page.evaluate(id=>current.items.find(i=>i.id===id).b.x,fixture.bId),moved.b.x);
    assert.equal(await page.evaluate(()=>current.items.find(i=>i.type==='note')?.text),'');
+   // The timing probe was attached before the reload and is therefore lost.
+   // Its numeric results are sampled before leaving the original editor.
    evidence({nativeModel:false,syntheticFixture:true,physicalEvents:true,
-    endpointDistancePx:18,overlappingNote:true,undoRedo:true,reopen:true});
+    endpointDistancePx:18,overlappingNote:true,dimensions:5,
+    undoRedo:true,reopen:true,timings:capturedTimings});
   });
  });
  await test('pan_zoom_fit_and_repeated_reopen',async({page,step,evidence})=>{
