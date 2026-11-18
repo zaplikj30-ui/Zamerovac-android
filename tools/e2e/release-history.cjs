@@ -13,6 +13,8 @@ const {suite,assert,createCanvas}=require('./harness.cjs');
    assert(await page.locator('details.releaseTimeline').first().getByText('Verze 1.4.0').isVisible());
    assert((await page.locator('details.releaseTimeline').first().innerText()).includes('Samostatná místní ochrana'));
    assert(await page.locator('details.releaseTimeline').nth(1).getByText('Verze 1.3.0').isVisible());
+   // The newly inserted 1.4.0 entry leaves 1.3.0 collapsed; open its details before checking the body.
+   await page.locator('details.releaseTimeline').nth(1).locator('summary').click();
    assert((await page.locator('details.releaseTimeline').nth(1).innerText()).includes('smysluplná čísla vydání'));
    assert((await page.locator('details.releaseTimeline').nth(2).innerText()).includes('Verze 1.2.153'));
    assert((await page.locator('details.releaseTimeline').nth(3).innerText()).includes('Verze 1.2.152'));
