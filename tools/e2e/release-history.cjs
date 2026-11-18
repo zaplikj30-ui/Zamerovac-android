@@ -1,7 +1,11 @@
 'use strict';
 const {suite,assert,createCanvas}=require('./harness.cjs');
-const catalog=require('../../app/src/main/assets/release-history.js');
-const {read:configuredVersion}=require('../release/versioning.js');
+const path=require('node:path');
+// In the hosted QA fallback the reviewed test runner is separate from the
+// checked-out product. Resolve release metadata from the product worktree.
+const productRoot=process.cwd();
+const catalog=require(path.join(productRoot,'app/src/main/assets/release-history.js'));
+const {read:configuredVersion}=require(path.join(productRoot,'tools/release/versioning.js'));
 // Only the historical suffix is fixed; every future release adds a new leading entry.
 const historicalVersions=['1.4.0','1.3.0','1.2.153','1.2.152','1.2.151','1.2.150',
  '1.2.149','1.2.148','1.2.147','1.2','1.1'];
