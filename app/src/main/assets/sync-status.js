@@ -10,6 +10,7 @@ const names={
  failed:['☁✕','Selhalo','Synchronizace selhala. Zakázky zůstávají místně; příčinu je nutné vyřešit.']
 };
 let phase='unset',reason=names.unset[2],lastNotice=null,knownPeers=null;
+let knownConflictIds=new Set(),conflictDetail='';
 const button=document.getElementById('cloudBtn');
 if(!button)return;
 const oldCloudClick=button.onclick;
@@ -28,6 +29,24 @@ function update(next,detail){
  phase=next;
  reason=String(detail||names[next][2]).slice(0,500);
  paint();
+}
+// A new durable local revision invalidates only the visual green receipt.
+ // Signed receipts and native ledger authority are never modified.
+function localSaved(){
+ if(phase==='confirmed')
+  update('pending','Místní změny jsou uložené; nová revize čeká na ověřené přijetí druhým zařízením.');
+}
+// Display newly retained copies once per stable record ID, while keeping
+// the number and explanation accessible in the sync status dialog.
+function conflicts(records){
+ if(!Array.isArray(records))return;
+ const current=new Set(records.filter(r=>r&&r.conflict===true&&typeof r.id==='string'&&r.id).map(r=>r.id));
+ const fresh=[...current].filter(id=>!knownConflictIds.has(id));
+ knownConflictIds=current;
+ conflictDetail=current.size?'Zachované konfliktní kopie: '+current.size+'. Zkontroluj obě verze v zakázkách před odstraněním.':'';
+ // Do not replace an immediately visible sync failure with a lesser toast.
+ if(fresh.length&&phase!=='failed')
+  notify('Synchronizace: zachované konfliktní kopie: '+current.size+'. Zkontroluj obě verze.');
 }
 function alertOnce(key,message,critical=false){
  if(critical||lastNotice!==key){
@@ -105,12 +124,12 @@ function show(){
  else if(phase==='pending'&&receipt())update('confirmed',names.confirmed[2]);
  const title='Synchronizace · '+names[phase][1];
  modal(title,'<p id="syncStatusDetails"></p><p id="syncStatusExplanation"></p><div class="row wrap"><button id="syncStatusPair" class="outline">Synchronizace zařízení</button><button id="syncStatusCloud" class="outline">Google Disk / ruční přenos</button></div>',()=>true,'Zavřít');
- document.getElementById('syncStatusDetails').textContent=reason;
+ document.getElementById('syncStatusDetails').textContent=reason+(conflictDetail?'\n'+conflictDetail:'');
  document.getElementById('syncStatusExplanation').textContent='Google účet, párování a skutečně potvrzený přenos jsou tři různé věci. Synchronizace není historická záloha.';
  document.getElementById('syncStatusPair').onclick=()=>{document.getElementById('modal').hidden=true;root.openZamerovacPeers?.();};
  document.getElementById('syncStatusCloud').onclick=()=>{document.getElementById('modal').hidden=true;oldCloudClick?.();};
 }
 button.onclick=show;
 paint();
-root.ZamerovacSyncStatus=Object.freeze({error,cloud,peerState,peerProblem,show,status:()=>({phase,reason,knownPeers})});
+root.ZamerovacSyncStatus=Object.freeze({error,cloud,peerState,peerProblem,localSaved,conflicts,show,status:()=>({phase,reason,knownPeers})});
 })(window);
