@@ -32,7 +32,8 @@ suite('latency',async test=>{
   // Real Chromium UI click/commit/render/readback. Browser localStorage is not Android disk.
   const folderUi=[];
   await page.evaluate(()=>{
-   window.__folderProbe={saves:[],renders:[]};
+   window.__folderProbe={saves:[],renders:[],clickAt:null};
+   document.querySelector('#okModal').addEventListener('click',()=>{__folderProbe.clickAt=performance.now()},true);
    const save0=window.save,render0=window.showFolder;
    if(typeof save0!=='function'||typeof render0!=='function')throw Error('Missing app save/render functions');
    window.save=function(...a){
@@ -41,7 +42,7 @@ suite('latency',async test=>{
    };
    window.showFolder=function(...a){
     const start=performance.now(),result=render0.apply(this,a);
-    __folderProbe.renders.push(performance.now()-start);return result;
+    __folderProbe.renders.push({ms:performance.now()-start,clickToRenderedMs:__folderProbe.clickAt===null?null:performance.now()-__folderProbe.clickAt});return result;
    };
   });
   for(let i=0;i<3;i++){
@@ -57,7 +58,7 @@ suite('latency',async test=>{
    },title);
    assert.equal(info.count,1,'Folder was displayed but not saved');
    assert.equal(info.save.ok,true,'Save was not acknowledged');
-   folderUi.push({case:i,saveJsMs:info.save.ms,showFolderJsMs:info.paint});
+   folderUi.push({case:i,saveJsMs:info.save.ms,showFolderJsMs:info.paint.ms,clickToRenderedMs:info.paint.clickToRenderedMs});
   }
   // Two synthetic DOM click dispatches during the same modal must not duplicate a record.
   await page.click('#createBtn');
