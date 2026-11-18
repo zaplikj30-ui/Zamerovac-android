@@ -6,7 +6,7 @@
 'use strict';
 // Recorded with the implementation; assign an actual release only at the joint
 // release gate. These notes must never be attributed to an already issued APK.
-const unreleasedChanges={title:'Rozpracováno – dosud nevydáno',groups:[{kind:'Opraveno',items:[
+const unreleasedChanges={title:'Změny pro testovací vydání 1.4.0',groups:[{kind:'Opraveno',items:[
  {text:'Samostatná místní ochrana zachovává přesné předchozí uložené stavy zakázek a původní fotografie i videa bez jejich plošného kopírování. ACK synchronizace ochranu neruší. Koš ukazuje zadržená data; při neověřitelné ochraně nebo nedostatku místa se příslušná operace zastaví.'},
  {text:'Galerie překresluje kóty, čáry a hodnoty v rozlišení displeje i při přiblížení. Prohlížení ani export nemění výběr a historii otevřeného editoru; návrat přes Upravit ke stejné fotografii zachová rozpracovanou práci.'},
  {text:'Popisky vložených fotografií používají šířku skutečného výstupu. PNG zahrnuje také natočený detail a jeho text mimo původní fotografii.'},
@@ -59,10 +59,10 @@ const releaseChanges={issue:39,version:'1.2.153',groups:[{kind:'Nové funkce',it
  {text:'Vytváření náhledů fotografií mimo zámek databáze, bezpečné souběhy cache a správné zrcadlení EXIF bez změny originálu.'},
  {text:'Omezená mezipaměť dekódovaných fotografií pro opakované otevření. První načtení po restartu je stále nutné.'}
 ]}]};
-// Připraveno pro budoucí testovací APK 1.4.0; samotný zápis do PR není vydání.
-// Do schváleného release zůstávají přesné nové položky evidované i jako unreleasedChanges.
+// Release notes 1.4.0: založené na implementovaných změnách; publikace tagu je samostatný krok.
+// Záznam se neznačí jako dočasný stav, aby po vydání APK nelhal.
 const releases=[
-  {version:'1.4.0',status:'prepared-not-published',
+  {version:'1.4.0',
    title:'Ochrana originálů, editace a přesných kót',groups:unreleasedChanges.groups},
   {
     "version":"1.3.0",
