@@ -10,6 +10,7 @@ ROOT = Path(__file__).resolve().parents[1]
 WORKFLOW = (ROOT / '.github/workflows/build-apk.yml').read_text(encoding='utf-8')
 GATE = (ROOT / 'tools/release/apk_gate.py').read_text(encoding='utf-8')
 DESIGN = (ROOT / 'docs/qa/CHATGPT_APK_DISPATCH_DESIGN.md').read_text(encoding='utf-8')
+CHROMIUM = (ROOT / '.github/workflows/chromium-simple.yml').read_text(encoding='utf-8')
 
 
 def job(name):
@@ -59,6 +60,82 @@ class CloudReleaseSafetyGateTest(unittest.TestCase):
         self.assertIn('assemblePreview', build)
         self.assertIn('upload-artifact@v4', build)
         self.assertNotIn('gh release create', build)
+
+    def test_build_stages_historical_qa_objects_before_js(self):
+        # Same immutable references as the already running QUICK workflow.
+        build = job('build')
+        marker = '      - name: Existing JS/Python/Drive regressions\n'
+        self.assertEqual(build.count(marker), 1)
+        step = build.split(marker, 1)[1].split('      - name:', 1)[0]
+        fetches = re.findall(
+            r'(?m)^          git fetch --no-tags origin (?:[0-9a-f]{40}(?: [0-9a-f]{40})*)
+        for snippet in ('def previous(', 'def inspect_apk(', 'SIGNER =', 'PACKAGE =',
+                        'new_code = old["version_code"] + 1',
+                        'if semver(version) <= semver(old_version)',
+                        'if meta["version_code"] != int(os.environ["NEW_CODE"])'):
+            self.assertIn(snippet, GATE)
+        self.assertIn('verifyDriveRegistration assemblePreview', WORKFLOW)
+        self.assertIn('python3 -m unittest discover', WORKFLOW)
+
+    def test_release_only_separately_authorized_same_bytes(self):
+        release = job('release')
+        self.assertIn('contents: write', release)
+        self.assertIn('actions: read', release)
+        self.assertIn('release-preflight', release)
+        self.assertIn('release-recheck', release)
+        self.assertIn('release-post', release)
+        self.assertIn('gh release create', release)
+        self.assertNotIn('assemblePreview', release)
+        self.assertNotIn('actions/checkout', release)
+        for snippet in ('if sha != requested_hash', 'if hashlib.sha256(data).hexdigest() != expected_hash',
+                        'run.get("run_attempt") != 1', 'decode_single_apk(',
+                        'tag already exists before create', 'revalidate_current_approval('):
+            self.assertIn(snippet, GATE)
+
+    def test_no_retry_or_tag_overwrite(self):
+        release = job('release')
+        self.assertNotIn('--clobber', release)
+        self.assertNotIn('--force', release)
+        self.assertNotIn('sleep ', release)
+        self.assertNotIn('for attempt', release)
+        self.assertEqual(WORKFLOW.count('contents: write'), 1)
+
+    def test_synchronized_job_concurrency_and_rerun_guards(self):
+        self.assertEqual(WORKFLOW.count('group: zamerovac-apk-owner-commands'), 3)
+        self.assertEqual(WORKFLOW.count('queue: max'), 3)
+        self.assertEqual(WORKFLOW.count('github.run_attempt == 1'), 3)
+        self.assertNotIn('cancel-in-progress: true', WORKFLOW)
+
+    def test_home_workflow_retired_and_no_active_legacy_release_bypass(self):
+        # Explicit owner decision #6978003077: both HOME workflows are gone.
+        # Historical design discussion is retained; only active YAML may run.
+        workflows = ROOT / ".github" / "workflows"
+        for path in ('windows-home-apk-release.yml', 'windows-self-hosted-qa.yml'):
+            self.assertFalse((workflows / path).exists(), 'retired HOME entrypoint reappeared')
+        active = list(workflows.glob('*.yml'))
+        self.assertTrue(active, 'no active workflow files found')
+        for path in active:
+            with self.subTest(path=path.name):
+                text = path.read_text(encoding='utf-8')
+                self.assertNotIn('runs-on: [self-hosted', text)
+                self.assertNotIn('zamerovac-qa]', text)
+                if 'gh release create' in text:
+                    self.assertEqual(path.name, 'build-apk.yml')
+        self.assertIn('HOME RETIRED', DESIGN)
+
+
+if __name__ == '__main__':
+    unittest.main()
+,
+            CHROMIUM,
+        )
+        self.assertEqual(len(fetches), 1, 'Expected one vetted QUICK fixture fetch')
+        fetch = fetches[0]
+        self.assertEqual(step.count(fetch), 1, 'BUILD must stage the same references exactly once')
+        self.assertLess(step.index('set -euo pipefail'), step.index(fetch))
+        self.assertLess(step.index(fetch), step.index('for file in tests/*.js'))
+        self.assertNotIn('|| true', step, 'Missing fixture must fail, not skip tests')
+        self.assertNotIn('git checkout', step, 'Historical inputs must not change the product')
 
     def test_previous_published_apk_determines_next_version_code(self):
         for snippet in ('def previous(', 'def inspect_apk(', 'SIGNER =', 'PACKAGE =',
