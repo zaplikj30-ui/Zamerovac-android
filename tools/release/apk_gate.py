@@ -246,6 +246,7 @@ def emit(**items):
 
 def build_preflight():
     api = api_client()
+    revalidate_current_approval(api, 'build')
     sha = exact(HEX40, os.environ["APPROVED_SHA"], "approved main")
     if main_sha(api) != sha:
         stop("main drift before BUILD")
@@ -264,6 +265,7 @@ def build_preflight():
 
 def build_postflight():
     api = api_client()
+    revalidate_current_approval(api, 'build')
     sha = exact(HEX40, os.environ["APPROVED_SHA"], "approved SHA")
     if main_sha(api) != sha:
         stop("main drift before artifact")
@@ -316,6 +318,51 @@ def decode_single_apk(blob, expected_name):
         stop("invalid ZIP structure/CRC")
 
 
+def revalidate_current_approval(api, operation):
+    if os.environ.get("GITHUB_RUN_ATTEMPT") != "1":
+        stop("replayed workflow attempt")
+    comment_id = os.environ.get("APPROVAL_COMMENT_ID", "")
+    with open(os.environ["GITHUB_EVENT_PATH"], encoding="utf8") as f:
+        event = json.load(f)
+    if os.environ["GITHUB_EVENT_NAME"] == "issue_comment":
+        positive_id(comment_id, "approval comment")
+        live = api.request("/issues/comments/" + comment_id)
+        original_body = event.get("comment", {}).get("body")
+        if (live.get("id") != int(comment_id) or
+                live.get("issue_url") != "https://api.github.com/repos/" + REPO + "/issues/183" or
+                live.get("user", {}).get("id") != OWNER_ID or
+                live.get("created_at") != live.get("updated_at") or
+                live.get("body") != original_body):
+            stop("current approval edited/deleted")
+        if operation == "build":
+            approved = "ZAMEROVAC BUILD " + os.environ["APPROVED_SHA"]
+        elif operation == "release":
+            approved = "ZAMEROVAC RELEASE " + os.environ["BUILD_RUN_ID"] + " " + os.environ["APPROVED_APK_HASH"]
+        else:
+            stop("unknown approval operation")
+        if original_body != approved:
+            stop("current approval no longer matches intended operation")
+    elif os.environ["GITHUB_EVENT_NAME"] == "workflow_dispatch":
+        if comment_id != "0":
+            stop("manual approval comment ID mismatch")
+        inputs = event.get("inputs") or {}
+        if inputs.get("operation") != operation:
+            stop("manual operation mismatch")
+        if operation == "build":
+            if (inputs.get("target_sha") != os.environ["APPROVED_SHA"] or
+                    inputs.get("build_run_id") or inputs.get("apk_sha256")):
+                stop("manual build inputs mismatch")
+        elif operation == "release":
+            if (inputs.get("target_sha") or
+                    inputs.get("build_run_id") != os.environ["BUILD_RUN_ID"] or
+                    inputs.get("apk_sha256") != os.environ["APPROVED_APK_HASH"]):
+                stop("manual release inputs mismatch")
+        else:
+            stop("unknown manual operation")
+    else:
+        stop("unauthorized event")
+
+
 def owner_comment(api, comment_id, source_sha):
     comment = api.request("/issues/comments/" + str(positive_id(comment_id, "comment ID")))
     if (comment.get("user", {}).get("id") != OWNER_ID or
@@ -329,6 +376,7 @@ def owner_comment(api, comment_id, source_sha):
 
 def release_preflight():
     api = api_client()
+    revalidate_current_approval(api, 'release')
     requested_run = positive_id(os.environ["BUILD_RUN_ID"], "build run ID")
     requested_hash = exact(HEX64, os.environ["APPROVED_APK_HASH"], "owner APK SHA256")
     run = api.request("/actions/runs/" + str(requested_run))
@@ -412,6 +460,7 @@ def release_preflight():
 
 def release_recheck():
     api = api_client()
+    revalidate_current_approval(api, 'release')
     expected_sha = exact(HEX40, os.environ["SOURCE_SHA"], "source")
     version = exact(VERSION, os.environ["RELEASE_VERSION"], "release version")
     tag = "test-v" + version
