@@ -300,6 +300,7 @@ const chapters=[
     "intro": "Každá zakázka může mít samostatné textové poznámky a fotografie také bodové poznámky.",
     "steps": [
       "Pomocí ＋ → Nová textová poznámka založ zápis s názvem a vlastním textem.",
+      "V přehledu aktuální složky zvol ＋ → Hlasová poznámka. Nejprve se potvrdí uložení jedné samostatné poznámky; mikrofon se nezapíná sám. V otevřené poznámce postupuj Spustit nahrávání → Zastavit záznam → Uložit. Po úspěšném zastavení se příloha bezpečně připojí k této poznámce, tlačítko Uložit pak zavře zápis. Pokud se uložení nebo připojení nepovede, nepovažuj hlas za připojený; dokončený originál zůstává k prověření v Uchovaných hlasových nahrávkách. Při odmítnutém mikrofonu zkontroluj oprávnění v Androidu. V již otevřené poznámce se hlas připojuje pouze k ní.",
       "V poznámce můžeš vytvořit seznam úkolů, zaškrtávat položky a přidat přílohy.",
       "Pro přidání fotografie nebo souboru použij Přiložit; pro hlasovou poznámku mikrofon, pokud je zařízení a oprávnění podporují.",
       "V editoru fotografie nástrojem Poznámka vyznač bod; podle dostupných funkcí otevři detail poznámky a doplň text nebo obrázky.",
