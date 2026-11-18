@@ -392,6 +392,7 @@ function showNewMenu(){if(!$('newMenu').hidden){closeMenus();return}if(!canWrite
 $('newMenu').innerHTML=choices.map((a,i)=>`<button class="choice" data-i="${i}"><strong>${a[0]}</strong>${a[1]}</button>`).join('');$('newMenu').querySelectorAll('button').forEach(b=>b.onclick=()=>{closeMenus();choices[+b.dataset.i][2]()})}
 // #197: create a durable standalone note; never start the microphone in this menu callback.
 function createVoiceNote(){
+ if(screen!=='browser'){notify('Hlasovou poznámku lze založit pouze z přehledu složky.');return false}
  const folder=currentFolder;
  if(!canWriteToFolder(folder)){
   notify('Složka není dostupná nebo je uzamčená. Hlasová poznámka nebyla vytvořena.');
