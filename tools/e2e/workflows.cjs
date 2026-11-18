@@ -29,6 +29,88 @@ async function line(page,type='dimension'){
 }
 (async()=>suite('workflows',async test=>{
  await test('folders_move_rename_trash_restore',async({page,step,evidence})=>{
+  await step('Measure real browser UI folder save, rejected storage, retry and double click',async()=>{
+   // The browser uses localStorage, NOT Android Native.saveDataChecked.
+   // Record JS save and folder rendering separately; never interpret this
+   // timing as a benchmark of the native database/audio journal.
+   const initial=await page.evaluate(()=>({
+    disk:localStorage.getItem('zamerovac-data'),count:state.records.length
+   }));
+   await page.evaluate(()=>{
+    const log=window.__folderSaveProbe={saveMs:[],renderMs:[],
+      storageWrites:0,rejectedWrites:0,failOnce:false};
+    const previousSave=save,previousFolder=showFolder,previousSet=Storage.prototype.setItem;
+    window.__restoreFolderProbe=()=>{
+     window.save=previousSave;window.showFolder=previousFolder;
+     Storage.prototype.setItem=previousSet;
+    };
+    window.save=function(...args){
+     const began=performance.now();
+     try{return previousSave.apply(this,args)}
+     finally{log.saveMs.push(performance.now()-began)}
+    };
+    window.showFolder=function(...args){
+     const began=performance.now();
+     try{return previousFolder.apply(this,args)}
+     finally{log.renderMs.push(performance.now()-began)}
+    };
+    Storage.prototype.setItem=function(key,value){
+     if(key==='zamerovac-data'){
+      log.storageWrites++;
+      if(log.failOnce){
+       log.failOnce=false;log.rejectedWrites++;
+       throw new DOMException('synthetic insufficient space','QuotaExceededError');
+      }
+     }
+     return previousSet.call(this,key,value);
+    };
+   });
+   const title='Syntetická složka – odmítnutý zápis';
+   await add(page,'Nová složka');await page.fill('#promptValue',title);
+   await page.evaluate(()=>__folderSaveProbe.failOnce=true);
+   await page.click('#okModal');
+   assert.equal(await page.locator('#modal').isVisible(),true,
+    'Rejected save must leave the folder dialog open');
+   assert.equal(await row(page,title).count(),0,'Rejected save created a ghost folder');
+   assert.deepEqual(await page.evaluate(()=>({
+    disk:localStorage.getItem('zamerovac-data'),count:state.records.length
+   })),initial,'Rejected save changed durable records or working list');
+   await page.click('#okModal');
+   assert.equal(await row(page,title).count(),1,
+    'Retry after synthetic disk-full must persist exactly one folder');
+   const second='Syntetická složka – dvojklik';
+   await page.context().setOffline(true);
+   try{
+    await add(page,'Nová složka');await page.fill('#promptValue',second);
+    const box=await page.locator('#okModal').boundingBox();
+    assert(box,'Save button must remain present');
+    await page.mouse.dblclick(box.x+box.width/2,box.y+box.height/2,{delay:45});
+   }finally{await page.context().setOffline(false)}
+   const result=await page.evaluate(({title,second})=>{
+    const rows=state.records.filter(r=>r.kind==='folder'&&(r.title===title||r.title===second));
+    const disk=JSON.parse(localStorage.getItem('zamerovac-data'));
+    const durable=disk.records.filter(r=>r.kind==='folder'&&(r.title===title||r.title===second));
+    return {live:rows.map(r=>r.title),durable:durable.map(r=>r.title),
+      saveMs:__folderSaveProbe.saveMs,renderMs:__folderSaveProbe.renderMs,
+      storageWrites:__folderSaveProbe.storageWrites,
+      rejectedWrites:__folderSaveProbe.rejectedWrites}
+   },{title,second});
+   assert.equal(result.live.filter(x=>x===title).length,1);
+   assert.equal(result.live.filter(x=>x===second).length,1,'Double-click duplicated a folder');
+   assert.deepEqual(result.durable.slice().sort(),result.live.slice().sort(),
+    'UI and durable browser state diverged');
+   assert.equal(result.rejectedWrites,1);
+   assert(result.saveMs.length>=3,'Save did not pass instrumented JS path');
+   assert(result.renderMs.length>=2,'Folder list did not pass render path');
+   await page.evaluate(()=>__restoreFolderProbe());
+   await page.reload();
+   assert.equal(await row(page,title).count(),1,'Retry did not survive reload');
+   assert.equal(await row(page,second).count(),1,'Double-click did not survive reload');
+   evidence({environment:'Chromium browser localStorage ONLY; no native Android IO',
+    confirmedFolders:2,rejectedWrites:result.rejectedWrites,
+    storageWrites:result.storageWrites,saveMs:result.saveMs,
+    renderMs:result.renderMs,offlineSecondFolder:true,doubleClick:true});
+  });
   await step('Create project/room/canvas through UI',async()=>{await folder(page,'Zakázka A');await row(page,'Zakázka A').click();await folder(page,'Pokoj');await row(page,'Pokoj').click();await createCanvas(page,'Stěna');await line(page);await page.click('#editorBack')});
   await step('Rename and move preserve exact annotations',async()=>{
    await actions(page,'Stěna');await page.click('#renameOne');await page.fill('#renameBase','Přejmenovaná stěna');await page.click('#okModal');
