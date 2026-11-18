@@ -388,12 +388,15 @@ function rememberSuccessfulAdd(kind,source=''){
  if(!supported.includes(kind))return;
  lastSuccessfulAdd={kind,source};
  const labels={folder:['📁','Nová složka'],canvas:['▦','Nový náčrt'],
-  note:['📝','Nová textová poznámka'],photo:['🖼️','Importovat fotografii'],
-  video:['▶','Importovat video'],audio:['♫','Přidat zvuk'],
-  file:['📎','Přidat soubor']};
+  note:['📝','Nová textová poznámka']};
+ // A selected audio/video/photo/file can all originate from the same picker.
+ // Advertise the real *source route*, never promise a MIME filter that is absent.
+ const picker=source==='camera'?['📷','Pořídit fotografii']:
+  source==='file'?['📎','Vybrat soubory']:['🖼️','Vybrat média a soubory'];
+ const [symbol,title]=labels[kind]||picker;
  const button=$('galleryBtn');
- button.textContent=source==='camera'&&kind==='photo'?'📷':labels[kind][0];
- button.title=source==='camera'&&kind==='photo'?'Pořídit fotografii':labels[kind][1];
+ button.textContent=symbol;
+ button.title=title;
  button.setAttribute('aria-label','Opakovat: '+button.title);
 }
 function createTextNote(){
