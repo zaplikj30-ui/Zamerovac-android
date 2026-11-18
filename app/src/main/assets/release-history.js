@@ -59,7 +59,11 @@ const releaseChanges={issue:39,version:'1.2.153',groups:[{kind:'Nové funkce',it
  {text:'Vytváření náhledů fotografií mimo zámek databáze, bezpečné souběhy cache a správné zrcadlení EXIF bez změny originálu.'},
  {text:'Omezená mezipaměť dekódovaných fotografií pro opakované otevření. První načtení po restartu je stále nutné.'}
 ]}]};
+// Připraveno pro budoucí testovací APK 1.4.0; samotný zápis do PR není vydání.
+// Do schváleného release zůstávají přesné nové položky evidované i jako unreleasedChanges.
 const releases=[
+  {version:'1.4.0',status:'prepared-not-published',
+   title:'Ochrana originálů, editace a přesných kót',groups:unreleasedChanges.groups},
   {
     "version":"1.3.0",
     "title":"Přehlednější číslování vydání",

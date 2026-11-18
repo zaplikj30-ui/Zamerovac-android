@@ -12,8 +12,14 @@ assert(JSON.stringify(history.unreleasedChanges).includes('Neověřitelná histo
 assert(JSON.stringify(history.unreleasedChanges).includes('nepotvrzené změny se neoznačí jako uložené'),'Feedback durable write must be documented as unreleased');
 assert(JSON.stringify(history.unreleasedChanges).includes('pozdní dokončení jiné editační relace'),'In-flight feedback guard must remain unreleased');
 const versions=history.releases.map(x=>x.version);
-assert.deepEqual(versions,['1.3.0','1.2.153','1.2.152','1.2.151','1.2.150','1.2.149','1.2.148','1.2.147','1.2','1.1']);
+assert.deepEqual(versions,['1.4.0','1.3.0','1.2.153','1.2.152','1.2.151','1.2.150','1.2.149','1.2.148','1.2.147','1.2','1.1']);
 assert.equal(new Set(versions).size,versions.length,'Version entries may not duplicate');
+assert.equal(history.releases[0].status,'prepared-not-published','1.4.0 is staged in draft only, not published');
+assert.deepEqual(history.releases[0].groups,history.unreleasedChanges.groups,'All exact pending notes belong to future 1.4.0');
+assert(history.hasReleaseNotes('1.4.0-test'));
+assert.equal(history.forVersion('1.4.0-test')[0].version,'1.4.0');
+assert(!history.forVersion('1.3.0-test').some(x=>x.version==='1.4.0'),'Installed 1.3.0 must not show future 1.4.0');
+assert(JSON.stringify(history.releases[0]).includes('ACK synchronizace ochranu neruší'));
 assert.equal(history.compareVersions('1.2.150','1.2.151'),-1);
 assert.equal(history.compareVersions('1.2.151-test','1.2.151'),0);
 assert.equal(history.compareVersions('1.2.151','1.2.150'),1);
@@ -69,9 +75,9 @@ console.log('PASS true versioned changelog: fixed releases, improvements, no fut
 assert.equal(history.releaseChanges.issue,39,'Release notes must match the update being published');
 assert.equal(history.releaseChanges.version,'1.2.153');
 assert(!history.forVersion('1.2.152').some(x=>x.version==='1.2.153'));
-assert(JSON.stringify(history.releases[1]).includes('A39-01 až A39-06'))
-assert(JSON.stringify(history.releases[0]).includes('smysluplná čísla vydání'));
-assert(JSON.stringify(history.releases[1]).includes('Oddělený výběr Google účtu'));
+assert(JSON.stringify(history.releases[2]).includes('A39-01 až A39-06'))
+assert(JSON.stringify(history.releases[1]).includes('smysluplná čísla vydání'));
+assert(JSON.stringify(history.releases[2]).includes('Oddělený výběr Google účtu'));
 assert(JSON.stringify(history.releaseChanges).includes('spustitelných příloh'));
 assert(JSON.stringify(history.releaseChanges).includes('zaniklá skupina Wi-Fi Direct'));
 assert(JSON.stringify(history.releaseChanges).includes('služba Androidu s oznámením'));
