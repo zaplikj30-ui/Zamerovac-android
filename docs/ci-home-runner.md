@@ -1,5 +1,7 @@
 # Domácí GitHub Actions runner – zaměřování a stav migrace
 
+> **HOME RETIRED – HISTORIE, NIKOLI AKTUÁLNÍ PLÁN.** Vlastník [18. 11. 2026 rozhodl](https://github.com/zaplikj30-ui/Zamerovac-android/pull/186#issuecomment-6978003077) ukončit HOME QA i domácí vydávání; v PR #186 jsou smazána obě odpovídající aktivní workflow. Původní běhy a údaje níže se zachovávají pouze jako archivní důkazy. HOME počítač, runner, WSL ani jeho služba nebyly změněny a nesmějí být zapnuty. `main` bude bez HOME workflow až po zvlášť schváleném merge.
+
 ## Aktuální kontrolní bod 8. 11. 2026 – domácí migrace je na main 4/4 PASS; B14 otestována
 
 - **Migrace skutečně hotová na `main` `a309a060dad7075b16cd9d23fd2a3f4c6e12972f`:** [HOME run #42497594300](https://github.com/zaplikj30-ui/Zamerovac-android/actions/runs/42497594300) – **4/4 SUCCESS** (76 rychlých, 21 Chromium, 265 Java/Robolectric + PDF, podepsaný lokální APK smoke). PR #69 byl výslovně schválen a sloučen. Níže uvedený původní text „main nemá QA“ je starý historický záznam.
