@@ -1,6 +1,8 @@
 # Evidence chyb Zaměřovače
 
-Tato složka je **rozcestník**, nikoli druhá databáze chyb. **Zdroj pravdy jsou [GitHub Issues](https://github.com/zaplikj30-ui/Zamerovac-android/issues)**. Původní testovací deník je [#13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13); výsledky automatických testů patří do [#28](https://github.com/zaplikj30-ui/Zamerovac-android/issues/28). Nepřepisovat zde celé záznamy a nevytvářet duplicity.
+Tato složka je **rozcestník**, nikoli druhá databáze chyb.
+
+**Hlášení z fialové vlaječky v aplikaci:** [příjmová složka a postup převzetí](z-aplikace/README.md). Exportní ZIP si asistent převezme až na pokyn vlastníka; před uploadem na GitHub přílohy úsporně upraví, ale média v telefonu nemění. **Zdroj pravdy jsou [GitHub Issues](https://github.com/zaplikj30-ui/Zamerovac-android/issues)**. Původní testovací deník je [#13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13); výsledky automatických testů patří do [#28](https://github.com/zaplikj30-ui/Zamerovac-android/issues/28). Nepřepisovat zde celé záznamy a nevytvářet duplicity.
 
 ## Nahlášené problémy z fyzického testování 18. 11. 2026
 
