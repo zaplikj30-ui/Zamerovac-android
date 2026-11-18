@@ -1,4 +1,4 @@
-/* #194 M3: execute REAL app.js save/CAS/reconcile and native media callbacks.
+/* #194 M3/F5: execute REAL app.js save/CAS/reconcile and native media callbacks.
  * Only Native transport/disk and DOM are synthetic; no Android bytes are changed.
  */
 'use strict';
@@ -27,7 +27,7 @@ const seed={schema:1,syncProtocol:2,prefs:{},records:[
  {id:'parent',kind:'folder',parentId:null,rev:'folder-rev',syncClock:{},deleted:false,media:[]}
 ]};
 function scene(snapshot=seed){
- let disk=JSON.stringify(snapshot),mode='',nativeWrites=0,serial=0,render=0;
+ let disk=JSON.stringify(snapshot),mode='',nativeWrites=0,casRaces=0,serial=0,render=0;
  const requests=[],notices=[],locks=new Set(),views=[];
  const button={textContent:'',title:'',dataset:{},setAttribute(key,value){this[key]=value}};
  const env={
@@ -40,6 +40,19 @@ function scene(snapshot=seed){
    saveDataChecked(payload,expected){
     if(mode==='throw')throw Error('synthetic pre-ack exception');
     if(mode==='deny'){mode='';return JSON.stringify({ok:false,error:'ENOSPC'})}
+    // Deterministic F5: a peer deletes/locks the target folder *after*
+    // the initial UI canWriteToFolder check but *before* native CAS ACK.
+    // The true product save() below must reconcile the returned disk snapshot.
+    if(mode==='race-delete'||mode==='race-lock'){
+     const concurrent=mode;mode='';
+     const remote=JSON.parse(disk),parent=remote.records.find(r=>r.id==='parent');
+     if(!parent)throw Error('F5 invalid fixture: missing remote parent');
+     parent.rev='peer-concurrent-parent';parent.syncClock={'peer-device':1};
+     if(concurrent==='race-delete')parent.deleted=true;
+     else {parent.locked=true;locks.add(parent.id)}
+     disk=JSON.stringify(remote);casRaces++;
+     return JSON.stringify({ok:false,current:disk});
+    }
     if(expected!==disk)return JSON.stringify({ok:false,current:disk});
     disk=payload;nativeWrites++;return JSON.stringify({ok:true,pendingAudioCount:0});
    },
@@ -55,7 +68,7 @@ function scene(snapshot=seed){
   promptText:()=>{},closeMenus:()=>{}
  };
  vm.createContext(env);
- vm.runInContext(production+'\nwindow.__qa194={newRecord,addRecord,createTextNote,pickMedia,repeatQuickAdd};',env,{filename:'app-194-cas-media.js'});
+ vm.runInContext(production+'\nwindow.__qa194={newRecord,addRecord,createTextNote,pickMedia,repeatQuickAdd,recById,canWriteToFolder};',env,{filename:'app-194-cas-media.js'});
  // Expose the product's actual functions also to simplified V8 test harnesses;
  // on Node's own vm global scope they are already available.
  Object.assign(env,env.window.__qa194);
@@ -63,6 +76,7 @@ function scene(snapshot=seed){
   env,button,requests,notices,locks,views,
   get saved(){return copy(JSON.parse(disk))},
   get writes(){return nativeWrites},
+  get races(){return casRaces},
   get renders(){return render},
   set mode(value){mode=value},
   set disk(value){disk=JSON.stringify(value)}
@@ -171,5 +185,49 @@ function intact(s){
  restart.env.repeatQuickAdd();
  assert.equal(restart.requests.at(-1).route,'media','Restart must open default media picker');
  intact(restart);
+ // F5: concurrent deletion / lock of the target AFTER initial allow, BEFORE
+ // native CAS retry. A successful add must never claim a live child under
+ // an inaccessible parent. A rejected add cannot leave a silent durable orphan.
+ const f5Findings=[],f5Failures=[],seedIds=new Set(seed.records.map(r=>r.id));
+ for(const race of ['race-delete','race-lock']){
+  for(const kind of ['folder','canvas','note','media']){
+   const q=scene();q.env.currentFolder='parent';q.mode=race;
+   let result;
+   const title='F5-'+race+'-'+kind;
+   if(kind==='note')result=q.env.createTextNote();
+   else if(kind==='media'){
+    q.env.pickMedia('media');const token=q.requests.at(-1).token;
+    result=await q.env.window.onNativeMedia(title,'image/png',title+'.png',null,token);
+    q.env.window.onNativeMediaDone(token);
+   }else result=q.env.addRecord(q.env.newRecord(kind,title));
+   assert.equal(q.races,1,'F5: a real synthetic Native CAS race must occur exactly once');
+   const durable=q.saved;
+   const children=durable.records.filter(r=>!seedIds.has(r.id));
+   const persisted=JSON.parse(q.env.persistedSnapshot);
+   const ramChildren=q.env.state.records.filter(r=>!seedIds.has(r.id));
+   const parent=durable.records.find(r=>r.id==='parent');
+   const liveParent=q.env.recById('parent'),writable=q.env.canWriteToFolder('parent');
+   const child=children[0];
+   assert.equal(children.length,1,'F5: fixture should keep one candidate to inspect');
+   assert.equal(persisted.records.some(r=>r.id===child.id),true,
+    'F5: persistedSnapshot must reflect native confirmed CAS, not a fake save');
+   assert.equal(ramChildren.some(r=>r.id===child.id),true,
+    'F5: RAM must expose the same committed child for this reproducer');
+   assert.equal(q.writes,1,'F5: one durable native ACK after CAS reconciliation required');
+   intact(q);
+   const reached=!!liveParent&&writable&&child.parentId===liveParent.id;
+   const wrong=!!result&&!reached;
+   f5Findings.push({race,kind,ack:q.writes,result:!!result,
+    parent:{id:parent.id,deleted:!!parent.deleted,locked:!!parent.locked},
+    child:{id:child.id,kind:child.kind,parentId:child.parentId,media:child.media},
+    reachable:reached,ram:ramChildren.length,snapshot:true,
+    quickTitle:q.button.title});
+   if(wrong)f5Failures.push(race+'/'+kind);
+  }
+ }
+ console.log('F5-CAS-REPRO',JSON.stringify(f5Findings));
+ assert.equal(f5Failures.length,0,
+  'F5: production save/reconcile published an inaccessible child with a successful quick action: '+f5Failures.join(', '));
+ console.log('PASS F5: no inaccessible child after concurrent delete/lock during real CAS retry');
  console.log('PASS #194 M3: real save CAS/reconcile and Native media callbacks, folder/canvas/note, camera/video/audio/file, root/nested/locked/missing, mixed batch, stale/cancel/disk-full, true CAS retry, restart');
 })().catch(err=>{console.error(err);process.exitCode=1});
