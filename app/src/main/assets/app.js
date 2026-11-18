@@ -142,11 +142,27 @@ function save(){
    if(!native){localStorage.setItem('zamerovac-data',text);state.syncProtocol=2;persistedSnapshot=text;return reportSaveResult(true)}
    const result=JSON.parse(Native.saveDataChecked(text,expected));
    if(result?.ok===true){
-    if(candidate!==state)applySavedState(candidate);
-    state.syncProtocol=2;persistedSnapshot=text;
+    // The native writer already committed this exact candidate. Record its
+    // authoritative snapshot before any fallible live/UI projection.
+    persistedSnapshot=text;
+    let presentationFailed=false;
+    if(candidate!==state)try{applySavedState(candidate)}catch(error){
+     presentationFailed=true;
+     // A partial projection must never become the next persisted version.
+     // Rebuild RAM from the ACKed JSON (not the stale local objects) and
+     // rebind active editors to the recovered committed records.
+     state=JSON.parse(text);state.prefs=prefs;
+     const committedRecord=active=>active?(
+      state.records.find(r=>r.id===active.id&&r.rev===active.rev)||
+      state.records.find(r=>r.conflictOf===active.id&&r.rev===active.rev)||
+      state.records.find(r=>r.id===active.id)||null):active;
+     current=committedRecord(current);
+     noteActive=committedRecord(noteActive);
+     window.__detailParent=committedRecord(window.__detailParent);
+    }
+    state.syncProtocol=2;
     // A confirmed Native CAS is durable. Never report failure or roll back
     // the attached media merely because a subsequent UI update throws.
-    let presentationFailed=false;
     try{window.PendingAudio?.saved?.(result)}catch(error){
      presentationFailed=true;
      try{window.PendingAudio?.refresh?.()}catch(ignored){}
