@@ -9,17 +9,31 @@ const {suite,assert,createCanvas}=require('./harness.cjs');
    await page.click('#back');
    await page.locator('#navMenu button').filter({hasText:'Historie změn'}).click();
    assert.equal(await page.locator('#modalTitle').innerText(),'Novinky a historie změn');
-   assert.equal(await page.locator('details.releaseTimeline').count(),11);
+   const timeline=page.locator('details.releaseTimeline');
+   const expectedVersions=["1.4.0","1.3.0","1.2.153","1.2.152","1.2.151","1.2.150","1.2.149","1.2.148","1.2.147","1.2","1.1"];
+   assert.equal(await timeline.count(),expectedVersions.length);
+   for(let i=0;i<expectedVersions.length;i++){
+    const entry=timeline.nth(i);
+    assert((await entry.locator('summary').innerText()).includes('Verze '+expectedVersions[i]),
+     'Wrong release at index '+i+': '+expectedVersions[i]);
+    assert.equal(await entry.evaluate(el=>el.open),i===0,
+     'Unexpected default open state at release index '+i);
+   }
    assert(await page.locator('details.releaseTimeline').first().getByText('Verze 1.4.0').isVisible());
    assert((await page.locator('details.releaseTimeline').first().innerText()).includes('Samostatná místní ochrana'));
    assert(await page.locator('details.releaseTimeline').nth(1).getByText('Verze 1.3.0').isVisible());
+   // The newly inserted 1.4.0 entry leaves 1.3.0 collapsed; open its details before checking the body.
+   await page.locator('details.releaseTimeline').nth(1).locator('summary').click();
+   assert.equal(await timeline.nth(1).evaluate(el=>el.open),true,'Version 1.3.0 did not expand');
    assert((await page.locator('details.releaseTimeline').nth(1).innerText()).includes('smysluplná čísla vydání'));
    assert((await page.locator('details.releaseTimeline').nth(2).innerText()).includes('Verze 1.2.153'));
    assert((await page.locator('details.releaseTimeline').nth(3).innerText()).includes('Verze 1.2.152'));
    await page.locator('details.releaseTimeline').nth(3).locator('summary').click();
+   assert.equal(await timeline.nth(3).evaluate(el=>el.open),true,'Version 1.2.152 did not expand');
    assert(await page.locator('details.releaseTimeline').nth(3).innerText().then(t=>t.includes('chybné přiřazování')));
    assert.equal(await page.locator('details.releaseTimeline').nth(3).locator('h3').first().innerText(),'Opraveno');
    await page.locator('details.releaseTimeline').nth(5).locator('summary').click();
+   assert.equal(await timeline.nth(5).evaluate(el=>el.open),true,'Version 1.2.150 did not expand');
    assert((await page.locator('details.releaseTimeline').nth(5).innerText()).includes('Bluetooth Bosch'));
    assert((await page.locator('details.releaseTimeline').nth(5).innerText()).includes('Zákaznické PDF'));
   });
@@ -32,6 +46,7 @@ const {suite,assert,createCanvas}=require('./harness.cjs');
   await step('Navigate from 1.2.151 to real offline help',async()=>{
    const helpVersion=page.locator('details.releaseTimeline').nth(4);
    await helpVersion.locator('summary').click();
+   assert.equal(await helpVersion.evaluate(el=>el.open),true,'Version 1.2.151 did not expand');
    await helpVersion.locator('[data-feature="0"]').first().click();
    assert.equal(await page.locator('#modal').isVisible(),false);
    assert(await page.locator('#helpPanel').isVisible());
@@ -54,6 +69,9 @@ const {suite,assert,createCanvas}=require('./harness.cjs');
     assert(dialog&&dialog.x>=-1&&dialog.x+dialog.width<=viewport.width+1,
      'Release dialog must not overflow viewport');
     assert.equal(await page.locator('details.releaseTimeline').count(),11);
+    assert((await page.locator('details.releaseTimeline').first().locator('summary').innerText()).includes('Verze 1.4.0'));
+    assert((await page.locator('details.releaseTimeline').nth(10).locator('summary').innerText()).includes('Verze 1.1'));
+
     await page.click('#okModal');
     assert.equal(await page.locator('#modal').isVisible(),false);
     await page.click('#closeSettings');
