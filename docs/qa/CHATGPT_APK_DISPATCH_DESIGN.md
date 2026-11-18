@@ -1,86 +1,135 @@
-# Návrh: ChatGPT → SESTAVIT → VYDAT → fyzicky otestovat
+# DESIGN #183 + #184: ChatGPT → SESTAVIT → VYDAT → fyzicky otestovat
 
-**Stav: DESIGN PRO NEZÁVISLÉ SECURITY REVIEW – NEIMPLEMENTOVÁNO.**
-Navazuje na [#183](https://github.com/zaplikj30-ui/Zamerovac-android/issues/183) a [#184](https://github.com/zaplikj30-ui/Zamerovac-android/issues/184).
-**Rozhodnutí vlastníka:** obě změny jako jeden celek; **ChatGPT Work NEPOUŽÍVAT**.
-**Výchozí zdrojový SHA:** `5ecc098d4c9a54d5cf9fb3376834e1e7b238241f` na `main`, poslední vydaná testovací APK `test-v1.4.0`. Před implementací aktualizovat proti skutečnému HEAD.
+**STAV: OPRAVENÝ NÁVRH K NEZÁVISLÉMU DESIGN/SECURITY RE-REVIEW; NEIMPLEMENTOVÁNO.** Jediný společný [PR #186](https://github.com/zaplikj30-ui/Zamerovac-android/pull/186) pro [#183](https://github.com/zaplikj30-ui/Zamerovac-android/issues/183) (spuštění z běžného ChatGPT) a [#184](https://github.com/zaplikj30-ui/Zamerovac-android/issues/184) (oddělené BUILD, RELEASE a fyzické ověření). ChatGPT Work je **zakázán**. Dokument **není** souhlas ke spuštění, implementaci, merge ani vydání.
 
-## Co je prokázané a co není
+## 0. Skutečný základ a hranice
 
-- Běžný ChatGPT má připojený GitHub nástroj pro zápis komentářů do issues jménem `zaplikj30-ui` (ověřeno v REST komentářích PR #179), čtení kódu, vytváření větví a PR, případně opakování *již existujícího neúspěšného* runu.
-- Tento konektor **neposkytuje vytvoření nového `workflow_dispatch`**. Jeho `rerun_failed_workflow_run_jobs` není univerzální spouštěcí API.
-- GitHub Actions podporuje `issue_comment: created` a spouští takový workflow z výchozí větve. Jde o **novou veřejnou událost**, kterou je nutné autorizovat **před spuštěním jobu**. Předchozí projektové řešení chráněných owner komentářů existuje v `cloud-pr150-source-qa.yml`, ale jeho komplikované P/V/Q/E brány se nemají přebírat.
-- Současný `build-apk.yml` má pouze `workflow_dispatch`, sestavení i publikaci v jednom privilegovaném jobu `contents:write` a `publish_release=true` povinné již pro build. Po úspěšném běhu #44223056380 vyšlo `test-v1.4.0` se SHA256 `d63ea74d343f94278bba200430e165cff93977c8ad36fcb9415e66ff64535609`; již vydané bajty neměnit.
-- Pro nový build nelze použít starou verzi `1.4.0`; další produktová testovací verze a changelog se musejí nejdříve řádně připravit. Testování workflow **není samo důvod vydat prázdnou novou APK**.
-- **NEOVĚŘENO:** zda se autorizované owner-komentáře dají bezpečně přijímat i v konkrétním budoucím GitHub Actions prostředí, jak bude ověřeno při pilotu. Žádný pilot ani APK build nebyl v rámci tohoto návrhu spuštěn.
+- Při návrhové kontrole main/base **5ecc098d4c9a54d5cf9fb3376834e1e7b238241f**; původní PR HEAD **91678af6bd114cb9ca4c6149810248563fce2460**. Před implementací vše znovu ověřit.
+- Poslední opravdu publikované vydání je **test-v1.4.0** s assetem **Zamerovac-v1.4.0.apk** a GitHub API digestem **sha256:d63ea74d343f94278bba200430e165cff93977c8ad36fcb9415e66ff64535609**. Zachovat beze změny. Současné **config/app-version.properties: versionName=1.4.0** je již vydaná verze. Novou APK nevytvářet ani nevydávat bez skutečných produktových změn, nové verze, changelogu a samostatných souhlasů.
+- Stávající **.github/workflows/build-apk.yml** je potvrzená stará přímá BUILD→RELEASE cesta: owner workflow_dispatch na main, cloud_run_approved=true a publish_release=true, jeden job s **contents:write**, po Gradlu přímo gh release create. Existující kontroly staré/nové APK (apksigner, aapt, package, signer, verze, versionCode, Drive) zachovat v nových samostatných fázích.
+- Inventura main odhalila **další starou vydávací cestu .github/workflows/windows-home-apk-release.yml** (workflow_dispatch, self-hosted HOME, lokální build + publish, contents:write). HOME podle současného vlastníka pravděpodobně už nebude používaný: **nepoužívat, neinstalovat, nezapínat, nevyvíjet nový HOME fallback**. V **budoucím implementačním PR** doporučuji vyřadit jeho vykonatelný release job/spouštěč nebo soubor jako jednu z podmínek odstranění obchvatu; dokumentace může zůstat archivně. **Nyní HOME nic neměnit** a „pravděpodobně“ nepovažovat za definitivní schválení odstranění. Nelze-li starou publikační cestu bezpečně uzavřít, **STOP** před merge návrhu do použití. Ostatní zjištěné workflow (QUICK, native, Chromium, emulator) nejsou publikační; před implementačním merge obnovit inventuru všech skutečně aktivních vydávacích cest.
+- GitHub konektor běžného ChatGPT prokazatelně umí vytvořit komentář pod účtem **zaplikj30-ui / neměnné user ID 351234773**, ale dnes **nenabízí vytvoření nového workflow_dispatch**. Zápis komentáře neprokazuje schopnost bezpečně spustit job. Owner účet neprokazuje, zda příkaz zadal ChatGPT, nebo jej vlastník vytvořil ručně; jde záměrně o **stejné oprávnění účtu**, nikoli o druhý faktor.
+- Repo je PUBLIC; běžný GitHub-hosted Ubuntu standard compute pro public repozitář je bezplatný, strop 12 USD platí pro reálně placené služby. **Žádný nový běh bez konkrétního RUN GO**. Nikdy zákaznická data, nové tajné tokeny, HOME ani ChatGPT Work. Dvě známé **raw FAIL #88** se neprohlašují za opravené.
 
-## Technické možnosti
+## 1. Nejmenší společná cesta – C1
 
-| Varianta | Přínos | Riziko/cena | Rozhodnutí |
-|---|---|---|---|
-| A. Jen existující ruční `workflow_dispatch` | Nejmenší změna; už ověřená publikace | Nesplňuje spouštění z běžného ChatGPT bez klikání | Bezpečný fallback |
-| B. **Owner příkaz přes GitHub issue komentář** | Konektor umí vložit komentář, GitHub umí `issue_comment`; bez Work, osobního tokenu či serveru | Nový trigger a zvýšená rizika autorizace/komentářového vstupu; vyžaduje SECURITY REVIEW | **K prověření jako preferovaný návrh** |
-| C. Externí služba/webhook, soukromý token nebo nové infrastruktury | Technicky možné přímé API | Náklady, údržba, nové tajné údaje a rozšíření povrchu útoku | **NEDOPORUČENO** |
-| D. ChatGPT Work | Umí ovládat browser v podporovaném prostředí | **Vlastník zakázal** | **VYLOUČENO** |
+**Preferovaná varianta: změnit jediný stávající .github/workflows/build-apk.yml** tak, aby podporoval GitHub-native komentář a ruční záložní spuštění, ale **nikdy současně BUILD a RELEASE**. Možné jobs:
+1. **PILOT** – read-only, bez APK, Gradlu a checkoutu; ověřuje jen vlastníkovu identitu a příkaz.
+2. **BUILD-ONLY** – jediný trusted main checkout, kontrola zdroje, verze, předchozí APK a cílené testy; práva pouze **contents:read** a právě jeden ověřený APK Actions artifact. **Žádné GitHub Release, tag, contents:write ani publish krok.**
+3. **RELEASE-ONLY** – pouze na druhou samostatnou autorizační událost, práva **contents:write + actions:read**, kontrola původu a bajtů již hotové APK, **žádný build, Gradle nebo product checkout**. Release vytvoří přesně schválené APK.
 
-**Nedělat:** automatické vydávání na `push`, změnu `main` jen kvůli spuštění, vlastní manifestové/P/Q/E řetězce, HOME, nahrání sdíleného PAT tokenu, vydání podle neověřeného komentáře.
+**Izolace oprávnění:** workflow default permissions co nejmenší (např. contents:read), práva se nastaví zvlášť pro každý job. BUILD nesmí přes reusable workflow, matrix, cache či sdílený token získat contents:write; checkout **persist-credentials:false**, žádná neodůvodněná secrets. RELEASE nespouští cizí checkout ani skripty ze ZIP. Žádný workflow_run:completed automatický publish.
 
-## Návrh B – minimální řídicí cesta (ke schválení)
+**Migrace v jednom schváleném implementačním PR (ne teď):**
+- Odstranit starou podmínku umožňující zveřejnění jedinou dvojicí vstupů **cloud_run_approved=true, publish_release=true**, starý privilegovaný jednojobsový publish krok a automatické propojení s buildem. Pozitivně zachovat preflight/postflight kontrolu podpisu/verzí.
+- **workflow_dispatch** zůstane pouze jako manuální owner fallback s novým povinným **operation=pilot|build|release** a odpovídajícími parametry. Neznámá či legacy kombinace vstupů (včetně pouhých dvou starých booleanů) musí **SKIP/STOP, 0 Release**. Manuální fallback používá **tutéž BUILD-ONLY/RELEASE-ONLY větev, parser/verifikaci a práva**, žádný druhý publikační mechanismus.
+- Současně technicky **uzavřít starý HOME build+publish** (preferovaně odebrat jeho spustitelný release workflow, po výslovném schválení rozsahu), nikoli jej testovat nebo aktivovat. Auditovat aktivní workflow a nové změny main. **Nesmí být po merge dvě funkční vydávací cesty**, ani přechodný okamžik umožňující starý one-shot.
+- Před merge: statický/negativní test vyžadující, že staré **cloud_run_approved=true + publish_release=true** samo nesestaví a nevydá APK; starý HOME dispatch také nesmí zveřejnit. Pokud vlastník ponechání HOME požaduje, musí HOME nejprve prokázat **stejné oddělené jobs**, jinak STOP.
 
-1. **Jeden dedikovaný příkazový issue** (navržen #183, pokud kontrolor neodůvodní oddělené issue). Příkazy jako *celý obsah nově vytvořeného komentáře* s přesnou gramatikou, bez Markdownu, dalších řádků nebo volných parametrů:
-   - `ZAMEROVAC BUILD <40-hex-main-sha>`
-   - `ZAMEROVAC RELEASE <decimal-build-run-id> <64-hex-apk-sha256>`
-   Název/přesný tvar může kontrolor zjednodušit, musí ale zůstat jednoznačný a bez interpretace shellu.
-2. Asistent komentář vloží **teprve po konkrétním výslovném BUILD GO či RELEASE GO**. Nevyvodí GO z pouhé existence issues, starých schválení, zprávy třetí strany nebo ze zeleného buildu.
-3. Workflow na defaultní `main` má `issue_comment: types: [created]`. Podmínka **na úrovni jobu** (před přidělením runneru) musí být současně: přesné repo, přesné číslo issue, `!github.event.issue.pull_request`, `github.event.action == 'created'`, GitHub-autentizovaný **user ID vlastníka** (ne jen `author_association` či text komentáře), `github.actor` owner a očekávaný prefix příkazu. `github.triggering_actor` a rerun oprávnění posoudit nezávisle. Neodpovídající/cizí komentáře ⇒ **job SKIP, žádný build**.
-4. **První krok v jobu** načte autentický JSON event přes `GITHUB_EVENT_PATH`, validuje celé tělo proti pevné gramatice a přesné vlastníkově identitě. **Nikdy** nepřesouvat `github.event.comment.body` přímo do `run: shell`, `eval`, shell command substitution či GitHub expression interpolace. Veškerá proměnná data pouze jako validovaná čísla/hex, předávat přes bezpečná environment/output rozhraní. Nepoužívat kód/artefakty z PR.
-5. Pro hlavní build zkontrolovat **aktuální `main` proti schválenému SHA**, checkout přesně trusted `main` commit a před sestavením znovu porovnat Git SHA. Pokud mezitím main driftne, FAIL/STOP. Kontrolovat skutečně poslední vydanou APK, podpis/ID, `versionCode` a připravovanou vyšší verzi, zachovat současné `verifyDriveRegistration` + JS/Python + Gradle. **Nepřidávat produktové změny, nové knihovny ani přesměrování Maven zdrojů bez důkazu.**
-6. **Build-only job**: `permissions: contents: read`, žádné oprávnění `contents:write`, žádný release/publish step. Úspěšný výstup jediný `Zamerovac-vX.Y.Z.apk` v Actions artifactu s výsledným SHA256, verzí, signer digestem, source commit SHA a jedinečným run ID v logu. Artefakt považovat za **nedůvěryhodné bajty do doby ověření**. Fyzický test = NOT RUN.
-7. **Release-only job**: spouští ho nový samostatný owner komentář (nikdy automatické `workflow_run: completed`). Job má právě `contents:write` a `actions:read`, nepoužívá APK build, neinstaluje externí skripty, nekontroluje cizí PR. Ze zadaného run ID přes GitHub API ověří: stejný repo, schválený GitHub owner, očekávaný workflow, přesné `main` SHA, správné `event`, `conclusion=success`, žádný neočekávaný pokus/odlišný artifact, není expirovaný; přesné jméno artefaktu a právě jedna APK. Porovná **SHA256 samotné APK** s hodnotou v owner komentáři (digest ZIP archivu není digest APK). Ověří `apksigner`, `aapt`, package ID, cert, `versionCode`, `versionName`, aktuální latest release a monotónnost. Při jakémkoli nesouladu STOP bez vytvoření tagu či assetu. Před vytvořením release znovu zkontroluje existenci tagu/nejnovější vydání a změnu `main`. Publikuje **přesně stejné ověřené APK bajty** bez rebuildu.
-8. Nevydávat neodstraněné #88 race testy za PASS. Každé GitHub testovací vydání pouze pro **syntetická data**; live Drive/SAF, upgrade a fyzický Android NOT RUN, pokud skutečně neproběhly.
-9. Zachovat **ruční owner-only fallback** pro případ chybného konektoru nebo příkazu. Vlastník musí před každým novým cloud RUN ověřit rozpočet (strop 12 USD/měsíc; zpožděné účtování), žádné dražší runnery, HOME či další služby.
+## 2. Autentizace komentáře a ručního fallbacku – C2
 
-### Povinná oponentura před implementací
+**Jediný běžný issue #183** v repo zaplikj30-ui/Zamerovac-android (ne PR #186, jiné issue ani PR komentář). Workflow na aktuálním defaultním main: **issue_comment: types: [created]** a **workflow_dispatch**. Celý text příkazu je vždy právě jedna ASCII řádka, bez Markdownu, CR/LF, whitespace navíc a shell expanzí:
 
-Nezávislý kontrolor musí především vyřešit:
-- Zda bezpečně stačí `issue_comment` + číslo issue + neměnná identita autora; re-run, duplicitní komentáře, `github.triggering_actor`, označení `issue.pull_request`, edited/deleted události a cizí komentář v PUBLIC repo.
-- Zda je bezpečné jediné workflow vs. dva workflow soubory, aby **read-only BUILD** nemohl získat write token a **release-only** nikdy neprovedl build/cizí kód.
-- Jak jednoznačně autentizovat původ, SHA a integritu Actions artefaktu a zabránit `zip-slip`, symlinku, podvrženému `APK`, duplicitnímu/run ID, expirovanému artefaktu a race se změnou `latest` vydání.
-- Vhodnost místního GitHub CLI API, práce s tokenem (nikdy neposílat token na jiné hosty), explicitní `permissions`, bezpečné quoting a vhodnost `gh release create` po ověření.
-- Jestli nový veřejný trigger přináší nepřiměřené množství `skipped` runů a zda existuje **ještě menší bezpečný způsob** spuštění z konektoru bez Work, bez tokenu a bez další služby.
-- Jaký je minimální pilot, který **nepublikuje APK** a přesto prokáže reálné přijetí komentáře, autorizaci owner identity i fail-closed chování.
+~~~text
+ZAMEROVAC PILOT
+ZAMEROVAC BUILD 0123456789abcdef0123456789abcdef01234567
+ZAMEROVAC RELEASE 123456789 d63ea74d343f94278bba200430e165cff93977c8ad36fcb9415e66ff64535609
+~~~
 
-## Testovací matice
+Druhá a třetí řádka jsou **jen vzor tvaru**, nikoli souhlas ani platné parametry. Striktní parser **re.fullmatch**:
+- PILOT: přesně **ZAMEROVAC PILOT**
+- BUILD: **ZAMEROVAC BUILD [0-9a-f]{40}**
+- RELEASE: **ZAMEROVAC RELEASE [1-9][0-9]{0,18} [0-9a-f]{64}**
 
-| Scénář | Očekávané chování |
+Decimal run ID musí být pozitivní celé číslo, bez počátečních nul, pod bezpečným API limitem (ověřit 64-bit a GitHub REST rozsah). Žádný další volný parametr. Příkaz vloží asistent až po **výslovném, konkrétním owner PILOT/BUILD/RELEASE GO**; text jiného issue, PR, starý komentář či stav úspěšného buildu není GO.
+
+**Job-level if před přidělením runneru** pro komentář vyžaduje současně:
+- github.repository == **zaplikj30-ui/Zamerovac-android** a github.ref == **refs/heads/main** (workflow na defaultním main), github.event_name == **issue_comment**, github.event.action == **created**;
+- github.event.issue.number == **183**, issue.pull_request **neexistuje**, event.repository identita odpovídá repo;
+- github.event.comment.user.id == **351234773**, login == **zaplikj30-ui**, github.actor == **zaplikj30-ui**, github.triggering_actor == **zaplikj30-ui**;
+- **github.run_attempt == 1**, comment body má jen očekávaný typ příkazu / přesný PILOT (bez shell interpolace). Úplný regex až v parseru prvního kroku: job-level GitHub expressions regex fullmatch nenabízí.
+
+Pro ruční workflow_dispatch: repo/main, github.actor a github.triggering_actor owner, run_attempt=1, povinné operation a parametry přesného tvaru; nemá komentář, ostatní bezpečnostní kontroly stejné. **Edited/deleted/untrusted** a libovolné PR issue_comment => job **SKIPPED před runnerem** (GitHub může přesto evidovat skipped workflow run, 0 job compute a 0 publikace). Odlišný owner komentář s chybným payloadem může projít hrubým job-level prefixem, ale musí okamžitě FAIL při parsování, **před checkoutem, Gradlem i privileged operací**. Veřejné komentáře mohou spamovat skipped metadata; neslibovat nula run záznamů.
+
+**První krok všech oprávněných jobs** načte autentický **GITHUB_EVENT_PATH** a společný malý parser v důvěryhodném workflow. Znovu porovná repository.full_name/id, issue.number/pull_request absence, action, comment.id (kladné unikátní číslo), owner user.id/login, sender.id, body, github.actor/triggering_actor, run_attempt, event/ref/main, workflow identity. U běžného komentáře vyžadovat **created_at == updated_at**, ověřit přes GitHub REST, že konkrétní comment ID stále existuje **v #183**, nebylo dodatečně změněné a má přesné stejné tělo; pokud owner edituje/smaže po založení, **STOP**. Stejné parser vstupy pro ruční dispatch z důvěryhodných inputs. Předat jen validované řetězce přes **env/GITHUB_OUTPUT s hex/čísly**, nikdy vložit comment.body do YAML run:, Bash eval, interpolation ani spustit cizí skript. Token pouze na api.github.com a důvěryhodné GitHub endpointy, ne do logu ani na cizí host.
+
+**Rerun / dvojité příkazy / konkurence:**
+- run_attempt != 1 => job-level **SKIP**, nedávat tlačítku „Re-run“ právo znovu publikovat. Opakovaný BUILD po skutečném FAIL potřebuje **nový GO a nové owner comment ID nebo nový ruční dispatch**.
+- Dva různé owner komentáře mají různá comment ID; run_attempt je sám nededuplikuje. Použít **jednu GitHub Actions workflow-level concurrency group** pro PILOT/BUILD/RELEASE i manuální fallback, **cancel-in-progress:false, queue:max**, aby se nesoupeřilo o release/tag a queued schválení se tiše nepřepisovala (GitHub Actions v roce 2026 podporuje queue:max; až 100 pending, překročení => CANCELLED a ruční kontrola). Před jakýmkoli side-effect znovu ověřit aktuální stav pod serializací.
+- BUILD v serializovaném jobu kontroluje přes Actions API **všechny relevantní dostupné stránky** dřívějších BUILD runů tohoto workflow a jejich úspěšné BUILD joby/artefakty, source SHA, verzi a vydání. **Právě jeden úspěšný BUILD pro stejnou verzi/main SHA:** druhý shodný owner comment/dispatch => STOP, nikoli druhá APK. Neúspěšný/přerušený run není PASS ani použitelný artifact. Nejednoznačná historie, nedostupné API či závod => STOP a nové ruční posouzení, ne výjimka skrytým tokenem.
+- RELEASE vždy znovu zkontroluje původ, identitu vydání a existující tag/release, a to **uvnitř** serializovaného jobu. Opakovaný RELEASE příkaz, jiný run se stejnou versionName, externí vznik tagu i paralelní editace main => STOP. Žádná nucená úprava tagu, --clobber, force, delete-and-retry nebo automatický retry při nejasném výsledku. Concurrency sama nechrání před jinými workflows — ty budou C1 migrací vyřazeny.
+
+## 3. Oddělený BUILD-ONLY – C3
+
+**Vstup:** pouze aktuální main commit SHA schválený vlastníkem, nikdy cizí PR SHA. Před checkoutem GitHub API main head == schválených 40 hex; checkout přesné SHA z main, verify git rev-parse HEAD, po testech a před uploadem znovu ověřit, že main se nezměnil. Pouze trusted source bez secrets, nic ze soukromých zákaznických dat.
+
+**Před vydáním další verze** musí již existovat schválený produktový commit s pravdivě upravenými **config/app-version.properties**, offline release-history a případně offline help/testy; versionName **striktně vyšší** než skutečný poslední vydaný semver. Stávající 1.4.0 není povoleným novým BUILD cílem. BUILD ověří:
+- poslední skutečný GitHub Release/test APK (přes API, nikoli zastaralý dokument), přesně jedno .apk; signer cert SHA256 **c828c96739e554e8da4f5851913356134f1359a98d5013772ad5587e74a2d229**, package **cz.zamerovac.app.preview**, versionName a poslední reálný versionCode;
+- vložené bezpečnostní kontroly z dnes existující build-apk.yml; JS/Python, Drive registration, příslušná dostupná regresní sada podle změny; Gradle compile/assemblePreview s výpočtem **nový versionCode = previous real APK versionCode + 1**, nikoliv pořadí nového workflow. HTTP 429 / Gradle FAIL => žádný PASS artifact/Release, bez automatického falešného retry.
+- výsledná APK: **apksigner verify**, cert, package, **versionName=X.Y.Z-test**, **versionCode > poslední vydané** a rovné stanovenému bezpečnému novému code; skutečný **sha256sum APK**. Následně jediný soubor **Zamerovac-vX.Y.Z.apk** v Actions artifactu. Artifact název deterministicky váže **build run ID, run attempt=1, source SHA a owner comment ID** (u ručního fallbacku explicitní marker manual), takže při čtení nejsou možné nejednoznačné kandidáty. V artifactu **žádný manifest ani další soubory**.
+- log/step summary musí zaznamenat source SHA, build workflow path, run ID+attempt, event, autorizační komentář ID nebo manual, APK SHA256, signer, package, versionName/code, předchozí release ID/tag/code a výsledky testů. Bez tajných údajů. BUILD job success je nutný pro RELEASE, není důkaz fyzického testu ani opravy #88.
+
+**Práva BUILD:** job-level contents:read; případné actions:read pro přesné vyhledání dřívějších BUILD runů, explicitně bez contents:write. Upload artifact GitHub Actions přes runtime token, nikoliv přístup k Releases.
+
+## 4. Oddělený RELEASE-ONLY a stejná APK – C3
+
+**Vstup:** nový samostatně schválený owner příkaz (nebo ruční dispatch) s **decimal BUILD run ID** a **64 lower-hex SHA256 samotného APK**. RELEASE job bez kódu z produktu, Gradlu, sestavování, odemykání HOME nebo instalace externích věcí z artefaktu. Jediné nutné write právo **contents:write**; navíc **actions:read** pro přečtení konkrétního workflow runu a Actions artifactu.
+
+1. **Provenance přes GitHub API, fail closed:** owner komentář nebo ruční fallback znovu validován jako C2; run ID existuje v **tomtéž repo a repo ID**, je z **výslovně povoleného workflow id/path** na **main**, event pouze **issue_comment(created owner #183)** nebo owner workflow_dispatch(operation=build), run **completed/success** a **run_attempt == 1**, actor i triggering_actor owner, head_repository_id správný, head_branch=main a source head_sha důvěryhodný. Build job v jobs API přesně identifikován a **conclusion=success**; žádný release-only/pilot run nesmí sloužit jako zdroj. Pro komentářový původ identita původního comment ID z názvu artifactu + GitHub REST issue comments: přesné #183, author ID, nezměněný created/updated a přesný původní BUILD příkaz na schválený SHA; pro manual ověřit operation/build a jeho původní ověřený event/step summary, jinak STOP. Provenance z názvu ani z logu samotná nestačí, musí současně souhlasit nezávislá REST metadata runu, jobu, komentáře a artefaktu. UNKNOWN metadata nebo nepřístupné ověření => STOP, ne předpoklad PASS.
+2. **Source a existence artifactu:** aktuální HEAD main musí být **rovný source SHA původního buildu**, případný drift => STOP a nový BUILD GO. Pro run musí být právě **jediný očekávaný, neexpirovaný artifact** s korektním názvem, ID, workflow_run.id/head_sha/repository_id/head_repository_id; všechny stránky artefaktového seznamu kontrolovat na duplicity. Artifact od jiného runu, po jiném pokusu, vypršelý artifact, jiné name, další soubory v ZIP => STOP. Run attempt=1 řeší nejednoznačnost obnovy pokusu. GitHub artifact **ZIP digest je jen doplňková kontrola archivu, NENÍ hash APK**.
+3. **Bezpečné ZIP:** stažení pouze přes GitHub REST s omezením velikosti, HTTPS a kontrolovanými přesměrováními; **Authorization nesmí odejít z api.github.com na externí redirect host** (po prvním ověřeném 302 použít oddělené požadavky bez bearer tokenu, reject neznámý host/schéma). Python stdlib zipfile: **právě jedna** central-directory položka se jménem přesně **Zamerovac-vX.Y.Z.apk**, žádné další entry (ani skryté), dirs, absolutní cesty, ../, backslash, symlink/hardlink, executable/script, nenormální typ nebo encrypted; povolit jen očekávaný typ komprese, odmítnout duplicitní názvy, chybnou CRC, ZIP bomb a příliš velký kompresní poměr. Horní limit archivu i rozbalené APK (navrženě 100 MiB; před implementací změřit skutečnou velikost), bezpečný TEMP se zápisem jednoho obyčejného souboru, bez jeho spuštění. Jakákoli neověřená vlastnost ZIP => STOP.
+4. **Binární nezávislé ověření:** spočítat **SHA256 rozbalené APK** a porovnat s **owner-supplied 64hex**; apksigner verify včetně předem pinovaného certu, aapt package **cz.zamerovac.app.preview**, **versionName=X.Y.Z-test**, **versionCode > poslední SKUTEČNĚ vydané APK**; release version X.Y.Z semver > poslední skutečně vydaná X.Y.Z. Z API main SHA načíst **config/app-version.properties jako data** (bez checkoutu a spouštění skriptů) a vyžadovat jeho shodu s ověřenou APK. Z GitHub Release API stáhnout poslední zveřejněnou APK a prověřit její signer/code stejně jako dnešní preflight. Žádný „PASS“ jen podle popisu či původního logu.
+5. **Zákaz dvojitého vydání / TOCTOU:** uvnitř jediné concurrency group (C2) po kontrolách **bezprostředně znovu načíst main HEAD, latest release ID/tag/code, existenci cílového tagu v Git refs i existenci release a assetu**; pokud změna, existující tag nebo nejistý REST timeout => **STOP**, žádné přepsání. Jediný create bez --clobber/force/retag/delete a bez retry smyčky; tag cílit na ověřený source SHA. Pokud vytvoření tagu/release/upload assetu skončí částečně nebo UNKNOWN, **zastavit a ručně prověřit**, nesmazat automaticky a nezkoušet vytvořit znovu. Vydat **tentýž právě zvalidovaný temp APK soubor** bez recompilation či přepisu bajtů. Po uploadu GitHub release asset stáhnout a **znovu ověřit SHA256 proti schválenému APK**; teprve potom hlásit RELEASE PASS. Nejde-li download ověřit, oznámit UNKNOWN/STOP, nikoli PASS.
+6. **Metadata:** zaznamenat owner comment ID (nebo manual), BUILD run ID+attempt, approved SHA256 APK, product source SHA, nový Release ID/tag/asset ID a výsledný digest do GitHub run summary / PR. Nic nevydávat jen proto, že BUILD PASS nebo workflow skončil zeleně.
+
+## 5. Pilot a přesná negativní testovací matice – C4
+
+**Pilot 0 = žádný APK a žádný publish**. Teprve po nezávislém DESIGN APPROVE, bezpečné implementaci a jejím SOURCE review + samostatném owner PILOT RUN GO:
+- owner zadá do issue #183 **ZAMEROVAC PILOT**; read-only job bez checkoutu/Gradlu/artefaktu/Release ověří autentický komentář, actor, ref, workflow/run attempt a zapíše skutečný run URL a výsledek;
+- statickými a lokálně simulovanými event fixture testy prokázat, že **cizí user ID/actor/triggering_actor**, cizí issue a PR comment, edited/deleted, rerun, jiné repo/ref, jiný command, multiline, shell payload, Unicode/whitespace neprojdou; pro live negativní pilot vytvořit pouze odděleně schválené neškodné owner comment ve špatném issue / neplatný příkaz a ověřit **job SKIP/STOP a nulové přidělené write oprávnění**. Cizí účet/test comment se nepožaduje, pokud není právně a technicky dostupný; simulace ≠ live důkaz.
+- Neočekávaný live trigger, permission nebo běh = **STOP**; nesměšovat „skipped workflow metadata“ s runtime START. Pilot PASS neznamená úspěšnou bezpečnou publikaci.
+
+**BUILD pilot** až pro pozdější skutečnou vyšší produktovou verzi, nový owner BUILD GO; **RELEASE** teprve po kontrole konkrétního BUILD artifactu, novém RELEASE GO. **Fyzická instalace a reálný Bosch/S Pen/Drive/SAF samostatně** – fyzický PASS se z CI nevyvozuje.
+
+| Scénář (pozitivní i negativní) | Povinný výsledek |
 |---|---|
-| Owner + výslovný BUILD GO + přesný current-main SHA | Právě build-only artifact; **0 Release** |
-| Cizí uživatel / PR komentář / špatné issue / edit starého komentáře | **0 build, 0 publish**, nejlépe job SKIP |
-| Owner text s nečekaným řádkem, shell syntaxí, chybějícím SHA | **STOP před checkoutem** |
-| Main se po GO změní | **STOP**, nový explicitní souhlas |
-| Maven Central 429 / Gradle FAIL | **FAIL**, žádný artifact s tvrzením PASS a žádný Release |
-| Owner RELEASE GO pro existující ověřený build | Přesně stejné APK bajty, nový tag pouze jednou |
-| Release bez příslušného BUILD GO/úspěšného runu | **STOP** |
-| Změněný APK digest, podpis, ID, code, name, původ runu, expirovaný artifact | **STOP bez zveřejnění** |
-| Nové vydání vzniklo mezitím, tag již existuje | **STOP bez přepsání** |
-| Rerun stejného příkazu nebo konkurenční publish | Nesmí vzniknout duplicitní nebo neověřený Release |
-| Fyzická instalace/sync/Bosch/S Pen | **NOT RUN**, dokud se zvlášť fyzicky neotestuje |
+| Owner PILOT, správný issue/ref/actor/ID, attempt=1 | read-only PASS, **0 APK, 0 Release** |
+| Cizí issue/PR, actor nebo user ID, edited/deleted, rerun attempt=2, no GO | job SKIP před runnerem; **0 build, 0 publish** |
+| Příkaz s dalšími řádky, Markdownem, shell payloadem, nevalidní SHA/run ID/hash | parser FAIL před checkoutem či write |
+| Dva současné owner BUILD pro stejný SHA/verzi, opakovaný komentář | jeden přijatý BUILD nejvýše; druhý STOP; žádná tichá změna kódu |
+| SHA drift / source není current main / změna release během buildu | STOP; nevydávat, žádný „PASS artifact“ |
+| HTTP 429, chybějící Gradle dependency, neplatný podpis/package/name/code | BUILD FAIL, 0 release, žádný schválený APK |
+| BUILD GO bez nového RELEASE GO | jediný ověřitelný Actions artifact, **0 Release/tag** |
+| RELEASE bez konkrétního úspěšného BUILD/run attempt=1, z jiného repo, expired/duplicate artifact | STOP |
+| ZIP s ../, absolutní cestou, symlinkem, extra APK, duplicitním entry, zip bomb | STOP bez extrakce/spuštění nebezpečného payloadu |
+| Jiný SHA256 APK, ZIP digest zaměněný za APK, podpis/cert/package/verze/code | STOP |
+| RELEASE pro už vydanou 1.4.0, prázdnou novou verzi, tag exists, latest drift | STOP bez přepsání |
+| Dva současné RELEASE, dva různé RUN k téže verzi, rerun, neznámý výsledek HTTP | nejvýše 1 vydání, druhý STOP / UNKNOWN ručně vyřešit |
+| RELEASE GO pro plně ověřený nový BUILD | **jeden nový Release, stejný SHA256 bajtů před a po uploadu** |
+| Původní build-apk.yml se starými booleany / HOME legacy publish | 0 možnost BUILD→RELEASE jedním souhlasem |
+| Fyzický Android upgrade, data, S Pen/Bosch, live Drive/SAF | **NOT RUN**, dokud vlastník fyzický test výslovně nezahájí |
 
-## Akceptace a STOP
+**Závazný doklad**: u každé etapy aktuální runner/produkt SHA, prostředí, přesné PASS/FAIL/SKIP/NOT RUN/BLOCKED, URL a chybějící důkazy; žádný skutečný build/pilot nebyl při této DESIGN úpravě spuštěn. Neodůvodněné další bezpečnostní vrstvy, P/Q/E manifesty, vlastní backend či secret PAT jsou zakázané.
 
-**DESIGN HOTOVO:** nezávislá SECURITY kontrola vybraného nejmenšího řešení a rizik s přímým URL. Je-li design potřeba změnit, upravit v této jediné větvi a znovu přezkoumat.
+## 6. Varianty, rizika, HOTOVO / STOP
 
-**IMPLEMENTACE HOTOVO:** po design GO programátor provede jednu izolovanou změnu stávající infrastruktury, syntaxi/negativní a pozitivní testy, vlastní review; **jiný kontrolor** nezávisle zkontroluje aktuální diff. Výsledek pravdivě `PASS/FAIL/SKIP/NOT RUN/BLOCKED`.
+| Varianta | V čem je lepší / horší | Verdikt |
+|---|---|---|
+| **A – malá úprava současného GitHub Actions**: jeden soubor, oddělené jobs + owner issue_comment, manuální fallback | Splní #183 i #184 bez nových serverů/tokenů. Riziko PUBLIC skipped metadata, parseru, race a artefaktu vyžaduje konkrétní testy. | **PODMÍNĚNĚ PREFEROVÁNO – až po nezávislém DESIGN APPROVE** |
+| **B – pouze bezpečný ruční workflow_dispatch** se stejným BUILD/RELEASE oddělením | Nejmenší nové autorizační riziko; nesplní automatické spuštění z běžného ChatGPT. Při neúspěšném bezpečnostním pilotu návrat k B. | **Bezpečná záloha** |
+| **C – externí webhook/server/token** | Více tajných údajů, provozu, údržby, ceny i míst selhání. | **NEDOPORUČENO** |
 
-**PILOT HOTOVO:** pouze po samostatném owner RUN GO se skutečně provede nejmenší nezávadný cloud test, z logu potvrdí trusted SHA a fail-closed případy. **Nová APK/release vyžadují vlastní další schválení**, u budoucí verze, nikoli přepsání `test-v1.4.0`.
+**Zbývající rizika:** GitHub owner účet může být kompromitovaný (není druhý faktor), PUBLIC komentáře mohou vytvářet skipped běhy, třetí strany mohou ovlivnit externí síť/dodávky, API a artifact mohou selhat v neurčitém stavu, concurrency fronta má strop 100 a její pořadí není garantované. Fail-closed a serializace nejsou matematický důkaz absence závodu; implementační testy a nezávislý kontrolor musí ověřit skutečný YAML/REST/ZIP. HOME zůstává vypnutý, bez nové instalace. Žádné zákaznické ostré soubory.
 
-**STOP:** prokázané neoprávněné sestavení/publikování, neschválený write token, nezajištěná provenance artefaktu, nepřiměřená externí závislost/náklad či nemožnost nezávislého SECURITY review.
+**DESIGN HOTOVO:** všechny C1–C4 jsou konkrétně navržené, ověřené oproti skutečnému main, a **jiný kontrolor** schválí nový přesný SHA. **IMPLEMENTACE HOTOVO:** po DESIGN APPROVE autor ve *stejném PR #186* udělá jediný izolovaný workflow celek, vlastní pozitivní/negativní testy a kumulativní self-review, následně **nové nezávislé SOURCE/SECURITY review**. **PILOT HOTOVO:** pouze po zvláštním RUN GO skutečně prokázaný read-only komentář a odmítnutí chybných vstupů. BUILD, RELEASE a fyzický Android jsou další **oddělené souhlasy a evidence**.
 
-**NEMĚNIT:** produktové soubory, data, podpis/debug cert, package ID, #88 diagnostiky, již vydanou 1.4.0 a HOME.
+**STOP:** přetrvávající stará one-shot release cesta, nemožnost oddělit contents:read/write, autentizovat akci, ověřit artifact a jeho bajty, bezpečně ukončit UNKNOWN publish nebo neúměrné náklady. **NEMĚNIT:** produktový kód a zákaznická data, podpis a package ID, hotové test-v1.4.0, sync #88, HOME.
 
-## Podklady
+### Podklady
 
-- GitHub [Events that trigger workflows](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows)
-- GitHub [Secure use reference](https://docs.github.com/en/actions/reference/security/secure-use)
-- GitHub [REST artifacts and integrity](https://docs.github.com/en/rest/actions/artifacts)
-- Aktuální main `.github/workflows/build-apk.yml`, `docs/verzovani.md`, `AGENTS.md`.
+- [Nezávislé review PR #186 – CHANGES REQUIRED](https://github.com/zaplikj30-ui/Zamerovac-android/pull/186#pullrequestreview-5953495936).
+- [GitHub Actions events – issue_comment](https://docs.github.com/en/actions/reference/workflows-and-actions/events-that-trigger-workflows).
+- [GitHub Workflow syntax – jobs permissions a concurrency queue:max](https://docs.github.com/en/actions/reference/workflows-and-actions/workflow-syntax).
+- [GitHub REST – artifacts](https://docs.github.com/en/rest/actions/artifacts).
+- [GitHub REST – workflow runs](https://docs.github.com/en/rest/actions/workflow-runs).
+- Skutečný main **.github/workflows/build-apk.yml**, **.github/workflows/windows-home-apk-release.yml**, **config/app-version.properties**, **AGENTS.md**, **START_ZDE.md**, [#42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42).
