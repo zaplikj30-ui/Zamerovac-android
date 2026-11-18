@@ -72,13 +72,23 @@ class GitHubAPI:
         self.opener = opener or urllib.request.build_opener(NoRedirect)
         self.hosts = {"objects.githubusercontent.com", "release-assets.githubusercontent.com"}
 
-    def request(self, path, binary=False, payload=None, allow_404=False):
+    def artifact_zip(self, artifact_id):
+        # Actions archives use GitHub REST JSON media type and Azure blob storage,
+        # unlike Release APK assets (octet-stream + GitHub release CDN).
+        artifact_id = positive_id(artifact_id, "artifact ID")
+        return self.request("/actions/artifacts/" + str(artifact_id) + "/zip",
+                            binary=True, artifact=True)
+
+    def request(self, path, binary=False, payload=None, allow_404=False, artifact=False):
         if not isinstance(path, str) or not path.startswith("/"):
             stop("invalid GitHub API path")
+        if artifact and (not binary or payload is not None or
+                         not re.fullmatch(r"/actions/artifacts/[1-9][0-9]*/zip", path)):
+            stop("invalid Actions ZIP request")
         url = "https://api.github.com/repos/" + REPO + path
         data = json.dumps(payload).encode() if payload is not None else None
         headers = {"Authorization": "Bearer " + self.token, "User-Agent": "zamerovac-apk-gate",
-                   "Accept": "application/octet-stream" if binary else "application/vnd.github+json",
+                   "Accept": "application/vnd.github+json" if artifact or not binary else "application/octet-stream",
                    "X-GitHub-Api-Version": "2022-11-28"}
         req = urllib.request.Request(url, data=data, headers=headers,
                                      method="POST" if data is not None else "GET")
@@ -87,21 +97,30 @@ class GitHubAPI:
                 raw = response.read((MAX_ZIP if binary else 4 * 1024 * 1024) + 1)
                 if len(raw) > (MAX_ZIP if binary else 4 * 1024 * 1024):
                     stop("API response over size limit")
-                if binary and response.headers.get("Content-Type", "").startswith("application/json"):
-                    stop("asset binary endpoint returned JSON")
+                if binary and "json" in response.headers.get("Content-Type", "").lower():
+                    stop("binary endpoint returned JSON")
                 return raw if binary else json.loads(raw)
         except urllib.error.HTTPError as error:
             if allow_404 and error.code == 404 and not binary:
                 return None
             if not binary or error.code not in (301, 302, 303, 307, 308):
                 stop("GitHub API HTTP " + str(error.code))
-            return self.redirect_binary(error.headers.get("Location"))
+            return self.redirect_binary(error.headers.get("Location"), artifact=artifact)
+        except (urllib.error.URLError, TimeoutError):
+            stop("GitHub API network error")
 
-    def redirect_binary(self, url):
-        # Authenticated bearer MUST NOT follow the redirect. CDN request is tokenless.
+    def redirect_binary(self, url, artifact=False):
+        # Never forward bearer/cookies to a signed CDN URL (including subsequent hops).
         for _ in range(5):
-            parsed = urllib.parse.urlparse(url or "")
-            if (parsed.scheme != "https" or parsed.hostname not in self.hosts or
+            try:
+                parsed = urllib.parse.urlsplit(url or "")
+                allowed_port = parsed.port in (None, 443)
+            except ValueError:
+                stop("untrusted asset redirect")
+            host = parsed.hostname or ""
+            allowed_host = (re.fullmatch(r"productionresultssa[0-9]{1,3}\.blob\.core\.windows\.net", host)
+                            if artifact else host in self.hosts)
+            if (parsed.scheme != "https" or not allowed_host or not allowed_port or
                     parsed.username or parsed.password or parsed.fragment):
                 stop("untrusted asset redirect")
             req = urllib.request.Request(url, headers={"User-Agent": "zamerovac-apk-gate"})
@@ -115,6 +134,8 @@ class GitHubAPI:
                 if error.code not in (301, 302, 303, 307, 308):
                     stop("asset CDN HTTP " + str(error.code))
                 url = error.headers.get("Location")
+            except (urllib.error.URLError, TimeoutError):
+                stop("binary download network error")
         stop("too many CDN redirects")
 
     def pages(self, path, key, max_pages=30):
@@ -424,7 +445,7 @@ def release_preflight():
     if old["version_code"] >= 2147483646:
         stop("previous versionCode too high")
     expected_name = "Zamerovac-v" + version + ".apk"
-    archive = api.request("/actions/artifacts/" + str(positive_id(a["id"], "artifact ID")) + "/zip", binary=True)
+    archive = api.artifact_zip(a["id"])
     data = decode_single_apk(archive, expected_name)
     sha = hashlib.sha256(data).hexdigest()
     if sha != requested_hash:

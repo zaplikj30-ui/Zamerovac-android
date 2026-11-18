@@ -266,11 +266,14 @@ class TestApkGateOffline(unittest.TestCase):
             "expired": False, "workflow_run": {"id": run_id, "head_sha": SHA}
         }
         class FakeReleaseAPI:
+            def artifact_zip(self, identifier):
+                if identifier == artifact_id: return archive_data
+                raise AssertionError("UNEXPECTED ARTIFACT " + str(identifier))
+
             def request(self, path, **kwargs):
                 if path == "/actions/runs/" + str(run_id): return run
                 if path == "/actions/workflows/build-apk.yml": return {"id": workflow_id}
                 if path == "": return {"id": repo_id}
-                if path == "/actions/artifacts/" + str(artifact_id) + "/zip": return archive_data
                 if path == "/releases/latest":
                     return {"id": 9, "tag_name": "test-v1.4.0",
                             "assets": [{"id": 10, "name": "Zamerovac-v1.4.0.apk"}]}
