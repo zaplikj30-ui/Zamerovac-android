@@ -33,7 +33,7 @@ const chapters=[
     "title": "2. Zakázky, složky a podsložky",
     "intro": "Složky oddělují zákazníky, místnosti a části zakázky. Ve složce můžeš vytvářet další složky.",
     "steps": [
-      "Pomocí ＋ vytvoř Novou složku, otevři ji a ukládej do ní fotografie, soubory a poznámky.",
+      "Pomocí ＋ vytvoř Novou složku, otevři ji a ukládej do ní fotografie, soubory a poznámky. Druhé spodní tlačítko vedle ＋ opakuje poslední úspěšně uložený typ přidání v aktuální složce: například fotografii, složku, náčrt nebo textovou poznámku. Jeho obrázek se mění až po potvrzeném uložení, ne po zrušení či chybě. Ve spuštěné relaci se volba mění společně pro všechny složky; po novém spuštění se nyní vrací k původní galerii/fotografii. Trvalé nastavení zkratky zatím není zavedeno.",
       "Klepnutím na název složky v cestě nahoře se vrátíš na danou úroveň.",
       "U položky otevři nabídku ⋮ pro přejmenování, přesunutí, odstranění nebo dostupné exporty.",
       "Složku nepřesouvej do sebe ani do vlastní podsložky. Aplikace takový přesun odmítá."
