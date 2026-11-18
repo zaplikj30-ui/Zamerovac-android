@@ -14,7 +14,7 @@ const {suite,assert,createCanvas}=require('./harness.cjs');
    assert.equal(await timeline.count(),expectedVersions.length);
    for(let i=0;i<expectedVersions.length;i++){
     const entry=timeline.nth(i);
-    assert((await entry.locator('summary').innerText()).includes('Verze '+expectedVersions[i]),
+    assert.equal(await entry.locator('summary b').innerText(),'Verze '+expectedVersions[i],
      'Wrong release at index '+i+': '+expectedVersions[i]);
     assert.equal(await entry.evaluate(el=>el.open),i===0,
      'Unexpected default open state at release index '+i);
@@ -69,8 +69,8 @@ const {suite,assert,createCanvas}=require('./harness.cjs');
     assert(dialog&&dialog.x>=-1&&dialog.x+dialog.width<=viewport.width+1,
      'Release dialog must not overflow viewport');
     assert.equal(await page.locator('details.releaseTimeline').count(),11);
-    assert((await page.locator('details.releaseTimeline').first().locator('summary').innerText()).includes('Verze 1.4.0'));
-    assert((await page.locator('details.releaseTimeline').nth(10).locator('summary').innerText()).includes('Verze 1.1'));
+    assert.equal(await page.locator('details.releaseTimeline').first().locator('summary b').innerText(),'Verze 1.4.0');
+    assert.equal(await page.locator('details.releaseTimeline').nth(10).locator('summary b').innerText(),'Verze 1.1');
 
     await page.click('#okModal');
     assert.equal(await page.locator('#modal').isVisible(),false);
