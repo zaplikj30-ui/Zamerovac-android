@@ -53,7 +53,7 @@ function scene(){
   reportSaveResult:ok=>ok,
   applySavedState:next=>{env.state=next},
   reconcileSavedState:(base,local,remote)=>remote,
-  showFolder(){},modal(){},
+  showFolder(){},modal(){},console:{warn(){}},
  };
  vm.createContext(env);
  vm.runInContext(presenter,env,{filename:'sync-status.js'});
@@ -92,6 +92,15 @@ if(mode==='f1'||mode==='all'){
  assert.equal(s.api.status().phase,'confirmed','Uncommitted edit must not claim a new successful revision');
  assert.equal(s.reads,noReads,'Rejected save must not poll ledger');
  assert.equal(s.disk.records[0].items[0].measure,'1325,00000123','Rejected write changed durable bytes');
+ // A noncritical presenter failure after durable ACK must not turn that ACK into failure.
+ s.refuse=false;
+ const originalStatus=s.api;
+ s.window.ZamerovacSyncStatus={...originalStatus,localSaved(){throw Error('synthetic UI badge failure')}};
+ const postAck=clone(s.disk);postAck.records[0].title='Durably saved despite UI failure';
+ s.window.__setState(postAck);
+ assert.equal(s.window.__save(),true,'UI failure cannot reclassify acknowledged native write');
+ assert.equal(s.disk.records[0].title,'Durably saved despite UI failure');
+ s.window.ZamerovacSyncStatus=originalStatus;
  console.log('PASS F1: ACK(A) -> durable edit(B) pending without ledger I/O -> ACK(B), rejected CAS safe');
 }
 if(mode==='f2'||mode==='all'){
@@ -129,5 +138,16 @@ if(mode==='f2'||mode==='all'){
  assert.equal(s.notices.filter(x=>/konfliktní kopie/i.test(x)).length,2,
   'Rejected update must not announce a committed new conflict');
  assert(s.notices.length>=pre,'Failure should not hide notices');
+ // A notification renderer throwing after a native ACK must not reclassify the sync.
+ s.refuse=false;
+ const originalStatus=s.api;
+ s.window.ZamerovacSyncStatus={...originalStatus,conflicts(){throw Error('synthetic conflict toast failure')}};
+ const after=clone(s.old);after.records.push(conflict('copy-1'),conflict('copy-2'),conflict('copy-4'));
+ s.disk=after;
+ assert.equal(s.window.onNativeSync(JSON.stringify({transport:'cloud-v2',pending:false,
+  message:'Přenos potvrzen pro toto úložiště',data:after})),true,
+  'Post-ACK warning renderer error cannot turn committed sync into failure');
+ assert.equal(s.disk.records.filter(r=>r.conflict).length,3,'Confirmed conflict records must stay durable');
+ s.window.ZamerovacSyncStatus=originalStatus;
  console.log('PASS F2: new cloud-v2 conflict, deduplicated repeat, second conflict, persistent detail, rejected save');
 }
