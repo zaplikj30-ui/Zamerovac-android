@@ -8,7 +8,7 @@ Tato složka je **rozcestník**, nikoli druhá databáze chyb.
 
 | Priorita | Hlášení / stav | Detail |
 | --- | --- | --- |
-| P1 | Opakované varování na uchované hlasové nahrávky. Příčina **NEOVĚŘENA**. | [#190](https://github.com/zaplikj30-ui/Zamerovac-android/issues/190) |
+| P1 | Opakované varování na uchované hlasové nahrávky: **JS příčina opakovaných toastů reprodukována**; oprava je v [DRAFT PR #198](https://github.com/zaplikj30-ui/Zamerovac-android/pull/198), nikoli vydaná ani fyzicky ověřená. Na posledním SHA opravy čeká nezávislé re-review a cloudový retest. Příčina nejisté evidence nahrávek a související Android latence zůstává **NEOVĚŘENA**. | [#190](https://github.com/zaplikj30-ui/Zamerovac-android/issues/190) |
 | P1 | Zasekávání editoru a nespolehlivé uchopení kót. Příčina **NEOVĚŘENA**. | [#191](https://github.com/zaplikj30-ui/Zamerovac-android/issues/191) |
 | P2 | Opakované hlášení o spárování/synchronizaci. Příčina **NEOVĚŘENA**. | [#192](https://github.com/zaplikj30-ui/Zamerovac-android/issues/192) |
 | P2 | Rychlé tlačítko vlevo dole zůstává na fotografii místo poslední akce. V aktuální cestě kódu **neimplementováno**. | [#194](https://github.com/zaplikj30-ui/Zamerovac-android/issues/194) |
