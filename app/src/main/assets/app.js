@@ -532,7 +532,10 @@ window.onNativeSync=(text)=>{
   }
   const conflicts=result.data?state.records.filter(r=>r.conflict).length:0;
   if(result.transport==='cloud-v2'&&window.ZamerovacSyncStatus?.cloud?.(result)){
-   if(result.data)window.ZamerovacSyncStatus?.conflicts?.(state.records.filter(r=>r&&r.conflict===true));
+   // A non-authoritative toast/DOM error must not revoke an already
+   // confirmed native sync save or trigger a misleading retry.
+   if(result.data)try{window.ZamerovacSyncStatus?.conflicts?.(state.records.filter(r=>r&&r.conflict===true))}
+   catch(error){console.warn('Synchronizační upozornění na konflikty nelze zobrazit')}
    return true;
   }
   notify((result.message||'Synchronizace dokončena')+(conflicts?' · zachované konfliktní kopie: '+conflicts:''));return true;
