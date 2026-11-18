@@ -72,7 +72,7 @@ class GitHubAPI:
         self.opener = opener or urllib.request.build_opener(NoRedirect)
         self.hosts = {"objects.githubusercontent.com", "release-assets.githubusercontent.com"}
 
-    def request(self, path, binary=False, payload=None):
+    def request(self, path, binary=False, payload=None, allow_404=False):
         if not isinstance(path, str) or not path.startswith("/"):
             stop("invalid GitHub API path")
         url = "https://api.github.com/repos/" + REPO + path
@@ -91,6 +91,8 @@ class GitHubAPI:
                     stop("asset binary endpoint returned JSON")
                 return raw if binary else json.loads(raw)
         except urllib.error.HTTPError as error:
+            if allow_404 and error.code == 404 and not binary:
+                return None
             if not binary or error.code not in (301, 302, 303, 307, 308):
                 stop("GitHub API HTTP " + str(error.code))
             return self.redirect_binary(error.headers.get("Location"))
@@ -120,12 +122,12 @@ class GitHubAPI:
         for page in range(1, max_pages + 1):
             sep = "&" if "?" in path else "?"
             result = self.request(path + sep + "per_page=100&page=" + str(page))
-            values = result.get(key)
+            values = result if isinstance(result, list) else result.get(key)
             if not isinstance(values, list):
                 stop("missing API page " + key)
             all_items.extend(values)
             if len(values) < 100:
-                if "total_count" in result and len(all_items) != result["total_count"]:
+                if isinstance(result, dict) and "total_count" in result and len(all_items) != result["total_count"]:
                     stop("incomplete paginated API results")
                 return all_items
         stop("API pagination exceeds safe limit")
@@ -203,6 +205,9 @@ def inspect_apk(path, version=None):
 def previous(ap):
     info, version, asset = latest(ap)
     raw = ap.request("/releases/assets/" + str(positive_id(asset["id"], "latest asset ID")), binary=True)
+    declared = asset.get("digest")
+    if declared is not None and declared != "sha256:" + hashlib.sha256(raw).hexdigest():
+        stop("previous published asset digest mismatch")
     if len(raw) > MAX_APK:
         stop("latest APK too large")
     with tempfile.TemporaryDirectory() as td:
@@ -388,18 +393,12 @@ def release_preflight():
     if check_latest["id"] != info["id"]:
         stop("latest release changed")
     tag = "test-v" + version
-    # No broad 404 swallowing: refs/tags listing must be complete; API failure STOP.
-    refs = api.pages("/git/matching-refs/tags", "ref", max_pages=30) if False else api.request("/git/matching-refs/tags")
-    if not isinstance(refs, list):
-        stop("tag refs API invalid")
-    if any(x.get("ref") == "refs/tags/" + tag for x in refs):
+    # Exact API lookups. 404 is the sole accepted absence; other HTTP errors STOP.
+    if api.request("/git/ref/tags/" + tag, allow_404=True) is not None:
         stop("target tag already exists")
-    releases = api.pages("/releases", "releases") if False else api.request("/releases?per_page=100")
-    if not isinstance(releases, list):
-        stop("release list unavailable")
-    if any(x.get("tag_name") == tag for x in releases):
-        stop("release tag already exists")
-    final_path = Path(os.getenv("RUNNER_TEMP", td if False else "/tmp")) / "zamerovac-approved.apk"
+    if api.request("/releases/tags/" + tag, allow_404=True) is not None:
+        stop("target release already exists")
+    final_path = Path(os.environ["RUNNER_TEMP"]) / "zamerovac-approved.apk"
     # Never use a symlink/cached filename for the bytes. Recreate in this ephemeral job.
     with open(final_path, "xb") as dest:
         dest.write(data)
@@ -421,12 +420,10 @@ def release_recheck():
     info, _, _ = latest(api)
     if str(info["id"]) != os.environ["PREVIOUS_RELEASE_ID"]:
         stop("latest release changed before create")
-    refs = api.request("/git/matching-refs/tags")
-    if not isinstance(refs, list) or any(x.get("ref") == "refs/tags/" + tag for x in refs):
-        stop("release target tag exists or refs unavailable")
-    records = api.request("/releases?per_page=100")
-    if not isinstance(records, list) or any(x.get("tag_name") == tag for x in records):
-        stop("release exists or API unavailable")
+    if api.request("/git/ref/tags/" + tag, allow_404=True) is not None:
+        stop("tag already exists before create")
+    if api.request("/releases/tags/" + tag, allow_404=True) is not None:
+        stop("release already exists before create")
     file = Path(os.environ["APPROVED_FILE"])
     if not file.is_file() or hashlib.sha256(file.read_bytes()).hexdigest() != os.environ["EXPECTED_HASH"]:
         stop("approved APK mutated before create")
