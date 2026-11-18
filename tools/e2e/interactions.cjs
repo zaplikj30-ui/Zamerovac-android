@@ -49,8 +49,9 @@ async function setup(page){await createCanvas(page,'Gesta – syntetická');awai
     hits++;
    }
    await page.evaluate(()=>{selected=null;paint()});
-   const mid={x:(before[2].a.x+before[2].b.x)/2,y:(before[2].a.y+before[2].b.y)/2};
-   const from=await projected(page,mid);
+   // Avoid the wide measurement caption; the touch stays within the drawn line hit band.
+   const mid={x:before[2].a.x+(before[2].b.x-before[2].a.x)*.20,y:before[2].a.y+(before[2].b.y-before[2].a.y)*.20};
+   const onLine=await projected(page,mid),from={x:onLine.x,y:onLine.y+20};
    await drag(page,from,{x:from.x+19,y:from.y+13});
    const moved=await page.evaluate(()=>JSON.parse(JSON.stringify(current.items)));
    assert.notDeepEqual(moved[2].a,before[2].a,'Center drag did not move a');
@@ -68,7 +69,9 @@ async function setup(page){await createCanvas(page,'Gesta – syntetická');awai
    assert.deepEqual(await page.evaluate(()=>JSON.parse(JSON.stringify(current.items))),moved,'Saved dimensions changed after reload');
    // Test ambiguous 12px line overlap without silently modifying either dimension.
    await tool(page,'dimension');
-   const last=pts[4];
+   const last=await page.evaluate(()=>{
+    const item=current.items[4];return {a:worldToScreen(item.a),b:worldToScreen(item.b)};
+   });
    await drag(page,{x:last.a.x,y:last.a.y+12},{x:last.b.x,y:last.b.y+12});
    await tool(page,'select');
    const overlap=await page.evaluate(()=>JSON.parse(JSON.stringify(current.items)));
