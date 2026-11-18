@@ -96,6 +96,9 @@ function assertOldPhoto(s){
  assert.equal(s.starts,0,'voice started automatically');
  assert.match(s.element('recordAudio').textContent,/Spustit/);
  assert.equal(s.disk.records.filter(r=>r.kind==='note').length,1,'note not durably saved');
+ // A delayed/repeated callback after the note view opened must not create a duplicate.
+ assert.equal(s.env.createVoiceNote(),false,'stale double click should be rejected');
+ assert.equal(voiceNotes(s).length,1,'stale double click created duplicate');
  s.element('recordAudio').onclick();
  assert.equal(s.starts,1);assert(s.env.window.recording,'microphone did not start');
  assert.match(s.element('recordAudio').textContent,/Zastavit/);
