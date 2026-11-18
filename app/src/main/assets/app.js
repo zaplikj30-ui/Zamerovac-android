@@ -168,9 +168,10 @@ function save(){
      try{window.PendingAudio?.refresh?.()}catch(ignored){}
     }
     try{reportSaveResult(true)}catch(error){presentationFailed=true}
-    if(presentationFailed)try{
-     notify('Uloženo, ale přehled nebo upozornění se nepodařilo aktualizovat. Vrať se do přehledu a zkontroluj jej.');
-    }catch(ignored){}
+    if(presentationFailed){
+     window.__lastSavePresentationFailed=true;
+     try{notify('Uloženo, ale přehled nebo upozornění se nepodařilo aktualizovat. Vrať se do přehledu a zkontroluj jej.')}catch(ignored){}
+    }
     return true;
    }
    if(result?.ok!==false)throw new Error('Neplatné potvrzení zápisu');
@@ -521,7 +522,14 @@ function finishNoteRecording(){
  if(noteActive===target)renderNoteAttachments();return true;
 }
 function recordVoice(){
- if(window.recording){if(finishNoteRecording())notify('Nahrávka připojena. Ulož poznámku.');return}
+ if(window.recording){
+  // The post-ACK warning belongs to this recording stop; do not replace it
+  // with an ordinary success toast after a durable but UI-failed save.
+  window.__lastSavePresentationFailed=false;
+  if(finishNoteRecording()&&!window.__lastSavePresentationFailed)
+   notify('Nahrávka připojena. Ulož poznámku.');
+  return;
+ }
  const owner=noteActive;
  if(!owner||!state.records.includes(owner)||owner.deleted||window.isRecordLocked?.(owner)){
   notify('Nejprve otevři dostupnou a odemčenou poznámku.');
