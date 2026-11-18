@@ -222,6 +222,7 @@ const chapters=[
     "steps": [
       "Přepni na Vybrat a upravit, potom klepni na kótu nebo čáru.",
       "Bílé úchopy u konců přesouvají jednotlivé koncové body; střední oblast slouží k posunu celého objektu.",
+      "Jsou-li koncové úchopy dvou kót blízko sebe, klepnutí přímo na zřetelně bližší úchop vybere příslušnou kótu. U téměř stejně blízkých úchopů má přednost již označená kóta; v případě nejasnosti obraz přibliž a výběr zopakuj.",
       "U obdélníku, lichoběžníku a vložených obrázků se mohou objevit vlastní rohové či další úchopy.",
       "Při jemné práci používej lupu a podle potřeby vypni magnetické přichytávání.",
       "Po úpravě objekt odznač a ověř polohu i přesnou hodnotu po opětovném otevření."
