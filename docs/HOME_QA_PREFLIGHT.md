@@ -1,5 +1,7 @@
 # HOME QA – schválená Windows/WSL pojistka
 
+> **HOME RETIRED (18. 11. 2026): HISTORICKÁ DOKUMENTACE – NENÍ NÁVOD KE SPUŠTĚNÍ.** Rozhodnutím [vlastníka v PR #186](https://github.com/zaplikj30-ui/Zamerovac-android/pull/186#issuecomment-6978003077) byly oba aktivní HOME workflow odstraněny z návrhové větve. Níže uvedené dřívější postupy, příkazy a schválení nejsou nynější oprávnění spouštět HOME, vytvářet nové workflow, instalovat software ani vydat APK. Historická evidence zůstává zachovaná; na `main` do schváleného merge staré soubory stále jsou.
+
 Řízeno v [issue #42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42), nezávislý REQUEST FIX [#6754944468](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42#issuecomment-6754944468), opravné zadání [#6755055908](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42#issuecomment-6755055908). Samostatný infrastrukturní kód; Android produkt, PR #61/#92/#93/#94 a main zůstávají nedotčené.
 
 ## Problém a zvolená oprava
