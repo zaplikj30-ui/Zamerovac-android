@@ -30,11 +30,11 @@ function scene(){
   driveAccountState(){return JSON.stringify({sync:{backend:'drive',account:'test@example.invalid'}})},
   syncLedgerState(){ledgerReads++;return JSON.stringify(ledger)}
  },openZamerovacPeers(){peers++}};
- const env={window,document,notify:message=>notices.push(message),
+ const env={window,document,screen:'browser',notify:message=>notices.push(message),
   modal:(...args)=>events.push(args)};
  vm.createContext(env);vm.runInContext(source,env,{filename:'sync-status.js'});
  return {window,notices,classes,cloud,events,element,
-  get ledgerReads(){return ledgerReads},set ledger(value){ledger=value},
+  get ledgerReads(){return ledgerReads},set ledger(value){ledger=value},set screen(value){env.screen=value},
   get oldCloud(){return oldCloud},get peers(){return peers}};
 }
 function phase(s){return s.window.ZamerovacSyncStatus.status().phase}
@@ -88,6 +88,13 @@ assert.equal(s.events.length,1,'Tapping cloud should show status explanation');
 assert.match(s.element('syncStatusExplanation').textContent,/Google účet, párování/);
 s.element('syncStatusPair').onclick();assert.equal(s.peers,1,'Safe pairing action missing');
 s.element('syncStatusCloud').onclick();assert.equal(s.oldCloud,1,'Legacy cloud actions inaccessible');
+// A cloud callback during drawing must not synchronously open/scan the ledger.
+s.screen='editor';const beforeEditorReads=s.ledgerReads;
+api.cloud({transport:'cloud-v2',pending:false,message:'Přenos potvrzen'});
+assert.equal(s.ledgerReads,beforeEditorReads,'Editor drawing was blocked by native ledger I/O');
+assert.equal(phase(s),'pending','Unverified editor result must not turn green');
+s.screen='browser';s.cloud.onclick();
+assert.equal(phase(s),'confirmed','Explicit status tap should verify confirmed receipt');
 assert(s.ledgerReads>0,'Receipt should have been checked only for transfer/result and explicit UI');
 s.ledger={localSaved:true,error:true,targets:[{kind:'drive',state:'transport-ack',contentState:'not-required'}]};
 api.cloud({transport:'cloud-v2',pending:false,message:'Přenos potvrzen'});
