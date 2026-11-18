@@ -400,8 +400,10 @@ function createTextNote(){
  const note=newRecord('note','Nová poznámka');
  if(!canWriteToFolder(note.parentId)){notify('Nejdříve odemkněte složku.');return false}
  if(!persistNewRecord(note))return false;
+ const storedNote=recById(note.id);
+ if(!storedNote){notify('Uloženou poznámku nelze bezpečně otevřít.');return false}
  rememberSuccessfulAdd('note');
- openNote(recById(note.id)||note);
+ openNote(storedNote);
  return true;
 }
 function repeatQuickAdd(){
@@ -437,7 +439,7 @@ async function acceptPickedMedia(request,id,mime,name,takenAt=null){
 }
 $('filePick').addEventListener('change',async(e)=>{const request=stagedMediaRequest;if(!request)return;try{for(let file of e.target.files){let mediaId=await storeMedia(file,request.id);await acceptPickedMedia(request,mediaId,file.type||'application/octet-stream',file.name)}}catch(error){notify('Příloha nebyla přidána: '+error.message)}finally{if(stagedMediaRequest===request)stagedMediaRequest=null}});
 $('filePick').addEventListener('cancel',()=>{stagedMediaRequest=null});
-async function addMediaRecord(id,name,mime,takenAt=null,folder=currentFolder,source='media'){if(!canWriteToFolder(folder)){notify('Původní složka není dostupná nebo je uzamčená; příloha nebyla připojena jinam.');return null}const kind=mime.startsWith('image/')?'photo':mime.startsWith('video/')?'video':mime.startsWith('audio/')?'audio':'file',r=newRecord(kind,name,folder);r.media=[id];if(kind==='photo'&&takenAt)r.photoTakenAt=takenAt;if(!persistNewRecord(r))return null;rememberSuccessfulAdd(kind,source);if(screen==='browser'&&currentFolder===folder){showFolder();if(kind==='photo')openEditor(r)}return r}
+async function addMediaRecord(id,name,mime,takenAt=null,folder=currentFolder,source='media'){if(!canWriteToFolder(folder)){notify('Původní složka není dostupná nebo je uzamčená; příloha nebyla připojena jinam.');return null}const kind=mime.startsWith('image/')?'photo':mime.startsWith('video/')?'video':mime.startsWith('audio/')?'audio':'file',r=newRecord(kind,name,folder);r.media=[id];if(kind==='photo'&&takenAt)r.photoTakenAt=takenAt;if(!persistNewRecord(r))return null;const saved=recById(r.id);if(!saved){notify('Přílohu se nepodařilo bezpečně otevřít.');return null}rememberSuccessfulAdd(kind,source);if(screen==='browser'&&currentFolder===folder){showFolder();if(kind==='photo')openEditor(saved)}return saved}
 async function storeMedia(file,importToken=null){const id=uid(),mime=file.type||'application/octet-stream';if(importToken)await MediaImportOwnership.reserve(id,importToken);if(native){let bytes=new Uint8Array(await file.arrayBuffer());const chunkSize=48*1024;if(!Native.beginMediaChecked(id,mime,file.name||'soubor',bytes.length))throw new Error('Přílohu nelze připravit k uložení');for(let off=0;off<bytes.length;off+=chunkSize){let sub=bytes.subarray(off,off+chunkSize);let s='';for(let b of sub)s+=String.fromCharCode(b);if(!Native.appendMedia(id,btoa(s)))throw new Error('Příloha nebyla zapsána');}if(!Native.finishMedia(id))throw new Error('Příloha není uložená úplně');}
 else{const db=await mediaDb();await new Promise((resolve,reject)=>{let tx=db.transaction('files','readwrite');tx.objectStore('files').put(file,id);tx.oncomplete=resolve;tx.onerror=reject})}if(importToken)await MediaImportOwnership.published(id,importToken);return id}
 let idb=null;function mediaDb(){if(!idb)idb=new Promise((res,rej)=>{let req=indexedDB.open('zamerovac-media',1);req.onupgradeneeded=()=>req.result.createObjectStore('files');req.onsuccess=()=>res(req.result);req.onerror=rej});return idb}
