@@ -36,6 +36,15 @@ def step_script(name):
     return '\n'.join(block) + '\n'
 
 
+def require_product_workdir_step(workflow, name):
+    marker = '      - name: ' + name + '\n'
+    if workflow.count(marker) != 1:
+        raise AssertionError('Expected exactly one workflow step: ' + name)
+    block = workflow.split(marker, 1)[1].split('      - ', 1)[0]
+    if '        working-directory: product\n' not in block:
+        raise AssertionError('Missing product working-directory: ' + name)
+
+
 class ChromiumRevisionTests(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(prefix='qa-revision-')
@@ -109,6 +118,18 @@ class ChromiumRevisionTests(unittest.TestCase):
         self.assertNotEqual(negative.returncode, 0)
         self.assertIn('FAIL: checkout is not the requested product commit', negative.stdout)
 
+    def test_missing_or_relocated_pdf_step_is_detected(self):
+        workflow = WORKFLOW.read_text(encoding='utf-8')
+        name = 'Independent customer PDF and ZIP regression'
+        marker = '      - name: ' + name + '\n'
+        self.assertEqual(workflow.count(marker), 1)
+        require_product_workdir_step(workflow, name)
+        with self.assertRaisesRegex(AssertionError, 'Expected exactly one workflow step'):
+            require_product_workdir_step(workflow.replace(marker, ''), name)
+        with self.assertRaisesRegex(AssertionError, 'Missing product working-directory'):
+            require_product_workdir_step(workflow.replace(
+                marker + '        working-directory: product\n', marker), name)
+
     def test_older_product_keeps_current_runner_and_product_sha(self):
         # A real old git checkout with no new QA files; no fetched history or
         # network is needed even in a shallow GitHub Actions checkout.
@@ -147,11 +168,12 @@ class ChromiumRevisionTests(unittest.TestCase):
         self.assertIn('path: product', checkouts[1])
         self.assertIn('ref: ${{ env.QA_TARGET_SHA }}', checkouts[1])
         for name in ('Verify checked-out revision', 'QUICK current source JS, Python and regressions',
-                     'Chromium - current QUICK 7 and available E2E 21/81',
-                     'Android native Java, Drive and PDF checks - no APK'):
-            block = workflow.split('      - name: ' + name + '\n')[1].split('      - ')[0]
-            self.assertIn('        working-directory: product\n', block)
-        browser = step_script('Chromium - current QUICK 7 and available E2E 21/81')
+                     'Chromium - current QUICK 7 and available E2E 23/96',
+                     'Android native Java and Drive checks - no APK',
+                     'Full JVM - raw FAIL and strict ACK product acceptance',
+                     'Independent customer PDF and ZIP regression'):
+            require_product_workdir_step(workflow, name)
+        browser = step_script('Chromium - current QUICK 7 and available E2E 23/96')
         self.assertIn('"$GITHUB_WORKSPACE"/tools/check-*-browser.cjs', browser)
         self.assertIn('"$GITHUB_WORKSPACE/tools/e2e/$suite.cjs"', browser)
         self.assertIn('--directory app/src/main/assets', browser)

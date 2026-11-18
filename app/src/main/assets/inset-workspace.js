@@ -71,16 +71,21 @@
     ctx.fillStyle='#231a30';ctx.fillText(label,p.x,p.y+1)}
   ctx.restore();
  }
- // Rotace zobrazená jako dvě lehké šipky nad obrázkem, ne nové tlačítko v kolečku.
+ // Pouze vizuální změna: dvě samostatné otevřené klenuté šipky, nikoliv kruh.
+ // Dotykový bod pro otáčení zůstává beze změny v hitTest().
  function rotationHandle(c,p,g){
   c.save();c.translate(p.x,p.y);c.rotate(g.angle);
   c.lineCap='round';c.lineJoin='round';
-  c.strokeStyle='rgba(255,255,255,.88)';c.fillStyle='rgba(255,255,255,.88)';
+  c.strokeStyle='rgba(255,255,255,.92)';c.fillStyle='rgba(255,255,255,.92)';
   c.shadowColor='rgba(0,0,0,.7)';c.shadowBlur=4;c.lineWidth=2.7;
   for(const side of [-1,1]){
-   const a=side*3,b=side*17;
-   c.beginPath();c.moveTo(a,0);c.lineTo(b,0);c.stroke();
-   c.beginPath();c.moveTo(b,0);c.lineTo(b-side*7,-6);c.lineTo(b-side*7,6);c.closePath();c.fill();
+   const tipX=side*19;
+   c.beginPath();c.moveTo(side*3,5);
+   c.quadraticCurveTo(side*11,-18,tipX,3);
+   c.stroke();
+   c.beginPath();c.moveTo(tipX,3);
+   c.lineTo(side*11,-1);c.lineTo(side*16,-6);
+   c.closePath();c.fill();
   }
   c.restore();
  }
@@ -98,12 +103,69 @@
   const width=clamp(c.measureText(text).width+18,88,Math.max(88,(render?.viewport.w??stageCanvas.clientWidth)-20));
   return {x:p.x-width/2,y:p.y-fs/2-7,w:width,h:fs+15,p,text,fs};
  }
+ // All visible sheets rotate around the front photograph's centre.
+ // Reuse these screen-space bounds for the icon AND export/gallery extents.
+ function insetVisibleBlocks(it,g,render){
+  const count=(it.media||[]).filter(id=>!(it.audioMedia||[]).includes(id)).length;
+  const step=Math.min(10,72/Math.max(1,count-1));
+  const blocks=[];
+  for(let layer=0;layer<Math.max(1,count);layer++){
+   const offset=layer*step;
+   const corners=[
+    {x:-g.w/2+offset,y:-g.h/2-offset},
+    {x:g.w/2+offset,y:-g.h/2-offset},
+    {x:g.w/2+offset,y:g.h/2-offset},
+    {x:-g.w/2+offset,y:g.h/2-offset}
+   ].map(p=>turn(p,g));
+   const xs=corners.map(p=>p.x),ys=corners.map(p=>p.y);
+   blocks.push({x:Math.min(...xs),y:Math.min(...ys),
+    w:Math.max(...xs)-Math.min(...xs),h:Math.max(...ys)-Math.min(...ys)});
+  }
+  // The stack's numeric counter is visible only in the editor/gallery.
+  if(count>1&&!render?.exporting){
+   const offset=step*(count-1);
+   const centre=turn({x:g.w/2+offset+15,y:-g.h/2-offset-11},g);
+   blocks.push({x:centre.x-13,y:centre.y-13,w:26,h:26});
+  }
+  return blocks;
+ }
+ // Place the audio indicator next to the inset rather than over text or photo.
+ // Only screen-space drawing is affected; the stored note and hit areas stay intact.
+ function audioMarkerPosition(c,it,g,render){
+  if(!Array.isArray(it.audioMedia)||!it.audioMedia.length)return null;
+  const blocks=insetVisibleBlocks(it,g,render);
+  const left=Math.min(...blocks.map(p=>p.x)),right=Math.max(...blocks.map(p=>p.x+p.w));
+  const top=Math.min(...blocks.map(p=>p.y)),bottom=Math.max(...blocks.map(p=>p.y+p.h));
+  let caption;c.save();try{caption=labelRect(c,it,g,render)}finally{c.restore()}
+  const radius=13,gap=7;
+  const viewport=render?.viewport||{w:stageCanvas.clientWidth,h:stageCanvas.clientHeight};
+  const collides=(a,b)=>b&&a.x<b.x+b.w&&a.x+a.w>b.x&&a.y<b.y+b.h&&a.y+a.h>b.y;
+  const options=[
+   {x:right+gap+radius,y:bottom-radius}, // right/bottom, outside the inset
+   {x:right-radius,y:Math.max(bottom,caption?caption.y+caption.h:bottom)+gap+radius},
+   {x:left-gap-radius,y:bottom-radius},
+   {x:right-radius,y:top-gap-radius},
+   {x:left-gap-radius,y:top+radius}
+  ];
+  for(const p of options){
+   const marker={x:p.x-radius,y:p.y-radius,w:radius*2,h:radius*2};
+   // Export/gallery expands the output bounds; editor stays in the viewport.
+   if(!render?.exporting&&(marker.x<2||marker.y<2||
+    marker.x+marker.w>viewport.w-2||marker.y+marker.h>viewport.h-2))continue;
+   if(blocks.every(block=>!collides(marker,block))&&!collides(marker,caption))return p;
+  }
+  return null; // no safe place: never obscure the inset, its stack or caption
+ }
  // Shared bounds use the same geometry and default caption placement as rendering.
  window.insetAnnotationBounds=function(c,it,render){
   const image=window.__detailPhotoCache?.[it.media?.[0]];if(!image?.naturalWidth)return null;
-  const g=layout(it,image,render),corners=[turn({x:-g.w/2,y:-g.h/2},g),turn({x:g.w/2,y:-g.h/2},g),turn({x:g.w/2,y:g.h/2},g),turn({x:-g.w/2,y:g.h/2},g)];
+  const g=layout(it,image,render);
+  const corners=insetVisibleBlocks(it,g,render).flatMap(box=>
+   [{x:box.x,y:box.y},{x:box.x+box.w,y:box.y+box.h}]);
   const label=labelRect(c,it,g,render);
   if(label)corners.push({x:label.x,y:label.y},{x:label.x+label.w,y:label.y+label.h});
+  const marker=audioMarkerPosition(c,it,g,render);
+  if(marker)corners.push({x:marker.x-13,y:marker.y-13},{x:marker.x+13,y:marker.y+13});
   return {minX:Math.min(...corners.map(p=>p.x))-18,minY:Math.min(...corners.map(p=>p.y))-18,maxX:Math.max(...corners.map(p=>p.x))+18,maxY:Math.max(...corners.map(p=>p.y))+18};
  };
  function renderLabel(c,it,g,render){
@@ -173,30 +235,54 @@
   }finally{c.restore();}
   // ImageMeter zachovává textovou část poznámky i po vložení detailu.
   renderLabel(c,it,g,render);
-  // Přítomnost hlasu vyznačujeme ikonou, i když není vyplněný text.
-  if(Array.isArray(it.audioMedia)&&it.audioMedia.length){
-   const p=labelPosition(it,g,render);
-   c.save();c.font='bold 22px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillStyle='#f7dc27';
-   c.fillText('🎙',p.x+(it.text?Math.min(140,g.w/2):0),p.y+(it.text?0:3));c.restore();
+  // Recalculate the marker on zoom, rotation, drag and in the export renderer.
+  const audioMarker=audioMarkerPosition(c,it,g,render);
+  if(audioMarker){
+   c.save();try{
+    c.font='bold 22px sans-serif';c.textAlign='center';c.textBaseline='middle';c.fillStyle='#f7dc27';
+    c.fillText('🎙',audioMarker.x,audioMarker.y);
+   }finally{c.restore();}
   }
   // Bílý úchopový bod na konci šipky pouze při skutečném přetahování.
   if(show&&active?.item===it&&active.kind==='anchor'&&active.changed&&!render.exporting)
    handle(c,g.anchor,'',true);
   if(isSelected){
-   // Referenční ImageMeter: poloprůhledný středový úchop pro tažení fotografie.
+   // Zachováme původní poloprůhledný kruh a dovnitř pouze dokreslíme
+   // čtyři malé šipky: tažením za střed se detail přesouvá.
    c.save();c.fillStyle='rgba(255,255,255,.46)';
    c.strokeStyle='rgba(38,38,38,.55)';c.lineWidth=1.4;
    c.setLineDash([3,3]);
-   c.beginPath();c.arc(g.cx,g.cy,11,0,Math.PI*2);c.fill();c.stroke();c.restore();
-   // Jemné bílé trojúhelníkové úchopy u obou stran a otáčení nahoře.
+   c.beginPath();c.arc(g.cx,g.cy,11,0,Math.PI*2);c.fill();c.stroke();
+   c.setLineDash([]);
+   c.strokeStyle='rgba(35,35,35,.9)';c.fillStyle='rgba(35,35,35,.9)';
+   c.lineWidth=1.5;
+   c.beginPath();
+   c.moveTo(g.cx-5,g.cy);c.lineTo(g.cx+5,g.cy);
+   c.moveTo(g.cx,g.cy-5);c.lineTo(g.cx,g.cy+5);c.stroke();
+   for(const [dx,dy] of [[1,0],[-1,0],[0,1],[0,-1]]){
+    const tipX=g.cx+dx*8,tipY=g.cy+dy*8;
+    const baseX=g.cx+dx*4,baseY=g.cy+dy*4;
+    c.beginPath();c.moveTo(tipX,tipY);
+    c.lineTo(baseX-dy*2.4,baseY+dx*2.4);
+    c.lineTo(baseX+dy*2.4,baseY-dx*2.4);
+    c.closePath();c.fill();
+   }
+   c.restore();
+   // Na obou původních postranních úchopech obousměrné šipky pro změnu velikosti.
+   // Souřadnice i dotykové oblasti v hitTest() zůstávají beze změny.
    for(const side of [-1,1]){
     const p=turn({x:side*(g.w/2+15),y:0},g);
     c.save();c.translate(p.x,p.y);c.rotate(g.angle);
-    c.fillStyle='rgba(255,255,255,.72)';
-    c.strokeStyle='rgba(55,55,55,.65)';c.lineWidth=1.3;c.setLineDash([4,3]);
-    c.beginPath();
-    c.moveTo(side*17,0);c.lineTo(-side*7,-16);c.lineTo(-side*7,16);c.closePath();
-    c.fill();c.stroke();c.restore();
+    c.strokeStyle='rgba(255,255,255,.92)';c.fillStyle='rgba(255,255,255,.92)';
+    c.shadowColor='rgba(0,0,0,.7)';c.shadowBlur=4;c.lineWidth=2.7;
+    c.lineCap='round';c.lineJoin='round';
+    c.beginPath();c.moveTo(-12,0);c.lineTo(12,0);c.stroke();
+    for(const direction of [-1,1]){
+     const x=direction*13;
+     c.beginPath();c.moveTo(x,0);c.lineTo(x-direction*7,-6);
+     c.lineTo(x-direction*7,6);c.closePath();c.fill();
+    }
+    c.restore();
    }
    rotationHandle(c,turn({x:0,y:-g.h/2-33},g),g);
   }

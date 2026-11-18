@@ -20,6 +20,7 @@ final class DatabaseRecovery {
         try{out=file.startWrite();out.write(bytes);out.getFD().sync();file.finishWrite(out);out=null;if(!Arrays.equals(bytes,file.readFully()))throw new IOException("Evidence obnovy nebyla potvrzena");}catch(IOException failure){if(out!=null)file.failWrite(out);throw failure;}
     }
     static String id(File home)throws IOException{synchronized(TrashPurger.LOCK){JSONObject state=load(home);return state==null?"":state.optString("epoch");}}
+    static boolean pending(File home)throws IOException{synchronized(TrashPurger.LOCK){JSONObject state=load(home);return state!=null&&state.optBoolean("recovering");}}
     static boolean recovered(File home)throws IOException{
         JSONObject state=load(home);if(state!=null&&state.optBoolean("recovering"))return false;
         try{save(home,new JSONObject().put("version",1).put("epoch",UUID.randomUUID().toString()).put("recovering",true));return true;}catch(JSONException invalid){throw new IOException(invalid);}

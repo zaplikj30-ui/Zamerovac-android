@@ -3,6 +3,7 @@ import java.io.IOException;
 /** Live sync namespace cannot address a historical backup. */
 interface SyncStore extends ImmutableStore {
     String namespace();
+    default String uploadPath(String proposed,String hash,long size)throws Exception{return proposed;}
     default SyncStore checked(ImmutableStore.Checkpoint checkpoint){return this;}
     static String[] parts(String path)throws IOException{if(path==null||!path.matches("sync/v2(?:/[a-zA-Z0-9_.-]+)*")||path.contains("..")||path.length()>400)throw new IOException("Neplatná cesta synchronizace");return path.split("/");}
 }

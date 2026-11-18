@@ -67,7 +67,7 @@ const chapters=[
       "Náhledy v přehledu se vytvářejí se zmenšeným dekódováním mimo zámek místní databáze, aby načítání fotografie neblokovalo ukládání. U náhledu se respektuje otočení i zrcadlení EXIF; originál zůstává beze změny. Při chybě nebo odstranění fotografie se nepublikuje opožděný náhled.",
       "Opakované otevření stejné fotografie využívá omezenou paměťovou mezipaměť dekódovaných obrázků. Po úplném restartu se originál načítá znovu. Při načítání nebo chybě se samostatné kóty nezobrazují na prázdném podkladu; originály ani hodnoty se nemění.",
       "Příloha se připojí až po potvrzení celého zápisu. Při přerušení se nedokončený soubor odmítne a existující originál se nepřepíše.",
-      "Přidávání ze systémového výběru běží mimo hlavní vlákno a zobrazuje průběh. Po dobu dávky nezačínej další výběr. Výsledek patří do původní složky nebo poznámky; po přechodu jinam se tam nepřesměruje. Je-li původní cíl smazaný, uzamčený nebo dialog zavřený, příloha se jinam nepřipojí. Jedna dávka má nejvýše 1024 souborů a jeden soubor nejvýše 2 GiB."
+      "Přidávání ze systémového výběru běží mimo hlavní vlákno a zobrazuje průběh. Po dobu dávky nezačínej další výběr. Výsledek patří do původní složky nebo poznámky; po přechodu jinam se tam nepřesměruje. Je-li původní cíl smazaný, uzamčený nebo dialog zavřený, příloha se jinam nepřipojí. Jedna dávka má nejvýše 1024 souborů ; velikost souboru omezuje volné místo a schopnosti úložiště."
     ],
     "keywords": [
       "foto",
@@ -307,13 +307,15 @@ const chapters=[
     ],
     "notes": [
       "Hlasové nahrávání vyžaduje přístup k mikrofonu. Při odmítnutém oprávnění lze zkusit nastavení Androidu.",
-      "Hlas se připojí k původní poznámce až po úspěšném ukončení záznamu a potvrzení souboru. Uložit nebo šipka zpět v textové poznámce nahrávání ukončí. Při chybě mikrofonu nebo zápisu zůstane formulář otevřený; u bodové poznámky zůstane otevřený i po neúspěšném Zpět. Zrušit bodovou poznámku rozpracovaný hlas zahodí.",
-      "Nahrávej v otevřené aplikaci; systém může mikrofon na pozadí omezit. Nedokončený hlas se při zničení obrazovky nepřipojí. Existující originál ani při kolizi identifikátoru nepřepisuj. Přílohy s neplatnými metadaty nebo nad 2 GiB se odmítnou.",
+      "Hlasovou přílohu v bodové poznámce nejprve bezpečně ukonči tlačítkem Zastavit; k poznámce se zapíše až po potvrzení Uložit nebo po úspěšném Zpět. Zrušit zachová původní text a přílohy. Když Zastavit selže, původní pokus je ukončený a je nutné spustit nové nahrávání; neukládej neúplný hlas. Dokončená, ale nepotvrzená nahrávka zůstane v přehledu Uchované hlasové nahrávky i po restartu. V otevřené poznámce použij Připojit k této poznámce a Uložit. Záznam s nejistým dokončením nebo poškozenou evidencí se nemaže; tlačítkem Uložit kopii originálu jej lze zkopírovat pro kontrolu. Neznámá nebo poškozená evidence vyvolá samostatné upozornění a pozastaví automatické opravy i potvrzování připojení. Ostatní dostupné originály zůstávají v přehledu a lze uložit jejich jednotlivé kopie. Při nesouladu souborů se ověřený originál nabízí samostatně a obsah musí odpovídat evidovanému SHA. Tlačítko Uložit podezřelou kopii zachrání oddělený nejistý soubor pro ruční kontrolu; taková kopie není potvrzením původního obsahu ani připojení k poznámce. Dokončení v návrhu ještě neznamená úspěšné uložení poznámky. Automatické mazání nahrávek je vypnuté i při vysypání koše. ZIP zakázek nezahrnuje nepřipojené nahrávky; jejich kopii ulož samostatně. Uložit nebo šipka zpět v textové poznámce nahrávání ukončí. Při chybě mikrofonu nebo zápisu zůstane formulář otevřený; u bodové poznámky zůstane otevřený i po neúspěšném Zpět.",
+      "Nahrávej v otevřené aplikaci; systém může mikrofon na pozadí omezit. Nedokončený hlas se při zničení obrazovky nepřipojí. Existující originál ani při kolizi identifikátoru nepřepisuj. Přílohy s neplatnými metadaty se odmítnou; při nedostatku místa přenos zůstane nedokončený.",
       "Checklisty a přílohy dostávají revizi a průběžně se ukládají. Příchozí synchronizace během otevřené poznámky počká na dokončení její úpravy. Při chybě zápisu tlačítko Uložit formulář nezavře; zopakuj uložení.",
+      "Bodová poznámka může obsahovat zvuk i detailní fotografii. Přehrávání zvuku nemá samo otevřít klávesnici. Do kótování detailu lze vstoupit jen přes obrazovou přílohu, nikoli přes nahraný zvuk. Chybějící náhled nezmění uložený originál. Když smazání není potvrzené, dialog zůstane otevřený.",
       "Pouhé otevření a zavření textové poznámky nebo zobrazení prázdné skici nemění její obsah ani revizi. Uzamčená poznámka nedovolí měnit checklist ani odebírat přílohy.",
       "Soukromé poznámky do zákaznického PDF patří jen při výslovné volbě."
     ],
     "keywords": [
+      "uchované nahrávky", "obnova hlasu",
       "checklist",
       "poznámkový blok",
       "audio",
@@ -329,11 +331,12 @@ const chapters=[
     "intro": "Poznámky ve fotografii mohou obsahovat další obrázky nebo vlastní detailní kótování.",
     "steps": [
       "U bodové poznámky otevři její podrobnosti a vlož potřebné fotografie.",
-      "Vložený obrázek umísti do pracovní fotografie a podle dostupných úchopů nastav jeho polohu, velikost a natočení.",
+      "Po označení vložené fotografie ji přesuň tažením za středové čtyřsměrné šipky. Obousměrné šipky na levé i pravé straně mění velikost a dvě otevřené obloukové šipky nad fotografií slouží k otáčení.",
       "Do detailu obrázku lze přidávat vlastní kóty. Po návratu do hlavní fotografie ověř, že poznámka i její detail zůstaly uloženy.",
       "Při více přílohách se orientuj podle jejich seznamu nebo galerie."
     ],
     "notes": [
+      "Je-li vedle vložené detailní fotografie dost místa, značka hlasové přílohy se zobrazuje mimo její rámeček a textový popisek. Jde jen o označení nahrávky; posun, otočení ani přiblížení detailu nemění zvukový soubor.",
       "Příloha a její detail jsou součástí projektu; zálohovací ZIP má zachovat jejich vazby.",
       "Zákaznické PDF může tyto přílohy obsahovat pouze po povolení soukromých poznámek."
     ],
@@ -341,6 +344,9 @@ const chapters=[
       "detail",
       "vložená fotografie",
       "fotka do fotky",
+      "zvětšení detailu",
+      "obloukové šipky",
+      "otáčení fotografie",
       "stoh",
       "náhled"
     ]
@@ -439,7 +445,7 @@ const chapters=[
       "Pokud přerušená nebo poškozená záloha zanechá neúplný datový blok, nový pokus může z dostupného originálu vytvořit další ověřenou kopii. Původní soubor a historické manifesty nepřepisuje. Kontrola i obnova vybírají jen úplný obsah se správným součtem. Chyba oprávnění nebo čtení se nesmí vydávat za opravenou zálohu; pokud chybí všechny kopie i originál, obnova není možná. Ověření může vyžadovat další čtení velkých souborů.",
       "Automatická frekvence ani automatické promazávání nejsou zapnuté. Systémovou složku lze spravovat v jejím správci souborů; hromadné odstranění dat této aplikace v nastavení Disku smaže i její body. Sdílené bloky nemaž bez kontroly všech historií, jinak můžeš poškodit více bodů; synchronizace je nikdy nemaže.",
       "Nevyvážej pouhé zákaznické PDF, pokud chceš později upravovat kóty.",
-      "ZIP podporuje nejvýše 20 000 položek včetně tří metadatových souborů, celkem 2 GiB rozbalených dat a 20 MiB UTF-8 pro každý JSON. Nadlimitní export skončí chybou; nepovažuj jej za hotovou zálohu.",
+      "ZIP podporuje nejvýše 20 000 položek včetně tří metadatových souborů, 20 MiB UTF-8 pro každý JSON a postupné zpracování velkých médií podle dostupného místa. Nadlimitní export skončí chybou; nepovažuj jej za hotovou zálohu.",
       "Při čtení ZIP ze systémového úložiště můžeš dál ukládat místní práci. Obnova přidá nové kopie k aktuálním zakázkám; pomalý poskytovatel má časový limit a přerušení nepotvrdí obnovu.",
       "Nové ZIP zálohy obsahují kontrolní součty SHA-256 a velikosti souborů. Obnova je ověří před vytvořením kopií; starší ZIP zůstávají přijímány bez této dodatečné kontroly.",
       "Chybějící nebo prázdná příloha export zálohy zastaví. Neúspěšný zápis se neoznačí jako hotová záloha; původní zakázky zůstávají zachované.",
@@ -476,9 +482,9 @@ const chapters=[
       "Zámky složek slouží k ochraně před nechtěnou změnou. Před editací nebo mazáním složku podle potřeby odemkni."
     ],
     "notes": [
-      "Vysypání koše uchovává pouze identifikátory a revizi smazání. Nezávislá novější změna z jiného zařízení se může zachovat jako označená konfliktní kopie; původní vysypané ID se neobnovuje.",
-      "Trvalý úklid zahrnuje také výhradní hlasové poznámky a přílohy historie anotací. Soubor používaný jiným záznamem nebo jeho historií, včetně starších vložených záznamů, zůstane zachovaný; oddělené neměnné zálohy se tím nemažou. Pokud je historie příloh poškozená nebo nepřiměřeně zanořená, bezpečnostní kontrola vysypání odmítne místo rizikového smazání.",
-      "Obnovení z koše nenahrazuje samostatnou zálohu ZIP.",
+      "Vysypání koše odebere položky z běžného seznamu. Samostatná místní ochrana uchovává přesná metadata předchozích uložených stavů a originální přílohy bez jejich zdvojování. Přehled počtu chráněných revizí a velikosti příloh najdeš v koši. Potvrzení synchronizace tuto ochranu neruší. Nezávislá novější změna z jiného zařízení se může zachovat jako označená konfliktní kopie; původní vysypané ID se neobnovuje.",
+      "Chráněné fotografie, videa, hlasové poznámky i přílohy historie zůstávají v telefonu také po vysypání koše; místo se nemusí uvolnit. Aplikace jejich poslední kopii automaticky nemaže. Soubor používaný jiným záznamem nebo jeho historií, včetně starších vložených záznamů, zůstane zachovaný; oddělené neměnné zálohy se tím nemažou. Pokud je historie příloh poškozená nebo nepřiměřeně zanořená, bezpečnostní kontrola vysypání odmítne místo rizikového smazání.",
+      "Při nedostatku místa se operace vyžadující novou ochranu zastaví s chybou. Uvolni jiné soubory a opakuj ji. Chráněné soubory nemaž ručně. Místní ochrana není samostatná záloha proti ztrátě telefonu, poškození média ani odinstalaci; obnovu historických chráněných revizí tato verze automaticky neprovádí.",
       "Trvalé odstranění a synchronizace s dalšími zařízeními mohou mít nevratné následky."
     ],
     "keywords": [

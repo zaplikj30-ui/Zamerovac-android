@@ -4,16 +4,22 @@ const fs=require('node:fs');
 const path=require('node:path');
 const root=path.resolve(__dirname,'..');
 const history=require('../app/src/main/assets/release-history.js');
-assert(JSON.stringify(history.unreleasedChanges).includes('dosud nevydáno'));
-assert(JSON.stringify(history.unreleasedChanges).includes('nevytvářejí prázdné kroky v historii'),'Gesture history fix must remain unreleased until a real APK is published');
-assert(JSON.stringify(history.unreleasedChanges).includes('po uvolnění prstu obraz neodskočí'),'Pinch/pan lifecycle fix must stay unreleased');
-assert(JSON.stringify(history.unreleasedChanges).includes('starším JSON objektu'),'N4 retention fix must stay unreleased until its tests pass');
-assert(JSON.stringify(history.unreleasedChanges).includes('Neověřitelná historie vysypání koše'),'Nested reference limit must stay unreleased');
-assert(JSON.stringify(history.unreleasedChanges).includes('nepotvrzené změny se neoznačí jako uložené'),'Feedback durable write must be documented as unreleased');
-assert(JSON.stringify(history.unreleasedChanges).includes('pozdní dokončení jiné editační relace'),'In-flight feedback guard must remain unreleased');
+assert(JSON.stringify(history.unreleasedChanges).includes('Změny pro testovací vydání 1.4.0'));
+assert(JSON.stringify(history.unreleasedChanges).includes('nevytvářejí prázdné kroky v historii'),'Gesture history fix must be documented in test-release 1.4.0');
+assert(JSON.stringify(history.unreleasedChanges).includes('po uvolnění prstu obraz neodskočí'),'Pinch/pan lifecycle fix must be documented in test-release 1.4.0');
+assert(JSON.stringify(history.unreleasedChanges).includes('starším JSON objektu'),'N4 retention fix must be documented in test-release 1.4.0');
+assert(JSON.stringify(history.unreleasedChanges).includes('Neověřitelná historie vysypání koše'),'Nested reference limit must be documented in test-release 1.4.0');
+assert(JSON.stringify(history.unreleasedChanges).includes('nepotvrzené změny se neoznačí jako uložené'),'Feedback durable write must be documented in test-release 1.4.0');
+assert(JSON.stringify(history.unreleasedChanges).includes('pozdní dokončení jiné editační relace'),'In-flight feedback guard must be documented in test-release 1.4.0');
 const versions=history.releases.map(x=>x.version);
-assert.deepEqual(versions,['1.3.0','1.2.153','1.2.152','1.2.151','1.2.150','1.2.149','1.2.148','1.2.147','1.2','1.1']);
+assert.deepEqual(versions,['1.4.0','1.3.0','1.2.153','1.2.152','1.2.151','1.2.150','1.2.149','1.2.148','1.2.147','1.2','1.1']);
 assert.equal(new Set(versions).size,versions.length,'Version entries may not duplicate');
+assert.equal(Object.hasOwn(history.releases[0],'status'),false,'Shipped 1.4.0 history must not retain a stale not-published status');
+assert.deepEqual(history.releases[0].groups,history.unreleasedChanges.groups,'All exact pending notes belong to future 1.4.0');
+assert(history.hasReleaseNotes('1.4.0-test'));
+assert.equal(history.forVersion('1.4.0-test')[0].version,'1.4.0');
+assert(!history.forVersion('1.3.0-test').some(x=>x.version==='1.4.0'),'Installed 1.3.0 must not show future 1.4.0');
+assert(JSON.stringify(history.releases[0]).includes('ACK synchronizace ochranu neruší'));
 assert.equal(history.compareVersions('1.2.150','1.2.151'),-1);
 assert.equal(history.compareVersions('1.2.151-test','1.2.151'),0);
 assert.equal(history.compareVersions('1.2.151','1.2.150'),1);
@@ -69,9 +75,9 @@ console.log('PASS true versioned changelog: fixed releases, improvements, no fut
 assert.equal(history.releaseChanges.issue,39,'Release notes must match the update being published');
 assert.equal(history.releaseChanges.version,'1.2.153');
 assert(!history.forVersion('1.2.152').some(x=>x.version==='1.2.153'));
-assert(JSON.stringify(history.releases[1]).includes('A39-01 až A39-06'))
-assert(JSON.stringify(history.releases[0]).includes('smysluplná čísla vydání'));
-assert(JSON.stringify(history.releases[1]).includes('Oddělený výběr Google účtu'));
+assert(JSON.stringify(history.releases[2]).includes('A39-01 až A39-06'))
+assert(JSON.stringify(history.releases[1]).includes('smysluplná čísla vydání'));
+assert(JSON.stringify(history.releases[2]).includes('Oddělený výběr Google účtu'));
 assert(JSON.stringify(history.releaseChanges).includes('spustitelných příloh'));
 assert(JSON.stringify(history.releaseChanges).includes('zaniklá skupina Wi-Fi Direct'));
 assert(JSON.stringify(history.releaseChanges).includes('služba Androidu s oznámením'));
@@ -90,3 +96,5 @@ assert(JSON.stringify(history.releaseChanges).includes('Oddělený výběr Googl
 assert(JSON.stringify(history.releaseChanges).includes('Nové cloudové úložiště'));
 
 for(const phrase of ['A39-01 až A39-06','UTF-8 limit','odvolání rozjednaného TLS','cyklu složek','mimo zámek ukládání','celkových bajtů','hlasová a historická média'])assert(JSON.stringify(history.releaseChanges).includes(phrase),'Missing audit fix note: '+phrase);
+
+assert.match(fs.readFileSync('app/src/main/assets/release-history.js','utf8'),/ACK synchronizace ochranu neruší/);
