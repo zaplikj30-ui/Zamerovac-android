@@ -73,15 +73,31 @@ async function setup(page){await createCanvas(page,'Gesta – syntetická');awai
    await page.click('#editorBack');await page.reload();
    await page.locator('.entry-title',{hasText:title}).click();
    assert.deepEqual(await page.evaluate(()=>JSON.parse(JSON.stringify(current.items))),moved,'Saved dimensions changed after reload');
-   // Test ambiguous 12px line overlap without silently modifying either dimension.
-   await tool(page,'dimension');
-   const last=await page.evaluate(()=>{
+   // Existing annotations are intentionally hit before drawing even in dimension
+   // mode. Create the sixth line in free space, then MOVE it with real gestures
+   // to overlap the fifth; drawing directly within 12px selects the old line.
+   const fifth=await page.evaluate(()=>{
     const item=current.items[4];return {a:worldToScreen(item.a),b:worldToScreen(item.b)};
    });
-   await drag(page,{x:last.a.x,y:last.a.y+12},{x:last.b.x,y:last.b.y+12});
+   const canvas=await page.locator('#drawCanvas').boundingBox();
+   const freeY=Math.min(canvas.height-35,fifth.a.y+Math.max(65,canvas.height*.14));
+   assert(freeY-fifth.a.y>40,'Require a genuinely free drawing region');
+   await tool(page,'dimension');
+   await drag(page,{x:fifth.a.x,y:freeY},{x:fifth.b.x,y:freeY});
    await tool(page,'select');
+   const created=await page.evaluate(()=>JSON.parse(JSON.stringify(current.items)));
+   assert.equal(created.length,6,'The sixth line must be drawn outside existing hit zones');
+   const sixth=await page.evaluate(()=>{
+    const item=current.items[5];return {a:worldToScreen(item.a),b:worldToScreen(item.b)};
+   });
+   await page.evaluate(()=>{selected=null;paint()});
+   const fromSixth={x:sixth.a.x+(sixth.b.x-sixth.a.x)*.2,y:sixth.a.y+20};
+   await drag(page,fromSixth,{x:fromSixth.x,y:fromSixth.y+fifth.a.y+12-sixth.a.y});
    const overlap=await page.evaluate(()=>JSON.parse(JSON.stringify(current.items)));
    assert.equal(overlap.length,6);
+   for(let i=0;i<5;i++)assert.deepEqual(overlap[i],moved[i],'Moving sixth dimension changed an existing one');
+   const fifthScreen=await projected(page,overlap[4].a),sixthScreen=await projected(page,overlap[5].a);
+   assert(Math.abs(sixthScreen.y-fifthScreen.y-12)<1,'Overlapping lines are not 12px apart');
    await page.evaluate(()=>{selected=null;paint()});
    const near=await projected(page,{x:(overlap[5].a.x+overlap[5].b.x)/2,y:(overlap[5].a.y+overlap[5].b.y)/2});
    await clickAt(page,near);
