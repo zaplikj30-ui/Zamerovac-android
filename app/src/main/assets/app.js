@@ -402,7 +402,10 @@ function createVoiceNote(){
   notify('Hlasovou poznámku se nepodařilo uložit. Nahrávání nezačalo.');
   return false;
  }
- openNote(note);
+ // A CAS reconciliation may have replaced record objects on successful save.
+ const savedNote=recById(note.id);
+ if(!savedNote){notify('Uloženou poznámku nelze bezpečně otevřít.');return false}
+ openNote(savedNote);
  notify(native?'Poznámka připravena. Nahrávání spustíš tlačítkem Spustit.':'Poznámka připravena. Přidej zvukový soubor.');
  return true;
 }
