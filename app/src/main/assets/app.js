@@ -385,11 +385,27 @@ function showNewMenu(){if(!$('newMenu').hidden){closeMenus();return}if(!canWrite
 ['<svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h9l5 5v12H5z" fill="#f3f0e7" stroke="#a8a0ba" stroke-width="1.5"/><path d="M14 3v5h5" stroke="#a8a0ba" stroke-width="1.5"/><path d="m9 16 7.6-7.6 2.4 2.4-7.6 7.6-3.4 1z" fill="#d7c2ff" stroke="#9263d5" stroke-width="1.6"/><path d="m15.2 9.8 2.4 2.4" stroke="#9263d5" stroke-width="1.6"/></svg>','Nový náčrt',()=>promptText('Nový náčrt','Název','Nový náčrt',name=>addRecord(newRecord('canvas',name)))],
 ['📝','Nová textová poznámka',()=>{let r=newRecord('note','Nová poznámka');if(!canWriteToFolder(r.parentId)){notify('Nejdříve odemkněte složku.');return}if(!persistNewRecord(r))return;openNote(r)}],
 ['📁','Nová složka',()=>promptText('Nová složka','Jméno zákazníka nebo místnosti','',name=>addRecord(newRecord('folder',name)))],
-['🎤','Hlasová poznámka',()=>recordVoice()],
+['🎤','Hlasová poznámka',()=>createVoiceNote()],
 ['📎','Přidat další soubor',()=>pickMedia('file')],
 ['<svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h16v12H4z" fill="#e8bf65" stroke="#b98828" stroke-width="1.7"/><path d="M3 4h18v4H3z" fill="#ffd778" stroke="#b98828" stroke-width="1.7"/><path d="M12 11a4 4 0 1 1-3.5 5.9" stroke="#9263d5" stroke-width="2.2"/><path d="m7 12 1.5 4.9 4.8-1.1" stroke="#9263d5" stroke-width="2.2"/></svg>','Importovat zakázky ze ZIP',()=>native?Native.importBackup():notify('Obnova ZIP je dostupná v Android aplikaci')]
 ];
 $('newMenu').innerHTML=choices.map((a,i)=>`<button class="choice" data-i="${i}"><strong>${a[0]}</strong>${a[1]}</button>`).join('');$('newMenu').querySelectorAll('button').forEach(b=>b.onclick=()=>{closeMenus();choices[+b.dataset.i][2]()})}
+// #197: create a durable standalone note; never start the microphone in this menu callback.
+function createVoiceNote(){
+ const folder=currentFolder;
+ if(!canWriteToFolder(folder)){
+  notify('Složka není dostupná nebo je uzamčená. Hlasová poznámka nebyla vytvořena.');
+  return false;
+ }
+ const note=newRecord('note','Hlasová poznámka',folder);
+ if(!persistNewRecord(note)){
+  notify('Hlasovou poznámku se nepodařilo uložit. Nahrávání nezačalo.');
+  return false;
+ }
+ openNote(note);
+ notify(native?'Poznámka připravena. Nahrávání spustíš tlačítkem Spustit.':'Poznámka připravena. Přidej zvukový soubor.');
+ return true;
+}
 function pickMedia(type,handler=null){
  if(stagedMediaRequest){notify('Probíhá přidávání příloh. Počkej na dokončení.');return}
  const request={id:uid(),handler,folder:currentFolder,modal:handler&&!$('modal').hidden?$('modalBody').firstElementChild:null};stagedMediaRequest=request;
@@ -428,7 +444,7 @@ async function assetUrl(id){if(!id)return '';if(native)return 'https://appassets
 async function openAttachment(id){if(!id){notify('Soubor nelze najít');return}let url=await assetUrl(id);if(native)Native.openMedia(id);else window.open(url,'_blank')}
 const noteViewBaselines=new WeakMap();let noteCheckSaveTimer=null,noteRecordingOwner=null;
 function noteChanged(debounce=false){if(!noteActive)return;const record=noteActive;touch(record);clearTimeout(noteCheckSaveTimer);if(debounce)noteCheckSaveTimer=setTimeout(()=>{if(state.records.includes(record))save();},350);else save();}
-function openNote(r){noteViewBaselines.set(r,{value:canonicalSavedValue(r),title:String(r.title??''),text:String(r.text||'')});screen='note';document.body.classList.add('in-note');noteActive=r;$('browserView').hidden=true;$('browserFoot').hidden=true;$('noteView').hidden=false;$('editorView').hidden=true;$('noteTitle').value=r.title;$('noteText').value=r.text||'';renderChecks();renderNoteAttachments()}
+function openNote(r){noteViewBaselines.set(r,{value:canonicalSavedValue(r),title:String(r.title??''),text:String(r.text||'')});screen='note';document.body.classList.add('in-note');noteActive=r;$('browserView').hidden=true;$('browserFoot').hidden=true;$('noteView').hidden=false;$('editorView').hidden=true;$('noteTitle').value=r.title;$('noteText').value=r.text||'';renderChecks();renderNoteAttachments();$('recordAudio').textContent=native?'▶ Spustit nahrávání':'＋ Přidat zvukový soubor'}
 function renderChecks(){$('checkItems').innerHTML=(noteActive.checks||[]).map((c,i)=>`<div class="checkRow"><input type="checkbox" data-check="${i}" ${c.done?'checked':''}><input type="text" data-text="${i}" value="${escapeHtml(c.text)}" aria-label="Úkol"><button data-delete="${i}">×</button></div>`).join('');$('checkItems').querySelectorAll('[data-check]').forEach(el=>el.onchange=()=>{noteActive.checks[+el.dataset.check].done=el.checked;noteChanged()});$('checkItems').querySelectorAll('[data-text]').forEach(el=>el.oninput=()=>{noteActive.checks[+el.dataset.text].text=el.value;noteChanged(true)});$('checkItems').querySelectorAll('[data-delete]').forEach(el=>el.onclick=()=>{noteActive.checks.splice(+el.dataset.delete,1);noteChanged();renderChecks()});if(window.isRecordLocked?.(noteActive))$('checkItems').querySelectorAll('input,button').forEach(el=>el.disabled=true)}
 function renderNoteAttachments(){$('noteAttachments').innerHTML=(noteActive.media||[]).map((m,i)=>`<div class="attachRow"><button data-open="${escapeHtml(m)}">▣ Příloha ${i+1}</button><button data-remove="${i}">×</button></div>`).join('');$('noteAttachments').querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openAttachment(b.dataset.open));$('noteAttachments').querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{noteActive.media.splice(+b.dataset.remove,1);noteChanged();renderNoteAttachments()});if(window.isRecordLocked?.(noteActive))$('noteAttachments').querySelectorAll('[data-remove]').forEach(el=>el.disabled=true)}
 function saveNote(){if(!noteActive)return;if(!finishNoteRecording())return false;clearTimeout(noteCheckSaveTimer);const baseline=noteViewBaselines.get(noteActive);if(!baseline||$('noteTitle').value!==baseline.title)noteActive.title=$('noteTitle').value.trim()||'Poznámka';if(!baseline||$('noteText').value!==baseline.text)noteActive.text=$('noteText').value;if(!baseline||canonicalSavedValue(noteActive)!==baseline.value)touch(noteActive);if(!save())return false;noteActive=null;showFolder();return true}
@@ -437,17 +453,48 @@ $('recordAudio').onclick=recordVoice;
 window.__audioPermissionDenied=()=>{window.__audioPermissionRetry=null;notify('Mikrofon není povolen. Povol jej v nastavení aplikace.');};
 function finishNoteRecording(){
  window.__audioPermissionRetry=null;if(!window.recording)return true;
- const id=window.recording,owner=noteRecordingOwner,recorded=Native.stopAudio();window.recording=null;noteRecordingOwner=null;$('recordAudio').textContent='● Hlasová poznámka';
+ const id=window.recording,owner=noteRecordingOwner;
+ let recorded=false;
+ try{recorded=Native.stopAudio()===true}catch(error){notify('Nahrávání se nepodařilo bezpečně ukončit. Originál zůstává k prověření.')}
+ window.recording=null;noteRecordingOwner=null;$('recordAudio').textContent='▶ Spustit nahrávání';
  if(!recorded){if(window.PendingAudio)window.PendingAudio.retained();else notify('Záznam hlasu nebyl bezpečně uložen. Poznámka zůstává otevřená.');return false}
  const target=owner&&state.records.find(r=>r===owner);
  if(!target||target.deleted||target.kind!=='note'||window.isRecordLocked?.(target)){notify('Původní poznámka není dostupná nebo je uzamčená; hlas nebyl připojen k jiné poznámce.');return false}
- if(!target.media.includes(id))target.media.push(id);touch(target);if(!save())return false;if(noteActive===target)renderNoteAttachments();return true;
+ // The native journal retains the original bytes. Never let a later unrelated
+ // save publish an attachment rejected by the durable CAS writer.
+ const previous={media:[...(target.media||[])],rev:target.rev,updatedAt:target.updatedAt,syncClock:target.syncClock,hierarchyConflict:target.hierarchyConflict};
+ const hadHierarchyConflict=Object.hasOwn(target,'hierarchyConflict');
+ if(!target.media.includes(id)){target.media.push(id);touch(target)}
+ if(!save()){
+  target.media=previous.media;target.rev=previous.rev;target.updatedAt=previous.updatedAt;target.syncClock=previous.syncClock;
+  if(hadHierarchyConflict)target.hierarchyConflict=previous.hierarchyConflict;else delete target.hierarchyConflict;
+  window.PendingAudio?.retained?.();
+  return false;
+ }
+ if(noteActive===target)renderNoteAttachments();return true;
 }
 function recordVoice(){
- if(!native){notify('V prohlížeči použij možnost přidat zvukový soubor.');const owner=noteActive;pickMedia('file',(id)=>{if(owner&&state.records.includes(owner)&&!window.isRecordLocked?.(owner)){owner.media.push(id);touch(owner);save();if(noteActive===owner)renderNoteAttachments()}});return}
- if(window.recording){if(finishNoteRecording())notify('Zvuková poznámka uložena');return}
- const owner=noteActive,id=uid();if(!owner)return;
- const start=()=>{if(noteActive!==owner||!state.records.includes(owner)||owner.deleted||window.isRecordLocked?.(owner))return;if(!Native.startAudio(id))return;window.__audioPermissionRetry=null;noteRecordingOwner=owner;window.recording=id;$('recordAudio').textContent='■ Zastavit záznam';notify('Nahrávání spuštěno')};window.__audioPermissionRetry=start;start();
+ if(window.recording){if(finishNoteRecording())notify('Nahrávka připojena. Ulož poznámku.');return}
+ const owner=noteActive;
+ if(!owner||!state.records.includes(owner)||owner.deleted||window.isRecordLocked?.(owner)){
+  notify('Nejprve otevři dostupnou a odemčenou poznámku.');
+  return;
+ }
+ if(!native){notify('V prohlížeči přidej zvuk jako soubor.');pickMedia('file',(id)=>{if(owner===noteActive&&state.records.includes(owner)&&!window.isRecordLocked?.(owner)){owner.media.push(id);touch(owner);save();if(noteActive===owner)renderNoteAttachments()}});return}
+ const id=uid();
+ const start=()=>{
+  if(noteActive!==owner||!state.records.includes(owner)||owner.deleted||window.isRecordLocked?.(owner)){
+   window.__audioPermissionRetry=null;
+   notify('Původní poznámka není dostupná nebo je uzamčená. Nahrávání nezačalo.');
+   return;
+  }
+  let started=false;
+  try{started=Native.startAudio(id)===true}catch(error){notify('Mikrofon: nahrávání se nepodařilo spustit.')}
+  if(!started){notify('Nahrávání nezačalo. Zkontroluj oprávnění mikrofonu a volné místo.');return}
+  window.__audioPermissionRetry=null;noteRecordingOwner=owner;window.recording=id;
+  $('recordAudio').textContent='■ Zastavit záznam';notify('Nahrávání spuštěno');
+ };
+ window.__audioPermissionRetry=start;start();
 }
 $('createBtn').onclick=showNewMenu;$('galleryBtn').onclick=()=>pickMedia('media');
 function showAppMenu(id,items){
