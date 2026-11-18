@@ -525,6 +525,7 @@ window.onNativeSync=(text)=>{
    if(screen==='browser')showFolder();
   }
   const conflicts=result.data?state.records.filter(r=>r.conflict).length:0;
+  if(result.transport==='cloud-v2'&&window.ZamerovacSyncStatus?.cloud?.(result))return true;
   notify((result.message||'Synchronizace dokončena')+(conflicts?' · zachované konfliktní kopie: '+conflicts:''));return true;
  }catch(e){notify('Synchronizace: '+e.message);return false}
 };
@@ -534,7 +535,7 @@ window.onLaserValue=(value,unit)=>{
  window.lastLaser={value:String(value),unit:String(unit||'mm'),receivedAt:Date.now()};
  notify('Bosch: '+value+' '+(unit||'mm')+' – pro zápis otevři a vyber kótu');
 };
-window.onNativeError=message=>notify('Chyba: '+message);
+window.onNativeError=message=>{if(window.ZamerovacSyncStatus?.error?.(message))return;notify('Chyba: '+message)};
 window.handleAndroidBack=()=>{
   if(!$('modal').hidden){if(typeof window.modalBackHandler==='function'){window.modalBackHandler();return 'handled'}$('modal').hidden=true;window.modalOK=null;return 'handled';}
   if(!$('settingsPanel').hidden){$('settingsPanel').hidden=true;return 'handled';}
