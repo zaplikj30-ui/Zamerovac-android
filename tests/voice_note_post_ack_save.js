@@ -66,7 +66,7 @@ function scene(mode){
  };
  if(mode==='post-report-throw')env.document={};
  vm.createContext(env);vm.runInContext(production,env,{filename:'app.js original functions'});
- const has=(records)=>records.find(r=>r.id==='note-197').media.filter(id=>id==='audio-new').length;
+ const has=(records)=>records.find(r=>r.id==='note-197')?.media.filter(id=>id==='audio-new').length??0;
  const inspect=()=>({
   ram:has(state.records),disk:has(JSON.parse(disk).records),
   snapshot:has(JSON.parse(env.persistedSnapshot).records),
