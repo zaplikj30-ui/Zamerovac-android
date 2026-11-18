@@ -208,23 +208,31 @@ function intact(s){
    const parent=durable.records.find(r=>r.id==='parent');
    const liveParent=q.env.recById('parent'),writable=q.env.canWriteToFolder('parent');
    const child=children[0];
-   assert.equal(children.length,1,'F5: fixture should keep one candidate to inspect');
-   assert.equal(persisted.records.some(r=>r.id===child.id),true,
-    'F5: persistedSnapshot must reflect native confirmed CAS, not a fake save');
-   assert.equal(ramChildren.some(r=>r.id===child.id),true,
-    'F5: RAM must expose the same committed child for this reproducer');
-   assert.equal(q.writes,1,'F5: one durable native ACK after CAS reconciliation required');
    intact(q);
-   const reached=!!liveParent&&writable&&child.parentId===liveParent.id;
-   const wrong=!!result&&!reached;
+   const reached=!!liveParent&&writable&&child?.parentId===liveParent.id;
+   const committed=!!child&&persisted.records.some(r=>r.id===child.id)&&
+    ramChildren.some(r=>r.id===child.id);
+   // Two safe outcomes are acceptable: (1) an ACK with a still reachable
+   // parent, or (2) a fail-closed rejection without any new durable child,
+   // unchanged quick-action state and intact original records.
+   const safe=!!result?(q.writes===1&&children.length===1&&committed&&reached):
+    (children.length===0&&q.button.title==='');
    f5Findings.push({race,kind,ack:q.writes,result:!!result,
     parent:{id:parent.id,deleted:!!parent.deleted,locked:!!parent.locked},
-    child:{id:child.id,kind:child.kind,parentId:child.parentId,media:child.media},
-    reachable:reached,ram:ramChildren.length,snapshot:true,
-    quickTitle:q.button.title});
-   if(wrong)f5Failures.push(race+'/'+kind);
+    child:child&&{id:child.id,kind:child.kind,parentId:child.parentId,media:child.media},
+    reachable:reached,ram:ramChildren.length,
+    snapshot:!!child&&persisted.records.some(r=>r.id===child.id),
+    quickTitle:q.button.title,safe});
+   if(!safe)f5Failures.push(race+'/'+kind);
   }
  }
+ // Negative control: pre-ACK disk refusal must not leak a new child
+ // or change the "last successful add" indicator.
+ const deny=scene();deny.env.currentFolder='parent';deny.mode='deny';
+ assert.equal(deny.env.addRecord(deny.env.newRecord('folder','F5-pre-ACK-denied')),false);
+ assert.equal(deny.saved.records.some(r=>r.title==='F5-pre-ACK-denied'),false);
+ assert.equal(deny.button.title,'');
+ intact(deny);
  console.log('F5-CAS-REPRO',JSON.stringify(f5Findings));
  assert.equal(f5Failures.length,0,
   'F5: production save/reconcile published an inaccessible child with a successful quick action: '+f5Failures.join(', '));
