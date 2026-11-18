@@ -21,6 +21,97 @@ async function setup(page){await createCanvas(page,'Gesta – syntetická');awai
   });
   await page.click('#editorBack');await page.reload();await page.locator('.entry-title').click();assert.deepEqual(await record(page),original);assert.equal(await page.evaluate(()=>window.__xss),undefined);evidence({taps:[1,2,3],endpoints:2,jitterPx:.5,touchCancel:true});
 
+  await step('Two nearby dimension grips and an empty note: real mouse clicks, exact saved values',async()=>{
+   // Synthetic fixture is staged through the production save; selection and
+   // dragging below use actual trusted Chromium pointer events, not stageDown().
+   const fixture=await page.evaluate(()=>{
+    const a=current.items[0],b=JSON.parse(JSON.stringify(a));
+    b.id=uid();b.a={x:a.a.x+18/view.zoom,y:a.a.y};
+    b.b={x:a.b.x+18/view.zoom,y:a.b.y};
+    b.measure='3250,000000009876543';b.unit='mm';
+    const extras=[];
+    for(let i=1;i<=3;i++){
+     const other=JSON.parse(JSON.stringify(a));other.id=uid();
+     other.a={x:a.a.x,y:a.a.y+70*i/view.zoom};
+     other.b={x:a.b.x,y:a.b.y+70*i/view.zoom};
+     extras.push(other);
+    }
+    const c={x:(a.a.x+a.b.x)/2,y:(a.a.y+a.b.y)/2+35/view.zoom};
+    current.items.push(b,...extras,{id:uid(),type:'note',a:c,b:{...c},text:'',
+      media:[],color:prefs.color,fontSize:prefs.fontSize,width:prefs.lineWidth});
+    if(save()!==true)throw Error('Synthetic fixture was not confirmed saved');
+    paint();
+    return {aId:a.id,bId:b.id,a:a.a,b:b.a,bEnd:b.b,
+      extras:extras.map(item=>({id:item.id,a:item.a})),
+      firstMeasure:a.measure,secondMeasure:b.measure};
+   });
+   await tool(page,'select');
+   // Browser-only timing: from a real pointerdown to first completed canvas
+   // paint, plus editor commit. Native WebView/IO is not measured here.
+   await page.evaluate(()=>{
+    const timings=window.__annotationTiming={downAt:null,paintAfterDownMs:[],commitMs:[]};
+    const oldPaint=paint,oldCommit=commitEditor;
+    window.paint=function(...args){
+     const result=oldPaint.apply(this,args);
+     if(timings.downAt!==null){
+      timings.paintAfterDownMs.push(performance.now()-timings.downAt);
+      timings.downAt=null;
+     }
+     return result;
+    };
+    window.commitEditor=function(...args){
+     const at=performance.now();
+     try{return oldCommit.apply(this,args)}
+     finally{timings.commitMs.push(performance.now()-at)}
+    };
+    stageCanvas.addEventListener('pointerdown',()=>{timings.downAt=performance.now()},true);
+   });
+   for(const extra of fixture.extras){
+    await clickAt(page,await projected(page,extra.a));await dismiss(page);
+    assert.equal(await page.evaluate(()=>selected),extra.id,'A separate dimension must be selectable');
+   }
+   await clickAt(page,await projected(page,fixture.a));await dismiss(page);
+   assert.equal(await page.evaluate(()=>selected),fixture.aId,'First dimension must be selected');
+   await clickAt(page,await projected(page,fixture.b));await dismiss(page);
+   assert.equal(await page.evaluate(()=>selected),fixture.bId,
+    'A closer overlapping endpoint must beat the previously selected grip');
+   const midpoint={x:(fixture.a.x+fixture.b.x)/2,y:(fixture.a.y+fixture.b.y)/2};
+   const beforeTap=await page.evaluate(()=>JSON.stringify(current.items));
+   await clickAt(page,await projected(page,midpoint));await dismiss(page);
+   assert.equal(await page.evaluate(()=>selected),fixture.bId,
+    'At equally close endpoints the already-selected dimension should remain active');
+   assert.equal(await page.evaluate(()=>JSON.stringify(current.items)),beforeTap,
+    'Tapping must never change precise geometry or media');
+   const end=await projected(page,fixture.bEnd);
+   await drag(page,end,{x:end.x+27,y:end.y+17});
+   const moved=await page.evaluate(id=>JSON.parse(JSON.stringify(current.items.find(i=>i.id===id))),fixture.bId);
+   assert(moved&&moved.b.x!==fixture.bEnd.x,'Drag must move the chosen endpoint');
+   assert.equal(moved.measure,fixture.secondMeasure);
+   assert.equal(moved.unit,'mm');
+   assert.equal(await page.evaluate(id=>current.items.find(i=>i.id===id).measure,fixture.aId),fixture.firstMeasure);
+   await page.click('#undo');
+   assert.equal(await page.evaluate(id=>current.items.find(i=>i.id===id).b.x,fixture.bId),fixture.bEnd.x);
+   await redo(page);
+   assert.equal(await page.evaluate(id=>current.items.find(i=>i.id===id).b.x,fixture.bId),moved.b.x);
+   const capturedTimings=await page.evaluate(()=>({
+    paintAfterDownMs:__annotationTiming.paintAfterDownMs,
+    commitMs:__annotationTiming.commitMs
+   }));
+   assert(capturedTimings.paintAfterDownMs.length>=4,
+    'Real pointerdown did not reach a measured canvas paint');
+   assert(capturedTimings.commitMs.length>=1,
+    'A completed endpoint drag must invoke commitEditor');
+   await page.click('#editorBack');await page.reload();await page.locator('.entry-title').click();
+   assert.equal(await page.evaluate(()=>current.items.length),6,'Five dimensions and an empty note must persist');
+   assert.equal(await page.evaluate(id=>current.items.find(i=>i.id===id).measure,fixture.aId),fixture.firstMeasure);
+   assert.equal(await page.evaluate(id=>current.items.find(i=>i.id===id).b.x,fixture.bId),moved.b.x);
+   assert.equal(await page.evaluate(()=>current.items.find(i=>i.type==='note')?.text),'');
+   // The timing probe was attached before the reload and is therefore lost.
+   // Its numeric results are sampled before leaving the original editor.
+   evidence({nativeModel:false,syntheticFixture:true,physicalEvents:true,
+    endpointDistancePx:18,overlappingNote:true,dimensions:5,
+    undoRedo:true,reopen:true,timings:capturedTimings});
+  });
   await step('Five dimension pointer grips, drag, overlap, Undo/Redo and reopen',async()=>{
    await page.click('#editorBack');
    const title='Syntetické kóty 191';
