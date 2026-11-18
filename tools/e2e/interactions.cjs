@@ -27,9 +27,12 @@ async function setup(page){await createCanvas(page,'Gesta – syntetická');awai
    await createCanvas(page,title);
    const bounds=await page.locator('#drawCanvas').boundingBox();
    assert(bounds&&bounds.width>320&&bounds.height>360,'Canvas dimensions');
-   const pts=Array.from({length:5},(_,i)=>({
-    a:{x:bounds.width*.17,y:bounds.height*(.17+i*.13)},
-    b:{x:bounds.width*.79,y:bounds.height*(.17+i*.13)}
+   // Positions must be inside the measured image, not viewport fractions:
+   // drawing outside photoSize clamps the endpoints at the lower image edge.
+   const pts=await page.evaluate(()=>Array.from({length:5},(_,i)=>{
+    const y=photoSize.h*(.15+i*.16);
+    return {a:worldToScreen({x:photoSize.w*.20,y}),
+     b:worldToScreen({x:photoSize.w*.75,y})};
    }));
    for(let i=0;i<5;i++){
     await tool(page,'dimension');await drag(page,pts[i].a,pts[i].b);
@@ -40,6 +43,9 @@ async function setup(page){await createCanvas(page,'Gesta – syntetická');awai
    await tool(page,'select');
    const before=await page.evaluate(()=>JSON.parse(JSON.stringify(current.items)));
    assert.equal(before.length,5);
+   assert(await page.evaluate(()=>current.items.every(it=>
+    it.a.y>0&&it.b.y>0&&it.a.y<photoSize.h-80&&it.b.y<photoSize.h-80
+   )),'Precondition: five dimensions must stay inside image bounds');
    let hits=0,visibleSelected=false;
    for(let i=0;i<before.length;i++)for(const part of ['a','middle','b']){
     const item=before[i],point=part==='middle'?{x:(item.a.x+item.b.x)/2,y:(item.a.y+item.b.y)/2}:item[part];
@@ -80,8 +86,9 @@ async function setup(page){await createCanvas(page,'Gesta – syntetická');awai
     const item=current.items[4];return {a:worldToScreen(item.a),b:worldToScreen(item.b)};
    });
    const canvas=await page.locator('#drawCanvas').boundingBox();
-   const freeY=Math.min(canvas.height-35,fifth.a.y+Math.max(65,canvas.height*.14));
-   assert(freeY-fifth.a.y>40,'Require a genuinely free drawing region');
+   const freeY=await page.evaluate(()=>worldToScreen({x:photoSize.w*.5,y:photoSize.h*.93}).y);
+   assert(freeY-fifth.a.y>40&&freeY<canvas.height-15,
+    'Require a free image region safely above the photo bottom');
    await tool(page,'dimension');
    await drag(page,{x:fifth.a.x,y:freeY},{x:fifth.b.x,y:freeY});
    await tool(page,'select');
