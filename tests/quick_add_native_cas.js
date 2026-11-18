@@ -32,7 +32,7 @@ function scene(snapshot=seed){
  const button={textContent:'',title:'',dataset:{},setAttribute(key,value){this[key]=value}};
  const env={
   native:true,initial:copy(seed),state:copy(snapshot),prefs:{},dataLoadFailed:false,
-  persistedSnapshot:disk,current:null,noteActive:null,screen:'browser',currentFolder:null,
+  persistedSnapshot:disk,current:null,noteActive:null,stagedMediaRequest:null,screen:'browser',currentFolder:null,
   syncDeviceId:'00000000-0000-4000-8000-000000000001',
   uid:()=>('n-'+(++serial)),stamp:()=> '2026-11-18',
   window:{isRecordLocked:record=>locks.has(record?.id),PendingAudio:{saved(){} }},
