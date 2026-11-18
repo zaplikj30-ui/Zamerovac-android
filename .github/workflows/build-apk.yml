@@ -198,6 +198,9 @@ jobs:
       - name: Existing JS/Python/Drive regressions
         run: |
           set -euo pipefail
+          # Historical security/QA tests require these reviewed Git objects.
+          # Fetch data only for tests; do not check out or run legacy workflows.
+          git fetch --no-tags origin 1d6a786c77aa2a797bf7bd75f9977a3ae6613459 ae3b4df53c25557f28b4a25ccb65adc2abdff639
           for f in app/src/main/assets/*.js sync/*.js; do node --check "$f"; done
           node tools/qa/audit.cjs
           node tools/check-android-window.cjs
