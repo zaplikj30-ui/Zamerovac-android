@@ -1,0 +1,46 @@
+name: Zaměřovač – jednorázový CodeQL bezpečnostní pilot
+
+# One-shot trial, explicitly requested by the owner on 2026-11-18.
+# Only the opening of this exact draft PR may run this workflow.
+# No push, schedule, release, APK, HOME, or recurring trigger.
+on:
+  pull_request:
+    types: [opened]
+    paths:
+      - '.github/workflows/codeql-one-shot.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  codeql:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.event_name == 'pull_request' && github.event.action == 'opened' && github.base_ref == 'main' && github.head_ref == 'qa/codeql-one-shot-20261118' && github.event.pull_request.head.repo.full_name == 'zaplikj30-ui/Zamerovac-android' && github.event.pull_request.user.login == 'zaplikj30-ui' && github.event.pull_request.draft == true }}
+    name: CodeQL ${{ matrix.language }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      actions: read
+      security-events: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - language: java-kotlin
+            build-mode: none
+          - language: javascript-typescript
+            build-mode: none
+          - language: python
+            build-mode: none
+    steps:
+      - name: Checkout read-only source
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v4
+        with:
+          languages: ${{ matrix.language }}
+          build-mode: ${{ matrix.build-mode }}
+      - name: Analyze security findings
+        uses: github/codeql-action/analyze@v4
