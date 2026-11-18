@@ -40,12 +40,18 @@ async function setup(page){await createCanvas(page,'Gesta – syntetická');awai
    await tool(page,'select');
    const before=await page.evaluate(()=>JSON.parse(JSON.stringify(current.items)));
    assert.equal(before.length,5);
-   let hits=0;
-   for(const item of before)for(const part of ['a','middle','b']){
-    const point=part==='middle'?{x:(item.a.x+item.b.x)/2,y:(item.a.y+item.b.y)/2}:item[part];
+   let hits=0,visibleSelected=false;
+   for(let i=0;i<before.length;i++)for(const part of ['a','middle','b']){
+    const item=before[i],point=part==='middle'?{x:(item.a.x+item.b.x)/2,y:(item.a.y+item.b.y)/2}:item[part];
     await page.evaluate(()=>{selected=null;paint()});
+    const beforePixels=i===0&&part==='middle'?await page.evaluate(()=>stageCanvas.toDataURL()):null;
     await clickAt(page,await projected(page,point));
-    assert.equal(await page.evaluate(()=>selected),item.id,'Wrong dimension at '+part);
+    assert.equal(await page.evaluate(()=>selected),item.id,'Wrong dimension at '+i+'/'+part);
+    if(beforePixels!==null){
+     const selectedPixels=await page.evaluate(()=>stageCanvas.toDataURL());
+     assert.notEqual(selectedPixels,beforePixels,'Selection should visibly redraw the actual canvas');
+     visibleSelected=true;
+    }
     hits++;
    }
    await page.evaluate(()=>{selected=null;paint()});
@@ -82,7 +88,7 @@ async function setup(page){await createCanvas(page,'Gesta – syntetická');awai
    const chosen=await page.evaluate(()=>selected);
    assert([overlap[4].id,overlap[5].id].includes(chosen),'Overlapping hit must select one of the two close dimensions');
    assert.deepEqual(await page.evaluate(()=>JSON.parse(JSON.stringify(current.items))),overlap,'Overlapping tap changed geometry');
-   evidence({actualBrowserPointers:true,dimensions:5,hitChecks:hits,moveUndoRedoReload:true,overlapDistancePx:12,overlapSelected:chosen===overlap[5].id?'new':'previous',androidRetest:false});
+   evidence({actualBrowserPointers:true,dimensions:5,hitChecks:hits,visibleSelected,moveUndoRedoReload:true,overlapDistancePx:12,overlapSelected:chosen===overlap[5].id?'new':'previous',androidRetest:false});
   });
  });
  await test('pan_zoom_fit_and_repeated_reopen',async({page,step,evidence})=>{
