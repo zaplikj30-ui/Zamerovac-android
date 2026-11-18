@@ -1,5 +1,5 @@
 name: Zaměřovač – kontrola kompilace Androidu bez APK
-# Manual cloud fallback; Windows/WSL2 home QA is primary.
+# Manual GitHub-hosted native compilation check; HOME workflows retired in PR #186.
 # Cloud QA stays available as manual emergency regression backup; never run without owner approval.
 on:
   workflow_dispatch:
