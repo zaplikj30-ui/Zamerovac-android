@@ -42,11 +42,15 @@ function conflicts(records){
  if(!Array.isArray(records))return;
  const current=new Set(records.filter(r=>r&&r.conflict===true&&typeof r.id==='string'&&r.id).map(r=>r.id));
  const fresh=[...current].filter(id=>!knownConflictIds.has(id));
- knownConflictIds=current;
+ // Always retain the details before a possibly failing toast. Only mark
+ // newly discovered IDs as announced AFTER a successful notification.
+ // While a critical error is visible, defer the lesser conflict toast.
+ knownConflictIds=new Set([...knownConflictIds].filter(id=>current.has(id)));
  conflictDetail=current.size?'Zachované konfliktní kopie: '+current.size+'. Zkontroluj obě verze v zakázkách před odstraněním.':'';
- // Do not replace an immediately visible sync failure with a lesser toast.
- if(fresh.length&&phase!=='failed')
+ if(fresh.length&&phase!=='failed'){
   notify('Synchronizace: zachované konfliktní kopie: '+current.size+'. Zkontroluj obě verze.');
+  knownConflictIds=current;
+ }
 }
 function alertOnce(key,message,critical=false){
  if(critical||lastNotice!==key){
