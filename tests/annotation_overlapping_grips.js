@@ -38,6 +38,10 @@ for(const zoom of [1,1.5,2]){
  assert.equal(t.b.measure,'3250,000000009876543');
  assert.equal(t.b.unit,'mm');
 }
+const secondSelected=scenario(1,0,'b');
+assert.equal(secondSelected.tap(secondSelected.a.a),'a','Other exact endpoint must beat active B');
+assert.equal(secondSelected.tap({x:109,y:100}),'b',
+ 'At equal grip distance preserve the active B, too');
 const none=scenario(1,0,null);
 assert.equal(none.tap(none.b.a),'b','No active selection must use the closest grip');
 console.log('PASS #191: nearer overlapping grips, ambiguous active grip, zoom, note and exact values');
