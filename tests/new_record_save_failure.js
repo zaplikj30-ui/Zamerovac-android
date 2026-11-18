@@ -18,7 +18,7 @@ const logic=[
  extract('function recById(id,includeDeleted=false){','function folderContains('),
  extract('function newRecord(kind,title,parentId=currentFolder){','let modalFocusTimer=null;'),
  extract('function promptText(','// ImageMeter-style browser previews.'),
- extract('function showNewMenu(){','function pickMedia('),
+ extract('// #194: session-only last confirmed add action.','function pickMedia('),
  extract('async function addMediaRecord(','async function storeMedia(')
 ].join('\n');
 
@@ -41,6 +41,7 @@ async function run(kind,confirmed){
   modal:(title,markup,callback)=>{dialog=callback},
   $:id=>id==='promptValue'?{value:'Nová složka'}:
     id==='newMenu'?{hidden:true,querySelectorAll:()=>buttons}:
+    id==='galleryBtn'?{hidden:true,textContent:'',setAttribute(){} }:
     {hidden:true},
   Native:{saveDataChecked(payload,expected){
     saveCalls++;
