@@ -55,16 +55,16 @@ jobs:
       cancel-in-progress: false
       queue: max
     outputs:
-      operation: ${{ steps.auth.outputs.operation }
-      source_sha: ${{ steps.auth.outputs.source_sha }
-      run_id: ${{ steps.auth.outputs.run_id }
-      apk_hash: ${{ steps.auth.outputs.apk_hash }
-      comment_id: ${{ steps.auth.outputs.comment_id }
+      operation: ${{ steps.auth.outputs.operation }}
+      source_sha: ${{ steps.auth.outputs.source_sha }}
+      run_id: ${{ steps.auth.outputs.run_id }}
+      apk_hash: ${{ steps.auth.outputs.apk_hash }}
+      comment_id: ${{ steps.auth.outputs.comment_id }}
     steps:
       - name: Verify owner, unchanged comment, exact grammar and current main (PILOT only)
         id: auth
         env:
-          GH_TOKEN: ${{ github.token }
+          GH_TOKEN: ${{ github.token }}
         shell: bash
         run: |
           set -euo pipefail
@@ -150,7 +150,7 @@ jobs:
   build:
     name: build-only
     needs: authorize
-    if: ${{ needs.authorize.result == 'success' && needs.authorize.outputs.operation == 'build' }
+    if: ${{ github.run_attempt == 1 && needs.authorize.result == 'success' && needs.authorize.outputs.operation == 'build' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 60
     permissions:
@@ -163,13 +163,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          ref: ${{ needs.authorize.outputs.source_sha }
+          ref: ${{ needs.authorize.outputs.source_sha }}
           fetch-depth: 1
           persist-credentials: false
           submodules: false
       - name: Verify trusted source and version
         env:
-          APPROVED_SHA: ${{ needs.authorize.outputs.source_sha }
+          APPROVED_SHA: ${{ needs.authorize.outputs.source_sha }}
         run: |
           set -euo pipefail
           test "$(git rev-parse HEAD)" = "$APPROVED_SHA"
@@ -185,9 +185,9 @@ jobs:
       - name: Check latest APK signer/version and duplicate BUILD
         id: prepare
         env:
-          GH_TOKEN: ${{ github.token }
-          APPROVED_SHA: ${{ needs.authorize.outputs.source_sha }
-          APPROVAL_COMMENT_ID: ${{ needs.authorize.outputs.comment_id }
+          GH_TOKEN: ${{ github.token }}
+          APPROVED_SHA: ${{ needs.authorize.outputs.source_sha }}
+          APPROVAL_COMMENT_ID: ${{ needs.authorize.outputs.comment_id }}
           APPROVED_OPERATION: build
         run: python3 tools/release/apk_gate.py build-preflight
       - name: Existing JS/Python/Drive regressions
@@ -201,7 +201,7 @@ jobs:
           gradle --no-daemon -p tools/drive-config-checks verify
       - name: Assemble ONLY preview APK
         env:
-          BUILD_CODE_OFFSET: ${{ steps.prepare.outputs.offset }
+          BUILD_CODE_OFFSET: ${{ steps.prepare.outputs.offset }}
         run: |
           set -euo pipefail
           export GITHUB_RUN_NUMBER="$BUILD_CODE_OFFSET"
@@ -209,31 +209,31 @@ jobs:
       - name: Verify APK bytes, signature, package, versionCode, SHA, main
         id: verify
         env:
-          GH_TOKEN: ${{ github.token }
-          APPROVED_SHA: ${{ needs.authorize.outputs.source_sha }
-          APPROVAL_COMMENT_ID: ${{ needs.authorize.outputs.comment_id }
+          GH_TOKEN: ${{ github.token }}
+          APPROVED_SHA: ${{ needs.authorize.outputs.source_sha }}
+          APPROVAL_COMMENT_ID: ${{ needs.authorize.outputs.comment_id }}
           APPROVED_OPERATION: build
-          APP_VERSION: ${{ steps.prepare.outputs.version }
-          PREVIOUS_RELEASE_ID: ${{ steps.prepare.outputs.previous_release_id }
-          PREVIOUS_CODE: ${{ steps.prepare.outputs.previous_code }
-          NEW_CODE: ${{ steps.prepare.outputs.new_code }
+          APP_VERSION: ${{ steps.prepare.outputs.version }}
+          PREVIOUS_RELEASE_ID: ${{ steps.prepare.outputs.previous_release_id }}
+          PREVIOUS_CODE: ${{ steps.prepare.outputs.previous_code }}
+          NEW_CODE: ${{ steps.prepare.outputs.new_code }}
         run: python3 tools/release/apk_gate.py build-postflight
       - uses: actions/upload-artifact@v4
         with:
-          name: Zamerovac-preview-APK-${{ github.run_id }-${{ github.run_attempt }-${{ needs.authorize.outputs.source_sha }-${{ needs.authorize.outputs.comment_id }
+          name: Zamerovac-preview-APK-${{ github.run_id }}-${{ github.run_attempt }}-${{ needs.authorize.outputs.source_sha }}-${{ needs.authorize.outputs.comment_id }}
           path: dist/*.apk
           if-no-files-found: error
           retention-days: 30
           compression-level: 0
       - name: BUILD summary, no RELEASE
         env:
-          APK_HASH: ${{ steps.verify.outputs.apk_hash }
+          APK_HASH: ${{ steps.verify.outputs.apk_hash }}
         run: |
           printf 'PASS BUILD only; run=%s, attempt=%s, actual APK sha256=%s; RELEASE NOT RUN\n' "$GITHUB_RUN_ID" "$GITHUB_RUN_ATTEMPT" "$APK_HASH" >> "$GITHUB_STEP_SUMMARY"
   release:
     name: release-only
     needs: authorize
-    if: ${{ needs.authorize.result == 'success' && needs.authorize.outputs.operation == 'release' }
+    if: ${{ github.run_attempt == 1 && needs.authorize.result == 'success' && needs.authorize.outputs.operation == 'release' }}
     runs-on: ubuntu-24.04
     timeout-minutes: 30
     permissions:
@@ -246,7 +246,7 @@ jobs:
     steps:
       - name: Fetch only trusted release gate from exact main SHA, no product checkout
         env:
-          GH_TOKEN: ${{ github.token }
+          GH_TOKEN: ${{ github.token }}
         run: |
           set -euo pipefail
           python3 - <<'PY'
@@ -270,24 +270,24 @@ jobs:
       - name: Check exact BUILD provenance, ZIP safety, APK signature/version/hash
         id: verify
         env:
-          GH_TOKEN: ${{ github.token }
-          BUILD_RUN_ID: ${{ needs.authorize.outputs.run_id }
-          APPROVED_APK_HASH: ${{ needs.authorize.outputs.apk_hash }
-          APPROVAL_COMMENT_ID: ${{ needs.authorize.outputs.comment_id }
+          GH_TOKEN: ${{ github.token }}
+          BUILD_RUN_ID: ${{ needs.authorize.outputs.run_id }}
+          APPROVED_APK_HASH: ${{ needs.authorize.outputs.apk_hash }}
+          APPROVAL_COMMENT_ID: ${{ needs.authorize.outputs.comment_id }}
           APPROVED_OPERATION: release
         run: python3 "$RUNNER_TEMP/apk_gate.py" release-preflight
       - name: Recheck latest/main/tag, publish same bytes ONCE, never retry UNKNOWN
         env:
-          GH_TOKEN: ${{ github.token }
-          SOURCE_SHA: ${{ steps.verify.outputs.source_sha }
-          RELEASE_TAG: ${{ steps.verify.outputs.tag }
-          RELEASE_VERSION: ${{ steps.verify.outputs.version }
-          APPROVED_FILE: ${{ steps.verify.outputs.approved_file }
-          EXPECTED_HASH: ${{ steps.verify.outputs.expected_hash }
-          PREVIOUS_RELEASE_ID: ${{ steps.verify.outputs.previous_release_id }
-          BUILD_RUN_ID: ${{ needs.authorize.outputs.run_id }
-          APPROVED_APK_HASH: ${{ needs.authorize.outputs.apk_hash }
-          APPROVAL_COMMENT_ID: ${{ needs.authorize.outputs.comment_id }
+          GH_TOKEN: ${{ github.token }}
+          SOURCE_SHA: ${{ steps.verify.outputs.source_sha }}
+          RELEASE_TAG: ${{ steps.verify.outputs.tag }}
+          RELEASE_VERSION: ${{ steps.verify.outputs.version }}
+          APPROVED_FILE: ${{ steps.verify.outputs.approved_file }}
+          EXPECTED_HASH: ${{ steps.verify.outputs.expected_hash }}
+          PREVIOUS_RELEASE_ID: ${{ steps.verify.outputs.previous_release_id }}
+          BUILD_RUN_ID: ${{ needs.authorize.outputs.run_id }}
+          APPROVED_APK_HASH: ${{ needs.authorize.outputs.apk_hash }}
+          APPROVAL_COMMENT_ID: ${{ needs.authorize.outputs.comment_id }}
           APPROVED_OPERATION: release
         run: |
           set -euo pipefail
@@ -299,10 +299,10 @@ jobs:
             --latest
       - name: Download published release asset; verify exact original SHA256
         env:
-          GH_TOKEN: ${{ github.token }
-          RELEASE_TAG: ${{ steps.verify.outputs.tag }
-          RELEASE_VERSION: ${{ steps.verify.outputs.version }
-          EXPECTED_HASH: ${{ steps.verify.outputs.expected_hash }
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ steps.verify.outputs.tag }}
+          RELEASE_VERSION: ${{ steps.verify.outputs.version }}
+          EXPECTED_HASH: ${{ steps.verify.outputs.expected_hash }}
         run: |
           set -euo pipefail
           python3 "$RUNNER_TEMP/apk_gate.py" release-post
