@@ -59,6 +59,7 @@ function boot(disk,{approve=true,fault='none'}={}){
  vm.createContext(ctx);
  vm.runInContext('var overlay=null;\n'+startup+persistence+escapeHtml+summary+list,ctx);
  const read=()=>JSON.parse(vm.runInContext('JSON.stringify(reports)',ctx));
+ const commit=next=>vm.runInContext('persist('+JSON.stringify(next)+')',ctx);
  const draw=()=>vm.runInContext('showReportList()',ctx);
  const click=id=>{
   draw();
@@ -66,7 +67,7 @@ function boot(disk,{approve=true,fault='none'}={}){
   assert.ok(button,'Expected delete button for '+id);
   button.onclick();
  };
- return {calls,read,click};
+ return {calls,read,click,commit};
 }
 function data(rows){return new Map([[KEY,JSON.stringify(rows)]])}
 function fromDisk(disk){return JSON.parse(disk.get(KEY))}
@@ -178,6 +179,30 @@ scenario('P3-B 301 reports, incomplete oldest: render, delete healthy, restart, 
  assert.deepEqual(boot(disk).read(),fromDisk(disk),'Restart keeps the legacy record and valid reports');
  assert.equal(session.calls.nativeCalls,0);
 });
+scenario('P3-B legacy non-text fields and invalid date render without rewriting source',()=>{
+ const rows=Array.from({length:301},(_,i)=>makeReport(i));
+ rows[0].title={label:'bad'};
+ rows[0].description=17;
+ rows[0].screen={toString:null};
+ rows[0].createdAt={toString:null,valueOf:null};
+ const disk=data(rows),before=JSON.stringify(rows[0]),session=boot(disk);
+ session.click('fb-001');
+ assert.equal(fromDisk(disk).length,300);
+ assert.equal(JSON.stringify(fromDisk(disk)[0]),before,'Corrupt legacy report bytes must remain unchanged');
+ assert.match(session.calls.markup,/\(Bez popisu\)/,'Legacy text fallback is visible');
+ assert.match(session.calls.markup,/Datum neuvedeno/,'Invalid date cannot crash list rendering');
+ assert.deepEqual(boot(disk).read(),fromDisk(disk));
+});
+scenario('broken startup storage payload blocks all overwrites',()=>{
+ const invalid='{not JSON';
+ const disk=new Map([[KEY,invalid]]);
+ const session=boot(disk);
+ assert.equal(session.read().length,0,'Loader may display empty list but must not rewrite corruption');
+ assert.equal(session.commit([makeReport(1)]),false,'Corrupt startup data must lock writes');
+ assert.equal(session.calls.writes,0);
+ assert.equal(disk.get(KEY),invalid,'Never overwrite damaged original storage');
+ assert.ok(session.calls.notices.some(m=>/nejistý/i.test(m)),'Warn about unsafe storage');
+});
 scenario('one normal report: explicit confirmation deletes only selected ID',()=>{
  const rows=[makeReport(1),makeReport(2),makeReport(3)],disk=data(rows);
  const session=boot(disk);
@@ -188,4 +213,4 @@ scenario('one normal report: explicit confirmation deletes only selected ID',()=
  assert.equal(session.calls.nativeCalls,0,'Delete must never touch native/media bridge');
 });
 if(failures.length){console.error(failures.join('\n'));process.exitCode=1}
-else console.log('PASS: 9 feedback deletion integrity scenarios, no media writes');
+else console.log('PASS: 11 feedback deletion integrity scenarios, no media writes');
