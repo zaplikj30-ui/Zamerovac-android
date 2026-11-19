@@ -288,6 +288,17 @@ scenario('legacy video title metadata cannot crash share confirmation',()=>{
  assert.match(session.calls.prompts[0],/Video/,'Bad label falls back to a harmless display string');
  assert.deepEqual(fromDisk(disk),[a],'Never rewrite report data for display');
 });
+scenario('corrupt legacy report itself can be deleted only after one informed confirmation',()=>{
+ const bad={...makeReport(0),title:{toString:null,valueOf:null},
+  description:{toString:null,valueOf:null}},good=makeReport(1);
+ const disk=data([bad,good]),session=boot(disk);
+ session.click('fb-000');
+ assert.equal(session.calls.prompts.length,1,'One explicit confirmation for the corrupt record');
+ assert.match(session.calls.prompts[0],/\(Bez popisu\)/,'Safe confirmation fallback');
+ assert.deepEqual(fromDisk(disk),[good],'Delete only the confirmed corrupt record');
+ assert.deepEqual(boot(disk).read(),[good],'Restart keeps all healthy records');
+ assert.equal(session.calls.nativeCalls,0);
+});
 scenario('one normal report: explicit confirmation deletes only selected ID',()=>{
  const rows=[makeReport(1),makeReport(2),makeReport(3)],disk=data(rows);
  const session=boot(disk);
@@ -298,4 +309,4 @@ scenario('one normal report: explicit confirmation deletes only selected ID',()=
  assert.equal(session.calls.nativeCalls,0,'Delete must never touch native/media bridge');
 });
 if(failures.length){console.error(failures.join('\n'));process.exitCode=1}
-else console.log('PASS: 18 feedback deletion integrity scenarios, no media writes');
+else console.log('PASS: 19 feedback deletion integrity scenarios, no media writes');
