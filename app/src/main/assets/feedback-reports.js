@@ -241,7 +241,10 @@
   if(!saveToFile){
    const overview=batch.map((r,i)=>{
     const videos=Array.isArray(r.videos)?r.videos:[];
-    const names=videos.map(v=>String(typeof v==='string'?v:v?.name||'Video').slice(0,80)).join(', ');
+    const names=videos.map(v=>{
+    const label=typeof v==='string'?v:(typeof v?.name==='string'?v.name:'Video');
+    return label.slice(0,80);
+   }).join(', ');
     return (i+1)+'. '+String(r.title||r.description||'(Bez popisu)').slice(0,100)+
       ' — '+videos.length+' video'+(names?' ('+names+')':'');
    }).join('\n');
