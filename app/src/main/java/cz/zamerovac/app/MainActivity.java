@@ -672,17 +672,57 @@ public class MainActivity extends Activity {
         if(!settings.getBoolean("issuezip-"+id,false))return;
         File f=mediaFile(id);
         if(!f.exists()||f.delete())
-            settings.edit().remove("issuezip-"+id).remove("mime-"+id).remove("name-"+id).apply();
+            settings.edit().remove("issuezip-"+id).remove("issuezip-state-"+id)
+                .remove("mime-"+id).remove("name-"+id).apply();
     }
     private void cleanupIssueZips(){
+        // Expire only abandoned, NOT YET SHARED temporary files. ACTION_SEND does
+        // not acknowledge recipient completion, so time alone cannot authorize
+        // deletion of a shared ZIP (even after app restart).
+        synchronized(this){if(issueBundleBusy||pendingIssueZipId!=null)return;}
         File[] files=new File(getFilesDir(),"media").listFiles();
         if(files==null)return;
         long now=System.currentTimeMillis();
         for(File f:files){
             String id=f.getName();
-            if(f.isFile()&&id.startsWith("issuezip-")&&validId(id)&&f.lastModified()>0
-                &&now-f.lastModified()>ISSUE_ZIP_TTL_MS)deleteIssueZip(id);
+            if(!f.isFile()||!id.startsWith("issuezip-")||!validId(id)||f.lastModified()<=0
+                ||now-f.lastModified()<=ISSUE_ZIP_TTL_MS)continue;
+            String state=settings.getString("issuezip-state-"+id,"");
+            if("building".equals(state)||"ready".equals(state))deleteIssueZip(id);
         }
+    }
+    private void requestIssueZipCleanup(){
+        runOnUiThread(()->{
+            new android.app.AlertDialog.Builder(MainActivity.this)
+                .setTitle("Úklid dočasných ZIPů")
+                .setMessage("Pokračuj pouze tehdy, když je sdílení všech dřívějších ZIPů dokončeno a příjemci je již nepotřebují. Otevření nabídky sdílení není potvrzení doručení. Uložených hlášení ani originálních médií se úklid nedotkne.")
+                .setNegativeButton("Zrušit",(dialog,which)->{})
+                .setPositiveButton("Potvrzuji dokončení",(dialog,which)->{
+                    synchronized(MainActivity.this){
+                        if(issueBundleBusy||pendingIssueZipId!=null){
+                            error("Probíhá export připomínek; nyní ZIPy nelze vyčistit");return;
+                        }
+                        issueBundleBusy=true;
+                    }
+                    new Thread(()->{
+                        int deleted=0;
+                        try{
+                            File[] entries=new File(getFilesDir(),"media").listFiles();
+                            if(entries!=null)for(File f:entries){
+                                String id=f.getName();
+                                if(!f.isFile()||!id.startsWith("issuezip-")||!validId(id)
+                                    ||!settings.getBoolean("issuezip-"+id,false))continue;
+                                String state=settings.getString("issuezip-state-"+id,"");
+                                if(!"shared".equals(state)&&!"save-pending".equals(state))continue;
+                                deleteIssueZip(id);
+                                if(!f.exists())deleted++;
+                            }
+                            js("window.onReportBundlesCleaned?.("+deleted+")");
+                        }catch(Exception ex){error("Úklid dočasných ZIPů: "+ex.getMessage());}
+                        finally{synchronized(MainActivity.this){issueBundleBusy=false;}}
+                    },"ZamerovacIssueManualCleanup").start();
+                }).show();
+        });
     }
     /** Preflight all selected attachments BEFORE writing; an incomplete ZIP is never shared. */
     private String createIssueZip(String json)throws IOException,JSONException{
@@ -751,7 +791,8 @@ public class MainActivity extends Activity {
         if(meta.length>512*1024||meta.length>MAX_ISSUE_BUNDLE_BYTES-bytes)
             throw new IOException("Metadata překračují limit balíčku");
         String id="issuezip-"+UUID.randomUUID();
-        if(!settings.edit().putBoolean("issuezip-"+id,true).commit())
+        if(!settings.edit().putBoolean("issuezip-"+id,true)
+            .putString("issuezip-state-"+id,"building").commit())
             throw new IOException("Nelze evidovat dočasný export");
         File target=mediaFile(id);
         try(ZipOutputStream zip=new ZipOutputStream(new FileOutputStream(target))){
@@ -768,8 +809,11 @@ public class MainActivity extends Activity {
         if(target.length()>MAX_ISSUE_BUNDLE_BYTES){
             deleteIssueZip(id);throw new IOException("Hotový ZIP přesahuje limit 256 MiB");
         }
-        settings.edit().putString("mime-"+id,"application/zip")
-            .putString("name-"+id,"Zamerovac-pripominky.zip").apply();
+        if(!settings.edit().putString("mime-"+id,"application/zip")
+            .putString("name-"+id,"Zamerovac-pripominky.zip")
+            .putString("issuezip-state-"+id,"ready").commit()){
+            deleteIssueZip(id);throw new IOException("Nezdařilo se dokončit dočasný ZIP");
+        }
         return id;
     }
     private void zipIssueFile(ZipOutputStream zip,File input,String name,long expected)throws IOException{
@@ -801,6 +845,8 @@ public class MainActivity extends Activity {
                 runOnUiThread(()->{
                     try{
                         if(saveToFile){
+                            if(!settings.edit().putString("issuezip-state-"+id,"save-pending").commit())
+                                throw new IOException("Nepotvrzené uložení stavu ZIP");
                             pendingIssueZipId=id;
                             Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT);
                             intent.addCategory(Intent.CATEGORY_OPENABLE);
@@ -808,6 +854,8 @@ public class MainActivity extends Activity {
                             intent.putExtra(Intent.EXTRA_TITLE,"Zamerovac-pripominky.zip");
                             startActivityForResult(intent,REQUEST_ISSUE_EXPORT);
                         }else{
+                            if(!settings.edit().putString("issuezip-state-"+id,"shared").commit())
+                                throw new IOException("Nepotvrzené uložení stavu sdílení");
                             Uri uri=new Uri.Builder().scheme("content")
                                 .authority(getPackageName()+".files").appendPath(id).build();
                             Intent intent=new Intent(Intent.ACTION_SEND);
@@ -818,7 +866,7 @@ public class MainActivity extends Activity {
                             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                             startActivity(Intent.createChooser(intent,"Sdílet připomínky"));
                             // ACTION_SEND has no reliable completion acknowledgement. Keep the
-                            // read-only ZIP temporarily; prune it after 24 h on a later launch.
+                            // read-only ZIP: only explicit user confirmation allows cleanup.
                         }
                     }catch(Exception ex){
                         if(id.equals(pendingIssueZipId))pendingIssueZipId=null;
@@ -1094,6 +1142,7 @@ public class MainActivity extends Activity {
         }
         @JavascriptInterface public void shareIssueBundle(String json){sendIssueBundle(json,false);}
         @JavascriptInterface public void saveIssueBundle(String json){sendIssueBundle(json,true);}
+        @JavascriptInterface public void cleanupFinishedIssueBundles(){requestIssueZipCleanup();}
         @JavascriptInterface public void shareText(String title,String content){
             runOnUiThread(()->{
                 Intent send=new Intent(Intent.ACTION_SEND).setType("text/plain");
