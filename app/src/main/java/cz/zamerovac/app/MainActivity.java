@@ -136,7 +136,7 @@ public class MainActivity extends Activity {
     private String mediaSelectionToken;
     private volatile boolean mediaImportBusy;
     private final java.util.concurrent.ThreadPoolExecutor mediaImports=new java.util.concurrent.ThreadPoolExecutor(1,1,30,java.util.concurrent.TimeUnit.SECONDS,new java.util.concurrent.ArrayBlockingQueue<>(1),work->{Thread thread=new Thread(work,"ZamerovacMediaImport");thread.setDaemon(true);return thread;},new java.util.concurrent.ThreadPoolExecutor.AbortPolicy());
-    private String pendingIssueZipId;
+    private volatile String pendingIssueZipId;
     private final PhotoThumbnails photoThumbnails=new PhotoThumbnails();
     private final VideoThumbnails videoThumbnails=new VideoThumbnails();
     private CustomerPdfExport customerExport;
@@ -699,6 +699,9 @@ public class MainActivity extends Activity {
             JSONObject clean=new JSONObject();
             // No local media IDs, customer filenames, annotations or internal state in the exported JSON.
             for(String key:new String[]{"type","title","description","screen","appVersion","createdAt","updatedAt"}){
+                Object field=report.opt(key);
+                if(field!=null&&field!=JSONObject.NULL&&!(field instanceof String))
+                    throw new IOException("Neplatný text v připomínce");
                 String value=report.optString(key,"");
                 if(value.length()>16000)throw new IOException("Text připomínky je příliš dlouhý");
                 clean.put(key,value);
@@ -711,12 +714,18 @@ public class MainActivity extends Activity {
             if(size>MAX_ISSUE_BUNDLE_BYTES-bytes)throw new IOException("Přílohy přesahují limit 256 MiB");
             bytes+=size;files.add(image);paths.add(imagePath);sizes.add(size);
             clean.put("obrazek",imagePath);
+            Object videoValue=report.opt("videos");
+            if(videoValue!=null&&videoValue!=JSONObject.NULL&&!(videoValue instanceof JSONArray))
+                throw new IOException("Neplatný seznam videí");
             JSONArray videos=report.optJSONArray("videos"),videoPaths=new JSONArray();
             if(videos!=null){
                 if(videos.length()>12)throw new IOException("Jedna připomínka může obsahovat nejvýše 12 videí");
                 for(int j=0;j<videos.length();j++){
+                    Object value=videos.opt(j);
+                    if(!(value instanceof JSONObject)&&!(value instanceof String))
+                        throw new IOException("Neplatný záznam videa");
                     JSONObject item=videos.optJSONObject(j);
-                    String video=item==null?videos.optString(j,""):item.optString("id","");
+                    String video=item==null?(String)value:item.optString("id","");
                     File original=checkedIssueMedia(video,true);
                     String mime=mediaMime(video);
                     String extension=mime.contains("webm")?"webm":mime.contains("quicktime")?"mov":
