@@ -10,7 +10,7 @@ on:
       scope:
         description: Run launch first. Compare requires a successful launch and separate owner GO.
         type: choice
-        options: [launch, compare]
+        options: [launch, compare, probe]
         default: launch
 permissions:
   contents: read
@@ -34,13 +34,14 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          case "$QA_SCOPE" in launch|compare) ;; *) exit 2 ;; esac
+          case "$QA_SCOPE" in launch|compare|probe) ;; *) exit 2 ;; esac
           test -c /dev/kvm
           # Grant only the current user access on this disposable hosted VM.
           sudo setfacl -m "u:$(id -un):rw" /dev/kvm
           test -r /dev/kvm && test -w /dev/kvm
           test "$(df -Pk . | awk 'END{print $4}')" -ge 12582912
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        if: inputs.scope != 'probe'
         with:
           ref: ${{ env.QA_AFTER }}
           path: qa-after
@@ -52,6 +53,7 @@ jobs:
           path: qa-before
           persist-credentials: false
       - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
+        if: inputs.scope != 'probe'
         with:
           distribution: temurin
           java-version: '17'
@@ -59,6 +61,7 @@ jobs:
         with:
           node-version: '22'
       - name: Build verified preview revisions for this job only
+        if: inputs.scope != 'probe'
         shell: bash
         env:
           GRADLE_USER_HOME: ${{ runner.temp }}/pr220-gradle
@@ -89,10 +92,10 @@ jobs:
           disable-linux-hw-accel: false
           emulator-boot-timeout: 480
           pre-emulator-launch-script: test "$(df -Pk . | awk 'END{print $4}')" -ge 8388608
-          script: node tools/e2e/android-pr220.cjs
+          script: if [ "$QA_SCOPE" = probe ]; then node tools/e2e/android-pr220-media-probe.cjs; else node tools/e2e/android-pr220.cjs; fi
         env:
           NODE_PATH: ${{ github.workspace }}/tools/qa-browser/node_modules
       - name: Remove temporary APK files
-        if: always()
+        if: always() && inputs.scope != 'probe'
         shell: bash
         run: rm -f qa-before/app/build/outputs/apk/preview/app-preview.apk qa-after/app/build/outputs/apk/preview/app-preview.apk
