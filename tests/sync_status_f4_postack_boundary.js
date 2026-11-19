@@ -83,7 +83,7 @@ function scene(fault='none',restartData=null){
   },
   saveDataChecked(text,expected){
    attempts++;
-   if(mode==='cas-refusal'||mode==='disk-full')
+   if(mode==='cas-refusal'||mode==='disk-full'||mode==='frozen-cas-refusal')
     return JSON.stringify({ok:false,error:'synthetic disk full'});
    if(mode==='race-read-cas'&&attempts===1){
     const newer=JSON.parse(disk);newer.records.push({id:'peer-new',
@@ -308,8 +308,12 @@ if(mode==='edge'||mode==='all'){
  assert.equal(audio.acks,1,'P5: Native did not actually commit');
  assert.equal(audio.disk.records[0].title,'Local unsaved editor draft');
  assert.equal(audio.snapshot.records[0].title,'Local unsaved editor draft');
- assert(!audio.notices.some(s=>/^Neuloženo:/.test(s)),
-  'P5: post-ACK PendingAudio UI fault incorrectly displayed Neuloženo');
+ assert.equal(audio.env.window.__lastSaveFailed,false,
+  'P5: post-ACK PendingAudio error cannot leave an ACKed write labeled failed');
+ assert(!/^Neuloženo:/.test(audio.notices.at(-1)||''),
+  'P5: last visible notification after durable ACK cannot say Neuloženo');
+ assert(audio.notices.some(s=>/Uloženo.*nahrávek/i.test(s)),
+  'P5: explicit retained-audio check must be reported after ACK');
  console.log('PASS F4 P5 post-ACK PendingAudio exception has truthful user-visible status');
  const banner=scene('save-banner-throw');dirty(banner);
  assert.equal(send(banner),true,
@@ -525,8 +529,23 @@ if(['frozen-audio','frozen-audio-error','frozen-cas-refusal'].includes(mode)){
   assert.equal(s.disk.records.filter(r=>r.id==='conflict-1').length,1);
   assert.deepEqual(s.disk.records[0].media,['immutable-origin-media-id']);
   assert.equal(s.disk.records[0].items[0].laserMeasuredMm,'1585.800001234567890');
-  assert(s.notices.at(-1)?.startsWith('Uloženo')||!s.notices.some(n=>/^Neuloženo:/.test(n)),
-    'Final user notice must not suggest loss of acknowledged bytes');
+  assert(!/^Neuloženo:/.test(s.notices.at(-1)||''),
+   'Final visible notice must not contradict confirmed Native CAS');
+  assert.equal(s.env.window.__lastSaveFailed,false,
+   'Frozen post-ACK presentation fault cannot leave false save-failure state');
+  if(mode==='frozen-audio-error')assert(s.notices.some(n=>/Uloženo.*nahrávek/i.test(n)),
+   'After actual immutable audio saved() throws, notify to check retained audio');
+  // Restore working UI and confirm a subsequent save, CAS, restart and bytes.
+  s.fault='none';
+  s.ram.records.find(r=>r.id==='note-1').title='Later immutable audio draft';
+  assert.equal(s.window.__f4.save(),true,'Subsequent save after frozen audio path must succeed');
+  assert.equal(s.disk.records.find(r=>r.id==='note-1').title,'Later immutable audio draft');
+  assert.equal(s.disk.records.filter(r=>r.id==='conflict-1').length,1);
+  const reboot=scene('frozen-audio',s.disk);
+  assert.equal(send(reboot,clone(reboot.old)),true,'Restart with actual frozen API cannot fail');
+  assert.equal(reboot.snapshot.records.find(r=>r.id==='note-1').title,'Later immutable audio draft');
+  assert.deepEqual(reboot.disk.records.find(r=>r.id==='note-1').media,
+   ['immutable-origin-media-id']);
  }
  console.log('PASS production immutable PendingAudio '+mode);
 }
