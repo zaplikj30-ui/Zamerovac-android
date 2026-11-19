@@ -709,8 +709,9 @@ public class MainActivity extends Activity {
     }
     /** Preflight all selected attachments BEFORE writing; an incomplete ZIP is never shared. */
     private String createIssueZip(String json)throws IOException,JSONException{
-        if(json==null||json.length()>512*1024)throw new IOException("Seznam připomínek je příliš velký");
+        JsonInput.check(json,512*1024); // also rejects excessive nesting before org.json allocation
         JSONObject root=new JSONObject(json);
+        JsonInput.unicode(root); // reject malformed surrogate sequences in external text
         JSONArray reports=root.optJSONArray("reports");
         if(reports==null||reports.length()==0||reports.length()>50)
             throw new IOException("Vyber 1 až 50 připomínek");
