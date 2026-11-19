@@ -99,7 +99,7 @@ function scene(initial=seed){
   return false;
  };
  vm.createContext(env);
- vm.runInContext(production+'\nwindow.__f5={save,reconcileSavedState,newRecord,persistNewRecord,addRecord,pickMedia,addMediaRecord,recById,canWriteToFolder,candidateAllowsNewRecord};',env,{filename:'production-app.js-F5'});
+ vm.runInContext(production+'\nwindow.__f5={save,reconcileSavedState,newRecord,persistNewRecord,addRecord,pickMedia,addMediaRecord,recById,canWriteToFolder,candidateAllowsNewRecord:typeof candidateAllowsNewRecord===\"function\"?candidateAllowsNewRecord:null};',env,{filename:'production-app.js-F5'});
  Object.assign(env,env.window.__f5);
  return {
   env,notices,requests,views,journal,
