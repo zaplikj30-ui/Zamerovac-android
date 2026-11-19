@@ -567,7 +567,7 @@ window.onNativeSync=(text)=>{
      // presenter from the shared save() failure message. The audio journal
      // remains Native-owned; preserve any failure as a visible recovery warning.
      const pendingAudio=window.PendingAudio,oldSaved=pendingAudio?.saved;
-     let audioNoticeFailed=false;
+     let audioNoticeFailed=false,savePresentationError=null,saveOutcome=false;
      try{
       if(typeof oldSaved==='function')pendingAudio.saved=function(...args){
        try{return oldSaved.apply(pendingAudio,args)}
@@ -576,7 +576,7 @@ window.onNativeSync=(text)=>{
         try{pendingAudio.refresh?.()}catch(ignored){}
        }
       };
-      save();
+      try{saveOutcome=save()}catch(error){savePresentationError=error}
      }finally{
       if(typeof oldSaved==='function')pendingAudio.saved=oldSaved;
      }
@@ -590,6 +590,14 @@ window.onNativeSync=(text)=>{
      // ok:true. Require the exact committed state, not a toast/boolean.
      confirmed=actual&&actual.schema===1&&Array.isArray(actual.records)&&
        canonicalSavedValue(actual)===canonicalSavedValue(JSON.parse(JSON.stringify(state)));
+     if(confirmed&&(savePresentationError||!saveOutcome)){
+      // A DOM/reportSaveResult error occurred after the authoritative ACK.
+      // Correct the UI on this synchronous callback without editing save().
+      badUI=true;window.__lastSaveFailed=false;
+      window.__lastSavePresentationFailed=true;
+      warn('Uloženo, ale přehled nebo upozornění se nepodařilo aktualizovat. Zkontroluj údaje.');
+     }
+     if(savePresentationError&&!confirmed)throw savePresentationError;
     }
     if(!confirmed)throw Error('Dodatečné sloučení nebylo potvrzeno; rozpracované změny zůstaly zachovány');
    }catch(error){
