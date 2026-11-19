@@ -70,6 +70,15 @@ assert.match(java,/pendingIssueZipId!=null/,'Must not cleanup during pending loc
 assert.match(java,/issueBundleBusy/,'Must not delete during ZIP creation');
 assert.match(java,/"shared"\.equals\(state\)/,'Manual cleanup must include shared ZIPs');
 assert.match(java,/"building"\.equals\(state\)/,'Manual cleanup must recover abandoned preparations');
+const zipStart=java.indexOf('    private String createIssueZip(');
+const zipEnd=java.indexOf('    private void sendIssueBundle(',zipStart);
+assert.ok(zipStart>0&&zipEnd>zipStart,'Real ZIP creation must be covered');
+const zipCode=java.slice(zipStart,zipEnd);
+assert.match(zipCode,/zipIssueFile\(zip,f,paths\.get\(i\),sizes\.get\(i\)\)/,
+ 'ZIP must copy original media bytes, not encode copies');
+assert.match(zipCode,/new FileInputStream\(input\)/,'Read only from original files');
+assert.doesNotMatch(zipCode,/MediaCodec|MediaMuxer|Bitmap\.compress|BitmapFactory|Media3/,
+ 'No new media compression or resizing in ZIP export');
 assert.doesNotMatch(listCode,/mediaFile\(|deleteMedia\(/,
  'Deleting a report must never delete source media');
 console.log('PASS: confirmed individual report deletion, cancel, disk-full, shared ZIP safety and original preservation checks');
