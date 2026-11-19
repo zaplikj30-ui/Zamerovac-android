@@ -132,12 +132,51 @@ function reportSaveResult(ok){
  }
  return false;
 }
-function save(){
+// #207 F5: reject a NEW child before every CAS when a concurrent edit made
+// its intended parent (or any ancestor) unavailable in the staged candidate.
+// Do not consult recById()/window.isRecordLocked(): those use stale global RAM.
+function candidateAllowsNewRecord(candidate,intent){
+ if(!candidate||!Array.isArray(candidate.records)||
+    typeof intent?.id!=='string'||!intent.id||
+    typeof intent.kind!=='string'||!intent.kind)return false;
+ const records=new Map();
+ for(const r of candidate.records){
+  if(!r||typeof r!=='object'||Array.isArray(r)||
+     typeof r.id!=='string'||!r.id||records.has(r.id))return false;
+  records.set(r.id,r);
+ }
+ const child=records.get(intent.id);
+ if(!child||child.kind!==intent.kind||child.parentId!==intent.parentId||
+    child.deleted||child.locked||child.hierarchyConflict)return false;
+ const purged=candidate.trashPurgedIds??[];
+ const tombstones=candidate.syncTombstones??{};
+ if(!Array.isArray(purged)||purged.some(id=>typeof id!=='string'||!id)||
+    !tombstones||typeof tombstones!=='object'||Array.isArray(tombstones))return false;
+ const purgedIds=new Set(purged);
+ const unavailable=id=>purgedIds.has(id)||Object.hasOwn(tombstones,id);
+ if(unavailable(intent.id))return false;
+ const seen=new Set([intent.id]);
+ let parentId=intent.parentId;
+ while(parentId!==null){
+  if(typeof parentId!=='string'||!parentId||seen.has(parentId))return false;
+  seen.add(parentId);
+  const folder=records.get(parentId);
+  if(!folder||folder.kind!=='folder'||folder.deleted||folder.locked||
+     folder.hierarchyConflict||unavailable(parentId))return false;
+  // Legacy root folders may omit parentId; new records must use null.
+  parentId=folder.parentId===undefined?null:folder.parentId;
+ }
+ return true;
+}
+function save(newRecordIntent=null){
  if(dataLoadFailed){notify('Zakázky nelze načíst. Zápis je zablokovaný, původní data zůstávají chráněná.');return reportSaveResult(false)}
  try{
   // Stage conflicting merges; only publish them after the native writer confirms.
   let candidate=state,expected=persistedSnapshot;
   for(let attempt=0;attempt<3;attempt++){
+   // Validate against the exact candidate that this CAS attempt will write.
+   if(newRecordIntent&&!candidateAllowsNewRecord(candidate,newRecordIntent))
+    throw new Error('Cílová složka se během ukládání změnila nebo není dostupná. Nový záznam nebyl uložen.');
    const text=JSON.stringify({...candidate,syncProtocol:2});
    if(!native){localStorage.setItem('zamerovac-data',text);state.syncProtocol=2;persistedSnapshot=text;return reportSaveResult(true)}
    const result=JSON.parse(Native.saveDataChecked(text,expected));
@@ -199,8 +238,11 @@ function folderContains(folderId,otherId){
 function newRecord(kind,title,parentId=currentFolder){return {id:uid(),syncClock:advanceSyncClock({}),kind,title,parentId,createdAt:stamp(),updatedAt:stamp(),rev:uid(),media:[],items:[],text:'',checks:[],width:1400,height:900,deleted:false}}
 // New records must never become visible as saved after a rejected durable write.
 function persistNewRecord(r){
+ // Only new-record commits enforce this extra guard; ordinary edits and
+ // restores retain their existing save/CAS behavior.
+ const intent={id:r.id,parentId:r.parentId,kind:r.kind};
  state.records.push(r);
- if(save()===true)return true;
+ if(save(intent)===true)return true;
  const at=state.records.indexOf(r);
  if(at>=0)state.records.splice(at,1);
  return false;
