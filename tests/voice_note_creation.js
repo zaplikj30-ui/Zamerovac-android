@@ -49,6 +49,9 @@ function scene(options={}){
   getElementById:element
  };
  const env={
+  // Real browser timer globals are absent from a fresh Node vm context.
+  // Use Node's timer APIs to exercise production noteChanged()/saveNote().
+  setTimeout,clearTimeout,
   document,$:element,window:{isRecordLocked:()=>locked,
    PendingAudio:{saved(){if(options.postAckSavedThrows)throw Error('synthetic post-ACK presenter failure')},retained(){retained++},refresh(){}}},
   native:true,currentFolder:Object.hasOwn(options,'currentFolder')?options.currentFolder:'folder-main',
