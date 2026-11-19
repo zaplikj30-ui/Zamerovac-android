@@ -51,11 +51,35 @@
   if(!banner){banner=document.createElement('button');banner.id='pendingAudioBanner';banner.type='button';banner.className='outline';banner.onclick=show;document.querySelector('#browserView')?.prepend(banner)}
   banner.textContent=t('title');
  }
- function refresh(){if(native&&typeof Native.pendingAudio==='function')bannerCount(list().length)}
+ function refresh(){
+  if(!native||typeof Native.pendingAudio!=='function')return;
+  const count=list().length; // list() retains a needs-review entry on unreadable journals.
+  bannerCount(count);
+  if(count===0)lastSavedWarning=null; // A confirmed empty journal starts a new warning cycle.
+ }
+ // A native save already checked the audio journal. Warn only when the
+ // reported pending state changes; keep the persistent banner visible.
+ let lastSavedWarning=null;
+ function warnOnChange(status){
+  if(status!==lastSavedWarning){
+   lastSavedWarning=status;
+   if(status)notify(t('retained'));
+  }
+ }
  function saved(result){
   if(Number.isSafeInteger(result.pendingAudioCount)&&result.pendingAudioCount>=0){
-   bannerCount(result.pendingAudioCount);if(result.audioPending)notify(t('retained'));
-  }else if(result.audioPending)retained();else refresh();
+   const pending=!!result.audioPending||result.pendingAudioCount>0;
+   bannerCount(pending?Math.max(1,result.pendingAudioCount):0);
+   warnOnChange(pending?'count:'+result.pendingAudioCount:null);
+  }else if(result.audioPending){
+   // Recovery failed to supply a count. Preserve the warning, and do not
+   // synchronously recover the same uncertain journal a second time.
+   bannerCount(1);
+   warnOnChange('uncertain');
+  }else{
+   warnOnChange(null);
+   refresh();
+  }
  }
  window.PendingAudio=Object.freeze({list,confirm,retained,rows,refresh,saved,show,exported:verified=>notify(t(verified===true?'exported':'exportedReview'))});
  const previousAttachments=renderNoteAttachments;
