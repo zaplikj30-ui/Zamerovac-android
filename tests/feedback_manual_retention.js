@@ -12,7 +12,11 @@ const listEnd=source.indexOf('\n function sendBatch(saveToFile){',listStart);
 const persistStart=source.indexOf(' const persist=next=>');
 const persistEnd=source.indexOf('\n const q=',persistStart);
 assert.ok(listStart>=0&&listEnd>listStart&&persistStart>=0&&persistEnd>persistStart);
-const listCode=source.slice(listStart,listEnd),persistCode=source.slice(persistStart,persistEnd);
+const stateStart=source.indexOf(' let feedbackWriteUncertain=false;');
+const stateEnd=source.indexOf('\n // Never truncate',stateStart);
+assert.ok(stateStart>=0&&stateEnd>stateStart,'Production uncertain-write state is required');
+const listCode=source.slice(listStart,listEnd),
+ persistCode=source.slice(stateStart,stateEnd)+'\n'+source.slice(persistStart,persistEnd);
 function caseOf({confirmed,storageFails=false}){
  const report={id:'fb-001',title:'Staré hlášení',description:'Popis',resolved:false,screen:'Editor',
   createdAt:'2026-11-01T00:00:00Z',videos:[{id:'video001'}]};
