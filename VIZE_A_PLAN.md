@@ -424,6 +424,17 @@ Tato část **zpřesňuje již existující požadavek**, nezakládá druhé nez
 
 **Pravidlo upozornění na budoucí problém:** Jestliže se při další opravě nebo architektonické volbě ukáže řešení, které by **významně ztížilo případné zveřejnění** (např. nevratný datový formát, nepřenosná vazba na jediný hardware, zbytečně široká oprávnění, nebezpečné podepisování či pevné české texty v nové logice), upozornit uživatele **konkrétně na riziko**, nabídnout přiměřenou alternativu a vyčíslit kompromis v rozsahu práce. **Nepoužívat hypotetické Play jako záminku k rozsáhlému refaktoringu bez domluvy.**
 
+### Dálkové zapínání předem připravených funkcí – funkční přepínače (schválený požadavek do plánu, 19. 11. 2026)
+
+**Záměr vlastníka:** mít možnost případně vydat stabilní bezplatný Zaměřovač na Google Play a u již zabudovaných, bezpečně oddělených novějších funkcí ponechat přepínač vypnutý, dokud nebudou doladěny a ověřeny. Poté je podle potřeby povolit či znovu skrýt **bez nové aktualizace aplikace**, pokud se mění jen již implementované chování. Samotné vydání na Google Play tímto **není schváleno**.
+
+- **Technická možnost:** centrální přepínače funkcí (*feature flags*); pro Android je vhodným kandidátem **Firebase Remote Config**. Definitivní volba služby, závislostí, soukromí a nákladů vyžaduje samostatné DESIGN/SECURITY posouzení a schválení před implementací. Není povoleno nyní vytvářet Firebase projekt, zapojit SDK, měnit účet, vydat APK ani spouštět cloudové běhy.
+- **Bezpečný výchozí stav:** nové nehotové funkce jsou ve veřejné verzi standardně **VYPNUTÉ**. Přepínač musí chránit celé volání funkce, nejen skrýt tlačítko. Základní měření, kóty, média, uložení, obnova, import/export a offline práce jsou na konfiguraci nezávislé. Přepínač nesmí měnit či mazat starší data nebo zakázat přístup k nim.
+- **Bezpečnostní hranice:** ani vypnutá funkce nesmí obsahovat známé kritické vady, které mohou běžet na pozadí nebo zasáhnout stabilní aplikaci. Remote Config není ochrana tajemství, placeného obsahu ani ověřování zákaznických licencí; hodnoty na klientovi mohou být čitelné. Nepřenášet v něm citlivé údaje, zákaznická data ani spustitelný kód.
+- **Postupné uvolnění:** před zapnutím samostatné pozitivní, negativní a regresní testy, případně omezené zpřístupnění testerům a teprve následně širší aktivace. Musí být možnost přepínač vrátit na VYPNUTO. Dálková změna ale není okamžité nouzové zastavení: offline zařízení a lokální cache mohou používat starou hodnotu.
+- **Povinné scénáře před vydáním:** první spuštění bez sítě, nedostupná služba, chybná/stará konfigurace, zapnutí/vypnutí při otevřené zakázce, restart, uložení/obnova, aktualizace aplikace, ochrana originálních médií, ID a přesných kót. Výsledek musí být předvídatelný a nesmí vyvolat ztrátu dat.
+- **Priorita:** až po dokončení rozpracovaných oprav a integrace; oddělená návrhová práce, jeden autor a následné nezávislé review. **Stav: schváleno pouze pro zařazení do plánu; kód, Firebase integrace, testy a veřejné vydání NOT RUN / NEIMPLEMENTOVÁNO.**
+
 ### Vlastní identita Zaměřovače vůči ImageMeteru před případným zveřejněním
 
 **Otevřená strategická otázka uživatele (4. 11. 2026):** Pokud by šel Zaměřovač veřejně do obchodu s aplikacemi, nakolik se má lišit od referenčního ImageMeteru? **Zatím nejde o schválení redesignu, přejmenování, změny současného funkčního vzoru ani veřejného vydání.**
@@ -524,6 +535,7 @@ Tato část **zpřesňuje již existující požadavek**, nezakládá druhé nez
 ## 7. Historie rozhodnutí o směru
 | Datum | Co bylo dohodnuto |
 |---|---|
+| 2026-11-19 | Vlastník schválil zařazení budoucích dálkových přepínačů funkcí do plánu: možné stabilní bezplatné vydání s vypnutými připravenými funkcemi a jejich pozdější aktivace po otestování. Firebase Remote Config je kandidát, nikoli schválená integrace; žádné PR implementace, cloud ani APK. |
 | 2026-11-04 | Udržovat také dlouhodobou podobu aplikace, budoucí nápady, plánované změny a rozhodnutí. Vize se může měnit. |
 | 2026-11-04 | Schválena bezpečná příprava vícejazyčnosti, řádek „Jazyk aplikace“ s jedinou volbou 🇨🇿 Čeština; bez samostatné APK. [Issue #14](https://github.com/zaplikj30-ui/Zamerovac-android/issues/14). |
 | 2026-11-04 | Nové upřesnění: škálovat na desítky jazyků, vyhledávání, autonyma, různé skripty/formáty a RTL; v příští aktualizaci pouze česká volba, ostatní opravy mají přednost. |
