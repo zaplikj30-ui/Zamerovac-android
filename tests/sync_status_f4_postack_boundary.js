@@ -55,6 +55,11 @@ function scene(fault='none',restartData=null){
  const Native={
   loadData(){
    reads++;
+   if(acks>0&&mode==='post-ack-read-throw')
+    throw Error('synthetic second Native.loadData unavailable after CAS ACK');
+   if(acks>0&&mode==='post-ack-read-invalid-json')return '{"schema":';
+   if(acks>0&&mode==='post-ack-read-invalid-schema')
+    return '{"schema":0,"records":[]}';
    if(mode==='native-read-race'&&reads===2){
     const newer=JSON.parse(disk);
     newer.records.push({id:'peer-during-adoption',kind:'note',rev:'newest-peer',
@@ -131,6 +136,7 @@ function scene(fault='none',restartData=null){
   get nativeData(){return JSON.parse(disk)},
   get status(){return window.ZamerovacSyncStatus.status()},
   set fault(x){mode=x},
+  peerWrite(record){const data=JSON.parse(disk);data.records.push(clone(record));disk=JSON.stringify(data)},
   get env(){return env},
   get details(){
    window.ZamerovacSyncStatus.show();
@@ -388,6 +394,10 @@ if(mode==='post-ack-peer'||mode==='all'){
   'P1: newer peer change must not show a green confirmed receipt');
  assert.equal(s.window.__syncViewNeedsRefresh,true,
   'P1: view needs refresh while newer peer is not reconciled');
+ assert.match(s.details,/Zachované konfliktní kopie|Místní zápis potvrzen|Čeká/i,
+  'P3: status details must remain available');
+ assert.equal(s.window.__syncViewNeedsRefresh,true,
+  'P3 RED: opening cloud details cleared unreconciled Native peer data');
  assert.equal(s.snapshot.records.some(r=>r.id==='peer-post-ack'),false,
   'P1: unmerged peer must not be falsely included in our CAS baseline');
  assert.equal(s.ram.records.find(r=>r.id==='note-1')?.title,'Místní potvrzený návrh',
@@ -414,4 +424,55 @@ if(mode==='post-ack-peer'||mode==='all'){
  assert.equal(s.snapshot.records.some(r=>r.id==='peer-post-ack'),true,
   'P1: next successful save still has stale persistedSnapshot');
  console.log('PASS P1 post-ACK peer write: no rollback, no lost drafts/media, truthful warning, next CAS');
+}
+
+// P1b: second Native.loadData is fallible only AFTER actual local CAS ok:true.
+// Preserve the already ACKed snapshot, even if disk freshness is unknown.
+if(['post-ack-read-throw','post-ack-read-invalid-json','post-ack-read-invalid-schema','all'].includes(mode)){
+ const faults=mode==='all'?
+  ['post-ack-read-throw','post-ack-read-invalid-json','post-ack-read-invalid-schema']:[mode];
+ for(const fault of faults){
+  const s=scene(fault),live=s.ram.records.find(r=>r.id==='note-1');
+  live.title='Potvrzený lokální návrh';live.rev='local-ack-rev';
+  live.syncClock={'00000000-0000-4000-8000-000000000001':1};
+  s.window.__f4.setCurrent(live);s.window.__f4.setNote(live);
+  s.window.__detailParent=live;s.env.screen='editor';
+  const completed=send(s);
+  assert.equal(s.acks,1,'P1b '+fault+': Native CAS must confirm first');
+  assert.equal(completed,false,'P1b: unreadable later Native image cannot be fully accepted');
+  assert.equal(s.disk.records.find(r=>r.id==='note-1').title,'Potvrzený lokální návrh');
+  assert.equal(s.snapshot.records.find(r=>r.id==='note-1')?.title,
+   'Potvrzený lokální návrh','P1b RED: persistedSnapshot reverted to pre-ACK after '+fault);
+  assert.equal(s.ram.records.find(r=>r.id==='note-1')?.title,'Potvrzený lokální návrh');
+  assert.equal(s.current,live,'P1b: active editor identity changed after ACK');
+  assert.equal(s.window.__f4.getNote(),live,'P1b: active note identity changed');
+  assert.equal(s.window.__detailParent,live,'P1b: active detail identity changed');
+  assert.deepEqual(s.ram.records[0].media,['immutable-origin-media-id']);
+  assert.equal(s.ram.records[0].items[0].measure,'1585,800001234567890');
+  assert.equal(s.ram.records[0].items[0].laserMeasuredMm,'1585.800001234567890');
+  assert.equal(s.status.phase,'pending','P1b: unverified state must not be green');
+  assert.equal(s.window.__syncViewNeedsRefresh,true,'P1b: refresh required');
+  assert(s.notices.some(t=>/místní zápis potvrzen/i.test(t)&&/nelze ověřit/i.test(t)),
+   'P1b: missing truthful local-ACK and Native-unverified notice');
+  assert(!s.notices.some(t=>/mezitím přišla novější data|Neuloženo:|Dodatečné sloučení nebylo potvrzeno/.test(t)),
+   'P1b: wrong message after post-ACK read error');
+  s.fault='none';
+  // Independent peer write; next ordinary save MUST preserve it as well.
+  s.peerWrite({id:'peer-after-read-error',rev:'peer-unique',kind:'note',
+   title:'Novější peer po chybě čtení',parentId:null,
+   media:['immutable-peer-extra'],items:[]});
+  s.ram.records.find(r=>r.id==='note-1').title='Následná lokální změna';
+  assert.equal(s.window.__f4.save(),true,'P1b: subsequent save must reconcile after '+fault);
+  assert.equal(s.disk.records.find(r=>r.id==='note-1').title,'Následná lokální změna');
+  assert.equal(s.disk.records.filter(r=>r.id==='peer-after-read-error').length,1,
+   'P1b: subsequent save lost/duplicated peer data');
+  assert.equal(s.disk.records.filter(r=>r.id==='conflict-1').length,1);
+  assert.deepEqual(s.disk.records.find(r=>r.id==='note-1').media,['immutable-origin-media-id']);
+  assert.equal(s.disk.records.find(r=>r.id==='note-1').items[0].measure,'1585,800001234567890');
+  const reboot=scene('none',s.disk);
+  assert.equal(send(reboot,clone(reboot.old)),true,'P1b: restart must load current Native data');
+  assert.equal(reboot.snapshot.records.find(r=>r.id==='note-1').title,'Následná lokální změna');
+  assert.equal(reboot.disk.records.filter(r=>r.id==='peer-after-read-error').length,1);
+  console.log('PASS P1b '+fault+': ACK/draft safe, subsequent CAS and restart');
+ }
 }
