@@ -57,7 +57,6 @@ suite('sync-cadence',async run=>{
    const f=flag.getBoundingClientRect(),c=control.getBoundingClientRect();
    return !(f.left<c.right&&c.left<f.right&&f.top<c.bottom&&c.top<f.bottom);
   }),true,'Fialová vlaječka nesmí překrývat přepínač synchronizace');
-  await page.check('[data-setting="autoSync"]');assert.equal(await page.evaluate(()=>prefs.syncFrequency),'auto');await page.uncheck('[data-setting="autoSync"]');await page.evaluate(()=>openZamerovacPeers());assert.equal(await page.locator('#syncFrequency').inputValue(),'manual');await page.selectOption('#syncFrequency','30');assert.equal(await page.locator('[data-setting="autoSync"]').isChecked(),true);assert.equal(await page.evaluate(()=>JSON.stringify(state.records)),before);
   // Real pointer movement back to the opposite edge must remain available.
   const fromLeft=await flag.boundingBox();
   assert(fromLeft,'Flag missing after left drag');
@@ -69,6 +68,8 @@ suite('sync-cadence',async run=>{
   assert(fromRight&&fromRight.x>fromLeft.x+35,'Report flag did not follow reverse drag to the right');
   assert.equal(await page.evaluate(()=>JSON.parse(localStorage.getItem('zamerovac-feedback-flag-position-v1')).edge),'right');
   assert.equal(await page.evaluate(()=>JSON.stringify(state.records)),before,'Dragging flag cannot change saved project data');
+  await page.check('[data-setting="autoSync"]');assert.equal(await page.evaluate(()=>prefs.syncFrequency),'auto');await page.uncheck('[data-setting="autoSync"]');await page.evaluate(()=>openZamerovacPeers());assert.equal(await page.locator('#syncFrequency').inputValue(),'manual');await page.selectOption('#syncFrequency','30');assert.equal(await page.locator('[data-setting="autoSync"]').isChecked(),true);assert.equal(await page.evaluate(()=>JSON.stringify(state.records)),before);
+
  });
  await run('failed-persistence-does-not-activate-new-frequency',async({page})=>{
   await page.evaluate(()=>{prefs.syncFrequency='15';prefs.autoSync=true;save();window.cadenceCalls=0;applyNativePrefs=()=>{cadenceCalls++;return true};window.cadenceSave=save;save=()=>false;openZamerovacPeers()});await page.selectOption('#syncFrequency','manual');assert.equal(await page.locator('#syncFrequency').inputValue(),'15');assert.equal(await page.evaluate(()=>prefs.autoSync),true);assert.equal(await page.evaluate(()=>cadenceCalls),0);
