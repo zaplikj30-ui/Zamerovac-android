@@ -65,4 +65,13 @@ assert.equal(actions,0);assert.equal(saves,0);assert.equal(reads,0);
 lookup('openPendingAudioRecovery').onclick();assert.equal(recovery,0);
 sandbox.PendingAudio={show:()=>{recovery++}};lookup('openPendingAudioRecovery').onclick();assert.equal(recovery,1);
 lookup('backupAll').onclick();assert.equal(actions,1); // original listener survives the move
+const missing=lookup('settingsSearch');missing.value='neexistujici_nastaveni';missing.oninput();
+assert.equal(lookup('settingsSearchResults').children.length,1);
+assert.equal(lookup('settingsSearchResults').children[0].tagName,'P');
+missing.value='';missing.oninput();assert.equal(categories.hidden,false);
+assert.equal(sandbox.ZamerovacSettingsNavigation.showTarget('chooseLaser'),true);
+sandbox.renderSettings(); // controller re-renders after a setting change or rejected save
+assert.equal(lookup('settingsPage-measurement').hidden,false);
+assert.equal(lookup('settingsPage-measurement').contains(lookup('chooseLaser')),true);
+assert.equal(saves,0);assert.equal(reads,0);assert.equal(actions,1);
 console.log('PASS: 5 categories, 18 legacy controls intact, search, deep-link, back, modal, recovery, no open-side-effects');
