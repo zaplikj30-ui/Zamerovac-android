@@ -19,4 +19,4 @@
 
 /* Keep the report flag accessible but clear of settings controls. */
 #settingsPanel .panelHead{position:sticky;top:0;z-index:1;padding-right:64px}
-#settingsPanel:not([hidden]) ~ #feedbackFlag{top:5px!important;right:9px!important;left:auto!important}
+#settingsPanel:not([hidden]) ~ #feedbackFlag:not([data-settings-moved]){top:5px!important;right:9px!important;left:auto!important}

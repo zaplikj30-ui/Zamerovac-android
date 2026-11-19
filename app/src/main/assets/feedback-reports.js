@@ -73,6 +73,9 @@
   if(Math.hypot(e.clientX-drag.x,e.clientY-drag.y)>9)drag.moved=true;
   if(drag.moved){
    clearTimeout(longTimer);
+   // CSS places the flag safely on first opening Settings; once dragged,
+   // release that temporary placement so the user's pointer can move it.
+   if(document.getElementById('settingsPanel')?.hidden===false)flag.dataset.settingsMoved='true';
    flag.style.left=clamp(e.clientX-23,4,innerWidth-49)+'px';
    flag.style.top=clamp(e.clientY-23,48,innerHeight-58)+'px';
    flag.style.right='auto';
