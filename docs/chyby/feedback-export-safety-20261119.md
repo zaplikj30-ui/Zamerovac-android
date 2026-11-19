@@ -34,6 +34,14 @@
 - **B – samostatná kompresní/transkódovací funkce:** **NEMĚNIT / bez schválení**; vlastníkem výslovně zamítnuté pro tento celek. Nepokračovat v jejím návrhu nebo implementaci.
 - **C – bezpečné předání nadlimitních důkazů:** vybrat menší počet důkazů, nebo předat ZIP soukromou schválenou cestou; neuploadovat neověřená citlivá média na veřejný GitHub. Neměnit původní kvalitu.
 
+## Následné nálezy Kontrolora 5 a cílené vlastní opravy
+- **301+ záznamů / duplicitní ID:** seznam při startu neodřezává starší hlášení. Při smazání 1 položky se vyžaduje jednoznačné ID, jinak se odmítne bez zápisu. Nezavádí se žádná automatická retence.
+- **P2-A – nejistý readback po již provedeném zápisu:** samotný \`setItem\` není potvrzení. Selže-li následný \`getItem\` nebo nelze spolehlivě načíst startup baseline, \`feedbackWriteUncertain\` v aktuální relaci blokuje další zápisy, nový screenshot i místní/externí ZIP. Stará RAM tím nemůže pozdějším uložením obnovit smazaný záznam. Není prováděna tichá oprava ani smazání původních dat; bezpečné pokračování vyžaduje znovunačtení aplikace a ověření uloženého stavu.
+- **P3-B – neúplný nejstarší záznam:** \`summary\` používá bezpečné fallbacky pro chybějící či neřetězcové titulky, popisy, obrazovku a datum, aniž mění uložený objekt. Pokud by startup pole obsahovalo opravdu neplatné neobjektové prvky, aplikace zobrazí ostatní platné záznamy, ale zablokuje mutaci a export, aby nevymazala původní položky při přepsání filtrovaného seznamu.
+- **Navazující soukromí a média:** duplicitní/neplatná ID se před ZIP odmítnou, neplatný popis nebo seznam videí vyvolá vysvětlené odmítnutí, chybný volitelný název videa dostane bezpečný zobrazovací fallback. Po nejistém zápisu se další pokus o uložení nebo novou fotografickou připomínku odmítne *před* vytvářením dalších originálních či anotovaných kopií.
+- **Trvalé testy:** \`tests/feedback_delete_integrity.js\` přímo z produkčních úseků JS ověřuje přesně potvrzené mazání při 301 hlášeních, duplicitní ID, stornování, neúspěšný zápis a nejisté čtení, další operaci ve stejné relaci, restart, neúplná legacy data, metadata pro sdílení i ochranu ZIP. \`tests/feedback_raster_reuse.js\` navíc pokrývá opakovaný pokus o uložení po nejistém ACK bez nové mediální kopie. Všechny tyto testy jsou **syntetické** (V8/Node VM), nikoliv důkaz fyzického Android runtime.
+- **Omezení:** do nativního \`MainActivity.java\`, SAF, MediaProvider, formátu ZIP v2, zákaznických souborů, synchronizace ani komprese se v tomto dalším opravném cyklu nezasahovalo.
+
 ## Skutečné testovací důkazy a zbývající rizika
 - RED: původní produkční `sendBatch(false)` volal `Native.shareIssueBundle` bez potvrzení.
 - PASS: na opraveném JS ve V8 – odmítnutí, potvrzení, místní uložení, chybějící bridge, prázdný výběr; syntaxe JS/help; strukturální přítomnost nativních ochranných podmínek. **Strukturální Java test není Android runtime test.**
