@@ -744,7 +744,7 @@ window.onNativeSync=(text)=>{
    const candidate=reconcileSavedState(base,JSON.parse(JSON.stringify(state)),disk);
    const candidateText=JSON.stringify({...candidate,syncProtocol:2});
    const diskText=JSON.stringify({...disk,syncProtocol:2});
-   let confirmed=false,latest=diskRaw;
+   let confirmed=false,latest=diskRaw,previousPresentationFailure=null;
    try{
     if(canonicalSavedValue(JSON.parse(candidateText))===canonicalSavedValue(JSON.parse(diskText))){
      // A concurrent native writer can advance the disk after the first read.
@@ -761,8 +761,12 @@ window.onNativeSync=(text)=>{
      // save() may return false if its post-ACK audio presentation throws.
      // Only subsequent verified CAS evidence may reclassify the local write.
      const pendingAudio=window.PendingAudio;
+     // Catch a new post-ACK presentation fault even when save() returns true.
+     previousPresentationFailure=window.__lastSavePresentationFailed===true;
+     window.__lastSavePresentationFailed=false;
      let savePresentationError=null,saveOutcome=false;
      try{saveOutcome=save()}catch(error){savePresentationError=error}
+     const savePresentationFailed=window.__lastSavePresentationFailed===true;
      // save() advances persistedSnapshot only after Native CAS ok:true.
      // Capture exact ACKed bytes BEFORE the fallible second Native disk read.
      const acknowledgedSnapshot=persistedSnapshot;
@@ -792,7 +796,7 @@ window.onNativeSync=(text)=>{
       else peerChangedAfterAck=true;
      }
      if(readError&&!confirmed)throw readError;
-     if(confirmed&&(savePresentationError||!saveOutcome)){
+     if(confirmed&&(savePresentationError||!saveOutcome||savePresentationFailed)){
       // A DOM/reportSaveResult error occurred after the authoritative ACK.
       // Correct the UI on this synchronous callback without editing save().
       badUI=true;window.__lastSaveFailed=false;
@@ -807,6 +811,7 @@ window.onNativeSync=(text)=>{
     }
     if(!confirmed)throw Error('Dodatečné sloučení nebylo potvrzeno; rozpracované změny zůstaly zachovány');
    }catch(error){
+    if(previousPresentationFailure===true)window.__lastSavePresentationFailed=true;
     state=saved.state;persistedSnapshot=saved.snapshot;
     current=saved.current;noteActive=saved.noteActive;window.__detailParent=saved.detail;
     throw error;

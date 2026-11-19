@@ -315,6 +315,26 @@ if(mode==='edge'||mode==='all'){
  assert(audio.notices.some(s=>/Uloženo.*nahrávek/i.test(s)),
   'P5: explicit retained-audio check must be reported after ACK');
  console.log('PASS F4 P5 post-ACK PendingAudio exception has truthful user-visible status');
+ // Integration #202 + #203: a prior UI fault must not be mistaken for a NEW
+ // post-ACK audio problem; a refused pre-ACK write must preserve its warning.
+ const prior=scene();dirty(prior);
+ prior.env.window.__lastSavePresentationFailed=true;
+ assert.equal(send(prior),true,'P5: stale presenter flag cannot block fresh Native ACK');
+ assert.equal(prior.acks,1);
+ assert.equal(prior.env.window.__lastSavePresentationFailed,false,
+  'P5: clean ACK did not clear obsolete presentation error');
+ assert.equal(prior.env.window.__syncAudioReviewNeeded,undefined,
+  'P5: stale error incorrectly claimed new retained-audio failure');
+ assert(!prior.notices.some(x=>/Uloženo.*nahrávek/i.test(x)),
+  'P5: stale error generated unrelated retained-audio alert');
+ console.log('PASS integration F4: stale presenter flag does not invent new audio failure');
+ const pre=scene('cas-refusal');dirty(pre);
+ pre.env.window.__lastSavePresentationFailed=true;
+ assert.equal(send(pre),false,'P5: rejected Native CAS must remain rejected');
+ assert.equal(pre.acks,0);
+ assert.equal(pre.env.window.__lastSavePresentationFailed,true,
+  'P5: pre-ACK refusal erased earlier presentation warning');
+ console.log('PASS integration F4: pre-ACK refusal preserves prior UI warning');
  const banner=scene('save-banner-throw');dirty(banner);
  assert.equal(send(banner),true,
   'P5: post-ACK reportSaveResult DOM throw must not turn confirmed sync into false');
