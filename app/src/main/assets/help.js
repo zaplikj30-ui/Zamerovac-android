@@ -651,6 +651,11 @@ const chapters=[
       "Ztratil se obrázek po přiblížení nebo se zobrazila mřížka: ukonči gesto, obnov zobrazení; nemaž zakázku ani data aplikace.",
       "Při hlášení chyby přímo v aplikaci se potvrzení Uloženo zobrazí až po ověření zápisu seznamu připomínek. Pokud zápis selže, rozpracovaná připomínka zůstane otevřená; nemaž ji, zkontroluj volné místo a uložení zopakuj.",
       "Při ukládání obrázkové připomínky zůstane editor otevřený, dokud zápis neskončí. Zavření, Android Zpět a přepnutí do seznamu se během ukládání bezpečně odmítnou.",
+      "Fialovou vlaječku klepnutím otevři pro novou připomínku se snímkem obrazovky, dlouhým podržením zobraz Moje připomínky. Označ chybu perem, šipkou či textem, můžeš přidat video a připomínku uložit v telefonu.",
+      "V seznamu Moje připomínky vyber hlášení. Uložit ZIP vytvoří místní soubor; Sdílet vybrané nejprve zobrazí výslovné upozornění a až po potvrzení nabídku Androidu. Storno nic neodesílá. Na veřejný GitHub se nic neodesílá automaticky.",
+      "Před sdílením otevři a zkontroluj všechna vybraná hlášení: viditelné osobní údaje, zakázky, adresy, kóty, titulky a video. ZIP neobsahuje původní názvy příloh ani interní ID v JSON, ale video zůstává v původním formátu včetně případných skrytých metadat. Viditelné údaje nejsou automaticky začerněné.",
+      "Příliš velký nebo neúplný balíček je odmítnut místo tichého vynechání přílohy; v jedné dávce může být nejvýše 50 hlášení, u každého 12 videí a celkem 256 MiB vstupních souborů. Velká videa aplikace zatím automaticky nepřekóduje. Pro GitHub Issues je potřeba zvlášť zkontrolovat podporovaný formát, limit velikosti i soukromí; redigovaná média předat až po kontrole.",
+      "Dočasný ZIP při uložení do souboru aplikace po dokončení odstraní; po systémovém sdílení ho kvůli převzetí cílovou aplikací ponechá dočasně a při dalším spuštění po 24 hodinách promaže. Původní snímky, videa a uložené připomínky zůstávají nedotčené.",
       "Pokud chyba přetrvává, poznamenej verzi aplikace a pošli popis kroků a případně snímek či video."
     ],
     "notes": [
