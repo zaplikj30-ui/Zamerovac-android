@@ -76,10 +76,14 @@ function build(){
   const id=category+'|'+group;let section=groups.get(id);
   if(!section){section=element('section','settings-subgroup');section.append(element('h3',null,group));groups.set(id,section);pages.get(category).append(section);}
   section.append(node);
-  if(node.classList?.contains('setting')){
+  // Production peer/backup entry buttons are .outline, not .setting.
+  // Index the original interactive node, never a cloned replacement.
+  if(node.classList?.contains('setting')||node.matches?.('button,input,select')||node.querySelector?.('button,input,select')){
    const label=node.querySelector?.('span')?.textContent?.trim()||node.textContent?.trim()||'Nastavení';
-   const extra=category==='sync'?' záloha zalohování přenos disk':category==='measurement'?' laser měřič bosch jednotka':category==='maintenance'?' nahrávky obnova chyba log':'';
-   entries.push({node,category,label,group,terms:clean(label+' '+group+' '+categories.find(x=>x.id===category).title+extra)});
+   // Only the actual control and its narrow subsection are searchable.
+   // A category-wide keyword would make unrelated controls false positives.
+   const synonym=group==='Zálohy a obnova'?' záloha':'';
+   entries.push({node,category,label,group,terms:clean(label+' '+group+synonym)});
   }
  }
  let group='Informace a údržba';
