@@ -144,7 +144,6 @@ public class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle saved){super.onCreate(saved);
         settings=getSharedPreferences("zamerovac",MODE_PRIVATE);
-        new Thread(this::cleanupIssueZips,"ZamerovacIssueCleanup").start();
         driveAccountFlow=new DriveAccountFlow(this,new DriveAccounts(getNoBackupFilesDir()),this::driveChanged);driveAccountFlow.restore(saved);if(saved!=null){cloudTreeRevision=saved.getLong("cloud-tree-revision",-1);backupTreeRevision=saved.getLong("backup-tree-revision",-1);}
         // Android 15/16/17 draw behind system bars: inset the WebView explicitly.
         getWindow().getDecorView().setSystemUiVisibility(
@@ -654,7 +653,6 @@ public class MainActivity extends Activity {
 
     /** Feedback-only temporary ZIPs. Never touch project media or original report assets. */
     private static final long MAX_ISSUE_BUNDLE_BYTES=256L*1024L*1024L;
-    private static final long ISSUE_ZIP_TTL_MS=24L*60L*60L*1000L;
     private boolean issueBundleBusy;
 
     private File checkedIssueMedia(String id,boolean video)throws IOException{
@@ -674,22 +672,6 @@ public class MainActivity extends Activity {
         if(!f.exists()||f.delete())
             settings.edit().remove("issuezip-"+id).remove("issuezip-state-"+id)
                 .remove("mime-"+id).remove("name-"+id).apply();
-    }
-    private void cleanupIssueZips(){
-        // Expire only abandoned, NOT YET SHARED temporary files. ACTION_SEND does
-        // not acknowledge recipient completion, so time alone cannot authorize
-        // deletion of a shared ZIP (even after app restart).
-        synchronized(this){if(issueBundleBusy||pendingIssueZipId!=null)return;}
-        File[] files=new File(getFilesDir(),"media").listFiles();
-        if(files==null)return;
-        long now=System.currentTimeMillis();
-        for(File f:files){
-            String id=f.getName();
-            if(!f.isFile()||!id.startsWith("issuezip-")||!validId(id)||f.lastModified()<=0
-                ||now-f.lastModified()<=ISSUE_ZIP_TTL_MS)continue;
-            String state=settings.getString("issuezip-state-"+id,"");
-            if("building".equals(state)||"ready".equals(state))deleteIssueZip(id);
-        }
     }
     private void requestIssueZipCleanup(){
         runOnUiThread(()->{
@@ -713,7 +695,8 @@ public class MainActivity extends Activity {
                                 if(!f.isFile()||!id.startsWith("issuezip-")||!validId(id)
                                     ||!settings.getBoolean("issuezip-"+id,false))continue;
                                 String state=settings.getString("issuezip-state-"+id,"");
-                                if(!"shared".equals(state)&&!"save-pending".equals(state))continue;
+                                if(!"shared".equals(state)&&!"save-pending".equals(state)
+                                    &&!"building".equals(state)&&!"ready".equals(state))continue;
                                 deleteIssueZip(id);
                                 if(!f.exists())deleted++;
                             }
@@ -839,7 +822,6 @@ public class MainActivity extends Activity {
         new Thread(()->{
             String ready=null;
             try{
-                cleanupIssueZips();
                 ready=createIssueZip(text);
                 final String id=ready;
                 runOnUiThread(()->{
