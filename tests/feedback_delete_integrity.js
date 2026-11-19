@@ -110,7 +110,7 @@ scenario('cancel: entire 301-record list remains unchanged',()=>{
  assert.equal(disk.get(KEY),before);
  assert.equal(session.read().length,301);
 });
-for(const fault of ['throw','ignored','readback']){
+for(const fault of ['throw','ignored']){
  scenario('disk failure '+fault+': no RAM loss, no falsely confirmed deletion',()=>{
   const disk=data(Array.from({length:301},(_,i)=>makeReport(i))),before=disk.get(KEY);
   const session=boot(disk,{fault});
@@ -123,6 +123,19 @@ for(const fault of ['throw','ignored','readback']){
   assert.deepEqual(boot(disk).read(),JSON.parse(before),'Restart after error must preserve all reports');
  });
 }
+scenario('readback error after successful write: no unapproved data loss',()=>{
+ const originals=Array.from({length:301},(_,i)=>makeReport(i));
+ const disk=data(originals);
+ const session=boot(disk,{fault:'readback'});
+ session.click('fb-001');
+ assert.equal(session.calls.writes,1);
+ assert.equal(session.read().length,301,'Unacknowledged write must preserve RAM snapshot for retry');
+ assert.ok(session.calls.notices.some(m=>/Nepodařilo se uložit/i.test(m)),'Storage readback failure must be reported');
+ const stored=fromDisk(disk);
+ assert.deepEqual(stored,originals.filter(r=>r.id!=='fb-001'),
+  'A write that completed before readback failure must still remove ONLY the confirmed record');
+ assert.deepEqual(boot(disk).read(),stored,'Reload must reflect actual durable bytes, not a false success');
+});
 scenario('one normal report: explicit confirmation deletes only selected ID',()=>{
  const rows=[makeReport(1),makeReport(2),makeReport(3)],disk=data(rows);
  const session=boot(disk);
