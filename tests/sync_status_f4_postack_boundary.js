@@ -1,7 +1,7 @@
-/* #192 F4: RED source regression for ACK/UI boundary design review.
+/* #192 F4: RED before fix; keep exact browser/editor fault injections after fix.
  * Executes production reconcileSavedState(), applySavedState(), save(),
  * onNativeSync() and sync-status.js. Only Native/disk/DOM are synthetic.
- * Keep intentionally RED until an independently approved product fix.
+ * Use the original RED assertions unchanged; now demand PASS on the fixed SHA.
  */
 'use strict';
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
@@ -13,8 +13,12 @@ function extract(start,end){
  return app.slice(a,b);
 }
 const production=extract('function touch(rec){','function notify(msg){')+'\n'+
- extract('window.onNativeSync=(text)=>{','window.onLaserValue=')+
- '\nwindow.__f4={snapshot:()=>persistedSnapshot,state:()=>state};';
+ extract(app.includes('window.ZamerovacSyncReadCommittedConflicts=')?
+  'window.ZamerovacSyncReadCommittedConflicts=':'window.onNativeSync=(text)=>{','window.onLaserValue=')+
+ '\nwindow.__f4={snapshot:()=>persistedSnapshot,state:()=>state,'+
+ 'getCurrent:()=>current,setCurrent:v=>{current=v},getNote:()=>noteActive,'+
+ 'setNote:v=>{noteActive=v},setState:v=>{state=v},' +
+ 'save:()=>save()};';
 const clone=v=>JSON.parse(JSON.stringify(v));
 function scene(fault='none'){
  const old={schema:1,syncProtocol:2,records:[{
@@ -45,17 +49,42 @@ function scene(fault='none'){
  }
  const document={getElementById:node,createElement:id=>node('made-'+id),body:{append(){}}};
  const Native={
-  loadData(){return mode==='invalid-load'?'{"schema":0,"records":[]}':disk},
+  loadData(){
+   if(mode==='load-throw')throw Error('synthetic Native load unavailable');
+   if(mode==='invalid-load')return '{"schema":0,"records":[]}';
+   if(mode==='duplicate-ids'){
+    const broken=JSON.parse(disk);broken.records.push({...broken.records[0]});
+    return JSON.stringify(broken);
+   }
+   return disk;
+  },
   saveDataChecked(text,expected){
    attempts++;
-   if(mode==='cas-refusal')return JSON.stringify({ok:false,error:'synthetic disk full'});
+   if(mode==='cas-refusal'||mode==='disk-full')
+    return JSON.stringify({ok:false,error:'synthetic disk full'});
+   if(mode==='race-read-cas'&&attempts===1){
+    const newer=JSON.parse(disk);newer.records.push({id:'peer-new',
+     kind:'note',rev:'other-peer',parentId:null,title:'Newer remote',
+     media:['immutable-peer-extra'],items:[]});
+    disk=JSON.stringify(newer);
+    return JSON.stringify({ok:false,current:disk});
+   }
+   if(mode==='retry-exhausted'){
+    const newer=JSON.parse(disk);newer.records.push({id:'peer-'+attempts,
+     kind:'note',rev:'other-'+attempts,title:'Peer update',
+     parentId:null,media:[],items:[]});
+    disk=JSON.stringify(newer);
+    return JSON.stringify({ok:false,current:disk});
+   }
    if(expected!==disk)return JSON.stringify({ok:false,current:disk});
    disk=text;acks++;return JSON.stringify({ok:true,pendingAudioCount:0,audioPending:false});
   },
   syncLedgerState(){return JSON.stringify({localSaved:true,
    targets:[{kind:'drive',state:'waiting',contentState:'waiting'}]})}
  };
- const window={Native,PendingAudio:{saved(){}},openZamerovacPeers(){}};
+ const window={Native,PendingAudio:{saved(){
+   if(mode==='post-ack-audio')throw Error('synthetic post-ACK PendingAudio.saved failure');
+  }},openZamerovacPeers(){}};
  const env={Native,window,document,$:node,native:true,
   screen:fault==='editor'?'editor':'browser',current:null,noteActive:null,
   prefs:clone(old.prefs),state:clone(old),initial:clone(old),
@@ -74,6 +103,11 @@ function scene(fault='none'){
   get disk(){return JSON.parse(disk)},get acks(){return acks},get attempts(){return attempts},
   get snapshot(){return JSON.parse(window.__f4.snapshot())},
   get ram(){return window.__f4.state()},
+  get current(){return window.__f4.getCurrent()},
+  get nativeData(){return JSON.parse(disk)},
+  get status(){return window.ZamerovacSyncStatus.status()},
+  set fault(x){mode=x},
+  get env(){return env},
   get details(){
    window.ZamerovacSyncStatus.show();
    return nodes.get('syncStatusDetails')?.textContent||'';
