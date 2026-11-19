@@ -13,10 +13,10 @@
   throw Error('Z195: required folder form/save/render not available');
  // JS return does NOT prove Native durability when a post-ACK callback fails.
  const samples=[];
- let active=null,sequence=0;
+ let active=null,sequence=0,stopped=false;
  const now=()=>performance.now();
  const settle=ticket=>{
-  if(ticket.reported)return;
+  if(stopped||!ticket.saveStarted||ticket.reported)return;
   ticket.reported=true;
   samples.push({
    sequence:ticket.sequence,jsSaveReturnedTrue:ticket.jsSaveReturnedTrue===true,
@@ -28,20 +28,26 @@
   if(active===ticket)active=null;
  };
  const onClick=()=>{
-  if(modal.hidden||title.textContent.trim()!=='Nová složka')return;
+  if(stopped||modal.hidden||title.textContent.trim()!=='Nová složka')return;
   // A hidden/rejected save is not interpreted as a confirmed CAS.
-  active={sequence:++sequence,started:now(),jsSaveReturnedTrue:false,
+  const ticket={sequence:++sequence,started:now(),jsSaveReturnedTrue:false,
    clickToSaveStartMs:null,jsSaveMs:null,showFolderMs:null,
-   clickToShowFolderStartMs:null,clickToTwoFramesMs:null,reported:false};
+   clickToShowFolderStartMs:null,clickToTwoFramesMs:null,
+   saveStarted:false,reported:false};
+  active=ticket;
+  // promptText either performs save synchronously or rejects the input.
+  // A rejected click must not capture the next unrelated browser task.
+  queueMicrotask(()=>{if(active===ticket&&!ticket.saveStarted)active=null});
  };
  const saveWrapper=function(...args){
-  const ticket=active,started=now();
+  const ticket=stopped?null:active,started=now();
+  if(ticket)ticket.saveStarted=true;
   try{
    const result=originalSave.apply(this,args);
    if(ticket)ticket.jsSaveReturnedTrue=result===true;
    return result;
   }finally{
-   if(ticket){
+   if(ticket&&!stopped){
     ticket.clickToSaveStartMs=started-ticket.started;
     ticket.jsSaveMs=now()-started; // Includes synchronous native bridge & JS post-ACK
     // A post-save failure may prevent showFolder entirely. Record the
@@ -53,13 +59,14 @@
   }
  };
  const folderWrapper=function(...args){
-  const ticket=active,started=now();
+  const ticket=stopped?null:active,started=now();
   try{return originalFolder.apply(this,args)}
   finally{
-   if(ticket&&ticket.jsSaveReturnedTrue===true){
+   if(ticket&&!stopped&&ticket.jsSaveReturnedTrue===true){
     ticket.clickToShowFolderStartMs=started-ticket.started;
     ticket.showFolderMs=now()-started; // synchronous DOM update, not paint
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
+     if(stopped)return;
      ticket.clickToTwoFramesMs=now()-ticket.started; // approximate visible frame
      settle(ticket);
     }));
@@ -69,6 +76,8 @@
  window.save=saveWrapper;window.showFolder=folderWrapper;
  button.addEventListener('click',onClick,true);
  const stop=()=>{
+  if(stopped)return;
+  stopped=true;active=null;
   button.removeEventListener('click',onClick,true);
   if(window.save===saveWrapper)window.save=originalSave;
   if(window.showFolder===folderWrapper)window.showFolder=originalFolder;
