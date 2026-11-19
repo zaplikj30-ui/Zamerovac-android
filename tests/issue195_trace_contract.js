@@ -57,10 +57,15 @@ fail=true;click();assert.equal(window.save(),false);flush();
 assert.equal(probe.samples.length,2);
 assert.equal(probe.samples[1].jsSaveReturnedTrue,false);
 assert.equal(probe.samples[1].jsSaveMs,7);
-assert.equal(probe.samples[1].showFolderMs,null,'false ACK must never paint successful folder');
+assert.equal(probe.samples[1].showFolderMs,null,'false JS return must never infer a rendered folder');
 assert.equal(probe.samples[1].clickToTwoFramesMs,null);
 fail=false;
-title.textContent='Jiný dialog';click();assert.equal(probe.samples.length,2,'other dialogs ignored');
+click();assert.equal(window.save(),true);flush(); // successful JS return, but no showFolder
+assert.equal(probe.samples.length,3,'missing render must not leave an incomplete sample');
+assert.equal(probe.samples[2].jsSaveReturnedTrue,true);
+assert.equal(probe.samples[2].showFolderMs,null);
+assert.equal(probe.samples[2].clickToTwoFramesMs,null);
+title.textContent='Jiný dialog';click();assert.equal(probe.samples.length,3,'other dialogs ignored');
 probe.stop();assert.equal(window.save,firstSave);
 assert.equal(window.showFolder,firstFolder);
 assert.equal(window.__z195FolderProbe,undefined);assert.equal(events.length,0);
