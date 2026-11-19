@@ -77,6 +77,10 @@ const zipCode=java.slice(zipStart,zipEnd);
 assert.match(zipCode,/zipIssueFile\(zip,f,paths\.get\(i\),sizes\.get\(i\)\)/,
  'ZIP must copy original media bytes, not encode copies');
 assert.match(zipCode,/new FileInputStream\(input\)/,'Read only from original files');
+assert.match(zipCode,/JsonInput\.check\(json,512\*1024\)/,
+ 'Untrusted ZIP manifest must be checked for size and nesting');
+assert.match(zipCode,/JsonInput\.unicode\(root\)/,
+ 'Invalid Unicode in external manifest must fail closed');
 assert.doesNotMatch(zipCode,/MediaCodec|MediaMuxer|Bitmap\.compress|BitmapFactory|Media3/,
  'No new media compression or resizing in ZIP export');
 assert.doesNotMatch(listCode,/mediaFile\(|deleteMedia\(/,
