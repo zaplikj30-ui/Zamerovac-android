@@ -10,7 +10,20 @@ const path=require('node:path');
 const {tool,drag,projected,editSelected,midpoint}=require('./harness.cjs');
 
 const filename='pr220-synthetic.png';
-const remote='/sdcard/Download/'+filename;
+const remote='/data/local/tmp/'+filename;
+function stageImage(adb,local){
+ adb('push',local,remote);
+ const inserted=adb('shell','content','insert','--uri','content://media/external/images/media',
+  '--bind','_display_name:s:'+filename,'--bind','mime_type:s:image/png',
+  '--bind','relative_path:s:Pictures/');
+ const uri=/^Inserted (content:\/\/media\/external\/images\/media\/\d+)$/.exec(inserted)?.[1];
+ assert(uri,'MediaStore did not return an image URI');
+ try{
+  adb('shell','sh','-c','content write --uri '+uri+' < '+remote);
+  assert(adb('shell','content','query','--uri',uri).includes(filename),'Staged image absent from MediaStore');
+ }catch(error){adb('shell','content','delete','--uri',uri);throw error}
+ return uri;
+}
 
 // Deterministic 1200 x 1000 RGB PNG with high-entropy pixels and no metadata.
 function fixture(){
@@ -97,9 +110,9 @@ async function sample({device,adb,open,apk,count,hash}){
   const roots=pickerControl(adb,'Show roots');
   assert(roots,'DocumentsUI navigation unavailable');
   adb('shell','input','tap',...roots);
-  const downloads=pickerControl(adb,'Downloads');
-  assert(downloads,'Downloads location unavailable');
-  adb('shell','input','tap',...downloads);
+  const images=pickerControl(adb,'Images');
+  assert(images,'Images location unavailable');
+  adb('shell','input','tap',...images);
   target=pickerControl(adb,filename);
  }
  assert(target,'Synthetic fixture not visible in Android picker');
@@ -158,10 +171,10 @@ async function compare({device,adb,open,apks}){
  const bytes=fixture(),hash=createHash('sha256').update(bytes).digest('hex');
  assert(bytes.length>=3*1024*1024&&bytes.length<=6*1024*1024);
  const local=path.join(dir,filename);
+ let uri;
  try{
   writeFileSync(local,bytes);
-  adb('shell','mkdir','-p','/sdcard/Download');
-  adb('push',local,remote);
+  uri=stageImage(adb,local);
   console.log('Synthetic PNG',bytes.length,hash);
   for(const count of [1,10,50]){
    const rows={before:[],after:[]};
@@ -183,9 +196,9 @@ async function compare({device,adb,open,apks}){
    }
   }
  }finally{
-  try{adb('shell','rm','-f',remote,'/sdcard/pr220-window.xml')}
+  try{if(uri)adb('shell','content','delete','--uri',uri);adb('shell','rm','-f',remote,'/sdcard/pr220-window.xml')}
   finally{rmSync(dir,{recursive:true,force:true})}
  }
 }
 
-module.exports={compare,fixture};
+module.exports={compare,fixture,stageImage};
