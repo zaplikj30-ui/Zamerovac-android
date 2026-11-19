@@ -62,7 +62,7 @@
  let drag=null,longTimer=null,longHandled=false;
  flag.addEventListener('pointerdown',e=>{
   if(e.button!==0)return;
-  drag={x:e.clientX,y:e.clientY,t:Date.now(),moved:false};
+  drag={x:e.clientX,y:e.clientY,t:Date.now(),moved:false,hadSettingsMoved:flag.dataset.settingsMoved!==undefined};
   longHandled=false;
   try{flag.setPointerCapture(e.pointerId)}catch(err){}
   clearTimeout(longTimer);
@@ -93,7 +93,12 @@
    placeFlag();
   }else if(!longHandled){startNewReport()}
  });
- flag.addEventListener('pointercancel',()=>{drag=null;clearTimeout(longTimer);placeFlag()});
+ flag.addEventListener('pointercancel',()=>{
+  // A canceled drag must not disable the settings-header safety placement.
+  // Preserve a marker left by an earlier completed drag.
+  if(drag&&!drag.hadSettingsMoved)delete flag.dataset.settingsMoved;
+  drag=null;clearTimeout(longTimer);placeFlag();
+ });
  flag.addEventListener('contextmenu',e=>{e.preventDefault();clearTimeout(longTimer);drag=null;showReportList()});
  let overlay=null,active=null,busy=false;
  function closeOverlay(){
