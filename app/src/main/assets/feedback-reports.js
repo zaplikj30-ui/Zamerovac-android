@@ -6,7 +6,8 @@
  const KEY='zamerovac-feedback-v1',POS='zamerovac-feedback-flag-position-v1';
  const validId=id=>typeof id==='string'&&/^[a-zA-Z0-9_-]{3,120}$/.test(id);
  let reports=[];
- try{const v=JSON.parse(localStorage.getItem(KEY)||'[]');if(Array.isArray(v))reports=v.filter(x=>x&&typeof x==='object').slice(-300)}catch(e){}
+ // Never truncate on restart: doing so could silently erase older reports on the next save.
+ try{const v=JSON.parse(localStorage.getItem(KEY)||'[]');if(Array.isArray(v))reports=v.filter(x=>x&&typeof x==='object')}catch(e){}
  // Commit the proposed list only after the device confirms its storage bytes.
  // A quota/private-mode failure must never be reported as a successful save.
  const persist=next=>{
@@ -142,12 +143,19 @@
   });
   overlay.querySelectorAll('[data-feedback-delete]').forEach(button=>button.onclick=()=>{
    const id=button.dataset.feedbackDelete;
-   const report=reports.find(r=>r.id===id);
-   if(!report)return;
+   const matches=reports.filter(r=>r.id===id);
+   if(!matches.length)return;
+   if(matches.length!==1){
+    notify('Nelze bezpečně smazat: více hlášení má stejné ID. Nic nebylo smazáno.');
+    return;
+   }
+   const report=matches[0];
    const name=String(report.title||report.description||'(Bez popisu)').slice(0,100);
    if(!window.confirm('Opravdu smazat uložené hlášení „'+name+'“?\n'+
       'Smaže se jen jeho záznam ze seznamu. Původní snímky ani videa se nemažou.'))return;
-   const remaining=reports.filter(r=>r.id!==id);
+   // Remove precisely one confirmed object, never every entry sharing an ID.
+   const remaining=reports.slice();
+   remaining.splice(reports.indexOf(report),1);
    if(!persist(remaining))return;
    reports=remaining;showReportList();notify('Hlášení smazáno');
   });
