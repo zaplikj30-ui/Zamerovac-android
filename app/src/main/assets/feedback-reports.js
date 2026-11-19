@@ -184,7 +184,9 @@
     return;
    }
    const report=matches[0];
-   const name=String(report.title||report.description||'(Bez popisu)').slice(0,100);
+   const safeTitle=typeof report.title==='string'?report.title:'';
+   const safeDescription=typeof report.description==='string'?report.description:'';
+   const name=(safeTitle||safeDescription||'(Bez popisu)').slice(0,100);
    if(!window.confirm('Opravdu smazat uložené hlášení „'+name+'“?\n'+
       'Smaže se jen jeho záznam ze seznamu. Původní snímky ani videa se nemažou.'))return;
    // Remove precisely one confirmed object, never every entry sharing an ID.
