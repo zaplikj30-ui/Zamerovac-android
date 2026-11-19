@@ -587,3 +587,42 @@ if(['frozen-double-fault','frozen-peer-after-ack'].includes(mode)){
  assert.equal(reboot.snapshot.records[0].title,'After combined frozen recovery');
  console.log('PASS immutable combined post-ACK '+mode);
 }
+
+
+/* P2-A/P2-B: use real frozen audio JS and one physical toast target.
+ * Verified ledger response is synthetic; only Native may authorize it. */
+if(['p2-green','p2-audio','p2-critical'].includes(mode)){
+ const fault=mode==='p2-green'?'browser':'frozen-audio-error';
+ const s=scene(fault),rec=s.ram.records[0];
+ if(mode!=='p2-green'){rec.title='P2 Audio draft';rec.rev='p2-audio-rev'}
+ s.env.screen='browser';
+ const toast={textContent:''};s.nodes.set('toast',toast);
+ s.env.notify=message=>{const msg=String(message);s.notices.push(msg);toast.textContent=msg};
+ s.env.Native.syncLedgerState=()=>JSON.stringify({localSaved:true,targets:[
+  {kind:'drive',state:'verified-checkpoint',contentState:'verified-checkpoint'}]});
+ const critical=mode==='p2-critical';
+ const msg=critical?'Synchronizace hlásí chybu: Poškozená data':'Přenos potvrzen';
+ const done=s.window.onNativeSync(JSON.stringify({transport:'cloud-v2',pending:false,message:msg,data:s.remote}));
+ assert.equal(done,true,'A UI error after confirmed Native CAS must not revoke durable data');
+ assert.equal(s.acks,1,'A real synthetic saveDataChecked(ok:true) is required');
+ assert.equal(s.window.__syncViewNeedsRefresh,true,'UI failure must retain a recovery flag');
+ if(critical){
+  assert.equal(s.status.phase,'failed','A critical error outranks post-ACK audio/UI errors');
+  assert.match(toast.textContent,/Poškozená data/i,'Critical error must remain the final visible toast');
+  assert.match(s.details,/nahrávk/i,'Retained audio risk must still be readable in status detail');
+ }else{
+  if(mode==='p2-audio')
+   assert.match(toast.textContent,/nahrávk/i,'P2-B RED: final visible toast lost retained-audio warning');
+  assert.equal(s.status.phase,'pending','P2-A RED: failed UI may not leave green cloud');
+  if(mode==='p2-audio')
+   assert.match(s.details,/nahrávk/i,'P2-B RED: status detail lost retained-audio warning');
+  else{
+   s.fault='none';
+   assert.equal(s.window.onNativeSync(JSON.stringify({
+    transport:'cloud-v2',pending:false,message:'Přenos potvrzen',data:s.remote})),true);
+   assert.equal(s.window.__syncViewNeedsRefresh,false,'Successfully projected Native state clears refresh flag');
+   assert.equal(s.status.phase,'confirmed','Successful projection + verified Native ledger permits green');
+  }
+ }
+ console.log('PASS #203 P2-A/P2-B '+mode);
+}

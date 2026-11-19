@@ -145,7 +145,8 @@ function show(){
   update('confirmed',names.confirmed[2]);
  const title='Synchronizace · '+names[phase][1];
  modal(title,'<p id="syncStatusDetails"></p><p id="syncStatusExplanation"></p><div class="row wrap"><button id="syncStatusPair" class="outline">Synchronizace zařízení</button><button id="syncStatusCloud" class="outline">Google Disk / ruční přenos</button></div>',()=>true,'Zavřít');
- document.getElementById('syncStatusDetails').textContent=reason+(conflictDetail?'\n'+conflictDetail:'');
+ document.getElementById('syncStatusDetails').textContent=reason+(conflictDetail?'\n'+conflictDetail:'')+
+  (root.__syncAudioReviewNeeded?'\nUchované hlasové nahrávky: ověř jejich evidenci a původní soubory, než je znovu připojíš. Nic automaticky nemaž.':'');
  document.getElementById('syncStatusExplanation').textContent='Google účet, párování a skutečně potvrzený přenos jsou tři různé věci. Synchronizace není historická záloha.';
  document.getElementById('syncStatusPair').onclick=()=>{document.getElementById('modal').hidden=true;root.openZamerovacPeers?.();};
  document.getElementById('syncStatusCloud').onclick=()=>{document.getElementById('modal').hidden=true;oldCloudClick?.();};

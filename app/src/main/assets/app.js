@@ -528,7 +528,7 @@ window.ZamerovacSyncReadCommittedConflicts=()=>{
 };
 window.onNativeSync=(text)=>{
  // F4: native durable data, optional confirmed JS reconciliation, then UI.
- let result,render=false,badUI=false,peerChangedAfterAck=false,nativeReadUnverified=false;
+ let result,render=false,badUI=false,audioReviewNeeded=false,peerChangedAfterAck=false,nativeReadUnverified=false;
  const warn=m=>{try{notify(m)}catch(ignored){console.warn(m)}};
  try{
   result=JSON.parse(text);
@@ -608,7 +608,7 @@ window.onNativeSync=(text)=>{
       // PendingAudio.saved() throws. Remove it only after exact ACK evidence.
       try{$('saveErrorBanner')?.remove()}catch(error){}
       try{pendingAudio?.refresh?.()}catch(error){}
-      warn('Uloženo, ale zobrazení nebo evidence uchovaných nahrávek se nepodařila ověřit. Zkontroluj nahrávky.');
+      audioReviewNeeded=true;window.__syncAudioReviewNeeded=true;
      }
      if(savePresentationError&&!confirmed)throw savePresentationError;
     }
@@ -653,6 +653,14 @@ window.onNativeSync=(text)=>{
   'Místní zápis potvrzen, ale novější stav úložiště nelze ověřit. Zkontroluj synchronizaci.':
   'Místní zápis potvrzen; mezitím přišla novější data od druhého zařízení. Znovu ověř synchronizaci.';
  const pendingAfterAck=peerChangedAfterAck||nativeReadUnverified;
+ // Render first: a current signed receipt never means that a failed
+ // browser/editor projection was completed. Do not add ledger I/O to gestures.
+ if(render)try{
+  if(screen==='browser')showFolder();
+  else if(screen==='editor'&&current)$('editorTitle').textContent=current.title;
+ }catch(error){badUI=true;console.warn('Přehled synchronizovaných změn nelze zobrazit')}
+ if(pendingAfterAck||badUI)window.__syncViewNeedsRefresh=true;
+ else if(render)window.__syncViewNeedsRefresh=false;
  const displayResult=pendingAfterAck?{...result,transport:'cloud-v2',pending:true,message:pendingMessage}:result;
  if(displayResult.transport==='cloud-v2'&&typeof window.ZamerovacSyncStatus?.cloud==='function'){
   try{window.ZamerovacSyncStatus.cloud(displayResult)}
@@ -663,21 +671,26 @@ window.onNativeSync=(text)=>{
   try{notify((result.message||'Synchronizace dokončena')+(copies.length?' · zachované konfliktní kopie: '+copies.length:''))}
   catch(error){badUI=true;console.warn('Synchronizační hlášku nelze zobrazit')}
  }
- if(render)try{
-  if(screen==='browser')showFolder();
-  else if(screen==='editor'&&current)$('editorTitle').textContent=current.title;
- }catch(error){badUI=true;console.warn('Přehled synchronizovaných změn nelze zobrazit')}
- if(pendingAfterAck){
-  window.__syncViewNeedsRefresh=true;
-  warn(pendingMessage);
-  return false; // local Native CAS confirmed; newest peer still requires reconciliation
- }
- // A cloud-detail tap cannot clear this flag. Only fully reconciled data
- // and successful rendering of the current view permit clearing it.
- if(render&&!badUI)window.__syncViewNeedsRefresh=false;
+ const statusPhase=()=>{try{return window.ZamerovacSyncStatus?.status?.().phase}catch(error){return null}};
  if(badUI){
   window.__syncViewNeedsRefresh=true;
-  warn('Data jsou místně uložená, ale zobrazení se nepodařilo obnovit. Otevři stav synchronizace.');
+  // A fallible presenter can set confirmed before throwing on a DOM/toast.
+  // Revoke only the view: no native write, no new recipient receipt.
+  if(statusPhase()==='confirmed')
+   try{window.ZamerovacSyncStatus.cloud({transport:'cloud-v2',pending:true,message:'Zobrazení synchronizace je nutné obnovit'})}
+   catch(error){console.warn('Mrak se nepodařilo znovu vykreslit')}
+ }
+ const audioMessage='Uloženo, ale zobrazení nebo evidence uchovaných nahrávek se nepodařila ověřit. Zkontroluj nahrávky.';
+ const criticalVisible=statusPhase()==='failed';
+ if(pendingAfterAck){
+  if(!criticalVisible)warn(pendingMessage+(audioReviewNeeded?' '+audioMessage:''));
+  return false; // Native CAS confirmed; newer peer still requires reconciliation
+ }
+ if(badUI&&!criticalVisible){
+  // Keep the actionable audio warning as the FINAL toast; generic view and
+  // conflict notifications must not erase it. Critical errors stay first.
+  warn(audioReviewNeeded?audioMessage+' Otevři stav synchronizace.':
+   'Data jsou místně uložená, ale zobrazení se nepodařilo obnovit. Otevři stav synchronizace.');
  }
  return true;
 };
