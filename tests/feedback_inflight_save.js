@@ -8,6 +8,7 @@ function extract(start,end){
  return src.slice(a,b);
 }
 const code=[
+ extract(' let feedbackWriteUncertain=false;','\n // Never truncate'),
  extract(' const persist=next=>','\n const q='),
  extract(' function closeOverlay(){','\n function makeOverlay('),
  extract(' async function saveReport(){','\n // Android Zpět'),

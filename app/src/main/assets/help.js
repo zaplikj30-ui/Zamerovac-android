@@ -575,10 +575,12 @@ const chapters=[
     "title": "21. Nastavení, jazyk a vzhled",
     "intro": "V Nastavení najdeš chování editoru, zobrazení, jednotky a další volby.",
     "steps": [
-      "Z hlavního menu otevři Nastavení.",
-      "V Editoru nastav lupu, přichytávání bodů/rastru, mřížku, odstup rastru a citlivost přesouvání.",
-      "V Rozměrech nastav výchozí jednotky a počet zobrazovaných desetinných míst.",
-      "Ve Vzhledu nastav barvu, tloušťku čar, velikost textu, zobrazení a další běžné chování.",
+      "Z hlavního menu otevři Nastavení. Nejprve se zobrazí pět kategorií a vyhledávání; návratem z podstránky se vrátíš k jejich přehledu.",
+      "Editor a kreslení obsahuje lupu, přichytávání, mřížku, citlivost přesouvání a přednastavené texty.",
+      "Měření a jednotky obsahuje výchozí jednotky, desetinná místa a volitelná nastavení kompatibilního laseru.",
+      "Synchronizace a zálohy rozlišuje přenos aktuálních změn od skutečné samostatné zálohy ZIP a historických záloh.",
+      "Vzhled a ovládání obsahuje barvy, tloušťku čar, velikost textu, displej, vibrace a klávesnici.",
+      "Aplikace a údržba obsahuje jazyk, verzi, diagnostiku, připomínky a Obnovu nahrávek. Na hlavní ploše se při evidovaném problému nahrávky ukáže malá výstraha; neskrývá nejistotu evidence.",
       "V hlavním menu ☰ → Historie změn nebo v Nastavení → Novinky a historie změn si zobrazíš skutečné novinky, opravené chyby a vylepšení podle verzí. Od verze 1.3.0 se významnější změny projevují druhým číslem verze, menší opravy posledním číslem; číslo sestavení Androidu je samostatné.",
       "Jazyk aplikace zatím nabízí pouze 🇨🇿 Čeština; další překlady nejsou hotové."
     ],
@@ -659,7 +661,14 @@ const chapters=[
       "Nejde vybrat ZIP: najdi soubor v systémovém správci a ověř, že jde o zálohu Zaměřovače, nikoli zákaznický PDF ZIP.",
       "Ztratil se obrázek po přiblížení nebo se zobrazila mřížka: ukonči gesto, obnov zobrazení; nemaž zakázku ani data aplikace.",
       "Při hlášení chyby přímo v aplikaci se potvrzení Uloženo zobrazí až po ověření zápisu seznamu připomínek. Pokud zápis selže, rozpracovaná připomínka zůstane otevřená; nemaž ji, zkontroluj volné místo a uložení zopakuj.",
+      "Pokud aplikace při zápisu připomínek nedokáže ověřit uložený stav nebo najde poškozené starší položky, zablokuje nové hlášení a snímek, další ukládání i ZIP export, aby nepřepsala novější či neznámá data. Rozpracovanou připomínku a původní média nemaž; aplikaci znovu spusť a ověř uložený seznam. Pokud hlášení přetrvá, nemaž data aplikace a požádej o bezpečnou obnovu.",
       "Při ukládání obrázkové připomínky zůstane editor otevřený, dokud zápis neskončí. Zavření, Android Zpět a přepnutí do seznamu se během ukládání bezpečně odmítnou.",
+      "Fialovou vlaječku klepnutím otevři pro novou připomínku se snímkem obrazovky, dlouhým podržením zobraz Moje připomínky. Označ chybu perem, šipkou či textem, můžeš přidat video a připomínku uložit v telefonu.",
+      "V seznamu Moje připomínky vyber hlášení. Uložit ZIP vytvoří místní soubor; Sdílet vybrané nejprve zobrazí výslovné upozornění a až po potvrzení nabídku Androidu. Storno nic neodesílá. Na veřejný GitHub se nic neodesílá automaticky.",
+      "Před sdílením otevři a zkontroluj všechna vybraná hlášení: viditelné osobní údaje, zakázky, adresy, kóty, titulky a video. ZIP neobsahuje původní názvy příloh ani interní ID v JSON, ale video zůstává v původním formátu včetně případných skrytých metadat. Viditelné údaje nejsou automaticky začerněné.",
+      "Příliš velký nebo neúplný balíček je odmítnut místo tichého vynechání přílohy; v jedné dávce může být nejvýše 50 hlášení, u každého 12 videí a celkem 256 MiB vstupních souborů. Fotografie, screenshoty ani videa se při exportu znovu nepřekódují ani nezmenšují. Pro GitHub Issues zkontroluj zvlášť formát, limit velikosti a soukromí. Nepřikládej neveřejná zákaznická data.",
+      "Uložené hlášení můžeš smazat jednotlivě tlačítkem Smazat a potvrzením; nevyřešená hlášení se automaticky nemažou. Seznam uchová všechna hlášení i při více než 300 záznamech. Starý záznam s chybějícím popisem se zobrazí s náhradním textem; sám se neopravuje ani nemaže. Duplicitní ID zablokuje smazání i export. Neplatná pole vybraného hlášení zablokují export místo neúplného ZIPu. Mazání položky neodstraní původní snímky ani videa z telefonu.",
+      "Dočasný ZIP pro místní uložení aplikace odstraní až po ukončení kopírování nebo po zrušení dialogu. ZIP předaný do systémového sdílení nemaže automaticky po čase, protože otevření dialogu nedokazuje doručení. Až když jsou všechna sdílení skutečně dokončena, můžeš v Moje připomínky zvolit Vyčistit dočasné ZIPy a potvrdit úklid v Androidu. Žádný dočasný ZIP se nemaže automaticky jen podle stáří; i nedokončené přípravy lze odstranit až po výslovném potvrzení úklidu.",
       "Pokud chyba přetrvává, poznamenej verzi aplikace a pošli popis kroků a případně snímek či video."
     ],
     "notes": [
