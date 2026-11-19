@@ -644,8 +644,16 @@ window.onNativeSync=(text)=>{
    render=true;
   }
  }catch(error){
-  warn('Synchronizace: '+error.message);
-  return false; // data/JS CAS failure, not an optional presentation error
+  const saveError='Synchronizace: '+error.message;
+  const sourceMessage=typeof result?.message==='string'?result.message:'';
+  // Native may also report a critical cloud fault when our additional
+  // JS CAS fails before it can confirm any local write.
+  if(result?.transport==='cloud-v2'&&/hlásí chybu:|synchronizace selhal|chyba:/i.test(sourceMessage)){
+   try{window.ZamerovacSyncStatus?.cloud?.(result)}
+   catch(ignored){console.warn('Kritický stav synchronizace nelze vykreslit')}
+   warn(sourceMessage+' · '+saveError);
+  }else warn(saveError);
+  return false; // local CAS failed, original RAM draft remains
  }
  // DATA/ACK BOUNDARY: no UI can change the confirmed local result.
  const copies=result.data?state.records.filter(r=>r&&r.conflict===true):[];
@@ -661,7 +669,11 @@ window.onNativeSync=(text)=>{
  }catch(error){badUI=true;console.warn('Přehled synchronizovaných změn nelze zobrazit')}
  if(pendingAfterAck||badUI)window.__syncViewNeedsRefresh=true;
  else if(render)window.__syncViewNeedsRefresh=false;
- const displayResult=pendingAfterAck?{...result,transport:'cloud-v2',pending:true,message:pendingMessage}:result;
+ if(pendingAfterAck)window.__syncNativeReviewReason=pendingMessage;
+ // The Java-issued message is authoritative for a reported cloud error.
+ // Local peer/read recovery is supplementary, never a replacement.
+ const displayResult=pendingAfterAck?{...result,transport:'cloud-v2',pending:true,
+  message:[result.message,pendingMessage].filter(Boolean).join(' · ')}:result;
  if(displayResult.transport==='cloud-v2'&&typeof window.ZamerovacSyncStatus?.cloud==='function'){
   try{window.ZamerovacSyncStatus.cloud(displayResult)}
   catch(error){badUI=true;console.warn('Synchronizační stav mraku nelze zobrazit')}
@@ -682,16 +694,22 @@ window.onNativeSync=(text)=>{
  }
  const audioMessage='Uloženo, ale zobrazení nebo evidence uchovaných nahrávek se nepodařila ověřit. Zkontroluj nahrávky.';
  const criticalVisible=statusPhase()==='failed';
+ const nativeCritical=/hlásí chybu:|synchronizace selhal|chyba:/i.test(String(result.message||''));
  if(pendingAfterAck){
-  if(!criticalVisible)warn(pendingMessage+(audioReviewNeeded?' '+audioMessage:''));
+  // The FINAL toast must retain the Native error even if a peer/DOM/audio
+  // warning arrived later; only verified local CAS evidence is being kept.
+  if(nativeCritical&&(badUI||!criticalVisible))
+   warn(String(result.message)+' · '+pendingMessage+(audioReviewNeeded?' '+audioMessage:''));
+  else if(!criticalVisible)warn(pendingMessage+(audioReviewNeeded?' '+audioMessage:''));
   return false; // Native CAS confirmed; newer peer still requires reconciliation
  }
- if(badUI&&!criticalVisible){
-  // Keep the actionable audio warning as the FINAL toast; generic view and
-  // conflict notifications must not erase it. Critical errors stay first.
-  warn(audioReviewNeeded?audioMessage+' Otevři stav synchronizace.':
-   'Data jsou místně uložená, ale zobrazení se nepodařilo obnovit. Otevři stav synchronizace.');
+ if(badUI){
+  if(nativeCritical)warn(String(result.message)+(audioReviewNeeded?' '+audioMessage:''));
+  else if(!criticalVisible)
+   warn(audioReviewNeeded?audioMessage+' Otevři stav synchronizace.':
+    'Data jsou místně uložená, ale zobrazení se nepodařilo obnovit. Otevři stav synchronizace.');
  }
+ if(render&&!badUI)window.__syncNativeReviewReason='';
  return true;
 };
 window.onLaserValue=(value,unit)=>{

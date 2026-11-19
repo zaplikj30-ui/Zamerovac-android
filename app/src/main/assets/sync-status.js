@@ -124,6 +124,7 @@ function peerProblem(message){
  return true;
 }
 function show(){
+ let readWarning='';
  // Rebuild the conflict detail from the currently durable Native disk when
  // the user explicitly opens status, including after a broken toast/view.
  // This never writes data or reads the ledger during a drawing gesture.
@@ -132,7 +133,9 @@ function show(){
    const durable=root.ZamerovacSyncReadCommittedConflicts();
    try{conflicts(durable)}catch(error){} // failed toast is not marked delivered
   }catch(error){
-   update('failed','Lokální synchronizovaná data nelze bezpečně ověřit. Zkontroluj úložiště.');
+   readWarning='Lokální synchronizovaná data nelze bezpečně ověřit. Zkontroluj úložiště.';
+   // Detail read failure must not erase a prior critical cloud error.
+   if(phase!=='failed')update('failed',readWarning);
   }
  }
  // Explicit user request: ledger verification is intentionally NOT on the
@@ -145,7 +148,10 @@ function show(){
   update('confirmed',names.confirmed[2]);
  const title='Synchronizace · '+names[phase][1];
  modal(title,'<p id="syncStatusDetails"></p><p id="syncStatusExplanation"></p><div class="row wrap"><button id="syncStatusPair" class="outline">Synchronizace zařízení</button><button id="syncStatusCloud" class="outline">Google Disk / ruční přenos</button></div>',()=>true,'Zavřít');
- document.getElementById('syncStatusDetails').textContent=reason+(conflictDetail?'\n'+conflictDetail:'')+
+ document.getElementById('syncStatusDetails').textContent=reason+
+  (readWarning&&reason!==readWarning?'\n'+readWarning:'')+
+  (root.__syncNativeReviewReason?'\n'+root.__syncNativeReviewReason:'')+
+  (conflictDetail?'\n'+conflictDetail:'')+
   (root.__syncAudioReviewNeeded?'\nUchované hlasové nahrávky: ověř jejich evidenci a původní soubory, než je znovu připojíš. Nic automaticky nemaž.':'');
  document.getElementById('syncStatusExplanation').textContent='Google účet, párování a skutečně potvrzený přenos jsou tři různé věci. Synchronizace není historická záloha.';
  document.getElementById('syncStatusPair').onclick=()=>{document.getElementById('modal').hidden=true;root.openZamerovacPeers?.();};

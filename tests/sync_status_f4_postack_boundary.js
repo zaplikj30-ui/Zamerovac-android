@@ -626,3 +626,83 @@ if(['p2-green','p2-audio','p2-critical'].includes(mode)){
  }
  console.log('PASS #203 P2-A/P2-B '+mode);
 }
+
+
+/* P2-C: SafSyncV2.Result and MainActivity Java→JS shape are checked against
+ * production Java source. The Java result shape is checked; JVM not executed. */
+if(mode.startsWith('p2c-')){
+ const java=fs.readFileSync('app/src/main/java/cz/zamerovac/app/SafSyncV2.java','utf8');
+ const bridge=fs.readFileSync('app/src/main/java/cz/zamerovac/app/MainActivity.java','utf8');
+ assert(java.includes('new Result(!error.isEmpty()?"Synchronizace hlásí chybu: "+error'));
+ assert(bridge.includes('.put("message",result.message).put("data",result.data).put("pending",result.pending).put("transport","cloud-v2")'));
+ const critical='Synchronizace hlásí chybu: Poškozená revize cloudu';
+ const peer=['p2c-peer','p2c-peer-ui','p2c-peer-normal','p2c-recover'].includes(mode);
+ const reread=['p2c-reread','p2c-reread-ui'].includes(mode);
+ const pre=['p2c-preack','p2c-preack-wait'].includes(mode);
+ const fault=peer?'frozen-peer-after-ack':reread?'frozen-double-fault':
+  mode==='p2c-audio'?'frozen-audio-error':pre?'frozen-cas-refusal':
+  mode==='p2c-render'?'browser':'frozen-audio';
+ const s=scene(fault),audio=s.window.PendingAudio,rec=s.ram.records[0];
+ rec.title='P2C precise draft';rec.rev='p2c-rev';
+ s.window.__f4.setCurrent(rec);s.window.__f4.setNote(rec);
+ s.env.screen=['p2c-render','p2c-audio','p2c-peer-ui','p2c-reread-ui'].includes(mode)?'browser':'editor';
+ if(['p2c-peer-ui','p2c-reread-ui'].includes(mode))
+  s.env.showFolder=()=>{throw Error('synthetic view unavailable AFTER Native CAS ACK')};
+ const toast={textContent:''};s.nodes.set('toast',toast);
+ s.env.notify=msg=>{s.notices.push(String(msg));toast.textContent=String(msg)};
+ let ledgerReads=0;
+ s.env.Native.syncLedgerState=()=>{ledgerReads++;return JSON.stringify({localSaved:true,targets:[
+  {kind:'drive',state:'verified-checkpoint',contentState:'verified-checkpoint'}]})};
+ const javaResult=(message,pending,data)=>JSON.stringify({message,data,pending,transport:'cloud-v2'});
+ const hasCritical=!['p2c-peer-normal','p2c-preack-wait'].includes(mode);
+ const incomplete=peer||reread;
+ const done=s.window.onNativeSync(javaResult(hasCritical?critical:'Synchronizace: čeká na příjemce',true,s.remote));
+ assert.equal(done,!pre&&!incomplete,'Native CAS vs incomplete callback result');
+ assert.equal(s.acks,pre?0:1,'Pre-ACK not saved / post-ACK durable');
+ assert.equal(s.window.PendingAudio,audio,'Frozen PendingAudio identity modified');
+ if(fault.startsWith('frozen-'))assert(Object.isFrozen(audio));
+ assert.equal(s.status.phase,hasCritical?'failed':'pending','P2-C: critical status lost');
+ if(hasCritical){
+  assert.match(toast.textContent,/Poškozená revize cloudu/,'P2-C: final visible toast');
+  assert.match(s.status.reason,/Poškozená revize cloudu/,'P2-C: reason');
+ }
+ const detail=s.details;
+ if(hasCritical)assert.match(detail,/Poškozená revize cloudu/,'P2-C: detail');
+ if(peer)assert.match(detail,/mezitím|novější data/,'Peer-after-ACK detail');
+ if(reread){
+  assert.match(detail,/novější stav úložiště nelze ověřit/,'Post-ACK read detail');
+  assert.match(detail,/Uchované hlasové nahrávky/,'Post-ACK audio detail');
+ }
+ if(mode==='p2c-audio')assert.match(detail,/Uchované hlasové nahrávky/);
+ if(!pre){
+  assert.equal(s.snapshot.records[0].title,'P2C precise draft');
+  assert.equal(s.ram.records[0].title,'P2C precise draft');
+  assert.deepEqual(s.snapshot.records[0].media,['immutable-origin-media-id']);
+  assert.equal(s.snapshot.records[0].items[0].laserMeasuredMm,'1585.800001234567890');
+  assert.equal(s.disk.records.filter(r=>r.id==='conflict-1').length,1);
+ }else{
+  assert.equal(s.snapshot.records[0].title,'Originál','Unconfirmed CAS published');
+  assert.equal(s.current,rec);
+ }
+ if(incomplete&&hasCritical){
+  assert.equal(s.window.__syncViewNeedsRefresh,true);
+  assert.equal(ledgerReads,0,'Critical sync should not query ledger during editor gesture');
+ }
+ if(mode==='p2c-recover'){
+  s.fault='none';s.env.screen='browser';
+  assert.equal(s.window.onNativeSync(javaResult('Přenos potvrzen pro toto úložiště.',false,s.disk)),true);
+  assert.equal(s.window.__syncViewNeedsRefresh,false);
+  assert.equal(s.status.phase,'confirmed','Only verified ledger + successful re-projection green');
+  assert(!s.window.__syncNativeReviewReason,'Pending state not cleared after successful adoption');
+ }else if(incomplete){
+  s.fault='none';s.ram.records[0].title='P2C subsequent safe save';
+  assert.equal(s.window.__f4.save(),true,'Next save after ACK');
+  assert.equal(s.disk.records[0].title,'P2C subsequent safe save');
+  if(peer)assert.equal(s.disk.records.filter(r=>r.id==='peer-post-ack').length,1);
+  assert.deepEqual(s.disk.records[0].media,['immutable-origin-media-id']);
+  const reboot=scene('none',s.disk);
+  assert.equal(send(reboot,clone(reboot.old)),true);
+  assert.equal(reboot.snapshot.records[0].title,'P2C subsequent safe save');
+ }
+ console.log('PASS P2-C '+mode);
+}
