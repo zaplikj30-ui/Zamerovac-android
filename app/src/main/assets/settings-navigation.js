@@ -124,7 +124,10 @@ back.onclick=()=>{if(selected!==null)display(null);else{panel.hidden=true;select
 const oldBack=root.handleAndroidBack;
 root.handleAndroidBack=function(){
  const otherPanel=[...document.querySelectorAll('.panel')].some(node=>node!==panel&&!node.hidden);
- if(!panel.hidden&&selected!==null&&document.getElementById('modal')?.hidden&&!otherPanel){display(null);return 'handled';}
+ // The feedback report is an aria-modal overlay, not a .panel. Its own Back
+ // handler must close it (or refuse while saving) before navigating categories.
+ const feedbackOpen=!!document.getElementById('feedbackOverlay');
+ if(!panel.hidden&&selected!==null&&document.getElementById('modal')?.hidden&&!otherPanel&&!feedbackOpen){display(null);return 'handled';}
  return typeof oldBack==='function'?oldBack():'root';
 };
 root.ZamerovacSettingsNavigation=Object.freeze({showTarget(id){const target=document.getElementById(id);const item=entries.find(x=>x.node===target||x.node.contains(target));if(!item)return false;display(item.category,item.node);return true;}});
