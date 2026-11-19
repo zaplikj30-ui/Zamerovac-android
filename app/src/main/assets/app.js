@@ -537,7 +537,8 @@ window.onNativeSync=(text)=>{
    // The native disk, not a potentially stale callback snapshot, is authority.
    const diskRaw=native?Native.loadData():JSON.stringify(result.data),disk=JSON.parse(diskRaw);
    if(!disk||disk.schema!==1||!Array.isArray(disk.records)||
-      disk.records.some(r=>!r||typeof r!=='object'||Array.isArray(r)||typeof r.id!=='string'||!r.id)||
+      disk.records.some(r=>!r||typeof r!=='object'||Array.isArray(r)||typeof r.id!=='string'||!r.id||
+       (r.media!==undefined&&(!Array.isArray(r.media)||r.media.some(id=>typeof id!=='string'||!id))))||
       new Set(disk.records.map(r=>r.id)).size!==disk.records.length)
     throw Error('Zakázky nelze bezpečně načíst');
    const saved={state,snapshot:persistedSnapshot,current,noteActive,detail:window.__detailParent};
