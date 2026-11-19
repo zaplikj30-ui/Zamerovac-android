@@ -70,7 +70,7 @@ assert.match(java,/pendingIssueZipId!=null/,'Must not cleanup during pending loc
 assert.match(java,/issueBundleBusy/,'Must not delete during ZIP creation');
 assert.match(java,/"shared"\.equals\(state\)/,'Manual cleanup must include shared ZIPs');
 assert.match(java,/"building"\.equals\(state\)/,'Manual cleanup must recover abandoned preparations');
-const exportStart=java.indexOf('        if(request==REQUEST_ISSUE_EXPORT){\n            String id=');
+const exportStart=java.indexOf('        if(request==REQUEST_ISSUE_EXPORT){\n            final String id=');
 const exportEnd=java.indexOf('        if(request==REQUEST_IMPORT_BACKUP',exportStart);
 assert.ok(exportStart>0&&exportEnd>exportStart,'Actual document ZIP result path must be tested');
 const exportResult=java.slice(exportStart,exportEnd);
