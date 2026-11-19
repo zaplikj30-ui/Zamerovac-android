@@ -219,6 +219,11 @@
    notify('Stav uložených připomínek je nejistý. Před exportem znovu spusť aplikaci.');
    return;
   }
+  // Do not silently omit an ambiguous or invalid record from a shared evidence bundle.
+  if(reports.some(r=>!validId(r.id))||new Set(reports.map(r=>r.id)).size!==reports.length){
+   notify('Nelze bezpečně exportovat: hlášení mají neplatné nebo duplicitní ID.');
+   return;
+  }
   const batch=selectedReports();
   if(!batch.length){notify('Nejdřív vyber alespoň jednu připomínku');return}
   if(!native||typeof (saveToFile?Native.saveIssueBundle:Native.shareIssueBundle)!=='function'){
