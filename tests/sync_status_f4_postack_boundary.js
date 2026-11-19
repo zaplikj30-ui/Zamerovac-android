@@ -265,4 +265,53 @@ if(mode==='edge'||mode==='all'){
  assert(!audio.notices.some(s=>/^Neuloženo:/.test(s)),
   'P5: post-ACK PendingAudio UI fault incorrectly displayed Neuloženo');
  console.log('PASS F4 P5 post-ACK PendingAudio exception has truthful user-visible status');
+ // Malformed media IDs in a Native snapshot are not silently accepted.
+ const mediaBad=scene('media-malformed'),badDraft=dirty(mediaBad);
+ const mediaBase=clone(mediaBad.snapshot);
+ assert.equal(send(mediaBad),false,'P5: malformed Native media ID must fail closed');
+ assert.equal(mediaBad.acks,0);assert.deepEqual(mediaBad.snapshot,mediaBase);
+ assert.equal(mediaBad.current,badDraft);
+ assert.equal(mediaBad.ram.records[0].title,'Local unsaved editor draft');
+ console.log('PASS F4 P5 malformed Native media rejected with active draft intact');
+ // Native success precedes optional editor reference rebinding. If a live
+ // JavaScript getter becomes non-readable AFTER ACK, recover by captured ID.
+ const rebind=scene(),live=dirty(rebind),rawId=live.id;
+ Object.defineProperty(live,'id',{enumerable:true,configurable:true,
+  get(){if(rebind.acks>0)throw Error('synthetic post-ACK live getter failure');return rawId;}});
+ assert.equal(send(rebind),true,'P1: post-ACK active getter must not revoke Native commit');
+ assert.equal(rebind.acks,1,'P1: synthetic CAS did not actually commit');
+ assert.equal(rebind.snapshot.records[0].title,'Local unsaved editor draft');
+ assert.equal(rebind.ram.records[0].title,'Local unsaved editor draft');
+ assert.equal(rebind.current,rebind.ram.records[0],'P1: recovered current not bound to ACKed state');
+ assert.equal(rebind.disk.records.filter(r=>r.id==='conflict-1').length,1);
+ console.log('PASS F4 P1 recovery from fallible active-object rebind after ACK');
+ // An undelivered toast is not marked seen; explicit cloud tap retries
+ // conflict details directly from Native.loadData and does not double-notify.
+ const toast=scene();toast.env.notify=()=>{throw Error('synthetic toast unavailable')};
+ assert.equal(send(toast),true,'P3: notification rendering may not revoke ACK');
+ assert.equal(toast.notices.length,0);
+ toast.env.notify=msg=>toast.notices.push(String(msg));
+ assert.match(toast.details,/Zachované konfliktní kopie: 1/);
+ assert.equal(toast.notices.filter(x=>/zachované konfliktní kopie/i.test(x)).length,1);
+ toast.details;
+ assert.equal(toast.notices.filter(x=>/zachované konfliktní kopie/i.test(x)).length,1,
+  'P3: successful recovery must not duplicate same conflict');
+ console.log('PASS F4 P3 explicit status rederives Native durable conflict after toast failure');
+ // Further save, then restart on exactly those persisted JSON bytes. Must not
+ // resurrect stale peer copies, duplicate IDs or alter exact dimensional data.
+ const follow=scene();dirty(follow);
+ assert.equal(send(follow),true);
+ const next=follow.ram.records.find(r=>r.id==='note-1');
+ next.title='Later local confirmed edit';
+ assert.equal(follow.window.__f4.save(),true,'P4: next local save after sync failed');
+ assert.equal(follow.disk.records.find(r=>r.id==='note-1').title,'Later local confirmed edit');
+ assert.equal(follow.disk.records.filter(r=>r.id==='conflict-1').length,1);
+ const restarted=scene('none',follow.disk);
+ assert.equal(send(restarted,clone(restarted.old)),true,
+  'P4: restart with a stale callback must use Native persisted disk');
+ assert.equal(restarted.acks,0,'P4: clean restart must not rewrite identical persisted data');
+ assert.equal(restarted.snapshot.records.find(r=>r.id==='note-1').title,'Later local confirmed edit');
+ assert.equal(restarted.disk.records.filter(r=>r.id==='conflict-1').length,1);
+ intact(restarted);
+ console.log('PASS F4 P4 next save/restart with stale callback, exact media/kóty, no duplicate copy');
 }
