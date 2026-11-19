@@ -566,10 +566,12 @@ const chapters=[
     "title": "21. Nastavení, jazyk a vzhled",
     "intro": "V Nastavení najdeš chování editoru, zobrazení, jednotky a další volby.",
     "steps": [
-      "Z hlavního menu otevři Nastavení.",
-      "V Editoru nastav lupu, přichytávání bodů/rastru, mřížku, odstup rastru a citlivost přesouvání.",
-      "V Rozměrech nastav výchozí jednotky a počet zobrazovaných desetinných míst.",
-      "Ve Vzhledu nastav barvu, tloušťku čar, velikost textu, zobrazení a další běžné chování.",
+      "Z hlavního menu otevři Nastavení. Nejprve se zobrazí pět kategorií a vyhledávání; návratem z podstránky se vrátíš k jejich přehledu.",
+      "Editor a kreslení obsahuje lupu, přichytávání, mřížku, citlivost přesouvání a přednastavené texty.",
+      "Měření a jednotky obsahuje výchozí jednotky, desetinná místa a volitelná nastavení kompatibilního laseru.",
+      "Synchronizace a zálohy rozlišuje přenos aktuálních změn od skutečné samostatné zálohy ZIP a historických záloh.",
+      "Vzhled a ovládání obsahuje barvy, tloušťku čar, velikost textu, displej, vibrace a klávesnici.",
+      "Aplikace a údržba obsahuje jazyk, verzi, diagnostiku, připomínky a Obnovu nahrávek. Na hlavní ploše se při evidovaném problému nahrávky ukáže malá výstraha; neskrývá nejistotu evidence.",
       "V hlavním menu ☰ → Historie změn nebo v Nastavení → Novinky a historie změn si zobrazíš skutečné novinky, opravené chyby a vylepšení podle verzí. Od verze 1.3.0 se významnější změny projevují druhým číslem verze, menší opravy posledním číslem; číslo sestavení Androidu je samostatné.",
       "Jazyk aplikace zatím nabízí pouze 🇨🇿 Čeština; další překlady nejsou hotové."
     ],
