@@ -20,7 +20,7 @@ const production=extract('function touch(rec){','function notify(msg){')+'\n'+
  'setNote:v=>{noteActive=v},setState:v=>{state=v},' +
  'save:()=>save()};';
 const clone=v=>JSON.parse(JSON.stringify(v));
-function scene(fault='none'){
+function scene(fault='none',restartData=null){
  const old={schema:1,syncProtocol:2,records:[{
   id:'note-1',rev:'r1',kind:'note',title:'Originál',parentId:null,deleted:false,
   media:['immutable-origin-media-id'],
@@ -34,7 +34,9 @@ function scene(fault='none'){
   media:['immutable-peer-media-id'],
   items:[{id:'dim-2',measure:'55,00000000001',
    laserMeasuredMm:'55.00000000001',unit:'mm'}]});
- let disk=JSON.stringify(remote),acks=0,attempts=0;
+ const boot=restartData?clone(restartData):clone(old);
+ if(restartData){remote.records=clone(restartData.records);remote.prefs=clone(restartData.prefs)}
+ let disk=JSON.stringify(restartData||remote),acks=0,attempts=0;
  const notices=[],nodes=new Map(),seen=[];
  let mode=fault;
  function node(id){
@@ -50,6 +52,10 @@ function scene(fault='none'){
  const document={getElementById:node,createElement:id=>node('made-'+id),body:{append(){}}};
  const Native={
   loadData(){
+   if(mode==='media-malformed'){
+    const malformed=JSON.parse(disk);malformed.records[0].media=[null];
+    return JSON.stringify(malformed);
+   }
    if(mode==='load-throw')throw Error('synthetic Native load unavailable');
    if(mode==='invalid-load')return '{"schema":0,"records":[]}';
    if(mode==='duplicate-ids'){
@@ -87,8 +93,8 @@ function scene(fault='none'){
   }},openZamerovacPeers(){}};
  const env={Native,window,document,$:node,native:true,
   screen:fault==='editor'?'editor':'browser',current:null,noteActive:null,
-  prefs:clone(old.prefs),state:clone(old),initial:clone(old),
-  persistedSnapshot:JSON.stringify(old),dataLoadFailed:false,
+  prefs:clone(boot.prefs),state:clone(boot),initial:clone(old),
+  persistedSnapshot:JSON.stringify(boot),dataLoadFailed:false,
   syncDeviceId:'00000000-0000-4000-8000-000000000001',uid:()=>'new-id',
   showFolder(){seen.push('show-folder');if(mode==='browser')throw Error('synthetic showFolder DOM failure')},
   notify:msg=>notices.push(String(msg)),modal(){seen.push('show-details')},
