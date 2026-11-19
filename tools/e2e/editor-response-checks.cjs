@@ -1,10 +1,7 @@
 'use strict';
-const nativeStorage=require('./native-storage-fixture.cjs');
-const {suite,assert,chooseFiles,tool,drag,projected,editSelected,midpoint}=require('./harness.cjs');
+const {assert,chooseFiles,tool,drag,projected,editSelected,midpoint}=require('./harness.cjs');
 
-suite('editor-response',async test=>{
- await test('status_icons_fit_small_phone_and_open_details',async({page,evidence})=>{
-  await nativeStorage(page);
+async function checkStatusIcons({page,evidence}){
   await page.setViewportSize({width:320,height:640});
   const mic=page.locator('#pendingAudioBanner'),cloud=page.locator('#cloudBtn');
   await page.evaluate(()=>{Native.pendingAudio=()=> '[]';PendingAudio.refresh()});
@@ -21,6 +18,22 @@ suite('editor-response',async test=>{
     return {width:r.width,height:r.height,inside:el.parentElement.id==='browserFoot',clickable:el.contains(hits)};
    });
    assert(placement.width>=44&&placement.height>=44&&placement.inside&&placement.clickable);
+   for(const width of [320,360]){
+    await page.setViewportSize({width,height:640});
+    const controls=await page.evaluate(()=>{
+     const ids=['bluetoothBtn','boschHistoryBtn','pendingAudioBanner','cloudBtn'];
+     return ids.map(id=>{
+      const button=document.getElementById(id),rect=button.getBoundingClientRect();
+      const hit=document.elementFromPoint(rect.left+rect.width/2,rect.top+rect.height/2);
+      return {id,left:rect.left,right:rect.right,clickable:button.contains(hit)};
+     });
+    });
+    for(const [index,control] of controls.entries()){
+     assert(control.clickable&&control.left>=0&&control.right<=width,control.id+' is clipped or covered');
+     if(index>0)assert(controls[index-1].right<=control.left,control.id+' overlaps the preceding button');
+    }
+   }
+   await page.setViewportSize({width:320,height:640});
    assert.equal(await mic.getAttribute('aria-label'),'Nahrávky vyžadují kontrolu');
    await mic.click();assert.equal(await page.locator('#retainedAudioList').isVisible(),true);
    if(journal.includes('uncertain')||journal==='{broken')
@@ -54,9 +67,10 @@ suite('editor-response',async test=>{
   await page.click('#okModal');
   await page.evaluate(()=>{Native.pendingAudio=()=> '[]';PendingAudio.refresh()});
   assert.equal(await mic.count(),0);
-  evidence({viewport:320,states:states.map(([state])=>state),journals:['empty','pending','uncertain','unreadable']});
- });
- await test('folder_save_and_list_dates',async({page,evidence})=>{
+  evidence({viewports:[320,360],states:states.map(([state])=>state),journals:['empty','pending','uncertain','unreadable']});
+}
+
+async function checkFolderSaveAndListDates({page,evidence}){
   const results=[];
   for(const count of [1,10,50]){
    await page.reload();
@@ -93,8 +107,9 @@ suite('editor-response',async test=>{
   }
   evidence(results);
   for(const result of results)assert.equal(result.dateCalls,0,'Date formatter should be reused within list render');
- });
- await test('photo_import_save_and_immediate_grip',async({page,evidence})=>{
+}
+
+async function checkPhotoImportAndImmediateGrip({page,evidence}){
   const bytes=Buffer.from(await page.evaluate(()=>{
    const c=document.createElement('canvas');c.width=4000;c.height=3000;
    const ctx=c.getContext('2d'),g=ctx.createLinearGradient(0,0,4000,3000);
@@ -188,5 +203,6 @@ suite('editor-response',async test=>{
    assert.equal(result.imagePaints,1,'Decoded photo must paint once at the final viewport');
    assert.equal(result.jitter.paints,0,'Touch jitter must not repaint unchanged geometry');
   }
- });
-}).catch(e=>{console.error(e);process.exitCode=1});
+}
+
+module.exports={checkStatusIcons,checkFolderSaveAndListDates,checkPhotoImportAndImmediateGrip};

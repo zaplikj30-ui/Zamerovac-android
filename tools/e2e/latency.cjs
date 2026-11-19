@@ -3,6 +3,7 @@ const fs=require('node:fs'),path=require('node:path');
 // Measurements, not invented speed limits. Native timings below are a JS bridge
 // model; Android filesystem/Bitmap/IME/CPU measurements still require Android.
 const {suite,assert,chooseFiles,createCanvas,tool,drag,editSelected}=require('./harness.cjs');
+const {checkFolderSaveAndListDates,checkPhotoImportAndImmediateGrip}=require('./editor-response-checks.cjs');
 const nativeStorage=require('./native-storage-fixture.cjs');
 async function png(page,w,h){return Buffer.from(await page.evaluate(([w,h])=>{
  const c=document.createElement('canvas');c.width=w;c.height=h;const x=c.getContext('2d'),p=x.createImageData(w,h);
@@ -10,7 +11,7 @@ async function png(page,w,h){return Buffer.from(await page.evaluate(([w,h])=>{
  x.putImageData(p,0,0);return c.toDataURL().split(',')[1];
 },[w,h]),'base64')}
 suite('latency',async test=>{
- await test('project_1_10_50_editable_documents',async({page,evidence})=>{
+ await test('project_1_10_50_editable_documents',async({page,step,evidence})=>{
   await createCanvas(page,'Syntetická zakázka');await tool(page,'dimension');await drag(page,{x:100,y:240},{x:450,y:320});await editSelected(page);
   await page.fill('#measureInput','1585,800001');await page.click('#okModal');
   const samples=await page.evaluate(()=>{
@@ -71,6 +72,8 @@ suite('latency',async test=>{
   for(const title of ['Složka UI 0','Složka UI 1','Složka UI 2','Složka dvojklik'])
    assert.equal(await page.locator('.entry-title',{hasText:title}).count(),1,'Folder missing after real browser reload');
   evidence({platform:'Chromium localStorage (no Android I/O)',folderUi,doubleDomClick:true,reload:true});
+  await step('Folder save and Czech list dates in projects with 1, 10 and 50 items',
+   ()=>checkFolderSaveAndListDates({page,evidence}));
   // A separate synthetic native CAS bridge: negative failure must leave the modal and disk unchanged.
   await nativeStorage(page);
   await page.evaluate(()=>{
@@ -106,7 +109,7 @@ suite('latency',async test=>{
   evidence({platform:'Chromium + mock Native CAS/audio (NOT Android)',bridge});
 
  });
- for(const size of [[1200,800],[6000,4000]])await test('photo_and_gallery_'+size.join('x'),async({page,evidence,directory})=>{
+ for(const size of [[1200,800],[6000,4000]])await test('photo_and_gallery_'+size.join('x'),async({page,step,evidence,directory})=>{
   const bytes=await png(page,...size),samples=[];
   // Use a real local file. Sending a 37 MB Buffer through Playwright's protocol
   // exceeded the CI fileChooser timeout before the app could handle the input.
@@ -127,6 +130,8 @@ suite('latency',async test=>{
   }finally{fs.rmSync(fixture,{force:true})}
   await page.reload();assert.equal(await page.evaluate(()=>state.records.filter(r=>r.kind==='photo').length),3);
   evidence({size,pngBytes:bytes.length,fixtureDelivery:'local file path',platform:'Linux Chromium/localStorage/IndexedDB; open includes UI file chooser automation',samples});
+  if(size[0]===1200)await step('JPEG import, immediate grip drag and durable readback',
+   ()=>checkPhotoImportAndImmediateGrip({page,evidence}));
  });
  for(const size of [[320,240],[1440,2800]])await test('existing_feedback_'+size.join('x'),async({page,evidence})=>{
   const bytes=await png(page,...size);await nativeStorage(page);
