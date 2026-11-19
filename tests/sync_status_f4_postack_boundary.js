@@ -381,15 +381,15 @@ if(mode==='post-ack-peer'||mode==='all'){
  assert.equal(s.disk.records.filter(r=>r.id==='peer-post-ack').length,1,
   'P1: second peer update did not reach Native disk');
  assert.equal(accepted,false,'P1: newer peer requires future reconciliation');
+ assert.equal(s.snapshot.records.find(r=>r.id==='note-1')?.title,
+  'Místní potvrzený návrh',
+  'P1 RED: persistedSnapshot rolled back to pre-ACK state after a second peer write');
  assert.equal(s.window.ZamerovacSyncStatus.status().phase,'pending',
   'P1: newer peer change must not show a green confirmed receipt');
  assert.equal(s.window.__syncViewNeedsRefresh,true,
   'P1: view needs refresh while newer peer is not reconciled');
  assert.equal(s.snapshot.records.some(r=>r.id==='peer-post-ack'),false,
   'P1: unmerged peer must not be falsely included in our CAS baseline');
- assert.equal(s.snapshot.records.find(r=>r.id==='note-1')?.title,
-  'Místní potvrzený návrh',
-  'P1 RED: persistedSnapshot rolled back to pre-ACK state after a second peer write');
  assert.equal(s.ram.records.find(r=>r.id==='note-1')?.title,'Místní potvrzený návrh',
   'P1: RAM lost already confirmed draft');
  assert.equal(s.current,live,'P1: live editor identity changed after confirmed CAS');
