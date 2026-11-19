@@ -15,7 +15,8 @@ function extract(start,end){
 }
 const saveStart=app.includes('function invalidateSyncBadgeAfterSave(){')?
  'function invalidateSyncBadgeAfterSave(){':'function save(){';
-const product=extract(saveStart,'function notify(msg){')+'\n'+
+const product=extract('function canonicalSavedValue(value){','function sameHierarchyIntent(')+'\n'+
+ extract(saveStart,'function notify(msg){')+'\n'+
  extract('window.onNativeSync=(text)=>{','window.onLaserValue=')+
  '\nwindow.__save=save;window.__getSnapshot=()=>persistedSnapshot;window.__setState=value=>{state=value};';
 const clone=v=>JSON.parse(JSON.stringify(v));
