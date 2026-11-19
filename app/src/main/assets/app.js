@@ -553,7 +553,11 @@ window.onNativeSync=(text)=>{
    let confirmed=false,latest=diskRaw;
    try{
     if(canonicalSavedValue(JSON.parse(candidateText))===canonicalSavedValue(JSON.parse(diskText))){
-     confirmed=true; // exact Native data: no redundant JS CAS
+     // A concurrent native writer can advance the disk after the first read.
+     // Accept a CAS-free adoption only if it is still the SAME durable image.
+     latest=native?Native.loadData():localStorage.getItem('zamerovac-data');
+     if(latest!==diskRaw)throw Error('Nativní data se během přijetí změnila; načti synchronizaci znovu');
+     confirmed=true; // exact current Native data: no redundant JS CAS
     }else{
      // Reuse the unchanged shared save()/CAS/tombstone/retry implementation.
      // Detach active pointers so its post-ACK projection cannot mutate drafts
