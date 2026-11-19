@@ -122,6 +122,17 @@ function peerProblem(message){
  return true;
 }
 function show(){
+ // Rebuild the conflict detail from the currently durable Native disk when
+ // the user explicitly opens status, including after a broken toast/view.
+ // This never writes data or reads the ledger during a drawing gesture.
+ if(typeof root.ZamerovacSyncReadCommittedConflicts==='function'){
+  try{
+   const durable=root.ZamerovacSyncReadCommittedConflicts();
+   try{conflicts(durable)}catch(error){} // failed toast is not marked delivered
+  }catch(error){
+   update('failed','Lokální synchronizovaná data nelze bezpečně ověřit. Zkontroluj úložiště.');
+  }
+ }
  // Explicit user request: ledger verification is intentionally NOT on the
  // editor's drawing or automatic-toast path.
  if(phase==='confirmed'&&!receipt())update('pending','Předchozí potvrzení již neodpovídá aktuálním datům. Zkontroluj čekající přenos.');
