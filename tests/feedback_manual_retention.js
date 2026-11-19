@@ -70,6 +70,17 @@ assert.match(java,/pendingIssueZipId!=null/,'Must not cleanup during pending loc
 assert.match(java,/issueBundleBusy/,'Must not delete during ZIP creation');
 assert.match(java,/"shared"\.equals\(state\)/,'Manual cleanup must include shared ZIPs');
 assert.match(java,/"building"\.equals\(state\)/,'Manual cleanup must recover abandoned preparations');
+const exportStart=java.indexOf('        if(request==REQUEST_ISSUE_EXPORT){\\n            String id=');
+const exportEnd=java.indexOf('        if(request==REQUEST_IMPORT_BACKUP',exportStart);
+assert.ok(exportStart>0&&exportEnd>exportStart,'Actual document ZIP result path must be tested');
+const exportResult=java.slice(exportStart,exportEnd);
+const launchCopy=exportResult.indexOf('new Thread(');
+assert.ok(launchCopy>0,'File copying must run outside the UI thread');
+assert.doesNotMatch(exportResult.slice(0,launchCopy),/pendingIssueZipId=null/,
+ 'Pending ZIP must stay pinned until copy finishes; otherwise manual cleanup can unlink it');
+assert.match(exportResult,/issueBundleBusy=true/,'Copy must hold busy guard');
+assert.match(exportResult,/finally\\{[\\s\\S]*?deleteIssueZip\\(id\\)/,
+ 'The source ZIP may be deleted only after the output stream is closed');
 const zipStart=java.indexOf('    private String createIssueZip(');
 const zipEnd=java.indexOf('    private void sendIssueBundle(',zipStart);
 assert.ok(zipStart>0&&zipEnd>zipStart,'Real ZIP creation must be covered');
