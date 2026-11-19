@@ -18,10 +18,11 @@ function mediaUri(adb,name){
  return mediaRoot+'/'+ids[0];
 }
 function mediaIds(adb,name){
- const rows=adb('shell','content','query','--uri',mediaRoot,'--projection','_id:_display_name',
-  '--where',"_display_name='"+name+"'");
- const ids=[...rows.matchAll(/^Row: \d+ _id=(\d+), _display_name=([^\r\n,]+)$/gm)]
-  .filter(row=>row[2]===name).map(row=>row[1]);
+ const rows=adb('shell','content','query','--uri',mediaRoot,'--projection','_id:_display_name');
+ const ids=[...rows.matchAll(/^Row: \d+ (.+)$/gm)].map(row=>({
+  id:/(?:^|, )_id=(\d+)(?:,|$)/.exec(row[1])?.[1],
+  name:/(?:^|, )_display_name=([^,\r\n]+)(?:,|$)/.exec(row[1])?.[1]
+ })).filter(row=>row.name===name&&/^\d+$/.test(row.id||'')).map(row=>row.id);
  return ids;
 }
 function stageImage(adb,local){

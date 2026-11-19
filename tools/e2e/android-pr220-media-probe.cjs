@@ -28,9 +28,12 @@ try{
  console.log(JSON.stringify({phase:'insert',exit:result.status,stdoutClass:output===''?'empty':/^Inserted /.test(output)?'insert-message':'other',stdoutLength:output.length,stderrClass:result.stderr?.trim()?'present':'empty'}));
  if(result.status!==0)process.exitCode=1;
  else{
-  const lookup=adb('shell','content','query','--uri',uriRoot,'--projection','_id:_display_name','--where',"_display_name='"+filename+"'");
-  const ids=[...(lookup.stdout||'').matchAll(/^Row: \d+ _id=(\d+), _display_name=([^\r\n,]+)$/gm)].filter(x=>x[2]===filename).map(x=>x[1]);
-  console.log(JSON.stringify({phase:'lookup',exit:lookup.status,matches:ids.length}));
+  const lookup=adb('shell','content','query','--uri',uriRoot,'--projection','_id:_display_name');
+  const ids=[...(lookup.stdout||'').matchAll(/^Row: \d+ (.+)$/gm)].map(x=>({
+   id:/(?:^|, )_id=(\d+)(?:,|$)/.exec(x[1])?.[1],
+   name:/(?:^|, )_display_name=([^,\r\n]+)(?:,|$)/.exec(x[1])?.[1]
+  })).filter(x=>x.name===filename&&/^\d+$/.test(x.id||'')).map(x=>x.id);
+  console.log(JSON.stringify({phase:'lookup',exit:lookup.status,matches:ids.length,rows:(lookup.stdout||'').split(/\r?\n/).filter(x=>x.startsWith('Row: ')).length,outputClass:lookup.stdout?.trim()?'nonempty':'empty'}));
   if(lookup.status!==0||ids.length!==1)process.exitCode=1;
   else{
    uri=uriRoot+'/'+ids[0];
