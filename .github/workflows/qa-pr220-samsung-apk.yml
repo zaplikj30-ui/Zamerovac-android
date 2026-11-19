@@ -1,0 +1,77 @@
+name: Zaměřovač PR220 - jednorázová testovací APK pro Samsung
+on:
+  push:
+    branches: [qa/pr220-samsung-apk-20261120]
+    paths:
+      - .github/workflows/qa-pr220-samsung-apk.yml
+
+permissions:
+  contents: read
+concurrency:
+  group: qa-pr220-samsung-apk-once
+  cancel-in-progress: false
+
+jobs:
+  preview:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.event_name == 'push' && github.ref == 'refs/heads/qa/pr220-samsung-apk-20261120' && github.run_attempt == 1 }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout exact trusted product revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: d9c42ef5b352db8321533c46f50681ff19f0c349
+          persist-credentials: false
+      - name: Verify immutable source and no release
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = 'd9c42ef5b352db8321533c46f50681ff19f0c349'
+          test -f app/build.gradle
+          test -f config/app-version.properties
+          test -f tools/debug-signing.p12.b64
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Build signed preview APK only
+        shell: bash
+        env:
+          GRADLE_USER_HOME: ${{ runner.temp }}/pr220-gradle
+        run: |
+          set -euo pipefail
+          checksum=31c55713e40233a8303827ceb42ca48a47267a0ad4bab9177123121e71524c26
+          curl -fsSL https://services.gradle.org/distributions/gradle-8.10.2-bin.zip -o "$RUNNER_TEMP/pr220-gradle.zip"
+          printf '%s  %s\n' "$checksum" "$RUNNER_TEMP/pr220-gradle.zip" | sha256sum -c -
+          unzip -q "$RUNNER_TEMP/pr220-gradle.zip" -d "$RUNNER_TEMP"
+          GITHUB_RUN_NUMBER=9000 "$RUNNER_TEMP/gradle-8.10.2/bin/gradle" --no-daemon :app:assemblePreview
+      - name: Verify APK identity, signature, and checksum
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk=app/build/outputs/apk/preview/app-preview.apk
+          test -s "$apk"
+          unzip -tq "$apk" >/dev/null
+          sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          signer="$(find "$sdk/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          aapt="$(find "$sdk/build-tools" -type f -name aapt | sort -V | tail -n 1)"
+          test -n "$signer" && test -n "$aapt"
+          "$signer" verify --verbose "$apk"
+          package="$("$aapt" dump badging "$apk" | grep '^package: ')"
+          printf '%s\n' "$package"
+          [[ "$package" == *"name='cz.zamerovac.app.preview'"* ]]
+          [[ "$package" == *"versionCode='10000'"* ]]
+          mkdir -p dist
+          cp "$apk" dist/Zamerovac-PR220-preview-Samsung.apk
+          (cd dist && sha256sum Zamerovac-PR220-preview-Samsung.apk > Zamerovac-PR220-preview-Samsung.apk.sha256)
+          printf '%s\n' 'd9c42ef5b352db8321533c46f50681ff19f0c349' > dist/SOURCE-SHA.txt
+          printf 'Testovací APK z PR #220 SHA %s. Podepsáno pouze interním DEBUG certifikátem, NE pro zákaznická data.\n' 'd9c42ef5b352db8321533c46f50681ff19f0c349' >> "$GITHUB_STEP_SUMMARY"
+          cat dist/*.sha256 >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload APK for Samsung installation (not release)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: Zamerovac-PR220-preview-Samsung
+          path: dist/
+          if-no-files-found: error
+          retention-days: 14
+          compression-level: 0
