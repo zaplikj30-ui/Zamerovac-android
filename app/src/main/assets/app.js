@@ -564,27 +564,12 @@ window.onNativeSync=(text)=>{
      // Detach active pointers so its post-ACK projection cannot mutate drafts
      // or set editorTitle until the local merge is truly confirmed.
      state=candidate;current=null;noteActive=null;window.__detailParent=null;
-     // During THIS sync callback only, isolate the existing post-ACK audio
-     // presenter from the shared save() failure message. The audio journal
-     // remains Native-owned; preserve any failure as a visible recovery warning.
-     const pendingAudio=window.PendingAudio,oldSaved=pendingAudio?.saved;
-     let audioNoticeFailed=false,savePresentationError=null,saveOutcome=false;
-     try{
-      if(typeof oldSaved==='function')pendingAudio.saved=function(...args){
-       try{return oldSaved.apply(pendingAudio,args)}
-       catch(error){
-        audioNoticeFailed=true;
-        try{pendingAudio.refresh?.()}catch(ignored){}
-       }
-      };
-      try{saveOutcome=save()}catch(error){savePresentationError=error}
-     }finally{
-      if(typeof oldSaved==='function')pendingAudio.saved=oldSaved;
-     }
-     if(audioNoticeFailed){
-      badUI=true;
-      warn('Zápis byl potvrzen, ale evidenci nahrávky je nutné zkontrolovat.');
-     }
+     // PendingAudio is a frozen production API; do not replace its methods.
+     // save() may return false if its post-ACK audio presentation throws.
+     // Only subsequent verified CAS evidence may reclassify the local write.
+     const pendingAudio=window.PendingAudio;
+     let savePresentationError=null,saveOutcome=false;
+     try{saveOutcome=save()}catch(error){savePresentationError=error}
      // save() advances persistedSnapshot only after Native CAS ok:true.
      // Capture exact ACKed bytes BEFORE the fallible second Native disk read.
      const acknowledgedSnapshot=persistedSnapshot;
@@ -619,7 +604,11 @@ window.onNativeSync=(text)=>{
       // Correct the UI on this synchronous callback without editing save().
       badUI=true;window.__lastSaveFailed=false;
       window.__lastSavePresentationFailed=true;
-      warn('Uloženo, ale přehled nebo upozornění se nepodařilo aktualizovat. Zkontroluj údaje.');
+      // save() can show an erroneous failure banner after a durable ACK if
+      // PendingAudio.saved() throws. Remove it only after exact ACK evidence.
+      try{$('saveErrorBanner')?.remove()}catch(error){}
+      try{pendingAudio?.refresh?.()}catch(error){}
+      warn('Uloženo, ale zobrazení nebo evidence uchovaných nahrávek se nepodařila ověřit. Zkontroluj nahrávky.');
      }
      if(savePresentationError&&!confirmed)throw savePresentationError;
     }
