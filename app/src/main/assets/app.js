@@ -558,7 +558,27 @@ window.onNativeSync=(text)=>{
      // Detach active pointers so its post-ACK projection cannot mutate drafts
      // or set editorTitle until the local merge is truly confirmed.
      state=candidate;current=null;noteActive=null;window.__detailParent=null;
-     save();
+     // During THIS sync callback only, isolate the existing post-ACK audio
+     // presenter from the shared save() failure message. The audio journal
+     // remains Native-owned; preserve any failure as a visible recovery warning.
+     const pendingAudio=window.PendingAudio,oldSaved=pendingAudio?.saved;
+     let audioNoticeFailed=false;
+     try{
+      if(typeof oldSaved==='function')pendingAudio.saved=function(...args){
+       try{return oldSaved.apply(pendingAudio,args)}
+       catch(error){
+        audioNoticeFailed=true;
+        try{pendingAudio.refresh?.()}catch(ignored){}
+       }
+      };
+      save();
+     }finally{
+      if(typeof oldSaved==='function')pendingAudio.saved=oldSaved;
+     }
+     if(audioNoticeFailed){
+      badUI=true;
+      warn('Zápis byl potvrzen, ale evidenci nahrávky je nutné zkontrolovat.');
+     }
      latest=native?Native.loadData():localStorage.getItem('zamerovac-data');
      const actual=JSON.parse(latest);
      // Old shared save() can return false if a UI/audio callback throws after
