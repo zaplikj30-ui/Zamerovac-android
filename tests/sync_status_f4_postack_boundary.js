@@ -202,6 +202,8 @@ if(mode==='edge'||mode==='all'){
   draft.rev='local-draft-rev';
   draft.syncClock={'00000000-0000-4000-8000-000000000001':1};
   s.window.__f4.setCurrent(draft);
+  s.window.__f4.setNote(draft);
+  s.window.__detailParent=draft;
   s.env.screen='editor';
   s.env.editStack=[{id:'undo-draft',measure:'1585,800001234567890'}];
   s.env.redoStack=[{id:'redo-draft',measure:'55,00000000001'}];
@@ -216,6 +218,8 @@ if(mode==='edge'||mode==='all'){
  assert.equal(s.snapshot.records.find(r=>r.id==='note-1').title,'Local unsaved editor draft');
  assert.equal(s.ram.records.find(r=>r.id==='note-1').title,'Local unsaved editor draft');
  assert.equal(s.current,draft,'P4: unchanged live editor identity must be retained');
+ assert.equal(s.window.__f4.getNote(),draft,'P4: active note draft lost');
+ assert.equal(s.window.__detailParent,draft,'P4: active detail reference lost');
  assert.equal(s.env.editStack.length,1,'P4: Undo draft lost');
  assert.equal(s.env.redoStack.length,1,'P4: Redo draft lost');
  intact(s);
@@ -232,6 +236,8 @@ if(mode==='edge'||mode==='all'){
  assert.equal(send(rejected),false,'P4: disk-full JS CAS must fail closed');
  assert.equal(rejected.acks,0);
  assert.equal(rejected.current,ref,'P4: pre-ACK failure changed active editor object');
+ assert.equal(rejected.window.__f4.getNote(),ref,'P4: rejected CAS lost active note');
+ assert.equal(rejected.window.__detailParent,ref,'P4: rejected CAS lost detail reference');
  assert.equal(rejected.ram.records[0].title,'Local unsaved editor draft');
  assert.deepEqual(rejected.snapshot,baseline,'P4: rejected candidate poisoned persistedSnapshot');
  assert.equal(rejected.env.editStack.length,1);
@@ -245,6 +251,13 @@ if(mode==='edge'||mode==='all'){
   assert.equal(x.current,ref);assert.equal(x.ram.records[0].title,'Local unsaved editor draft');
  }
  console.log('PASS F4 P5 Native.loadData throw and duplicate IDs');
+ const blocked=scene();const blockedRef=dirty(blocked);
+ blocked.env.dataLoadFailed=true;
+ const blockedBase=clone(blocked.snapshot);
+ assert.equal(send(blocked),false,'P5: prior failed Native load must keep writes blocked');
+ assert.equal(blocked.acks,0);assert.deepEqual(blocked.snapshot,blockedBase);
+ assert.equal(blocked.current,blockedRef);
+ console.log('PASS F4 P5 prior blocked data load fails closed');
  // A genuinely concurrent third writer between disk read and JS CAS must
  // survive the existing shared save()/reconcile retry.
  const raced=scene('race-read-cas');dirty(raced);
