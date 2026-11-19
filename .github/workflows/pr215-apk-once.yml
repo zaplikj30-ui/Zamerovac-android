@@ -10,7 +10,9 @@ concurrency:
   cancel-in-progress: false
 jobs:
   preview_apk:
+    # Retired after the single owner-approved successful build 44603077298.
     if: >-
+      false &&
       github.repository == 'zaplikj30-ui/Zamerovac-android' &&
       github.event_name == 'push' &&
       github.ref == 'refs/heads/qa/pr215-apk-once-20261119' &&
