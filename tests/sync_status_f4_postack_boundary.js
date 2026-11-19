@@ -7,18 +7,19 @@
 const assert=require('node:assert/strict'),fs=require('node:fs'),vm=require('node:vm');
 const app=fs.readFileSync('app/src/main/assets/app.js','utf8');
 const presenter=fs.readFileSync('app/src/main/assets/sync-status.js','utf8');
+const actualPendingAudio=fs.readFileSync('app/src/main/assets/pending-audio.js','utf8');
 function extract(start,end){
  const a=app.indexOf(start),b=app.indexOf(end,a+start.length);
  assert(a>=0&&b>a,'Production boundary changed: '+start);
  return app.slice(a,b);
 }
-const production=extract('function touch(rec){','function notify(msg){')+'\n'+
+const production="(function(){'use strict';\n"+extract('function touch(rec){','function notify(msg){')+'\n'+
  extract(app.includes('window.ZamerovacSyncReadCommittedConflicts=')?
   'window.ZamerovacSyncReadCommittedConflicts=':'window.onNativeSync=(text)=>{','window.onLaserValue=')+
  '\nwindow.__f4={snapshot:()=>persistedSnapshot,state:()=>state,'+
  'getCurrent:()=>current,setCurrent:v=>{current=v},getNote:()=>noteActive,'+
  'setNote:v=>{noteActive=v},setState:v=>{state=v},' +
- 'save:()=>save()};';
+ 'save:()=>save()};\n})()';
 const clone=v=>JSON.parse(JSON.stringify(v));
 function scene(fault='none',restartData=null){
  const old={schema:1,syncProtocol:2,records:[{
@@ -40,6 +41,8 @@ function scene(fault='none',restartData=null){
  const notices=[],nodes=new Map(),seen=[];
  let mode=fault;
  function node(id){
+  if(id==='pendingAudioBanner'&&mode==='frozen-audio-error'&&acks>0)
+   throw Error('synthetic frozen PendingAudio.saved UI failure after Native ACK');
   if(id==='saveErrorBanner'&&mode==='save-banner-throw'&&acks>0)
    throw Error('synthetic post-ACK save banner DOM failure');
   if(!nodes.has(id))nodes.set(id,{
@@ -108,13 +111,14 @@ function scene(fault='none',restartData=null){
     disk=JSON.stringify(newer);
    }return JSON.stringify({ok:true,pendingAudioCount:0,audioPending:false});
   },
+  pendingAudio(){return '[]'},
   syncLedgerState(){return JSON.stringify({localSaved:true,
    targets:[{kind:'drive',state:'waiting',contentState:'waiting'}]})}
  };
- const window={Native,PendingAudio:{saved(){
+ const window={Native,ZamerovacI18n:{t:key=>key},PendingAudio:{saved(){
    if(mode==='post-ack-audio')throw Error('synthetic post-ACK PendingAudio.saved failure');
   }},openZamerovacPeers(){}};
- const env={Native,window,document,$:node,native:true,
+ const env={Native,window,document,$:node,native:true,renderNoteAttachments(){},
   screen:fault==='editor'?'editor':'browser',current:null,noteActive:null,
   prefs:clone(boot.prefs),state:clone(boot),initial:clone(old),
   persistedSnapshot:JSON.stringify(boot),dataLoadFailed:false,
@@ -127,6 +131,11 @@ function scene(fault='none',restartData=null){
  vm.createContext(env);
  vm.runInContext(presenter,env,{filename:'sync-status.js'});
  vm.runInContext(production,env,{filename:'actual-app-sync-cas.js'});
+ if(fault.startsWith('frozen-')){
+  vm.runInContext(actualPendingAudio,env,{filename:'actual-pending-audio.js'});
+  assert(Object.isFrozen(window.PendingAudio),'production PendingAudio must be Object.freeze');
+  assert.equal(Object.getOwnPropertyDescriptor(window.PendingAudio,'saved').writable,false);
+ }
  window.ZamerovacSyncStatus.peerState({peers:{trusted:{}}});
  return {window,nodes,notices,seen,old,remote,
   get disk(){return JSON.parse(disk)},get acks(){return acks},get attempts(){return attempts},get reads(){return reads},
@@ -494,4 +503,30 @@ if(['post-ack-read-throw','post-ack-read-invalid-json','post-ack-read-invalid-sc
   assert.equal(reboot.disk.records.filter(r=>r.id==='peer-after-read-error').length,1);
   console.log('PASS P1b '+fault+': ACK/draft safe, subsequent CAS and restart');
  }
+}
+
+if(['frozen-audio','frozen-audio-error','frozen-cas-refusal'].includes(mode)){
+ const s=scene(mode),live=s.ram.records[0],audio=s.window.PendingAudio;
+ live.title='Immutable audio merged draft';live.rev='immutable-audio-rev';
+ s.window.__f4.setCurrent(live);s.window.__f4.setNote(live);s.env.screen='editor';
+ const answer=send(s);
+ assert.equal(Object.isFrozen(audio),true);
+ assert.equal(s.window.PendingAudio,audio,'Frozen audio API identity changed during sync');
+ assert.equal(s.window.PendingAudio.saved,audio.saved,'Frozen callback was replaced');
+ if(mode==='frozen-cas-refusal'){
+  assert.equal(answer,false);assert.equal(s.acks,0);
+  assert.equal(s.snapshot.records[0].title,'Originál');
+  assert.equal(s.current,live);
+ }else{
+  assert.equal(answer,true,'Frozen PendingAudio blocked expected sync CAS');
+  assert.equal(s.acks,1,'Frozen sync merge must execute Native saveDataChecked(ok:true)');
+  assert.equal(s.disk.records[0].title,'Immutable audio merged draft');
+  assert.equal(s.snapshot.records[0].title,'Immutable audio merged draft');
+  assert.equal(s.disk.records.filter(r=>r.id==='conflict-1').length,1);
+  assert.deepEqual(s.disk.records[0].media,['immutable-origin-media-id']);
+  assert.equal(s.disk.records[0].items[0].laserMeasuredMm,'1585.800001234567890');
+  assert(s.notices.at(-1)?.startsWith('Uloženo')||!s.notices.some(n=>/^Neuloženo:/.test(n)),
+    'Final user notice must not suggest loss of acknowledged bytes');
+ }
+ console.log('PASS production immutable PendingAudio '+mode);
 }
