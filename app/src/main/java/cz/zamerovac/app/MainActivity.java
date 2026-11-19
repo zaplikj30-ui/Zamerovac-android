@@ -507,13 +507,14 @@ public class MainActivity extends Activity {
             final Uri destination=data==null?null:data.getData();
             if(id!=null&&destination!=null){
                 new Thread(()->{
-                    try(InputStream in=new FileInputStream(mediaFile(id));
-                        OutputStream out=getContentResolver().openOutputStream(destination,"w")){
-                        if(out==null)throw new IOException("Nelze otevřít výstup");
-                        copy(in,out);
-                    }
-                    // Report success only after the destination stream has closed cleanly.
-                    js("window.onReportBundleSaved?.()");
+                    try{
+                        try(InputStream in=new FileInputStream(mediaFile(id));
+                            OutputStream out=getContentResolver().openOutputStream(destination,"w")){
+                            if(out==null)throw new IOException("Nelze otevřít výstup");
+                            copy(in,out);
+                        }
+                        // Report success only after the destination stream has closed cleanly.
+                        js("window.onReportBundleSaved?.()");
                     }catch(Exception ex){
                         try{android.provider.DocumentsContract.deleteDocument(getContentResolver(),destination);}
                         catch(Exception ignored){}
