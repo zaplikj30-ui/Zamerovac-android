@@ -519,31 +519,87 @@ window.onNativePhotoAddress=(mediaId,address)=>{
 window.onNativeMediaDone=token=>{if(stagedMediaRequest?.id===token)stagedMediaRequest=null};
 window.onNativeMediaProgress=(token,done,total)=>{if(stagedMediaRequest?.id===token)notify('Přidávání příloh: '+done+'/'+total)};
 window.onNativeSync=(text)=>{
+ // F4: native durable data, optional confirmed JS reconciliation, then UI.
+ let result,render=false,badUI=false;
+ const warn=m=>{try{notify(m)}catch(ignored){console.warn(m)}};
  try{
-  const result=JSON.parse(text);
+  result=JSON.parse(text);
+  if(!result||typeof result!=='object'||Array.isArray(result))throw Error('Neplatná odpověď synchronizace');
   if(result.data){
-   // Read the current confirmed database, never replay a stale callback snapshot.
-   const snapshot=native?Native.loadData():JSON.stringify(result.data),disk=JSON.parse(snapshot);
-   if(disk.schema!==1||!Array.isArray(disk.records))throw new Error('Zakázky nelze bezpečně načíst');
+   // The native disk, not a potentially stale callback snapshot, is authority.
+   const diskRaw=native?Native.loadData():JSON.stringify(result.data),disk=JSON.parse(diskRaw);
+   if(!disk||disk.schema!==1||!Array.isArray(disk.records)||
+      disk.records.some(r=>!r||typeof r!=='object'||Array.isArray(r)||typeof r.id!=='string'||!r.id)||
+      new Set(disk.records.map(r=>r.id)).size!==disk.records.length)
+    throw Error('Zakázky nelze bezpečně načíst');
+   const saved={state,snapshot:persistedSnapshot,current,noteActive,detail:window.__detailParent};
    const base=persistedSnapshot?JSON.parse(persistedSnapshot):initial;
-   applySavedState(reconcileSavedState(base,state,disk));persistedSnapshot=snapshot;
-   if(!save())return false;
-   if(screen==='browser')showFolder();
+   // Stage a detached candidate: no live draft/reference is mutated pre-ACK.
+   const candidate=reconcileSavedState(base,JSON.parse(JSON.stringify(state)),disk);
+   const candidateText=JSON.stringify({...candidate,syncProtocol:2});
+   const diskText=JSON.stringify({...disk,syncProtocol:2});
+   let confirmed=false,latest=diskRaw;
+   try{
+    if(canonicalSavedValue(JSON.parse(candidateText))===canonicalSavedValue(JSON.parse(diskText))){
+     confirmed=true; // exact Native data: no redundant JS CAS
+    }else{
+     // Reuse the unchanged shared save()/CAS/tombstone/retry implementation.
+     // Detach active pointers so its post-ACK projection cannot mutate drafts
+     // or set editorTitle until the local merge is truly confirmed.
+     state=candidate;current=null;noteActive=null;window.__detailParent=null;
+     save();
+     latest=native?Native.loadData():localStorage.getItem('zamerovac-data');
+     const actual=JSON.parse(latest);
+     // Old shared save() can return false if a UI/audio callback throws after
+     // ok:true. Require the exact committed state, not a toast/boolean.
+     confirmed=actual&&actual.schema===1&&Array.isArray(actual.records)&&
+       canonicalSavedValue(actual)===canonicalSavedValue(JSON.parse(JSON.stringify(state)));
+    }
+    if(!confirmed)throw Error('Dodatečné sloučení nebylo potvrzeno; rozpracované změny zůstaly zachovány');
+   }catch(error){
+    state=saved.state;persistedSnapshot=saved.snapshot;
+    current=saved.current;noteActive=saved.noteActive;window.__detailParent=saved.detail;
+    throw error;
+   }
+   // All data operations are now complete: adopt only currently durable bytes.
+   const committed=JSON.parse(latest);
+   state=committed;state.prefs=prefs;persistedSnapshot=latest;
+   const bind=active=>{
+    if(!active)return active;
+    const target=state.records.find(r=>r.id===active.id&&r.rev===active.rev)||
+      state.records.find(r=>r.conflictOf===active.id&&r.rev===active.rev)||
+      state.records.find(r=>r.id===active.id)||null;
+    if(target&&sameSavedValue(active,target)){
+     state.records[state.records.indexOf(target)]=active;
+     return active;
+    }
+    return target;
+   };
+   current=bind(saved.current);noteActive=bind(saved.noteActive);
+   window.__detailParent=bind(saved.detail);
+   render=true;
   }
-  const conflicts=result.data?state.records.filter(r=>r.conflict).length:0;
-  if(result.transport==='cloud-v2'&&typeof window.ZamerovacSyncStatus?.cloud==='function'){
-   // The Native CAS above already confirmed the received data. A status
-   // presenter/toast exception must not turn that durable ACK into failure
-   // or skip the independent retained-conflicts update.
-   let handled=false;
-   try{handled=window.ZamerovacSyncStatus.cloud(result)===true}
-   catch(error){handled=true;console.warn('Synchronizační stav mraku nelze zobrazit')}
-   if(result.data)try{window.ZamerovacSyncStatus?.conflicts?.(state.records.filter(r=>r&&r.conflict===true))}
-   catch(error){console.warn('Synchronizační upozornění na konflikty nelze zobrazit')}
-   if(handled)return true;
-  }
-  notify((result.message||'Synchronizace dokončena')+(conflicts?' · zachované konfliktní kopie: '+conflicts:''));return true;
- }catch(e){notify('Synchronizace: '+e.message);return false}
+ }catch(error){
+  warn('Synchronizace: '+error.message);
+  return false; // data/JS CAS failure, not an optional presentation error
+ }
+ // DATA/ACK BOUNDARY: no UI can change the confirmed local result.
+ const copies=result.data?state.records.filter(r=>r&&r.conflict===true):[];
+ if(result.transport==='cloud-v2'&&typeof window.ZamerovacSyncStatus?.cloud==='function'){
+  try{window.ZamerovacSyncStatus.cloud(result)}
+  catch(error){badUI=true;console.warn('Synchronizační stav mraku nelze zobrazit')}
+  if(result.data)try{window.ZamerovacSyncStatus?.conflicts?.(copies)}
+  catch(error){badUI=true;console.warn('Synchronizační upozornění na konflikty nelze zobrazit')}
+ }else{
+  try{notify((result.message||'Synchronizace dokončena')+(copies.length?' · zachované konfliktní kopie: '+copies.length:''))}
+  catch(error){badUI=true;console.warn('Synchronizační hlášku nelze zobrazit')}
+ }
+ if(render)try{
+  if(screen==='browser')showFolder();
+  else if(screen==='editor'&&current)$('editorTitle').textContent=current.title;
+ }catch(error){badUI=true;console.warn('Přehled synchronizovaných změn nelze zobrazit')}
+ if(badUI)window.__syncViewNeedsRefresh=true;
+ return true;
 };
 window.onLaserValue=(value,unit)=>{
  // Přenos mimo editor: uložit poslední přijatou hodnotu do paměti.
