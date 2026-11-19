@@ -1,5 +1,5 @@
 'use strict';
-const {execFileSync,spawnSync}=require('node:child_process');
+const {spawnSync}=require('node:child_process');
 const {mkdtempSync,writeFileSync,rmSync}=require('node:fs');
 const {tmpdir}=require('node:os');
 const path=require('node:path');
@@ -23,14 +23,20 @@ try{
  const push=adb('push',local,remote);assert.equal(push.status,0,'ADB staging failed');
  const result=adb('shell','content','insert','--uri',uriRoot,'--bind','_display_name:s:pr220-probe.png','--bind','mime_type:s:image/png','--bind','relative_path:s:Pictures/');
  const output=(result.stdout||'').trim();
- uri=/^Inserted (content:\/\/media\/external\/images\/media\/\d+)$/.exec(output)?.[1];
- console.log(JSON.stringify({phase:'insert',exit:result.status,stdoutClass:uri?'expected-uri':output===''?'empty':/^Inserted /.test(output)?'other-insert':'other',stdoutLength:output.length,stderrClass:result.stderr?.trim()?'present':'empty'}));
- if(result.status!==0||!uri)process.exitCode=1;
+ console.log(JSON.stringify({phase:'insert',exit:result.status,stdoutClass:output===''?'empty':/^Inserted /.test(output)?'insert-message':'other',stdoutLength:output.length,stderrClass:result.stderr?.trim()?'present':'empty'}));
+ if(result.status!==0)process.exitCode=1;
  else{
-  const write=adb('shell','sh','-c','content write --uri '+uri+' < '+remote);
-  const query=adb('shell','content','query','--uri',uri);
-  console.log(JSON.stringify({phase:'write-query',writeExit:write.status,queryExit:query.status,listed:query.stdout?.includes('pr220-probe.png')}));
-  if(write.status!==0||query.status!==0||!query.stdout?.includes('pr220-probe.png'))process.exitCode=1;
+  const lookup=adb('shell','content','query','--uri',uriRoot,'--projection','_id:_display_name','--where',"_display_name='pr220-probe.png'");
+  const ids=[...(lookup.stdout||'').matchAll(/^Row: \d+ _id=(\d+), _display_name=pr220-probe\.png$/gm)].map(x=>x[1]);
+  console.log(JSON.stringify({phase:'lookup',exit:lookup.status,matches:ids.length}));
+  if(lookup.status!==0||ids.length!==1)process.exitCode=1;
+  else{
+   uri=uriRoot+'/'+ids[0];
+   const write=adb('shell','sh','-c','content write --uri '+uri+' < '+remote);
+   const query=adb('shell','content','query','--uri',uri);
+   console.log(JSON.stringify({phase:'write-query',writeExit:write.status,queryExit:query.status,listed:query.stdout?.includes('pr220-probe.png')}));
+   if(write.status!==0||query.status!==0||!query.stdout?.includes('pr220-probe.png'))process.exitCode=1;
+  }
  }
 }finally{
  if(uri)adb('shell','content','delete','--uri',uri);

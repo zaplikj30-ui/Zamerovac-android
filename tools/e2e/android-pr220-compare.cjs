@@ -11,13 +11,22 @@ const {tool,drag,projected,editSelected,midpoint}=require('./harness.cjs');
 
 const filename='pr220-synthetic.png';
 const remote='/data/local/tmp/'+filename;
+const mediaRoot='content://media/external/images/media';
+function mediaUri(adb,name){
+ const rows=adb('shell','content','query','--uri',mediaRoot,'--projection','_id:_display_name',
+  '--where',"_display_name='"+name+"'");
+ const ids=[...rows.matchAll(/^Row: \d+ _id=(\d+), _display_name=([^\r\n,]+)$/gm)]
+  .filter(row=>row[2]===name).map(row=>row[1]);
+ assert.equal(ids.length,1,'Expected exactly one synthetic MediaStore image');
+ return mediaRoot+'/'+ids[0];
+}
 function stageImage(adb,local){
  adb('push',local,remote);
- const inserted=adb('shell','content','insert','--uri','content://media/external/images/media',
+ adb('shell','content','insert','--uri',mediaRoot,
   '--bind','_display_name:s:'+filename,'--bind','mime_type:s:image/png',
   '--bind','relative_path:s:Pictures/');
- const uri=/^Inserted (content:\/\/media\/external\/images\/media\/\d+)$/.exec(inserted)?.[1];
- assert(uri,'MediaStore did not return an image URI');
+ // Android 13 content CLI may succeed silently; query the inserted row by fixed name.
+ const uri=mediaUri(adb,filename);
  try{
   adb('shell','sh','-c','content write --uri '+uri+' < '+remote);
   assert(adb('shell','content','query','--uri',uri).includes(filename),'Staged image absent from MediaStore');
@@ -204,4 +213,4 @@ async function compare({device,adb,open,apks}){
  }
 }
 
-module.exports={compare,fixture,stageImage,selectStagedImage};
+module.exports={compare,fixture,stageImage,selectStagedImage,mediaUri};
