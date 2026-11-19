@@ -650,7 +650,10 @@ window.onNativeSync=(text)=>{
   if(screen==='browser')showFolder();
   else if(screen==='editor'&&current)$('editorTitle').textContent=current.title;
  }catch(error){badUI=true;console.warn('Přehled synchronizovaných změn nelze zobrazit')}
- if(badUI)window.__syncViewNeedsRefresh=true;
+ if(badUI){
+  window.__syncViewNeedsRefresh=true;
+  warn('Data jsou místně uložená, ale zobrazení se nepodařilo obnovit. Otevři stav synchronizace.');
+ }
  return true;
 };
 window.onLaserValue=(value,unit)=>{
