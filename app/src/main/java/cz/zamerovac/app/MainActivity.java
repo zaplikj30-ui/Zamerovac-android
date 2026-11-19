@@ -37,6 +37,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Trace;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.provider.MediaStore;
@@ -783,22 +784,43 @@ public class MainActivity extends Activity {
         // Legacy Java test/setup entry only. WebView must use acknowledged compare-and-save.
         public boolean saveData(String text){try{writeDb(text);return true;}catch(Exception e){error("Uložení: "+e.getMessage());return false;}}
         @JavascriptInterface public String saveDataChecked(String text,String expected){
-            synchronized(TrashPurger.LOCK){
-                try{
-                    // Fail closed for stale backup, corrupt primary and lost initialized DB.
-                    String current=readDbForCas();
-                    if(!current.equals(expected)){
-                        // Missing files are an I/O failure, never a valid empty CAS snapshot.
-                        if(current.isEmpty())throw new IOException("Databáze není dostupná pro porovnání");
-                        return new JSONObject().put("ok",false).put("current",current).toString();
-                    }
-                    writeDb(text);lastUiGeneration=LocalDatabase.generation(getFilesDir());
-                    // The project commit has already succeeded. A journal failure cannot roll it back.
-                    try{int pending=new PendingAudio(new File(getFilesDir(),"media"),settings).recoverPrimary().length();return new JSONObject().put("ok",true).put("audioPending",pending>0).put("pendingAudioCount",pending).toString();}
-                    catch(Exception uncertainty){return "{\"ok\":true,\"audioPending\":true}";}
+            // #195: diagnostic Perfetto slices in debuggable builds only.
+            // Static labels only: no names, IDs, JSON, paths, or media bytes.
+            final boolean perf=BuildConfig.DEBUG;
+            if(perf)Trace.beginSection("Z195-bridge");
+            try {
+                if(perf)Trace.beginSection("Z195-lock-wait");
+                synchronized(TrashPurger.LOCK){
+                    if(perf)Trace.endSection();
+                    try{
+                        // Fail closed for stale backup, corrupt primary and lost initialized DB.
+                        String current;
+                        if(perf)Trace.beginSection("Z195-readDb");
+                        try{current=readDbForCas();}
+                        finally{if(perf)Trace.endSection();}
+                        if(!current.equals(expected)){
+                            // Missing files are an I/O failure, never a valid empty CAS snapshot.
+                            if(current.isEmpty())throw new IOException("Databáze není dostupná pro porovnání");
+                            return new JSONObject().put("ok",false).put("current",current).toString();
+                        }
+                        if(perf)Trace.beginSection("Z195-writeDb");
+                        try{writeDb(text);}
+                        finally{if(perf)Trace.endSection();}
+                        if(perf)Trace.beginSection("Z195-generation");
+                        try{lastUiGeneration=LocalDatabase.generation(getFilesDir());}
+                        finally{if(perf)Trace.endSection();}
+                        // The project commit has already succeeded. A journal failure cannot roll it back.
+                        try{
+                            int pending;
+                            if(perf)Trace.beginSection("Z195-recoverPrimary");
+                            try{pending=new PendingAudio(new File(getFilesDir(),"media"),settings).recoverPrimary().length();}
+                            finally{if(perf)Trace.endSection();}
+                            return new JSONObject().put("ok",true).put("audioPending",pending>0).put("pendingAudioCount",pending).toString();
+                        }catch(Exception uncertainty){return "{\"ok\":true,\"audioPending\":true}";}
 
-                }catch(Exception e){try{return new JSONObject().put("ok",false).put("error","Uložení se nezdařilo; poslední potvrzená data zůstávají chráněná. "+e.getMessage()).toString();}catch(Exception ignored){return "{}";}}
-            }
+                    }catch(Exception e){try{return new JSONObject().put("ok",false).put("error","Uložení se nezdařilo; poslední potvrzená data zůstávají chráněná. "+e.getMessage()).toString();}catch(Exception ignored){return "{}";}}
+                }
+            }finally{if(perf)Trace.endSection();}
         }
         @JavascriptInterface public boolean beginMedia(String id,String mime,String name){return beginMediaChecked(id,mime,name,-1);}
         @JavascriptInterface public boolean beginMediaChecked(String id,String mime,String name,long expected){
