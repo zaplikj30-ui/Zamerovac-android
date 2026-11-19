@@ -789,10 +789,15 @@ public class MainActivity extends Activity {
             final boolean perf=BuildConfig.DEBUG;
             if(perf)Trace.beginSection("Z195-bridge");
             try {
+                boolean lockWaitOpen=perf;
                 if(perf)Trace.beginSection("Z195-lock-wait");
-                synchronized(TrashPurger.LOCK){
-                    if(perf)Trace.endSection();
-                    try{
+                try {
+                    synchronized(TrashPurger.LOCK){
+                        if(perf){
+                            lockWaitOpen=false;
+                            Trace.endSection();
+                        }
+                        try{
                         // Fail closed for stale backup, corrupt primary and lost initialized DB.
                         String current;
                         if(perf)Trace.beginSection("Z195-readDb");
@@ -818,7 +823,11 @@ public class MainActivity extends Activity {
                             return new JSONObject().put("ok",true).put("audioPending",pending>0).put("pendingAudioCount",pending).toString();
                         }catch(Exception uncertainty){return "{\"ok\":true,\"audioPending\":true}";}
 
-                    }catch(Exception e){try{return new JSONObject().put("ok",false).put("error","Uložení se nezdařilo; poslední potvrzená data zůstávají chráněná. "+e.getMessage()).toString();}catch(Exception ignored){return "{}";}}
+                        }catch(Exception e){try{return new JSONObject().put("ok",false).put("error","Uložení se nezdařilo; poslední potvrzená data zůstávají chráněná. "+e.getMessage()).toString();}catch(Exception ignored){return "{}";}}
+                    }
+                }finally{
+                    // If monitor entry failed, close the wait slice before bridge.
+                    if(lockWaitOpen)Trace.endSection();
                 }
             }finally{if(perf)Trace.endSection();}
         }
