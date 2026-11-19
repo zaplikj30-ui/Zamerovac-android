@@ -82,7 +82,7 @@ function build(){
    const label=node.querySelector?.('span')?.textContent?.trim()||node.textContent?.trim()||'Nastavení';
    // Only the actual control and its narrow subsection are searchable.
    // A category-wide keyword would make unrelated controls false positives.
-   const synonym=group==='Zálohy a obnova'?' záloha':'';
+   const synonym=group==='Zálohy a obnova'?' záloha':node.id==='openPendingAudioRecovery'?' nahrávky':'';
    entries.push({node,category,label,group,terms:clean(label+' '+group+synonym)});
   }
  }
