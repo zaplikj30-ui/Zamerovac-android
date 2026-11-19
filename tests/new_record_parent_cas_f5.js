@@ -99,7 +99,7 @@ function scene(initial=seed){
   return false;
  };
  vm.createContext(env);
- vm.runInContext(production+'\nwindow.__f5={save,reconcileSavedState,newRecord,persistNewRecord,addRecord,pickMedia,addMediaRecord,recById,canWriteToFolder};',env,{filename:'production-app.js-F5'});
+ vm.runInContext(production+'\nwindow.__f5={save,reconcileSavedState,newRecord,persistNewRecord,addRecord,pickMedia,addMediaRecord,recById,canWriteToFolder,candidateAllowsNewRecord};',env,{filename:'production-app.js-F5'});
  Object.assign(env,env.window.__f5);
  return {
   env,notices,requests,views,journal,
@@ -159,23 +159,6 @@ function refused(s,result){
 const ok=[],failed=[];
 async function check(label,fn){try{await fn();ok.push(label)}catch(e){failed.push(label+': '+e.message)}}
 const f5Results=[];
-async function f5(){
- for(const change of ['race-delete','race-lock']){
-  for(const kind of ['folder','canvas','note','media']){
-   const s=scene();s.mode=change;
-   const added=await create(s,kind,'F5 '+change+' '+kind);
-   assert.equal(s.races,1,'Native must force a genuine CAS conflict');
-   const child=childRecords(s.disk)[0],parent=s.disk.records.find(r=>r.id==='parent');
-   const eligible=!!parent&&!parent.deleted&&!parent.locked;
-   const safe=added?(s.acks===1&&!!child&&eligible&&child.parentId===parent.id):
-    (s.acks===0&&!child&&childRecords(s.env.state).length===0);
-   f5Results.push({change,kind,ack:s.acks,added:!!added,child:child?.id||null,
-    parentDeleted:!!parent?.deleted,parentLocked:!!parent?.locked,safe});
-   assert.equal(safe,true,'F5 child committed under inaccessible parent');
-   refused(s,added);
-  }
- }
-}
 const extras=async()=>{
  await check('root folder',async()=>{const s=scene();s.env.currentFolder=null;committed(s,await create(s,'folder'),null)});
  await check('live parent',async()=>{const s=scene();committed(s,await create(s,'canvas'),'parent')});
@@ -224,6 +207,40 @@ const extras=async()=>{
   assert(persisted.some(r=>r.title==='third'));
   assert(!persisted.some(r=>r.title==='rejected'));
   unchanged(s);
+ });
+ await check('candidate guard rejects duplicate IDs and silent reparenting',async()=>{
+  const s=scene(),r=s.env.newRecord('note','Draft');
+  const candidate=deep(s.env.state),intent={id:r.id,kind:r.kind,parentId:r.parentId};
+  candidate.records.push(deep(r));
+  assert.equal(s.env.candidateAllowsNewRecord(candidate,intent),true);
+  const duplicate=deep(candidate);duplicate.records.push(deep(r));
+  assert.equal(s.env.candidateAllowsNewRecord(duplicate,intent),false);
+  const moved=deep(candidate);moved.records.find(x=>x.id===r.id).parentId=null;
+  assert.equal(s.env.candidateAllowsNewRecord(moved,intent),false);
+ });
+ await check('candidate guard rejects kind, tombstone and unstable ancestor',async()=>{
+  const s=scene(),r=s.env.newRecord('folder','Draft');
+  const baseline=deep(s.env.state),intent={id:r.id,kind:r.kind,parentId:r.parentId};
+  baseline.records.push(deep(r));
+  const wrongKind=deep(baseline);wrongKind.records.find(x=>x.id==='parent').kind='note';
+  assert.equal(s.env.candidateAllowsNewRecord(wrongKind,intent),false);
+  const tombstone=deep(baseline);tombstone.syncTombstones={parent:{}};
+  assert.equal(s.env.candidateAllowsNewRecord(tombstone,intent),false);
+  const purged=deep(baseline);purged.trashPurgedIds=['parent'];
+  assert.equal(s.env.candidateAllowsNewRecord(purged,intent),false);
+  const uncertain=deep(baseline);uncertain.records.find(x=>x.id==='parent').hierarchyConflict={parentId:'old'};
+  assert.equal(s.env.candidateAllowsNewRecord(uncertain,intent),false);
+ });
+ await check('candidate guard rejects unsafe parent types and cycles',async()=>{
+  const s=scene(),r=s.env.newRecord('folder','Draft');
+  const baseline=deep(s.env.state),intent={id:r.id,kind:r.kind,parentId:r.parentId};
+  baseline.records.push(deep(r));
+  for(const parentId of ['',42,{},'absent']){
+   const bad=deep(baseline);bad.records.find(x=>x.id==='parent').parentId=parentId;
+   assert.equal(s.env.candidateAllowsNewRecord(bad,intent),false);
+  }
+  const cycle=deep(baseline);cycle.records.find(x=>x.id==='parent').parentId='parent';
+  assert.equal(s.env.candidateAllowsNewRecord(cycle,intent),false);
  });
  await check('next save/reload keeps remote parent and originals',async()=>{
   const s=scene();s.mode='race-delete';
