@@ -99,7 +99,7 @@ function scene(fault='none'){
  vm.runInContext(presenter,env,{filename:'sync-status.js'});
  vm.runInContext(production,env,{filename:'actual-app-sync-cas.js'});
  window.ZamerovacSyncStatus.peerState({peers:{trusted:{}}});
- return {window,nodes,notices,seen,remote,
+ return {window,nodes,notices,seen,old,remote,
   get disk(){return JSON.parse(disk)},get acks(){return acks},get attempts(){return attempts},
   get snapshot(){return JSON.parse(window.__f4.snapshot())},
   get ram(){return window.__f4.state()},
