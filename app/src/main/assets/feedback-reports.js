@@ -34,7 +34,7 @@
    return false;
   }
  };
- const q=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const q=s=>String(typeof s==='string'||typeof s==='number'?s:'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const now=()=>new Date().toISOString();
  const makeId=()=>typeof uid==='function'?uid():'f-'+Date.now()+'-'+Math.random().toString(36).slice(2);
  const videoName=v=>typeof v==='string'?v:v?.name||'Video obrazovky';
@@ -130,8 +130,12 @@
  function summary(r){
   const title=typeof r.title==='string'?r.title:'';
   const description=typeof r.description==='string'?r.description:'';
+  const screen=typeof r.screen==='string'?r.screen:'';
+  const rawDate=typeof r.createdAt==='string'?r.createdAt:'';
+  const date=rawDate&&!Number.isNaN(Date.parse(rawDate))?
+   new Date(rawDate).toLocaleDateString('cs-CZ'):'Datum neuvedeno';
   return '<div class="feedback-card-title">'+q(title||description.slice(0,65)||'(Bez popisu)')+'</div>'+
-    '<small>'+q(r.type==='bug'?'Chyba':'Změna')+' · '+q(r.screen||'')+' · '+q(new Date(r.createdAt).toLocaleDateString('cs-CZ'))+
+    '<small>'+q(r.type==='bug'?'Chyba':'Změna')+' · '+q(screen)+' · '+q(date)+
     (r.resolved?' · Vyřešeno':'')+'</small>';
  }
  function selectedReports(){
