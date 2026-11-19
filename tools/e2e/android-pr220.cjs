@@ -25,8 +25,12 @@ function preview(tree){
  console.log('APK digest',tree,exec('sha256sum',[apk]).split(/\s/)[0]);
  return apk;
 }
+function assertInstall(output){
+ assert.match(output,/^(?:Performing (?:Streamed|Push) Install\r?\n)?Success$/,'ADB installation did not report success');
+}
 async function open(device,apk){
- assert.equal(adb('install','-r','-t',apk),'Success');
+ assertInstall(adb('install','-r','-t',apk));
+ assert.match(adb('shell','pm','path',pkg),/^package:\/[^\r\n]+\.apk(?:\r?\npackage:\/[^\r\n]+\.apk)*$/,'Installed preview package missing');
  assert.equal(adb('shell','pm','clear',pkg),'Success');
  assert.match(adb('shell','am','start','-W','-n',pkg+'/cz.zamerovac.app.MainActivity'),/^Status: ok$/m);
  const webview=await device.webView({pkg},{timeout:20000});
