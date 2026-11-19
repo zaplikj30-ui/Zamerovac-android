@@ -173,6 +173,90 @@ if(mode==='cas-refusal'||mode==='all'){
  const s=scene('cas-refusal');
  assert.equal(send(s),false,'F4 rejected additional JS CAS must not claim confirmed local reconciliation');
  assert.equal(s.acks,0);
- assert.doesNotMatch(s.details,/Zachované konfliktní kopie/);
- console.log('PASS F4 pre-ACK additional CAS refusal: no false local confirmation');
+ assert.equal(s.snapshot.records.some(r=>r.id==='conflict-1'),false,
+  'Refused local merge must not advance the JS CAS baseline');
+ assert.match(s.details,/Zachované konfliktní kopie: 1/,
+  'Native already stored this conflict; explicit cloud tap must not hide it');
+ console.log('PASS F4 pre-ACK JS-CAS refusal: draft baseline unchanged, native conflict still visible');
+}
+
+if(mode==='edge'||mode==='all'){
+ const dirty=s=>{
+  const draft=s.ram.records.find(r=>r.id==='note-1');
+  draft.title='Local unsaved editor draft';
+  draft.rev='local-draft-rev';
+  draft.syncClock={'00000000-0000-4000-8000-000000000001':1};
+  s.window.__f4.setCurrent(draft);
+  s.env.screen='editor';
+  s.env.editStack=[{id:'undo-draft',measure:'1585,800001234567890'}];
+  s.env.redoStack=[{id:'redo-draft',measure:'55,00000000001'}];
+  return draft;
+ };
+ // P4: native sync changed a different record. Preserve a real local dirty
+ // editor through concurrent CAS, and only acknowledge an actual disk commit.
+ const s=scene(),draft=dirty(s);
+ assert.equal(send(s),true,'P4: dirty editor plus remote conflict must be confirmed');
+ assert.equal(s.acks,1,'P4: actual dirty edit needs a confirmed Native JS CAS');
+ assert.equal(s.disk.records.find(r=>r.id==='note-1').title,'Local unsaved editor draft');
+ assert.equal(s.snapshot.records.find(r=>r.id==='note-1').title,'Local unsaved editor draft');
+ assert.equal(s.ram.records.find(r=>r.id==='note-1').title,'Local unsaved editor draft');
+ assert.equal(s.current,draft,'P4: unchanged live editor identity must be retained');
+ assert.equal(s.env.editStack.length,1,'P4: Undo draft lost');
+ assert.equal(s.env.redoStack.length,1,'P4: Redo draft lost');
+ intact(s);
+ const firstAcks=s.acks;
+ assert.equal(send(s,clone(s.old)),true,'P4: stale callback must read current Native disk');
+ assert.equal(s.acks,firstAcks,'P4: repeated callback must not duplicate confirmed CAS');
+ assert.equal(s.disk.records.filter(r=>r.id==='conflict-1').length,1,'P4: duplicate conflict ID');
+ assert.match(s.details,/Zachované konfliktní kopie: 1/);
+ console.log('PASS F4 P4 dirty editor, confirmed CAS, stale/repeated callback, exact IDs, Undo/Redo');
+ // Pre-ACK disk full must not mutate references, lose a local draft or
+ // produce a false status confirmation.
+ const rejected=scene('disk-full'),ref=dirty(rejected);
+ const baseline=clone(rejected.snapshot);
+ assert.equal(send(rejected),false,'P4: disk-full JS CAS must fail closed');
+ assert.equal(rejected.acks,0);
+ assert.equal(rejected.current,ref,'P4: pre-ACK failure changed active editor object');
+ assert.equal(rejected.ram.records[0].title,'Local unsaved editor draft');
+ assert.deepEqual(rejected.snapshot,baseline,'P4: rejected candidate poisoned persistedSnapshot');
+ assert.equal(rejected.env.editStack.length,1);
+ assert.equal(rejected.env.redoStack.length,1);
+ console.log('PASS F4 P4 dirty pre-ACK CAS refusal preserves draft + snapshot and Undo/Redo');
+ // Native load failure/corruption must not publish a false merge.
+ for(const fault of ['load-throw','duplicate-ids']){
+  const x=scene(fault),ref=dirty(x),base=clone(x.snapshot);
+  assert.equal(send(x),false,'P5: invalid native '+fault+' cannot succeed');
+  assert.equal(x.acks,0);assert.deepEqual(x.snapshot,base);
+  assert.equal(x.current,ref);assert.equal(x.ram.records[0].title,'Local unsaved editor draft');
+ }
+ console.log('PASS F4 P5 Native.loadData throw and duplicate IDs');
+ // A genuinely concurrent third writer between disk read and JS CAS must
+ // survive the existing shared save()/reconcile retry.
+ const raced=scene('race-read-cas');dirty(raced);
+ assert.equal(send(raced),true,'P4: concurrent writer between read and CAS lost');
+ assert.equal(raced.acks,1,'P4: expected confirmed CAS after conflict retry');
+ assert(raced.attempts>=2,'P4: CAS conflict branch was not exercised');
+ assert.equal(raced.disk.records.filter(r=>r.id==='peer-new').length,1);
+ assert.equal(raced.disk.records.find(r=>r.id==='note-1').title,'Local unsaved editor draft');
+ assert.equal(raced.disk.records.filter(r=>r.id==='conflict-1').length,1);
+ console.log('PASS F4 P4 concurrent read/CAS update retained and confirmed');
+ // Exhausted CAS retries: new Native disk data exist, but the JS dirty draft
+ // must not be silently acknowledged, overwritten or discarded.
+ const exhausted=scene('retry-exhausted'),r=dirty(exhausted),expected=clone(exhausted.snapshot);
+ assert.equal(send(exhausted),false,'P5: exhausted CAS retry cannot report local success');
+ assert.equal(exhausted.acks,0);assert(exhausted.attempts>=3);
+ assert.equal(exhausted.current,r,'P5: retry failure lost active editor');
+ assert.equal(exhausted.ram.records[0].title,'Local unsaved editor draft');
+ assert.deepEqual(exhausted.snapshot,expected,'P5: retry failure changed local CAS baseline');
+ assert.equal(exhausted.disk.records.filter(row=>row.id.startsWith('peer-')).length,3);
+ console.log('PASS F4 P5 exhausted retry retains local draft without overwriting native newer data');
+ // P5: a post-ACK warning must not label a durable write as uncommitted.
+ const audio=scene('post-ack-audio');dirty(audio);
+ assert.equal(send(audio),true,'P5: pending-audio callback after acknowledged CAS cannot invalidate durable data');
+ assert.equal(audio.acks,1,'P5: Native did not actually commit');
+ assert.equal(audio.disk.records[0].title,'Local unsaved editor draft');
+ assert.equal(audio.snapshot.records[0].title,'Local unsaved editor draft');
+ assert(!audio.notices.some(s=>/^Neuloženo:/.test(s)),
+  'P5: post-ACK PendingAudio UI fault incorrectly displayed Neuloženo');
+ console.log('PASS F4 P5 post-ACK PendingAudio exception has truthful user-visible status');
 }
