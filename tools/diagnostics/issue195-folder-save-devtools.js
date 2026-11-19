@@ -9,7 +9,8 @@
  const title=document.getElementById('modalTitle');
  const button=document.getElementById('okModal');
  const originalSave=window.save,originalFolder=window.showFolder;
- if(!modal||!title||!button||typeof originalSave!=='function'||typeof originalFolder!=='function')
+ if(!modal||!title||!button||typeof button.onclick!=='function'||
+    typeof originalSave!=='function'||typeof originalFolder!=='function')
   throw Error('Z195: required folder form/save/render not available');
  // JS return does NOT prove Native durability when a post-ACK callback fails.
  const samples=[];
@@ -35,9 +36,13 @@
    clickToShowFolderStartMs:null,clickToTwoFramesMs:null,
    saveStarted:false,reported:false};
   active=ticket;
-  // promptText either performs save synchronously or rejects the input.
-  // A rejected click must not capture the next unrelated browser task.
-  queueMicrotask(()=>{if(active===ticket&&!ticket.saveStarted)active=null});
+  // A later, noncapturing listener will check the synchronous modal action.
+  // The existing app.js onclick was registered before this DevTools helper.
+ };
+ const afterClick=()=>{
+  // Runs after the production onclick on this button. Unlike a microtask,
+  // this check is part of the very same event dispatch.
+  if(!stopped&&active&&!active.saveStarted)active=null;
  };
  const saveWrapper=function(...args){
   const ticket=stopped?null:active,started=now();
@@ -75,10 +80,12 @@
  };
  window.save=saveWrapper;window.showFolder=folderWrapper;
  button.addEventListener('click',onClick,true);
+ button.addEventListener('click',afterClick,false);
  const stop=()=>{
   if(stopped)return;
   stopped=true;active=null;
   button.removeEventListener('click',onClick,true);
+  button.removeEventListener('click',afterClick,false);
   if(window.save===saveWrapper)window.save=originalSave;
   if(window.showFolder===folderWrapper)window.showFolder=originalFolder;
   delete window.__z195FolderProbe;
