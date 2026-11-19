@@ -41,7 +41,7 @@ function scene(fault='none',restartData=null){
  const notices=[],nodes=new Map(),seen=[];
  let mode=fault;
  function node(id){
-  if(id==='pendingAudioBanner'&&mode==='frozen-audio-error'&&acks>0)
+  if(id==='pendingAudioBanner'&&(mode==='frozen-audio-error'||mode==='frozen-double-fault')&&acks>0)
    throw Error('synthetic frozen PendingAudio.saved UI failure after Native ACK');
   if(id==='saveErrorBanner'&&mode==='save-banner-throw'&&acks>0)
    throw Error('synthetic post-ACK save banner DOM failure');
@@ -58,7 +58,7 @@ function scene(fault='none',restartData=null){
  const Native={
   loadData(){
    reads++;
-   if(acks>0&&mode==='post-ack-read-throw')
+   if(acks>0&&(mode==='post-ack-read-throw'||mode==='frozen-double-fault'))
     throw Error('synthetic second Native.loadData unavailable after CAS ACK');
    if(acks>0&&mode==='post-ack-read-invalid-json')return '{"schema":';
    if(acks>0&&mode==='post-ack-read-invalid-schema')
@@ -103,7 +103,7 @@ function scene(fault='none',restartData=null){
    disk=text;acks++;
    // Native first ACK is durable. Before the callback reads Native again,
    // an independent peer makes a second confirmed change.
-   if(mode==='post-ack-peer'){
+   if(mode==='post-ack-peer'||mode==='frozen-peer-after-ack'){
     const newer=JSON.parse(disk);
     newer.records.push({id:'peer-post-ack',kind:'note',rev:'peer-rev-new',
      title:'Novější souběžná změna',parentId:null,deleted:false,
@@ -548,4 +548,40 @@ if(['frozen-audio','frozen-audio-error','frozen-cas-refusal'].includes(mode)){
    ['immutable-origin-media-id']);
  }
  console.log('PASS production immutable PendingAudio '+mode);
+}
+
+if(['frozen-double-fault','frozen-peer-after-ack'].includes(mode)){
+ const s=scene(mode),audio=s.window.PendingAudio,live=s.ram.records[0];
+ live.title='Frozen ACK recovery draft';live.rev='immutable-combined-rev';
+ s.window.__f4.setCurrent(live);s.window.__f4.setNote(live);s.env.screen='editor';
+ const complete=send(s);
+ assert.equal(complete,false,'Unverified Native follow-up or peer race cannot claim full merge');
+ assert.equal(s.acks,1,'Frozen API may not block first Native CAS');
+ assert.equal(s.snapshot.records[0].title,'Frozen ACK recovery draft',
+  'Confirmed snapshot was rolled back despite frozen API');
+ assert.equal(s.ram.records[0].title,'Frozen ACK recovery draft');
+ assert.equal(s.current,live);
+ assert.equal(s.window.PendingAudio,audio,'Frozen production API identity changed');
+ assert(Object.isFrozen(audio));
+ assert.equal(s.status.phase,'pending');
+ assert.equal(s.window.__syncViewNeedsRefresh,true);
+ assert.deepEqual(s.snapshot.records[0].media,['immutable-origin-media-id']);
+ assert.equal(s.snapshot.records[0].items[0].laserMeasuredMm,'1585.800001234567890');
+ if(mode==='frozen-double-fault'){
+  assert(s.notices.some(n=>/místní zápis potvrzen/i.test(n)&&/nelze ověřit/i.test(n)),
+   'Two failures after ACK must show Native-unverified warning');
+ }else{
+  assert.equal(s.disk.records.filter(r=>r.id==='peer-post-ack').length,1);
+  assert(s.notices.some(n=>/místní zápis potvrzen/i.test(n)&&/novější|mezitím/i.test(n)));
+ }
+ s.fault='none';
+ s.ram.records[0].title='After combined frozen recovery';
+ assert.equal(s.window.__f4.save(),true,'Next save after frozen post-ACK fault');
+ assert.equal(s.disk.records[0].title,'After combined frozen recovery');
+ if(mode==='frozen-peer-after-ack')
+  assert.equal(s.disk.records.filter(r=>r.id==='peer-post-ack').length,1);
+ const reboot=scene('frozen-audio',s.disk);
+ assert.equal(send(reboot,clone(reboot.old)),true,'Frozen module restart must adopt Native');
+ assert.equal(reboot.snapshot.records[0].title,'After combined frozen recovery');
+ console.log('PASS immutable combined post-ACK '+mode);
 }
