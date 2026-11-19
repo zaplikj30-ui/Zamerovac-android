@@ -11,7 +11,16 @@ async function actions(page,title){
 }
 async function trash(page){await page.click('#back');await page.locator('#navMenu .appMenuItem').filter({hasText:'Koš'}).click()}
 async function png(page,color='#a0a0a0',width=800,height=600){return Buffer.from(await page.evaluate(({color,width,height})=>{const c=document.createElement('canvas');c.width=width;c.height=height;c.getContext('2d').fillStyle=color;c.getContext('2d').fillRect(0,0,width,height);return c.toDataURL('image/png').split(',')[1]},{color,width,height}),'base64')}
-async function upload(page,name,color,width,height){const buffer=await png(page,color,width,height);await chooseFiles(page,'#galleryBtn',{name,mimeType:'image/png',buffer});await page.waitForFunction(()=>screen==='editor'&&!!stageImg);return buffer}
+async function upload(page,name,color,width,height){
+ const buffer=await png(page,color,width,height);
+ // The footer quick action remembers the LAST confirmed add (e.g. a folder).
+ // Import through the stable + menu; still exercise Chromium's real filechooser.
+ const chooser=page.waitForEvent('filechooser');
+ await add(page,'Importovat obrázek / PDF / video');
+ await (await chooser).setFiles({name,mimeType:'image/png',buffer});
+ await page.waitForFunction(()=>screen==='editor'&&!!stageImg);
+ return buffer;
+}
 async function hashes(page){return page.evaluate(async()=>{
  const db=await mediaDb(),pairs=await new Promise((resolve,reject)=>{const tx=db.transaction('files','readonly'),store=tx.objectStore('files'),req=store.openCursor(),pairs=[];req.onerror=reject;req.onsuccess=()=>{const cursor=req.result;if(!cursor)return resolve(pairs);pairs.push([cursor.key,cursor.value]);cursor.continue()}});
  const result={};for(const [id,blob] of pairs)result[id]=Array.from(new Uint8Array(await crypto.subtle.digest('SHA-256',await blob.arrayBuffer())),x=>x.toString(16).padStart(2,'0')).join('');return result;
@@ -156,7 +165,19 @@ async function line(page,type='dimension'){
   });
  });
  await test('photo_details_nested_gallery_png_hashes',async({page,step,evidence,directory})=>{
-  await folder(page,'Fotografická zakázka');await row(page,'Fotografická zakázka').click();await upload(page,'original.png','#777777',1000,700);await line(page);
+  await folder(page,'Fotografická zakázka');await row(page,'Fotografická zakázka').click();
+  await step('Quick action after folder creation remains New folder',async()=>{
+   const before=await page.evaluate(()=>state.records.length),quick=page.locator('#galleryBtn');
+   assert.equal(await quick.getAttribute('title'),'Nová složka');
+   assert.equal(await quick.getAttribute('aria-label'),'Opakovat: Nová složka');
+   await quick.click();
+   assert.equal(await page.locator('#modalTitle').textContent(),'Nová složka');
+   assert.equal(await page.locator('#modal').isVisible(),true);
+   await page.click('#cancelModal');
+   assert.equal(await page.evaluate(()=>state.records.length),before,
+    'Cancelling repeated folder must not create a phantom folder');
+  });
+  await upload(page,'original.png','#777777',1000,700);await line(page);
   await step('Note with two real uploaded images and nested dimension',async()=>{
    await tool(page,'note');const p=await page.evaluate(()=>({x:view.dx+photoSize.w*view.zoom*.35,y:view.dy+photoSize.h*view.zoom*.65}));await drag(page,p,{x:p.x+30,y:p.y+20});await editSelected(page);await page.fill('#richText','Soukromý detail\nobě fotografie');
    const one=await png(page,'#ff0000',120,240),two=await png(page,'#0000ff',240,120);await chooseFiles(page,'#richPhotoPick',[{name:'red.png',mimeType:'image/png',buffer:one},{name:'blue.png',mimeType:'image/png',buffer:two}]);
