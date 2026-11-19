@@ -40,7 +40,8 @@ const chapters=[
     ],
     "notes": [
       "Při přesunu a přejmenování se mají zachovat kóty a přiložená média. Po složitější operaci je pro jistotu znovu otevři.",
-      "Uzamčenou složku nejdřív odemkni, teprve pak upravuj její obsah."
+      "Uzamčenou složku nejdřív odemkni, teprve pak upravuj její obsah.",
+      "Pokud jiná změna mezitím složku smaže, zamkne nebo znepřístupní, nové položky se do ní neuloží. Otevři dostupnou složku a přidání zopakuj až po kontrole; původní soubory aplikace při takovém odmítnutí automaticky nemaže."
     ],
     "keywords": [
       "zakázka",
