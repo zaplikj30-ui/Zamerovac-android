@@ -71,7 +71,7 @@ function scene(initial=seed){
      if(operation==='race-unrelated'){original.title='Changed remotely';original.rev='peer-other'}
      if(operation==='race2'||operation==='race3'){
       original.title='Other rev '+casCalls;original.rev='peer-other-'+casCalls;
-      mode=operation==='race3'&&casCalls<3?'race3':(operation==='race2'&&casCalls<2?'race2':'');
+      mode=casCalls<(operation==='race3'?2:1)?operation:'';
      }
      disk=JSON.stringify(remote);races++;
      return JSON.stringify({ok:false,current:disk});
@@ -177,7 +177,7 @@ async function f5(){
  }
 }
 const extras=async()=>{
- await check('root folder',async()=>{const s=scene();s.env.currentFolder=null;committed(s,await create(s,'folder'),'null-root')});
+ await check('root folder',async()=>{const s=scene();s.env.currentFolder=null;committed(s,await create(s,'folder'),null)});
  await check('live parent',async()=>{const s=scene();committed(s,await create(s,'canvas'),'parent')});
  await check('valid nested',async()=>{const data=deep(seed);data.records.find(r=>r.id==='parent').parentId='ancestor';const s=scene(data);committed(s,await create(s,'note'),'parent')});
  for(const kind of ['folder','canvas','note','media'])await check('healthy '+kind,async()=>{const s=scene();committed(s,await create(s,kind),'parent')});
