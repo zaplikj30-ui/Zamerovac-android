@@ -523,7 +523,7 @@ if(['frozen-audio','frozen-audio-error','frozen-cas-refusal'].includes(mode)){
   assert.equal(s.snapshot.records[0].title,'Originál');
   assert.equal(s.current,live);
  }else{
-  assert.equal(s.attempts,1,'Frozen production API must reach the real CAS path');
+  assert(s.attempts>=2,'Frozen production API must perform actual CAS conflict retry');
   assert.equal(s.acks,1,'Frozen sync merge must execute Native saveDataChecked(ok:true)');
   assert.equal(answer,true,'Frozen PendingAudio blocked expected sync CAS');
   assert.equal(s.disk.records[0].title,'Immutable audio merged draft');
