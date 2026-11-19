@@ -518,6 +518,14 @@ window.onNativePhotoAddress=(mediaId,address)=>{
 };
 window.onNativeMediaDone=token=>{if(stagedMediaRequest?.id===token)stagedMediaRequest=null};
 window.onNativeMediaProgress=(token,done,total)=>{if(stagedMediaRequest?.id===token)notify('Přidávání příloh: '+done+'/'+total)};
+// Status detail is a read-only view of the latest Native disk, not a
+// promise that a remote peer has signed an ACK for the current revision.
+window.ZamerovacSyncReadCommittedConflicts=()=>{
+ const raw=native?Native.loadData():localStorage.getItem('zamerovac-data');
+ const data=JSON.parse(raw);
+ if(!data||data.schema!==1||!Array.isArray(data.records))throw Error('Neověřená lokální data');
+ return data.records.filter(r=>r&&r.conflict===true&&!r.deleted);
+};
 window.onNativeSync=(text)=>{
  // F4: native durable data, optional confirmed JS reconciliation, then UI.
  let result,render=false,badUI=false;
@@ -533,6 +541,9 @@ window.onNativeSync=(text)=>{
       new Set(disk.records.map(r=>r.id)).size!==disk.records.length)
     throw Error('Zakázky nelze bezpečně načíst');
    const saved={state,snapshot:persistedSnapshot,current,noteActive,detail:window.__detailParent};
+   // Capture active IDs before CAS: a later faulty getter must not invalidate
+   // already confirmed bytes or force a data-loss rollback.
+   const refIds=[saved.current,saved.noteActive,saved.detail].map(a=>a?{id:a.id,rev:a.rev}:null);
    const base=persistedSnapshot?JSON.parse(persistedSnapshot):initial;
    // Stage a detached candidate: no live draft/reference is mutated pre-ACK.
    const candidate=reconcileSavedState(base,JSON.parse(JSON.stringify(state)),disk);
@@ -564,19 +575,26 @@ window.onNativeSync=(text)=>{
    // All data operations are now complete: adopt only currently durable bytes.
    const committed=JSON.parse(latest);
    state=committed;state.prefs=prefs;persistedSnapshot=latest;
-   const bind=active=>{
+   const bind=(active,key)=>{
     if(!active)return active;
-    const target=state.records.find(r=>r.id===active.id&&r.rev===active.rev)||
-      state.records.find(r=>r.conflictOf===active.id&&r.rev===active.rev)||
-      state.records.find(r=>r.id===active.id)||null;
-    if(target&&sameSavedValue(active,target)){
-     state.records[state.records.indexOf(target)]=active;
-     return active;
+    const target=state.records.find(r=>r.id===key.id&&r.rev===key.rev)||
+      state.records.find(r=>r.conflictOf===key.id&&r.rev===key.rev)||
+      state.records.find(r=>r.id===key.id)||null;
+    if(!target)return null;
+    try{
+     // Preserve an unmodified live editor reference without copying it
+     // into another object. Never mutate it before the Native ACK.
+     if(Object.isExtensible(active)&&sameSavedValue(active,target)){
+      state.records[state.records.indexOf(target)]=active;
+      return active;
+     }
+    }catch(error){
+     badUI=true; // fallback to confirmed disk record, no phantom failure
     }
     return target;
    };
-   current=bind(saved.current);noteActive=bind(saved.noteActive);
-   window.__detailParent=bind(saved.detail);
+   current=bind(saved.current,refIds[0]);noteActive=bind(saved.noteActive,refIds[1]);
+   window.__detailParent=bind(saved.detail,refIds[2]);
    render=true;
   }
  }catch(error){
