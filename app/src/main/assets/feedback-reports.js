@@ -123,7 +123,8 @@
    '<article class="feedback-card">'+
    '<input type="checkbox" data-feedback-check="'+q(r.id)+'" aria-label="Vybrat připomínku" '+(r.resolved?'':'checked')+'>'+
    '<div class="feedback-card-detail">'+summary(r)+'</div>'+
-   '<button data-feedback-edit="'+q(r.id)+'" class="outline">Otevřít</button></article>'
+   '<button data-feedback-edit="'+q(r.id)+'" class="outline">Otevřít</button>'+
+   '<button data-feedback-delete="'+q(r.id)+'" class="outline">Smazat</button></article>'
   ).join('');
   makeOverlay('<div class="feedback-head"><b>Moje připomínky ('+reports.length+')</b><button id="feedbackClose" class="feedback-close" aria-label="Zavřít">✕</button></div>'+
    '<div class="feedback-list"><p class="feedback-muted">Hlášení zůstávají v tomto zařízení. Až budeš chtít, vybereš je a odešleš společně.</p>'+
@@ -131,6 +132,7 @@
    '</div><div class="feedback-list-footer">'+
    '<label class="feedback-check-all"><input type="checkbox" id="feedbackAll"> Vybrat vše</label>'+
    '<button id="feedbackDeleteResolved" class="outline">Smazat vyřešené</button>'+
+   '<button id="feedbackCleanupZip" class="outline">Vyčistit dočasné ZIPy</button>'+
    '<button id="feedbackSaveZip" class="outline">Uložit ZIP</button>'+
    '<button id="feedbackShareZip" class="primary">Sdílet vybrané</button></div>');
   overlay.querySelector('#feedbackClose').onclick=closeOverlay;
@@ -138,6 +140,24 @@
    const report=reports.find(x=>x.id===button.dataset.feedbackEdit);
    if(report)editReport(JSON.parse(JSON.stringify(report)),false);
   });
+  overlay.querySelectorAll('[data-feedback-delete]').forEach(button=>button.onclick=()=>{
+   const id=button.dataset.feedbackDelete;
+   const report=reports.find(r=>r.id===id);
+   if(!report)return;
+   const name=String(report.title||report.description||'(Bez popisu)').slice(0,100);
+   if(!window.confirm('Opravdu smazat uložené hlášení „'+name+'“?\n'+
+      'Smaže se jen jeho záznam ze seznamu. Původní snímky ani videa se nemažou.'))return;
+   const remaining=reports.filter(r=>r.id!==id);
+   if(!persist(remaining))return;
+   reports=remaining;showReportList();notify('Hlášení smazáno');
+  });
+  overlay.querySelector('#feedbackCleanupZip').onclick=()=>{
+   if(!native||typeof Native.cleanupFinishedIssueBundles!=='function'){
+    notify('Úklid dočasných ZIPů je dostupný v Android aplikaci');return;
+   }
+   // Native shows its own confirmation. The chooser alone does not prove delivery.
+   Native.cleanupFinishedIssueBundles();
+  };
   overlay.querySelector('#feedbackAll').onchange=e=>overlay.querySelectorAll('[data-feedback-check]').forEach(c=>c.checked=e.target.checked);
   overlay.querySelector('#feedbackDeleteResolved').onclick=()=>{
    const button=overlay.querySelector('#feedbackDeleteResolved');
@@ -171,7 +191,7 @@
    }).join('\n');
    const warning='Před sdílením otevři každou připomínku a zkontroluj obsah snímků, videí i textů.\n'+
      'Viditelné adresy, jména či zakázky se automaticky nezakrývají.\n'+
-     'Video může obsahovat skrytá metadata a nemusí být zmenšené.\n\n'+
+     'Video může obsahovat skrytá metadata a zachovává původní kvalitu.\n\n'+
      'Vybraná hlášení:\n'+overview+'\n\nPokračovat k systémové nabídce sdílení?';
    if(!window.confirm(warning))return;
   }
@@ -182,6 +202,7 @@
   else Native.shareIssueBundle(JSON.stringify(manifest));
  }
  window.onReportBundleSaved=()=>notify('ZIP připomínek uložen');
+ window.onReportBundlesCleaned=count=>notify('Vyčištěné dočasné ZIPy: '+Number(count||0));
  function editReport(report,isNew){
   active={report,isNew,tool:'pen',selected:-1,stroke:null,canvas:null,image:null,
     viewport:{scale:1,x:0,y:0},pointers:new Map(),gesture:null,gestureEnding:false,pan:null};
