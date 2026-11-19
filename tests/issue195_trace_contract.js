@@ -12,7 +12,15 @@ const bridge=java.slice(start,end);
 assert(java.includes('import android.os.Trace;'),'Android Trace import missing');
 const sections=['Z195-bridge','Z195-lock-wait','Z195-readDb','Z195-writeDb','Z195-generation','Z195-recoverPrimary'];
 for(const name of sections)assert(bridge.includes('Trace.beginSection("'+name+'")'),'missing '+name);
-assert(bridge.includes('if(BuildConfig.DEBUG)'), 'test-only Debug gate missing');
+assert(bridge.includes('final boolean perf=BuildConfig.DEBUG;'), 'test-only BuildConfig.DEBUG gate missing');
+assert.equal((bridge.match(/if\(perf\)Trace\.beginSection\(/g)||[]).length,sections.length,
+ 'every profiling section must be guarded by the debug flag');
+assert.equal((bridge.match(/if\(perf\)Trace\.endSection\(/g)||[]).length,sections.length,
+ 'every end section must be guarded by the debug flag');
+const order=['Z195-lock-wait','Z195-readDb','Z195-writeDb','Z195-generation','Z195-recoverPrimary'];
+for(let i=1;i<order.length;i++)
+ assert(bridge.indexOf('Trace.beginSection("'+order[i]+'")')>bridge.indexOf('Trace.beginSection("'+order[i-1]+'")'),
+ 'observed Native ordering unexpectedly changed: '+order[i]);
 assert.equal((bridge.match(/Trace\.beginSection\(/g)||[]).length,(bridge.match(/Trace\.endSection\(/g)||[]).length,
  'begin/end sections count must be balanced, incl error paths');
 for(const required of [
@@ -28,7 +36,9 @@ let clock=0;const events=[],raf=[],out=[],button={
  addEventListener(kind,cb,capture){events.push({kind,cb,capture})},
  removeEventListener(kind,cb,capture){events.splice(events.findIndex(e=>e.kind===kind&&e.cb===cb&&e.capture===capture),1)}
 };
-const window={save(){clock+=7;return true},showFolder(){clock+=3;return true}},firstSave=window.save,firstFolder=window.showFolder;
+let fail=false;
+const window={save(){clock+=7;return !fail},showFolder(){clock+=3;return true}},
+ firstSave=window.save,firstFolder=window.showFolder;
 const modal={hidden:false},title={textContent:'Nová složka'};
 const document={getElementById:id=>id==='modal'?modal:id==='modalTitle'?title:id==='okModal'?button:null};
 const console={info(msg){out.push(msg)},table(rows){out.push(rows)}};
@@ -43,9 +53,14 @@ assert.equal(probe.samples[0].jsSaveMs,7);
 assert.equal(probe.samples[0].showFolderMs,3);
 assert.equal(probe.samples[0].clickToTwoFramesMs,10);
 assert(!JSON.stringify(probe.samples).includes('Nová složka'),'personal names never captured');
-window.save=()=>false; // simulate a failed native ACK without changing the instrumented hook
-// Reset to instrumented wrapper; alter the saved original behavior in next mock session separately.
-window.save=firstSave; // removal must not clobber a different owner of save()
+fail=true;click();assert.equal(window.save(),false);flush();
+assert.equal(probe.samples.length,2);
+assert.equal(probe.samples[1].ack,false);
+assert.equal(probe.samples[1].jsSaveMs,7);
+assert.equal(probe.samples[1].showFolderMs,null,'false ACK must never paint successful folder');
+assert.equal(probe.samples[1].clickToTwoFramesMs,null);
+fail=false;
+title.textContent='Jiný dialog';click();assert.equal(probe.samples.length,2,'other dialogs ignored');
 probe.stop();assert.equal(window.save,firstSave);
 assert.equal(window.showFolder,firstFolder);
 assert.equal(window.__z195FolderProbe,undefined);assert.equal(events.length,0);
