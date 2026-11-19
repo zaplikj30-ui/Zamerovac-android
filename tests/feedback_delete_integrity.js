@@ -234,6 +234,16 @@ scenario('mixed malformed legacy array cannot silently discard an entry on next 
  assert.ok(session.calls.notices.some(m=>/nejistý/i.test(m)));
  assert.deepEqual(boot(disk).read(),session.read());
 });
+scenario('untrusted report IDs may not reach external/local share',()=>{
+ const wrong={...makeReport(1),id:{toString:null,valueOf:null}},other=makeReport(2);
+ const disk=data([wrong,other]);
+ const session=boot(disk);
+ session.exportBatch(false);session.exportBatch(true);
+ assert.equal(session.calls.nativeCalls,0,'Malformed ID must not be sent to native share or save bridge');
+ assert.equal(session.calls.prompts.length,0,'Refuse malformed identity before external share consent');
+ assert.ok(session.calls.notices.some(m=>/neplatné|duplicit|ID/i.test(m)),'Explain refusal');
+ assert.deepEqual(fromDisk(disk),[wrong,other]);
+});
 scenario('one normal report: explicit confirmation deletes only selected ID',()=>{
  const rows=[makeReport(1),makeReport(2),makeReport(3)],disk=data(rows);
  const session=boot(disk);
@@ -244,4 +254,4 @@ scenario('one normal report: explicit confirmation deletes only selected ID',()=
  assert.equal(session.calls.nativeCalls,0,'Delete must never touch native/media bridge');
 });
 if(failures.length){console.error(failures.join('\n'));process.exitCode=1}
-else console.log('PASS: 13 feedback deletion integrity scenarios, no media writes');
+else console.log('PASS: 14 feedback deletion integrity scenarios, no media writes');
