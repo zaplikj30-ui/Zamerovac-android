@@ -38,7 +38,15 @@ function fixture(){
    const saved=win.save();if(saved===true)win.showFolder();return saved;
   });prompt.value=text;
  };
- const click=()=>{for(const l of [...listeners])l.cb();ok.onclick()};
+ // Browser target: capture listener, already-registered production onclick,
+ // then the DevTools noncapturing afterClick listener on the same button.
+ assert.equal(listeners.filter(x=>x.capture===false).length,1,
+  'post-onclick validation listener must be installed');
+ const click=()=>{
+  for(const l of [...listeners].filter(x=>x.capture===true))l.cb();
+  ok.onclick();
+  for(const l of [...listeners].filter(x=>x.capture===false))l.cb();
+ };
  const microFlush=()=>{for(let n=0;n<6&&micro.length;n++)micro.splice(0).forEach(fn=>fn())};
  const rafFlush=()=>{for(let n=0;n<6&&raf.length;n++)raf.splice(0).forEach(fn=>fn())};
  return {win,env,modal,cancel,notice,probe,prepare,click,microFlush,rafFlush,
