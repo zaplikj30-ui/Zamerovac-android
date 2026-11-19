@@ -25,12 +25,19 @@ const makeReport=i=>({
 });
 function boot(disk,{approve=true,fault='none'}={}){
  const calls={prompts:[],notices:[],writes:0,buttons:[],markup:'',nativeCalls:0};
- let wrote=false;
+ let wrote=false,oneReadbackFailure=false;
  const ctx={
   localStorage:{
-   getItem(key){if(fault==='readback'&&wrote)throw new Error('Readback unavailable');return disk.get(key)||null;},
+   getItem(key){
+    if(fault==='readback'&&wrote)throw new Error('Readback unavailable');
+    if(fault==='readback-once'&&oneReadbackFailure){
+     oneReadbackFailure=false;throw new Error('Transient readback unavailable');
+    }
+    return disk.get(key)||null;
+   },
    setItem(key,value){calls.writes++;if(fault==='throw')throw new Error('QuotaExceeded');
-    if(fault!=='ignored')disk.set(key,value);wrote=true;}
+    if(fault!=='ignored')disk.set(key,value);wrote=true;
+    if(fault==='readback-once')oneReadbackFailure=true;}
   },
   notify:message=>calls.notices.push(message),
   window:{confirm:message=>{calls.prompts.push(message);return approve}},
@@ -136,6 +143,41 @@ scenario('readback error after successful write: no unapproved data loss',()=>{
   'A write that completed before readback failure must still remove ONLY the confirmed record');
  assert.deepEqual(boot(disk).read(),stored,'Reload must reflect actual durable bytes, not a false success');
 });
+scenario('P2-A uncertain write: next confirmed delete cannot resurrect deleted report',()=>{
+ const rows=[makeReport(1),makeReport(2),makeReport(3)],disk=data(rows);
+ const session=boot(disk,{fault:'readback-once'});
+ session.click('fb-001'); // setItem committed, getItem failed once
+ assert.deepEqual(fromDisk(disk),[rows[1],rows[2]],'First write physically removed only confirmed entry');
+ assert.deepEqual(session.read(),rows,'RAM is deliberately not marked successful after failed readback');
+ assert.ok(session.calls.notices.some(m=>/Nepodařilo se uložit/i.test(m)));
+ session.click('fb-003'); // same session; stale RAM must NOT overwrite the new disk state
+ assert.deepEqual(fromDisk(disk),[rows[1],rows[2]],
+  'Second mutation must not resurrect fb-001 from stale RAM');
+ assert.equal(session.calls.writes,1,'No second write before a trusted reload');
+ assert.ok(!session.calls.notices.includes('Hlášení smazáno'),
+  'Do not claim success during uncertain save');
+ const reboot=boot(disk);
+ assert.deepEqual(reboot.read(),[rows[1],rows[2]],'Restart recovers confirmed disk baseline');
+ reboot.click('fb-003');
+ assert.deepEqual(fromDisk(disk),[rows[1]],'A new confirmed mutation after restart may continue safely');
+ assert.equal(session.calls.nativeCalls,0,'Do not use native media bridge for deletion');
+});
+scenario('P3-B 301 reports, incomplete oldest: render, delete healthy, restart, retain all others',()=>{
+ const rows=Array.from({length:301},(_,i)=>makeReport(i));
+ delete rows[0].description;
+ rows[0].title='';
+ const disk=data(rows);
+ const session=boot(disk);
+ assert.equal(session.read().length,301);
+ session.click('fb-001'); // this calls real summary() for the old damaged record
+ assert.equal(session.calls.prompts.length,1);
+ assert.equal(fromDisk(disk).length,300);
+ assert.deepEqual(fromDisk(disk),rows.filter(r=>r.id!=='fb-001'),
+  'Preserve incomplete oldest verbatim, never repair or delete it implicitly');
+ assert.match(session.calls.markup,/\(Bez popisu\)/,'Render a safe visible fallback');
+ assert.deepEqual(boot(disk).read(),fromDisk(disk),'Restart keeps the legacy record and valid reports');
+ assert.equal(session.calls.nativeCalls,0);
+});
 scenario('one normal report: explicit confirmation deletes only selected ID',()=>{
  const rows=[makeReport(1),makeReport(2),makeReport(3)],disk=data(rows);
  const session=boot(disk);
@@ -146,4 +188,4 @@ scenario('one normal report: explicit confirmation deletes only selected ID',()=
  assert.equal(session.calls.nativeCalls,0,'Delete must never touch native/media bridge');
 });
 if(failures.length){console.error(failures.join('\n'));process.exitCode=1}
-else console.log('PASS: 7 feedback deletion integrity scenarios, no media writes');
+else console.log('PASS: 9 feedback deletion integrity scenarios, no media writes');
