@@ -4,6 +4,14 @@ const assert=require('node:assert/strict');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const path=require('node:path');
+// Keep this fake DOM aligned with the exact production constructors.
+const assets=path.join(__dirname,'../app/src/main/assets/');
+const peerSource=fs.readFileSync(path.join(assets,'peer-sync.js'),'utf8');
+const backupSource=fs.readFileSync(path.join(assets,'backup-history.js'),'utf8');
+assert.match(peerSource,/node\('button',text,'outline'\)/);
+assert.match(peerSource,/button\('Synchronizace zařízení – místní a Google Disk','peerSettings',open\)/);
+assert.match(backupSource,/el\('button',text,'outline'\)/);
+assert.match(backupSource,/button\('Historické zálohy a obnova','historySettings',open\)/);
 class Node{
  constructor(tag){this.tagName=tag.toUpperCase();this._children=[];this.parent=null;this.id='';this.className='';this._text='';this.dataset={};this.hidden=false;this.attributes={};this.value='';this.focused=false;this.scrollTop=0;this.style={};}
  get children(){return this._children;}
