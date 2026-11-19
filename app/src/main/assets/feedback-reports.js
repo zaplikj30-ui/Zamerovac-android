@@ -226,6 +226,11 @@
   }
   const batch=selectedReports();
   if(!batch.length){notify('Nejdřív vyber alespoň jednu připomínku');return}
+  if(batch.some(r=>typeof r.title!=='string'||typeof r.description!=='string'||
+      (r.videos!=null&&!Array.isArray(r.videos)))){
+   notify('Nelze bezpečně exportovat: vybrané hlášení má neplatné údaje.');
+   return;
+  }
   if(!native||typeof (saveToFile?Native.saveIssueBundle:Native.shareIssueBundle)!=='function'){
    notify('Export ZIP je dostupný v Android aplikaci');return;
   }
