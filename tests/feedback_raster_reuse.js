@@ -129,6 +129,19 @@ async function scenario({stored=report(),change,blobNull=false,finishOk=true,sto
   assert.ok(!s.calls.errors.includes('Připomínka uložena'),'False storage success');
   assert.ok(s.calls.errors.some(x=>x.includes('nepodařilo uložit')),'Failure must be visible');
  }
+ // A completed localStorage write with unreadable ACK must not generate more media
+ // if the user retries Save before restart. Native media bytes are not touched.
+ s=await scenario({stored:null,storageFailure:'read'});
+ assert.equal(s.calls.begin,1,'Initial attempt prepared exactly one annotated PNG');
+ assert.equal(s.calls.persist,1);
+ const beforeRetry={blob:s.calls.blob,begin:s.calls.begin,append:s.calls.append,
+  finish:s.calls.finish,persist:s.calls.persist};
+ await vm.runInContext('saveReport()',s.scope);
+ assert.deepEqual({blob:s.calls.blob,begin:s.calls.begin,append:s.calls.append,
+  finish:s.calls.finish,persist:s.calls.persist},beforeRetry,
+  'Uncertain storage must refuse repeat Save BEFORE creating orphan media copies');
+ assert.ok(s.calls.errors.some(x=>/nejistý/i.test(x)),
+  'User must be told to restart instead of silently retrying stale write');
  s=await scenario({stored:null,storageFailure:'write'});
  assert.equal(s.reports.length,0,'Failed first save must not create a ghost report');
  assert.equal(s.calls.list,0);
