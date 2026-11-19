@@ -38,7 +38,8 @@ for(const required of [
 assert(!/Log\.(?:d|i|w|e|v)\(/.test(bridge),'no logcat with user content');
 assert(!/setWebContentsDebuggingEnabled|JavascriptInterface public (?:long|int|boolean) (?:trace|profile)/.test(bridge),
  'no new debugging bridge or release debugging');
-let clock=0;const events=[],raf=[],micro=[],out=[],button={
+let clock=0;const events=[],raf=[],out=[],button={
+ onclick:()=>{}, // production modal handler exists before the DevTools hook
  addEventListener(kind,cb,capture){events.push({kind,cb,capture})},
  removeEventListener(kind,cb,capture){events.splice(events.findIndex(e=>e.kind===kind&&e.cb===cb&&e.capture===capture),1)}
 };
@@ -48,31 +49,33 @@ const window={save(){clock+=7;return !fail},showFolder(){clock+=3;return true}},
 const modal={hidden:false},title={textContent:'Nová složka'};
 const document={getElementById:id=>id==='modal'?modal:id==='modalTitle'?title:id==='okModal'?button:null};
 const console={info(msg){out.push(msg)},table(rows){out.push(rows)}};
-vm.runInNewContext(helper,{window,document,performance:{now:()=>clock},requestAnimationFrame:fn=>raf.push(fn),queueMicrotask:fn=>micro.push(fn),console});
+vm.runInNewContext(helper,{window,document,performance:{now:()=>clock},requestAnimationFrame:fn=>raf.push(fn),console});
 const probe=window.__z195FolderProbe;
 assert(probe,'Chrome DevTools hook not installed');
-const click=()=>events.filter(e=>e.kind==='click').forEach(e=>e.cb());
+const click=()=>events.filter(e=>e.kind==='click'&&e.capture===true).forEach(e=>e.cb());
+const afterClick=()=>events.filter(e=>e.kind==='click'&&e.capture===false).forEach(e=>e.cb());
+assert.equal(events.filter(e=>e.capture===false).length,1,'after-onclick validation listener missing');
 const flush=()=>{for(let n=0;n<4&&raf.length;n++){const batch=raf.splice(0);batch.forEach(fn=>fn())}};
-click();assert.equal(window.save(),true);assert.equal(window.showFolder(),true);flush();
+click();assert.equal(window.save(),true);assert.equal(window.showFolder(),true);afterClick();flush();
 assert.equal(probe.samples.length,1);assert.equal(probe.samples[0].jsSaveReturnedTrue,true);
 assert.equal(probe.samples[0].jsSaveMs,7);
 assert.equal(probe.samples[0].showFolderMs,3);
 assert.equal(probe.samples[0].clickToTwoFramesMs,10);
 assert(!JSON.stringify(probe.samples).includes('Nová složka'),'personal names never captured');
-fail=true;click();assert.equal(window.save(),false);flush();
+fail=true;click();assert.equal(window.save(),false);afterClick();flush();
 assert.equal(probe.samples.length,2);
 assert.equal(probe.samples[1].jsSaveReturnedTrue,false);
 assert.equal(probe.samples[1].jsSaveMs,7);
 assert.equal(probe.samples[1].showFolderMs,null,'false JS return must never infer a rendered folder');
 assert.equal(probe.samples[1].clickToTwoFramesMs,null);
 fail=false;
-click();assert.equal(window.save(),true);flush(); // successful JS return, but no showFolder
+click();assert.equal(window.save(),true);afterClick();flush(); // successful JS return, but no showFolder
 assert.equal(probe.samples.length,3,'missing render must not leave an incomplete sample');
 assert.equal(probe.samples[2].jsSaveReturnedTrue,true);
 assert.equal(probe.samples[2].showFolderMs,null);
 assert.equal(probe.samples[2].clickToTwoFramesMs,null);
-title.textContent='Jiný dialog';click();assert.equal(probe.samples.length,3,'other dialogs ignored');
-probe.stop();micro.splice(0).forEach(fn=>fn());assert.equal(window.save,firstSave);
+title.textContent='Jiný dialog';click();afterClick();assert.equal(probe.samples.length,3,'other dialogs ignored');
+probe.stop();assert.equal(window.save,firstSave);
 assert.equal(window.showFolder,firstFolder);
 assert.equal(window.__z195FolderProbe,undefined);assert.equal(events.length,0);
 console.info('PASS #195: trace source contract + opt-in DevTools measurements/cleanup (STATIC Java, VM browser mock)');
