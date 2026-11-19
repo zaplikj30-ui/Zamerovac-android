@@ -28,11 +28,13 @@ const host=new Node('div');host.id='settingsContent';panel.append(head,back,host
 const modal=new Node('div');modal.id='modal';modal.hidden=true;doc.append(modal);
 const all=[];const h=t=>{const n=new Node('div');n.className='setGroup';n.textContent=t;return n};
 const row=(label,id,key)=>{const n=new Node('label');n.className='setting';n.id=id||'';const span=new Node('span');span.textContent=label;n.append(span);if(key){const input=new Node('input');input.dataset.setting=key;n.append(input)}n.onclick=()=>{actions++;};all.push(n);return n};
-let actions=0,saves=0,reads=0,renderCalls=0,recovery=0;
+let actions=0,saves=0,reads=0,renderCalls=0,recovery=0,peerOpened=0,historyOpened=0;
+const outline=(label,id,action)=>{const n=new Node('button');n.className='outline';n.type='button';n.id=id;n.textContent=label;n.onclick=action;all.push(n);return n;};
 const seed=()=>{
  const nodes=[h('Editor'),row('Lupa',null,'loupe'),row('Přednastavené texty',null,'presets'),h('Rozměry'),row('Jednotky',null,'unit'),h('Vzhled'),row('Barva nástrojů',null,'color'),h('Cloud'),row('Automatická synchronizace',null,'autoSync'),h('Systémová složka synchronizace'),row('Vybrat systémovou složku','chooseCloud'),h('Bluetooth'),row('Připojit měřič','chooseLaser'),h('Jazyk'),row('Jazyk aplikace','appLanguageSetting'),h('O aplikaci'),row('Verze Zaměřovače','appVersionInfo')];
  const extra=new Node('div');extra.append(h('Vzhled aplikace'),row('Barva prostředí','uiTheme'),h('Laser Bosch – přesnost zápisu'),row('Zaokrouhlování laseru','laserRoundingChoice'),h('Informace a údržba'),row('Historie změn','openHistory'),row('Historie měření z laseru','openReadings'),row('Moje připomínky','openFeedbackReports'),row('Exportovat ZIP','backupAll'),row('Obnovit ZIP','restoreAll'));
- nodes.push(extra,h('Synchronizace zařízení'),row('Místní a Google Disk','peerSettings'),h('Zálohování'),row('Historické zálohy','historySettings'));
+ // The real peer-sync.js and backup-history.js mount .outline BUTTONs, not .setting labels.
+ nodes.push(extra,h('Synchronizace zařízení'),outline('Synchronizace zařízení – místní a Google Disk','peerSettings',()=>{peerOpened++;}),h('Zálohování'),outline('Historické zálohy a obnova','historySettings',()=>{historyOpened++;}));
  host.replaceChildren(...nodes);
 };
 const lookup=id=>{let found;const walk=n=>{if(n.id===id)found=n;for(const c of n.children)walk(c)};walk(doc);return found||null};
@@ -43,6 +45,8 @@ vm.runInNewContext(fs.readFileSync(path.join(__dirname,'../app/src/main/assets/s
 sandbox.toggleSettings();assert.equal(panel.hidden,false);assert.equal(renderCalls,1);assert.equal(saves,0);assert.equal(reads,0);assert.equal(actions,0);
 assert.equal(lookup('settingsContent').children.length,6);const categories=lookup('settingsContent').children[0].children[2];assert.equal(categories.children.length,5);
 assert.equal(all.length,18);for(const item of all)assert.equal(item.parent?.className,'settings-subgroup');
+assert.equal(lookup('peerSettings').tagName,'BUTTON');assert.equal(lookup('peerSettings').className,'outline');
+assert.equal(lookup('historySettings').tagName,'BUTTON');assert.equal(lookup('historySettings').className,'outline');
 assert.equal(lookup('settingsPage-measurement').contains(lookup('chooseLaser')),true);
 assert.equal(lookup('settingsPage-measurement').contains(lookup('openReadings')),true);
 assert.equal(lookup('settingsPage-editor').contains(all.find(x=>x.querySelector('[data-setting]')?.dataset.setting==='presets')),true);
@@ -50,11 +54,36 @@ assert.equal(lookup('settingsPage-sync').contains(lookup('backupAll')),true);
 assert.equal(lookup('settingsPage-sync').contains(lookup('historySettings')),true);
 assert.equal(lookup('settingsPage-maintenance').contains(lookup('openPendingAudioRecovery')),true);
 assert.equal(lookup('settingsPage-maintenance').contains(lookup('openFeedbackReports')),true);
+assert.equal(sandbox.ZamerovacSettingsNavigation.showTarget('peerSettings'),true);
+assert.equal(lookup('settingsPage-sync').hidden,false);
+assert.equal(sandbox.ZamerovacSettingsNavigation.showTarget('historySettings'),true);
+assert.equal(lookup('settingsPage-sync').hidden,false);
 assert.equal(sandbox.ZamerovacSettingsNavigation.showTarget('uiTheme'),true);
 assert.equal(lookup('settingsPage-appearance').hidden,false);
 assert.equal(lookup('settingsPage-sync').hidden,true);
 back.onclick();assert.equal(lookup('settingsPage-appearance').hidden,true);assert.equal(categories.hidden,false);
-const search=lookup('settingsSearch');search.value='zaloha';search.oninput();const results=lookup('settingsSearchResults');assert.equal(results.hidden,false);assert.ok(results.children.length>=1);results.children[0].onclick();assert.equal(lookup('settingsPage-sync').hidden,false);
+const search=lookup('settingsSearch'),results=lookup('settingsSearchResults');
+const searchFor=q=>{search.value=q;search.oninput();return [...results.children].map(n=>n.textContent);};
+// Positive: real production .outline buttons are findable, not just moved to a section.
+let hits=searchFor('historické zálohy');assert.equal(hits.length,1);assert.match(hits[0],/Historické zálohy a obnova/);
+assert.equal(peerOpened,0);assert.equal(historyOpened,0);assert.equal(saves,0);assert.equal(reads,0);
+results.children[0].onclick();assert.equal(lookup('settingsPage-sync').hidden,false);
+assert.equal(lookup('historySettings').focused,true);
+lookup('historySettings').onclick();assert.equal(historyOpened,1);
+back.onclick();
+hits=searchFor('synchronizace zařízení');assert.equal(hits.length,1);assert.match(hits[0],/Synchronizace zařízení – místní a Google Disk/);
+results.children[0].onclick();assert.equal(lookup('settingsPage-sync').hidden,false);
+assert.equal(lookup('peerSettings').focused,true);
+lookup('peerSettings').onclick();assert.equal(peerOpened,1);
+back.onclick();
+// Negative: a broad keyword must not surface unrelated controls from the category.
+hits=searchFor('nahravky');assert.equal(hits.length,1);assert.match(hits[0],/Obnova nahrávek/);
+assert.equal(hits.some(x=>/Verze|Diagnostika|Připomínky/.test(x)),false);
+hits=searchFor('zaloha');assert.ok(hits.length>=1);
+assert.equal(hits.some(x=>/Automatická synchronizace|Místní a Google Disk|Vybrat systémovou složku/.test(x)),false);
+assert.equal(searchFor('neexistujici_nastaveni')[0],'Žádné odpovídající nastavení.');
+assert.equal(saves,0);assert.equal(reads,0);assert.equal(actions,0);assert.equal(peerOpened,1);assert.equal(historyOpened,1);
+search.value='';search.oninput();assert.equal(results.hidden,true);
 assert.equal(sandbox.handleAndroidBack(),'handled');assert.equal(categories.hidden,false);
 assert.equal(sandbox.handleAndroidBack(),'handled');assert.equal(panel.hidden,true);
 sandbox.toggleSettings();assert.equal(categories.hidden,false);
@@ -74,4 +103,4 @@ sandbox.renderSettings(); // controller re-renders after a setting change or rej
 assert.equal(lookup('settingsPage-measurement').hidden,false);
 assert.equal(lookup('settingsPage-measurement').contains(lookup('chooseLaser')),true);
 assert.equal(saves,0);assert.equal(reads,0);assert.equal(actions,1);
-console.log('PASS: 5 categories, 18 legacy controls intact, search, deep-link, back, modal, recovery, no open-side-effects');
+console.log('PASS: 5 categories, 18 production-faithful controls including outline buttons, exact positive/negative search, deep-links, back/modal, recovery, zero search IO, original onclick');
