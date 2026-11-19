@@ -53,7 +53,16 @@ function scene(){
   persistedSnapshot:disk,notify:message=>notices.push(message),
   reportSaveResult:ok=>ok,
   applySavedState:next=>{env.state=next},
-  reconcileSavedState:(base,local,remote)=>remote,
+  // This old presenter test now preserves dirty local edits for negative CAS.
+  // Real production reconcileSavedState() is exercised in the F4 matrix.
+  reconcileSavedState:(base,local,remote)=>{
+   const old=new Map(base.records.map(r=>[r.id,r]));
+   const locals=new Map(local.records.map(r=>[r.id,r]));
+   return {...remote,records:remote.records.map(r=>{
+    const draft=locals.get(r.id);
+    return draft&&JSON.stringify(draft)!==JSON.stringify(old.get(r.id))?draft:r;
+   }).concat(local.records.filter(r=>!remote.records.some(d=>d.id===r.id)))};
+  },
   showFolder(){},modal(){},console:{warn(){}},
  };
  vm.createContext(env);
@@ -133,6 +142,9 @@ if(mode==='f2'||mode==='all'){
  assert.match(s.node('syncStatusDetails').textContent,/konfliktní kopie/i,
   'F2: conflict explanation must remain available on status tap');
  s.refuse=true;
+ const localDraft=clone(s.disk);
+ localDraft.records.find(r=>r.id==='n1').title='Local dirty draft requiring JS CAS';
+ s.window.__setState(localDraft);
  const pre=s.notices.length;
  assert.equal(update([conflict('copy-1'),conflict('copy-2'),conflict('copy-3')]),false,
   'Rejected sync save must not be reported as successful');
@@ -177,7 +189,9 @@ if(mode==='f3'||mode==='all'){
  assert.equal(receive(s,[conflict('copy-postack')]),true,
   'F3: cloud pending toast exception after confirmed disk ACK must not cause sync=false');
  assert.equal(injected,1,'F3: actual pending presenter was not fault-injected');
- assert.equal(s.calls.length,1,'F3: expected one confirmed native CAS invocation');
+ assert.equal(s.calls.length,0,'F3: canonical identical Native disk must not trigger redundant CAS');
+ assert.deepEqual(s.disk.records.map(r=>r.id),['n1','copy-postack'],
+  'F3: Native durable data, not fake JS CAS, is the authority');
  assert.equal(s.disk.records.filter(r=>r.conflict).length,1,'F3: native committed conflict copy missing');
  assert.equal(JSON.parse(s.window.__getSnapshot()).records.filter(r=>r.conflict).length,1,
   'F3: durable snapshot missing copied record');
@@ -221,6 +235,8 @@ if(mode==='f3'||mode==='all'){
   'F3: deferred critical conflict must appear after warning clears');
  // Pre-ACK refusal must stay false and must NOT leak a new conflict as saved.
  const refused=scene();refused.api.peerState({peers:{trusted:{}}});refused.refuse=true;
+ const dirty=clone(refused.old);dirty.records[0].title='Uncommitted local dirty draft';
+ refused.window.__setState(dirty);
  assert.equal(receive(refused,[conflict('copy-uncommitted')]),false);
  assert.equal(refused.disk.records.filter(r=>r.conflict).length,1,
   'F3: test intentionally emulates a peer-written disk, not our rejected CAS');
