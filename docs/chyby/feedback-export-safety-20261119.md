@@ -18,15 +18,20 @@
 - Uživatel před externím sdílením vidí výběr a výslovné upozornění: musí kontrolovat viditelný obsah, text i video; odmítnutí přenos zastaví.
 - Native ZIP selže jako celek při chybějící, prázdné, neplatné nebo v průběhu změněné příloze; vstupní limit: 50 hlášení, nejvýše 12 videí na hlášení, nejvýše 256 MiB v jednom balíčku, nejvýše 512 KiB předaného JSON.
 - Exportní JSON používá whitelist polí bez interních ID, vektorových anotací a původních názvů souborů. Obrázky se jmenují podle čísla připomínky, nikoli zákazníka. **Obsah pixelů ani vložená metadata originálního videa nejsou automaticky redigována.**
-- Dočasný ZIP je ve vlastním namespace `issuezip-`, bez automatického uploadu. Po uloženém či zrušeném dokumentovém exportu je smazán, po externím sdílení zůstane pro příjemce dostupný do následného úklidu (stáří >24 hodin; úklid při spuštění nebo dalším exportu).
+- Dočasný ZIP je ve vlastním namespace `issuezip-`, bez automatického uploadu. Po uloženém či zrušeném dokumentovém exportu se odstraní, ale ZIP předaný k externímu sdílení čeká na výslovně potvrzený ruční úklid; automatická lhůta se týká pouze nikdy nesdílených příprav.
 - Původní média ani připomínky v telefonu se nemažou a nepřekódují; zákaznický ZIP, sync a datový model se nemění.
 
-## Video a velikost: rozhodnutí STOP pro rozšíření
-Neprovádět automatickou transcoding kompresi bez design/security rozhodnutí a vlastníka. Efektivní konverze videa by vyžadovala novou nativní transkódovací cestu, případně novou knihovnu nebo změnu výstupního formátu. Je třeba ověřit audio, orientaci, časovou synchronizaci, možné ztráty snímků, barev, přesných kót, kodeky a kompatibilitu včetně odmítnutí a disk-full.
+## Rozhodnutí vlastníka 19. 11. 2026: originální kvalita a výslovné mazání
+- **NEMĚNIT:** žádná nová komprese, transkódování, škálování ani zmenšování fotografií, screenshotů nebo videí v exportu. ZIP jen kopíruje originální bajty médií; odstraňuje pouze lokální interní ID z textového manifestu. Snížená velikost není cílem tohoto PR.
+- Všechny uložené připomínky je možné jednotlivě odstranit **pouze po výslovném potvrzení uživatele**. Současné hromadné „Smazat vyřešené“ zůstává; nevyřešená hlášení se automaticky nemažou. Původní soubory v `media/` zůstávají nedotčené.
+- **Dočasný ZIP předaný do Android ACTION_SEND není doručený jen proto, že se otevřel chooser.** Takové ZIPy proto nesmí automaticky mazat 24hodinová lhůta, restart aplikace ani nové sdílení. Tato ochrana platí i pro ZIPy větší než limit přílohy veřejného GitHub Issue.
+- Nesdílené rozpracované ZIPy (stavy `building`/`ready`) lze po 24 hodinách čistit automaticky; u dokumentového exportu se dočasný ZIP odstraňuje po zrušení či po úplném dokončení zápisu/uzavření streamu. Sdílené a nejisté ZIPy zůstávají, dokud uživatel v Moje připomínky nevyvolá **Vyčistit dočasné ZIPy** a v nativním potvrzení neprohlásí, že všechny přenosy skončily. Neexistuje automatické potvrzení převzetí externí aplikací.
+- Ochranná kontrola formátu/úplnosti a horní limit celkové vstupní velikosti 256 MiB zůstávají. Limit není slib, že GitHub soubor přijme.
 
-- **A – minimální vratná oprava (tento PR):** kontrola soukromí, úplnost, limity a úklid. Nejmenší zásah; velikost videí se **nezlepší**. Doporučeno okamžitě pro ochranu dat, nikoli jako dokončení optimalizace.
-- **B – izolovaný Android transcoder:** lokální kopie přes Android `MediaCodec/MediaMuxer` nebo po schválení Media3 Transformer; originály neměnné. Vyšší náklady, rozsáhlé skutečné Android testy a nezávislé DESIGN/SECURITY review před implementací. Kandidát, pokud fyzická měření potvrdí častý problém.
-- **C – ruční úprava před GitHub Issues:** export původního ZIP a oddělené redigované a zmenšené přílohy mimo aplikaci, s fyzickou kontrolou čitelnosti. Nulová změna nativního video stacku, ale více ručních kroků. Vhodné do schválení B.
+## A/B/C po novém rozhodnutí vlastníka
+- **A – pokračovat s omezenou vratnou opravou:** soukromí, potvrzení, úplnost a retenční bezpečnost. Bez komprese. **Doporučeno a implementováno v tomto PR.**
+- **B – samostatná kompresní/transkódovací funkce:** **NEMĚNIT / bez schválení**; vlastníkem výslovně zamítnuté pro tento celek. Nepokračovat v jejím návrhu nebo implementaci.
+- **C – bezpečné předání nadlimitních důkazů:** vybrat menší počet důkazů, nebo předat ZIP soukromou schválenou cestou; neuploadovat neověřená citlivá média na veřejný GitHub. Neměnit původní kvalitu.
 
 ## Skutečné testovací důkazy a zbývající rizika
 - RED: původní produkční `sendBatch(false)` volal `Native.shareIssueBundle` bez potvrzení.
@@ -35,4 +40,4 @@ Neprovádět automatickou transcoding kompresi bez design/security rozhodnutí a
 - Riziko: Android proces může skončit při zápisu dokumentu; částečný výsledek u cizího SAF poskytovatele nemusí být možné smazat. Přijímající aplikace může potřebovat ZIP i po zvolení sdílení, proto se ZIP nesmí smazat hned po otevření chooseru.
 - Riziko: veřejný GitHub a neanonymizované snímky/videa; kontrola musí zůstat vědomá, EXIF neřeší viditelný obsah. Samotný ZIP neznamená podporovanou GitHub Issues přílohu.
 
-**Předání:** další fyzické Android QA a nezávislé SOURCE/SECURITY review změněného HEAD. Bez cloud/HOME/merge/APK. Podklad: [samostatné PR #193](https://github.com/zaplikj30-ui/Zamerovac-android/pull/193), beze změny jeho větve.
+**Předání:** po autorském review další fyzické Android QA a nezávislé SOURCE/SECURITY review změněného HEAD. Bez cloud/HOME/merge/APK. Podklad: [samostatné PR #193](https://github.com/zaplikj30-ui/Zamerovac-android/pull/193), beze změny jeho větve.
