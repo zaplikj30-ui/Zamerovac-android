@@ -36,7 +36,7 @@ function scene(fault='none',restartData=null){
    laserMeasuredMm:'55.00000000001',unit:'mm'}]});
  const boot=restartData?clone(restartData):clone(old);
  if(restartData){remote.records=clone(restartData.records);remote.prefs=clone(restartData.prefs)}
- let disk=JSON.stringify(restartData||remote),acks=0,attempts=0;
+ let disk=JSON.stringify(restartData||remote),acks=0,attempts=0,reads=0;
  const notices=[],nodes=new Map(),seen=[];
  let mode=fault;
  function node(id){
@@ -52,6 +52,13 @@ function scene(fault='none',restartData=null){
  const document={getElementById:node,createElement:id=>node('made-'+id),body:{append(){}}};
  const Native={
   loadData(){
+   reads++;
+   if(mode==='native-read-race'&&reads===2){
+    const newer=JSON.parse(disk);
+    newer.records.push({id:'peer-during-adoption',kind:'note',rev:'newest-peer',
+     parentId:null,media:['immutable-newest-media'],items:[]});
+    disk=JSON.stringify(newer);
+   }
    if(mode==='media-malformed'){
     const malformed=JSON.parse(disk);malformed.records[0].media=[null];
     return JSON.stringify(malformed);
@@ -106,7 +113,7 @@ function scene(fault='none',restartData=null){
  vm.runInContext(production,env,{filename:'actual-app-sync-cas.js'});
  window.ZamerovacSyncStatus.peerState({peers:{trusted:{}}});
  return {window,nodes,notices,seen,old,remote,
-  get disk(){return JSON.parse(disk)},get acks(){return acks},get attempts(){return attempts},
+  get disk(){return JSON.parse(disk)},get acks(){return acks},get attempts(){return attempts},get reads(){return reads},
   get snapshot(){return JSON.parse(window.__f4.snapshot())},
   get ram(){return window.__f4.state()},
   get current(){return window.__f4.getCurrent()},
@@ -314,4 +321,15 @@ if(mode==='edge'||mode==='all'){
  assert.equal(restarted.disk.records.filter(r=>r.id==='conflict-1').length,1);
  intact(restarted);
  console.log('PASS F4 P4 next save/restart with stale callback, exact media/kóty, no duplicate copy');
+ // P2: a no-CAS adoption must not adopt an older disk snapshot if Native
+ // changed again between initial read and final immutable-data publication.
+ const racedRead=scene('native-read-race',follow.disk);
+ const oldBaseline=clone(racedRead.snapshot),oldRam=clone(racedRead.ram);
+ assert.equal(send(racedRead,clone(racedRead.old)),false,
+  'P2: stale native snapshot was adopted while another writer advanced disk');
+ assert.equal(racedRead.acks,0,'P2: no hidden CAS should be attempted on pure adoption');
+ assert.deepEqual(racedRead.snapshot,oldBaseline,'P2: stale read poisoned persistedSnapshot');
+ assert.deepEqual(racedRead.ram,oldRam,'P2: stale read mutated RAM');
+ assert.equal(racedRead.disk.records.filter(r=>r.id==='peer-during-adoption').length,1);
+ console.log('PASS F4 P2 second Native read refuses stale CAS-free adoption');
 }
