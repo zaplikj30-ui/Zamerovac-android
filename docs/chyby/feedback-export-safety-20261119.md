@@ -18,14 +18,14 @@
 - Uživatel před externím sdílením vidí výběr a výslovné upozornění: musí kontrolovat viditelný obsah, text i video; odmítnutí přenos zastaví.
 - Native ZIP selže jako celek při chybějící, prázdné, neplatné nebo v průběhu změněné příloze; vstupní limit: 50 hlášení, nejvýše 12 videí na hlášení, nejvýše 256 MiB v jednom balíčku, nejvýše 512 KiB předaného JSON.
 - Exportní JSON používá whitelist polí bez interních ID, vektorových anotací a původních názvů souborů. Obrázky se jmenují podle čísla připomínky, nikoli zákazníka. **Obsah pixelů ani vložená metadata originálního videa nejsou automaticky redigována.**
-- Dočasný ZIP je ve vlastním namespace `issuezip-`, bez automatického uploadu. Po uloženém či zrušeném dokumentovém exportu se odstraní, ale ZIP předaný k externímu sdílení čeká na výslovně potvrzený ruční úklid; automatická lhůta se týká pouze nikdy nesdílených příprav.
+- Dočasný ZIP je ve vlastním namespace `issuezip-`, bez automatického uploadu. Po uloženém či zrušeném dokumentovém exportu se odstraní, ale ZIP předaný k externímu sdílení čeká na výslovně potvrzený ruční úklid; žádný časový úklid automaticky neprobíhá.
 - Původní média ani připomínky v telefonu se nemažou a nepřekódují; zákaznický ZIP, sync a datový model se nemění.
 
 ## Rozhodnutí vlastníka 19. 11. 2026: originální kvalita a výslovné mazání
 - **NEMĚNIT:** žádná nová komprese, transkódování, škálování ani zmenšování fotografií, screenshotů nebo videí v exportu. ZIP jen kopíruje originální bajty médií; odstraňuje pouze lokální interní ID z textového manifestu. Snížená velikost není cílem tohoto PR.
 - Všechny uložené připomínky je možné jednotlivě odstranit **pouze po výslovném potvrzení uživatele**. Současné hromadné „Smazat vyřešené“ zůstává; nevyřešená hlášení se automaticky nemažou. Původní soubory v `media/` zůstávají nedotčené.
 - **Dočasný ZIP předaný do Android ACTION_SEND není doručený jen proto, že se otevřel chooser.** Takové ZIPy proto nesmí automaticky mazat 24hodinová lhůta, restart aplikace ani nové sdílení. Tato ochrana platí i pro ZIPy větší než limit přílohy veřejného GitHub Issue.
-- Nesdílené rozpracované ZIPy (stavy `building`/`ready`) lze po 24 hodinách čistit automaticky; u dokumentového exportu se dočasný ZIP odstraňuje po zrušení či po úplném dokončení zápisu/uzavření streamu. Sdílené a nejisté ZIPy zůstávají, dokud uživatel v Moje připomínky nevyvolá **Vyčistit dočasné ZIPy** a v nativním potvrzení neprohlásí, že všechny přenosy skončily. Neexistuje automatické potvrzení převzetí externí aplikací.
+- Žádný ZIP se nemaže automaticky jen kvůli stáří. Dokumentový export odstraní dočasný ZIP po zrušení či po úplném dokončení zápisu/uzavření streamu. Sdílené, opuštěné i nejisté ZIPy zůstávají, dokud uživatel v Moje připomínky nevyvolá **Vyčistit dočasné ZIPy** a v nativním potvrzení neprohlásí, že všechny přenosy skončily. Neexistuje automatické potvrzení převzetí externí aplikací.
 - Ochranná kontrola formátu/úplnosti a horní limit celkové vstupní velikosti 256 MiB zůstávají. Limit není slib, že GitHub soubor přijme.
 
 ## A/B/C po novém rozhodnutí vlastníka
