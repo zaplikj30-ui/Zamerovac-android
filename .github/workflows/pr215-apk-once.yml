@@ -52,9 +52,11 @@ jobs:
       - name: Build preview without publishing
         shell: bash
         env:
-          GITHUB_RUN_NUMBER: '157'
+          PREVIEW_RUN_OFFSET: '157'
         run: |
           set -euo pipefail
+          export GITHUB_RUN_NUMBER="$PREVIEW_RUN_OFFSET"
+          test "$GITHUB_RUN_NUMBER" = '157'
           gradle --no-daemon -p tools/drive-config-checks verify
           gradle --no-daemon :app:verifyDriveRegistration :app:assemblePreview -PdriveRequireConfigured=true
       - name: Verify actual APK signature, package, versionCode and bytes
