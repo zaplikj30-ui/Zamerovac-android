@@ -10,7 +10,14 @@
  // all subsequent mutations must wait for a fresh startup load.
  let feedbackWriteUncertain=false;
  // Never truncate on restart: doing so could silently erase older reports on the next save.
- try{const v=JSON.parse(localStorage.getItem(KEY)||'[]');if(Array.isArray(v))reports=v.filter(x=>x&&typeof x==='object');else feedbackWriteUncertain=true}catch(e){feedbackWriteUncertain=true}
+ try{
+  const v=JSON.parse(localStorage.getItem(KEY)||'[]');
+  if(Array.isArray(v)){
+   reports=v.filter(x=>x&&typeof x==='object'&&!Array.isArray(x));
+   // Malformed legacy elements stay intact in storage; never persist a filtered subset.
+   if(reports.length!==v.length)feedbackWriteUncertain=true;
+  }else feedbackWriteUncertain=true;
+ }catch(e){feedbackWriteUncertain=true}
  // Commit the proposed list only after the device confirms its storage bytes.
  // A quota/private-mode failure must never be reported as a successful save.
  const persist=next=>{
@@ -151,6 +158,7 @@
   ).join('');
   makeOverlay('<div class="feedback-head"><b>Moje připomínky ('+reports.length+')</b><button id="feedbackClose" class="feedback-close" aria-label="Zavřít">✕</button></div>'+
    '<div class="feedback-list"><p class="feedback-muted">Hlášení zůstávají v tomto zařízení. Až budeš chtít, vybereš je a odešleš společně.</p>'+
+   (feedbackWriteUncertain?'<p class="feedback-muted">Stav uložených hlášení nelze bezpečně ověřit. Změny a export jsou zablokovány; nepřepisuj ani nemaž data aplikace.</p>':'')+
    (cards||'<p>Zatím žádné připomínky. Klepni na vlaječku a označ první problém.</p>')+
    '</div><div class="feedback-list-footer">'+
    '<label class="feedback-check-all"><input type="checkbox" id="feedbackAll"> Vybrat vše</label>'+
