@@ -11,7 +11,7 @@ const begin=source.indexOf(' function sendBatch(saveToFile){');
 const end=source.indexOf('\n window.onReportBundleSaved=',begin);
 assert.ok(begin>=0&&end>begin,'Test must execute the real sendBatch handler');
 const actual=source.slice(begin,end);
-function run(saveToFile,approved,hasSave=true,selected=true){
+function run(saveToFile,approved,hasSave=true,selected=true,videoCount=1,reportCount=1){
  const calls={asked:[],shared:[],saved:[],notices:[]};
  const report={id:'report-001',title:'Chyba kóty',description:'Tajný text ve snímku',screen:'Editor',
   screenshotId:'image-001',annotatedId:'image-002',videos:[{id:'video-001',name:'rodinne-video.mp4',mime:'video/mp4'}]};
@@ -19,7 +19,10 @@ function run(saveToFile,approved,hasSave=true,selected=true){
   shareIssueBundle:x=>calls.shared.push(JSON.parse(x)),
   ...(hasSave?{saveIssueBundle:x=>calls.saved.push(JSON.parse(x))}:{})
  },window:{confirm:t=>{calls.asked.push(t);return approved}},
- selectedReports:()=>selected?[report]:[],notify:m=>calls.notices.push(m),now:()=> '2026-11-19T00:00:00Z'};
+ selectedReports:()=>selected?Array.from({length:reportCount},(_,i)=>({
+  ...report,id:'report-'+i,title:'Chyba kóty '+i,
+  videos:videoCount?report.videos:[]
+ })):[],notify:m=>calls.notices.push(m),now:()=> '2026-11-19T00:00:00Z'};
  vm.createContext(ctx);vm.runInContext(actual,ctx);vm.runInContext('sendBatch('+saveToFile+')',ctx);
  return calls;
 }
@@ -32,6 +35,11 @@ assert.equal(s.shared.length,0,'Cancel must not transmit a bundle');
 s=run(false,true);
 assert.equal(s.shared.length,1,'Explicit approval shares exactly once');
 assert.equal(s.saved.length,0);
+s=run(false,true,true,true,0,2);
+assert.equal(s.shared.length,1,'Two reports must be exported as one batch');
+assert.equal(s.shared[0].reports.length,2,'Both selected reports must be present');
+assert.equal(s.shared[0].reports[0].videos.length,0,'Video is optional');
+assert.match(s.asked[0],/0 video/,'Confirmation must describe missing video attachments');
 s=run(true,false);
 assert.equal(s.asked.length,0,'Saving a local ZIP does not need external-sharing consent');
 assert.equal(s.saved.length,1,'Local save still works');
