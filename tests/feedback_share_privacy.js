@@ -18,14 +18,17 @@ function run(saveToFile,approved,hasSave=true,selected=true,videoCount=1,reportC
  const calls={asked:[],shared:[],saved:[],notices:[]};
  const report={id:'report-001',title:'Chyba kóty',description:'Tajný text ve snímku',screen:'Editor',
   screenshotId:'image-001',annotatedId:'image-002',videos:[{id:'video-001',name:'rodinne-video.mp4',mime:'video/mp4'}]};
- const ctx={native:true,Native:{
+ const batch=selected?Array.from({length:reportCount},(_,i)=>({
+  ...report,id:'report-'+i,title:'Chyba kóty '+i,
+  videos:videoCount?report.videos:[]
+ })): [];
+ const ctx={native:true,reports:batch,
+ validId:id=>typeof id==='string'&&/^[a-zA-Z0-9_-]{3,120}$/.test(id),
+ Native:{
   shareIssueBundle:x=>calls.shared.push(JSON.parse(x)),
   ...(hasSave?{saveIssueBundle:x=>calls.saved.push(JSON.parse(x))}:{})
  },window:{confirm:t=>{calls.asked.push(t);return approved}},
- selectedReports:()=>selected?Array.from({length:reportCount},(_,i)=>({
-  ...report,id:'report-'+i,title:'Chyba kóty '+i,
-  videos:videoCount?report.videos:[]
- })):[],notify:m=>calls.notices.push(m),now:()=> '2026-11-19T00:00:00Z'};
+ selectedReports:()=>batch,notify:m=>calls.notices.push(m),now:()=> '2026-11-19T00:00:00Z'};
  vm.createContext(ctx);vm.runInContext(actual,ctx);vm.runInContext('sendBatch('+saveToFile+')',ctx);
  return calls;
 }
