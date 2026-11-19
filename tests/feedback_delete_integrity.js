@@ -244,6 +244,26 @@ scenario('untrusted report IDs may not reach external/local share',()=>{
  assert.ok(session.calls.notices.some(m=>/neplatné|duplicit|ID/i.test(m)),'Explain refusal');
  assert.deepEqual(fromDisk(disk),[wrong,other]);
 });
+scenario('ambiguous duplicate IDs cannot reach Native ZIP without review',()=>{
+ const a=makeReport(1),b=makeReport(2);
+ b.id=a.id;
+ const disk=data([a,b]);
+ const session=boot(disk);
+ session.exportBatch(false);session.exportBatch(true);
+ assert.equal(session.calls.nativeCalls,0,'Duplicate report identity must not be exported');
+ assert.equal(session.calls.prompts.length,0,'Reject before sharing dialog');
+ assert.ok(session.calls.notices.some(m=>/duplicit/i.test(m)));
+ assert.deepEqual(fromDisk(disk),[a,b]);
+});
+scenario('malformed legacy description cannot crash or disclose unreviewed ZIP',()=>{
+ const a={...makeReport(1),title:'',description:{toString:null,valueOf:null}},b=makeReport(2);
+ const disk=data([a,b]),session=boot(disk);
+ session.exportBatch(false);
+ assert.equal(session.calls.nativeCalls,0,'Malformed legacy text must not reach Native');
+ assert.equal(session.calls.prompts.length,0,'Do not show misleading confirmation after invalid metadata');
+ assert.ok(session.calls.notices.some(m=>/neplatn/i.test(m)),'Explain invalid report text');
+ assert.deepEqual(fromDisk(disk),[a,b]);
+});
 scenario('one normal report: explicit confirmation deletes only selected ID',()=>{
  const rows=[makeReport(1),makeReport(2),makeReport(3)],disk=data(rows);
  const session=boot(disk);
@@ -254,4 +274,4 @@ scenario('one normal report: explicit confirmation deletes only selected ID',()=
  assert.equal(session.calls.nativeCalls,0,'Delete must never touch native/media bridge');
 });
 if(failures.length){console.error(failures.join('\n'));process.exitCode=1}
-else console.log('PASS: 14 feedback deletion integrity scenarios, no media writes');
+else console.log('PASS: 16 feedback deletion integrity scenarios, no media writes');
