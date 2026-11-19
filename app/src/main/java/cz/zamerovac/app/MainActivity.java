@@ -502,9 +502,12 @@ public class MainActivity extends Activity {
             clearCustomerExport();return;
         }
         if(request==REQUEST_ISSUE_EXPORT){
-            String id=pendingIssueZipId;pendingIssueZipId=null;
+            final String id=pendingIssueZipId;
             final Uri destination=data==null?null:data.getData();
             if(id!=null&&destination!=null){
+                // Keep the pending ZIP pinned until the external SAF stream closes.
+                // Clearing it on picker return lets another export/cleanup unlink it mid-copy.
+                synchronized(this){issueBundleBusy=true;}
                 new Thread(()->{
                     try{
                         try(InputStream in=new FileInputStream(mediaFile(id));
@@ -512,15 +515,23 @@ public class MainActivity extends Activity {
                             if(out==null)throw new IOException("Nelze otevřít výstup");
                             copy(in,out);
                         }
-                        // Report success only after the destination stream has closed cleanly.
                         js("window.onReportBundleSaved?.()");
                     }catch(Exception ex){
                         try{android.provider.DocumentsContract.deleteDocument(getContentResolver(),destination);}
                         catch(Exception ignored){}
                         error("Uložení balíčku: "+ex.getMessage());
-                    }finally{deleteIssueZip(id);}
+                    }finally{
+                        deleteIssueZip(id);
+                        synchronized(MainActivity.this){
+                            if(id.equals(pendingIssueZipId))pendingIssueZipId=null;
+                            issueBundleBusy=false;
+                        }
+                    }
                 },"ZamerovacIssueExport").start();
-            }else deleteIssueZip(id);
+            }else{
+                deleteIssueZip(id);
+                if(id!=null&&id.equals(pendingIssueZipId))pendingIssueZipId=null;
+            }
             return;
         }
         if(request==REQUEST_IMPORT_BACKUP&&data!=null&&data.getData()!=null){
