@@ -144,6 +144,7 @@ public class MainActivity extends Activity {
 
     @Override public void onCreate(Bundle saved){super.onCreate(saved);
         settings=getSharedPreferences("zamerovac",MODE_PRIVATE);
+        new Thread(this::cleanupIssueZips,"ZamerovacIssueCleanup").start();
         driveAccountFlow=new DriveAccountFlow(this,new DriveAccounts(getNoBackupFilesDir()),this::driveChanged);driveAccountFlow.restore(saved);if(saved!=null){cloudTreeRevision=saved.getLong("cloud-tree-revision",-1);backupTreeRevision=saved.getLong("backup-tree-revision",-1);}
         // Android 15/16/17 draw behind system bars: inset the WebView explicitly.
         getWindow().getDecorView().setSystemUiVisibility(
@@ -483,7 +484,7 @@ public class MainActivity extends Activity {
             if(request==REQUEST_BACKUP){pendingArchiveFolderId=null;pendingArchiveSelectionIds=null;}
             if(request==REQUEST_ATTACH)finishMediaSelection(mediaSelectionToken);
             if(request==REQUEST_CAMERA){discardPendingCamera();finishMediaSelection(mediaSelectionToken);}
-            if(request==REQUEST_ISSUE_EXPORT)pendingIssueZipId=null;
+            if(request==REQUEST_ISSUE_EXPORT){String issueId=pendingIssueZipId;pendingIssueZipId=null;deleteIssueZip(issueId);}
             if(request==REQUEST_CUSTOMER_EXPORT)clearCustomerExport();
             return;
         }
@@ -503,14 +504,21 @@ public class MainActivity extends Activity {
         }
         if(request==REQUEST_ISSUE_EXPORT){
             String id=pendingIssueZipId;pendingIssueZipId=null;
-            if(id!=null&&data!=null&&data.getData()!=null){
-                try(InputStream in=new FileInputStream(mediaFile(id));
-                    OutputStream out=getContentResolver().openOutputStream(data.getData(),"w")){
-                    if(out==null)throw new IOException("Nelze otevřít výstup");
-                    copy(in,out);
-                    js("window.onReportBundleSaved?.()");
-                }catch(Exception ex){error("Uložení balíčku: "+ex.getMessage());}
-            }
+            final Uri destination=data==null?null:data.getData();
+            if(id!=null&&destination!=null){
+                new Thread(()->{
+                    try(InputStream in=new FileInputStream(mediaFile(id));
+                        OutputStream out=getContentResolver().openOutputStream(destination,"w")){
+                        if(out==null)throw new IOException("Nelze otevřít výstup");
+                        copy(in,out);
+                        js("window.onReportBundleSaved?.()");
+                    }catch(Exception ex){
+                        try{android.provider.DocumentsContract.deleteDocument(getContentResolver(),destination);}
+                        catch(Exception ignored){}
+                        error("Uložení balíčku: "+ex.getMessage());
+                    }finally{deleteIssueZip(id);}
+                },"ZamerovacIssueExport").start();
+            }else deleteIssueZip(id);
             return;
         }
         if(request==REQUEST_IMPORT_BACKUP&&data!=null&&data.getData()!=null){
@@ -641,52 +649,143 @@ public class MainActivity extends Activity {
         return new JSONObject().put("format","cz.zamerovac.archive").put("version",2).put("entries",checksums).toString().getBytes(StandardCharsets.UTF_8);
     }
 
-    /** Local feedback ZIP, including only explicitly captured screenshots and attached videos. */
-    private String createIssueZip(String json) throws IOException, JSONException {
+    /** Feedback-only temporary ZIPs. Never touch project media or original report assets. */
+    private static final long MAX_ISSUE_BUNDLE_BYTES=256L*1024L*1024L;
+    private static final long ISSUE_ZIP_TTL_MS=24L*60L*60L*1000L;
+    private boolean issueBundleBusy;
+
+    private File checkedIssueMedia(String id,boolean video)throws IOException{
+        if(!validId(id))throw new IOException("Neplatné ID přílohy připomínky");
+        File f=mediaFile(id);
+        if(!f.isFile()||!f.canRead()||f.length()<=0)
+            throw new IOException("Chybí nebo je prázdná příloha připomínky");
+        String mime=mediaMime(id);
+        if(video?!mime.startsWith("video/"):!"image/png".equals(mime))
+            throw new IOException("Příloha připomínky má nesprávný formát");
+        return f;
+    }
+    private void deleteIssueZip(String id){
+        if(id==null||!id.startsWith("issuezip-")||!validId(id))return;
+        if(!settings.getBoolean("issuezip-"+id,false))return;
+        File f=mediaFile(id);
+        if(!f.exists()||f.delete())
+            settings.edit().remove("issuezip-"+id).remove("mime-"+id).remove("name-"+id).apply();
+    }
+    private void cleanupIssueZips(){
+        File[] files=new File(getFilesDir(),"media").listFiles();
+        if(files==null)return;
+        long now=System.currentTimeMillis();
+        for(File f:files){
+            String id=f.getName();
+            if(f.isFile()&&id.startsWith("issuezip-")&&validId(id)&&f.lastModified()>0
+                &&now-f.lastModified()>ISSUE_ZIP_TTL_MS)deleteIssueZip(id);
+        }
+    }
+    /** Preflight all selected attachments BEFORE writing; an incomplete ZIP is never shared. */
+    private String createIssueZip(String json)throws IOException,JSONException{
+        if(json==null||json.length()>512*1024)throw new IOException("Seznam připomínek je příliš velký");
         JSONObject root=new JSONObject(json);
         JSONArray reports=root.optJSONArray("reports");
-        if(reports==null||reports.length()==0)throw new IOException("Nejsou vybrány žádné připomínky");
-        String id=UUID.randomUUID().toString();
-        File target=mediaFile(id);
-        try(ZipOutputStream zip=new ZipOutputStream(new FileOutputStream(target))){
-            zip.putNextEntry(new ZipEntry("pripominky.json"));
-            zip.write(root.toString(2).getBytes(StandardCharsets.UTF_8));
-            zip.closeEntry();
-            for(int i=0;i<reports.length();i++){
-                JSONObject report=reports.optJSONObject(i);
-                if(report==null)continue;
-                String screenshot=report.optString("annotatedId","");
-                if(!validId(screenshot)||!mediaFile(screenshot).isFile())
-                    screenshot=report.optString("screenshotId","");
-                if(validId(screenshot)&&mediaFile(screenshot).isFile())
-                    zipIssueFile(zip,mediaFile(screenshot),
-                        String.format(java.util.Locale.ROOT,"obrazky/pripominka-%03d.png",i+1));
-                JSONArray videos=report.optJSONArray("videos");
-                if(videos==null)continue;
+        if(reports==null||reports.length()==0||reports.length()>50)
+            throw new IOException("Vyber 1 až 50 připomínek");
+        java.util.ArrayList<File> files=new java.util.ArrayList<>();
+        java.util.ArrayList<String> paths=new java.util.ArrayList<>();
+        java.util.ArrayList<Long> sizes=new java.util.ArrayList<>();
+        JSONArray sanitizedReports=new JSONArray();
+        long bytes=0;
+        for(int i=0;i<reports.length();i++){
+            JSONObject report=reports.optJSONObject(i);
+            if(report==null)throw new IOException("Poškozený záznam připomínky");
+            JSONObject clean=new JSONObject();
+            // No local media IDs, customer filenames, annotations or internal state in the exported JSON.
+            for(String key:new String[]{"type","title","description","screen","appVersion","createdAt","updatedAt"}){
+                String value=report.optString(key,"");
+                if(value.length()>16000)throw new IOException("Text připomínky je příliš dlouhý");
+                clean.put(key,value);
+            }
+            String annotated=report.optString("annotatedId","");
+            String screenshot=annotated.isEmpty()?report.optString("screenshotId",""):annotated;
+            File image=checkedIssueMedia(screenshot,false);
+            String imagePath=String.format(java.util.Locale.ROOT,"obrazky/pripominka-%03d.png",i+1);
+            long size=image.length();
+            if(size>MAX_ISSUE_BUNDLE_BYTES-bytes)throw new IOException("Přílohy přesahují limit 256 MiB");
+            bytes+=size;files.add(image);paths.add(imagePath);sizes.add(size);
+            clean.put("obrazek",imagePath);
+            JSONArray videos=report.optJSONArray("videos"),videoPaths=new JSONArray();
+            if(videos!=null){
+                if(videos.length()>12)throw new IOException("Jedna připomínka může obsahovat nejvýše 12 videí");
                 for(int j=0;j<videos.length();j++){
                     JSONObject item=videos.optJSONObject(j);
                     String video=item==null?videos.optString(j,""):item.optString("id","");
-                    if(!validId(video)||!mediaFile(video).isFile())continue;
+                    File original=checkedIssueMedia(video,true);
                     String mime=mediaMime(video);
-                    String extension=mime.contains("webm")?"webm":mime.contains("quicktime")?"mov":"mp4";
-                    zipIssueFile(zip,mediaFile(video),String.format(java.util.Locale.ROOT,
-                        "videa/pripominka-%03d-%02d.%s",i+1,j+1,extension));
+                    String extension=mime.contains("webm")?"webm":mime.contains("quicktime")?"mov":
+                        mime.contains("3gpp")?"3gp":mime.equals("video/mp4")?"mp4":"bin";
+                    String path=String.format(java.util.Locale.ROOT,
+                        "videa/pripominka-%03d-%02d.%s",i+1,j+1,extension);
+                    size=original.length();
+                    if(size>MAX_ISSUE_BUNDLE_BYTES-bytes)throw new IOException("Přílohy přesahují limit 256 MiB");
+                    bytes+=size;files.add(original);paths.add(path);sizes.add(size);
+                    videoPaths.put(path);
                 }
             }
-        }catch(Exception ex){target.delete();throw ex;}
+            clean.put("videa",videoPaths);
+            sanitizedReports.put(clean);
+        }
+        JSONObject sanitized=new JSONObject().put("application","Zaměřovač TEST")
+            .put("formatVersion",2).put("exportedAt",root.optString("exportedAt",""))
+            .put("reports",sanitizedReports);
+        byte[] meta=sanitized.toString(2).getBytes(StandardCharsets.UTF_8);
+        if(meta.length>512*1024||meta.length>MAX_ISSUE_BUNDLE_BYTES-bytes)
+            throw new IOException("Metadata překračují limit balíčku");
+        String id="issuezip-"+UUID.randomUUID();
+        if(!settings.edit().putBoolean("issuezip-"+id,true).commit())
+            throw new IOException("Nelze evidovat dočasný export");
+        File target=mediaFile(id);
+        try(ZipOutputStream zip=new ZipOutputStream(new FileOutputStream(target))){
+            zip.putNextEntry(new ZipEntry("pripominky.json"));
+            zip.write(meta);
+            zip.closeEntry();
+            for(int i=0;i<files.size();i++){
+                File f=files.get(i);
+                if(!f.isFile()||f.length()!=sizes.get(i))
+                    throw new IOException("Příloha se během exportu změnila");
+                zipIssueFile(zip,f,paths.get(i),sizes.get(i));
+            }
+        }catch(Exception ex){deleteIssueZip(id);throw ex;}
+        if(target.length()>MAX_ISSUE_BUNDLE_BYTES){
+            deleteIssueZip(id);throw new IOException("Hotový ZIP přesahuje limit 256 MiB");
+        }
         settings.edit().putString("mime-"+id,"application/zip")
             .putString("name-"+id,"Zamerovac-pripominky.zip").apply();
         return id;
     }
-    private void zipIssueFile(ZipOutputStream zip,File input,String name)throws IOException {
+    private void zipIssueFile(ZipOutputStream zip,File input,String name,long expected)throws IOException{
         zip.putNextEntry(new ZipEntry(name));
-        try(InputStream in=new FileInputStream(input)){copy(in,zip);}
+        long copied=0;
+        try(InputStream in=new FileInputStream(input)){
+            byte[] buf=new byte[64*1024];int n;
+            while((n=in.read(buf))!=-1){
+                if(n>expected-copied)throw new IOException("Příloha se během exportu zvětšila");
+                zip.write(buf,0,n);copied+=n;
+            }
+        }
+        if(copied!=expected)throw new IOException("Příloha se během exportu zkrátila");
         zip.closeEntry();
     }
     private void sendIssueBundle(String text,boolean saveToFile){
+        synchronized(this){
+            if(issueBundleBusy||pendingIssueZipId!=null){
+                error("Jiný export připomínek ještě probíhá");return;
+            }
+            issueBundleBusy=true;
+        }
         new Thread(()->{
+            String ready=null;
             try{
-                String id=createIssueZip(text);
+                cleanupIssueZips();
+                ready=createIssueZip(text);
+                final String id=ready;
                 runOnUiThread(()->{
                     try{
                         if(saveToFile){
@@ -706,10 +805,22 @@ public class MainActivity extends Activity {
                             intent.setClipData(android.content.ClipData.newRawUri("Připomínky",uri));
                             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                             startActivity(Intent.createChooser(intent,"Sdílet připomínky"));
+                            // ACTION_SEND has no reliable completion acknowledgement. Keep the
+                            // read-only ZIP temporarily; prune it after 24 h on a later launch.
                         }
-                    }catch(Exception ex){error("Sdílení připomínek: "+ex.getMessage());}
+                    }catch(Exception ex){
+                        if(id.equals(pendingIssueZipId))pendingIssueZipId=null;
+                        deleteIssueZip(id);
+                        error("Sdílení připomínek: "+ex.getMessage());
+                    }finally{
+                        synchronized(MainActivity.this){issueBundleBusy=false;}
+                    }
                 });
-            }catch(Exception ex){error("Balíček připomínek: "+ex.getMessage());}
+            }catch(Exception ex){
+                if(ready!=null)deleteIssueZip(ready);
+                synchronized(MainActivity.this){issueBundleBusy=false;}
+                error("Balíček připomínek: "+ex.getMessage());
+            }
         },"ZamerovacIssueBundle").start();
     }
     private void collectMediaIds(JSONObject record,Set<String> ids)throws IOException{
