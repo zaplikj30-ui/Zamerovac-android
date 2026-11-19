@@ -44,8 +44,11 @@
    if(ticket){
     ticket.clickToSaveStartMs=started-ticket.started;
     ticket.jsSaveMs=now()-started; // Includes synchronous native bridge & JS post-ACK
-    if(ticket.jsSaveReturnedTrue!==true)
-     requestAnimationFrame(()=>requestAnimationFrame(()=>settle(ticket)));
+    // A post-save failure may prevent showFolder entirely. Record the
+    // missing render as null, never invent a completed paint or Native ACK.
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{
+     if(ticket.showFolderMs===null)settle(ticket);
+    }));
    }
   }
  };
