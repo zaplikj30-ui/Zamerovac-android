@@ -6,17 +6,33 @@
  const KEY='zamerovac-feedback-v1',POS='zamerovac-feedback-flag-position-v1';
  const validId=id=>typeof id==='string'&&/^[a-zA-Z0-9_-]{3,120}$/.test(id);
  let reports=[];
+ // If a write may have reached localStorage but its readback was not verified,
+ // all subsequent mutations must wait for a fresh startup load.
+ let feedbackWriteUncertain=false;
  // Never truncate on restart: doing so could silently erase older reports on the next save.
- try{const v=JSON.parse(localStorage.getItem(KEY)||'[]');if(Array.isArray(v))reports=v.filter(x=>x&&typeof x==='object')}catch(e){}
+ try{const v=JSON.parse(localStorage.getItem(KEY)||'[]');if(Array.isArray(v))reports=v.filter(x=>x&&typeof x==='object');else feedbackWriteUncertain=true}catch(e){feedbackWriteUncertain=true}
  // Commit the proposed list only after the device confirms its storage bytes.
  // A quota/private-mode failure must never be reported as a successful save.
  const persist=next=>{
+  if(feedbackWriteUncertain){
+   notify('Stav uložených připomínek je nejistý. Před další změnou znovu spusť aplikaci.');
+   return false;
+  }
+  let attempted=false;
   try{
    const serialized=JSON.stringify(next);
+   attempted=true;
    localStorage.setItem(KEY,serialized);
    if(localStorage.getItem(KEY)!==serialized)throw new Error('Nepotvrzený zápis připomínek');
    return true;
-  }catch(e){notify('Nepodařilo se uložit seznam připomínek');return false}
+  }catch(e){
+   // Even if setItem succeeded, a failed readback leaves the persisted baseline unknown.
+   // Do not let the old RAM list overwrite a more recent, actually committed value.
+   if(attempted)feedbackWriteUncertain=true;
+   notify('Nepodařilo se uložit seznam připomínek'+
+    (feedbackWriteUncertain?'. Stav úložiště je nejistý; před další změnou znovu spusť aplikaci.':''));
+   return false;
+  }
  };
  const q=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const now=()=>new Date().toISOString();
@@ -112,7 +128,9 @@
  };
  function getBase(id){return validId(id)?'https://appassets.androidplatform.net/media/'+encodeURIComponent(id):''}
  function summary(r){
-  return '<div class="feedback-card-title">'+q(r.title||r.description.slice(0,65)||'(Bez popisu)')+'</div>'+
+  const title=typeof r.title==='string'?r.title:'';
+  const description=typeof r.description==='string'?r.description:'';
+  return '<div class="feedback-card-title">'+q(title||description.slice(0,65)||'(Bez popisu)')+'</div>'+
     '<small>'+q(r.type==='bug'?'Chyba':'Změna')+' · '+q(r.screen||'')+' · '+q(new Date(r.createdAt).toLocaleDateString('cs-CZ'))+
     (r.resolved?' · Vyřešeno':'')+'</small>';
  }
@@ -185,6 +203,10 @@
   overlay.querySelector('#feedbackSaveZip').onclick=()=>sendBatch(true);
  }
  function sendBatch(saveToFile){
+  if(feedbackWriteUncertain){
+   notify('Stav uložených připomínek je nejistý. Před exportem znovu spusť aplikaci.');
+   return;
+  }
   const batch=selectedReports();
   if(!batch.length){notify('Nejdřív vyber alespoň jednu připomínku');return}
   if(!native||typeof (saveToFile?Native.saveIssueBundle:Native.shareIssueBundle)!=='function'){
