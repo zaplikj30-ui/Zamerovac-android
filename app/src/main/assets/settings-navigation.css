@@ -13,6 +13,6 @@
 .settings-page .settings-subgroup{min-width:0}
 .settings-home[hidden],.settings-page[hidden],.settings-search-results[hidden],.settings-categories[hidden]{display:none!important}
 /* Existing PendingAudio API decides whether an alert exists; never conceal its error state. */
-#pendingAudioBanner{position:absolute;top:64px;right:10px;z-index:8;width:36px;height:36px;min-width:36px;min-height:36px;padding:0;border:1px solid #e0b85c;border-radius:50%;background:#524021;color:#fff;font-size:0;box-shadow:0 2px 7px #0007}
-#pendingAudioBanner::before{content:'⚠';font-size:21px;line-height:36px}
+#pendingAudioBanner{position:absolute;top:64px;right:10px;z-index:8;width:98px;height:32px;min-width:98px;min-height:32px;padding:0;border:1px solid #e0b85c;border-radius:17px;background:#524021;color:#fff;font-size:0;box-shadow:0 2px 7px #0007}
+#pendingAudioBanner::before{content:'⚠ Nahrávky';font-size:12px;line-height:32px}
 @media (max-width:360px){.settings-page .setting{padding-left:9px;padding-right:9px}.settings-category{padding-left:12px}}
