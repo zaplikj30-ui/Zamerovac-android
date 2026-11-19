@@ -20,7 +20,16 @@ suite('peer-sync',async run=>{
  });
  await run('menu-settings-offline-and-data-preserved',async({page})=>{
   const before=await page.evaluate(()=>JSON.stringify(state));await page.click('#back');await page.getByText('⇄  Synchronizace zařízení',{exact:true}).click();await page.locator('#peerSyncPanel').waitFor({state:'visible'});assert.match(await page.locator('#peerProblem').innerText(),/Android/);await page.click('#peerPair');assert.match(await page.locator('#peerProblem').innerText(),/Android/);await page.keyboard.press('Escape');assert.equal(await page.locator('#peerSyncPanel').isVisible(),false);
-  await page.evaluate(()=>{toggleSettings()});await page.click('#peerSettings');await page.locator('#peerClose').click();assert.equal(await page.evaluate(()=>JSON.stringify(state)),before);
+  await page.evaluate(()=>{toggleSettings()});
+  // The settings home shows categories; the peer button is hidden until Sync is opened.
+  assert.equal(await page.locator('#peerSettings').isVisible(),false);
+  await page.locator('.settings-category[data-category="sync"]').click();
+  assert.equal(await page.locator('#settingsPage-sync').isVisible(),true);
+  assert.equal(await page.locator('#peerSettings').isVisible(),true);
+  await page.locator('#peerSettings').click();
+  await page.locator('#peerSyncPanel').waitFor({state:'visible'});
+  await page.locator('#peerClose').click();
+  assert.equal(await page.evaluate(()=>JSON.stringify(state)),before);
  });
  await run('explicit-approval-full-code-reject-back-and-stale-session',async({page})=>{
   await mock(page);const before=await page.evaluate(()=>JSON.stringify(state));await page.evaluate(()=>openZamerovacPeers());await page.click('#peerPair');assert.equal((await page.evaluate(()=>peerCalls)).at(-1).name,'pair');
