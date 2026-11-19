@@ -105,7 +105,7 @@ const cases=[
    'lock acquisition must be under try, not before try');
   assert.match(s,/lockWaitOpen\s*=\s*false;\s*Trace\.endSection\(\);/,
    'normal lock entry must close trace once');
-  assert.match(s,/\}\s*finally\s*\{\s*if\(lockWaitOpen\)Trace\.endSection\(\);\s*\}\s*\}\s*finally\s*\{\s*if\(perf\)Trace\.endSection\(\);/,
+  assert.match(s,/\}\s*finally\s*\{\s*(?:\/\/[^\n]*\n\s*)?if\(lockWaitOpen\)Trace\.endSection\(\);\s*\}\s*\}\s*finally\s*\{\s*if\(perf\)Trace\.endSection\(\);/,
    'lock wait must have own finally before bridge finally');
  }]
 ];
