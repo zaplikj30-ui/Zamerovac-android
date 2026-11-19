@@ -16,6 +16,7 @@ const persistence=segment(' const persist=next=>','\n const q=');
 const escapeHtml=segment(' const q=','\n const now=');
 const summary=segment(' function summary(r){','\n function selectedReports(){');
 const list=segment(' function showReportList(){','\n function sendBatch(saveToFile){');
+const share=segment(' function sendBatch(saveToFile){','\n window.onReportBundleSaved=');
 const KEY='zamerovac-feedback-v1';
 const makeReport=i=>({
  id:'fb-'+String(i).padStart(3,'0'), title:'Hlášení '+i,description:'Popis '+i,
@@ -53,13 +54,17 @@ function boot(disk,{approve=true,fault='none'}={}){
   },
   closeOverlay:()=>{},
   sendBatch:()=>{calls.nativeCalls++;},
-  Native:{cleanupFinishedIssueBundles:()=>{calls.nativeCalls++}},
+  Native:{cleanupFinishedIssueBundles:()=>{calls.nativeCalls++},
+   shareIssueBundle:()=>{calls.nativeCalls++},saveIssueBundle:()=>{calls.nativeCalls++}},
+  now:()=> '2026-11-19T09:00:00.000Z',
+  selectedReports:()=>JSON.parse(vm.runInContext('JSON.stringify(reports)',ctx)),
   native:true
  };
  vm.createContext(ctx);
- vm.runInContext('var overlay=null;\n'+startup+persistence+escapeHtml+summary+list,ctx);
+ vm.runInContext('var overlay=null;\n'+startup+persistence+escapeHtml+summary+list+share,ctx);
  const read=()=>JSON.parse(vm.runInContext('JSON.stringify(reports)',ctx));
  const commit=next=>vm.runInContext('persist('+JSON.stringify(next)+')',ctx);
+ const exportBatch=save=>vm.runInContext('sendBatch('+!!save+')',ctx);
  const draw=()=>vm.runInContext('showReportList()',ctx);
  const click=id=>{
   draw();
@@ -67,7 +72,7 @@ function boot(disk,{approve=true,fault='none'}={}){
   assert.ok(button,'Expected delete button for '+id);
   button.onclick();
  };
- return {calls,read,click,commit};
+ return {calls,read,click,commit,exportBatch};
 }
 function data(rows){return new Map([[KEY,JSON.stringify(rows)]])}
 function fromDisk(disk){return JSON.parse(disk.get(KEY))}
@@ -203,6 +208,32 @@ scenario('broken startup storage payload blocks all overwrites',()=>{
  assert.equal(disk.get(KEY),invalid,'Never overwrite damaged original storage');
  assert.ok(session.calls.notices.some(m=>/nejistý/i.test(m)),'Warn about unsafe storage');
 });
+scenario('uncertain write locks another metadata save and external/local ZIP',()=>{
+ const rows=[makeReport(1),makeReport(2),makeReport(3)],disk=data(rows);
+ const session=boot(disk,{fault:'readback-once'});
+ session.click('fb-001');
+ const confirmed=JSON.stringify([rows[1],rows[2]]);
+ assert.equal(disk.get(KEY),confirmed,'First write reached storage despite readback failure');
+ const submitted=[rows[1],{...rows[2],title:'Another edit'}];
+ assert.equal(session.commit(submitted),false,'A later metadata edit must not overwrite uncertain storage');
+ session.exportBatch(false);session.exportBatch(true);
+ assert.equal(session.calls.nativeCalls,0,'Neither external share nor local ZIP may export stale RAM');
+ assert.equal(session.calls.writes,1,'No second storage writes');
+ assert.equal(disk.get(KEY),confirmed,'Keep confirmed disk contents');
+ const reboot=boot(disk);
+ assert.equal(reboot.commit(submitted),true,'After successful reload, edits are allowed');
+ assert.deepEqual(fromDisk(disk),submitted);
+});
+scenario('mixed malformed legacy array cannot silently discard an entry on next save',()=>{
+ const items=[null,...Array.from({length:300},(_,i)=>makeReport(i))];
+ const disk=data(items),previous=disk.get(KEY);
+ const session=boot(disk);
+ assert.equal(session.read().length,300,'Valid reports remain visible to aid recovery');
+ assert.equal(session.commit(session.read().slice(1)),false,'Block rewrite of mixed unsupported legacy data');
+ assert.equal(disk.get(KEY),previous,'Never erase the malformed entry without owner consent');
+ assert.ok(session.calls.notices.some(m=>/nejistý/i.test(m)));
+ assert.deepEqual(boot(disk).read(),session.read());
+});
 scenario('one normal report: explicit confirmation deletes only selected ID',()=>{
  const rows=[makeReport(1),makeReport(2),makeReport(3)],disk=data(rows);
  const session=boot(disk);
@@ -213,4 +244,4 @@ scenario('one normal report: explicit confirmation deletes only selected ID',()=
  assert.equal(session.calls.nativeCalls,0,'Delete must never touch native/media bridge');
 });
 if(failures.length){console.error(failures.join('\n'));process.exitCode=1}
-else console.log('PASS: 11 feedback deletion integrity scenarios, no media writes');
+else console.log('PASS: 13 feedback deletion integrity scenarios, no media writes');
