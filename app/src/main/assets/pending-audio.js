@@ -48,8 +48,14 @@
  function bannerCount(count){
   let banner=$('pendingAudioBanner');
   if(!count){banner?.remove();return}
-  if(!banner){banner=document.createElement('button');banner.id='pendingAudioBanner';banner.type='button';banner.className='outline';banner.onclick=show;document.querySelector('#browserView')?.prepend(banner)}
-  banner.textContent=t('title');
+  if(!banner){
+   banner=document.createElement('button');banner.id='pendingAudioBanner';banner.type='button';
+   banner.className='ico';banner.onclick=show;
+   banner.title=t('indicator');banner.setAttribute('aria-label',banner.title);
+   banner.innerHTML='<svg viewBox="0 0 24 24" width="24" height="24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="3" width="6" height="11" rx="3"/><path d="M3 11v1a6 6 0 0 0 9 5.2M9 18v3m-3 0h6M18 9v6m0 3h.01"/></svg>';
+   const footer=$('browserFoot');
+   footer?.insertBefore(banner,$('cloudBtn'));
+  }
  }
  function refresh(){
   if(!native||typeof Native.pendingAudio!=='function')return;

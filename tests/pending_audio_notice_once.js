@@ -10,10 +10,7 @@ const source=fs.readFileSync('app/src/main/assets/pending-audio.js','utf8');
 function scene(entries=[],nativeJournal){
  const elements=new Map(),warnings=[];let scans=0;
  const document={
-  createElement(tag){return {tag,remove(){elements.delete(this.id)}}},
-  querySelector(selector){
-   return selector==='#browserView'?{prepend(el){elements.set(el.id,el)}}:null;
-  }
+  createElement(tag){return {tag,setAttribute(){},remove(){elements.delete(this.id)}}}
  };
  const env={
   window:{ZamerovacI18n:{t:key=>key}},
@@ -21,7 +18,7 @@ function scene(entries=[],nativeJournal){
   Native:{pendingAudio(){scans++;return nativeJournal?nativeJournal():JSON.stringify(entries)}},
   document,renderNoteAttachments(){},
   notify:msg=>warnings.push(msg),
-  $:id=>elements.get(id)||null,
+  $:id=>id==='browserFoot'?{insertBefore(el){elements.set(el.id,el)}}:elements.get(id)||null,
   modal(){},dateText(){return ''},openAttachment(){},
   noteActive:null,state:{records:[]},persistedSnapshot:'',
   save:()=>true,touch(){}

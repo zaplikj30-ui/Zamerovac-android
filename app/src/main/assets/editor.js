@@ -26,10 +26,10 @@ function openEditor(r){
   loadPhotoImage(r.media[0]).then(img=>{
    if(!active())return;clearTimeout(photoLoadTimer);photoLoadFailed=false;stageImg=img;
    photoSize={w:img.naturalWidth,h:img.naturalHeight};
-   initialImageView();paint();
+   initialImageView();
   }).catch(failed);
  }
- resizeEditor();initialImageView();paint();
+ resizeEditorCanvas();initialImageView();
 }
 function hideEditorLoupe(){
  magnifierPoint=null;loupeSide=null;$('loupe').hidden=true;
@@ -44,6 +44,9 @@ $('fitBtn').onclick=fitImage;$('zoomIn').onclick=()=>{const p=centerPoint();zoom
 function centerPoint(){return{x:stageCanvas.clientWidth/2,y:stageCanvas.clientHeight/2}}
 function resizeEditor(){
  if(screen!=='editor')return;
+ resizeEditorCanvas();paint();
+}
+function resizeEditorCanvas(){
  const el=$('stage'),dpr=window.devicePixelRatio||1,w=el.clientWidth,h=el.clientHeight;
  // Preserve zoom and the world point at the centre, including unsaved drafts.
  if(editorViewport?.record===current&&w>0&&h>0){
@@ -51,11 +54,15 @@ function resizeEditor(){
  }
  editorViewport={record:current,w,h};
  stageCanvas.width=Math.max(1,Math.floor(w*dpr));stageCanvas.height=Math.max(1,Math.floor(h*dpr));
- ctx.setTransform(dpr,0,0,dpr,0,0);paint();
+ ctx.setTransform(dpr,0,0,dpr,0,0);
 }
 window.addEventListener('resize',resizeEditor);
 function fitImage(){let w=stageCanvas.clientWidth,h=stageCanvas.clientHeight;if(!w||!h)return;Object.assign(view,AnnotationGeometry.fittedViewport(w,h,photoSize));paint()}
-function initialImageView(){fitImage();const p=centerPoint();zoomAt(1.15,p.x,p.y)}
+function initialImageView(){
+ const p=centerPoint();
+ if(p.x&&p.y)Object.assign(view,AnnotationGeometry.fittedViewport(p.x*2,p.y*2,photoSize));
+ zoomAt(1.15,p.x,p.y);
+}
 function zoomAt(factor,x,y){Object.assign(view,AnnotationGeometry.zoomedViewport(view,factor,x,y));paint()}
 function screenToWorld(p){return AnnotationGeometry.screenToWorld(p,view)}
 function worldToScreen(p){return AnnotationGeometry.worldToScreen(p,view)}
@@ -669,7 +676,7 @@ if(['polyline','chain','cumulative','angle'].includes(mode)&&polylineDraft.lengt
   // Never mutate annotation coordinates until a real drag is established.
   // Previously the endpoint branch called snap() even below 7 px, silently
   // changing geometry while stageUp discarded the undo checkpoint as a tap.
-  if(!selectedHandle.dragged){paint();return;}
+  if(!selectedHandle.dragged)return;
   if(selectedHandle.kind==='select-only'||selectedHandle.kind==='open-selected'){
    magnifierPoint=null;paint();return;
   }

@@ -4,19 +4,18 @@
 (function(root){
 'use strict';
 const names={
- unset:['☁̸','Nenastaveno','Zařízení nejsou připravena k synchronizaci. Nejprve je bezpečně spáruj.'],
- pending:['☁↑','Čeká','Změny jsou místně uložené, ale jejich přijetí druhým zařízením není potvrzené.'],
- confirmed:['☁✓','Potvrzeno','Aktuální revize má ověřené potvrzení přenosu; dostupnost druhého zařízení se ověřuje zvlášť.'],
- failed:['☁✕','Selhalo','Synchronizace selhala. Zakázky zůstávají místně; příčinu je nutné vyřešit.']
+ unset:['Nenastaveno','Zařízení nejsou připravena k synchronizaci. Nejprve je bezpečně spáruj.'],
+ pending:['Čeká','Změny jsou místně uložené, ale jejich přijetí druhým zařízením není potvrzené.'],
+ confirmed:['Potvrzeno','Aktuální revize má ověřené potvrzení přenosu; dostupnost druhého zařízení se ověřuje zvlášť.'],
+ failed:['Selhalo','Synchronizace selhala. Zakázky zůstávají místně; příčinu je nutné vyřešit.']
 };
-let phase='unset',reason=names.unset[2],lastNotice=null,knownPeers=null;
+let phase='unset',reason=names.unset[1],lastNotice=null,knownPeers=null;
 let knownConflictIds=new Set(),conflictDetail='';
 const button=document.getElementById('cloudBtn');
 if(!button)return;
 const oldCloudClick=button.onclick;
 function paint(){
- const [mark,label]=names[phase];
- button.textContent=mark;
+ const [label]=names[phase];
  button.classList.remove('sync-unset','sync-pending','sync-confirmed','sync-failed');
  button.classList.add('sync-'+phase);
  const title='Synchronizace: '+label;
@@ -27,7 +26,7 @@ function paint(){
 function update(next,detail){
  if(!Object.hasOwn(names,next))return;
  phase=next;
- reason=String(detail||names[next][2]).slice(0,500);
+ reason=String(detail||names[next][1]).slice(0,500);
  paint();
 }
 // A new durable local revision invalidates only the visual green receipt.
@@ -90,8 +89,8 @@ function cloud(result){
   update('failed',message);
   alertOnce('cloud-error:'+message,message,danger.test(message));
  }else if(result.pending===true){
-  update('pending',message||names.pending[2]);
-  alertOnce('cloud-pending',names.pending[2]);
+  update('pending',message||names.pending[1]);
+  alertOnce('cloud-pending',names.pending[1]);
  }else if(result.pending===false&&typeof screen==='string'&&screen==='editor'){
   // Native ledger verification can hit SQLite. Do not block the user's
   // current drawing gesture; check on explicit status tap or next attempt.
@@ -99,7 +98,7 @@ function cloud(result){
  }else if(result.pending===false&&root.__syncViewNeedsRefresh){
   update('pending','Údaje jsou na zařízení, ale nejnovější změny ještě nejsou načtené do aplikace.');
  }else if(result.pending===false&&receipt()){
-  update('confirmed',names.confirmed[2]);
+  update('confirmed',names.confirmed[1]);
   lastNotice=null;
   // Deliberately no success toast for a normal automatic attempt.
  }else{
@@ -114,12 +113,12 @@ function peerState(raw){
   if(!peer||typeof peer!=='object'||Array.isArray(peer))return;
   knownPeers=peer.peers&&typeof peer.peers==='object'&&!Array.isArray(peer.peers)?Object.keys(peer.peers).length:0;
   if(!knownPeers){if(phase==='confirmed'||phase==='pending')update('unset');}
-  else if(phase==='unset')update('pending',names.pending[2]);
+  else if(phase==='unset')update('pending',names.pending[1]);
  }catch(error){}
 }
 function peerProblem(message){
  const raw=String(message??'');
- update('failed',raw||names.failed[2]);
+ update('failed',raw||names.failed[1]);
  alertOnce('peer:'+raw,'Synchronizace zařízení: '+raw,danger.test(raw));
  return true;
 }
@@ -145,8 +144,8 @@ function show(){
  else if(phase==='confirmed'&&!receipt())
   update('pending','Předchozí potvrzení již neodpovídá aktuálním datům. Zkontroluj čekající přenos.');
  else if(phase==='pending'&&!root.__syncViewNeedsRefresh&&receipt())
-  update('confirmed',names.confirmed[2]);
- const title='Synchronizace · '+names[phase][1];
+  update('confirmed',names.confirmed[1]);
+ const title='Synchronizace · '+names[phase][0];
  modal(title,'<p id="syncStatusDetails"></p><p id="syncStatusExplanation"></p><div class="row wrap"><button id="syncStatusPair" class="outline">Synchronizace zařízení</button><button id="syncStatusCloud" class="outline">Google Disk / ruční přenos</button></div>',()=>true,'Zavřít');
  document.getElementById('syncStatusDetails').textContent=reason+
   (readWarning&&reason!==readWarning?'\n'+readWarning:'')+
