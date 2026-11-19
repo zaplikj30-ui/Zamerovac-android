@@ -528,7 +528,7 @@ window.ZamerovacSyncReadCommittedConflicts=()=>{
 };
 window.onNativeSync=(text)=>{
  // F4: native durable data, optional confirmed JS reconciliation, then UI.
- let result,render=false,badUI=false;
+ let result,render=false,badUI=false,peerChangedAfterAck=false;
  const warn=m=>{try{notify(m)}catch(ignored){console.warn(m)}};
  try{
   result=JSON.parse(text);
@@ -585,12 +585,25 @@ window.onNativeSync=(text)=>{
       badUI=true;
       warn('Zápis byl potvrzen, ale evidenci nahrávky je nutné zkontrolovat.');
      }
+     // The shared save() updates persistedSnapshot only after Native CAS
+     // ok:true. Capture those exact ACKed bytes BEFORE the second disk read.
+     const acknowledgedSnapshot=persistedSnapshot;
      latest=native?Native.loadData():localStorage.getItem('zamerovac-data');
      const actual=JSON.parse(latest);
      // Old shared save() can return false if a UI/audio callback throws after
      // ok:true. Require the exact committed state, not a toast/boolean.
      confirmed=actual&&actual.schema===1&&Array.isArray(actual.records)&&
        canonicalSavedValue(actual)===canonicalSavedValue(JSON.parse(JSON.stringify(state)));
+     if(!confirmed&&typeof acknowledgedSnapshot==='string'&&
+        acknowledgedSnapshot!==saved.snapshot){
+      const acknowledged=JSON.parse(acknowledgedSnapshot);
+      if(acknowledged?.schema===1&&Array.isArray(acknowledged.records)&&
+         canonicalSavedValue(acknowledged)===canonicalSavedValue(JSON.parse(JSON.stringify(state)))){
+       // Local CAS was ACKed; the newer peer state is not reconciled yet.
+       // Preserve our ACK baseline for the next CAS retry, never the pre-ACK base.
+       latest=acknowledgedSnapshot;confirmed=true;peerChangedAfterAck=true;
+      }
+     }
      if(confirmed&&(savePresentationError||!saveOutcome)){
       // A DOM/reportSaveResult error occurred after the authoritative ACK.
       // Correct the UI on this synchronous callback without editing save().
@@ -637,8 +650,10 @@ window.onNativeSync=(text)=>{
  }
  // DATA/ACK BOUNDARY: no UI can change the confirmed local result.
  const copies=result.data?state.records.filter(r=>r&&r.conflict===true):[];
- if(result.transport==='cloud-v2'&&typeof window.ZamerovacSyncStatus?.cloud==='function'){
-  try{window.ZamerovacSyncStatus.cloud(result)}
+ const pendingMessage='Místní zápis potvrzen; mezitím přišla novější data od druhého zařízení. Znovu ověř synchronizaci.';
+ const displayResult=peerChangedAfterAck?{...result,transport:'cloud-v2',pending:true,message:pendingMessage}:result;
+ if(displayResult.transport==='cloud-v2'&&typeof window.ZamerovacSyncStatus?.cloud==='function'){
+  try{window.ZamerovacSyncStatus.cloud(displayResult)}
   catch(error){badUI=true;console.warn('Synchronizační stav mraku nelze zobrazit')}
   if(result.data)try{window.ZamerovacSyncStatus?.conflicts?.(copies)}
   catch(error){badUI=true;console.warn('Synchronizační upozornění na konflikty nelze zobrazit')}
@@ -650,6 +665,11 @@ window.onNativeSync=(text)=>{
   if(screen==='browser')showFolder();
   else if(screen==='editor'&&current)$('editorTitle').textContent=current.title;
  }catch(error){badUI=true;console.warn('Přehled synchronizovaných změn nelze zobrazit')}
+ if(peerChangedAfterAck){
+  window.__syncViewNeedsRefresh=true;
+  warn(pendingMessage);
+  return false; // local Native CAS confirmed; newest peer still requires reconciliation
+ }
  if(badUI){
   window.__syncViewNeedsRefresh=true;
   warn('Data jsou místně uložená, ale zobrazení se nepodařilo obnovit. Otevři stav synchronizace.');
