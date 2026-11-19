@@ -96,6 +96,8 @@ function cloud(result){
   // Native ledger verification can hit SQLite. Do not block the user's
   // current drawing gesture; check on explicit status tap or next attempt.
   update('pending','Pokus dokončen. Potvrzení aktuální revize ověříme po dokončení kreslení.');
+ }else if(result.pending===false&&root.__syncViewNeedsRefresh){
+  update('pending','Údaje jsou na zařízení, ale nejnovější změny ještě nejsou načtené do aplikace.');
  }else if(result.pending===false&&receipt()){
   update('confirmed',names.confirmed[2]);
   lastNotice=null;
@@ -135,8 +137,12 @@ function show(){
  }
  // Explicit user request: ledger verification is intentionally NOT on the
  // editor's drawing or automatic-toast path.
- if(phase==='confirmed'&&!receipt())update('pending','Předchozí potvrzení již neodpovídá aktuálním datům. Zkontroluj čekající přenos.');
- else if(phase==='pending'&&receipt())update('confirmed',names.confirmed[2]);
+ if(root.__syncViewNeedsRefresh&&phase==='confirmed')
+  update('pending','Novější data ještě nebyla bezpečně převzata do aplikace.');
+ else if(phase==='confirmed'&&!receipt())
+  update('pending','Předchozí potvrzení již neodpovídá aktuálním datům. Zkontroluj čekající přenos.');
+ else if(phase==='pending'&&!root.__syncViewNeedsRefresh&&receipt())
+  update('confirmed',names.confirmed[2]);
  const title='Synchronizace · '+names[phase][1];
  modal(title,'<p id="syncStatusDetails"></p><p id="syncStatusExplanation"></p><div class="row wrap"><button id="syncStatusPair" class="outline">Synchronizace zařízení</button><button id="syncStatusCloud" class="outline">Google Disk / ruční přenos</button></div>',()=>true,'Zavřít');
  document.getElementById('syncStatusDetails').textContent=reason+(conflictDetail?'\n'+conflictDetail:'');
