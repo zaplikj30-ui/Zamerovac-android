@@ -1,6 +1,6 @@
 'use strict';
 const assert=require('node:assert/strict');
-const {createHash}=require('node:crypto');
+const {createHash,randomUUID}=require('node:crypto');
 const {performance}=require('node:perf_hooks');
 const {setTimeout:delay}=require('node:timers/promises');
 const {deflateSync,crc32}=require('node:zlib');
@@ -9,24 +9,31 @@ const {tmpdir}=require('node:os');
 const path=require('node:path');
 const {tool,drag,projected,editSelected,midpoint}=require('./harness.cjs');
 
-const filename='pr220-synthetic.png';
+const filename='pr220-'+randomUUID()+'.png';
 const remote='/data/local/tmp/'+filename;
 const mediaRoot='content://media/external/images/media';
 function mediaUri(adb,name){
+ const ids=mediaIds(adb,name);
+ assert.equal(ids.length,1,'Expected exactly one synthetic MediaStore image');
+ return mediaRoot+'/'+ids[0];
+}
+function mediaIds(adb,name){
  const rows=adb('shell','content','query','--uri',mediaRoot,'--projection','_id:_display_name',
   '--where',"_display_name='"+name+"'");
  const ids=[...rows.matchAll(/^Row: \d+ _id=(\d+), _display_name=([^\r\n,]+)$/gm)]
   .filter(row=>row[2]===name).map(row=>row[1]);
- assert.equal(ids.length,1,'Expected exactly one synthetic MediaStore image');
- return mediaRoot+'/'+ids[0];
+ return ids;
 }
 function stageImage(adb,local){
  adb('push',local,remote);
+ assert.equal(mediaIds(adb,filename).length,0,'Synthetic image name already exists');
  adb('shell','content','insert','--uri',mediaRoot,
   '--bind','_display_name:s:'+filename,'--bind','mime_type:s:image/png',
   '--bind','relative_path:s:Pictures/');
  // Android 13 content CLI may succeed silently; query the inserted row by fixed name.
- const uri=mediaUri(adb,filename);
+ const added=mediaIds(adb,filename);
+ assert.equal(added.length,1,'Cannot identify the newly inserted MediaStore image safely');
+ const uri=mediaRoot+'/'+added[0];
  try{
   adb('shell','sh','-c','content write --uri '+uri+' < '+remote);
   assert(adb('shell','content','query','--uri',uri).includes(filename),'Staged image absent from MediaStore');
@@ -213,4 +220,4 @@ async function compare({device,adb,open,apks}){
  }
 }
 
-module.exports={compare,fixture,stageImage,selectStagedImage,mediaUri};
+module.exports={compare,fixture,stageImage,selectStagedImage,mediaUri,filename};
