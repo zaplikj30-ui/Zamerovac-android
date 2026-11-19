@@ -10,6 +10,17 @@ suite('sync-cadence',async run=>{
   assert.equal(await page.locator('#settingsPage-sync').isVisible(),true);
   assert.equal(await page.locator('[data-setting="autoSync"]').isVisible(),true);
   assert.equal(await page.locator('#feedbackFlag').isVisible(),true);
+  // Real pointer interaction: temporary header placement must not disable dragging.
+  const flag=page.locator('#feedbackFlag'),start=await flag.boundingBox();
+  assert(start,'Report flag is missing');
+  const viewport=page.viewportSize();
+  await page.mouse.move(start.x+start.width/2,start.y+start.height/2);
+  await page.mouse.down();
+  await page.mouse.move(Math.round(viewport.width*.20),Math.round(viewport.height*.68),{steps:8});
+  await page.mouse.up();
+  const moved=await flag.boundingBox();
+  assert(moved&&Math.abs(moved.x-start.x)>35,'Report flag did not follow the drag in Settings');
+  assert.equal(await flag.getAttribute('data-settings-moved'),'true');
   assert.equal(await page.evaluate(()=>{
    const flag=document.getElementById('feedbackFlag'),control=document.querySelector('[data-setting="autoSync"]');
    const f=flag.getBoundingClientRect(),c=control.getBoundingClientRect();
