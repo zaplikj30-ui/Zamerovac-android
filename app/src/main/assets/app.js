@@ -168,7 +168,8 @@ function candidateAllowsNewRecord(candidate,intent){
  }
  return true;
 }
-function save(newRecordIntent=null){
+function save(){
+ const newRecordIntent=arguments[0]||null;
  if(dataLoadFailed){notify('Zakázky nelze načíst. Zápis je zablokovaný, původní data zůstávají chráněná.');return reportSaveResult(false)}
  try{
   // Stage conflicting merges; only publish them after the native writer confirms.
