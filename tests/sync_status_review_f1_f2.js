@@ -49,7 +49,7 @@ function scene(){
  const window={Native,PendingAudio:{saved(){}},openZamerovacPeers(){}};
  const env={
   window,document:{getElementById:node},Native,native:true,
-  screen:'browser',current:null,noteActive:null,dataLoadFailed:false,state:clone(old),initial:clone(old),
+  screen:'browser',current:null,noteActive:null,prefs:clone(old.prefs),dataLoadFailed:false,state:clone(old),initial:clone(old),
   persistedSnapshot:disk,notify:message=>notices.push(message),
   reportSaveResult:ok=>ok,
   applySavedState:next=>{env.state=next},
