@@ -145,9 +145,16 @@ function candidateAllowsNewRecord(candidate,intent){
      typeof r.id!=='string'||!r.id||records.has(r.id))return false;
   records.set(r.id,r);
  }
+ // Legacy records may omit deleted/locked; when present they must be
+ // actual booleans. A hierarchy conflict marker is never writable,
+ // including malformed falsey values (0, null, '', false).
+ const writableFlags=r=>
+  (!Object.hasOwn(r,'deleted')||r.deleted===false)&&
+  (!Object.hasOwn(r,'locked')||r.locked===false)&&
+  !Object.hasOwn(r,'hierarchyConflict');
  const child=records.get(intent.id);
  if(!child||child.kind!==intent.kind||child.parentId!==intent.parentId||
-    child.deleted||child.locked||child.hierarchyConflict)return false;
+    !writableFlags(child))return false;
  const purged=candidate.trashPurgedIds??[];
  const tombstones=candidate.syncTombstones??{};
  if(!Array.isArray(purged)||purged.some(id=>typeof id!=='string'||!id)||
@@ -161,8 +168,8 @@ function candidateAllowsNewRecord(candidate,intent){
   if(typeof parentId!=='string'||!parentId||seen.has(parentId))return false;
   seen.add(parentId);
   const folder=records.get(parentId);
-  if(!folder||folder.kind!=='folder'||folder.deleted||folder.locked||
-     folder.hierarchyConflict||unavailable(parentId))return false;
+  if(!folder||folder.kind!=='folder'||!writableFlags(folder)||
+     unavailable(parentId))return false;
   // Legacy root folders may omit parentId; new records must use null.
   parentId=folder.parentId===undefined?null:folder.parentId;
  }
