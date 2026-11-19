@@ -112,6 +112,10 @@
   return isSettings?'Nastavení':screen==='editor'?'Editor fotografie':screen==='note'?'Poznámka':'Seznam zakázek';
  }
  function startNewReport(){
+  if(feedbackWriteUncertain){
+   notify('Stav uložených připomínek je nejistý. Před novým hlášením znovu spusť aplikaci.');
+   return;
+  }
   if(!native||typeof Native.captureReportScreenshot!=='function'){
    notify('Automatické zachycení obrazovky funguje v testovací Android aplikaci');
    return;
