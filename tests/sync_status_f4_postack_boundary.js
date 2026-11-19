@@ -394,10 +394,22 @@ if(mode==='post-ack-peer'||mode==='all'){
   'P1: newer peer change must not show a green confirmed receipt');
  assert.equal(s.window.__syncViewNeedsRefresh,true,
   'P1: view needs refresh while newer peer is not reconciled');
+ // A signed transport receipt cannot turn the badge green while latest
+ // Native peer changes are still absent from RAM.
+ const ledgerBefore=s.env.Native.syncLedgerState;
+ s.env.Native.syncLedgerState=()=>JSON.stringify({localSaved:true,targets:[
+  {kind:'drive',state:'verified-checkpoint',contentState:'verified-checkpoint'}]});
  assert.match(s.details,/Zachované konfliktní kopie|Místní zápis potvrzen|Čeká/i,
   'P3: status details must remain available');
  assert.equal(s.window.__syncViewNeedsRefresh,true,
   'P3 RED: opening cloud details cleared unreconciled Native peer data');
+ assert.equal(s.status.phase,'pending',
+  'P3 RED: signed transport receipt cannot mark an unadopted RAM image green');
+ s.window.ZamerovacSyncStatus.cloud({transport:'cloud-v2',pending:false,
+  message:'Pokus dokončen'});
+ assert.equal(s.status.phase,'pending',
+  'P3 RED: pending:false with transport receipt cannot hide an unreconciled RAM image');
+ s.env.Native.syncLedgerState=ledgerBefore;
  assert.equal(s.snapshot.records.some(r=>r.id==='peer-post-ack'),false,
   'P1: unmerged peer must not be falsely included in our CAS baseline');
  assert.equal(s.ram.records.find(r=>r.id==='note-1')?.title,'Místní potvrzený návrh',
@@ -423,6 +435,13 @@ if(mode==='post-ack-peer'||mode==='all'){
   '1585.800001234567890');
  assert.equal(s.snapshot.records.some(r=>r.id==='peer-post-ack'),true,
   'P1: next successful save still has stale persistedSnapshot');
+ // A REAL subsequent reconciliation plus successful UI rebind is the only
+ // path that clears the stale-view flag, never an earlier detail tap.
+ assert.equal(s.window.__syncViewNeedsRefresh,true,'P3: later local save alone is not UI reconciliation');
+ assert.equal(send(s,clone(s.old)),true,'P3: confirmed Native state must be adopted');
+ assert.equal(s.window.__syncViewNeedsRefresh,false,
+  'P3: successful Native-to-RAM adoption must finish pending refresh');
+ assert.equal(s.ram.records.filter(r=>r.id==='peer-post-ack').length,1);
  console.log('PASS P1 post-ACK peer write: no rollback, no lost drafts/media, truthful warning, next CAS');
 }
 
