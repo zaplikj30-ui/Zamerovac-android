@@ -1,115 +1,97 @@
-name: Zaměřovač – Android emulátor a snímky obrazovky
-
-# Emulator je narocny, spousti se pouze pred vetsim testovanim na vyzadani.
+name: Zaměřovač – Android 13 QA PR220
 on:
   workflow_dispatch:
     inputs:
       cloud_run_approved:
-        description: 'Placený GitHub cloud jen s výslovným souhlasem; limit 12 USD/měsíc'
-        required: true
+        description: Owner approved this exact QA revision and temporary APK build
         type: boolean
+        required: true
         default: false
-concurrency:
-  group: zamerovac-android-emulator-main
-  cancel-in-progress: true
-
+      scope:
+        description: Run launch first. Compare requires a successful launch and separate owner GO.
+        type: choice
+        options: [launch, compare]
+        default: launch
 permissions:
   contents: read
-
+concurrency:
+  group: zamerovac-android-pr220
+  cancel-in-progress: false
 jobs:
   emulator:
-    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.ref == 'refs/heads/main' && github.event_name == 'workflow_dispatch' && inputs.cloud_run_approved == true }}
-    name: Android 13 – kontrola obrazovek
-    runs-on: ubuntu-latest
-    timeout-minutes: 35
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/qa/pr220-android-review' && github.actor == 'zaplikj30-ui' && github.triggering_actor == 'zaplikj30-ui' && github.run_attempt == '1' && inputs.cloud_run_approved }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 60
+    env:
+      QA_SCOPE: ${{ inputs.scope }}
+      QA_BEFORE: 2009e0acf57a97ab32a8217a1365f62653884001
+      QA_AFTER: d9c42ef5b352db8321533c46f50681ff19f0c349
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          persist-credentials: false
+      - name: Check runner before provisioning
+        shell: bash
+        run: |
+          set -euo pipefail
+          case "$QA_SCOPE" in launch|compare) ;; *) exit 2 ;; esac
+          test -c /dev/kvm
+          # Grant only the current user access on this disposable hosted VM.
+          sudo setfacl -m "u:$(id -un):rw" /dev/kvm
+          test -r /dev/kvm && test -w /dev/kvm
+          test "$(df -Pk . | awk 'END{print $4}')" -ge 12582912
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: ${{ env.QA_AFTER }}
+          path: qa-after
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        if: inputs.scope == 'compare'
+        with:
+          ref: ${{ env.QA_BEFORE }}
+          path: qa-before
+          persist-credentials: false
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
         with:
           distribution: temurin
           java-version: '17'
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020
         with:
-          gradle-version: '8.10.2'
-      - name: Ověřit JavaScript a zdrojové testy
-        run: |
-          node --check app/src/main/assets/app.js
-          node --check app/src/main/assets/editor.js
-          python3 -m unittest discover -s tests -p 'test_*.py' -v
-      - name: Sestavit testovací Android APK
-        run: gradle --no-daemon assemblePreview
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - name: Připravit stávající Playwright pro skutečnou WebView (bez dalšího browseru)
-        run: npm install --no-save --package-lock=false playwright@1.62.1
-      - name: Povolit akceleraci Android emulátoru
-        run: |
-          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
-          sudo udevadm control --reload-rules
-          sudo udevadm trigger --name-match=kvm
-      - name: Stáhnout systémový obraz Androidu s opakováním při chybě ZIP
+          node-version: '22'
+      - name: Build verified preview revisions for this job only
         shell: bash
+        env:
+          GRADLE_USER_HOME: ${{ runner.temp }}/pr220-gradle
         run: |
           set -euo pipefail
-          SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
-          TOOL="$SDK/cmdline-tools/latest/bin/sdkmanager"
-          PKG="system-images;android-33;google_apis;x86_64"
-          IMAGE="$SDK/system-images/android-33/google_apis/x86_64"
-          for n in 1 2 3 4; do
-            echo "Stažení Android 13 obrazu, pokus $n/4"
-            if "$TOOL" --install "$PKG" --channel=0 > /tmp/sdk-install-image.log 2>&1 &&
-               test -s "$IMAGE/system.img"; then
-              echo "Android systémový obraz je připraven."
-              exit 0
-            fi
-            tail -n 16 /tmp/sdk-install-image.log || true
-            echo "::warning::Poškozené/neúplné stažení obrazu Androidu ($n/4); odstraním jen neúplný balíček."
-            rm -rf "$IMAGE" "$SDK/.temp" "$SDK/.downloadIntermediates" || true
-            sleep 10
-          done
-          echo "::error::Systémový obraz se nepodařilo stáhnout ani po čtyřech pokusech."
-          exit 1
-      - name: Připravit prokázaně potřebné místo pro testovací Android disk
-        shell: bash
-        run: |
-          set -euo pipefail
-          mkdir -p emulator-results
-          SDK="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-}}"
-          test -n "$SDK"
-          # This is an ephemeral Actions runner. Java/WebView tests use neither
-          # .NET nor the Android NDK; keep the SDK, Java, Gradle and all app data.
-          df -h . | tee emulator-results/disk-before.txt
-          sudo du -sh /usr/share/dotnet /usr/lib/dotnet "$SDK/ndk" 2>/dev/null || true
-          sudo rm -rf -- /usr/share/dotnet /usr/lib/dotnet "$SDK/ndk"
-          df -h . | tee emulator-results/disk-after.txt
-          # Emulator 37.2 required 7373 MB even when disk-size=2048M was set.
-          # Check actual capacity after system-image installation, with headroom.
-          AVAILABLE_KB=$(df --output=avail -k . | tail -1 | tr -d ' ')
-          if [ "$AVAILABLE_KB" -lt 8388608 ]; then
-            echo '::error::Android AVD needs at least 8 GiB free after installing its image.'
-            exit 1
-          fi
-      - name: Spustit Android emulátor a ověřit Zaměřovač
-        uses: reactivecircus/android-emulator-runner@v2
+          checksum=31c55713e40233a8303827ceb42ca48a47267a0ad4bab9177123121e71524c2619
+          curl -fsSL https://services.gradle.org/distributions/gradle-8.10.2-bin.zip -o "$RUNNER_TEMP/pr220-gradle.zip"
+          printf '%s  %s\n' "$checksum" "$RUNNER_TEMP/pr220-gradle.zip" | sha256sum -c -
+          unzip -q "$RUNNER_TEMP/pr220-gradle.zip" -d "$RUNNER_TEMP"
+          build() {
+            test "$(git -C "$1" rev-parse HEAD)" = "$2"
+            "$RUNNER_TEMP/gradle-8.10.2/bin/gradle" --no-daemon -p "$1" :app:assemblePreview
+          }
+          build qa-after "$QA_AFTER"
+          if [[ "$QA_SCOPE" == compare ]]; then build qa-before "$QA_BEFORE"; fi
+          npm ci --prefix tools/qa-browser --ignore-scripts --no-audit --no-fund
+      - name: Android 13 on GitHub-hosted KVM
+        uses: reactivecircus/android-emulator-runner@a421e43855164a8197daf9d8d40fe71c6996bb0d
         with:
           api-level: 33
           target: google_apis
           arch: x86_64
           profile: pixel_6
-          # The Google APIs image at its automatic 2 GiB default thrashed
-          # (kswapd/memory pressure) and SystemUI's dump service repeatedly ANRed.
           ram-size: 4096M
           emulator-options: -no-window -gpu swiftshader_indirect -no-snapshot -noaudio -no-boot-anim -camera-back none
           disable-animations: true
-          # Keep both real gates visible even if the older accessibility smoke
-          # fails; any failure still fails the job, without continue-on-error.
-          script: bash -c 'result=0; bash tools/emulator-smoke.sh || result=1; node tools/e2e/android-system.cjs || result=1; exit "$result"'
-      - name: Uložit snímky, záznam obrazovek a chybové logy
+          disable-linux-hw-accel: false
+          emulator-boot-timeout: 480
+          pre-emulator-launch-script: test "$(df -Pk . | awk 'END{print $4}')" -ge 8388608
+          script: node tools/e2e/android-pr220.cjs
+        env:
+          NODE_PATH: ${{ github.workspace }}/tools/qa-browser/node_modules
+      - name: Remove temporary APK files
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: Zamerovac-EMULATOR-snimky-a-logy
-          path: emulator-results/
-          retention-days: 30
-          if-no-files-found: warn
+        shell: bash
+        run: rm -f qa-before/app/build/outputs/apk/preview/app-preview.apk qa-after/app/build/outputs/apk/preview/app-preview.apk
