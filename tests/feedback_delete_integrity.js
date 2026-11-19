@@ -17,6 +17,7 @@ const escapeHtml=segment(' const q=','\n const now=');
 const summary=segment(' function summary(r){','\n function selectedReports(){');
 const list=segment(' function showReportList(){','\n function sendBatch(saveToFile){');
 const share=segment(' function sendBatch(saveToFile){','\n window.onReportBundleSaved=');
+const capture=segment(' function startNewReport(){','\n window.onReportScreenshot=');
 const KEY='zamerovac-feedback-v1';
 const makeReport=i=>({
  id:'fb-'+String(i).padStart(3,'0'), title:'Hlášení '+i,description:'Popis '+i,
@@ -55,16 +56,19 @@ function boot(disk,{approve=true,fault='none'}={}){
   closeOverlay:()=>{},
   sendBatch:()=>{calls.nativeCalls++;},
   Native:{cleanupFinishedIssueBundles:()=>{calls.nativeCalls++},
-   shareIssueBundle:()=>{calls.nativeCalls++},saveIssueBundle:()=>{calls.nativeCalls++}},
+   shareIssueBundle:()=>{calls.nativeCalls++},saveIssueBundle:()=>{calls.nativeCalls++},
+   captureReportScreenshot:()=>{calls.nativeCalls++}},
   now:()=> '2026-11-19T09:00:00.000Z',
   selectedReports:()=>JSON.parse(vm.runInContext('JSON.stringify(reports)',ctx)),
-  native:true
+  native:true,busy:false,flag:{style:{}},current:null,
+  screenName:()=> 'Editor',requestAnimationFrame:fn=>fn()
  };
  vm.createContext(ctx);
- vm.runInContext('var overlay=null;\n'+startup+persistence+escapeHtml+summary+list+share,ctx);
+ vm.runInContext('var overlay=null;\n'+startup+persistence+escapeHtml+summary+list+share+capture,ctx);
  const read=()=>JSON.parse(vm.runInContext('JSON.stringify(reports)',ctx));
  const commit=next=>vm.runInContext('persist('+JSON.stringify(next)+')',ctx);
  const exportBatch=save=>vm.runInContext('sendBatch('+!!save+')',ctx);
+ const startCapture=()=>vm.runInContext('startNewReport()',ctx);
  const draw=()=>vm.runInContext('showReportList()',ctx);
  const click=id=>{
   draw();
@@ -72,7 +76,7 @@ function boot(disk,{approve=true,fault='none'}={}){
   assert.ok(button,'Expected delete button for '+id);
   button.onclick();
  };
- return {calls,read,click,commit,exportBatch};
+ return {calls,read,click,commit,exportBatch,startCapture};
 }
 function data(rows){return new Map([[KEY,JSON.stringify(rows)]])}
 function fromDisk(disk){return JSON.parse(disk.get(KEY))}
@@ -264,6 +268,16 @@ scenario('malformed legacy description cannot crash or disclose unreviewed ZIP',
  assert.ok(session.calls.notices.some(m=>/neplatn/i.test(m)),'Explain invalid report text');
  assert.deepEqual(fromDisk(disk),[a,b]);
 });
+scenario('uncertain storage cannot create a new orphan screenshot via purple flag',()=>{
+ const rows=[makeReport(1),makeReport(2)],disk=data(rows);
+ const session=boot(disk,{fault:'readback-once'});
+ session.click('fb-001');
+ assert.deepEqual(fromDisk(disk),[rows[1]],'First delete committed with uncertain readback');
+ session.startCapture();
+ assert.equal(session.calls.nativeCalls,0,'Do not capture screenshot when subsequent report save is blocked');
+ assert.ok(session.calls.notices.some(m=>/nejistý/i.test(m)));
+ assert.deepEqual(fromDisk(disk),[rows[1]],'Do not alter confirmed data');
+});
 scenario('one normal report: explicit confirmation deletes only selected ID',()=>{
  const rows=[makeReport(1),makeReport(2),makeReport(3)],disk=data(rows);
  const session=boot(disk);
@@ -274,4 +288,4 @@ scenario('one normal report: explicit confirmation deletes only selected ID',()=
  assert.equal(session.calls.nativeCalls,0,'Delete must never touch native/media bridge');
 });
 if(failures.length){console.error(failures.join('\n'));process.exitCode=1}
-else console.log('PASS: 16 feedback deletion integrity scenarios, no media writes');
+else console.log('PASS: 17 feedback deletion integrity scenarios, no media writes');
