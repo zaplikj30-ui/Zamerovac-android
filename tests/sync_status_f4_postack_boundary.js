@@ -40,6 +40,8 @@ function scene(fault='none',restartData=null){
  const notices=[],nodes=new Map(),seen=[];
  let mode=fault;
  function node(id){
+  if(id==='saveErrorBanner'&&mode==='save-banner-throw'&&acks>0)
+   throw Error('synthetic post-ACK save banner DOM failure');
   if(!nodes.has(id))nodes.set(id,{
    id,title:'',hidden:false,dataset:{},attributes:{},textContent:'',
    classList:{add(){},remove(){}},setAttribute(k,v){this.attributes[k]=v},
@@ -272,6 +274,15 @@ if(mode==='edge'||mode==='all'){
  assert(!audio.notices.some(s=>/^Neuloženo:/.test(s)),
   'P5: post-ACK PendingAudio UI fault incorrectly displayed Neuloženo');
  console.log('PASS F4 P5 post-ACK PendingAudio exception has truthful user-visible status');
+ const banner=scene('save-banner-throw');dirty(banner);
+ assert.equal(send(banner),true,
+  'P5: post-ACK reportSaveResult DOM throw must not turn confirmed sync into false');
+ assert.equal(banner.acks,1,'P5: banner fault was not injected after Native ACK');
+ assert.equal(banner.snapshot.records[0].title,'Local unsaved editor draft');
+ assert.equal(banner.disk.records[0].title,'Local unsaved editor draft');
+ assert(banner.notices.some(x=>/Uloženo, ale|potvrzen/i.test(x)),
+  'P5: user needs a truthful post-ACK warning');
+ console.log('PASS F4 P5 post-ACK save banner failure recovered using Native CAS evidence');
  // Malformed media IDs in a Native snapshot are not silently accepted.
  const mediaBad=scene('media-malformed'),badDraft=dirty(mediaBad);
  const mediaBase=clone(mediaBad.snapshot);
