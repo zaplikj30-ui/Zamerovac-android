@@ -9,6 +9,12 @@ suite('sync-cadence',async run=>{
   await page.locator('.settings-category[data-category="sync"]').click();
   assert.equal(await page.locator('#settingsPage-sync').isVisible(),true);
   assert.equal(await page.locator('[data-setting="autoSync"]').isVisible(),true);
+  assert.equal(await page.locator('#feedbackFlag').isVisible(),true);
+  assert.equal(await page.evaluate(()=>{
+   const flag=document.getElementById('feedbackFlag'),control=document.querySelector('[data-setting="autoSync"]');
+   const f=flag.getBoundingClientRect(),c=control.getBoundingClientRect();
+   return !(f.left<c.right&&c.left<f.right&&f.top<c.bottom&&c.top<f.bottom);
+  }),true,'Fialová vlaječka nesmí překrývat přepínač synchronizace');
   await page.check('[data-setting="autoSync"]');assert.equal(await page.evaluate(()=>prefs.syncFrequency),'auto');await page.uncheck('[data-setting="autoSync"]');await page.evaluate(()=>openZamerovacPeers());assert.equal(await page.locator('#syncFrequency').inputValue(),'manual');await page.selectOption('#syncFrequency','30');assert.equal(await page.locator('[data-setting="autoSync"]').isChecked(),true);assert.equal(await page.evaluate(()=>JSON.stringify(state.records)),before);
  });
  await run('failed-persistence-does-not-activate-new-frequency',async({page})=>{
