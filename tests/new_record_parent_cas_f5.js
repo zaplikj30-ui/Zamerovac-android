@@ -69,6 +69,11 @@ function scene(initial=seed){
      if(operation==='race-rename'){parent.title='New remote folder title';parent.rev='peer-rename'}
      if(operation==='race-move-valid'){parent.parentId='ancestor';parent.rev='peer-move'}
      if(operation==='race-unrelated'){original.title='Changed remotely';original.rev='peer-other'}
+     // Reviewer #5967565093: malformed remote flag values must never be
+     // interpreted as an eligible target after the CAS retry.
+     if(operation==='race-flag-deleted-zero'){parent.deleted=0;parent.rev='peer-malformed-deleted'}
+     if(operation==='race-flag-locked-empty'){parent.locked='';parent.rev='peer-malformed-locked'}
+     if(operation==='race-flag-hierarchy-zero'){parent.hierarchyConflict=0;parent.rev='peer-malformed-hierarchy'}
      if(operation==='race2'||operation==='race3'){
       original.title='Other rev '+casCalls;original.rev='peer-other-'+casCalls;
       mode=casCalls<(operation==='race3'?2:1)?operation:'';
@@ -194,7 +199,7 @@ const extras=async()=>{
   const data=deep(seed);data.records.find(r=>r.id==='parent').locked=true;
   const s=scene(data);refused(s,await create(s,'folder'));
  });
- await check('batch PASS FAIL PASS preserves first',async()=>{
+ await check('record sequence folder PASS, canvas FAIL, folder PASS preserves first',async()=>{
   const s=scene();
   assert(await create(s,'folder','first'));
   assert.equal(s.acks,1);
@@ -242,7 +247,124 @@ const extras=async()=>{
   const cycle=deep(baseline);cycle.records.find(x=>x.id==='parent').parentId='parent';
   assert.equal(s.env.candidateAllowsNewRecord(cycle,intent),false);
  });
- await check('next save/reload keeps remote parent and originals',async()=>{
+ // Review #5967565093: legitimate old records may omit these keys entirely,
+ // or explicitly encode false. No schema/migration change is permitted.
+ await check('legacy missing flags and explicit false remain valid',async()=>{
+  const s=scene(),draft=s.env.newRecord('note','Legacy check');
+  const state=deep(s.env.state);state.records.find(r=>r.id==='parent').parentId='ancestor';
+  state.records.push(deep(draft));
+  const intent={id:draft.id,parentId:draft.parentId,kind:draft.kind};
+  for(const record of state.records.filter(r=>['parent','ancestor',draft.id].includes(r.id))){
+   delete record.deleted;delete record.locked;delete record.hierarchyConflict;
+  }
+  assert.equal(s.env.candidateAllowsNewRecord(state,intent),true,'legacy absent flags');
+  for(const record of state.records.filter(r=>['parent','ancestor',draft.id].includes(r.id))){
+   record.deleted=false;record.locked=false;
+  }
+  assert.equal(s.env.candidateAllowsNewRecord(state,intent),true,'explicit false flags');
+  assert.equal(s.env.candidateAllowsNewRecord(state,intent),true,'valid nested parent');
+ });
+ const invalidFlags=[
+  ['deleted',0],['deleted',null],['deleted',''],['deleted','false'],
+  ['locked',0],['locked',null],['locked',''],['locked','false'],
+  ['hierarchyConflict',0],['hierarchyConflict',null],
+  ['hierarchyConflict',''],['hierarchyConflict',false]
+ ];
+ for(const scope of ['child','parent','ancestor'])
+  for(const [field,value] of invalidFlags)
+   await check('invalid '+scope+'.'+field+'='+JSON.stringify(value),async()=>{
+    const s=scene(),draft=s.env.newRecord('note','Typed flags');
+    const state=deep(s.env.state);state.records.find(r=>r.id==='parent').parentId='ancestor';
+    state.records.push(deep(draft));
+    const intent={id:draft.id,parentId:draft.parentId,kind:draft.kind};
+    const target=state.records.find(r=>r.id===(scope==='child'?draft.id:scope));
+    target[field]=value;
+    assert.equal(s.env.candidateAllowsNewRecord(state,intent),false,
+     'malformed candidate flag should fail-closed');
+   });
+ for(const mode of ['race-flag-deleted-zero','race-flag-locked-empty','race-flag-hierarchy-zero'])
+  await check('malformed remote '+mode+' rejects before CAS ACK',async()=>{
+   const s=scene();s.mode=mode;
+   const result=await create(s,'folder','remote malformed');
+   assert.equal(s.races,1,'a real CAS retry with remote malformed flag is required');
+   refused(s,result);
+   const parent=s.disk.records.find(r=>r.id==='parent');
+   assert(parent&&parent.rev.startsWith('peer-malformed'),'remote revision survives');
+  });
+ // Actual onNativeMedia callbacks, not folder/canvas surrogates.
+ await check('same media request: onNativeMedia PASS > ENOSPC FAIL > PASS',async()=>{
+  const s=scene();s.env.pickMedia('media');
+  const req=s.requests.at(-1);
+  assert.equal(req.route,'media');const token=req.token;
+  const first='synthetic-media-first',bad='synthetic-media-rejected',third='synthetic-media-third';
+  const cb=(id,name)=>s.env.window.onNativeMedia(id,'image/png',name+'.png',null,token);
+  assert.equal(await cb(first,'Photo one'),true);
+  const ackAfterFirst=s.acks;assert.equal(ackAfterFirst,1);
+  s.mode='deny';
+  assert.equal(await cb(bad,'Rejected file'),false);
+  assert.equal(s.acks,ackAfterFirst,'pre-ACK media rejection must not write');
+  assert.equal(await cb(third,'Photo three'),true);
+  s.env.window.onNativeMediaDone(token);
+  assert.equal(s.env.stagedMediaRequest,null,'batch token closed');
+  assert.equal(await cb('synthetic-media-late','Late file'),false,'late callback must fail');
+  assert.equal(s.acks,2,'exactly two media records durably committed');
+  const mediaRecords=data=>data.records.filter(r=>[first,bad,third].some(id=>r.media?.includes(id)));
+  for(const data of [s.disk,s.snapshot,s.env.state]){
+   const records=mediaRecords(data);
+   assert.equal(records.length,2,'two records, never the failed media');
+   assert.deepEqual(records.map(r=>r.media[0]).sort(),[first,third].sort());
+   assert(records.every(r=>r.kind==='photo'&&r.parentId==='parent'));
+   assert.equal(new Set(records.map(r=>r.id)).size,2,'distinct record IDs');
+   assert(!data.records.some(r=>r.media?.includes(bad)),'no ghost failed media ID');
+  }
+  const reload=scene(s.disk); // New VM/context from the durably ACKed JSON.
+  assert.notEqual(reload.env,s.env,'a fresh independent V8 session');
+  assert.equal(reload.env.persistedSnapshot,JSON.stringify(s.disk));
+  assert.equal(mediaRecords(reload.disk).length,2);
+  assert.equal(mediaRecords(reload.env.state).length,2);
+  unchanged(s);unchanged(reload); // bytes are a *synthetic fixture*, not file IO
+ });
+ await check('rejected race → fresh V8 reload → valid root add',async()=>{
+  const s=scene();s.mode='race-delete';
+  assert.equal(await create(s,'folder','reject-me'),false);
+  assert.equal(s.races,1);assert.equal(s.acks,0);
+  assert.equal(s.disk.records.find(r=>r.id==='parent').deleted,true);
+  assert.equal(childRecords(s.disk).length,0);
+  const restart=scene(s.disk);
+  assert.notEqual(restart.env,s.env);
+  assert.equal(restart.env.persistedSnapshot,JSON.stringify(s.disk));
+  assert.equal(restart.env.state.records.find(r=>r.id==='parent').deleted,true);
+  restart.env.currentFolder='parent';
+  assert.equal(await create(restart,'folder','still-rejected'),false);
+  assert.equal(restart.acks,0);
+  restart.env.currentFolder=null;
+  assert(await create(restart,'folder','new-root'));
+  assert.equal(restart.acks,1);
+  assert.equal(restart.disk.records.find(r=>r.id==='parent').deleted,true);
+  assert.equal(restart.disk.records.find(r=>r.title==='new-root').parentId,null);
+  assert.equal(restart.disk.records.some(r=>r.title==='reject-me'||r.title==='still-rejected'),false);
+  const secondRestart=scene(restart.disk);
+  assert.equal(secondRestart.env.state.records.find(r=>r.title==='new-root').parentId,null);
+  assert.equal(secondRestart.env.state.records.find(r=>r.id==='parent').deleted,true);
+  unchanged(s);unchanged(restart);unchanged(secondRestart);
+ });
+ await check('successful remote rename + media survives new V8 reload',async()=>{
+  const s=scene();s.mode='race-rename';
+  assert(await create(s,'media','remote-rename-media'));
+  assert.equal(s.races,1);assert.equal(s.acks,1);
+  const originalDisk=JSON.stringify(s.disk);
+  const fresh=scene(s.disk);
+  assert.notEqual(fresh.env,s.env);
+  assert.equal(fresh.env.persistedSnapshot,originalDisk);
+  assert.equal(fresh.env.state.records.find(r=>r.id==='parent').title,'New remote folder title');
+  assert(fresh.env.state.records.some(r=>r.media?.includes('attached-media-id')));
+  assert.equal(fresh.env.save(),true);
+  const reloaded=scene(fresh.disk);
+  assert.equal(reloaded.env.state.records.find(r=>r.id==='parent').title,'New remote folder title');
+  assert(reloaded.env.state.records.some(r=>r.media?.includes('attached-media-id')));
+  unchanged(s);unchanged(fresh);unchanged(reloaded);
+ });
+ await check('next save without restart keeps remote parent and originals',async()=>{
   const s=scene();s.mode='race-delete';
   assert(!(await create(s,'folder')));
   assert.equal(s.env.save(),true,'unrelated save should reconcile remote delete');
