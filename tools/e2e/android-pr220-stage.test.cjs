@@ -1,6 +1,6 @@
 'use strict';
 const assert=require('node:assert/strict');
-const {stageImage}=require('./android-pr220-compare.cjs');
+const {stageImage,selectStagedImage}=require('./android-pr220-compare.cjs');
 const uri='content://media/external/images/media/123';
 function mock(inserted,query){
  const calls=[];
@@ -15,4 +15,23 @@ assert(good.calls.some(args=>args[2]==='insert'&&args.includes('relative_path:s:
 assert(good.calls.some(args=>args[1]==='sh'&&args[3]==='content write --uri '+uri+' < /data/local/tmp/pr220-synthetic.png'));
 assert.throws(()=>stageImage(mock('Failure','').adb,'fixture.png'));
 assert.throws(()=>stageImage(mock('Inserted '+uri,'').adb,'fixture.png'));
+const node=label=>`<node text="${label}" bounds="[10,20][50,60]"/>`;
+function picker(initial,afterRoots,afterImages){
+ const taps=[];
+ const adb=(...args)=>{
+  if(args[1]==='cat')return taps.length===0?initial:taps.length===1?afterRoots:afterImages;
+  if(args[1]==='input')taps.push(args.slice(3));
+  return '';
+ };
+ return {adb,taps};
+}
+const direct=picker(node('pr220-synthetic.png'));
+assert.deepEqual(selectStagedImage(direct.adb),['30','40']);
+assert.equal(direct.taps.length,0);
+const images=picker(node('Show roots'),node('Images'),node('pr220-synthetic.png'));
+assert.deepEqual(selectStagedImage(images.adb),['30','40']);
+assert.equal(images.taps.length,2);
+assert.throws(()=>selectStagedImage(picker(node('Downloads')).adb),/navigation unavailable/);
+assert.throws(()=>selectStagedImage(picker(node('Show roots'),node('Downloads')).adb),/Images location unavailable/);
+assert.throws(()=>selectStagedImage(picker(node('Show roots'),node('Images'),node('Downloads')).adb),/fixture not visible/);
 console.log('PASS MediaStore staging mocks: success, insert failure, missing query');

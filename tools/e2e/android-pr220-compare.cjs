@@ -55,6 +55,19 @@ function pickerControl(adb,label){
  }
  return null;
 }
+function selectStagedImage(adb){
+ let target=pickerControl(adb,filename);
+ if(target)return target;
+ const roots=pickerControl(adb,'Show roots');
+ assert(roots,'DocumentsUI navigation unavailable');
+ adb('shell','input','tap',...roots);
+ const images=pickerControl(adb,'Images');
+ assert(images,'Images location unavailable');
+ adb('shell','input','tap',...images);
+ target=pickerControl(adb,filename);
+ assert(target,'Synthetic fixture not visible in Android picker');
+ return target;
+}
 
 async function folder(page,title){
  await page.click('#createBtn');
@@ -105,17 +118,7 @@ async function sample({device,adb,open,apk,count,hash}){
   assert(performance.now()<pickerDeadline,'Android picker did not become active');
   await delay(150);
  }
- let target=pickerControl(adb,filename);
- if(!target){
-  const roots=pickerControl(adb,'Show roots');
-  assert(roots,'DocumentsUI navigation unavailable');
-  adb('shell','input','tap',...roots);
-  const images=pickerControl(adb,'Images');
-  assert(images,'Images location unavailable');
-  adb('shell','input','tap',...images);
-  target=pickerControl(adb,filename);
- }
- assert(target,'Synthetic fixture not visible in Android picker');
+ const target=selectStagedImage(adb);
  const started=performance.now();
  adb('shell','input','tap',...target);
  await page.waitForFunction(()=>screen==='editor'&&!!stageImg&&__qa.photoDraw!==null,null,{timeout:25000});
@@ -201,4 +204,4 @@ async function compare({device,adb,open,apks}){
  }
 }
 
-module.exports={compare,fixture,stageImage};
+module.exports={compare,fixture,stageImage,selectStagedImage};
