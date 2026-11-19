@@ -510,6 +510,10 @@
  }
  async function saveReport(){
   if(!active||busy)return;
+  if(feedbackWriteUncertain){
+   notify('Stav uložených připomínek je nejistý. Před další změnou znovu spusť aplikaci.');
+   return;
+  }
   const editing=active;
   const r=editing.report;
   r.type=overlay.querySelector('#feedbackType').value;
