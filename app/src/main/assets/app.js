@@ -534,6 +534,7 @@ window.onNativeSync=(text)=>{
   result=JSON.parse(text);
   if(!result||typeof result!=='object'||Array.isArray(result))throw Error('Neplatná odpověď synchronizace');
   if(result.data){
+   if(dataLoadFailed)throw Error('Načítání zakázek je zablokované; uložená data se nesmějí přepsat');
    // The native disk, not a potentially stale callback snapshot, is authority.
    const diskRaw=native?Native.loadData():JSON.stringify(result.data),disk=JSON.parse(diskRaw);
    if(!disk||disk.schema!==1||!Array.isArray(disk.records)||
