@@ -143,6 +143,7 @@ function show(){
  document.getElementById('syncStatusExplanation').textContent='Google účet, párování a skutečně potvrzený přenos jsou tři různé věci. Synchronizace není historická záloha.';
  document.getElementById('syncStatusPair').onclick=()=>{document.getElementById('modal').hidden=true;root.openZamerovacPeers?.();};
  document.getElementById('syncStatusCloud').onclick=()=>{document.getElementById('modal').hidden=true;oldCloudClick?.();};
+ if(phase!=='failed')root.__syncViewNeedsRefresh=false; // details now reread from durable Native storage
 }
 button.onclick=show;
 paint();
