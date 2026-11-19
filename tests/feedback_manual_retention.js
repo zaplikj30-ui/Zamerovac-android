@@ -61,15 +61,15 @@ assert.equal(t.reports.length,2,'Failed storage must keep both reports');
 assert.equal(JSON.parse(t.disk.get(t.KEY)).length,2);
 assert.match(t.calls.notices.join(' '),/Nepodařilo se uložit/);
 
-const cleanupStart=java.indexOf('    private void cleanupIssueZips(){');
-const cleanupEnd=java.indexOf('    /** Preflight all selected attachments',cleanupStart);
-assert.ok(cleanupStart>0&&cleanupEnd>cleanupStart);
-const autoCleanup=java.slice(cleanupStart,cleanupEnd);
-assert.match(autoCleanup,/issuezip-state-/);
-assert.match(autoCleanup,/building|ready/);
-assert.doesNotMatch(autoCleanup,/\.equals\("shared"\)/,'Share-pending ZIP must never be auto-deleted by age');
+assert.doesNotMatch(java,/cleanupIssueZips\(/,
+ 'No automatic, time-based cleanup is safe for an unfinished external handoff');
+assert.doesNotMatch(java,/ISSUE_ZIP_TTL_MS/,'No silent shared ZIP expiry');
 assert.match(java,/@JavascriptInterface public void cleanupFinishedIssueBundles\(/);
-assert.match(java,/AlertDialog\.Builder/,'Manual shared-ZIP cleanup needs native confirmation');
+assert.match(java,/AlertDialog\.Builder/,'Manual ZIP cleanup needs native confirmation');
 assert.match(java,/pendingIssueZipId!=null/,'Must not cleanup during pending local export');
-assert.doesNotMatch(listCode,/mediaFile\(|deleteMedia\(/,'Deleting report must never delete any source media');
+assert.match(java,/issueBundleBusy/,'Must not delete during ZIP creation');
+assert.match(java,/"shared"\.equals\(state\)/,'Manual cleanup must include shared ZIPs');
+assert.match(java,/"building"\.equals\(state\)/,'Manual cleanup must recover abandoned preparations');
+assert.doesNotMatch(listCode,/mediaFile\(|deleteMedia\(/,
+ 'Deleting a report must never delete source media');
 console.log('PASS: confirmed individual report deletion, cancel, disk-full, shared ZIP safety and original preservation checks');
