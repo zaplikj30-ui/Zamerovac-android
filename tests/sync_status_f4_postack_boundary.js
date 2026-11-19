@@ -92,7 +92,16 @@ function scene(fault='none',restartData=null){
     return JSON.stringify({ok:false,current:disk});
    }
    if(expected!==disk)return JSON.stringify({ok:false,current:disk});
-   disk=text;acks++;return JSON.stringify({ok:true,pendingAudioCount:0,audioPending:false});
+   disk=text;acks++;
+   // Native first ACK is durable. Before the callback reads Native again,
+   // an independent peer makes a second confirmed change.
+   if(mode==='post-ack-peer'){
+    const newer=JSON.parse(disk);
+    newer.records.push({id:'peer-post-ack',kind:'note',rev:'peer-rev-new',
+     title:'Novější souběžná změna',parentId:null,deleted:false,
+     media:['immutable-peer-post-ack'],items:[]});
+    disk=JSON.stringify(newer);
+   }return JSON.stringify({ok:true,pendingAudioCount:0,audioPending:false});
   },
   syncLedgerState(){return JSON.stringify({localSaved:true,
    targets:[{kind:'drive',state:'waiting',contentState:'waiting'}]})}
@@ -356,4 +365,47 @@ if(mode==='edge'||mode==='all'){
  assert.deepEqual(racedRead.ram,oldRam,'P2: stale read mutated RAM');
  assert.equal(racedRead.disk.records.filter(r=>r.id==='peer-during-adoption').length,1);
  console.log('PASS F4 P2 second Native read refuses stale CAS-free adoption');
+}
+
+if(mode==='post-ack-peer'||mode==='all'){
+ const s=scene('post-ack-peer');
+ const live=s.ram.records.find(r=>r.id==='note-1');
+ live.title='Místní potvrzený návrh';live.rev='local-post-ack-rev';
+ live.syncClock={'00000000-0000-4000-8000-000000000001':1};
+ s.window.__f4.setCurrent(live);
+ s.window.__f4.setNote(live);
+ s.window.__detailParent=live;s.env.screen='editor';
+ const accepted=send(s);
+ assert.equal(s.acks,1,'P1: first Native CAS must really return ok:true');
+ assert.equal(s.disk.records.find(r=>r.id==='note-1').title,'Místní potvrzený návrh');
+ assert.equal(s.disk.records.filter(r=>r.id==='peer-post-ack').length,1,
+  'P1: second peer update did not reach Native disk');
+ assert.equal(accepted,false,'P1: newer peer requires future reconciliation');
+ assert.equal(s.snapshot.records.find(r=>r.id==='note-1')?.title,
+  'Místní potvrzený návrh',
+  'P1 RED: persistedSnapshot rolled back to pre-ACK state after a second peer write');
+ assert.equal(s.ram.records.find(r=>r.id==='note-1')?.title,'Místní potvrzený návrh',
+  'P1: RAM lost already confirmed draft');
+ assert.equal(s.current,live,'P1: live editor identity changed after confirmed CAS');
+ assert.equal(s.window.__f4.getNote(),live,'P1: live note reference lost');
+ assert.deepEqual(s.ram.records[0].media,['immutable-origin-media-id']);
+ assert.equal(s.ram.records[0].items[0].measure,'1585,800001234567890');
+ assert(!s.notices.some(x=>/^Neuloženo:|Dodatečné sloučení nebylo potvrzeno/.test(x)),
+  'P1: false pre-ACK warning after durable ok:true');
+ assert(s.notices.some(x=>/potvrzen|uložen/i.test(x)&&/novější|mezitím/i.test(x)),
+  'P1: missing truthful saved-locally, newer-peer-pending notification');
+ // The next save must reconcile against the ACK snapshot, not its old base.
+ s.fault='none';
+ const changed=s.ram.records.find(r=>r.id==='note-1');changed.title='Následná místní změna';
+ assert.equal(s.window.__f4.save(),true,'P1: next save after peer race did not confirm');
+ assert.equal(s.disk.records.find(r=>r.id==='note-1').title,'Následná místní změna');
+ assert.equal(s.disk.records.filter(r=>r.id==='peer-post-ack').length,1,
+  'P1: next save lost newly confirmed peer record');
+ assert.deepEqual(s.disk.records.find(r=>r.id==='peer-post-ack').media,['immutable-peer-post-ack']);
+ assert.deepEqual(s.disk.records.find(r=>r.id==='note-1').media,['immutable-origin-media-id']);
+ assert.equal(s.disk.records.find(r=>r.id==='note-1').items[0].laserMeasuredMm,
+  '1585.800001234567890');
+ assert.equal(s.snapshot.records.some(r=>r.id==='peer-post-ack'),true,
+  'P1: next successful save still has stale persistedSnapshot');
+ console.log('PASS P1 post-ACK peer write: no rollback, no lost drafts/media, truthful warning, next CAS');
 }
