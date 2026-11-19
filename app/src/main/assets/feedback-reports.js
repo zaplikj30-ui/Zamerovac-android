@@ -159,8 +159,23 @@
  function sendBatch(saveToFile){
   const batch=selectedReports();
   if(!batch.length){notify('Nejdřív vyber alespoň jednu připomínku');return}
-  if(!native||!Native.shareIssueBundle){notify('Export ZIP je dostupný v Android aplikaci');return}
-  // Připojeny jsou výhradně snímky vytvořené při hlášení a videa zvolená uživatelem.
+  if(!native||typeof (saveToFile?Native.saveIssueBundle:Native.shareIssueBundle)!=='function'){
+   notify('Export ZIP je dostupný v Android aplikaci');return;
+  }
+  if(!saveToFile){
+   const overview=batch.map((r,i)=>{
+    const videos=Array.isArray(r.videos)?r.videos:[];
+    const names=videos.map(v=>String(typeof v==='string'?v:v?.name||'Video').slice(0,80)).join(', ');
+    return (i+1)+'. '+String(r.title||r.description||'(Bez popisu)').slice(0,100)+
+      ' — '+videos.length+' video'+(names?' ('+names+')':'');
+   }).join('\\n');
+   const warning='Před sdílením otevři každou připomínku a zkontroluj obsah snímků, videí i textů.\\n'+
+     'Viditelné adresy, jména či zakázky se automaticky nezakrývají.\\n'+
+     'Video může obsahovat skrytá metadata a nemusí být zmenšené.\\n\\n'+
+     'Vybraná hlášení:\\n'+overview+'\\n\\nPokračovat k systémové nabídce sdílení?';
+   if(!window.confirm(warning))return;
+  }
+  // Android vytvoří oddělený ZIP; lokální originály se nepřepisují.
   const manifest={application:'Zaměřovač TEST',exportedAt:now(),
    formatVersion:1,reports:batch.map(r=>({...r,device:'Android'}))};
   if(saveToFile)Native.saveIssueBundle(JSON.stringify(manifest));
