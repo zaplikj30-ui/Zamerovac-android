@@ -84,6 +84,7 @@ assert.equal(hits.some(x=>/Automatická synchronizace|Místní a Google Disk|Vyb
 assert.equal(searchFor('neexistujici_nastaveni')[0],'Žádné odpovídající nastavení.');
 assert.equal(saves,0);assert.equal(reads,0);assert.equal(actions,0);assert.equal(peerOpened,1);assert.equal(historyOpened,1);
 search.value='';search.oninput();assert.equal(results.hidden,true);
+assert.equal(sandbox.ZamerovacSettingsNavigation.showTarget('historySettings'),true);
 assert.equal(sandbox.handleAndroidBack(),'handled');assert.equal(categories.hidden,false);
 assert.equal(sandbox.handleAndroidBack(),'handled');assert.equal(panel.hidden,true);
 sandbox.toggleSettings();assert.equal(categories.hidden,false);
