@@ -10,7 +10,10 @@ const native=fs.readFileSync('app/src/main/java/cz/zamerovac/app/MainActivity.ja
 const begin=source.indexOf(' function sendBatch(saveToFile){');
 const end=source.indexOf('\n window.onReportBundleSaved=',begin);
 assert.ok(begin>=0&&end>begin,'Test must execute the real sendBatch handler');
-const actual=source.slice(begin,end);
+const stateStart=source.indexOf(' let feedbackWriteUncertain=false;');
+const stateEnd=source.indexOf('\n // Never truncate',stateStart);
+assert.ok(stateStart>=0&&stateEnd>stateStart,'Production uncertain-write state is required');
+const actual=source.slice(stateStart,stateEnd)+'\n'+source.slice(begin,end);
 function run(saveToFile,approved,hasSave=true,selected=true,videoCount=1,reportCount=1){
  const calls={asked:[],shared:[],saved:[],notices:[]};
  const report={id:'report-001',title:'Chyba kóty',description:'Tajný text ve snímku',screen:'Editor',
