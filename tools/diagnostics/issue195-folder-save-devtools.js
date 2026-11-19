@@ -11,6 +11,7 @@
  const originalSave=window.save,originalFolder=window.showFolder;
  if(!modal||!title||!button||typeof originalSave!=='function'||typeof originalFolder!=='function')
   throw Error('Z195: required folder form/save/render not available');
+ // JS return does NOT prove Native durability when a post-ACK callback fails.
  const samples=[];
  let active=null,sequence=0;
  const now=()=>performance.now();
@@ -18,7 +19,7 @@
   if(ticket.reported)return;
   ticket.reported=true;
   samples.push({
-   sequence:ticket.sequence,ack:ticket.ack===true,
+   sequence:ticket.sequence,jsSaveReturnedTrue:ticket.jsSaveReturnedTrue===true,
    clickToSaveStartMs:ticket.clickToSaveStartMs,
    jsSaveMs:ticket.jsSaveMs,showFolderMs:ticket.showFolderMs,
    clickToShowFolderStartMs:ticket.clickToShowFolderStartMs,
@@ -29,7 +30,7 @@
  const onClick=()=>{
   if(modal.hidden||title.textContent.trim()!=='Nová složka')return;
   // A hidden/rejected save is not interpreted as a confirmed CAS.
-  active={sequence:++sequence,started:now(),ack:false,
+  active={sequence:++sequence,started:now(),jsSaveReturnedTrue:false,
    clickToSaveStartMs:null,jsSaveMs:null,showFolderMs:null,
    clickToShowFolderStartMs:null,clickToTwoFramesMs:null,reported:false};
  };
@@ -37,13 +38,13 @@
   const ticket=active,started=now();
   try{
    const result=originalSave.apply(this,args);
-   if(ticket)ticket.ack=result===true;
+   if(ticket)ticket.jsSaveReturnedTrue=result===true;
    return result;
   }finally{
    if(ticket){
     ticket.clickToSaveStartMs=started-ticket.started;
     ticket.jsSaveMs=now()-started; // Includes synchronous native bridge & JS post-ACK
-    if(ticket.ack!==true)
+    if(ticket.jsSaveReturnedTrue!==true)
      requestAnimationFrame(()=>requestAnimationFrame(()=>settle(ticket)));
    }
   }
@@ -52,7 +53,7 @@
   const ticket=active,started=now();
   try{return originalFolder.apply(this,args)}
   finally{
-   if(ticket&&ticket.ack===true){
+   if(ticket&&ticket.jsSaveReturnedTrue===true){
     ticket.clickToShowFolderStartMs=started-ticket.started;
     ticket.showFolderMs=now()-started; // synchronous DOM update, not paint
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
