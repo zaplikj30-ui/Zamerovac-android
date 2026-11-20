@@ -1,4 +1,4 @@
-name: Zaměřovač PR220 - jednorázová testovací APK pro Samsung
+name: Zaměřovač PR220 - testovací APK s opravou překreslování
 on:
   push:
     branches: [qa/pr220-samsung-apk-20261120]
@@ -20,13 +20,13 @@ jobs:
       - name: Checkout exact trusted product revision
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
         with:
-          ref: d9c42ef5b352db8321533c46f50681ff19f0c349
+          ref: ea5ae399d1834917615a6d40546b60f3117e4a59
           persist-credentials: false
       - name: Verify immutable source and no release
         shell: bash
         run: |
           set -euo pipefail
-          test "$(git rev-parse HEAD)" = 'd9c42ef5b352db8321533c46f50681ff19f0c349'
+          test "$(git rev-parse HEAD)" = 'ea5ae399d1834917615a6d40546b60f3117e4a59'
           test -f app/build.gradle
           test -f config/app-version.properties
           test -f tools/debug-signing.p12.b64
@@ -44,7 +44,7 @@ jobs:
           curl -fsSL https://services.gradle.org/distributions/gradle-8.10.2-bin.zip -o "$RUNNER_TEMP/pr220-gradle.zip"
           printf '%s  %s\n' "$checksum" "$RUNNER_TEMP/pr220-gradle.zip" | sha256sum -c -
           unzip -q "$RUNNER_TEMP/pr220-gradle.zip" -d "$RUNNER_TEMP"
-          GITHUB_RUN_NUMBER=9000 "$RUNNER_TEMP/gradle-8.10.2/bin/gradle" --no-daemon :app:assemblePreview
+          GITHUB_RUN_NUMBER=9001 "$RUNNER_TEMP/gradle-8.10.2/bin/gradle" --no-daemon :app:assemblePreview
       - name: Verify APK identity, signature, and checksum
         shell: bash
         run: |
@@ -60,17 +60,17 @@ jobs:
           package="$("$aapt" dump badging "$apk" | grep '^package: ')"
           printf '%s\n' "$package"
           [[ "$package" == *"name='cz.zamerovac.app.preview'"* ]]
-          [[ "$package" == *"versionCode='10000'"* ]]
+          [[ "$package" == *"versionCode='10001'"* ]]
           mkdir -p dist
-          cp "$apk" dist/Zamerovac-PR220-preview-Samsung.apk
-          (cd dist && sha256sum Zamerovac-PR220-preview-Samsung.apk > Zamerovac-PR220-preview-Samsung.apk.sha256)
-          printf '%s\n' 'd9c42ef5b352db8321533c46f50681ff19f0c349' > dist/SOURCE-SHA.txt
-          printf 'Testovací APK z PR #220 SHA %s. Podepsáno pouze interním DEBUG certifikátem, NE pro zákaznická data.\n' 'd9c42ef5b352db8321533c46f50681ff19f0c349' >> "$GITHUB_STEP_SUMMARY"
+          cp "$apk" dist/Zamerovac-PR220-RAF-preview-Samsung.apk
+          (cd dist && sha256sum Zamerovac-PR220-RAF-preview-Samsung.apk > Zamerovac-PR220-RAF-preview-Samsung.apk.sha256)
+          printf '%s\n' 'ea5ae399d1834917615a6d40546b60f3117e4a59' > dist/SOURCE-SHA.txt
+          printf 'Testovací APK z PR #220 SHA %s. Podepsáno pouze interním DEBUG certifikátem, NE pro zákaznická data.\n' 'ea5ae399d1834917615a6d40546b60f3117e4a59' >> "$GITHUB_STEP_SUMMARY"
           cat dist/*.sha256 >> "$GITHUB_STEP_SUMMARY"
       - name: Upload APK for Samsung installation (not release)
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
         with:
-          name: Zamerovac-PR220-preview-Samsung
+          name: Zamerovac-PR220-RAF-preview-Samsung
           path: dist/
           if-no-files-found: error
           retention-days: 14
