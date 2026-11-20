@@ -393,6 +393,7 @@ class TestApkGateOffline(unittest.TestCase):
                         with self.assertRaisesRegex(RuntimeError, "versionCode"):
                             gate.release_preflight()
                 run["run_number"] = 505
+                gate.release_preflight()  # Restore baseline approved temp APK for remaining negative cases.
                 with patch.object(gate, "inspect_apk", return_value={
                         "version_code": 1156, "sha256": digest}):
                     with self.assertRaisesRegex(RuntimeError, "versionCode"):
