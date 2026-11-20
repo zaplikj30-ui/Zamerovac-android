@@ -115,7 +115,7 @@
    timer=setTimeout(()=>{if(press){wasLong=true;openHistory()}},650);
   });
   button.addEventListener('pointermove',e=>{
-   if(press&&Math.hypot(e.clientX-press.x,e.clientY-press.y)>10)stop();
+   if(press&&Math.hypot(e.clientX-press.x,e.clientY-press.y)>10){stop();wasLong=true}
   });
   button.addEventListener('pointerup',stop);
   button.addEventListener('pointercancel',stop);

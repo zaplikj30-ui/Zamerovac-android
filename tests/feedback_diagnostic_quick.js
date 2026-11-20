@@ -54,6 +54,7 @@ s.button.fire('click');assert.equal(s.counts().toggles,0,'synthetic click after 
 s=scenario();
 s.button.fire('pointerdown');s.button.fire('pointermove',{clientX:45,clientY:10});
 s.advance();assert.equal(s.counts().opened,0,'moved pointer cancels hold');
+s.button.fire('click');assert.equal(s.counts().toggles,0,'dragged diagnostic control must not accidentally toggle');
 s=scenario();
 s.button.fire('pointerdown');s.button.fire('pointercancel');s.advance();
 assert.equal(s.counts().opened,0,'cancelled pointer does not open history');
