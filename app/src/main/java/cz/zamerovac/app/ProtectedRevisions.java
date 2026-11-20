@@ -238,7 +238,17 @@ final class ProtectedRevisions {
     }
     private void preserve(String kind,String metadata,PeerSnapshot snapshot)throws IOException{synchronized(TrashPurger.LOCK){try{
         Map<String,JSONObject> prior=inventory(true);String source=PeerWire.hash(metadata.getBytes(StandardCharsets.UTF_8));
-        for(JSONObject old:prior.values())if(kind.equals(old.getString("kind"))&&source.equals(old.getString("sourceHash")))return;
+        // Reusing an existing protection preimage must reverify that exact
+        // hold's bytes. Otherwise a forged unchanged size/mtime/fileKey could
+        // let a stale cached summary silently skip durable protection.
+        // Hash only the matching hold, not all historical holds on each save.
+        for(Map.Entry<String,JSONObject> previous:prior.entrySet()){
+            JSONObject old=previous.getValue();
+            if(kind.equals(old.getString("kind"))&&source.equals(old.getString("sourceHash"))){
+                hold(previous.getKey(),true); // fail closed on corrupt identical preimage
+                return;
+            }
+        }
         JSONObject data=new JSONObject(metadata);if(snapshot!=null)data=data.getJSONObject("data");LocalDatabase.validate(data.toString());
         Set<String> ids=snapshot==null?PeerSnapshot.cleanupReferences(data.getJSONArray("records")):new TreeSet<>(snapshot.media.keySet());
         // Also include older embedded JSON objects and unknown history fields.
