@@ -102,6 +102,28 @@ class TestApkGateOffline(unittest.TestCase):
             self.assertIn("new_code=10513\n", outputs)
             self.assertIn("offset=9513\n", outputs)
 
+    def test_build_preflight_high_published_code_still_increases_without_release(self):
+        # Source SHA can change between BUILD-only runs while the last Release stays put.
+        with tempfile.TemporaryDirectory() as td, \\
+             mock.patch.object(gate, "api_client"), \\
+             mock.patch.object(gate, "revalidate_current_approval"), \\
+             mock.patch.object(gate, "main_sha", return_value=SHA), \\
+             mock.patch.object(gate, "duplicate_build"), \\
+             mock.patch.object(gate, "current_version", return_value="1.4.1"), \\
+             mock.patch.object(gate, "previous", return_value=(
+                 {"id": 9, "tag_name": "test-v1.4.0"}, "1.4.0",
+                 {"version_code": 15000})):
+            out = Path(td) / "outputs"
+            for run, code in (("505", 15505), ("506", 15506)):
+                out.write_text("")
+                with mock.patch.dict(os.environ, {"APPROVED_SHA": SHA,
+                        "GITHUB_RUN_NUMBER": run, "GITHUB_OUTPUT": str(out)}):
+                    gate.build_preflight()
+                fields = dict(line.split("=", 1) for line in out.read_text().splitlines())
+                self.assertEqual(int(fields["previous_code"]), 15000)
+                self.assertEqual(int(fields["new_code"]), code)
+                self.assertEqual(int(fields["offset"]), code - 1000)
+
     def test_valid_zip_contains_exactly_one_byte_identical_apk(self):
         data = b"SYNTHETIC-NOT-A-REAL-APK" * 32
         raw = archive([(NAME, data)])
@@ -352,6 +374,25 @@ class TestApkGateOffline(unittest.TestCase):
                 gate.release_preflight()
                 self.assertEqual(approved.read_bytes(), approved_data)
                 self.assertIn("expected_hash=" + digest, out.read_text())
+                # RELEASE re-derives the code from the verified origin run_number,
+                # even when the last published code dominates the known APK floor.
+                approved.unlink()
+                with patch.object(gate, "previous", return_value=(
+                        {"id": 9, "tag_name": "test-v1.4.0"}, "1.4.0",
+                        {"version_code": 15000})):
+                    for run_number, code in ((505, 15505), (506, 15506)):
+                        run["run_number"] = run_number
+                        with patch.object(gate, "inspect_apk", return_value={
+                                "version_code": code, "sha256": digest}):
+                            gate.release_preflight()
+                        self.assertEqual(approved.read_bytes(), approved_data)
+                        approved.unlink()
+                    run["run_number"] = 506
+                    with patch.object(gate, "inspect_apk", return_value={
+                            "version_code": 15505, "sha256": digest}):
+                        with self.assertRaisesRegex(RuntimeError, "versionCode"):
+                            gate.release_preflight()
+                run["run_number"] = 505
                 with patch.object(gate, "inspect_apk", return_value={
                         "version_code": 1156, "sha256": digest}):
                     with self.assertRaisesRegex(RuntimeError, "versionCode"):
