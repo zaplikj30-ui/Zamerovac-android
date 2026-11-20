@@ -104,12 +104,12 @@ class TestApkGateOffline(unittest.TestCase):
 
     def test_build_preflight_high_published_code_still_increases_without_release(self):
         # Source SHA can change between BUILD-only runs while the last Release stays put.
-        with tempfile.TemporaryDirectory() as td, \\
-             mock.patch.object(gate, "api_client"), \\
-             mock.patch.object(gate, "revalidate_current_approval"), \\
-             mock.patch.object(gate, "main_sha", return_value=SHA), \\
-             mock.patch.object(gate, "duplicate_build"), \\
-             mock.patch.object(gate, "current_version", return_value="1.4.1"), \\
+        with tempfile.TemporaryDirectory() as td, \
+             mock.patch.object(gate, "api_client"), \
+             mock.patch.object(gate, "revalidate_current_approval"), \
+             mock.patch.object(gate, "main_sha", return_value=SHA), \
+             mock.patch.object(gate, "duplicate_build"), \
+             mock.patch.object(gate, "current_version", return_value="1.4.1"), \
              mock.patch.object(gate, "previous", return_value=(
                  {"id": 9, "tag_name": "test-v1.4.0"}, "1.4.0",
                  {"version_code": 15000})):
