@@ -23,7 +23,7 @@ final class ProtectedRevisions {
     private static final ThreadLocal<int[]> DEBUG_COUNTS=new ThreadLocal<>();
     static void beginDebugCounts(){if(BuildConfig.DEBUG)DEBUG_COUNTS.set(new int[4]);}
     static int[] takeDebugCounts(){int[] result=DEBUG_COUNTS.get();DEBUG_COUNTS.remove();return result;}
-    private static void countDebug(int index){int[] result=DEBUG_COUNTS.get();if(result!=null)result[index]++;}
+    private static void countDebug(int index){if(!BuildConfig.DEBUG)return;int[] result=DEBUG_COUNTS.get();if(result!=null)result[index]++;}
     private static final class CachedHold {
         final java.nio.file.attribute.BasicFileAttributes attributes;final JSONObject summary;
         CachedHold(java.nio.file.attribute.BasicFileAttributes attributes,JSONObject summary){this.attributes=attributes;this.summary=summary;}
@@ -140,7 +140,7 @@ final class ProtectedRevisions {
             if(name.matches("[a-f0-9]{64}\\.json(\\.bak|\\.new)?"))ids.add(name.substring(0,64));
             else if(!name.matches("catalog\\.json(\\.bak|\\.new)?"))throw new IOException("Neznámý soubor ochrany");
         }
-        int[] debug=DEBUG_COUNTS.get();if(debug!=null)debug[0]=ids.size();
+        if(BuildConfig.DEBUG){int[] debug=DEBUG_COUNTS.get();if(debug!=null)debug[0]=ids.size();}
         Map<String,JSONObject> result=new TreeMap<>();for(String id:ids)result.put(id,hold(id));
         if(repair&&!ids.isEmpty()&&(!local.equals(ids)||!other.equals(ids)))saveCatalog(ids);
         return result;
