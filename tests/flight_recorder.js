@@ -101,7 +101,7 @@ function run(){
  confirmDelete=false;clearButton.onclick();assert.equal(api.sessionList().length,20,'cancelled clear-all must preserve all');
  confirmDelete=true;clearButton.onclick();assert.equal(api.sessionList().length,0,'confirmed clear-all deletes only diagnostic sessions');
  assert(html.indexOf('flight-recorder.js')<html.indexOf('app.js'),'flight recorder must exist before app.js');
- assert.match(app,/ZFlight\.record\('native-save'/);
+ assert.match(app,/ZFlight\?\.record\('native-save'/);
  assert.match(app,/ZFlight\?\.attachSettings/);
  assert.match(editor,/ZFlight\?\.record\('drag-release'/);
  assert.match(editor,/ZFlight\.record\('editor-commit'/);

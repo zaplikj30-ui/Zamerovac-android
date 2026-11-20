@@ -64,7 +64,7 @@ async function run(kind,confirmed){
  }
  const added=env.state.records.filter(item=>item.id!=='old-photo');
  const persisted=JSON.parse(env.persistedSnapshot).records.filter(item=>item.id!=='old-photo');
- assert.equal(saveCalls,1);
+ assert.equal(saveCalls,1,'Case '+kind+'/'+confirmed+' notices='+failNotice.join(';'));
  assert.equal(added.length,confirmed?1:0,'A rejected save left a ghost record in memory');
  assert.equal(persisted.length,confirmed?1:0,'A rejected save promoted a ghost record');
  assert.equal(env.state.records[0].items[0].measure,'1585,800001234567890');
@@ -80,7 +80,7 @@ async function run(kind,confirmed){
  }
  assert.equal(openNoteCalls,confirmed&&kind==='note'?1:0);
  assert.equal(openEditorCalls,confirmed&&kind==='photo'?1:0);
- assert.equal(folderRenders,confirmed&&(kind==='photo'||kind==='folder'||kind==='prompt')?1:0);
+ assert.equal(folderRenders,confirmed&&(kind==='folder'||kind==='prompt')?1:0,'Photo opens the editor without a redundant list redraw');
  if(!confirmed){
   assert.equal(env.window.__lastSaveFailed,true);
   assert.equal(disk,JSON.stringify(baseline));
