@@ -3,6 +3,7 @@
  * No fake stage handlers or mocked measurements; only native UI/media boundary is stubbed.
  */
 'use strict';
+const {installEditorPaintScheduler}=require('./helpers/editor_move_scheduler.cjs');
 const fs=require('node:fs');
 const vm=require('node:vm');
 const assert=require('node:assert/strict');
@@ -38,6 +39,7 @@ const app={
  setTool(key){app.mode=key},editItem(){app.opens++}
 };
 vm.createContext(app);
+installEditorPaintScheduler(vm,app,editor);
 vm.runInContext(asset('annotation-geometry.js'),app);
 vm.runInContext(asset('annotation-selection.js'),app);
 vm.runInContext(asset('annotation-translation.js'),app);
