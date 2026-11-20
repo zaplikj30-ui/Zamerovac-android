@@ -17,6 +17,11 @@ final class ProtectedRevisions {
     // App-owned hold files are immutable. Cache only verified summaries, never
     // full historical JSON; any inode/size/mtime or AtomicFile residue change
     // forces a fresh bounded read and hash verification. Restart rebuilds it.
+    // A 128-entry LRU repeatedly evicted every hold once the phone reached 133+
+    // revisions: each of the three save-path scans missed almost every entry.
+    // Retain a bounded 512 summaries (never full historical metadata) instead.
+    // Size/mtime/fileKey/residue checks and forceVerify for destructive paths stay intact.
+    private static final int MAX_VERIFIED_HOLDS=512;
     private static final LinkedHashMap<String,CachedHold> VERIFIED=new LinkedHashMap<>(16,0.75f,true);
     // Current debug Native bridge invocation only: count history scans without IDs.
     // [revisionCount, verifiedCacheHits, verifiedCacheMisses, originalChecks]
@@ -122,7 +127,7 @@ final class ProtectedRevisions {
         // summaries separately. Larger holds still receive full verification.
         if(media.length()<=256){
             VERIFIED.put(path.getAbsolutePath(),new CachedHold(attrs,hold));
-            while(VERIFIED.size()>128)VERIFIED.remove(VERIFIED.keySet().iterator().next());
+            while(VERIFIED.size()>MAX_VERIFIED_HOLDS)VERIFIED.remove(VERIFIED.keySet().iterator().next());
         }else VERIFIED.remove(path.getAbsolutePath());
         return hold;
     }
