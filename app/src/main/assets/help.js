@@ -571,7 +571,9 @@ const chapters=[
       "V Rozměrech nastav výchozí jednotky a počet zobrazovaných desetinných míst.",
       "Ve Vzhledu nastav barvu, tloušťku čar, velikost textu, zobrazení a další běžné chování.",
       "V hlavním menu ☰ → Historie změn nebo v Nastavení → Novinky a historie změn si zobrazíš skutečné novinky, opravené chyby a vylepšení podle verzí. Od verze 1.3.0 se významnější změny projevují druhým číslem verze, menší opravy posledním číslem; číslo sestavení Androidu je samostatné.",
-      "Jazyk aplikace zatím nabízí pouze 🇨🇿 Čeština; další překlady nejsou hotové."
+      "Jazyk aplikace zatím nabízí pouze 🇨🇿 Čeština; další překlady nejsou hotové.",
+      "V Nastavení → Diagnostika výkonu zapni záznam před testem, proveď několik pohybů kót na různých fotografiích, případně restartuj aplikaci a otevři Historii a sdílení diagnostiky. Každé zapnutí vytváří samostatné měření s datem a časem. Stejnou diagnostiku otevřeš také ve fialové vlaječce: krátké klepnutí na položku Diagnostika ji zapne nebo vypne, dlouhé podržení této položky otevře historii. Gesta samotné vlaječky zůstávají beze změny. V Historie a sdílení diagnostiky vyber konkrétní měření pro sdílení; popelnice vedle data smaže jen toto měření po potvrzení. Zvlášť lze smazat všechna měření. Nejvýše 20 měření, každé nejvýše 120 událostí; staré záznamy se automaticky nemažou, při dosažení limitu je nutné některé ručně smazat. Ukládají se jen časy a počty; nic se neodesílá automaticky. Pro dokončené úpravy kót rozlišuje diagnostika posun celé kóty, otočení, změnu délky (roztažení) i jejich kombinaci. Zaznamená jen typ operace a časy, ne souřadnice, geometrii ani skutečnou naměřenou hodnotu. Při otevření editoru se rozlišuje počet položek a běžných rozměrových kót na této fotografii od počtu všech položek, rozměrových kót a fotografií v celé místní databázi aplikace (bez smazaných fotografií). V diagnostické testovací sestavě se navíc rozlišuje převod dat do JSON, opětovné čtení databáze, ochrana historie, doklady obnovitelnosti a databázový zápis.",
+      "Když se diagnostická historie nedá přečíst nebo překračuje povolený rozsah, změny jsou zablokované a uložené bajty zůstávají zachované. Po dočasné chybě zkus aplikaci znovu otevřít. Pokud problém přetrvá, požádej o obnovu čitelné kopie. Při nepotvrzeném zápisu zkontroluj stav v Historii a sdílení diagnostiky. Pokud po migraci zůstala starší kopie, aplikace na to upozorní."
     ],
     "notes": [
       "Změna zobrazení jednotek nebo přiblížení nesmí přepočítat již uloženou naměřenou hodnotu bez tvé výslovné úpravy.",
@@ -591,7 +593,9 @@ const chapters=[
       "opravené chyby",
       "novinky",
       "verze",
-      "nastavení"
+      "nastavení",
+      "diagnostika výkonu",
+      "sekání kót"
     ]
   },
   {

@@ -18,6 +18,12 @@ final class ProtectedRevisions {
     // full historical JSON; any inode/size/mtime or AtomicFile residue change
     // forces a fresh bounded read and hash verification. Restart rebuilds it.
     private static final LinkedHashMap<String,CachedHold> VERIFIED=new LinkedHashMap<>(16,0.75f,true);
+    // Current debug Native bridge invocation only: count history scans without IDs.
+    // [revisionCount, verifiedCacheHits, verifiedCacheMisses, originalChecks]
+    private static final ThreadLocal<int[]> DEBUG_COUNTS=new ThreadLocal<>();
+    static void beginDebugCounts(){if(BuildConfig.DEBUG)DEBUG_COUNTS.set(new int[4]);}
+    static int[] takeDebugCounts(){int[] result=DEBUG_COUNTS.get();DEBUG_COUNTS.remove();return result;}
+    private static void countDebug(int index){if(!BuildConfig.DEBUG)return;int[] result=DEBUG_COUNTS.get();if(result!=null)result[index]++;}
     private static final class CachedHold {
         final java.nio.file.attribute.BasicFileAttributes attributes;final JSONObject summary;
         CachedHold(java.nio.file.attribute.BasicFileAttributes attributes,JSONObject summary){this.attributes=attributes;this.summary=summary;}
@@ -84,7 +90,8 @@ final class ProtectedRevisions {
         java.nio.file.attribute.BasicFileAttributes attrs=null;
         try{attrs=Files.readAttributes(path.toPath(),java.nio.file.attribute.BasicFileAttributes.class,LinkOption.NOFOLLOW_LINKS);}catch(NoSuchFileException absent){}
         CachedHold known=VERIFIED.get(path.getAbsolutePath());
-        if(attrs!=null&&known!=null&&known.matches(attrs)&&!new File(path+".bak").exists()&&!new File(path+".new").exists())return known.summary;
+        if(attrs!=null&&known!=null&&known.matches(attrs)&&!new File(path+".bak").exists()&&!new File(path+".new").exists()){countDebug(1);return known.summary;}
+        countDebug(2);
         File pending=new File(path+".new");boolean staged=!exists(path)&&pending.exists();byte[] bytes;
         if(staged){safe(pending);if(pending.length()>3L*LocalDatabase.MAX_BYTES)throw new IOException("Příliš velký nedokončený hold");bytes=Files.readAllBytes(pending.toPath());}
         else bytes=read(path);
@@ -119,6 +126,8 @@ final class ProtectedRevisions {
      * No historical manifest is ever pruned, even after epoch/namespace changes.
      */
     private Map<String,JSONObject> inventory(boolean repair)throws Exception{
+        if(BuildConfig.DEBUG)android.os.Trace.beginSection("Z195-revision-inventory");
+        try{
         if(Files.isSymbolicLink(home.toPath())||Files.isSymbolicLink(new File(home,"media").toPath())||Files.isSymbolicLink(directory.toPath())||directory.exists()&&!directory.isDirectory()||Files.isSymbolicLink(witness.getParentFile().toPath()))throw new IOException("Neplatné úložiště ochrany");
         File index=new File(directory,"catalog.json");Set<String> local=catalog(index),other=catalog(witness),ids=new TreeSet<>(local);ids.addAll(other);
         File[] files=directory.listFiles();if(files==null&&directory.exists())throw new IOException("Registr ochrany nelze načíst");
@@ -131,9 +140,11 @@ final class ProtectedRevisions {
             if(name.matches("[a-f0-9]{64}\\.json(\\.bak|\\.new)?"))ids.add(name.substring(0,64));
             else if(!name.matches("catalog\\.json(\\.bak|\\.new)?"))throw new IOException("Neznámý soubor ochrany");
         }
+        if(BuildConfig.DEBUG){int[] debug=DEBUG_COUNTS.get();if(debug!=null)debug[0]=ids.size();}
         Map<String,JSONObject> result=new TreeMap<>();for(String id:ids)result.put(id,hold(id));
         if(repair&&!ids.isEmpty()&&(!local.equals(ids)||!other.equals(ids)))saveCatalog(ids);
         return result;
+        }finally{if(BuildConfig.DEBUG)android.os.Trace.endSection();}
     }
     private void saveCatalog(Set<String> ids)throws Exception{
         byte[] bytes=new JSONObject().put("format","cz.zamerovac.protection.catalog").put("version",1).put("holds",new JSONArray(ids)).toString().getBytes(StandardCharsets.UTF_8);
@@ -223,7 +234,7 @@ final class ProtectedRevisions {
                     JSONObject known=old.getJSONObject("_ids").optJSONObject(id);
                     if(known!=null&&!known.getString("hash").isEmpty()){entry.put("hash",known.getString("hash")).put("size",known.getLong("size"));break;}
                 }
-            }else entry=ImmutableMediaProof.inspect(original).put("state","VERIFIED");
+            }else{countDebug(3);entry=ImmutableMediaProof.inspect(original).put("state","VERIFIED");}
             for(JSONObject old:prior.values()){
                 JSONObject pinned=old.getJSONObject("_ids").optJSONObject(id);
                 if(pinned!=null&&!pinned.getString("hash").isEmpty()&&!missing&&(pinned.getLong("size")!=entry.getLong("size")||!pinned.getString("hash").equals(entry.getString("hash"))))
