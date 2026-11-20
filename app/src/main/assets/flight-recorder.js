@@ -140,7 +140,12 @@ function attachSettings(panel){
  const clearButton=root.document.createElement('button');clearButton.type='button';clearButton.className='setting';clearButton.textContent='Smazat všechna měření';
  const history=root.document.createElement('div');history.id='flightHistory';history.hidden=true;
  const label=s=>new Date(s.startedAt).toLocaleString('cs-CZ');
- const confirmDelete=msg=>typeof root.confirm!=='function'||root.confirm(msg);
+ const pendingDeletes=new WeakSet();
+ const confirmDelete=(msg,button)=>{
+  if(typeof root.confirm==='function')return root.confirm(msg);
+  if(pendingDeletes.has(button)){pendingDeletes.delete(button);return true}
+  pendingDeletes.add(button);button.textContent='Potvrdit smazání';return false;
+ };
  function update(){
   toggleButton.textContent=enabled?'Vypnout záznam':'Zapnout záznam';
   status.textContent='Měření: '+sessions.length+' · aktuální události: '+rows.length+
@@ -159,16 +164,16 @@ function attachSettings(panel){
    const trash=root.document.createElement('button');trash.type='button';trash.textContent='🗑';trash.title='Smazat pouze toto měření';
    trash.setAttribute('aria-label','Smazat měření z '+label(s));
    trash.onclick=()=>{
-    if(!confirmDelete('Smazat pouze měření z '+label(s)+'?'))return;
+    if(!confirmDelete('Smazat pouze měření z '+label(s)+'?',trash))return;
     removeSession(s.id);render();update();
    };
    row.append(date,send,trash);history.append(row);
   }
  }
- toggleButton.onclick=()=>{toggle(!enabled);update();if(!history.hidden)render()};
- shareButton.onclick=()=>{history.hidden=!history.hidden;if(!history.hidden)render();update()};
+ toggleButton.onclick=()=>{pendingDeletes.delete(clearButton);clearButton.textContent='Smazat všechna měření';toggle(!enabled);update();if(!history.hidden)render()};
+ shareButton.onclick=()=>{pendingDeletes.delete(clearButton);clearButton.textContent='Smazat všechna měření';history.hidden=!history.hidden;if(!history.hidden)render();update()};
  clearButton.onclick=()=>{
-  if(!confirmDelete('Smazat VŠECHNA diagnostická měření? Zakázek a fotografií se to netýká.'))return;
+  if(!confirmDelete('Smazat VŠECHNA diagnostická měření? Zakázek a fotografií se to netýká.',clearButton))return;
   clear();if(!history.hidden)render();update();
  };
  section.append(heading,info,status,toggleButton,shareButton,clearButton,history);panel.append(section);update();

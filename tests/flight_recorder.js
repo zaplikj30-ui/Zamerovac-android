@@ -112,6 +112,17 @@ function run(){
  assert(java.includes('if(perf)LocalDatabase.takeDebugWrite();'),'missing failure cleanup of debug timings');
  for(const key of ['dimensionCount','databasePhotoCount','databaseItemCount','databaseDimensionCount'])
   assert(editor.includes(key),'missing scoped photo/project count '+key);
+ const fallback=boot();fallback.win.confirm=undefined;
+ fallback.api.toggle(true);fallback.api.attachSettings(fallback.panel);
+ const fallbackButtons=fallback.panel.children[0].children.filter(e=>e.tag==='button');
+ fallbackButtons[1].onclick();
+ const fallbackHistory=fallback.panel.children[0].children.at(-1);
+ const beforeFallback=fallback.api.sessionList().length;
+ fallbackHistory.children[0].children[2].onclick();
+ assert.equal(fallback.api.sessionList().length,beforeFallback,'missing native confirm must not silently delete');
+ assert.equal(fallbackHistory.children[0].children[2].textContent,'Potvrdit smazání');
+ fallbackHistory.children[0].children[2].onclick();
+ assert.equal(fallback.api.sessionList().length,beforeFallback-1,'explicit second tap authorizes deletion');
  assert(help.includes('na různých fotografiích'),'offline help photo distinction');
  for(const marker of ['Z195-revision-inventory','Z195-media-proof'])
   assert((revisions+media).includes(marker),'missing debug trace '+marker);
