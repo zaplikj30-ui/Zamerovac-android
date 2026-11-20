@@ -31,6 +31,8 @@ final class ImmutableMediaProof {
     }
     static JSONObject inspect(File file)throws Exception{return inspect(file,PeerMedia::inspect);}
     static JSONObject inspect(File file,Hash hash)throws Exception{
+        if(BuildConfig.DEBUG)android.os.Trace.beginSection("Z195-media-proof");
+        try{
         synchronized(TrashPurger.LOCK){
             String key=file.getAbsolutePath();Stamp before=stamp(file);Entry old=CACHE.get(key);
             if(before!=null&&old!=null&&old.stamp.same(before))return new JSONObject(old.proof);
@@ -39,5 +41,6 @@ final class ImmutableMediaProof {
             if(after!=null)CACHE.put(key,new Entry(after,proof));else CACHE.remove(key);
             return new JSONObject(proof.toString());
         }
+        }finally{if(BuildConfig.DEBUG)android.os.Trace.endSection();}
     }
 }
