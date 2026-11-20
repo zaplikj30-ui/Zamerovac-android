@@ -119,6 +119,8 @@ final class ProtectedRevisions {
      * No historical manifest is ever pruned, even after epoch/namespace changes.
      */
     private Map<String,JSONObject> inventory(boolean repair)throws Exception{
+        if(BuildConfig.DEBUG)android.os.Trace.beginSection("Z195-revision-inventory");
+        try{
         if(Files.isSymbolicLink(home.toPath())||Files.isSymbolicLink(new File(home,"media").toPath())||Files.isSymbolicLink(directory.toPath())||directory.exists()&&!directory.isDirectory()||Files.isSymbolicLink(witness.getParentFile().toPath()))throw new IOException("Neplatné úložiště ochrany");
         File index=new File(directory,"catalog.json");Set<String> local=catalog(index),other=catalog(witness),ids=new TreeSet<>(local);ids.addAll(other);
         File[] files=directory.listFiles();if(files==null&&directory.exists())throw new IOException("Registr ochrany nelze načíst");
@@ -134,6 +136,7 @@ final class ProtectedRevisions {
         Map<String,JSONObject> result=new TreeMap<>();for(String id:ids)result.put(id,hold(id));
         if(repair&&!ids.isEmpty()&&(!local.equals(ids)||!other.equals(ids)))saveCatalog(ids);
         return result;
+        }finally{if(BuildConfig.DEBUG)android.os.Trace.endSection();}
     }
     private void saveCatalog(Set<String> ids)throws Exception{
         byte[] bytes=new JSONObject().put("format","cz.zamerovac.protection.catalog").put("version",1).put("holds",new JSONArray(ids)).toString().getBytes(StandardCharsets.UTF_8);
