@@ -1,0 +1,120 @@
+name: Zamerovac - isolated integration of five PRs (one-shot, no APK)
+on:
+  push:
+    branches:
+      - integration/combined-209-223-215-220-222-20261120
+    paths:
+      - .github/workflows/integrate-five-prs-once.yml
+permissions:
+  contents: write
+concurrency:
+  group: zamerovac-5pr-one-shot
+  cancel-in-progress: false
+jobs:
+  integrate:
+    if: github.repository == 'zaplikj30-ui/Zamerovac-android' && github.event.repository.private == false
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Verify inputs, merge with fail-closed conflict reporting
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE=82bd99ee95e8b08a6e2d4f4a430e04567bf7c82c
+          mkdir -p integration-evidence/conflicts
+          printf 'Base=%s\nKickoff=%s\n' "$BASE" "$GITHUB_SHA" > integration-evidence/provenance.txt
+          if [ "$(git rev-parse refs/remotes/origin/main)" != "$BASE" ]; then
+            echo 'BLOCKED: main drift' | tee integration-evidence/blocked.txt
+            exit 30
+          fi
+          if ! git merge-base --is-ancestor "$BASE" "$GITHUB_SHA"; then
+            echo 'BLOCKED: kickoff does not descend from base' | tee integration-evidence/blocked.txt
+            exit 31
+          fi
+          git fetch --no-tags origin \
+            '+refs/pull/223/head:refs/remotes/source-pr223' \
+            '+refs/pull/220/head:refs/remotes/source-pr220' \
+            '+refs/pull/222/head:refs/remotes/source-pr222'
+          test "$(git rev-parse refs/remotes/source-pr223)" = 89037d6d3d1b1afbac74383d61a511b8953f4881 || { echo 'BLOCKED: #223 drift' | tee integration-evidence/blocked.txt; exit 32; }
+          test "$(git rev-parse refs/remotes/source-pr220)" = ea5ae399d1834917615a6d40546b60f3117e4a59 || { echo 'BLOCKED: #220 drift' | tee integration-evidence/blocked.txt; exit 32; }
+          test "$(git rev-parse refs/remotes/source-pr222)" = d71c79ede1dfdd47953175e561084fc67371e3aa || { echo 'BLOCKED: #222 drift' | tee integration-evidence/blocked.txt; exit 32; }
+          git config user.name 'Zamerovac Integration QA'
+          git config user.email 'integration-qa@users.noreply.github.com'
+          merge_one() {
+            ref="$1"; label="$2"
+            if git merge --no-ff --no-commit "refs/remotes/$ref"; then
+              git commit -m "Integrate $label"
+            else
+              echo "BLOCKED: real merge conflict for $label" | tee integration-evidence/blocked.txt
+              git status --short > integration-evidence/git-status.txt
+              git ls-files -u > integration-evidence/unmerged-stages.txt
+              git diff --cc > integration-evidence/combined.diff || true
+              git diff --name-only --diff-filter=U | while IFS= read -r f; do
+                [ -n "$f" ] || continue
+                name="$(printf '%s' "$f" | tr / _)"
+                cp "$f" "integration-evidence/conflicts/$name.conflicted" || true
+                for n in 1 2 3; do
+                  git show ":$n:$f" > "integration-evidence/conflicts/$name.stage$n" 2>/dev/null || true
+                done
+              done
+              exit 33
+            fi
+          }
+          merge_one source-pr223 '#209+#223'
+          merge_one source-pr220 '#215+#220'
+          merge_one source-pr222 '#222'
+          git diff --check "$BASE" HEAD
+          git diff --name-status "$BASE" HEAD > integration-evidence/changed-files.txt
+          git log -8 --format='%H %s' > integration-evidence/merge-history.txt
+          echo PASS > integration-evidence/merge-status.txt
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: All source Node and Python regression scripts
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in app/src/main/assets/*.js sync/*.js; do node --check "$f"; done
+          node tools/qa/audit.cjs
+          node tools/check-android-window.cjs
+          for t in tests/*.js; do node "$t"; done
+          python3 -m unittest discover -s tests -p 'test_*.py' -v
+          echo 'PASS Node/Python' > integration-evidence/test-status.txt
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+      - name: Compile and JVM preview tests, no APK
+        shell: bash
+        run: |
+          set -euo pipefail
+          gradle --no-daemon :app:compilePreviewJavaWithJavac :app:testPreviewUnitTest
+          echo 'PASS JVM' >> integration-evidence/test-status.txt
+      - name: Publish to isolated integration branch ONLY after tests
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git rm .github/workflows/integrate-five-prs-once.yml
+          git commit -m 'Remove one-shot integration workflow from product tree'
+          remote_sha="$(git ls-remote origin refs/heads/integration/combined-209-223-215-220-222-20261120 | cut -f1)"
+          test "$remote_sha" = "$GITHUB_SHA" || { echo 'BLOCKED: integration branch drift' | tee integration-evidence/blocked.txt; exit 34; }
+          auth="$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)"
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic $auth" push origin HEAD:refs/heads/integration/combined-209-223-215-220-222-20261120
+          git rev-parse HEAD | tee integration-evidence/published-sha.txt
+      - name: Store evidence even after failure
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-five-prs
+          path: integration-evidence/
+          if-no-files-found: warn
+          retention-days: 7
