@@ -1,6 +1,6 @@
-# #195 – postup měření ukládání nové složky na testovacím Androidu
+# #195 – diagnostika výkonu: nativní časování a lokální černá skříňka
 
-**POUZE DIAGNOSTICKÝ DRAFT.** Nic neinstalovat ani nevydávat bez nezávislého SOURCE/SECURITY review a výslovného GO vlastníka. Naměřená příčina zpomalení není známá.
+**POUZE DIAGNOSTICKÝ DRAFT.** V této větvi je nově i uživatelské UI a lokální flight recorder; před fyzickým použitím je nutná nezávislá SOURCE/SECURITY kontrola a schválená samostatná testovací APK. Naměřená příčina zamrzání na Samsungu není známá. Bez schválení neinstalovat, nevydávat, nespouštět HOME ani cloud.
 
 ## Proč je potřeba minimální instrumentace
 
@@ -21,6 +21,19 @@ Výchozí app/build.gradle má buildConfig true, debug signing a oddělenou vari
 
 Každá jednotlivá operace má výjimkově bezpečný try/finally pro Trace.endSection; vnější Z195-bridge také. Sekvence readDb → writeDb → generation → recoverPrimary a původní odpovědi CAS/exception nejsou změněné. Názvy jsou statické a bez metadat. Během trace spouštět jeden pokus najednou a vyhledat všech šest úseků; po chybovém CAS budou některé sekce správně chybět.
 
+## Černá skříňka přímo v aplikaci – NOVÉ, fyzicky NOT RUN
+
+Zobrazení: Nastavení → **Diagnostika výkonu (testovací)**. Tlačítka **Zapnout/Vypnout záznam**, **Sdílet diagnostický záznam**, **Smazat diagnostický záznam**. Implementace: `app/src/main/assets/flight-recorder.js`, načtený před `app.js`; zásahy do `editor.js` sledují otevření editoru, dokončený tah, dobu commit/save a následné kreslení. `app.js` sleduje čas Native bridge a status bez záznamu výsledného JSON, ID nebo obsahu chyby.
+
+- **Opt-in**: výchozí stav vypnuto, oddělená předvolba v lokálním WebView `localStorage` (nikoli projekty/Native CAS). Omezení **120 událostí**; záznamy mají UTC čas a jen názvy z pevného seznamu + povolené numerické délky/počty. Zachovávají se po běžném restartu; při vymazání dat aplikace zmizí. Zápis se slučuje po 1,2 s, při dokončení tahu/varování a odchodu z obrazovky se vynucuje flush. Po tvrdém pádu může chybět poslední neuložený vzorek.
+- **Měřené události**: start, otevření editoru, dokončený tah, velikost Undo a počet kót, celkový čas commit/save a kreslení, Native bridge, obecné selhání zápisu a prodleva webového UI (heartbeat 1 s, záznam při prodlevě větší než 1,6 s). Heartbeat není důkaz o konkrétních fyzických pixelech ani nativní ANR. Události neobsahují přesné délky, polohy, názvy zákazníků ani soubory.
+- **Native debug/preview**: odpověď existujícího `saveDataChecked` obsahuje vedle původního ACK volitelné číselné `diag`: `lockWaitMs`, `readMs`, `writeMs`, `generationMs`, `recoveryMs`, `revisionCount` (počet při posledním čtení inventáře), `cacheHits`, `cacheMisses` (během daného save) a `mediaChecks`. Žádný nový `@JavascriptInterface`, žádné zákaznické údaje v odpovědi navíc; v release nejsou tyto diagnostické metriky přidávány.
+- **Perfetto**: dosavadních šest `Z195-*` značek navíc doplněno o `Z195-revision-inventory` a `Z195-media-proof`. Jsou pouze v debug/preview, takže lze oddělit náklady revizní historie a ověřování médií od celého `writeDb`. Nezaměňovat tento systémový trace za zjednodušený in-app export.
+- **Ruční export**: systémová nabídka Android `Native.shareText` posílá *až na kliknutí* anonymní textový report. Žádné automatické spojení, crash reporting do cloudu nebo upload na PUBLIC GitHub. Webový režim pouze zobrazí kopírovatelný text. Před sdílením má uživatel možnost report přečíst. Syrový Perfetto trace uchovávat lokálně.
+- **Metodická výhrada**: zapnuté měření (zvlášť synchronní flush po dokončeném tahu) samo může přidat malé zdržení; porovnávat s vypnutou diagnostikou. Nevyhodnocovat stav na ostrých zakázkách. Tato funkce není lék ani automatická oprava.
+
+**Praktické použití po schválené preview sestavě:** zapnout → otevřít syntetickou fotografii → opakovaně přesunout kótu a pustit → otestovat návrat z editoru/restart a druhou fotografii → v Nastavení sdílet report. Při nálezu `writeMs` s `cacheMisses` rozlišit podrobné časy `Z195-revision-inventory` a `Z195-media-proof` v Perfetto. Následuje měřená cílená oprava, vlastní i nezávislé review a fyzický retest; žádné oslabení CAS či integrity.
+
 ## Dočasný JS helper bez zásahu do produktu
 
 Při budoucím povoleném testu v Chrome DevTools na odděleném testovacím WebView vložit obsah tools/diagnostics/issue195-folder-save-devtools.js do konzole. Není importován do app assets. Měří pouze vytvoření složky přes modal "Nová složka"; nečte názvy uložených zakázek ani JSON, jen boolean potvrzení a časové rozdíly.
@@ -38,4 +51,4 @@ Výstupní pole: clickToSaveStartMs (klik → JS save start); jsSaveMs (JS save 
 5. Pokud dojde k ztrátě média/ID, nepravdivému ACK, neúplné recovery, souběžné editaci bez správného CAS nebo k metodickému rozporu, **STOP**. Nepřebírat historický PASS 96/96 z PR #205 jako fyzické ověření.
 6. Až s výsledky doporučit cílenou opravu měřeného úseku, jiné prostředí/profiler, nebo samostatný architektonický návrh s owner/design/security GO. Nevypínat PendingAudio.recoverPrimary, neoddalovat CAS ani nepřesouvat IO do pozadí naslepo.
 
-**Současný stav:** SOURCE návrh, statické Java kontrakty a simulovaný DevTools test; skutečná Android/Gradle kompilace, fyzické časy, média a restarty **NOT RUN**. Java trace metadata ani JS měřič nejsou bezpečnostní audit ani výkonový PASS. Uživatelská offline nápověda se nemění, protože se nemění uživatelské chování. Všechny skutečné trace soubory uchovat lokálně, před sdílením ručně prověřit i okolní systémové události a na veřejný GitHub zveřejnit jen anonymní souhrn čísel.
+**Současný stav:** SOURCE návrh, opt-in uživatelské UI a lokální recorder, statické Java kontrakty a simulovaný JS test; skutečná Android/Gradle kompilace, fyzické časy, média a restarty **NOT RUN**. Java trace metadata ani JS měřič nejsou bezpečnostní audit ani výkonový PASS. Offline nápověda byla aktualizována pro nové ovládání. Všechny skutečné trace soubory uchovat lokálně, před sdílením ručně prověřit i okolní systémové události a na veřejný GitHub zveřejnit jen anonymní souhrn čísel.
