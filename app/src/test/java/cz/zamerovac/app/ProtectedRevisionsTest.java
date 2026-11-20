@@ -27,10 +27,66 @@ public class ProtectedRevisionsTest {
         exact="{ \"schema\":1, \"records\":[{\"id\":\"photo\",\"kind\":\"photo\",\"deleted\":true,\"media\":[\"original-photo\"],\"items\":[{\"a\":{\"x\":0.125,\"y\":999.5},\"b\":{\"x\":1234.56789,\"y\":0.5},\"measure\":\"0,000000123456789\",\"laserMeasuredMm\":\"1585.800001234567890\",\"media\":[\"original-video\"],\"history\":{\"undo\":[\"1250,123456789\"],\"redo\":[\"0.000000000001\"]}}]}]}";
         LocalDatabase.write(device,exact);
     }
+    @Test public void repeatedDimensionSaveProfile()throws Exception{
+        JSONObject data=new JSONObject(exact);JSONObject point=data.getJSONArray("records").getJSONObject(0).getJSONArray("items").getJSONObject(0).getJSONObject("a");
+        for(int i=0;i<110;i++){
+            point.put("x",i+0.125);
+            long start=System.nanoTime();LocalDatabase.write(device,data.toString());
+            long elapsed=System.nanoTime()-start;
+            System.out.println("ISSUE221 save="+(i+1)+" ns="+elapsed);
+        }
+        assertEquals(109.125,new JSONObject(LocalDatabase.readForCas(device)).getJSONArray("records").getJSONObject(0).getJSONArray("items").getJSONObject(0).getJSONObject("a").getDouble("x"),0);
+        exactBytes();
+        hasExactDatabase();
+        assertEquals(112,holds().size());
+
+        // Simulate process restart by discarding only the process-local cache.
+        java.lang.reflect.Field field=ProtectedRevisions.class.getDeclaredField("VERIFIED");
+        field.setAccessible(true);
+        synchronized(TrashPurger.LOCK){
+            Map<?,?> cache=(Map<?,?>)field.get(null);
+            cache.clear();
+            ProtectedRevisions reopened=new ProtectedRevisions(device,device.prefs);
+            long cold=System.nanoTime();
+            assertEquals(2,reopened.pins().size());
+            System.out.println("ISSUE221 cold ns="+(System.nanoTime()-cold));
+            Map<?,?> verified=new HashMap<>(cache);
+            long warm=System.nanoTime();
+            assertEquals(2,reopened.pins().size());
+            System.out.println("ISSUE221 warm ns="+(System.nanoTime()-warm));
+            Map<?,?> warmCache=new HashMap<>(cache);
+            long reused=verified.entrySet().stream()
+                .filter(entry->warmCache.get(entry.getKey())==entry.getValue()).count();
+            System.out.println("ISSUE221 reused="+reused);
+            assertEquals("Warm inventory must reuse verified history",112,reused);
+        }
+    }
     List<JSONObject> holds()throws Exception{
         List<JSONObject> result=new ArrayList<>();File[] files=new File(device.home,"protected-revisions").listFiles();
         if(files!=null)for(File f:files)if(f.getName().matches("[a-f0-9]{64}\\.json"))result.add(new JSONObject(new String(Files.readAllBytes(f.toPath()),StandardCharsets.UTF_8)));
         return result;
+    }
+    @Test public void warmCacheRejectsSameSizeCorruptionAndReplacement()throws Exception{
+        File folder=new File(device.home,"protected-revisions");
+        Path hold=Arrays.stream(Objects.requireNonNull(folder.listFiles()))
+            .filter(f->f.getName().matches("[a-f0-9]{64}\\.json")).findFirst().get().toPath();
+        byte[] original=Files.readAllBytes(hold),corrupt=original.clone();
+        corrupt[0]='!';
+        assertEquals(2,protection.pins().size());
+        java.nio.file.attribute.FileTime modified=Files.getLastModifiedTime(hold);
+        Files.write(hold,corrupt);
+        Files.setLastModifiedTime(hold,java.nio.file.attribute.FileTime.fromMillis(modified.toMillis()+1000));
+        Assert.assertThrows(IOException.class,protection::pins);
+
+        Files.write(hold,original);
+        assertEquals(2,protection.pins().size());
+        Path replacement=Files.createTempFile(device.home.toPath(),"replacement-hold",".tmp");
+        Files.write(replacement,corrupt);
+        Files.setLastModifiedTime(replacement,Files.getLastModifiedTime(hold));
+        Files.move(replacement,hold,StandardCopyOption.REPLACE_EXISTING);
+        Assert.assertThrows(IOException.class,protection::pins);
+        assertEquals(exact,LocalDatabase.readForCas(device));
+        exactBytes();
     }
     void exactBytes(){try{assertArrayEquals(photo,Files.readAllBytes(new File(device.home,"media/original-photo").toPath()));assertArrayEquals(video,Files.readAllBytes(new File(device.home,"media/original-video").toPath()));}catch(IOException e){throw new AssertionError(e);}}
     void hasExactDatabase()throws Exception{for(JSONObject hold:holds())if("database".equals(hold.getString("kind"))&&exact.equals(hold.getString("metadata")))return;fail("Missing byte-exact JSON preimage, geometry/laser/history");}
