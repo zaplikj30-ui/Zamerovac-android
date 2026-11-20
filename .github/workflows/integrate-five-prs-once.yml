@@ -144,8 +144,28 @@ jobs:
           for f in app/src/main/assets/*.js sync/*.js; do node --check "$f"; done
           node tools/qa/audit.cjs
           node tools/check-android-window.cjs
-          for t in tests/*.js; do node "$t"; done
-          python3 -m unittest discover -s tests -p 'test_*.py' -v
+          failures=0
+          for t in tests/*.js; do
+            logfile="integration-evidence/$(basename "$t").log"
+            if node "$t" > "$logfile" 2>&1; then
+              rm "$logfile"
+            else
+              echo "FAIL test: $t" | tee -a integration-evidence/test-failures.txt
+              tail -25 "$logfile"
+              failures=$((failures+1))
+            fi
+          done
+          if python3 -m unittest discover -s tests -p 'test_*.py' -v > integration-evidence/python-tests.log 2>&1; then
+            rm integration-evidence/python-tests.log
+          else
+            echo 'FAIL Python unit tests' | tee -a integration-evidence/test-failures.txt
+            tail -45 integration-evidence/python-tests.log
+            failures=$((failures+1))
+          fi
+          if [ "$failures" -ne 0 ]; then
+            echo "BLOCKED: $failures test failures" | tee integration-evidence/blocked.txt
+            exit 40
+          fi
           echo 'PASS Node/Python' > integration-evidence/test-status.txt
       - uses: actions/setup-java@v4
         with:
