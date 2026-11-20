@@ -102,14 +102,17 @@ class HomeQaCodePreflight(unittest.TestCase):
                     v.api_read(url, "FAKE_TOKEN")
 
     def test_current_cloud_build_preserves_dynamic_published_apk_preflight(self):
-        # Owner decision retires the HOME workflow; retain the reusable safety
-        # contract that versionCode comes from the last *published* signed APK.
+        # Owner retires HOME; keep signed published APK as one lower bound,
+        # and additionally prevent downgrade from distributed BUILD-only APKs.
         root = Path(__file__).resolve().parents[1]
         workflow = (root / ".github/workflows/build-apk.yml").read_text("utf-8")
         gate = (root / "tools/release/apk_gate.py").read_text("utf-8")
         self.assertIn("python3 tools/release/apk_gate.py build-preflight", workflow)
         self.assertIn("python3 tools/release/apk_gate.py build-postflight", workflow)
-        self.assertIn('new_code = old["version_code"] + 1', gate)
+        self.assertIn('KNOWN_PREVIEW_VERSION_CODE = 10008', gate)
+        self.assertIn('new_code = next_preview_code(old["version_code"], os.environ["GITHUB_RUN_NUMBER"])', gate)
+        self.assertIn('expected = next_preview_code(int(os.environ["PREVIOUS_CODE"]), os.environ["GITHUB_RUN_NUMBER"])', gate)
+        self.assertIn('expected_code = next_preview_code(old["version_code"], run.get("run_number"))', gate)
         self.assertIn('if semver(version) <= semver(old_version)', gate)
         self.assertIn('if meta["version_code"] != int(os.environ["NEW_CODE"])', gate)
         self.assertIn("verifyDriveRegistration assemblePreview", workflow)

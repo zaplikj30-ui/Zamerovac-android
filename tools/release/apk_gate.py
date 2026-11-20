@@ -29,6 +29,10 @@ HEX64 = re.compile(r"[0-9a-f]{64}")
 VERSION = re.compile(r"(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)")
 ARTIFACT = re.compile(r"Zamerovac-preview-APK-([1-9][0-9]*)-1-([0-9a-f]{40})-(0|[1-9][0-9]*)")
 SCRIPT_REPO_PATH = "tools/release/apk_gate.py"
+# Highest known existing preview installation reported by the owner (actual APK bytes).
+# Every subsequent GitHub BUILD gets a strictly increasing code based on its own
+# workflow run_number, even if no previous test build was published as a Release.
+KNOWN_PREVIEW_VERSION_CODE = 10008
 
 
 def stop(message):
@@ -265,6 +269,17 @@ def emit(**items):
             dst.write(k + "=" + str(value) + "\n")
 
 
+def next_preview_code(published_code, run_number):
+    """No downgrade from known test APKs; strictly increasing for each BUILD run."""
+    number = positive_id(run_number, "GitHub Actions workflow run number")
+    if not isinstance(published_code, int) or not 1001 <= published_code < 2147483646:
+        stop("previous Android versionCode invalid")
+    code = max(published_code, KNOWN_PREVIEW_VERSION_CODE) + number
+    if code >= 2147483647:
+        stop("preview versionCode exceeds Android signed int range")
+    return code
+
+
 def build_preflight():
     api = api_client()
     revalidate_current_approval(api, 'build')
@@ -276,9 +291,7 @@ def build_preflight():
     old_release, old_version, old = previous(api)
     if semver(version) <= semver(old_version):
         stop("new product version must be higher than existing release")
-    if old["version_code"] < 1001 or old["version_code"] >= 2147483646:
-        stop("previous Android versionCode invalid")
-    new_code = old["version_code"] + 1
+    new_code = next_preview_code(old["version_code"], os.environ["GITHUB_RUN_NUMBER"])
     emit(version=version, previous_tag=old_release["tag_name"],
          previous_release_id=positive_id(old_release["id"], "previous release"),
          previous_code=old["version_code"], new_code=new_code, offset=new_code - 1000)
@@ -299,7 +312,8 @@ def build_postflight():
     if not path.is_file() or path.stat().st_size > MAX_APK:
         stop("missing/oversize build APK")
     meta = inspect_apk(path, version)
-    if meta["version_code"] != int(os.environ["NEW_CODE"]) or meta["version_code"] <= int(os.environ["PREVIOUS_CODE"]):
+    expected = next_preview_code(int(os.environ["PREVIOUS_CODE"]), os.environ["GITHUB_RUN_NUMBER"])
+    if meta["version_code"] != int(os.environ["NEW_CODE"]) or meta["version_code"] != expected:
         stop("versionCode not correct/monotonic")
     dest = Path("dist")
     dest.mkdir(exist_ok=True)
@@ -454,7 +468,8 @@ def release_preflight():
         test_file = Path(td) / expected_name
         test_file.write_bytes(data)
         meta = inspect_apk(test_file, version)
-    if meta["version_code"] != old["version_code"] + 1 or meta["sha256"] != sha:
+    expected_code = next_preview_code(old["version_code"], run.get("run_number"))
+    if meta["version_code"] != expected_code or meta["sha256"] != sha:
         stop("versionCode/digest differs from original build contract")
     if main_sha(api) != source:
         stop("main moved during release preflight")
