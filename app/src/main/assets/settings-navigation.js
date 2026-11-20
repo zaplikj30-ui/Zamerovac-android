@@ -131,5 +131,5 @@ root.handleAndroidBack=function(){
  if(!panel.hidden&&selected!==null&&document.getElementById('modal')?.hidden&&!otherPanel&&!feedbackOpen){display(null);return 'handled';}
  return typeof oldBack==='function'?oldBack():'root';
 };
-root.ZamerovacSettingsNavigation=Object.freeze({showTarget(id){const target=document.getElementById(id);const item=entries.find(x=>x.node===target||x.node.contains(target));if(!item)return false;display(item.category,item.node);return true;}});
+root.ZamerovacSettingsNavigation=Object.freeze({showCategory(id){if(!pages.has(id))return false;display(id);return true;},showTarget(id){const target=document.getElementById(id);const item=entries.find(x=>x.node===target||x.node.contains(target));if(!item)return false;display(item.category,item.node);return true;}});
 })(window);
