@@ -87,9 +87,9 @@ class TestApkGateOffline(unittest.TestCase):
                      {"version_code": 1155})):
                 gate.build_preflight()
             outputs = out.read_text()
-            self.assertIn("previous_code=1155\\n", outputs)
-            self.assertIn("new_code=10513\\n", outputs)
-            self.assertIn("offset=9513\\n", outputs)
+            self.assertIn("previous_code=1155\n", outputs)
+            self.assertIn("new_code=10513\n", outputs)
+            self.assertIn("offset=9513\n", outputs)
 
     def test_valid_zip_contains_exactly_one_byte_identical_apk(self):
         data = b"SYNTHETIC-NOT-A-REAL-APK" * 32
