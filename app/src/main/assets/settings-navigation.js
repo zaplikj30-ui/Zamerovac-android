@@ -47,7 +47,7 @@ function flattenOriginalControls(){
  const original=[...host.children],flattened=[];
  for(const node of original){
   // upgrade.js owns one neutral wrapper; moving its children retains event handlers.
-  if(node.querySelector?.(':scope > .setGroup'))flattened.push(...node.children);
+  if(node.id!=='flightSettings'&&node.querySelector?.(':scope > .setGroup'))flattened.push(...node.children);
   else flattened.push(node);
  }
  return flattened;
@@ -96,6 +96,7 @@ function build(){
   if(setting==='presets'){category='editor';subgroup='Přednastavené texty';}
   if(id==='openReadings'){category='measurement';subgroup='Volitelný kompatibilní laser';}
   if(id==='backupAll'||id==='restoreAll'||id==='historySettings'){category='sync';subgroup='Zálohy a obnova';}
+  if(id==='flightSettings'){category='maintenance';subgroup='Diagnostika výkonu';}
   put(category,subgroup,node);
  }
  const recovery=element('button','setting','Obnova nahrávek');recovery.type='button';recovery.id='openPendingAudioRecovery';
