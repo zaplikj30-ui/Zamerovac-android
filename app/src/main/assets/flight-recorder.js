@@ -38,8 +38,16 @@ try{
   legacyPending=legacyRaw!==null;
  }else if(legacyRaw!==null){
   const legacy=JSON.parse(legacyRaw);
-  if(legacy?.version!==1||!Array.isArray(legacy.events)||legacy.events.length>LIMIT)throw Error('Invalid legacy history');
+  if(legacy?.version!==1||typeof legacy.enabled!=='boolean'||!Array.isArray(legacy.events)||
+     legacy.events.length>LIMIT||Object.keys(legacy).length!==3)throw Error('Invalid legacy history');
   const events=safeEvents(legacy.events);
+  // The legacy writer saved only these fields and already rounded its metrics.
+  // Refuse any conversion that would discard or change previously stored data.
+  if(events.length!==legacy.events.length||legacy.events.some((event,index)=>
+    Object.keys(event).length!==3||new Date(event.time).toISOString()!==event.time||Array.isArray(event.values)||
+    Object.entries(event.values).some(([key,value])=>
+     !Object.hasOwn(events[index].values,key)||events[index].values[key]!==value)))
+   throw Error('Incomplete legacy conversion');
   if(events.length||legacy.enabled===true){
    const first=events[0]?.time||new Date().toISOString();
    sessions=[{id:'s1',startedAt:first,endedAt:legacy.enabled===true?null:events[events.length-1]?.time||first,events}];

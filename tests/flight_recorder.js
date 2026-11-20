@@ -26,10 +26,12 @@ function boot(override={}){
  return {api:win.ZFlight,win,panel};
 }
 function run(){
- storage.set('zamerovac-perf-diagnostics-v1',JSON.stringify({version:1,enabled:false,events:[{time:'Private client name 123',type:'native-save',values:{bridgeMs:1}}]}));
+ storage.set('zamerovac-perf-diagnostics-v1',JSON.stringify({version:1,enabled:false,events:[{time:'2026-11-20T12:00:00.000Z',type:'native-save',values:{bridgeMs:1}}]}));
  let {api,panel}=boot();
  assert.equal(api.isEnabled(),false);
- assert.equal(api.snapshot().events.length,0,'invalid stored timestamps must not be shared');
+ assert.equal(api.snapshot().events[0].values.bridgeMs,1,'valid v1 event survives migration');
+ assert.equal(storage.has('zamerovac-perf-diagnostics-v1'),false,'confirmed migration removes v1');
+ storage.clear();({api,panel}=boot());
  api.toggle(true);
  api.record('native-save',{bridgeMs:30.234,writeMs:27.78,validationMs:1.2,revisionProtectMs:22.42,databaseCommitMs:3.4,serializeMs:2.14,success:1,name:'Secret',foo:111,readMs:-1},true);
  api.record('hidden-unknown',{secret:50},true);
@@ -178,6 +180,34 @@ checks.push(()=>{
  assert.equal(history.children.length,2);
  assert(section.children.some(e=>e.textContent.includes('nepodařilo potvrdit')));
 });
+const validEvent={time:stamp,type:'native-save',values:{writeMs:23}};
+for(const [name,enabled,event] of [
+ ['unknown type',false,{...validEvent,type:'future-diagnostic-type'}],
+ ['invalid time',false,{...validEvent,time:'Private client name 123'}],
+ ['impossible calendar date',false,{...validEvent,time:'2026-02-30T00:00:00.000Z'}],
+ ['null values',false,{...validEvent,values:null}],
+ ['invalid enabled','false',validEvent],
+ ['array values',false,{...validEvent,values:[]}],
+ ['unknown metric',false,{...validEvent,values:{writeMs:23,privateText:'secret'}}],
+ ['changed precision',false,{...validEvent,values:{writeMs:23.456}}]
+]){
+ checks.push(()=>{
+  storage.clear();
+  const raw=JSON.stringify({version:1,enabled,events:[validEvent,event]},null,2);
+  storage.set(legacyKey,raw);
+  for(let restart=0;restart<2;restart++){
+   const {api}=boot();
+   assert.equal(api.isEnabled(),false,name);
+   assert.equal(api.snapshot().persistenceOk,false,name);
+   assert.equal(api.toggle(true),false,name);
+   assert.equal(api.clear(),false,name);
+   assert.equal(api.flush(),false,name);
+   assert.equal(api.sessionList().length,0,name);
+   assert.equal(storage.has(key),false,name);
+   assert.equal(storage.get(legacyKey),raw,name);
+  }
+ });
+}
 let failures=0;
 for(const [i,check] of checks.entries())try{check()}catch(e){failures++;console.error('Persistence case',i+1,e.message);}
 console.log('Persistence fault cases:',checks.length-failures+'/'+checks.length);
