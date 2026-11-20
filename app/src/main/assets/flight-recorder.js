@@ -4,7 +4,7 @@
 'use strict';
 const KEY='zamerovac-perf-diagnostics-v1',LIMIT=120,MAX_MS=600000;
 const TYPES=new Set(['start','enabled','disabled','editor-open','drag-release','editor-commit','native-save','ui-stall','save-error']);
-const FIELDS=new Set(['elapsedMs','bridgeMs','serializeMs','savePathMs','paintMs','undoCount','itemCount','dimensionCount','projectPhotoCount','projectItemCount','projectDimensionCount','success','lockWaitMs','readMs','writeMs','validationMs','casRecheckMs','revisionProtectMs','evidenceMs','databaseCommitMs','generationMs','recoveryMs','revisionInventoryMs','revisionCount','cacheMisses','cacheHits','mediaChecks']);
+const FIELDS=new Set(['elapsedMs','bridgeMs','serializeMs','savePathMs','paintMs','undoCount','itemCount','dimensionCount','databasePhotoCount','databaseItemCount','databaseDimensionCount','success','lockWaitMs','readMs','writeMs','validationMs','casRecheckMs','revisionProtectMs','evidenceMs','databaseCommitMs','generationMs','recoveryMs','revisionInventoryMs','revisionCount','cacheMisses','cacheHits','mediaChecks']);
 const clock=()=>performance.now();
 const validTime=t=>typeof t==='string'&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(t)&&!Number.isNaN(Date.parse(t));
 let rows=[],enabled=false,persistError=false,flushTimer=null,beat=null,lastBeat=clock();

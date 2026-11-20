@@ -14,9 +14,9 @@ function openEditor(r){
   const items=Array.isArray(r.items)?r.items:[];
   window.ZFlight.record('editor-open',{
    itemCount:items.length,dimensionCount:items.filter(i=>i?.type==='dimension').length,
-   projectPhotoCount:photos.length,
-   projectItemCount:photos.reduce((n,p)=>n+(Array.isArray(p.items)?p.items.length:0),0),
-   projectDimensionCount:photos.reduce((n,p)=>n+(Array.isArray(p.items)?p.items.filter(i=>i?.type==='dimension').length:0),0)
+   databasePhotoCount:photos.length,
+   databaseItemCount:photos.reduce((n,p)=>n+(Array.isArray(p.items)?p.items.length:0),0),
+   databaseDimensionCount:photos.reduce((n,p)=>n+(Array.isArray(p.items)?p.items.filter(i=>i?.type==='dimension').length:0),0)
   });
  }
  document.body.classList.add('in-editor');closeMenus();$('editorHint').hidden=true;

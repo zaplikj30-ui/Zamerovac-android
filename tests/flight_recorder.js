@@ -69,7 +69,7 @@ function run(){
   assert(java.includes('.put("'+key+'",'),'missing native write phase '+key);
  assert(database.includes('DEBUG_WRITE_TIMES')&&database.includes('beginDebugWrite()')&&database.includes('takeDebugWrite()'),'missing scoped Native phase timing');
  assert(java.includes('if(perf)LocalDatabase.takeDebugWrite();'),'missing failure cleanup of debug timings');
- for(const key of ['dimensionCount','projectPhotoCount','projectItemCount','projectDimensionCount'])
+ for(const key of ['dimensionCount','databasePhotoCount','databaseItemCount','databaseDimensionCount'])
   assert(editor.includes(key),'missing scoped photo/project count '+key);
  assert(help.includes('na různých fotografiích'),'offline help photo distinction');
  for(const marker of ['Z195-revision-inventory','Z195-media-proof'])
