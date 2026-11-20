@@ -84,7 +84,7 @@ function finishHandleGesture(handle){
  redoStack=[];
  if(window.ZFlight?.isEnabled?.()){
   const items=Array.isArray(current.items)?current.items:[];
-  window.ZFlight.record('drag-release',{undoCount:editStack.length,itemCount:items.length,dimensionCount:items.filter(i=>i?.type==='dimension').length},true);
+  window.ZFlight?.record('drag-release',{undoCount:editStack.length,itemCount:items.length,dimensionCount:items.filter(i=>i?.type==='dimension').length},true);
  }
  touch(handle.item);commitEditor();
  return true;
