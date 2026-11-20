@@ -12,6 +12,7 @@ from pathlib import Path
 import platform
 import shutil
 import subprocess
+import threading
 import time
 import xml.etree.ElementTree as ET
 
@@ -149,6 +150,57 @@ def git(*args):
     return subprocess.check_output(["git", *args], cwd=ROOT, text=True).strip()
 
 
+
+# Bounded to leave time before the GitHub-hosted 60-minute job timeout for
+# evidence upload. A timeout is BLOCKED, never a PASS or an expected #88 FAIL.
+JVM_WALL_LIMIT_SECONDS = 35 * 60
+
+
+def run_gradle_logged(command, logfile, max_seconds=JVM_WALL_LIMIT_SECONDS):
+    """Preserve the complete Gradle output privately and emit safe CI heartbeats.
+
+    Previous runs redirected all stdout to a file, leaving the Actions step
+    visually silent for tens of minutes. No test data, paths, tokens or saved
+    customer records are echoed. The underlying full JVM command is unchanged.
+    """
+    stop = threading.Event()
+    began = time.monotonic()
+    result = None
+
+    def heartbeat():
+        while not stop.wait(60):
+            try:
+                size = logfile.stat().st_size
+            except OSError:
+                size = 0
+            print(f"JVM progress: elapsed={int(time.monotonic()-began)}s, "
+                  f"gradle_log_bytes={size}; full suite still in progress",
+                  flush=True)
+
+    with logfile.open("w", encoding="utf-8") as log:
+        worker = threading.Thread(target=heartbeat, daemon=True)
+        worker.start()
+        print(f"JVM full run starting: wall limit={max_seconds}s "
+              "(raw FAIL remains expected for #88)", flush=True)
+        try:
+            try:
+                result = subprocess.run(command, cwd=ROOT, stdout=log,
+                                        stderr=subprocess.STDOUT, check=False,
+                                        timeout=max_seconds)
+            except subprocess.TimeoutExpired:
+                log.write(f"\nBLOCKED: JVM full suite exceeded {max_seconds}s "
+                          "and was terminated; inspect partial Gradle output.\n")
+                log.flush()
+                print("BLOCKED: JVM full suite timeout; NOT a product PASS. "
+                      "Partial gradle-full.log will be retained as evidence.",
+                      flush=True)
+                result = subprocess.CompletedProcess(command, 124)
+            return result
+        finally:
+            stop.set()
+            worker.join(timeout=0.5)
+
+
 def run():
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--output", type=Path, default=ROOT / "app/build/reports/syncAckAcceptance")
@@ -165,8 +217,7 @@ def run():
     command += ([] if args.online_dependencies else ["--offline"])
     command += ["--no-daemon", "--max-workers=2", ":app:testPreviewUnitTest", "--rerun"]
     started = time.time_ns()
-    with (output / "gradle-full.log").open("w", encoding="utf-8") as log:
-        process = subprocess.run(command, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, check=False)
+    process = run_gradle_logged(command, output / "gradle-full.log")
     directory = ROOT / "app/build/test-results/testPreviewUnitTest"
     files = list(directory.glob("TEST-*.xml"))
     cases = read_cases(directory)
