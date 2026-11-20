@@ -9,9 +9,31 @@ const clock=()=>performance.now();
 const validTime=t=>typeof t==='string'&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(t)&&!Number.isNaN(Date.parse(t));
 let sessions=[],activeId=null,rows=[],enabled=false,persistError=false,flushTimer=null,beat=null,lastBeat=clock(),nextId=0;
 let confirmedRaw=null,blocked=false,legacyPending=false;
-function safeEvents(list){
- return Array.isArray(list)?list.filter(e=>e&&TYPES.has(e.type)&&validTime(e.time)&&e.values&&typeof e.values==='object')
-  .slice(-LIMIT).map(e=>({time:e.time,type:e.type,values:clean(e.values)})):[];
+function exactKeys(value,keys){
+ return value!==null&&typeof value==='object'&&!Array.isArray(value)&&
+  Object.keys(value).length===keys.length&&keys.every(key=>Object.hasOwn(value,key));
+}
+function sameData(left,right){
+ if(left===right)return true;
+ if(left===null||right===null||typeof left!=='object'||typeof right!=='object'||
+    Array.isArray(left)!==Array.isArray(right))return false;
+ const keys=Object.keys(left);
+ return keys.length===Object.keys(right).length&&keys.every(key=>
+  Object.hasOwn(right,key)&&sameData(left[key],right[key]));
+}
+function checkedEvents(list){
+ if(!Array.isArray(list)||list.length>LIMIT)throw Error('Invalid events');
+ return list.map(event=>{
+  if(!exactKeys(event,['time','type','values'])||!validTime(event.time)||
+     new Date(event.time).toISOString()!==event.time||!TYPES.has(event.type)||
+     event.values===null||typeof event.values!=='object'||Array.isArray(event.values))
+   throw Error('Invalid event');
+  const values=clean(event.values);
+  if(Object.keys(values).length!==Object.keys(event.values).length||
+     Object.entries(event.values).some(([key,value])=>!Object.hasOwn(values,key)||values[key]!==value))
+   throw Error('Lossy metrics');
+  return {time:event.time,type:event.type,values};
+ });
 }
 function current(){return sessions.find(s=>s.id===activeId)||sessions[sessions.length-1]||null}
 function refreshRows(){rows=current()?.events||[]}
@@ -20,14 +42,14 @@ try{
  const legacyRaw=root.localStorage.getItem(LEGACY);
  if(confirmedRaw!==null){
   const saved=JSON.parse(confirmedRaw);
-  if(saved?.version!==2||!Array.isArray(saved.sessions)||saved.sessions.length>SESSION_LIMIT||
+  if(!exactKeys(saved,['version','enabled','activeId','sessions'])||saved.version!==2||!Array.isArray(saved.sessions)||saved.sessions.length>SESSION_LIMIT||
      typeof saved.enabled!=='boolean')throw Error('Invalid history');
   const seen=new Set();
   for(const e of saved.sessions){
-   if(!e||typeof e.id!=='string'||!/^s[1-9][0-9]{0,5}$/.test(e.id)||seen.has(e.id)||!validTime(e.startedAt)||
-      (e.endedAt!==null&&!validTime(e.endedAt))||!Array.isArray(e.events)||e.events.length>LIMIT)
+   if(!exactKeys(e,['id','startedAt','endedAt','events'])||typeof e.id!=='string'||!/^s[1-9][0-9]{0,5}$/.test(e.id)||seen.has(e.id)||(!validTime(e.startedAt)||new Date(e.startedAt).toISOString()!==e.startedAt)||
+      (e.endedAt!==null&&(!validTime(e.endedAt)||new Date(e.endedAt).toISOString()!==e.endedAt))||!Array.isArray(e.events)||e.events.length>LIMIT)
     throw Error('Invalid session');
-   const events=safeEvents(e.events);
+   const events=checkedEvents(e.events);
    if(events.length!==e.events.length)throw Error('Invalid events');
    seen.add(e.id);
    sessions.push({id:e.id,startedAt:e.startedAt,endedAt:e.endedAt,events});
@@ -38,16 +60,9 @@ try{
   legacyPending=legacyRaw!==null;
  }else if(legacyRaw!==null){
   const legacy=JSON.parse(legacyRaw);
-  if(legacy?.version!==1||typeof legacy.enabled!=='boolean'||!Array.isArray(legacy.events)||
-     legacy.events.length>LIMIT||Object.keys(legacy).length!==3)throw Error('Invalid legacy history');
-  const events=safeEvents(legacy.events);
-  // The legacy writer saved only these fields and already rounded its metrics.
-  // Refuse any conversion that would discard or change previously stored data.
-  if(events.length!==legacy.events.length||legacy.events.some((event,index)=>
-    Object.keys(event).length!==3||new Date(event.time).toISOString()!==event.time||Array.isArray(event.values)||
-    Object.entries(event.values).some(([key,value])=>
-     !Object.hasOwn(events[index].values,key)||events[index].values[key]!==value)))
-   throw Error('Incomplete legacy conversion');
+  if(!exactKeys(legacy,['version','enabled','events'])||legacy.version!==1||
+     typeof legacy.enabled!=='boolean')throw Error('Invalid legacy history');
+  const events=checkedEvents(legacy.events);
   if(events.length||legacy.enabled===true){
    const first=events[0]?.time||new Date().toISOString();
    sessions=[{id:'s1',startedAt:first,endedAt:legacy.enabled===true?null:events[events.length-1]?.time||first,events}];
@@ -96,7 +111,7 @@ function flush(){
    throw Error('History changed');
   }
   const payload=JSON.stringify({version:2,enabled,activeId,sessions});
-  if(payload!==confirmedRaw){
+  if(!confirmedRaw||!sameData(JSON.parse(confirmedRaw),JSON.parse(payload))){
    storage.setItem(KEY,payload);
    try{
     if(storage.getItem(KEY)!==payload)throw Error('Write unconfirmed');

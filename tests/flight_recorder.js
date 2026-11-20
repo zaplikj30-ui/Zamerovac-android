@@ -208,6 +208,32 @@ for(const [name,enabled,event] of [
   }
  });
 }
+for(const mutate of [
+ d=>d.extra='private',d=>d.sessions[0].extra='private',
+ d=>d.sessions[0].events[0].extra='private',
+ d=>d.sessions[0].events[0].values.extra=12,
+ d=>d.sessions[0].events[0].values.writeMs=23.456,
+ d=>d.sessions[0].events[0].values.writeMs='secret',
+ d=>d.sessions[0].events[0].values=[],
+ d=>d.sessions[0].events[0].values=null,
+ d=>d.sessions[0].startedAt='2026-02-30T00:00:00.000Z',
+ d=>d.sessions[0].events[0].time='2026-02-30T00:00:00.000Z'
+]){
+ checks.push(()=>{
+  storage.clear();const d=JSON.parse(fixture(1,true));d.sessions[0].events=[validEvent];
+  mutate(d);const raw=JSON.stringify(d);storage.set(key,raw);
+  for(let n=0;n<2;n++){
+   const {api}=boot();api.report('s1');api.flush();api.toggle(true);api.clear();
+   assert.equal(storage.get(key),raw);assert.equal(api.snapshot().persistenceOk,false);
+   assert.equal(api.sessionList().length,0);
+  }
+ });
+}
+checks.push(()=>{
+ storage.clear();const raw=JSON.stringify({sessions:JSON.parse(fixture(2)).sessions,activeId:null,enabled:false,version:2},null,2);storage.set(key,raw);
+ const {api}=boot();api.report('s1');api.flush();
+ assert.equal(storage.get(key),raw);assert.equal(api.snapshot().persistenceOk,true);
+});
 let failures=0;
 for(const [i,check] of checks.entries())try{check()}catch(e){failures++;console.error('Persistence case',i+1,e.message);}
 console.log('Persistence fault cases:',checks.length-failures+'/'+checks.length);
