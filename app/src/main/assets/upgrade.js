@@ -951,6 +951,7 @@ function navigateToFeature(key){
  }
  function settings(targetId){
   showFolder();$('settingsPanel').hidden=false;renderSettings();
+  if(window.ZamerovacSettingsNavigation?.showTarget(targetId))return;
   const target=$(targetId);if(target)target.scrollIntoView({block:'center',behavior:'smooth'});
  }
  switch(key){

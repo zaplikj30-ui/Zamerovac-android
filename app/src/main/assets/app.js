@@ -132,21 +132,108 @@ function reportSaveResult(ok){
  }
  return false;
 }
+// #207 F5: reject a NEW child before every CAS when a concurrent edit made
+// its intended parent (or any ancestor) unavailable in the staged candidate.
+// Do not consult recById()/window.isRecordLocked(): those use stale global RAM.
+function candidateAllowsNewRecord(candidate,intent){
+ if(!candidate||!Array.isArray(candidate.records)||
+    typeof intent?.id!=='string'||!intent.id||
+    typeof intent.kind!=='string'||!intent.kind)return false;
+ const records=new Map();
+ for(const r of candidate.records){
+  if(!r||typeof r!=='object'||Array.isArray(r)||
+     typeof r.id!=='string'||!r.id||records.has(r.id))return false;
+  records.set(r.id,r);
+ }
+ // Legacy records may omit deleted/locked; when present they must be
+ // actual booleans. A hierarchy conflict marker is never writable,
+ // including malformed falsey values (0, null, '', false).
+ const writableFlags=r=>
+  (!Object.hasOwn(r,'deleted')||r.deleted===false)&&
+  (!Object.hasOwn(r,'locked')||r.locked===false)&&
+  !Object.hasOwn(r,'hierarchyConflict');
+ const child=records.get(intent.id);
+ if(!child||child.kind!==intent.kind||child.parentId!==intent.parentId||
+    !writableFlags(child))return false;
+ const purged=candidate.trashPurgedIds??[];
+ const tombstones=candidate.syncTombstones??{};
+ if(!Array.isArray(purged)||purged.some(id=>typeof id!=='string'||!id)||
+    !tombstones||typeof tombstones!=='object'||Array.isArray(tombstones))return false;
+ const purgedIds=new Set(purged);
+ const unavailable=id=>purgedIds.has(id)||Object.hasOwn(tombstones,id);
+ if(unavailable(intent.id))return false;
+ const seen=new Set([intent.id]);
+ let parentId=intent.parentId;
+ while(parentId!==null){
+  if(typeof parentId!=='string'||!parentId||seen.has(parentId))return false;
+  seen.add(parentId);
+  const folder=records.get(parentId);
+  if(!folder||folder.kind!=='folder'||!writableFlags(folder)||
+     unavailable(parentId))return false;
+  // Legacy root folders may omit parentId; new records must use null.
+  parentId=folder.parentId===undefined?null:folder.parentId;
+ }
+ return true;
+}
+// UI badge invalidation must not turn an already durable ACK into a false
+// save failure if the presenter/DOM unexpectedly throws.
+function invalidateSyncBadgeAfterSave(){
+ try{window.ZamerovacSyncStatus?.localSaved?.()}
+ catch(error){console.warn('Synchronizační stav ikony se nepodařilo aktualizovat')}
+}
 function save(){
+ const newRecordIntent=arguments[0]||null;
  if(dataLoadFailed){notify('Zakázky nelze načíst. Zápis je zablokovaný, původní data zůstávají chráněná.');return reportSaveResult(false)}
  try{
   // Stage conflicting merges; only publish them after the native writer confirms.
   let candidate=state,expected=persistedSnapshot;
   for(let attempt=0;attempt<3;attempt++){
-   const zTiming=window.ZFlight?.isEnabled?.()===true&&typeof performance!=='undefined';
+   // Validate against the exact candidate that this CAS attempt will write.
+   if(newRecordIntent&&!candidateAllowsNewRecord(candidate,newRecordIntent))
+    throw new Error('Cílová složka se během ukládání změnila nebo není dostupná. Nový záznam nebyl uložen.');
+   let zTiming=false;
+   try{zTiming=window.ZFlight?.isEnabled?.()===true&&typeof performance!=='undefined'}catch(ignored){}
    const zSerializeStart=zTiming?performance.now():0;
    const text=JSON.stringify({...candidate,syncProtocol:2});
    const zSerializeMs=zTiming?performance.now()-zSerializeStart:0;
-   if(!native){localStorage.setItem('zamerovac-data',text);state.syncProtocol=2;persistedSnapshot=text;return reportSaveResult(true)}
+   if(!native){localStorage.setItem('zamerovac-data',text);state.syncProtocol=2;persistedSnapshot=text;invalidateSyncBadgeAfterSave();return reportSaveResult(true)}
    const zSaveStart=zTiming?performance.now():null;
    const result=JSON.parse(Native.saveDataChecked(text,expected));
-   if(zSaveStart!==null)window.ZFlight.record('native-save',{serializeMs:zSerializeMs,bridgeMs:performance.now()-zSaveStart,success:result?.ok===true?1:0,...(result?.diag||{})});
-   if(result?.ok===true){if(candidate!==state)applySavedState(candidate);state.syncProtocol=2;persistedSnapshot=text;window.PendingAudio?.saved?.(result);return reportSaveResult(true)}
+   if(zSaveStart!==null)try{window.ZFlight?.record('native-save',{serializeMs:zSerializeMs,bridgeMs:performance.now()-zSaveStart,success:result?.ok===true?1:0,...(result?.diag||{})})}catch(ignored){}
+   if(result?.ok===true){
+    // The native writer already committed this exact candidate. Record its
+    // authoritative snapshot before any fallible live/UI projection.
+    persistedSnapshot=text;
+    let presentationFailed=false;
+    if(candidate!==state)try{applySavedState(candidate)}catch(error){
+     presentationFailed=true;
+     // A partial projection must never become the next persisted version.
+     // Rebuild RAM from the ACKed JSON (not the stale local objects) and
+     // rebind active editors to the recovered committed records.
+     state=JSON.parse(text);state.prefs=prefs;
+     const committedRecord=active=>active?(
+      state.records.find(r=>r.id===active.id&&r.rev===active.rev)||
+      state.records.find(r=>r.conflictOf===active.id&&r.rev===active.rev)||
+      state.records.find(r=>r.id===active.id)||null):active;
+     current=committedRecord(current);
+     noteActive=committedRecord(noteActive);
+     window.__detailParent=committedRecord(window.__detailParent);
+    }
+    state.syncProtocol=2;
+    invalidateSyncBadgeAfterSave();
+    // A confirmed Native CAS is durable. Never report failure or roll back
+    // the attached media merely because a subsequent UI update throws.
+    try{window.PendingAudio?.saved?.(result)}catch(error){
+     presentationFailed=true;
+     try{window.PendingAudio?.refresh?.()}catch(ignored){}
+    }
+    try{reportSaveResult(true)}catch(error){presentationFailed=true}
+    if(presentationFailed){
+     window.__lastSavePresentationFailed=true;
+     try{notify('Uloženo, ale přehled nebo upozornění se nepodařilo aktualizovat. Vrať se do přehledu a zkontroluj jej.')}catch(ignored){}
+    }
+    return true;
+   }
    if(result?.ok!==false)throw new Error('Neplatné potvrzení zápisu');
    if(typeof result.current!=='string')throw new Error(result.error||'Zápis nebyl potvrzen');
    const disk=JSON.parse(result.current),base=expected?JSON.parse(expected):initial;
@@ -175,7 +262,7 @@ function save(){
    candidate=reconcileSavedState(base,candidate,disk);expected=result.current;
   }
   throw new Error('Zakázky se právě mění. Zkus uložení znovu.');
- }catch(e){window.ZFlight?.record('save-error',{},true);notify('Neuloženo: '+e.message);return reportSaveResult(false)}
+ }catch(e){try{window.ZFlight?.record('save-error',{},true)}catch(ignored){}notify('Neuloženo: '+e.message);return reportSaveResult(false)}
 }
 function notify(msg){const el=$('toast');el.textContent=msg;el.hidden=false;clearTimeout(window.toastTimer);window.toastTimer=setTimeout(()=>el.hidden=true,3000)}
 function dateText(s){return s?new Date(s).toLocaleDateString('cs-CZ'):''}
@@ -204,8 +291,11 @@ function folderContains(folderId,otherId){
 function newRecord(kind,title,parentId=currentFolder){return {id:uid(),syncClock:advanceSyncClock({}),kind,title,parentId,createdAt:stamp(),updatedAt:stamp(),rev:uid(),media:[],items:[],text:'',checks:[],width:1400,height:900,deleted:false}}
 // New records must never become visible as saved after a rejected durable write.
 function persistNewRecord(r){
+ // Only new-record commits enforce this extra guard; ordinary edits and
+ // restores retain their existing save/CAS behavior.
+ const intent={id:r.id,parentId:r.parentId,kind:r.kind};
  state.records.push(r);
- if(save()===true)return true;
+ if(save(intent)===true)return true;
  const at=state.records.indexOf(r);
  if(at>=0)state.records.splice(at,1);
  return false;
@@ -213,6 +303,7 @@ function persistNewRecord(r){
 function addRecord(r){
  if(!canWriteToFolder(r.parentId)){notify('Nejdříve odemkněte složku.');return false}
  if(!persistNewRecord(r))return false;
+ if(r.kind==='folder'||r.kind==='canvas')rememberSuccessfulAdd(r.kind);
  showFolder();return r;
 }
 function closeMenus(){for(let id of ['toolMenu','newMenu','navMenu','overflowMenu','editorOverflow'])$(id).hidden=true;if($('editorExtraToolbar')?.hidden===false)window.setEditorExtraToolbarExpanded?.(false)}
@@ -251,8 +342,17 @@ function showFolder(){applyBackgroundPattern();screen='browser';current=null;doc
 $('breadcrumbs').innerHTML=`<button class="crumb" data-nav="root">⌂ Domů</button>`+path.map(r=>`<span>›</span><button class="crumb" data-nav="${escapeHtml(r.id)}">${escapeHtml(r.title)}</button>`).join('');
 $('breadcrumbs').querySelectorAll('[data-nav]').forEach(b=>b.onclick=()=>{currentFolder=b.dataset.nav==='root'?null:b.dataset.nav;showFolder()});
 if(dataLoadFailed){$('items').innerHTML='<div class="empty" role="alert">Uložené zakázky se nepodařilo načíst. Zápis je zablokovaný, původní soubory zůstávají beze změny. Aplikaci nemaž ani nevymazávej její data. Zavři ji a zkus otevřít znovu; pokud chyba trvá, požádej o pomoc s obnovou zálohy.</div>';return}
+// Reuse locale resolution across the rows of this render.
+let dateFormatter;
+const entryDate=value=>{
+ if(!value)return '';
+ const date=new Date(value);
+ if(!Number.isFinite(date.getTime()))return dateText(value);
+ dateFormatter??=new Intl.DateTimeFormat('cs-CZ');
+ return dateFormatter.format(date);
+};
 let list=state.records.filter(r=>!r.deleted&&r.parentId===currentFolder).sort((a,b)=>(a.kind==='folder'?0:1)-(b.kind==='folder'?0:1)||(sortAsc?1:-1)*a.title.localeCompare(b.title,'cs'));
-$('items').innerHTML=list.length?list.map(r=>`<div class="entry" data-id="${escapeHtml(r.id)}">${browserEntryIcon(r)}<div class="entry-info"><div class="entry-title">${escapeHtml(r.title)}${(r.locked||window.isRecordLocked?.(r))?' <span class="entry-lock" title="Uzamčeno" aria-label="Uzamčeno">🔒</span>':''}</div><div class="entry-date">${r.photoTakenAt?'Pořízeno: '+escapeHtml(photoDateText(r.photoTakenAt)):dateText(r.updatedAt)}${r.hierarchyConflict?' · OPRAVENÝ CYKLUS SLOŽEK':r.conflict?' · KONFLIKTNÍ KOPIE':''}</div>${r.photoTakenAt||r.photoAddress?'<div class="entry-place" title="'+escapeHtml(photoAddressText(r))+'">📍 '+escapeHtml(photoAddressText(r))+'</div>':''}</div><button class="entry-more" data-more="${escapeHtml(r.id)}">⋮</button></div>`).join(''):`<div class="empty"><div class="big">▤</div>Zatím prázdné.<br>Pomocí ＋ vytvoříš složku, fotografii nebo poznámku.</div>`;
+$('items').innerHTML=list.length?list.map(r=>`<div class="entry" data-id="${escapeHtml(r.id)}">${browserEntryIcon(r)}<div class="entry-info"><div class="entry-title">${escapeHtml(r.title)}${(r.locked||window.isRecordLocked?.(r))?' <span class="entry-lock" title="Uzamčeno" aria-label="Uzamčeno">🔒</span>':''}</div><div class="entry-date">${r.photoTakenAt?'Pořízeno: '+escapeHtml(photoDateText(r.photoTakenAt)):entryDate(r.updatedAt)}${r.hierarchyConflict?' · OPRAVENÝ CYKLUS SLOŽEK':r.conflict?' · KONFLIKTNÍ KOPIE':''}</div>${r.photoTakenAt||r.photoAddress?'<div class="entry-place" title="'+escapeHtml(photoAddressText(r))+'">📍 '+escapeHtml(photoAddressText(r))+'</div>':''}</div><button class="entry-more" data-more="${escapeHtml(r.id)}">⋮</button></div>`).join(''):`<div class="empty"><div class="big">▤</div>Zatím prázdné.<br>Pomocí ＋ vytvoříš složku, fotografii nebo poznámku.</div>`;
 $('items').querySelectorAll('.entry').forEach(el=>el.onclick=(e)=>{if(e.target.closest('[data-more]')){recordActions(el.dataset.id);return}openRecord(el.dataset.id)});
 $('items').querySelectorAll('.entry-thumb').forEach(img=>img.addEventListener('error',()=>{img.hidden=true;img.nextElementSibling.hidden=false},{once:true}));
 }
@@ -384,20 +484,79 @@ function markDeleted(id){let r=recById(id);
  }
  r.deleted=true;touch(r);for(let child of state.records.filter(x=>x.parentId===id&&!x.deleted))markDeleted(child.id)}
 function openRecord(id){let r=recById(id);if(!r)return;if(r.kind==='folder'){currentFolder=id;showFolder();return}if(r.kind==='photo'||r.kind==='canvas'){openEditor(r);return}if(r.kind==='note'){openNote(r);return}if(r.kind==='audio'||r.kind==='video'||r.kind==='file'){openAttachment(r.media[0]);return}}
+// #194: session-only last confirmed add action. The existing gallery icon and
+// action are the unchanged startup default; no new persistent preference.
+let lastSuccessfulAdd={kind:'photo',source:'media'};
+function rememberSuccessfulAdd(kind,source=''){
+ const supported=['folder','canvas','note','photo','video','audio','file'];
+ if(!supported.includes(kind))return;
+ lastSuccessfulAdd={kind,source};
+ const labels={folder:['📁','Nová složka'],canvas:['▦','Nový náčrt'],
+  note:['📝','Nová textová poznámka']};
+ // A selected audio/video/photo/file can all originate from the same picker.
+ // Advertise the real *source route*, never promise a MIME filter that is absent.
+ const picker=source==='camera'?['📷','Pořídit fotografii']:
+  source==='file'?['📎','Vybrat soubory']:['🖼️','Vybrat média a soubory'];
+ const [symbol,title]=kind==='note'&&source==='voice'?['🎤','Hlasová poznámka']:labels[kind]||picker;
+ const button=$('galleryBtn');
+ button.textContent=symbol;
+ button.title=title;
+ button.setAttribute('aria-label','Opakovat: '+button.title);
+}
+function createTextNote(){
+ const note=newRecord('note','Nová poznámka');
+ if(!canWriteToFolder(note.parentId)){notify('Nejdříve odemkněte složku.');return false}
+ if(!persistNewRecord(note))return false;
+ const storedNote=recById(note.id);
+ if(!storedNote){notify('Uloženou poznámku nelze bezpečně otevřít.');return false}
+ rememberSuccessfulAdd('note');
+ openNote(storedNote);
+ return true;
+}
+function repeatQuickAdd(){
+ if(!canWriteToFolder(currentFolder)){notify('Nejdříve odemkněte složku.');return false}
+ const {kind,source}=lastSuccessfulAdd;
+ if(kind==='folder')return promptText('Nová složka','Jméno zákazníka nebo místnosti','',name=>addRecord(newRecord('folder',name)));
+ if(kind==='canvas')return promptText('Nový náčrt','Název','Nový náčrt',name=>addRecord(newRecord('canvas',name)));
+ if(kind==='note')return source==='voice'?createVoiceNote():createTextNote();
+ return pickMedia(source==='camera'?'camera':source==='file'?'file':'media');
+}
 function showNewMenu(){if(!$('newMenu').hidden){closeMenus();return}if(!canWriteToFolder(currentFolder)){notify('Nejdříve odemkněte složku.');return}closeMenus();$('newMenu').hidden=false;const choices=[
 ['📷','Pořídit fotografii',()=>pickMedia('camera')],
 ['🖼️','Importovat obrázek / PDF / video',()=>pickMedia('media')],
 ['<svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 3h9l5 5v12H5z" fill="#f3f0e7" stroke="#a8a0ba" stroke-width="1.5"/><path d="M14 3v5h5" stroke="#a8a0ba" stroke-width="1.5"/><path d="m9 16 7.6-7.6 2.4 2.4-7.6 7.6-3.4 1z" fill="#d7c2ff" stroke="#9263d5" stroke-width="1.6"/><path d="m15.2 9.8 2.4 2.4" stroke="#9263d5" stroke-width="1.6"/></svg>','Nový náčrt',()=>promptText('Nový náčrt','Název','Nový náčrt',name=>addRecord(newRecord('canvas',name)))],
-['📝','Nová textová poznámka',()=>{let r=newRecord('note','Nová poznámka');if(!canWriteToFolder(r.parentId)){notify('Nejdříve odemkněte složku.');return}if(!persistNewRecord(r))return;openNote(r)}],
+['📝','Nová textová poznámka',()=>createTextNote()],
 ['📁','Nová složka',()=>promptText('Nová složka','Jméno zákazníka nebo místnosti','',name=>addRecord(newRecord('folder',name)))],
-['🎤','Hlasová poznámka',()=>recordVoice()],
+['🎤','Hlasová poznámka',()=>createVoiceNote()],
 ['📎','Přidat další soubor',()=>pickMedia('file')],
 ['<svg viewBox="0 0 24 24" width="25" height="25" fill="none" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 8h16v12H4z" fill="#e8bf65" stroke="#b98828" stroke-width="1.7"/><path d="M3 4h18v4H3z" fill="#ffd778" stroke="#b98828" stroke-width="1.7"/><path d="M12 11a4 4 0 1 1-3.5 5.9" stroke="#9263d5" stroke-width="2.2"/><path d="m7 12 1.5 4.9 4.8-1.1" stroke="#9263d5" stroke-width="2.2"/></svg>','Importovat zakázky ze ZIP',()=>native?Native.importBackup():notify('Obnova ZIP je dostupná v Android aplikaci')]
 ];
 $('newMenu').innerHTML=choices.map((a,i)=>`<button class="choice" data-i="${i}"><strong>${a[0]}</strong>${a[1]}</button>`).join('');$('newMenu').querySelectorAll('button').forEach(b=>b.onclick=()=>{closeMenus();choices[+b.dataset.i][2]()})}
+// #197: create a durable standalone note; never start the microphone in this menu callback.
+function createVoiceNote(){
+ if(screen!=='browser'){notify('Hlasovou poznámku lze založit pouze z přehledu složky.');return false}
+ const folder=currentFolder;
+ if(!canWriteToFolder(folder)){
+  notify('Složka není dostupná nebo je uzamčená. Hlasová poznámka nebyla vytvořena.');
+  return false;
+ }
+ const note=newRecord('note','Hlasová poznámka',folder);
+ window.__lastSavePresentationFailed=false;
+ if(!persistNewRecord(note)){
+  notify('Hlasovou poznámku se nepodařilo uložit. Nahrávání nezačalo.');
+  return false;
+ }
+ // A CAS reconciliation may have replaced record objects on successful save.
+ const savedNote=recById(note.id);
+ if(!savedNote){notify('Poznámka byla uložena, ale nelze ji bezpečně otevřít. Zkontroluj ji v přehledu.');return true}
+ rememberSuccessfulAdd('note','voice');
+ try{openNote(savedNote)}catch(error){notify('Poznámka byla uložena, ale její otevření selhalo. Zkontroluj ji v přehledu.');return true}
+ if(!window.__lastSavePresentationFailed)notify(native?'Poznámka připravena. Nahrávání spustíš tlačítkem Spustit.':'Poznámka připravena. Přidej zvukový soubor.');
+ return true;
+}
 function pickMedia(type,handler=null){
  if(stagedMediaRequest){notify('Probíhá přidávání příloh. Počkej na dokončení.');return}
- const request={id:uid(),handler,folder:currentFolder,modal:handler&&!$('modal').hidden?$('modalBody').firstElementChild:null};stagedMediaRequest=request;
+ const request={id:uid(),handler,folder:currentFolder,type,modal:handler&&!$('modal').hidden?$('modalBody').firstElementChild:null};stagedMediaRequest=request;
  try{if(native){if(type==='camera')Native.takePhotoForRequest(request.id);else Native.selectFilesForRequest(type,request.id);return}
  const inp=$('filePick');inp.value='';inp.accept=type==='camera'?'image/*':type==='file'?'*/*':'image/*,video/*,application/pdf,audio/*';inp.multiple=type==='file'||type==='media';if(type==='camera')inp.setAttribute('capture','environment');else inp.removeAttribute('capture');inp.click();
  }catch(error){stagedMediaRequest=null;notify('Přílohu nelze vybrat: '+error.message)}
@@ -405,11 +564,11 @@ function pickMedia(type,handler=null){
 async function acceptPickedMedia(request,id,mime,name,takenAt=null){
  if(!request||stagedMediaRequest!==request)return false;
  if(request.handler){if(request.modal&&($('modal').hidden||$('modalBody').firstElementChild!==request.modal)){notify('Původní dialog už je zavřený; příloha nebyla připojena jinam.');return false}if(request.handler(id,{name,mime,type:mime})===false)return false;return save()}
- return !!(await addMediaRecord(id,name,mime,takenAt,request.folder));
+ return !!(await addMediaRecord(id,name,mime,takenAt,request.folder,request.type));
 }
 $('filePick').addEventListener('change',async(e)=>{const request=stagedMediaRequest;if(!request)return;try{for(let file of e.target.files){let mediaId=await storeMedia(file,request.id);await acceptPickedMedia(request,mediaId,file.type||'application/octet-stream',file.name)}}catch(error){notify('Příloha nebyla přidána: '+error.message)}finally{if(stagedMediaRequest===request)stagedMediaRequest=null}});
 $('filePick').addEventListener('cancel',()=>{stagedMediaRequest=null});
-async function addMediaRecord(id,name,mime,takenAt=null,folder=currentFolder){if(!canWriteToFolder(folder)){notify('Původní složka není dostupná nebo je uzamčená; příloha nebyla připojena jinam.');return null}const kind=mime.startsWith('image/')?'photo':mime.startsWith('video/')?'video':mime.startsWith('audio/')?'audio':'file',r=newRecord(kind,name,folder);r.media=[id];if(kind==='photo'&&takenAt)r.photoTakenAt=takenAt;if(!persistNewRecord(r))return null;if(screen==='browser'&&currentFolder===folder){showFolder();if(kind==='photo')openEditor(r)}return r}
+async function addMediaRecord(id,name,mime,takenAt=null,folder=currentFolder,source='media'){if(!canWriteToFolder(folder)){notify('Původní složka není dostupná nebo je uzamčená; příloha nebyla připojena jinam.');return null}const kind=mime.startsWith('image/')?'photo':mime.startsWith('video/')?'video':mime.startsWith('audio/')?'audio':'file',r=newRecord(kind,name,folder);r.media=[id];if(kind==='photo'&&takenAt)r.photoTakenAt=takenAt;if(!persistNewRecord(r))return null;const saved=recById(r.id);if(!saved){notify('Přílohu se nepodařilo bezpečně otevřít.');return null}rememberSuccessfulAdd(kind,source);if(screen==='browser'&&currentFolder===folder){if(kind==='photo')openEditor(saved);else showFolder()}return saved}
 async function storeMedia(file,importToken=null){const id=uid(),mime=file.type||'application/octet-stream';if(importToken)await MediaImportOwnership.reserve(id,importToken);if(native){let bytes=new Uint8Array(await file.arrayBuffer());const chunkSize=48*1024;if(!Native.beginMediaChecked(id,mime,file.name||'soubor',bytes.length))throw new Error('Přílohu nelze připravit k uložení');for(let off=0;off<bytes.length;off+=chunkSize){let sub=bytes.subarray(off,off+chunkSize);let s='';for(let b of sub)s+=String.fromCharCode(b);if(!Native.appendMedia(id,btoa(s)))throw new Error('Příloha nebyla zapsána');}if(!Native.finishMedia(id))throw new Error('Příloha není uložená úplně');}
 else{const db=await mediaDb();await new Promise((resolve,reject)=>{let tx=db.transaction('files','readwrite');tx.objectStore('files').put(file,id);tx.oncomplete=resolve;tx.onerror=reject})}if(importToken)await MediaImportOwnership.published(id,importToken);return id}
 let idb=null;function mediaDb(){if(!idb)idb=new Promise((res,rej)=>{let req=indexedDB.open('zamerovac-media',1);req.onupgradeneeded=()=>req.result.createObjectStore('files');req.onsuccess=()=>res(req.result);req.onerror=rej});return idb}
@@ -433,7 +592,7 @@ async function assetUrl(id){if(!id)return '';if(native)return 'https://appassets
 async function openAttachment(id){if(!id){notify('Soubor nelze najít');return}let url=await assetUrl(id);if(native)Native.openMedia(id);else window.open(url,'_blank')}
 const noteViewBaselines=new WeakMap();let noteCheckSaveTimer=null,noteRecordingOwner=null;
 function noteChanged(debounce=false){if(!noteActive)return;const record=noteActive;touch(record);clearTimeout(noteCheckSaveTimer);if(debounce)noteCheckSaveTimer=setTimeout(()=>{if(state.records.includes(record))save();},350);else save();}
-function openNote(r){noteViewBaselines.set(r,{value:canonicalSavedValue(r),title:String(r.title??''),text:String(r.text||'')});screen='note';document.body.classList.add('in-note');noteActive=r;$('browserView').hidden=true;$('browserFoot').hidden=true;$('noteView').hidden=false;$('editorView').hidden=true;$('noteTitle').value=r.title;$('noteText').value=r.text||'';renderChecks();renderNoteAttachments()}
+function openNote(r){noteViewBaselines.set(r,{value:canonicalSavedValue(r),title:String(r.title??''),text:String(r.text||'')});screen='note';document.body.classList.add('in-note');noteActive=r;$('browserView').hidden=true;$('browserFoot').hidden=true;$('noteView').hidden=false;$('editorView').hidden=true;$('noteTitle').value=r.title;$('noteText').value=r.text||'';renderChecks();renderNoteAttachments();$('recordAudio').textContent=native?'▶ Spustit nahrávání':'＋ Přidat zvukový soubor'}
 function renderChecks(){$('checkItems').innerHTML=(noteActive.checks||[]).map((c,i)=>`<div class="checkRow"><input type="checkbox" data-check="${i}" ${c.done?'checked':''}><input type="text" data-text="${i}" value="${escapeHtml(c.text)}" aria-label="Úkol"><button data-delete="${i}">×</button></div>`).join('');$('checkItems').querySelectorAll('[data-check]').forEach(el=>el.onchange=()=>{noteActive.checks[+el.dataset.check].done=el.checked;noteChanged()});$('checkItems').querySelectorAll('[data-text]').forEach(el=>el.oninput=()=>{noteActive.checks[+el.dataset.text].text=el.value;noteChanged(true)});$('checkItems').querySelectorAll('[data-delete]').forEach(el=>el.onclick=()=>{noteActive.checks.splice(+el.dataset.delete,1);noteChanged();renderChecks()});if(window.isRecordLocked?.(noteActive))$('checkItems').querySelectorAll('input,button').forEach(el=>el.disabled=true)}
 function renderNoteAttachments(){$('noteAttachments').innerHTML=(noteActive.media||[]).map((m,i)=>`<div class="attachRow"><button data-open="${escapeHtml(m)}">▣ Příloha ${i+1}</button><button data-remove="${i}">×</button></div>`).join('');$('noteAttachments').querySelectorAll('[data-open]').forEach(b=>b.onclick=()=>openAttachment(b.dataset.open));$('noteAttachments').querySelectorAll('[data-remove]').forEach(b=>b.onclick=()=>{noteActive.media.splice(+b.dataset.remove,1);noteChanged();renderNoteAttachments()});if(window.isRecordLocked?.(noteActive))$('noteAttachments').querySelectorAll('[data-remove]').forEach(el=>el.disabled=true)}
 function saveNote(){if(!noteActive)return;if(!finishNoteRecording())return false;clearTimeout(noteCheckSaveTimer);const baseline=noteViewBaselines.get(noteActive);if(!baseline||$('noteTitle').value!==baseline.title)noteActive.title=$('noteTitle').value.trim()||'Poznámka';if(!baseline||$('noteText').value!==baseline.text)noteActive.text=$('noteText').value;if(!baseline||canonicalSavedValue(noteActive)!==baseline.value)touch(noteActive);if(!save())return false;noteActive=null;showFolder();return true}
@@ -442,19 +601,69 @@ $('recordAudio').onclick=recordVoice;
 window.__audioPermissionDenied=()=>{window.__audioPermissionRetry=null;notify('Mikrofon není povolen. Povol jej v nastavení aplikace.');};
 function finishNoteRecording(){
  window.__audioPermissionRetry=null;if(!window.recording)return true;
- const id=window.recording,owner=noteRecordingOwner,recorded=Native.stopAudio();window.recording=null;noteRecordingOwner=null;$('recordAudio').textContent='● Hlasová poznámka';
- if(!recorded){if(window.PendingAudio)window.PendingAudio.retained();else notify('Záznam hlasu nebyl bezpečně uložen. Poznámka zůstává otevřená.');return false}
+ const id=window.recording,owner=noteRecordingOwner;
+ let recorded=false;
+ try{recorded=Native.stopAudio()===true}catch(error){notify('Nahrávání se nepodařilo bezpečně ukončit. Originál zůstává k prověření.')}
+ window.recording=null;noteRecordingOwner=null;$('recordAudio').textContent='▶ Spustit nahrávání';
+ // Refresh the existing native recovery inventory for every unattached recording.
+ const showRetainedAudio=()=>{
+  if(typeof window.PendingAudio?.retained==='function')window.PendingAudio.retained();
+  else{window.PendingAudio?.refresh?.();notify('Hlas nebyl připojen. Původní nahrávku zkontroluj v Uchovaných hlasových nahrávkách.')}
+ };
+ if(!recorded){showRetainedAudio();return false}
  const target=owner&&state.records.find(r=>r===owner);
- if(!target||target.deleted||target.kind!=='note'||window.isRecordLocked?.(target)){notify('Původní poznámka není dostupná nebo je uzamčená; hlas nebyl připojen k jiné poznámce.');return false}
- if(!target.media.includes(id))target.media.push(id);touch(target);if(!save())return false;if(noteActive===target)renderNoteAttachments();return true;
+ if(!target||target.deleted||target.kind!=='note'||window.isRecordLocked?.(target)){
+  notify('Původní poznámka není dostupná nebo je uzamčená; hlas nebyl připojen k jiné poznámce.');
+  showRetainedAudio();return false;
+ }
+ // A rejected or throwing touch/CAS must not publish this ID in any later save.
+ // Preserve property presence as well as values (touch deletes hierarchyConflict).
+ const fields=['media','rev','updatedAt','syncClock','hierarchyConflict'];
+ const previous=fields.map(key=>({key,had:Object.hasOwn(target,key),value:key==='media'&&Array.isArray(target.media)?[...target.media]:target[key]}));
+ let confirmed=false,problem=null;
+ try{
+  if(!Array.isArray(target.media))throw new Error('Neplatný seznam příloh poznámky');
+  if(!target.media.includes(id)){target.media.push(id);touch(target)}
+  confirmed=save()===true;
+ }catch(error){problem=error}
+ if(!confirmed){
+  for(const {key,had,value} of previous){if(had)target[key]=value;else delete target[key]}
+  if(problem)notify('Připojení nahrávky se nepodařilo bezpečně dokončit.');
+  showRetainedAudio();return false;
+ }
+ if(noteActive===target)renderNoteAttachments();return true;
 }
 function recordVoice(){
- if(!native){notify('V prohlížeči použij možnost přidat zvukový soubor.');const owner=noteActive;pickMedia('file',(id)=>{if(owner&&state.records.includes(owner)&&!window.isRecordLocked?.(owner)){owner.media.push(id);touch(owner);save();if(noteActive===owner)renderNoteAttachments()}});return}
- if(window.recording){if(finishNoteRecording())notify('Zvuková poznámka uložena');return}
- const owner=noteActive,id=uid();if(!owner)return;
- const start=()=>{if(noteActive!==owner||!state.records.includes(owner)||owner.deleted||window.isRecordLocked?.(owner))return;if(!Native.startAudio(id))return;window.__audioPermissionRetry=null;noteRecordingOwner=owner;window.recording=id;$('recordAudio').textContent='■ Zastavit záznam';notify('Nahrávání spuštěno')};window.__audioPermissionRetry=start;start();
+ if(window.recording){
+  // The post-ACK warning belongs to this recording stop; do not replace it
+  // with an ordinary success toast after a durable but UI-failed save.
+  window.__lastSavePresentationFailed=false;
+  if(finishNoteRecording()&&!window.__lastSavePresentationFailed)
+   notify('Nahrávka připojena. Ulož poznámku.');
+  return;
+ }
+ const owner=noteActive;
+ if(!owner||!state.records.includes(owner)||owner.deleted||window.isRecordLocked?.(owner)){
+  notify('Nejprve otevři dostupnou a odemčenou poznámku.');
+  return;
+ }
+ if(!native){notify('V prohlížeči přidej zvuk jako soubor.');pickMedia('file',(id)=>{if(owner===noteActive&&state.records.includes(owner)&&!window.isRecordLocked?.(owner)){owner.media.push(id);touch(owner);save();if(noteActive===owner)renderNoteAttachments()}});return}
+ const id=uid();
+ const start=()=>{
+  if(noteActive!==owner||!state.records.includes(owner)||owner.deleted||window.isRecordLocked?.(owner)){
+   window.__audioPermissionRetry=null;
+   notify('Původní poznámka není dostupná nebo je uzamčená. Nahrávání nezačalo.');
+   return;
+  }
+  let started=false;
+  try{started=Native.startAudio(id)===true}catch(error){notify('Mikrofon: nahrávání se nepodařilo spustit.')}
+  if(!started){notify('Nahrávání nezačalo. Zkontroluj oprávnění mikrofonu a volné místo.');return}
+  window.__audioPermissionRetry=null;noteRecordingOwner=owner;window.recording=id;
+  $('recordAudio').textContent='■ Zastavit záznam';notify('Nahrávání spuštěno');
+ };
+ window.__audioPermissionRetry=start;start();
 }
-$('createBtn').onclick=showNewMenu;$('galleryBtn').onclick=()=>pickMedia('media');
+$('createBtn').onclick=showNewMenu;$('galleryBtn').onclick=repeatQuickAdd;
 function showAppMenu(id,items){
   const el=$(id),open=!el.hidden;closeMenus();if(open)return;
   el.innerHTML=items.map((o,i)=>'<button class="appMenuItem" data-action="'+i+'">'+o[0]+'</button>').join('');
@@ -523,21 +732,204 @@ window.onNativePhotoAddress=(mediaId,address)=>{
 };
 window.onNativeMediaDone=token=>{if(stagedMediaRequest?.id===token)stagedMediaRequest=null};
 window.onNativeMediaProgress=(token,done,total)=>{if(stagedMediaRequest?.id===token)notify('Přidávání příloh: '+done+'/'+total)};
+// Status detail is a read-only view of the latest Native disk, not a
+// promise that a remote peer has signed an ACK for the current revision.
+window.ZamerovacSyncReadCommittedConflicts=()=>{
+ const raw=native?Native.loadData():localStorage.getItem('zamerovac-data');
+ const data=JSON.parse(raw);
+ if(!data||data.schema!==1||!Array.isArray(data.records))throw Error('Neověřená lokální data');
+ return data.records.filter(r=>r&&r.conflict===true&&!r.deleted);
+};
 window.onNativeSync=(text)=>{
+ // F4: native durable data, optional confirmed JS reconciliation, then UI.
+ let result,render=false,badUI=false,audioReviewNeeded=false,peerChangedAfterAck=false,nativeReadUnverified=false;
+ const warn=m=>{try{notify(m)}catch(ignored){console.warn(m)}};
  try{
-  const result=JSON.parse(text);
+  result=JSON.parse(text);
+  if(!result||typeof result!=='object'||Array.isArray(result))throw Error('Neplatná odpověď synchronizace');
   if(result.data){
-   // Read the current confirmed database, never replay a stale callback snapshot.
-   const snapshot=native?Native.loadData():JSON.stringify(result.data),disk=JSON.parse(snapshot);
-   if(disk.schema!==1||!Array.isArray(disk.records))throw new Error('Zakázky nelze bezpečně načíst');
+   if(dataLoadFailed)throw Error('Načítání zakázek je zablokované; uložená data se nesmějí přepsat');
+   // The native disk, not a potentially stale callback snapshot, is authority.
+   const diskRaw=native?Native.loadData():JSON.stringify(result.data),disk=JSON.parse(diskRaw);
+   if(!disk||disk.schema!==1||!Array.isArray(disk.records)||
+      disk.records.some(r=>!r||typeof r!=='object'||Array.isArray(r)||typeof r.id!=='string'||!r.id||
+       (r.media!==undefined&&(!Array.isArray(r.media)||r.media.some(id=>typeof id!=='string'||!id))))||
+      new Set(disk.records.map(r=>r.id)).size!==disk.records.length)
+    throw Error('Zakázky nelze bezpečně načíst');
+   const saved={state,snapshot:persistedSnapshot,current,noteActive,detail:window.__detailParent};
+   // Capture active IDs before CAS: a later faulty getter must not invalidate
+   // already confirmed bytes or force a data-loss rollback.
+   const refIds=[saved.current,saved.noteActive,saved.detail].map(a=>a?{id:a.id,rev:a.rev}:null);
    const base=persistedSnapshot?JSON.parse(persistedSnapshot):initial;
-   applySavedState(reconcileSavedState(base,state,disk));persistedSnapshot=snapshot;
-   if(!save())return false;
-   if(screen==='browser')showFolder();
+   // Stage a detached candidate: no live draft/reference is mutated pre-ACK.
+   const candidate=reconcileSavedState(base,JSON.parse(JSON.stringify(state)),disk);
+   const candidateText=JSON.stringify({...candidate,syncProtocol:2});
+   const diskText=JSON.stringify({...disk,syncProtocol:2});
+   let confirmed=false,latest=diskRaw,previousPresentationFailure=null;
+   try{
+    if(canonicalSavedValue(JSON.parse(candidateText))===canonicalSavedValue(JSON.parse(diskText))){
+     // A concurrent native writer can advance the disk after the first read.
+     // Accept a CAS-free adoption only if it is still the SAME durable image.
+     latest=native?Native.loadData():localStorage.getItem('zamerovac-data');
+     if(latest!==diskRaw)throw Error('Nativní data se během přijetí změnila; načti synchronizaci znovu');
+     confirmed=true; // exact current Native data: no redundant JS CAS
+    }else{
+     // Reuse the unchanged shared save()/CAS/tombstone/retry implementation.
+     // Detach active pointers so its post-ACK projection cannot mutate drafts
+     // or set editorTitle until the local merge is truly confirmed.
+     state=candidate;current=null;noteActive=null;window.__detailParent=null;
+     // PendingAudio is a frozen production API; do not replace its methods.
+     // save() may return false if its post-ACK audio presentation throws.
+     // Only subsequent verified CAS evidence may reclassify the local write.
+     const pendingAudio=window.PendingAudio;
+     // Catch a new post-ACK presentation fault even when save() returns true.
+     previousPresentationFailure=window.__lastSavePresentationFailed===true;
+     window.__lastSavePresentationFailed=false;
+     let savePresentationError=null,saveOutcome=false;
+     try{saveOutcome=save()}catch(error){savePresentationError=error}
+     const savePresentationFailed=window.__lastSavePresentationFailed===true;
+     // save() advances persistedSnapshot only after Native CAS ok:true.
+     // Capture exact ACKed bytes BEFORE the fallible second Native disk read.
+     const acknowledgedSnapshot=persistedSnapshot;
+     let ackMatches=false;
+     if(typeof acknowledgedSnapshot==='string'&&acknowledgedSnapshot!==saved.snapshot){
+      const acknowledged=JSON.parse(acknowledgedSnapshot);
+      ackMatches=acknowledged?.schema===1&&Array.isArray(acknowledged.records)&&
+       canonicalSavedValue(acknowledged)===canonicalSavedValue(JSON.parse(JSON.stringify(state)));
+     }
+     let actual,readError=null;
+     try{
+      latest=native?Native.loadData():localStorage.getItem('zamerovac-data');
+      actual=JSON.parse(latest);
+      if(!actual||actual.schema!==1||!Array.isArray(actual.records)||
+         actual.records.some(r=>!r||typeof r!=='object'||Array.isArray(r)||typeof r.id!=='string'||!r.id||
+          (r.media!==undefined&&(!Array.isArray(r.media)||r.media.some(id=>typeof id!=='string'||!id))))||
+         new Set(actual.records.map(r=>r.id)).size!==actual.records.length)
+       throw Error('Nový nativní stav nelze bezpečně ověřit');
+     }catch(error){readError=error}
+     // A valid newer peer revision and an unverifiable Native read are
+     // different outcomes. Neither may roll back a proven local CAS ACK.
+     confirmed=!readError&&canonicalSavedValue(actual)===
+      canonicalSavedValue(JSON.parse(JSON.stringify(state)));
+     if(!confirmed&&ackMatches){
+      latest=acknowledgedSnapshot;confirmed=true;
+      if(readError)nativeReadUnverified=true;
+      else peerChangedAfterAck=true;
+     }
+     if(readError&&!confirmed)throw readError;
+     if(confirmed&&(savePresentationError||!saveOutcome||savePresentationFailed)){
+      // A DOM/reportSaveResult error occurred after the authoritative ACK.
+      // Correct the UI on this synchronous callback without editing save().
+      badUI=true;window.__lastSaveFailed=false;
+      window.__lastSavePresentationFailed=true;
+      // save() can show an erroneous failure banner after a durable ACK if
+      // PendingAudio.saved() throws. Remove it only after exact ACK evidence.
+      try{$('saveErrorBanner')?.remove()}catch(error){}
+      try{pendingAudio?.refresh?.()}catch(error){}
+      audioReviewNeeded=true;window.__syncAudioReviewNeeded=true;
+     }
+     if(savePresentationError&&!confirmed)throw savePresentationError;
+    }
+    if(!confirmed)throw Error('Dodatečné sloučení nebylo potvrzeno; rozpracované změny zůstaly zachovány');
+   }catch(error){
+    if(previousPresentationFailure===true)window.__lastSavePresentationFailed=true;
+    state=saved.state;persistedSnapshot=saved.snapshot;
+    current=saved.current;noteActive=saved.noteActive;window.__detailParent=saved.detail;
+    throw error;
+   }
+   // All data operations are now complete: adopt only currently durable bytes.
+   const committed=JSON.parse(latest);
+   state=committed;state.prefs=prefs;persistedSnapshot=latest;
+   const bind=(active,key)=>{
+    if(!active)return active;
+    const target=state.records.find(r=>r.id===key.id&&r.rev===key.rev)||
+      state.records.find(r=>r.conflictOf===key.id&&r.rev===key.rev)||
+      state.records.find(r=>r.id===key.id)||null;
+    if(!target)return null;
+    try{
+     // Preserve an unmodified live editor reference without copying it
+     // into another object. Never mutate it before the Native ACK.
+     if(Object.isExtensible(active)&&sameSavedValue(active,target)){
+      state.records[state.records.indexOf(target)]=active;
+      return active;
+     }
+    }catch(error){
+     badUI=true; // fallback to confirmed disk record, no phantom failure
+    }
+    return target;
+   };
+   current=bind(saved.current,refIds[0]);noteActive=bind(saved.noteActive,refIds[1]);
+   window.__detailParent=bind(saved.detail,refIds[2]);
+   render=true;
   }
-  const conflicts=result.data?state.records.filter(r=>r.conflict).length:0;
-  notify((result.message||'Synchronizace dokončena')+(conflicts?' · zachované konfliktní kopie: '+conflicts:''));return true;
- }catch(e){notify('Synchronizace: '+e.message);return false}
+ }catch(error){
+  const saveError='Synchronizace: '+error.message;
+  const sourceMessage=typeof result?.message==='string'?result.message:'';
+  // Native may also report a critical cloud fault when our additional
+  // JS CAS fails before it can confirm any local write.
+  if(result?.transport==='cloud-v2'&&/hlásí chybu:|synchronizace selhal|chyba:/i.test(sourceMessage)){
+   try{window.ZamerovacSyncStatus?.cloud?.(result)}
+   catch(ignored){console.warn('Kritický stav synchronizace nelze vykreslit')}
+   warn(sourceMessage+' · '+saveError);
+  }else warn(saveError);
+  return false; // local CAS failed, original RAM draft remains
+ }
+ // DATA/ACK BOUNDARY: no UI can change the confirmed local result.
+ const copies=result.data?state.records.filter(r=>r&&r.conflict===true):[];
+ const pendingMessage=nativeReadUnverified?
+  'Místní zápis potvrzen, ale novější stav úložiště nelze ověřit. Zkontroluj synchronizaci.':
+  'Místní zápis potvrzen; mezitím přišla novější data od druhého zařízení. Znovu ověř synchronizaci.';
+ const pendingAfterAck=peerChangedAfterAck||nativeReadUnverified;
+ // Render first: a current signed receipt never means that a failed
+ // browser/editor projection was completed. Do not add ledger I/O to gestures.
+ if(render)try{
+  if(screen==='browser')showFolder();
+  else if(screen==='editor'&&current)$('editorTitle').textContent=current.title;
+ }catch(error){badUI=true;console.warn('Přehled synchronizovaných změn nelze zobrazit')}
+ if(pendingAfterAck||badUI)window.__syncViewNeedsRefresh=true;
+ else if(render)window.__syncViewNeedsRefresh=false;
+ if(pendingAfterAck)window.__syncNativeReviewReason=pendingMessage;
+ // The Java-issued message is authoritative for a reported cloud error.
+ // Local peer/read recovery is supplementary, never a replacement.
+ const displayResult=pendingAfterAck?{...result,transport:'cloud-v2',pending:true,
+  message:[result.message,pendingMessage].filter(Boolean).join(' · ')}:result;
+ if(displayResult.transport==='cloud-v2'&&typeof window.ZamerovacSyncStatus?.cloud==='function'){
+  try{window.ZamerovacSyncStatus.cloud(displayResult)}
+  catch(error){badUI=true;console.warn('Synchronizační stav mraku nelze zobrazit')}
+  if(result.data)try{window.ZamerovacSyncStatus?.conflicts?.(copies)}
+  catch(error){badUI=true;console.warn('Synchronizační upozornění na konflikty nelze zobrazit')}
+ }else{
+  try{notify((result.message||'Synchronizace dokončena')+(copies.length?' · zachované konfliktní kopie: '+copies.length:''))}
+  catch(error){badUI=true;console.warn('Synchronizační hlášku nelze zobrazit')}
+ }
+ const statusPhase=()=>{try{return window.ZamerovacSyncStatus?.status?.().phase}catch(error){return null}};
+ if(badUI){
+  window.__syncViewNeedsRefresh=true;
+  // A fallible presenter can set confirmed before throwing on a DOM/toast.
+  // Revoke only the view: no native write, no new recipient receipt.
+  if(statusPhase()==='confirmed')
+   try{window.ZamerovacSyncStatus.cloud({transport:'cloud-v2',pending:true,message:'Zobrazení synchronizace je nutné obnovit'})}
+   catch(error){console.warn('Mrak se nepodařilo znovu vykreslit')}
+ }
+ const audioMessage='Uloženo, ale zobrazení nebo evidence uchovaných nahrávek se nepodařila ověřit. Zkontroluj nahrávky.';
+ const criticalVisible=statusPhase()==='failed';
+ const nativeCritical=/hlásí chybu:|synchronizace selhal|chyba:/i.test(String(result.message||''));
+ if(pendingAfterAck){
+  // The FINAL toast must retain the Native error even if a peer/DOM/audio
+  // warning arrived later; only verified local CAS evidence is being kept.
+  if(nativeCritical&&(badUI||!criticalVisible))
+   warn(String(result.message)+' · '+pendingMessage+(audioReviewNeeded?' '+audioMessage:''));
+  else if(!criticalVisible)warn(pendingMessage+(audioReviewNeeded?' '+audioMessage:''));
+  return false; // Native CAS confirmed; newer peer still requires reconciliation
+ }
+ if(badUI){
+  if(nativeCritical)warn(String(result.message)+(audioReviewNeeded?' '+audioMessage:''));
+  else if(!criticalVisible)
+   warn(audioReviewNeeded?audioMessage+' Otevři stav synchronizace.':
+    'Data jsou místně uložená, ale zobrazení se nepodařilo obnovit. Otevři stav synchronizace.');
+ }
+ if(render&&!badUI)window.__syncNativeReviewReason='';
+ return true;
 };
 window.onLaserValue=(value,unit)=>{
  // Přenos mimo editor: uložit poslední přijatou hodnotu do paměti.
@@ -545,7 +937,7 @@ window.onLaserValue=(value,unit)=>{
  window.lastLaser={value:String(value),unit:String(unit||'mm'),receivedAt:Date.now()};
  notify('Bosch: '+value+' '+(unit||'mm')+' – pro zápis otevři a vyber kótu');
 };
-window.onNativeError=message=>notify('Chyba: '+message);
+window.onNativeError=message=>{if(window.ZamerovacSyncStatus?.error?.(message))return;notify('Chyba: '+message)};
 window.handleAndroidBack=()=>{
   if(!$('modal').hidden){if(typeof window.modalBackHandler==='function'){window.modalBackHandler();return 'handled'}$('modal').hidden=true;window.modalOK=null;return 'handled';}
   if(!$('settingsPanel').hidden){$('settingsPanel').hidden=true;return 'handled';}

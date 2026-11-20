@@ -4,7 +4,16 @@ const allTools=toolGroups.flatMap(g=>g.tools);
 let drawStart=null,drawCurrent=null,stroke=[],polylineDraft=[],drawPointerId=null,selectedHandle=null,lastTap=0,lastTapAt=null,gesture=null;
 let lastDrawingTool='dimension',suppressToolClick=false,repeatPressTimer=null,loupeSide=null;
 let photoLoadGeneration=0,photoLoadTimer=null,photoLoadFailed=false,editorViewport=null;
+let movePaintFrame=0;
+function scheduleMovePaint(){
+ if(movePaintFrame)return;
+ movePaintFrame=requestAnimationFrame(()=>{movePaintFrame=0;paint()});
+}
+function cancelMovePaint(){
+ if(movePaintFrame){cancelAnimationFrame(movePaintFrame);movePaintFrame=0}
+}
 function openEditor(r){
+ cancelMovePaint();
  hideEditorLoupe();
  editorViewport=null;
  polylineDraft=[];stroke=[];drawStart=null;drawCurrent=null;lastTap=0;lastTapAt=null;loupeSide=null;
@@ -37,12 +46,13 @@ function openEditor(r){
   loadPhotoImage(r.media[0]).then(img=>{
    if(!active())return;clearTimeout(photoLoadTimer);photoLoadFailed=false;stageImg=img;
    photoSize={w:img.naturalWidth,h:img.naturalHeight};
-   initialImageView();paint();
+   initialImageView();
   }).catch(failed);
  }
- resizeEditor();initialImageView();paint();
+ resizeEditorCanvas();initialImageView();
 }
 function hideEditorLoupe(){
+ cancelMovePaint();
  magnifierPoint=null;loupeSide=null;$('loupe').hidden=true;
  for(const id of pointers.keys())try{stageCanvas.releasePointerCapture(id)}catch(error){}
  pointers.clear();
@@ -55,6 +65,9 @@ $('fitBtn').onclick=fitImage;$('zoomIn').onclick=()=>{const p=centerPoint();zoom
 function centerPoint(){return{x:stageCanvas.clientWidth/2,y:stageCanvas.clientHeight/2}}
 function resizeEditor(){
  if(screen!=='editor')return;
+ resizeEditorCanvas();paint();
+}
+function resizeEditorCanvas(){
  const el=$('stage'),dpr=window.devicePixelRatio||1,w=el.clientWidth,h=el.clientHeight;
  // Preserve zoom and the world point at the centre, including unsaved drafts.
  if(editorViewport?.record===current&&w>0&&h>0){
@@ -62,11 +75,15 @@ function resizeEditor(){
  }
  editorViewport={record:current,w,h};
  stageCanvas.width=Math.max(1,Math.floor(w*dpr));stageCanvas.height=Math.max(1,Math.floor(h*dpr));
- ctx.setTransform(dpr,0,0,dpr,0,0);paint();
+ ctx.setTransform(dpr,0,0,dpr,0,0);
 }
 window.addEventListener('resize',resizeEditor);
 function fitImage(){let w=stageCanvas.clientWidth,h=stageCanvas.clientHeight;if(!w||!h)return;Object.assign(view,AnnotationGeometry.fittedViewport(w,h,photoSize));paint()}
-function initialImageView(){fitImage();const p=centerPoint();zoomAt(1.15,p.x,p.y)}
+function initialImageView(){
+ const p=centerPoint();
+ if(p.x&&p.y)Object.assign(view,AnnotationGeometry.fittedViewport(p.x*2,p.y*2,photoSize));
+ zoomAt(1.15,p.x,p.y);
+}
 function zoomAt(factor,x,y){Object.assign(view,AnnotationGeometry.zoomedViewport(view,factor,x,y));paint()}
 function screenToWorld(p){return AnnotationGeometry.screenToWorld(p,view)}
 function worldToScreen(p){return AnnotationGeometry.worldToScreen(p,view)}
@@ -551,7 +568,22 @@ function hitAnnotation(point){
  // Endpoint grips take priority over captions and the move area, even on
  // first selection. In short segments the middle 40% remains a move zone.
  const activeItem=(current?.items||[]).find(item=>item.id===selected);
- const grip=(activeItem&&nearestHandle(point,activeItem))||nearestHandle(point);
+ const closestGrip=nearestHandle(point);
+ let grip=closestGrip;
+ // A clearly closer grip must not be stolen by a previously selected item.
+ // Only compare the active grip when the nearest grip belongs elsewhere.
+ if(activeItem&&closestGrip&&closestGrip.item!==activeItem){
+  const activeGrip=nearestHandle(point,activeItem);
+  if(activeGrip){
+   const screenDistance=handle=>{
+    const p=worldToScreen(handle.point);
+    return Math.hypot(point.x-p.x,point.y-p.y);
+   };
+   // Seven screen pixels is the existing drag-jitter threshold: in a
+   // truly ambiguous overlap retain the active grip, not the distant one.
+   if(screenDistance(activeGrip)<=screenDistance(closestGrip)+7)grip=activeGrip;
+  }
+ }
  if(grip)return grip.item;
  const label=nearestLabel(point);
  if(label?.item)return label.item;
@@ -673,11 +705,11 @@ function stageDown(e){
  drawPointerId=e.pointerId;drawStart=mode==='freehand'?boundsPoint(screenToWorld(s)):snap(screenToWorld(s));
  drawCurrent=drawStart;stroke=[drawStart];magnifierPoint=drawStart;paint();
 }
-function stageMove(e){if(screen!=='editor')return;const s=eventPoint(e);if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,s);if(pointers.size===2&&gesture){Object.assign(view,AnnotationGeometry.pinchViewport(gesture,[...pointers.values()]));paint();return}
+function stageMove(e){if(screen!=='editor')return;const s=eventPoint(e);if(!pointers.has(e.pointerId))return;pointers.set(e.pointerId,s);if(pointers.size===2&&gesture){Object.assign(view,AnnotationGeometry.pinchViewport(gesture,[...pointers.values()]));scheduleMovePaint();return}
 if(['polyline','chain','cumulative','angle'].includes(mode)&&polylineDraft.length&&pointers.size===1){
   drawCurrent=snap(screenToWorld(s),polylineDraft[polylineDraft.length-1]);
   const last=polylineDraft[polylineDraft.length-1];
-  stroke=Math.hypot(drawCurrent.x-last.x,drawCurrent.y-last.y)>2/Math.max(.05,view.zoom)?[...polylineDraft,{...drawCurrent}]:polylineDraft.map(p=>({...p}));paint();return;
+  stroke=Math.hypot(drawCurrent.x-last.x,drawCurrent.y-last.y)>2/Math.max(.05,view.zoom)?[...polylineDraft,{...drawCurrent}]:polylineDraft.map(p=>({...p}));scheduleMovePaint();return;
  }
  if(selectedHandle&&pointers.size===1){
   if(Math.hypot(s.x-selectedHandle.startScreen.x,s.y-selectedHandle.startScreen.y)>7)selectedHandle.dragged=true;
@@ -685,9 +717,9 @@ if(['polyline','chain','cumulative','angle'].includes(mode)&&polylineDraft.lengt
   // Never mutate annotation coordinates until a real drag is established.
   // Previously the endpoint branch called snap() even below 7 px, silently
   // changing geometry while stageUp discarded the undo checkpoint as a tap.
-  if(!selectedHandle.dragged){paint();return;}
+  if(!selectedHandle.dragged)return;
   if(selectedHandle.kind==='select-only'||selectedHandle.kind==='open-selected'){
-   magnifierPoint=null;paint();return;
+   magnifierPoint=null;scheduleMovePaint();return;
   }
   if(selectedHandle.kind==='move-polyline'){
      if(selectedHandle.dragged){
@@ -783,7 +815,7 @@ if(['polyline','chain','cumulative','angle'].includes(mode)&&polylineDraft.lengt
       [selectedItem[selectedHandle.key==='a'?'b':'a']]:[];
     const minLength=8/Math.max(.05,view.zoom);
     if(adjacent.some(other=>other&&Math.hypot(movedPoint.x-other.x,movedPoint.y-other.y)<minLength)){
-     magnifierPoint=null;paint();return;
+     magnifierPoint=null;scheduleMovePaint();return;
     }
     if(Number.isInteger(selectedHandle.pointIndex)){
      const item=selectedHandle.item,index=selectedHandle.pointIndex;
@@ -794,12 +826,13 @@ if(['polyline','chain','cumulative','angle'].includes(mode)&&polylineDraft.lengt
     selectedHandle.point=movedPoint;
     magnifierPoint=selectedHandle.point;
   }
-  paint();return;
+  scheduleMovePaint();return;
 }
-if(drag&&mode==='pan'){view.dx=drag.dx+(s.x-drag.screen.x);view.dy=drag.dy+(s.y-drag.screen.y);paint();return}
-if(drawStart&&drawPointerId===e.pointerId){drawCurrent=mode==='freehand'?boundsPoint(screenToWorld(s)):snap(screenToWorld(s),drawStart);magnifierPoint=drawCurrent;if(mode==='freehand')stroke.push({...drawCurrent});paint()}}
+if(drag&&mode==='pan'){view.dx=drag.dx+(s.x-drag.screen.x);view.dy=drag.dy+(s.y-drag.screen.y);scheduleMovePaint();return}
+if(drawStart&&drawPointerId===e.pointerId){drawCurrent=mode==='freehand'?boundsPoint(screenToWorld(s)):snap(screenToWorld(s),drawStart);magnifierPoint=drawCurrent;if(mode==='freehand')stroke.push({...drawCurrent});scheduleMovePaint()}}
 function stageUp(e){
  if(screen!=='editor'||!pointers.has(e.pointerId))return;
+ cancelMovePaint();
  const wasTwo=pointers.size===2;
  pointers.delete(e.pointerId);
  if(wasTwo){
@@ -820,7 +853,7 @@ function stageUp(e){
   }else paint();
   return;
  }
- if(drag){drag=null;return}if(!drawStart||drawPointerId!==e.pointerId)return;const a=drawStart,b=drawCurrent||drawStart;drawStart=null;drawCurrent=null;magnifierPoint=null;loupeSide=null;drawPointerId=null;if(Math.hypot(a.x-b.x,a.y-b.y)<3/view.zoom&&mode!=='note'&&mode!=='symbol'&&mode!=='target'){paint();return}if(mode==='target'&&Math.hypot(a.x-b.x,a.y-b.y)<3/view.zoom)b={x:a.x+36/view.zoom,y:a.y+12/view.zoom};let item={id:uid(),type:mode,a,b,color:prefs.color,width:prefs.lineWidth,fontSize:prefs.fontSize,unit:mode==='area'?'m²':prefs.unit,measure:'',text:'',points:(mode==='freehand'||mode==='polyline')?[...stroke]:[]};stroke=[];
+ if(drag){drag=null;paint();return}if(!drawStart||drawPointerId!==e.pointerId)return;const a=drawStart,b=drawCurrent||drawStart;drawStart=null;drawCurrent=null;magnifierPoint=null;loupeSide=null;drawPointerId=null;if(Math.hypot(a.x-b.x,a.y-b.y)<3/view.zoom&&mode!=='note'&&mode!=='symbol'&&mode!=='target'){paint();return}if(mode==='target'&&Math.hypot(a.x-b.x,a.y-b.y)<3/view.zoom)b={x:a.x+36/view.zoom,y:a.y+12/view.zoom};let item={id:uid(),type:mode,a,b,color:prefs.color,width:prefs.lineWidth,fontSize:prefs.fontSize,unit:mode==='area'?'m²':prefs.unit,measure:'',text:'',points:(mode==='freehand'||mode==='polyline')?[...stroke]:[]};stroke=[];
 if(mode==='area'){item.points=rectCorners(item);item.sideMeasures=['','','',''];item.sideTexts=['','','',''];}
 if(['dimension','chain','cumulative','area'].includes(mode)){
   // Follow the reference video: lay down the geometry first, adjust endpoints,
@@ -1162,6 +1195,6 @@ $('styleTool').onclick=()=>{
       else{prefs.lineWidth=w;prefs.fontSize=fs;prefs.color=color;save();paint()}
   });
 };
-stageCanvas.addEventListener('pointerdown',stageDown);stageCanvas.addEventListener('pointermove',stageMove);stageCanvas.addEventListener('pointerup',stageUp);stageCanvas.addEventListener('pointercancel',e=>{if(screen!=='editor'||!pointers.has(e.pointerId))return;pointers.delete(e.pointerId);gesture=null;drag=null;drawPointerId=null;magnifierPoint=null;drawStart=null;drawCurrent=null;finishHandleGesture(selectedHandle);selectedHandle=null;paint()});stageCanvas.addEventListener('wheel',e=>{e.preventDefault();const p=eventPoint(e);zoomAt(e.deltaY<0?1.1:.9,p.x,p.y)},{passive:false});
+stageCanvas.addEventListener('pointerdown',stageDown);stageCanvas.addEventListener('pointermove',stageMove);stageCanvas.addEventListener('pointerup',stageUp);stageCanvas.addEventListener('pointercancel',e=>{if(screen!=='editor'||!pointers.has(e.pointerId))return;cancelMovePaint();pointers.delete(e.pointerId);gesture=null;drag=null;drawPointerId=null;magnifierPoint=null;drawStart=null;drawCurrent=null;finishHandleGesture(selectedHandle);selectedHandle=null;paint()});stageCanvas.addEventListener('wheel',e=>{e.preventDefault();const p=eventPoint(e);zoomAt(e.deltaY<0?1.1:.9,p.x,p.y)},{passive:false});
 $('exportBtn').onclick=()=>{modal('Export',`<div class="row wrap"><button id="exportPng" class="outline">Export PNG</button><button id="exportPdf" class="outline">Export PDF</button></div><div class="muted">Originální soubor a editovatelné kóty se zachovávají zvlášť.</div>`,()=>true,'Zavřít');$('exportPng').onclick=()=>{exportPng();$('modal').hidden=true};$('exportPdf').onclick=()=>{if(native)Native.printPdf();else window.print();$('modal').hidden=true}};
 function exportPng(){let o=document.createElement('canvas');o.width=photoSize.w;o.height=photoSize.h;let c=o.getContext('2d');c.fillStyle='#fff';c.fillRect(0,0,o.width,o.height);if(stageImg)c.drawImage(stageImg,0,0,o.width,o.height);const render=annotationRenderContext(c,{view:{zoom:1,dx:0,dy:0},viewport:{w:o.width,h:o.height},selected:null,exporting:true});for(let item of current.items||[])drawItem(c,item,render);const data=o.toDataURL('image/png');if(native)Native.exportPng((current.title||'zamerovani')+'.png',data.slice(data.indexOf(',')+1));else{let a=document.createElement('a');a.download='zamerovani.png';a.href=data;a.click()}notify('Export obrázku připraven')}

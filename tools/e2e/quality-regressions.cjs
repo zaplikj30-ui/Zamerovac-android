@@ -126,7 +126,15 @@ suite('quality-regressions',async test=>{
  await test('project_photo_dimension_note_reopen_and_export',async({page,step,evidence,directory})=>{
   await page.click('#createBtn');await page.locator('#newMenu .choice').filter({hasText:'Nová složka'}).click();
   await page.fill('#promptValue','QA zakázka');await page.click('#okModal');await page.locator('.entry-title',{hasText:'QA zakázka'}).click();
-  await chooseFiles(page,'#galleryBtn',{name:'original.png',mimeType:'image/png',buffer:await image(page)});
+  await step('Import original PNG through +; folder quick action remains a folder',async()=>{
+   assert.equal(await page.locator('#galleryBtn').getAttribute('title'),'Nová složka',
+    'After creating a folder, the quick action must repeat New folder, not import media');
+   const buffer=await image(page);
+   await page.click('#createBtn');
+   const chooser=page.waitForEvent('filechooser');
+   await page.locator('#newMenu .choice').filter({hasText:'Importovat obrázek / PDF / video'}).click();
+   await (await chooser).setFiles({name:'original.png',mimeType:'image/png',buffer});
+  });
   await page.waitForFunction(()=>screen==='editor'&&!!stageImg);
   await page.evaluate(()=>{prefs.snapPoints=false;prefs.snapHorizontal=false;save()});
   await tool(page,'dimension');await drag(page,{x:140,y:280},{x:460,y:350});await editSelected(page);

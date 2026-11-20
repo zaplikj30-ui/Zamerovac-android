@@ -84,6 +84,9 @@ function historicalIndex(version){
     await page.setViewportSize(viewport);
     await page.click('#back');
     await page.locator('#navMenu button').filter({hasText:'Nastavení'}).click();
+    // Settings are now categorized; History is under Application & Maintenance.
+    await page.locator('.settings-category[data-category="maintenance"]').click();
+    assert.equal(await page.locator('#settingsPage-maintenance').isVisible(),true);
     await page.locator('#openHistory').click();
     assert(await page.locator('#modal').isVisible());
     const dialog=await page.locator('#modal .dialog').boundingBox();
@@ -96,6 +99,9 @@ function historicalIndex(version){
     await page.click('#okModal');
     assert.equal(await page.locator('#modal').isVisible(),false);
     await page.click('#closeSettings');
+    assert.equal(await page.locator('#settingsPage-maintenance').isVisible(),false);
+    await page.click('#closeSettings');
+    assert.equal(await page.locator('#settingsPanel').isVisible(),false);
    });
   }
   assert.equal(await page.evaluate(()=>JSON.stringify(state)),before);
