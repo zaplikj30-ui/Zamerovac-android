@@ -571,7 +571,8 @@ const chapters=[
       "V Rozměrech nastav výchozí jednotky a počet zobrazovaných desetinných míst.",
       "Ve Vzhledu nastav barvu, tloušťku čar, velikost textu, zobrazení a další běžné chování.",
       "V hlavním menu ☰ → Historie změn nebo v Nastavení → Novinky a historie změn si zobrazíš skutečné novinky, opravené chyby a vylepšení podle verzí. Od verze 1.3.0 se významnější změny projevují druhým číslem verze, menší opravy posledním číslem; číslo sestavení Androidu je samostatné.",
-      "Jazyk aplikace zatím nabízí pouze 🇨🇿 Čeština; další překlady nejsou hotové."
+      "Jazyk aplikace zatím nabízí pouze 🇨🇿 Čeština; další překlady nejsou hotové.",
+      "V Nastavení → Diagnostika výkonu zapni záznam před testem, proveď několik pohybů kót, případně restartuj aplikaci a zvol Sdílet diagnostický záznam. Ukládají se jen časy a počty, maximálně 120 událostí; nic se neodesílá automaticky. Záznam můžeš vypnout a smazat. Skutečné časy nativních fází jsou dostupné pouze v diagnostické testovací sestavě."
     ],
     "notes": [
       "Změna zobrazení jednotek nebo přiblížení nesmí přepočítat již uloženou naměřenou hodnotu bez tvé výslovné úpravy.",
@@ -591,7 +592,9 @@ const chapters=[
       "opravené chyby",
       "novinky",
       "verze",
-      "nastavení"
+      "nastavení",
+      "diagnostika výkonu",
+      "sekání kót"
     ]
   },
   {
