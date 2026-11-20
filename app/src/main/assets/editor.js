@@ -8,7 +8,7 @@ function openEditor(r){
  hideEditorLoupe();
  editorViewport=null;
  polylineDraft=[];stroke=[];drawStart=null;drawCurrent=null;lastTap=0;lastTapAt=null;loupeSide=null;
- screen='editor';document.body.classList.add('in-editor');closeMenus();$('editorHint').hidden=true;
+ screen='editor';window.ZFlight?.record('editor-open',{itemCount:r.items?.length||0});document.body.classList.add('in-editor');closeMenus();$('editorHint').hidden=true;
  current=r;selected=null;mode='select';lastDrawingTool='dimension';updateDrawingToolButton();
  $('browserView').hidden=true;$('browserFoot').hidden=true;$('noteView').hidden=true;
  $('editorView').hidden=false;$('editorTitle').textContent=r.title;
@@ -71,10 +71,17 @@ function finishHandleGesture(handle){
  if(JSON.stringify(current.items||[])===handle.beforeDragItems)return false;
  AnnotationHistory.recordSnapshot(handle.beforeDragItems,editStack);
  redoStack=[];
+ window.ZFlight?.record('drag-release',{undoCount:editStack.length,itemCount:current.items?.length||0},true);
  touch(handle.item);commitEditor();
  return true;
 }
-function commitEditor(){if(current?.kind==='photo'&&stageImg){current.width=photoSize.w;current.height=photoSize.h;}touch(current);const confirmed=save();paint();return confirmed}
+function commitEditor(){
+ const started=performance.now();
+ if(current?.kind==='photo'&&stageImg){current.width=photoSize.w;current.height=photoSize.h;}
+ touch(current);const confirmed=save();const paintedFrom=performance.now();paint();
+ window.ZFlight?.record('editor-commit',{savePathMs:paintedFrom-started,paintMs:performance.now()-paintedFrom,success:confirmed===true?1:0});
+ return confirmed;
+}
 function undoEditor(){if(!editStack.length)return;let restored;
  try{restored=AnnotationHistory.restore(current.items,editStack,redoStack)}
  catch(error){notify('Historie úprav je poškozená. Změny nebyly použity.');return false}
