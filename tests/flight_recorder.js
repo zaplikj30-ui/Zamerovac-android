@@ -10,6 +10,7 @@ const help=fs.readFileSync('app/src/main/assets/help.js','utf8');
 const java=fs.readFileSync('app/src/main/java/cz/zamerovac/app/MainActivity.java','utf8');
 const revisions=fs.readFileSync('app/src/main/java/cz/zamerovac/app/ProtectedRevisions.java','utf8');
 const media=fs.readFileSync('app/src/main/java/cz/zamerovac/app/ImmutableMediaProof.java','utf8');
+const database=fs.readFileSync('app/src/main/java/cz/zamerovac/app/LocalDatabase.java','utf8');
 const storage=new Map(),shares=[];let time=0,intervals=[];
 function el(tag){return {tag,children:[],style:{},textContent:'',value:'',append(...children){this.children.push(...children)},focus(){},select(){},remove(){}}}
 function boot(){
@@ -30,9 +31,11 @@ function run(){
  assert.equal(api.isEnabled(),false);
  assert.equal(api.snapshot().events.length,0,'invalid stored timestamps must not be shared');
  api.toggle(true);
- api.record('native-save',{bridgeMs:30.234,writeMs:27.78,success:1,name:'Secret',foo:111,readMs:-1},true);
+ api.record('native-save',{bridgeMs:30.234,writeMs:27.78,validationMs:1.2,revisionProtectMs:22.42,databaseCommitMs:3.4,serializeMs:2.14,success:1,name:'Secret',foo:111,readMs:-1},true);
  api.record('hidden-unknown',{secret:50},true);
  assert.equal(api.snapshot().events.at(-1).values.writeMs,27.8);
+ assert.equal(api.snapshot().events.at(-1).values.revisionProtectMs,22.4);
+ assert.equal(api.snapshot().events.at(-1).values.serializeMs,2.1);
  assert.equal(Object.hasOwn(api.snapshot().events.at(-1).values,'name'),false);
  assert.equal(Object.hasOwn(api.snapshot().events.at(-1).values,'foo'),false);
  assert.equal(Object.hasOwn(api.snapshot().events.at(-1).values,'readMs'),false);
@@ -62,6 +65,13 @@ function run(){
  assert(help.includes('Diagnostika výkonu')&&help.includes('120 událostí'),'offline help must explain new diagnostic controls');
  for(const label of ['lockWaitMs','readMs','writeMs','generationMs','recoveryMs','revisionCount','cacheHits','cacheMisses','mediaChecks'])
   assert(java.includes('.put("'+label+'",'),'missing Native phase '+label);
+ for(const key of ['validationMs','casRecheckMs','revisionProtectMs','evidenceMs','databaseCommitMs'])
+  assert(java.includes('.put("'+key+'",'),'missing native write phase '+key);
+ assert(database.includes('DEBUG_WRITE_TIMES')&&database.includes('beginDebugWrite()')&&database.includes('takeDebugWrite()'),'missing scoped Native phase timing');
+ assert(java.includes('if(perf)LocalDatabase.takeDebugWrite();'),'missing failure cleanup of debug timings');
+ for(const key of ['dimensionCount','projectPhotoCount','projectItemCount','projectDimensionCount'])
+  assert(editor.includes(key),'missing scoped photo/project count '+key);
+ assert(help.includes('na různých fotografiích'),'offline help photo distinction');
  for(const marker of ['Z195-revision-inventory','Z195-media-proof'])
   assert((revisions+media).includes(marker),'missing debug trace '+marker);
  console.log('PASS flight recorder: opt-in, privacy, 120 bound, local persistence, restart, stall, manual share, UI, integration and phase-source contracts');

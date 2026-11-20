@@ -13,6 +13,19 @@ final class LocalDatabase {
     private static final java.util.concurrent.ConcurrentHashMap<String,java.util.concurrent.atomic.AtomicLong> GENERATIONS=new java.util.concurrent.ConcurrentHashMap<>();
     static long generation(File home){return GENERATIONS.computeIfAbsent(home.getAbsolutePath(),key->new java.util.concurrent.atomic.AtomicLong()).get();}
     private static void changed(File home){GENERATIONS.computeIfAbsent(home.getAbsolutePath(),key->new java.util.concurrent.atomic.AtomicLong()).incrementAndGet();}
+    // Debug-only one-save timings, no customer content. Always cleared by the Native bridge.
+    // [validation, second CAS read, protected revisions, witnesses, durable DB commit].
+    private static final ThreadLocal<long[]> DEBUG_WRITE_TIMES=new ThreadLocal<>();
+    static void beginDebugWrite(){if(BuildConfig.DEBUG)DEBUG_WRITE_TIMES.set(new long[5]);}
+    static long[] takeDebugWrite(){
+        if(!BuildConfig.DEBUG)return null;
+        long[] data=DEBUG_WRITE_TIMES.get();DEBUG_WRITE_TIMES.remove();return data;
+    }
+    private static long debugPhaseStart(){return BuildConfig.DEBUG&&DEBUG_WRITE_TIMES.get()!=null?System.nanoTime():0L;}
+    private static void debugPhaseEnd(int index,long start){
+        if(start==0L)return;long[] data=DEBUG_WRITE_TIMES.get();
+        if(data!=null)data[index]+=Math.max(0L,System.nanoTime()-start);
+    }
     static void validate(String text)throws IOException {
         if(text==null||text.length()>MAX_BYTES||text.getBytes(StandardCharsets.UTF_8).length>MAX_BYTES)throw new IOException("Databáze je příliš velká");
         JsonInput.check(text);
@@ -205,9 +218,13 @@ final class LocalDatabase {
     }
     private static void write(File home,File noBackup,String text,android.content.SharedPreferences prefs)throws IOException{
         synchronized(TrashPurger.LOCK){
-            validate(text);File primary=new File(home,"projects.json"),backup=new File(home,"projects.bak"),
+            long phaseStart=debugPhaseStart();
+            validate(text);debugPhaseEnd(0,phaseStart);
+            File primary=new File(home,"projects.json"),backup=new File(home,"projects.bak"),
                 next=new File(home,"projects.tmp"),backupNext=new File(home,"projects.backup.tmp");
+            phaseStart=debugPhaseStart();
             String confirmed=readForCas(home,noBackup);
+            debugPhaseEnd(1,phaseStart);phaseStart=debugPhaseStart();
             if(!confirmed.isEmpty()&&!confirmed.equals(text))
                 new ProtectedRevisions(home,noBackup,prefs).preserveDatabase(confirmed);
             // The pre-upgrade backup may be the only remaining copy of a
@@ -216,6 +233,7 @@ final class LocalDatabase {
             // Protect the proposed exact state before publishing it as current.
             // If the later DB commit fails, this remains recovery evidence only.
             new ProtectedRevisions(home,noBackup,prefs).preserveDatabase(text);
+            debugPhaseEnd(2,phaseStart);phaseStart=debugPhaseStart();
             // Persist BOTH proofs before the first DB commit; any failed write
             // remains visible to the next process and never authorizes a reset.
             DatabaseInstallEvidence.ensure(home,noBackup);
@@ -224,6 +242,7 @@ final class LocalDatabase {
             // an already-used installation into a fresh pairing-only device.
             SyncPeerRegistry.recordDatabaseInitialized(noBackup);
             DatabaseRecovery.healthy(home,true);
+            debugPhaseEnd(3,phaseStart);phaseStart=debugPhaseStart();
             try{
                 writeSynced(next,text.getBytes(StandardCharsets.UTF_8));
                 if(primary.isFile()){
@@ -231,7 +250,7 @@ final class LocalDatabase {
                     if(previous!=null){writeSynced(backupNext,previous.getBytes(StandardCharsets.UTF_8));replace(backupNext,backup);}
                 }
                 replace(next,primary);changed(home);
-            }finally{next.delete();backupNext.delete();}
+            }finally{next.delete();backupNext.delete();debugPhaseEnd(4,phaseStart);}
         }
     }
 }

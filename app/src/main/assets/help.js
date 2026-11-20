@@ -572,7 +572,7 @@ const chapters=[
       "Ve Vzhledu nastav barvu, tloušťku čar, velikost textu, zobrazení a další běžné chování.",
       "V hlavním menu ☰ → Historie změn nebo v Nastavení → Novinky a historie změn si zobrazíš skutečné novinky, opravené chyby a vylepšení podle verzí. Od verze 1.3.0 se významnější změny projevují druhým číslem verze, menší opravy posledním číslem; číslo sestavení Androidu je samostatné.",
       "Jazyk aplikace zatím nabízí pouze 🇨🇿 Čeština; další překlady nejsou hotové.",
-      "V Nastavení → Diagnostika výkonu zapni záznam před testem, proveď několik pohybů kót, případně restartuj aplikaci a zvol Sdílet diagnostický záznam. Ukládají se jen časy a počty, maximálně 120 událostí; nic se neodesílá automaticky. Záznam můžeš vypnout a smazat. Skutečné časy nativních fází jsou dostupné pouze v diagnostické testovací sestavě."
+      "V Nastavení → Diagnostika výkonu zapni záznam před testem, proveď několik pohybů kót na různých fotografiích, případně restartuj aplikaci a zvol Sdílet diagnostický záznam. Ukládají se jen časy a počty, maximálně 120 událostí; nic se neodesílá automaticky. Záznam můžeš vypnout a smazat. Při otevření editoru se rozlišuje počet položek a běžných rozměrových kót na této fotografii od počtu všech položek, rozměrových kót a fotografií v projektu. V diagnostické testovací sestavě se navíc rozlišuje převod dat do JSON, opětovné čtení databáze, ochrana historie, doklady obnovitelnosti a databázový zápis."
     ],
     "notes": [
       "Změna zobrazení jednotek nebo přiblížení nesmí přepočítat již uloženou naměřenou hodnotu bez tvé výslovné úpravy.",

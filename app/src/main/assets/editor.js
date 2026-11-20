@@ -8,7 +8,18 @@ function openEditor(r){
  hideEditorLoupe();
  editorViewport=null;
  polylineDraft=[];stroke=[];drawStart=null;drawCurrent=null;lastTap=0;lastTapAt=null;loupeSide=null;
- screen='editor';window.ZFlight?.record('editor-open',{itemCount:r.items?.length||0});document.body.classList.add('in-editor');closeMenus();$('editorHint').hidden=true;
+ screen='editor';
+ if(window.ZFlight?.isEnabled?.()){
+  const photos=(state.records||[]).filter(p=>p?.kind==='photo'&&!p.deleted);
+  const items=Array.isArray(r.items)?r.items:[];
+  window.ZFlight.record('editor-open',{
+   itemCount:items.length,dimensionCount:items.filter(i=>i?.type==='dimension').length,
+   projectPhotoCount:photos.length,
+   projectItemCount:photos.reduce((n,p)=>n+(Array.isArray(p.items)?p.items.length:0),0),
+   projectDimensionCount:photos.reduce((n,p)=>n+(Array.isArray(p.items)?p.items.filter(i=>i?.type==='dimension').length:0),0)
+  });
+ }
+ document.body.classList.add('in-editor');closeMenus();$('editorHint').hidden=true;
  current=r;selected=null;mode='select';lastDrawingTool='dimension';updateDrawingToolButton();
  $('browserView').hidden=true;$('browserFoot').hidden=true;$('noteView').hidden=true;
  $('editorView').hidden=false;$('editorTitle').textContent=r.title;
@@ -71,7 +82,10 @@ function finishHandleGesture(handle){
  if(JSON.stringify(current.items||[])===handle.beforeDragItems)return false;
  AnnotationHistory.recordSnapshot(handle.beforeDragItems,editStack);
  redoStack=[];
- window.ZFlight?.record('drag-release',{undoCount:editStack.length,itemCount:current.items?.length||0},true);
+ if(window.ZFlight?.isEnabled?.()){
+  const items=Array.isArray(current.items)?current.items:[];
+  window.ZFlight.record('drag-release',{undoCount:editStack.length,itemCount:items.length,dimensionCount:items.filter(i=>i?.type==='dimension').length},true);
+ }
  touch(handle.item);commitEditor();
  return true;
 }

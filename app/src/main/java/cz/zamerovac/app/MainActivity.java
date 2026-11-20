@@ -814,6 +814,7 @@ public class MainActivity extends Activity {
                             if(current.isEmpty())throw new IOException("Databáze není dostupná pro porovnání");
                             return new JSONObject().put("ok",false).put("current",current).toString();
                         }
+                        if(perf)LocalDatabase.beginDebugWrite();
                         if(perf)Trace.beginSection("Z195-writeDb");
                         long writeStartNs=perf?System.nanoTime():0L;
                         try{writeDb(text);}
@@ -838,6 +839,13 @@ public class MainActivity extends Activity {
                                   .put("writeMs",measuredNs[2]/1000000.0)
                                   .put("generationMs",measuredNs[3]/1000000.0)
                                   .put("recoveryMs",measuredNs[4]/1000000.0);
+                                long[] writeParts=LocalDatabase.takeDebugWrite();
+                                if(writeParts!=null)stats
+                                    .put("validationMs",writeParts[0]/1000000.0)
+                                    .put("casRecheckMs",writeParts[1]/1000000.0)
+                                    .put("revisionProtectMs",writeParts[2]/1000000.0)
+                                    .put("evidenceMs",writeParts[3]/1000000.0)
+                                    .put("databaseCommitMs",writeParts[4]/1000000.0);
                                 int[] counts=ProtectedRevisions.takeDebugCounts();
                                 if(counts!=null)stats.put("revisionCount",counts[0])
                                   .put("cacheHits",counts[1])
@@ -855,7 +863,7 @@ public class MainActivity extends Activity {
                     // If monitor entry failed, close the wait slice before bridge.
                     if(lockWaitOpen)Trace.endSection();
                 }
-            }finally{if(perf)Trace.endSection();if(perf)ProtectedRevisions.takeDebugCounts();}
+            }finally{if(perf)Trace.endSection();if(perf)ProtectedRevisions.takeDebugCounts();if(perf)LocalDatabase.takeDebugWrite();}
         }
         @JavascriptInterface public boolean beginMedia(String id,String mime,String name){return beginMediaChecked(id,mime,name,-1);}
         @JavascriptInterface public boolean beginMediaChecked(String id,String mime,String name,long expected){
