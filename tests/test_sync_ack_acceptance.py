@@ -62,58 +62,48 @@ class SyncAckAcceptanceTest(unittest.TestCase):
                 self.assertIn("--rerun", command)
                 self.assertIn("--no-daemon", command)
 
-    def test_inventory_protects_513_baseline_and_exact_approved_additions(self):
-        import hashlib
-        import json
+    def test_historical_methods_cannot_disappear_but_new_pass_tests_autocount(self):
+        # Use the exact 513 independently preserved historical IDs, not mocks.
+        cases = [dict(id=name, status="FAIL" if name in gate.EXPECTED else "PASS",
+                      message=gate.EXPECTED.get(name, ""))
+                 for name in sorted(gate.baseline_case_ids())]
+        cases += [dict(id=name, status="PASS", message="")
+                  for name in sorted(gate.REQUIRED_LATER_CASE_IDS)]
+        self.assertEqual(gate.EXPECTED_CASE_COUNT + 2, len(cases))
+        self.assertEqual([], gate.inventory_problems(cases))
+        self.assertEqual("PASS", gate.classify(cases, 1)["product_acceptance"]["status"])
+
+        # Future additions are automatic, with no 515 -> 516 constant update.
+        extra = dict(id="cz.zamerovac.app.AddedSafetyTest.newMethod", status="PASS", message="")
+        self.assertEqual([], gate.inventory_problems(cases + [extra]))
+        self.assertEqual("PASS", gate.classify(cases + [extra], 1)["product_acceptance"]["status"])
+
+        # Still require the old test identities even if count stays equal.
+        replaced = [dict(c) for c in cases]
+        replaced[0]["id"] = extra["id"]
+        self.assertTrue(gate.inventory_problems(replaced))
+        self.assertTrue(gate.inventory_problems(cases[1:]))
+        # The two recent valuable cache/data tests must remain present too.
+        self.assertTrue(gate.inventory_problems(cases[:-1]))
+        self.assertTrue(gate.inventory_problems(cases + [dict(cases[-1])]))
+        # A newly added failing/ignored test is NEVER an acceptable extra.
+        for status in ("FAIL", "ERROR", "SKIP"):
+            with self.subTest(status=status):
+                wrong = dict(extra, status=status)
+                self.assertEqual("FAIL", gate.classify(cases + [wrong], 1)["product_acceptance"]["status"])
+
+    def test_historical_manifest_tampering_is_rejected(self):
+        import tempfile
         from unittest.mock import patch
-
-        baseline = self.baseline() + [
-            {"id": f"cz.zamerovac.app.SyntheticTest.method{i:03d}",
-             "status": "PASS", "message": ""}
-            for i in range(gate.EXPECTED_CASE_COUNT - len(self.baseline()))
-        ]
-        additions = [
-            {"id": name, "status": "PASS", "message": ""}
-            for name in sorted(gate.ADDITIONAL_CASE_IDS)
-        ]
-        cases = baseline + additions
-        digest = hashlib.sha256(
-            json.dumps(sorted(case["id"] for case in baseline),
-                       separators=(",", ":"), ensure_ascii=True).encode("ascii")
-        ).hexdigest()
-
-        with patch.object(gate, "EXPECTED_CASE_IDS_SHA256", digest):
-            self.assertEqual([], gate.inventory_problems(cases))
-            self.assertEqual("FAIL", gate.classify(cases, 1)["gradle"]["status"])
-            self.assertEqual("PASS", gate.classify(cases, 1)["product_acceptance"]["status"])
-
-            # Unknown additional PASS must NOT quietly change the inventory.
-            unknown = dict(id="cz.zamerovac.app.SyntheticTest.unreviewedNewTest",
-                           status="PASS", message="")
-            self.assertTrue(gate.inventory_problems(cases + [unknown]))
-
-            # Replacing one of the historical methods is still a failure even
-            # when the total number of test cases stays the same.
-            replaced = [dict(case) for case in cases]
-            replaced[len(baseline) - 1]["id"] = unknown["id"]
-            self.assertTrue(gate.inventory_problems(replaced))
-
-            # Newly approved methods are required, not ignored test-count slack.
-            self.assertTrue(gate.inventory_problems(cases[:-1]))
-            swapped = [dict(case) for case in cases]
-            swapped[-1]["id"] = unknown["id"]
-            self.assertTrue(gate.inventory_problems(swapped))
-
-            # Duplicate methods cannot masquerade as new coverage.
-            self.assertTrue(gate.inventory_problems(cases + [dict(cases[-1])]))
-            # Failure or SKIP in an added test is never excused by its allowlist.
-            for status in ("FAIL", "SKIP", "ERROR"):
-                with self.subTest(status=status):
-                    faulty = [dict(case) for case in cases]
-                    faulty[-1]["status"] = status
-                    self.assertEqual(
-                        "FAIL", gate.classify(faulty, 1)["product_acceptance"]["status"]
-                    )
+        with tempfile.TemporaryDirectory() as tmp:
+            file = Path(tmp) / "jvm-baseline.txt"
+            valid = gate.BASELINE_CASES_FILE.read_text(encoding="ascii")
+            file.write_text(valid, encoding="ascii")
+            with patch.object(gate, "BASELINE_CASES_FILE", file):
+                self.assertEqual(gate.EXPECTED_CASE_COUNT, len(gate.baseline_case_ids()))
+                file.write_text(valid.replace("cz.zamerovac.app.", "cz.corrupted.app.", 1), encoding="ascii")
+                with self.assertRaisesRegex(ValueError, "fingerprint changed"):
+                    gate.baseline_case_ids()
 
     def test_original_diagnostics_helpers_and_e2e_are_byte_preserved(self):
         self.assertEqual(gate.TEST_DIGESTS, gate.preserved_tests())

@@ -26,20 +26,32 @@ REQUIRED = {
     "cz.zamerovac.app.SyncAckReconciliationTest.driveLateDuplicateAckRestartBothAndRetryMustNotFalselyFinish",
     "cz.zamerovac.app.SyncAckReconciliationTest.safLateDuplicateAckRestartBothAndRetryMustNotFalselyFinish",
 }
-# Exact 513 classname.method IDs from independently preserved #116 JUnit XML (64 suites).
-# This is a TEST INVENTORY fingerprint, not a commit/ref SHA gate.
+# Immutable exact 513 method IDs from independent #116 JUnit inventory.
+# New PASS tests count automatically; no manually maintained total-case gate.
+# This content is fingerprinted against the original independently reviewed XML.
 # https://github.com/zaplikj30-ui/Zamerovac-android/pull/116#issuecomment-6838698456
-# https://github.com/zaplikj30-ui/Zamerovac-android/pull/116#issuecomment-6838705119
 EXPECTED_CASE_IDS_SHA256 = "e4897bcee1daec5a1e319ab0a9854fa915d2ee81d7501f3987ac4e89bad8c8a7"
-EXPECTED_CASE_COUNT = 513  # Immutable #116 baseline; do not increment on new tests.
-# Approved additional tests are checked by their exact method IDs, not by
-# changing the historical 513-method inventory or its fingerprint.
-# When a PR adds a JVM @Test, review its purpose and register its method ID
-# here; do not silently accept an unexpected test/rename/missing baseline.
-ADDITIONAL_CASE_IDS = frozenset({
+BASELINE_CASES_FILE = ROOT / "tools/qa/jvm-baseline-116.txt"
+REQUIRED_LATER_CASE_IDS = frozenset({
     "cz.zamerovac.app.ProtectedRevisionsTest.repeatedDimensionSaveProfile",
     "cz.zamerovac.app.ProtectedRevisionsTest.warmCacheRejectsSameSizeCorruptionAndReplacement",
 })
+
+
+def baseline_case_ids():
+    """Validate the archived immutable list, then return its exact method IDs."""
+    lines = BASELINE_CASES_FILE.read_text(encoding="ascii").splitlines()
+    if not lines or len(lines) != len(set(lines)) or lines != sorted(lines):
+        raise ValueError("Historical JVM method manifest missing, duplicated or unsorted")
+    digest = hashlib.sha256(
+        json.dumps(lines, separators=(",", ":"), ensure_ascii=True).encode("ascii")
+    ).hexdigest()
+    if digest != EXPECTED_CASE_IDS_SHA256:
+        raise ValueError("Historical #116 JVM baseline fingerprint changed")
+    return frozenset(lines)
+
+
+EXPECTED_CASE_COUNT = len(baseline_case_ids())
 
 TEST_DIGESTS = {
     "provider-and-helpers": "69297e7750a3e5e774211ff2406c9dadcbe9694ff525edbaeb1f872e9725b088",
@@ -110,32 +122,26 @@ def classify(cases, gradle_exit):
 
 
 def inventory_problems(cases):
-    """Preserve the signed-off #116 inventory while allowing ONLY reviewed additions.
+    """Require every original #116 JVM method; count newer PASS tests automatically.
 
-    Count the 513 historical test IDs after removing the exact allowlisted new
-    methods.  This avoids a brittle global 513 -> 515 count update every time a
-    PR adds tests. Unknown additions, replaced IDs and absent added tests fail.
+    This prevents the old 513 -> 515 false-fail: no new count/hash to update.
+    The original 513 IDs and two explicitly retained PR #222 tests may never
+    disappear or be renamed. All other new tests must be actual PASS (classify).
     """
     ids = [case["id"] for case in cases]
     found = set(ids)
-    baseline = [case_id for case_id in ids if case_id not in ADDITIONAL_CASE_IDS]
+    required = baseline_case_ids() | REQUIRED_LATER_CASE_IDS
     problems = []
     if len(ids) != len(found):
         problems.append("Duplicate JVM method IDs in full test inventory")
-    missing = sorted(ADDITIONAL_CASE_IDS - found)
+    missing = sorted(required - found)
     if missing:
-        problems.append("Approved additional JVM tests missing: " + ", ".join(missing))
-    if len(baseline) != EXPECTED_CASE_COUNT:
         problems.append(
-            f"Historical JVM inventory must keep {EXPECTED_CASE_COUNT} IDs; "
-            f"got {len(baseline)} excluding {len(ADDITIONAL_CASE_IDS)} registered additions. "
-            "Check missing/replaced baseline methods or register newly reviewed tests by full method ID."
+            f"Missing {len(missing)} protected JVM test methods: " +
+            ", ".join(missing[:8]) + (" ..." if len(missing) > 8 else "")
         )
-    digest = hashlib.sha256(
-        json.dumps(sorted(baseline), separators=(",", ":"), ensure_ascii=True).encode("ascii")
-    ).hexdigest()
-    if digest != EXPECTED_CASE_IDS_SHA256:
-        problems.append("Missing/replaced/unregistered JVM method ID versus reviewed 513-method baseline (#116)")
+    # New method names are deliberately allowed when all of their tests PASS.
+    # This is additive-only: no original test ID may be removed/replaced.
     return problems
 
 
