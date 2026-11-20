@@ -787,6 +787,9 @@ public class MainActivity extends Activity {
             // #195: diagnostic Perfetto slices in debuggable builds only.
             // Static labels only: no names, IDs, JSON, paths, or media bytes.
             final boolean perf=BuildConfig.DEBUG;
+            // Numeric durations are only emitted in debug/preview ACK responses.
+            final long[] measuredNs=new long[5];
+            final long lockStartNs=perf?System.nanoTime():0L;
             if(perf)Trace.beginSection("Z195-bridge");
             try {
                 boolean lockWaitOpen=perf;
@@ -794,6 +797,7 @@ public class MainActivity extends Activity {
                 try {
                     synchronized(TrashPurger.LOCK){
                         if(perf){
+                            measuredNs[0]=System.nanoTime()-lockStartNs;
                             lockWaitOpen=false;
                             Trace.endSection();
                         }
@@ -801,26 +805,37 @@ public class MainActivity extends Activity {
                         // Fail closed for stale backup, corrupt primary and lost initialized DB.
                         String current;
                         if(perf)Trace.beginSection("Z195-readDb");
+                        long readStartNs=perf?System.nanoTime():0L;
                         try{current=readDbForCas();}
-                        finally{if(perf)Trace.endSection();}
+                        finally{if(perf)measuredNs[1]=System.nanoTime()-readStartNs;if(perf)Trace.endSection();}
                         if(!current.equals(expected)){
                             // Missing files are an I/O failure, never a valid empty CAS snapshot.
                             if(current.isEmpty())throw new IOException("Databáze není dostupná pro porovnání");
                             return new JSONObject().put("ok",false).put("current",current).toString();
                         }
                         if(perf)Trace.beginSection("Z195-writeDb");
+                        long writeStartNs=perf?System.nanoTime():0L;
                         try{writeDb(text);}
-                        finally{if(perf)Trace.endSection();}
+                        finally{if(perf)measuredNs[2]=System.nanoTime()-writeStartNs;if(perf)Trace.endSection();}
                         if(perf)Trace.beginSection("Z195-generation");
+                        long generationStartNs=perf?System.nanoTime():0L;
                         try{lastUiGeneration=LocalDatabase.generation(getFilesDir());}
-                        finally{if(perf)Trace.endSection();}
+                        finally{if(perf)measuredNs[3]=System.nanoTime()-generationStartNs;if(perf)Trace.endSection();}
                         // The project commit has already succeeded. A journal failure cannot roll it back.
                         try{
                             int pending;
                             if(perf)Trace.beginSection("Z195-recoverPrimary");
+                            long recoveryStartNs=perf?System.nanoTime():0L;
                             try{pending=new PendingAudio(new File(getFilesDir(),"media"),settings).recoverPrimary().length();}
-                            finally{if(perf)Trace.endSection();}
-                            return new JSONObject().put("ok",true).put("audioPending",pending>0).put("pendingAudioCount",pending).toString();
+                            finally{if(perf)measuredNs[4]=System.nanoTime()-recoveryStartNs;if(perf)Trace.endSection();}
+                            JSONObject response=new JSONObject().put("ok",true).put("audioPending",pending>0).put("pendingAudioCount",pending);
+                            if(perf)response.put("diag",new JSONObject()
+                              .put("lockWaitMs",measuredNs[0]/1000000.0)
+                              .put("readMs",measuredNs[1]/1000000.0)
+                              .put("writeMs",measuredNs[2]/1000000.0)
+                              .put("generationMs",measuredNs[3]/1000000.0)
+                              .put("recoveryMs",measuredNs[4]/1000000.0));
+                            return response.toString();
                         }catch(Exception uncertainty){return "{\"ok\":true,\"audioPending\":true}";}
 
                         }catch(Exception e){try{return new JSONObject().put("ok",false).put("error","Uložení se nezdařilo; poslední potvrzená data zůstávají chráněná. "+e.getMessage()).toString();}catch(Exception ignored){return "{}";}}
