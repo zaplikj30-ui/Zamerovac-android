@@ -12,7 +12,7 @@ const revisions=fs.readFileSync('app/src/main/java/cz/zamerovac/app/ProtectedRev
 const media=fs.readFileSync('app/src/main/java/cz/zamerovac/app/ImmutableMediaProof.java','utf8');
 const database=fs.readFileSync('app/src/main/java/cz/zamerovac/app/LocalDatabase.java','utf8');
 const storage=new Map(),shares=[];let time=0,intervals=[];
-function el(tag){return {tag,children:[],style:{},textContent:'',value:'',append(...children){this.children.push(...children)},focus(){},select(){},remove(){}}}
+function el(tag){return {tag,children:[],style:{},textContent:'',value:'',append(...children){this.children.push(...children)},setAttribute(key,val){this[key]=val},focus(){},select(){},remove(){}}}
 function boot(){
  const panel=el('section');panel.querySelector=selector=>selector==='#flightSettings'?panel.children.find(c=>c.id==='flightSettings')||null:null;
  const doc={visibilityState:'visible',addEventListener(){},createElement:el,body:el('body'),getElementById:()=>null};
@@ -48,7 +48,11 @@ function run(){
  const buttons=panel.children[0].children.filter(e=>e.tag==='button');
  assert.equal(buttons.length,3);
  assert.equal(buttons[0].textContent,'Vypnout záznam');
- buttons[1].onclick();assert.equal(shares.length,1);
+ buttons[1].onclick();assert.equal(shares.length,0,'share must wait for session selection');
+ const history=panel.children[0].children.at(-1);
+ assert.equal(history.hidden,false);
+ assert.equal(history.children.length,1);
+ history.children[0].children[1].onclick();assert.equal(shares.length,1);
  assert(!shares[0].value.includes('Secret'),'no untrusted text may appear in report');
  assert(!shares[0].value.includes('foo'),'unknown field may not appear in report');
  ({api}=boot());assert.equal(api.isEnabled(),true);
@@ -57,6 +61,18 @@ function run(){
  api.toggle(false);api.record('native-save',{bridgeMs:555},true);
  assert.equal(api.snapshot().events.at(-1).type,'disabled');
  api.clear();assert.equal(api.snapshot().events.length,0);
+ api.toggle(true);api.record('native-save',{bridgeMs:111,clientName:'Secret'},true);api.toggle(false);
+ api.toggle(true);api.record('native-save',{bridgeMs:222},true);
+ let list=api.sessionList();assert.equal(list.length,2,'each recording creates a session');
+ assert.equal(api.snapshot(list[0].id).events.some(e=>e.values.bridgeMs===111),true);
+ assert.equal(api.snapshot(list[1].id).events.some(e=>e.values.bridgeMs===111),false);
+ assert.equal(api.removeSession(list[0].id),true,'delete only selected session');
+ list=api.sessionList();assert.equal(list.length,1);
+ assert.equal(api.snapshot(list[0].id).events.some(e=>e.values.bridgeMs===222),true);
+ api.share(list[0].id);assert.equal(shares.length,2);
+ assert(!shares[1].value.includes('Secret'),'share must not expose unknown keys');
+ ({api}=boot());assert.equal(api.sessionList().length,1,'session history must survive reload');
+ api.clear();assert.equal(api.sessionList().length,1,'while recording, clear creates a fresh active session');
  assert(html.indexOf('flight-recorder.js')<html.indexOf('app.js'),'flight recorder must exist before app.js');
  assert.match(app,/ZFlight\.record\('native-save'/);
  assert.match(app,/ZFlight\?\.attachSettings/);
