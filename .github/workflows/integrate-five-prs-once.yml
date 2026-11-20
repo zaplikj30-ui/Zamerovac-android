@@ -143,6 +143,10 @@ jobs:
           old='assert.equal(saveCalls,1);'
           new="assert.equal(saveCalls,1,'Case '+kind+'/'+confirmed+' notices='+failNotice.join(';'));"
           assert s.count(old)==1, 'Unexpected CAS regression assertion'
+          s=s.replace(old,new)
+          old="assert.equal(folderRenders,confirmed&&(kind==='photo'||kind==='folder'||kind==='prompt')?1:0);"
+          new="assert.equal(folderRenders,confirmed&&(kind==='folder'||kind==='prompt')?1:0,'Photo opens the editor without a redundant list redraw');"
+          assert s.count(old)==1, 'Unexpected photo-redraw assertion'
           p.write_text(s.replace(old,new))
           PY
           git add tests/flight_recorder.js tests/new_record_save_failure.js
