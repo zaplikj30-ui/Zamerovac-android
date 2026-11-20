@@ -61,7 +61,70 @@ jobs:
                   git show ":$n:$f" > "integration-evidence/conflicts/$name.stage$n" 2>/dev/null || true
                 done
               done
-              exit 33
+              if [ "$ref" = source-pr220 ]; then
+                python3 - <<'PY'
+          from pathlib import Path
+          import re
+          expected = {
+              'app/src/main/assets/app.js',
+              'app/src/main/assets/index.html',
+          }
+          import subprocess
+          unresolved = set(subprocess.check_output(
+              ['git','diff','--name-only','--diff-filter=U'],text=True).splitlines())
+          assert unresolved == expected, f'Unexpected conflicts: {unresolved}'
+          pattern = re.compile(r'(?ms)^<<<<<<< HEAD\n(.*?)^=======\n(.*?)^>>>>>>> refs/remotes/source-pr220\n')
+          def parts(s):
+              matches=list(pattern.finditer(s))
+              assert len(matches)==1, f'Unexpected conflict markers: {len(matches)}'
+              m=matches[0]
+              return m,m.group(1),m.group(2)
+          app=Path('app/src/main/assets/app.js')
+          s=app.read_text()
+          match,ours,theirs=parts(s)
+          assert "window.ZFlight.record('native-save'" in ours
+          assert 'newRecordIntent&&!candidateAllowsNewRecord' in theirs
+          assert 'invalidateSyncBadgeAfterSave()' in theirs
+          assert 'let presentationFailed=false' in theirs
+          assert 'persistedSnapshot=text;' in theirs
+          assert '   const text=JSON.stringify({...candidate,syncProtocol:2});' in theirs
+          assert '   const result=JSON.parse(Native.saveDataChecked(text,expected));' in theirs
+          combined=theirs.replace('   const text=JSON.stringify({...candidate,syncProtocol:2});',
+          """   let zTiming=false;
+             try{zTiming=window.ZFlight?.isEnabled?.()===true&&typeof performance!=='undefined'}catch(ignored){}
+             const zSerializeStart=zTiming?performance.now():0;
+             const text=JSON.stringify({...candidate,syncProtocol:2});
+             const zSerializeMs=zTiming?performance.now()-zSerializeStart:0;""".replace('             ','   '),1)
+          combined=combined.replace('   const result=JSON.parse(Native.saveDataChecked(text,expected));',
+          """   const zSaveStart=zTiming?performance.now():null;
+             const result=JSON.parse(Native.saveDataChecked(text,expected));
+             if(zSaveStart!==null)try{window.ZFlight?.record('native-save',{serializeMs:zSerializeMs,bridgeMs:performance.now()-zSaveStart,success:result?.ok===true?1:0,...(result?.diag||{})})}catch(ignored){}""".replace('             ','   '),1)
+          assert 'zSerializeMs' in combined and 'zSaveStart' in combined
+          s=s[:match.start()]+combined+s[match.end():]
+          original="}catch(e){window.ZFlight?.record('save-error',{},true);notify('Neuloženo: '+e.message);return reportSaveResult(false)}"
+          safer="}catch(e){try{window.ZFlight?.record('save-error',{},true)}catch(ignored){}notify('Neuloženo: '+e.message);return reportSaveResult(false)}"
+          assert s.count(original)==1
+          s=s.replace(original,safer)
+          app.write_text(s)
+          html=Path('app/src/main/assets/index.html')
+          s=html.read_text()
+          match,ours,theirs=parts(s)
+          assert ours.count('flight-recorder.js')==1
+          assert theirs.count('settings-navigation.js')==1 and theirs.count('sync-status.js')==1
+          assert theirs.count('flight-recorder.js')==0
+          combined=theirs.replace('<script src="app.js"></script>',
+                                  '<script src="flight-recorder.js"></script><script src="app.js"></script>',1)
+          assert combined.count('flight-recorder.js')==1
+          s=s[:match.start()]+combined+s[match.end():]
+          html.write_text(s)
+          print('PASS: manually specified, exact two-file conflict resolution')
+          PY
+                git add app/src/main/assets/app.js app/src/main/assets/index.html
+                test -z "$(git ls-files -u)"
+                git commit -m 'Integrate #215+#220 with checked CAS/diagnostics and script-order conflict resolution'
+              else
+                exit 33
+              fi
             fi
           }
           merge_one source-pr223 '#209+#223'
