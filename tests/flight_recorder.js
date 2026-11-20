@@ -11,13 +11,13 @@ const java=fs.readFileSync('app/src/main/java/cz/zamerovac/app/MainActivity.java
 const revisions=fs.readFileSync('app/src/main/java/cz/zamerovac/app/ProtectedRevisions.java','utf8');
 const media=fs.readFileSync('app/src/main/java/cz/zamerovac/app/ImmutableMediaProof.java','utf8');
 const database=fs.readFileSync('app/src/main/java/cz/zamerovac/app/LocalDatabase.java','utf8');
-const storage=new Map(),shares=[];let time=0,intervals=[];
-function el(tag){return {tag,children:[],style:{},textContent:'',value:'',append(...children){this.children.push(...children)},setAttribute(key,val){this[key]=val},focus(){},select(){},remove(){}}}
+const storage=new Map(),shares=[];let time=0,intervals=[],confirmDelete=true;
+function el(tag){let text='';return {tag,children:[],style:{},get textContent(){return text},set textContent(v){text=v;this.children.length=0},value:'',append(...children){this.children.push(...children)},setAttribute(key,val){this[key]=val},focus(){},select(){},remove(){}}}
 function boot(){
  const panel=el('section');panel.querySelector=selector=>selector==='#flightSettings'?panel.children.find(c=>c.id==='flightSettings')||null:null;
  const doc={visibilityState:'visible',addEventListener(){},createElement:el,body:el('body'),getElementById:()=>null};
  const win={localStorage:{getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,value)},
-  document:doc,addEventListener(){},Native:{shareText:(title,value)=>shares.push({title,value})}};
+  document:doc,addEventListener(){},confirm:()=>confirmDelete,Native:{shareText:(title,value)=>shares.push({title,value})}};
  const pending=[];
  const context={window:win,performance:{now:()=>time},Date,JSON,Object,Number,
   setTimeout:fn=>{pending.push(fn);return pending.length},clearTimeout(){},
@@ -66,13 +66,38 @@ function run(){
  let list=api.sessionList();assert.equal(list.length,2,'each recording creates a session');
  assert.equal(api.snapshot(list[0].id).events.some(e=>e.values.bridgeMs===111),true);
  assert.equal(api.snapshot(list[1].id).events.some(e=>e.values.bridgeMs===111),false);
- assert.equal(api.removeSession(list[0].id),true,'delete only selected session');
+ const rowPanel=el('section');rowPanel.querySelector=selector=>selector==='#flightSettings'?rowPanel.children.find(c=>c.id==='flightSettings')||null:null;
+ api.attachSettings(rowPanel);
+ const rowButtons=rowPanel.children[0].children.filter(e=>e.tag==='button');
+ rowButtons[1].onclick();
+ const rowHistory=rowPanel.children[0].children.at(-1);
+ assert.equal(rowHistory.children.length,2,'both dated measurements must be visible');
+ confirmDelete=false;
+ rowHistory.children[1].children[2].onclick();
+ assert.equal(api.sessionList().length,2,'cancelled trash must preserve measurement');
+ confirmDelete=true;
+ rowHistory.children[1].children[2].onclick();
+ assert.equal(api.sessionList().length,1,'trash must delete only selected measurement');
+ assert.equal(rowHistory.children.length,1,'history must rerender after deletion');
+ assert.equal(api.removeSession(list[0].id),false,'deleted measurement is no longer present');
  list=api.sessionList();assert.equal(list.length,1);
  assert.equal(api.snapshot(list[0].id).events.some(e=>e.values.bridgeMs===222),true);
  api.share(list[0].id);assert.equal(shares.length,2);
  assert(!shares[1].value.includes('Secret'),'share must not expose unknown keys');
  ({api}=boot());assert.equal(api.sessionList().length,1,'session history must survive reload');
  api.clear();assert.equal(api.sessionList().length,1,'while recording, clear creates a fresh active session');
+ api.toggle(false);
+ for(let i=api.sessionList().length;i<20;i++){assert.equal(api.toggle(true),true);api.toggle(false)}
+ assert.equal(api.sessionList().length,20,'history has explicit bounded capacity');
+ assert.equal(api.toggle(true),false,'full history must not silently delete old measurements');
+ assert.equal(api.removeSession(api.sessionList()[0].id),true);
+ assert.equal(api.toggle(true),true,'deleting one allows a new recording');
+ api.toggle(false);
+ const clearPanel=el('section');clearPanel.querySelector=selector=>selector==='#flightSettings'?clearPanel.children.find(c=>c.id==='flightSettings')||null:null;
+ api.attachSettings(clearPanel);
+ const clearButton=clearPanel.children[0].children.filter(e=>e.tag==='button')[2];
+ confirmDelete=false;clearButton.onclick();assert.equal(api.sessionList().length,20,'cancelled clear-all must preserve all');
+ confirmDelete=true;clearButton.onclick();assert.equal(api.sessionList().length,0,'confirmed clear-all deletes only diagnostic sessions');
  assert(html.indexOf('flight-recorder.js')<html.indexOf('app.js'),'flight recorder must exist before app.js');
  assert.match(app,/ZFlight\.record\('native-save'/);
  assert.match(app,/ZFlight\?\.attachSettings/);

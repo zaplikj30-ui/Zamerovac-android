@@ -109,7 +109,7 @@ function snapshot(id){
 }
 function report(id){
  flush();
- return 'Zamerovac diagnostic report - times and counters only; no photos, names or measurement values.\\n'.replace('\\n','\n')+JSON.stringify(snapshot(id),null,2);
+ return 'Zamerovac diagnostic report - times and counters only; no photos, names or measurement values.\n'+JSON.stringify(snapshot(id),null,2);
 }
 function showCopy(text){
  const old=root.document.getElementById('flightReport');if(old)old.remove();
