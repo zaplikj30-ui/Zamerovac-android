@@ -58,6 +58,39 @@ class TestApkGateOffline(unittest.TestCase):
                 gate.positive_id(value, "run id")
         self.assertEqual(gate.positive_id("123456", "run id"), 123456)
 
+    def test_preview_codes_outgrow_known_owner_apk_and_unreleased_builds(self):
+        # Actual owner-supplied APK: vc10008; earlier BUILD gave vc1156.
+        # Old formula vc1155+1 is an Android downgrade from the test APK.
+        self.assertEqual(gate.next_preview_code(1155, "1"), 10009)
+        self.assertEqual(gate.next_preview_code(1155, "505"), 10513)
+        self.assertEqual(gate.next_preview_code(1155, "506"), 10514)
+        self.assertEqual(gate.next_preview_code(15000, "505"), 15001)
+        for number in ("0", "-1", "1.0", "", "2147483640"):
+            with self.subTest(number=number), self.assertRaises(RuntimeError):
+                gate.next_preview_code(1155, number)
+        with self.assertRaises(RuntimeError):
+            gate.next_preview_code(2147483646, "1")
+
+    def test_build_preflight_uses_authenticated_workflow_number(self):
+        with tempfile.TemporaryDirectory() as td:
+            out = Path(td) / "outputs"
+            with mock.patch.dict(os.environ, {
+                "APPROVED_SHA": SHA, "GITHUB_RUN_NUMBER": "505",
+                "GITHUB_OUTPUT": str(out)
+            }), mock.patch.object(gate, "api_client"), \
+                 mock.patch.object(gate, "revalidate_current_approval"), \
+                 mock.patch.object(gate, "main_sha", return_value=SHA), \
+                 mock.patch.object(gate, "duplicate_build"), \
+                 mock.patch.object(gate, "current_version", return_value="1.4.1"), \
+                 mock.patch.object(gate, "previous", return_value=(
+                     {"id": 9, "tag_name": "test-v1.4.0"}, "1.4.0",
+                     {"version_code": 1155})):
+                gate.build_preflight()
+            outputs = out.read_text()
+            self.assertIn("previous_code=1155\\n", outputs)
+            self.assertIn("new_code=10513\\n", outputs)
+            self.assertIn("offset=9513\\n", outputs)
+
     def test_valid_zip_contains_exactly_one_byte_identical_apk(self):
         data = b"SYNTHETIC-NOT-A-REAL-APK" * 32
         raw = archive([(NAME, data)])
@@ -255,7 +288,7 @@ class TestApkGateOffline(unittest.TestCase):
         workflow_id, repo_id = 777, 888
         archive_data = archive([(NAME, approved_data)])
         run = {
-            "id": run_id, "workflow_id": workflow_id, "path": gate.WORKFLOW,
+            "id": run_id, "run_number": 505, "workflow_id": workflow_id, "path": gate.WORKFLOW,
             "run_attempt": 1, "status": "completed", "conclusion": "success",
             "head_sha": SHA, "head_branch": "main", "event": "workflow_dispatch",
             "actor": {"id": gate.OWNER_ID}, "triggering_actor": {"id": gate.OWNER_ID},
@@ -301,13 +334,17 @@ class TestApkGateOffline(unittest.TestCase):
                     {"id": 9, "tag_name": "test-v1.4.0"}, "1.4.0",
                     {"version_code": 1155})),
                 patch.object(gate, "inspect_apk", return_value={
-                    "version_code": 1156, "sha256": digest}),
+                    "version_code": 10513, "sha256": digest}),
             )
             with mock.patch.dict(os.environ, env), contextlib.ExitStack() as stack:
                 for m in mocks: stack.enter_context(m)
                 gate.release_preflight()
                 self.assertEqual(approved.read_bytes(), approved_data)
                 self.assertIn("expected_hash=" + digest, out.read_text())
+                with patch.object(gate, "inspect_apk", return_value={
+                        "version_code": 1156, "sha256": digest}):
+                    with self.assertRaisesRegex(RuntimeError, "versionCode"):
+                        gate.release_preflight()
                 approved.unlink()
                 os.environ["APPROVED_APK_HASH"] = "f" * 64
                 with self.assertRaisesRegex(RuntimeError, "SHA256 mismatch"):
