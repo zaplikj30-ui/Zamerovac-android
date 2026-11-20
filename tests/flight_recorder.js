@@ -50,7 +50,7 @@ function run(){
  assert.equal(api.snapshot().events.length,120,'restart must retain bounded events');
  time=3000;intervals.at(-1)();assert.equal(api.snapshot().events.at(-1).type,'ui-stall');
  api.toggle(false);api.record('native-save',{bridgeMs:555},true);
- assert.equal(api.snapshot().events.at(-1).type,'disabled'===api.snapshot().events.at(-1).type?'disabled':'ui-stall');
+ assert.equal(api.snapshot().events.at(-1).type,'disabled');
  api.clear();assert.equal(api.snapshot().events.length,0);
  assert(html.indexOf('flight-recorder.js')<html.indexOf('app.js'),'flight recorder must exist before app.js');
  assert.match(app,/ZFlight\.record\('native-save'/);
