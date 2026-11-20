@@ -151,9 +151,11 @@ def git(*args):
 
 
 
-# Bounded to leave time before the GitHub-hosted 60-minute job timeout for
-# evidence upload. A timeout is BLOCKED, never a PASS or an expected #88 FAIL.
-JVM_WALL_LIMIT_SECONDS = 35 * 60
+# The approved GitHub-hosted job already enforces its own 60-minute limit.
+# A previous successful FULL JVM run took ~52 minutes end-to-end. Do not add
+# a shorter default wall limit that would misclassify a valid run as a failure.
+# A caller may supply a timeout for a deliberately targeted diagnostic test.
+JVM_WALL_LIMIT_SECONDS = None
 
 
 def run_gradle_logged(command, logfile, max_seconds=JVM_WALL_LIMIT_SECONDS):
@@ -162,6 +164,7 @@ def run_gradle_logged(command, logfile, max_seconds=JVM_WALL_LIMIT_SECONDS):
     Previous runs redirected all stdout to a file, leaving the Actions step
     visually silent for tens of minutes. No test data, paths, tokens or saved
     customer records are echoed. The underlying full JVM command is unchanged.
+    Do not shorten the approved 60-minute Actions job timeout by default.
     """
     stop = threading.Event()
     began = time.monotonic()
@@ -180,7 +183,8 @@ def run_gradle_logged(command, logfile, max_seconds=JVM_WALL_LIMIT_SECONDS):
     with logfile.open("w", encoding="utf-8") as log:
         worker = threading.Thread(target=heartbeat, daemon=True)
         worker.start()
-        print(f"JVM full run starting: wall limit={max_seconds}s "
+        print("JVM full run starting; progress every 60s; "
+              "no additional timeout beyond GitHub's existing job limit "
               "(raw FAIL remains expected for #88)", flush=True)
         try:
             try:
