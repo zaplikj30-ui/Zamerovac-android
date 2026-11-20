@@ -64,7 +64,18 @@ class TestApkGateOffline(unittest.TestCase):
         self.assertEqual(gate.next_preview_code(1155, "1"), 10009)
         self.assertEqual(gate.next_preview_code(1155, "505"), 10513)
         self.assertEqual(gate.next_preview_code(1155, "506"), 10514)
-        self.assertEqual(gate.next_preview_code(15000, "505"), 15001)
+        # A higher published versionCode must not flatten sequential BUILD-only runs.
+        self.assertEqual(gate.next_preview_code(15000, "505"), 15505)
+        self.assertEqual(gate.next_preview_code(15000, "506"), 15506)
+        self.assertLess(gate.next_preview_code(15000, "505"),
+                        gate.next_preview_code(15000, "506"))
+        self.assertEqual(gate.next_preview_code(10008, "1"), 10009)
+        self.assertEqual(gate.next_preview_code(10009, "1"), 10010)
+        self.assertEqual(gate.next_preview_code(2147483645, "1"), 2147483646)
+        with self.assertRaisesRegex(RuntimeError, "signed int"):
+            gate.next_preview_code(2147483645, "2")
+        with self.assertRaisesRegex(RuntimeError, "signed int"):
+            gate.next_preview_code(15000, "2147483640")
         for number in ("0", "-1", "1.0", "", "2147483640"):
             with self.subTest(number=number), self.assertRaises(RuntimeError):
                 gate.next_preview_code(1155, number)
