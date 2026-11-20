@@ -140,9 +140,9 @@ function save(){
   for(let attempt=0;attempt<3;attempt++){
    const text=JSON.stringify({...candidate,syncProtocol:2});
    if(!native){localStorage.setItem('zamerovac-data',text);state.syncProtocol=2;persistedSnapshot=text;return reportSaveResult(true)}
-   const zSaveStart=performance.now();
+   const zSaveStart=window.ZFlight?.isEnabled?.()===true&&typeof performance!=='undefined'?performance.now():null;
    const result=JSON.parse(Native.saveDataChecked(text,expected));
-   window.ZFlight?.record('native-save',{bridgeMs:performance.now()-zSaveStart,success:result?.ok===true?1:0,...(result?.diag||{})});
+   if(zSaveStart!==null)window.ZFlight.record('native-save',{bridgeMs:performance.now()-zSaveStart,success:result?.ok===true?1:0,...(result?.diag||{})});
    if(result?.ok===true){if(candidate!==state)applySavedState(candidate);state.syncProtocol=2;persistedSnapshot=text;window.PendingAudio?.saved?.(result);return reportSaveResult(true)}
    if(result?.ok!==false)throw new Error('Neplatné potvrzení zápisu');
    if(typeof result.current!=='string')throw new Error(result.error||'Zápis nebyl potvrzen');
