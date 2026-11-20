@@ -120,6 +120,39 @@ public class ProtectedRevisionsTest {
         Files.setLastModifiedTime(hold,before.lastModifiedTime());
         assertEquals(2,protection.pinsForCleanup().size());
     }
+    @Test public void repeatedSaveRejectsForgedStatOnCachedMatchingPreimage()throws Exception{
+        File directory=new File(device.home,"protected-revisions");
+        // Save an identical preimage to exercise the normally cheap reuse path.
+        protection.preserveDatabase(exact);
+        Path same=null;
+        for(File item:Objects.requireNonNull(directory.listFiles())){
+            if(!item.getName().matches("[a-f0-9]{64}\\.json"))continue;
+            JSONObject data=new JSONObject(new String(Files.readAllBytes(item.toPath()),StandardCharsets.UTF_8));
+            if("database".equals(data.optString("kind"))&&exact.equals(data.optString("metadata"))){
+                same=item.toPath();break;
+            }
+        }
+        assertNotNull("Exact database preimage must be preserved",same);
+        assertEquals(2,protection.pins().size()); // Warm the metadata-only cache.
+        java.nio.file.attribute.BasicFileAttributes before=Files.readAttributes(same,
+            java.nio.file.attribute.BasicFileAttributes.class,LinkOption.NOFOLLOW_LINKS);
+        byte[] original=Files.readAllBytes(same),corrupt=original.clone();
+        corrupt[0]=(byte)(corrupt[0]=='!'?'?':'!');
+        Files.write(same,corrupt);
+        Files.setLastModifiedTime(same,before.lastModifiedTime());
+        java.nio.file.attribute.BasicFileAttributes after=Files.readAttributes(same,
+            java.nio.file.attribute.BasicFileAttributes.class,LinkOption.NOFOLLOW_LINKS);
+        assertEquals(before.size(),after.size());
+        assertEquals(before.lastModifiedTime(),after.lastModifiedTime());
+        assertEquals(before.fileKey(),after.fileKey());
+        Assert.assertThrows("Matching cached preimage must not hide corrupt bytes",
+            IOException.class,()->protection.preserveDatabase(exact));
+        assertEquals(exact,LocalDatabase.readForCas(device));
+        exactBytes();
+        Files.write(same,original);
+        Files.setLastModifiedTime(same,before.lastModifiedTime());
+        protection.preserveDatabase(exact);
+    }
     void exactBytes(){try{assertArrayEquals(photo,Files.readAllBytes(new File(device.home,"media/original-photo").toPath()));assertArrayEquals(video,Files.readAllBytes(new File(device.home,"media/original-video").toPath()));}catch(IOException e){throw new AssertionError(e);}}
     void hasExactDatabase()throws Exception{for(JSONObject hold:holds())if("database".equals(hold.getString("kind"))&&exact.equals(hold.getString("metadata")))return;fail("Missing byte-exact JSON preimage, geometry/laser/history");}
     @Test public void ackSupersessionForgetAndRestartNeverReleaseOriginals()throws Exception{
