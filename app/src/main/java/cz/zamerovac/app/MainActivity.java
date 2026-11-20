@@ -796,9 +796,9 @@ public class MainActivity extends Activity {
                 if(perf)Trace.beginSection("Z195-lock-wait");
                 try {
                     synchronized(TrashPurger.LOCK){
+                        if(perf)measuredNs[0]=System.nanoTime()-lockStartNs;
+                        if(perf)ProtectedRevisions.beginDebugCounts();
                         if(perf){
-                            measuredNs[0]=System.nanoTime()-lockStartNs;
-                            ProtectedRevisions.beginDebugCounts();
                             lockWaitOpen=false;
                             Trace.endSection();
                         }
