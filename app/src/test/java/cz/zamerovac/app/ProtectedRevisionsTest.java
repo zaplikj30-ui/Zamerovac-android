@@ -32,7 +32,8 @@ public class ProtectedRevisionsTest {
         for(int i=0;i<100;i++){
             point.put("x",i+0.125);
             long start=System.nanoTime();LocalDatabase.write(device,data.toString());
-            if(i%10==9)System.out.println("ISSUE221 save="+(i+1)+" holds="+holds().size()+" ns="+(System.nanoTime()-start));
+            long elapsed=System.nanoTime()-start;
+            System.out.println("ISSUE221 save="+(i+1)+" ns="+elapsed);
         }
         assertEquals(99.125,new JSONObject(LocalDatabase.readForCas(device)).getJSONArray("records").getJSONObject(0).getJSONArray("items").getJSONObject(0).getJSONObject("a").getDouble("x"),0);
         exactBytes();

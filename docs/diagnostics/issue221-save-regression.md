@@ -26,3 +26,5 @@ APK staženy z existujících GitHub Releases. SHA256 souhlasí s API digesty as
 Čas checkpointu zahrnuje i diagnostické `holds()` po zápisu, není čistým časem CAS. Žádný tvrdý časový limit není tvrzením o telefonu. Fyzické dlouhé zamrznutí **NEREPRODUKOVÁNO**, příčina **UNKNOWN**. Zatím nejde o RED→PASS ani hotovou opravu. Gesture/restart/druhá fotografie/realistická velká média pro tento test **NOT RUN**. Další krok: odstranit diagnostický overhead z měření, zaznamenat všechny vzorky a oddělit cold/warm proces a velikost médií. Teprve při prokázání příčiny produktová oprava a sousední regrese.
 
 Žádná změna funkce/UI; nápověda nerelevantní. Žádný nový cloudový běh, APK, merge, HOME nebo výdaj.
+
+Retest s čistým časem samotného `LocalDatabase.write` (100 vzorků, bez `holds()` v měřeném úseku): první deset medián 27.27 ms, posledních deset 47.64 ms, maximum 84.67 ms. PASS readback a originály. Nejde o fyzický Android ani reprodukci dlouhého záseku.
