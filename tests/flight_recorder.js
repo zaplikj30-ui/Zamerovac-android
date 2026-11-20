@@ -25,9 +25,10 @@ function boot(){
  return {api:win.ZFlight,win,panel};
 }
 function run(){
+ storage.set('zamerovac-perf-diagnostics-v1',JSON.stringify({version:1,enabled:false,events:[{time:'Private client name 123',type:'native-save',values:{bridgeMs:1}}]}));
  let {api,panel}=boot();
  assert.equal(api.isEnabled(),false);
- assert.equal(api.snapshot().events.length,0);
+ assert.equal(api.snapshot().events.length,0,'invalid stored timestamps must not be shared');
  api.toggle(true);
  api.record('native-save',{bridgeMs:30.234,writeMs:27.78,success:1,name:'Secret',foo:111,readMs:-1},true);
  api.record('hidden-unknown',{secret:50},true);
