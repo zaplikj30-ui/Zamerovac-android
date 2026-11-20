@@ -177,13 +177,24 @@ function attachSettings(panel){
   clear();if(!history.hidden)render();update();
  };
  section.append(heading,info,status,toggleButton,shareButton,clearButton,history);panel.append(section);update();
+ section.showFlightHistory=()=>{
+  history.hidden=false;render();update();
+  section.scrollIntoView?.({block:'start'});
+ };
+}
+function showHistory(panel){
+ if(!panel)return false;
+ attachSettings(panel);
+ const section=panel.querySelector('#flightSettings');
+ if(!section||typeof section.showFlightHistory!=='function')return false;
+ section.showFlightHistory();return true;
 }
 root.addEventListener?.('pagehide',flush);
 root.document?.addEventListener?.('visibilitychange',()=>{
  if(root.document.visibilityState==='hidden')flush();
  else lastBeat=clock();
 });
-const api=Object.freeze({record,toggle,clear,removeSession,sessionList,share,report,snapshot,attachSettings,isEnabled:()=>enabled,flush});
+const api=Object.freeze({record,toggle,clear,removeSession,sessionList,share,report,snapshot,attachSettings,showHistory,isEnabled:()=>enabled,flush});
 root.ZFlight=api;
 watch();
 if(enabled)record('start',{},true);

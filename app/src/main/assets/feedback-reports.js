@@ -82,6 +82,49 @@
   overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');
   overlay.innerHTML=markup;
   document.body.appendChild(overlay);
+  attachQuickDiagnostics();
+ }
+
+ // Quick toggle is inside the flag's window; flag tap/hold/drag stay untouched.
+ function attachQuickDiagnostics(){
+  const flight=window.ZFlight,head=overlay?.querySelector('.feedback-head');
+  if(!flight||!head)return;
+  const line=document.createElement('div');line.className='feedback-diagnostics';
+  const button=document.createElement('button');
+  button.id='feedbackDiagnostics';button.type='button';
+  button.title='Klepnutí zapne/vypne diagnostiku; podržení otevře historii';
+  button.setAttribute('aria-label','Diagnostika: klepnout pro zapnutí nebo vypnutí, podržet pro historii');
+  const hint=document.createElement('small');hint.textContent='Podrž pro historii';
+  const refresh=()=>{button.textContent='Diagnostika: '+(flight.isEnabled()?'Zapnuto':'Vypnuto')};
+  refresh();line.append(button,hint);head.insertAdjacentElement('afterend',line);
+  let timer=null,press=null,wasLong=false;
+  const stop=()=>{if(timer!==null)clearTimeout(timer);timer=null;press=null};
+  function openHistory(){
+   stop();
+   if(busy){notify('Probíhá ukládání připomínky. Nejdřív jej dokonči.');return}
+   if(overlay?.querySelector('#feedbackCanvas')){
+    if(typeof window.confirm!=='function'||
+       !window.confirm('Opustit rozpracovanou připomínku bez uložení?'))return;
+   }
+   closeOverlay();
+   if(!window.openZamerovacDiagnosticHistory?.())notify('Historie diagnostiky není dostupná');
+  }
+  button.addEventListener('pointerdown',e=>{
+   if(e.button!==0)return;
+   stop();wasLong=false;press={x:e.clientX,y:e.clientY};
+   timer=setTimeout(()=>{if(press){wasLong=true;openHistory()}},650);
+  });
+  button.addEventListener('pointermove',e=>{
+   if(press&&Math.hypot(e.clientX-press.x,e.clientY-press.y)>10)stop();
+  });
+  button.addEventListener('pointerup',stop);
+  button.addEventListener('pointercancel',stop);
+  button.addEventListener('contextmenu',e=>{e.preventDefault();wasLong=true;openHistory()});
+  button.addEventListener('click',e=>{
+   if(wasLong){e.preventDefault();wasLong=false;return}
+   const wanted=!flight.isEnabled();flight.toggle(wanted);refresh();
+   if(wanted&&!flight.isEnabled())notify('Limit diagnostiky: smaž některé starší měření');
+  });
  }
  function screenName(){
   const isSettings=!document.getElementById('settingsPanel')?.hidden;
