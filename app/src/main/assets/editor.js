@@ -84,7 +84,12 @@ function finishHandleGesture(handle){
  redoStack=[];
  if(window.ZFlight?.isEnabled?.()){
   const items=Array.isArray(current.items)?current.items:[];
-  window.ZFlight?.record('drag-release',{undoCount:editStack.length,itemCount:items.length,dimensionCount:items.filter(i=>i?.type==='dimension').length},true);
+  const values={undoCount:editStack.length,itemCount:items.length,
+   dimensionCount:items.filter(i=>i?.type==='dimension').length};
+  const classified=handle.item?.type==='dimension'&&handle.diagnosticStartA&&handle.diagnosticStartB&&
+   window.ZFlight?.recordDimensionGesture?.(handle.kind,handle.diagnosticStartA,handle.diagnosticStartB,
+    handle.item.a,handle.item.b,values);
+  if(!classified)window.ZFlight?.record('drag-release',values,true);
  }
  touch(handle.item);commitEditor();
  return true;
@@ -639,6 +644,10 @@ function stageDown(e){
   if(hit.kind==='move-dimension'){
    hit.startA={...candidate.a};
    hit.startB={...candidate.b};
+  }
+  if(candidate.type==='dimension'&&['point','move-dimension'].includes(hit.kind)&&window.ZFlight?.isEnabled?.()){
+   hit.diagnosticStartA={...candidate.a};
+   hit.diagnosticStartB={...candidate.b};
   }
   if(hit.kind==='target-caption')hit.startPoint={...candidate.b};
    if(hit.kind==='note-caption')

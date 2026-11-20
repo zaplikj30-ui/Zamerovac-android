@@ -3,7 +3,7 @@
 (function(root){
 'use strict';
 const KEY='zamerovac-perf-diagnostics-v2',LEGACY='zamerovac-perf-diagnostics-v1',LIMIT=120,SESSION_LIMIT=20,MAX_MS=600000;
-const TYPES=new Set(['start','enabled','disabled','editor-open','drag-release','editor-commit','native-save','ui-stall','save-error']);
+const TYPES=new Set(['start','enabled','disabled','editor-open','drag-release','dimension-move','dimension-rotate','dimension-resize','dimension-rotate-resize','dimension-point-adjust','editor-commit','native-save','ui-stall','save-error']);
 const FIELDS=new Set(['elapsedMs','bridgeMs','serializeMs','savePathMs','paintMs','undoCount','itemCount','dimensionCount','databasePhotoCount','databaseItemCount','databaseDimensionCount','success','lockWaitMs','readMs','writeMs','validationMs','casRecheckMs','revisionProtectMs','evidenceMs','databaseCommitMs','generationMs','recoveryMs','revisionInventoryMs','revisionCount','cacheMisses','cacheHits','mediaChecks']);
 const clock=()=>performance.now();
 const validTime=t=>typeof t==='string'&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(t)&&!Number.isNaN(Date.parse(t));
@@ -75,6 +75,29 @@ function record(type,values={},important=false){
  rows.push({time:new Date().toISOString(),type,values:clean(values)});
  if(rows.length>LIMIT)rows.splice(0,rows.length-LIMIT);
  if(important)flush();else schedule();
+}
+// Classify finished dimension geometry only when recording is enabled.
+// No coordinates, angles, dimension lengths or laser values enter the report.
+// An endpoint change can both rotate and stretch a dimension.
+function dimensionGestureType(kind,fromA,fromB,toA,toB){
+ if(kind!=='move-dimension'&&kind!=='point')return null;
+ if(![fromA,fromB,toA,toB].every(p=>p&&Number.isFinite(p.x)&&Number.isFinite(p.y)))return null;
+ if(kind==='move-dimension')return 'dimension-move';
+ const x=fromB.x-fromA.x,y=fromB.y-fromA.y;
+ const u=toB.x-toA.x,v=toB.y-toA.y;
+ const oldLength=Math.hypot(x,y),newLength=Math.hypot(u,v);
+ if(oldLength<1e-6||newLength<1e-6)return 'dimension-point-adjust';
+ const turn=Math.abs(Math.atan2(x*v-y*u,x*u+y*v))>0.003;
+ const stretch=Math.abs(newLength-oldLength)>0.25;
+ return turn&&stretch?'dimension-rotate-resize':
+  turn?'dimension-rotate':stretch?'dimension-resize':'dimension-point-adjust';
+}
+function recordDimensionGesture(kind,fromA,fromB,toA,toB,values={}){
+ if(!enabled)return false;
+ const type=dimensionGestureType(kind,fromA,fromB,toA,toB);
+ if(!type)return false;
+ record(type,values,true);
+ return true;
 }
 function watch(){
  if(beat!==null)clearInterval(beat);
@@ -194,7 +217,7 @@ root.document?.addEventListener?.('visibilitychange',()=>{
  if(root.document.visibilityState==='hidden')flush();
  else lastBeat=clock();
 });
-const api=Object.freeze({record,toggle,clear,removeSession,sessionList,share,report,snapshot,attachSettings,showHistory,isEnabled:()=>enabled,flush});
+const api=Object.freeze({record,recordDimensionGesture,toggle,clear,removeSession,sessionList,share,report,snapshot,attachSettings,showHistory,isEnabled:()=>enabled,flush});
 root.ZFlight=api;
 watch();
 if(enabled)record('start',{},true);
