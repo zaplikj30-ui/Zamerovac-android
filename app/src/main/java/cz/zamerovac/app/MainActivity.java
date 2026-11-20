@@ -853,7 +853,7 @@ public class MainActivity extends Activity {
                     // If monitor entry failed, close the wait slice before bridge.
                     if(lockWaitOpen)Trace.endSection();
                 }
-            }finally{if(perf)Trace.endSection();}
+            }finally{if(perf)Trace.endSection();if(perf)ProtectedRevisions.takeDebugCounts();}
         }
         @JavascriptInterface public boolean beginMedia(String id,String mime,String name){return beginMediaChecked(id,mime,name,-1);}
         @JavascriptInterface public boolean beginMediaChecked(String id,String mime,String name,long expected){
