@@ -29,16 +29,17 @@ public class ProtectedRevisionsTest {
     }
     @Test public void repeatedDimensionSaveProfile()throws Exception{
         JSONObject data=new JSONObject(exact);JSONObject point=data.getJSONArray("records").getJSONObject(0).getJSONArray("items").getJSONObject(0).getJSONObject("a");
-        for(int i=0;i<110;i++){
+        for(int i=0;i<150;i++){
             point.put("x",i+0.125);
             long start=System.nanoTime();LocalDatabase.write(device,data.toString());
             long elapsed=System.nanoTime()-start;
             System.out.println("ISSUE221 save="+(i+1)+" ns="+elapsed);
         }
-        assertEquals(109.125,new JSONObject(LocalDatabase.readForCas(device)).getJSONArray("records").getJSONObject(0).getJSONArray("items").getJSONObject(0).getJSONObject("a").getDouble("x"),0);
+        assertEquals(149.125,new JSONObject(LocalDatabase.readForCas(device)).getJSONArray("records").getJSONObject(0).getJSONArray("items").getJSONObject(0).getJSONObject("a").getDouble("x"),0);
         exactBytes();
         hasExactDatabase();
-        assertEquals(112,holds().size());
+        assertEquals(152,holds().size());
+        assertTrue("Regression fixture must exceed the old 128-entry cache limit",holds().size()>128);
 
         // Simulate process restart by discarding only the process-local cache.
         java.lang.reflect.Field field=ProtectedRevisions.class.getDeclaredField("VERIFIED");
@@ -58,7 +59,7 @@ public class ProtectedRevisionsTest {
             long reused=verified.entrySet().stream()
                 .filter(entry->warmCache.get(entry.getKey())==entry.getValue()).count();
             System.out.println("ISSUE221 reused="+reused);
-            assertEquals("Warm inventory must reuse verified history",112,reused);
+            assertEquals("Warm inventory must reuse all 152 verified holds",152,reused);
         }
     }
     List<JSONObject> holds()throws Exception{
