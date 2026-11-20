@@ -51,13 +51,19 @@ function watch(){
  },1000);
 }
 function toggle(value){
+ const wasEnabled=enabled;
+ if(wasEnabled&&value!==true)record('disabled',{},true);
  enabled=value===true;
- if(enabled){record('enabled',{},true);watch()}
+ if(enabled){if(!wasEnabled)record('enabled',{},true);watch()}
  else{watch();flush()}
  return enabled;
 }
 function clear(){rows=[];flush()}
-function snapshot(){return {version:1,generatedAt:new Date().toISOString(),events:rows.map(e=>({time:e.time,type:e.type,values:{...e.values}})),persistenceOk:!persistError}}
+function snapshot(){
+ let appVersion='web';
+ try{if(typeof root.Native?.getAppVersion==='function')appVersion=String(root.Native.getAppVersion()).slice(0,32)}catch(_){}
+ return {version:1,appVersion,generatedAt:new Date().toISOString(),events:rows.map(e=>({time:e.time,type:e.type,values:{...e.values}})),persistenceOk:!persistError};
+}
 function report(){
  flush();
  return 'Zamerovac diagnostic report - times and counters only; no photos, names or measurement values.\n'+JSON.stringify(snapshot(),null,2);
