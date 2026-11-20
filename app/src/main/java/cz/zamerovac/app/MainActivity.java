@@ -830,19 +830,21 @@ public class MainActivity extends Activity {
                             try{pending=new PendingAudio(new File(getFilesDir(),"media"),settings).recoverPrimary().length();}
                             finally{if(perf)measuredNs[4]=System.nanoTime()-recoveryStartNs;if(perf)Trace.endSection();}
                             JSONObject response=new JSONObject().put("ok",true).put("audioPending",pending>0).put("pendingAudioCount",pending);
-                            if(perf)response.put("diag",new JSONObject()
-                              .put("lockWaitMs",measuredNs[0]/1000000.0)
-                              .put("readMs",measuredNs[1]/1000000.0)
-                              .put("writeMs",measuredNs[2]/1000000.0)
-                              .put("generationMs",measuredNs[3]/1000000.0)
-                              .put("recoveryMs",measuredNs[4]/1000000.0));
                             if(perf){
-                              int[] counts=ProtectedRevisions.takeDebugCounts();
-                              if(counts!=null)response.getJSONObject("diag")
-                                .put("revisionCount",counts[0])
-                                .put("cacheHits",counts[1])
-                                .put("cacheMisses",counts[2])
-                                .put("mediaChecks",counts[3]);
+                              try{
+                                JSONObject stats=new JSONObject()
+                                  .put("lockWaitMs",measuredNs[0]/1000000.0)
+                                  .put("readMs",measuredNs[1]/1000000.0)
+                                  .put("writeMs",measuredNs[2]/1000000.0)
+                                  .put("generationMs",measuredNs[3]/1000000.0)
+                                  .put("recoveryMs",measuredNs[4]/1000000.0);
+                                int[] counts=ProtectedRevisions.takeDebugCounts();
+                                if(counts!=null)stats.put("revisionCount",counts[0])
+                                  .put("cacheHits",counts[1])
+                                  .put("cacheMisses",counts[2])
+                                  .put("mediaChecks",counts[3]);
+                                response.put("diag",stats);
+                              }catch(Exception ignored){/* Debug metrics must never change the confirmed ACK. */}
                             }
                             return response.toString();
                         }catch(Exception uncertainty){return "{\"ok\":true,\"audioPending\":true}";}
