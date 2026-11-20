@@ -84,3 +84,27 @@ for(const kind of ['dimension','line']){
  assert.equal(annotation.b.x,300,kind+' opposite endpoint must remain fixed');
 }
 console.log('OK: dragging endpoints works, tiny double taps never change or collapse dimensions/lines');
+ 
+// Issue #195: faulty opt-in diagnostics must not interrupt an actual drag,
+// Undo history or the durable commit path. Real stage handlers stay in use.
+const faultDim={id:'fault-dim',type:'dimension',a:{x:100,y:200},b:{x:300,y:200},
+ measure:'1585,800001',laserMeasuredMm:1585.800001,unit:'mm',offset:0};
+ctx.current={kind:'folder',items:[faultDim]};
+ctx.selected=null;ctx.mode='select';ctx.snap=p=>({...p});ctx.pointers.clear();
+ctx.window.ZFlight={isEnabled:()=>true,record(){throw Error('diagnostic write failed')},
+ recordDimensionGesture(){throw Error('diagnostic write failed')}};
+const priorCommits=ctx.commits;
+pointer('Down',200,200);pointer('Move',240,230);pointer('Up',240,230);
+assert.deepEqual([faultDim.a.x,faultDim.a.y,faultDim.b.x,faultDim.b.y],
+ [140,230,340,230],'Diagnostic failure blocked actual dimension gesture');
+assert.equal(ctx.commits,priorCommits+1,'Diagnostic failure lost geometry save');
+assert.equal(faultDim.measure,'1585,800001');
+assert.equal(faultDim.laserMeasuredMm,1585.800001);
+// Run the real editor commit function: an optional event write must not turn
+// an already-confirmed save into a thrown exception.
+ctx.save=()=>true;ctx.performance={now:()=>100};
+vm.runInContext(extract('function commitEditor(){','function undoEditor(){'),ctx);
+assert.equal(ctx.commitEditor(),true,'Telemetry exception changed a confirmed save result');
+ctx.window.ZFlight={isEnabled(){throw Error('diagnostic status failed')}};
+assert.equal(ctx.commitEditor(),true,'Telemetry enablement error blocked confirmed save');
+console.log('PASS: diagnostic exceptions cannot interrupt a real dimension drag or a confirmed editor save');

@@ -18,7 +18,8 @@ function openEditor(r){
  editorViewport=null;
  polylineDraft=[];stroke=[];drawStart=null;drawCurrent=null;lastTap=0;lastTapAt=null;loupeSide=null;
  screen='editor';
- if(window.ZFlight?.isEnabled?.()){
+ // Diagnostics are optional: never prevent opening the editor.
+ try{if(window.ZFlight?.isEnabled?.()){
   const photos=(state.records||[]).filter(p=>p?.kind==='photo'&&!p.deleted);
   const items=Array.isArray(r.items)?r.items:[];
   window.ZFlight.record('editor-open',{
@@ -27,7 +28,7 @@ function openEditor(r){
    databaseItemCount:photos.reduce((n,p)=>n+(Array.isArray(p.items)?p.items.length:0),0),
    databaseDimensionCount:photos.reduce((n,p)=>n+(Array.isArray(p.items)?p.items.filter(i=>i?.type==='dimension').length:0),0)
   });
- }
+ }}catch(ignored){}
  document.body.classList.add('in-editor');closeMenus();$('editorHint').hidden=true;
  current=r;selected=null;mode='select';lastDrawingTool='dimension';updateDrawingToolButton();
  $('browserView').hidden=true;$('browserFoot').hidden=true;$('noteView').hidden=true;
@@ -99,7 +100,8 @@ function finishHandleGesture(handle){
  if(JSON.stringify(current.items||[])===handle.beforeDragItems)return false;
  AnnotationHistory.recordSnapshot(handle.beforeDragItems,editStack);
  redoStack=[];
- if(window.ZFlight?.isEnabled?.()){
+ // Recording a gesture must never prevent the real geometry commit.
+ try{if(window.ZFlight?.isEnabled?.()){
   const items=Array.isArray(current.items)?current.items:[];
   const values={undoCount:editStack.length,itemCount:items.length,
    dimensionCount:items.filter(i=>i?.type==='dimension').length};
@@ -107,16 +109,17 @@ function finishHandleGesture(handle){
    window.ZFlight?.recordDimensionGesture?.(handle.kind,handle.diagnosticStartA,handle.diagnosticStartB,
     handle.item.a,handle.item.b,values);
   if(!classified)window.ZFlight?.record('drag-release',values,true);
- }
+ }}catch(ignored){}
  touch(handle.item);commitEditor();
  return true;
 }
 function commitEditor(){
- const diag=window.ZFlight?.isEnabled?.()===true&&typeof performance!=='undefined';
+ let diag=false;
+ try{diag=window.ZFlight?.isEnabled?.()===true&&typeof performance!=='undefined'}catch(ignored){}
  const started=diag?performance.now():0;
  if(current?.kind==='photo'&&stageImg){current.width=photoSize.w;current.height=photoSize.h;}
  touch(current);const confirmed=save();const paintedFrom=diag?performance.now():0;paint();
- if(diag)window.ZFlight.record('editor-commit',{savePathMs:paintedFrom-started,paintMs:performance.now()-paintedFrom,success:confirmed===true?1:0});
+ if(diag)try{window.ZFlight.record('editor-commit',{savePathMs:paintedFrom-started,paintMs:performance.now()-paintedFrom,success:confirmed===true?1:0})}catch(ignored){}
  return confirmed;
 }
 function undoEditor(){if(!editStack.length)return;let restored;
@@ -677,10 +680,10 @@ function stageDown(e){
    hit.startA={...candidate.a};
    hit.startB={...candidate.b};
   }
-  if(candidate.type==='dimension'&&['point','move-dimension'].includes(hit.kind)&&window.ZFlight?.isEnabled?.()){
+  try{if(candidate.type==='dimension'&&['point','move-dimension'].includes(hit.kind)&&window.ZFlight?.isEnabled?.()){
    hit.diagnosticStartA={...candidate.a};
    hit.diagnosticStartB={...candidate.b};
-  }
+  }}catch(ignored){}
   if(hit.kind==='target-caption')hit.startPoint={...candidate.b};
    if(hit.kind==='note-caption')
    hit.startPoint={...(hit.item.captionMoved&&hit.item.b?hit.item.b:hit.item.a)};
