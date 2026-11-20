@@ -27,6 +27,16 @@ public class ProtectedRevisionsTest {
         exact="{ \"schema\":1, \"records\":[{\"id\":\"photo\",\"kind\":\"photo\",\"deleted\":true,\"media\":[\"original-photo\"],\"items\":[{\"a\":{\"x\":0.125,\"y\":999.5},\"b\":{\"x\":1234.56789,\"y\":0.5},\"measure\":\"0,000000123456789\",\"laserMeasuredMm\":\"1585.800001234567890\",\"media\":[\"original-video\"],\"history\":{\"undo\":[\"1250,123456789\"],\"redo\":[\"0.000000000001\"]}}]}]}";
         LocalDatabase.write(device,exact);
     }
+    @Test public void repeatedDimensionSaveProfile()throws Exception{
+        JSONObject data=new JSONObject(exact);JSONObject point=data.getJSONArray("records").getJSONObject(0).getJSONArray("items").getJSONObject(0).getJSONObject("a");
+        for(int i=0;i<100;i++){
+            point.put("x",i+0.125);
+            long start=System.nanoTime();LocalDatabase.write(device,data.toString());
+            if(i%10==9)System.out.println("ISSUE221 save="+(i+1)+" holds="+holds().size()+" ns="+(System.nanoTime()-start));
+        }
+        assertEquals(99.125,new JSONObject(LocalDatabase.readForCas(device)).getJSONArray("records").getJSONObject(0).getJSONArray("items").getJSONObject(0).getJSONObject("a").getDouble("x"),0);
+        exactBytes();
+    }
     List<JSONObject> holds()throws Exception{
         List<JSONObject> result=new ArrayList<>();File[] files=new File(device.home,"protected-revisions").listFiles();
         if(files!=null)for(File f:files)if(f.getName().matches("[a-f0-9]{64}\\.json"))result.add(new JSONObject(new String(Files.readAllBytes(f.toPath()),StandardCharsets.UTF_8)));
