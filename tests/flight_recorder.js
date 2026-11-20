@@ -13,10 +13,10 @@ const media=fs.readFileSync('app/src/main/java/cz/zamerovac/app/ImmutableMediaPr
 const database=fs.readFileSync('app/src/main/java/cz/zamerovac/app/LocalDatabase.java','utf8');
 const storage=new Map(),shares=[];let time=0,intervals=[],confirmDelete=true;
 function el(tag){let text='';return {tag,children:[],style:{},get textContent(){return text},set textContent(v){text=v;this.children.length=0},value:'',append(...children){this.children.push(...children)},setAttribute(key,val){this[key]=val},focus(){},select(){},remove(){}}}
-function boot(){
+function boot(override={}){
  const panel=el('section');panel.querySelector=selector=>selector==='#flightSettings'?panel.children.find(c=>c.id==='flightSettings')||null:null;
  const doc={visibilityState:'visible',addEventListener(){},createElement:el,body:el('body'),getElementById:()=>null};
- const win={localStorage:{getItem:key=>storage.get(key)||null,setItem:(key,value)=>storage.set(key,value)},
+ const win={localStorage:{getItem:key=>storage.get(key)??null,setItem:(key,value)=>storage.set(key,value),removeItem:key=>storage.delete(key),...override},
   document:doc,addEventListener(){},confirm:()=>confirmDelete,Native:{shareText:(title,value)=>shares.push({title,value})}};
  const pending=[];
  const context={window:win,performance:{now:()=>time},Date,JSON,Object,Number,
@@ -129,3 +129,56 @@ function run(){
  console.log('PASS flight recorder: opt-in, privacy, 120 bound, local persistence, restart, stall, manual share, UI, integration and phase-source contracts');
 }
 run();
+
+const key='zamerovac-perf-diagnostics-v2', legacyKey='zamerovac-perf-diagnostics-v1';
+const stamp='2026-11-20T00:00:00.000Z';
+const fixture=(count,enabled=false)=>JSON.stringify({version:2,enabled,activeId:enabled?'s1':null,
+ sessions:Array.from({length:count},(_,i)=>({id:'s'+(i+1),startedAt:stamp,endedAt:null,events:[]}))});
+const checks=[];
+for(const raw of ['{broken JSON',fixture(21),JSON.stringify({version:2,enabled:false,activeId:null,sessions:[{}]})]){
+ checks.push(()=>{storage.clear();storage.set(key,raw);const {api}=boot();
+  assert.equal(api.toggle(true),false);api.flush();assert.equal(storage.get(key),raw);assert.equal(api.snapshot().persistenceOk,false);});
+}
+checks.push(()=>{storage.clear();const raw=fixture(2);storage.set(key,raw);
+ const {api}=boot({getItem(){throw Error('unavailable')}});api.toggle(true);api.flush();
+ assert.equal(storage.get(key),raw);assert.equal(api.snapshot().persistenceOk,false);});
+for(const setItem of [()=>{throw Object.assign(Error('full'),{name:'QuotaExceededError'})},()=>{}]){
+ for(const [enabled,action] of [[false,a=>a.removeSession('s1')],[false,a=>a.clear()],
+  [false,a=>a.toggle(true)],[true,a=>a.toggle(false)],[true,a=>a.removeSession('s1')]]){
+  checks.push(()=>{storage.clear();const raw=fixture(2,enabled);storage.set(key,raw);
+   const {api}=boot({setItem});assert.equal(action(api),false);
+   assert.equal(api.isEnabled(),enabled);assert.equal(api.sessionList().length,2);
+   assert.equal(storage.get(key),raw);assert.equal(api.snapshot().persistenceOk,false);});
+ }
+}
+for(const override of [{setItem(){throw Error('full')}},{setItem(){}},{removeItem(){throw Error('denied')}}]){
+ checks.push(()=>{storage.clear();const raw=JSON.stringify({version:1,enabled:false,events:[{time:stamp,type:'native-save',values:{writeMs:12}}]});
+  storage.set(legacyKey,raw);const {api}=boot(override);
+  assert.equal(storage.get(legacyKey),raw);assert.equal(api.snapshot().persistenceOk,false);
+  if(override.removeItem)assert.equal(JSON.parse(storage.get(key)).sessions[0].events[0].values.writeMs,12);
+  else assert.equal(storage.has(key),false);});
+}
+checks.push(()=>{
+ storage.clear();const raw=fixture(2);storage.set(key,raw);
+ let failRead=false,writes=0;
+ const {api}=boot({
+  setItem(k,v){storage.set(k,v);if(++writes===1)failRead=true},
+  getItem(k){if(failRead){failRead=false;throw Error('readback unavailable')}return storage.get(k)??null}
+ });
+ assert.equal(api.removeSession('s1'),false);
+ assert.equal(storage.get(key),raw);assert.equal(api.sessionList().length,2);
+ assert.equal(api.snapshot().persistenceOk,false);
+});
+checks.push(()=>{
+ storage.clear();storage.set(key,fixture(2));const {api,panel}=boot({setItem(){throw Error('full')}});
+ api.attachSettings(panel);const section=panel.children[0];
+ section.children.filter(e=>e.tag==='button')[1].onclick();
+ const history=section.children.at(-1);
+ history.children[0].children[2].onclick();
+ assert.equal(history.children.length,2);
+ assert(section.children.some(e=>e.textContent.includes('nepodařilo potvrdit')));
+});
+let failures=0;
+for(const [i,check] of checks.entries())try{check()}catch(e){failures++;console.error('Persistence case',i+1,e.message);}
+console.log('Persistence fault cases:',checks.length-failures+'/'+checks.length);
+if(failures)process.exitCode=1;
