@@ -33,14 +33,15 @@ const chapters=[
     "title": "2. Zakázky, složky a podsložky",
     "intro": "Složky oddělují zákazníky, místnosti a části zakázky. Ve složce můžeš vytvářet další složky.",
     "steps": [
-      "Pomocí ＋ vytvoř Novou složku, otevři ji a ukládej do ní fotografie, soubory a poznámky.",
+      "Pomocí ＋ vytvoř Novou složku, otevři ji a ukládej do ní fotografie, soubory a poznámky. Druhé spodní tlačítko vedle ＋ opakuje poslední skutečně úspěšný způsob přidání do aktuální složky: novou složku, náčrt, textovou poznámku, fotografování nebo otevření stejného typu výběrového okna. Po importu videa, zvuku, obrázku či souboru tlačítko znovu otevře původní smíšený výběr médií nebo souborů; nefiltruje pouze naposledy vybraný formát. Po potvrzeném založení samostatné hlasové poznámky lze stejnou volbu zopakovat; samotné nahrávání je vždy nutné spustit zvlášť. Jeho obrázek se mění až po potvrzeném uložení, ne po zrušení či chybě. Ve spuštěné relaci se volba mění společně pro všechny složky; po novém spuštění se nyní vrací k původnímu smíšenému výběru médií a souborů. Trvalé nastavení zkratky zatím není zavedeno.",
       "Klepnutím na název složky v cestě nahoře se vrátíš na danou úroveň.",
       "U položky otevři nabídku ⋮ pro přejmenování, přesunutí, odstranění nebo dostupné exporty.",
       "Složku nepřesouvej do sebe ani do vlastní podsložky. Aplikace takový přesun odmítá."
     ],
     "notes": [
       "Při přesunu a přejmenování se mají zachovat kóty a přiložená média. Po složitější operaci je pro jistotu znovu otevři.",
-      "Uzamčenou složku nejdřív odemkni, teprve pak upravuj její obsah."
+      "Uzamčenou složku nejdřív odemkni, teprve pak upravuj její obsah.",
+      "Pokud jiná změna mezitím složku smaže, zamkne nebo znepřístupní, nové položky se do ní neuloží. Otevři dostupnou složku a přidání zopakuj až po kontrole; původní soubory aplikace při takovém odmítnutí automaticky nemaže."
     ],
     "keywords": [
       "zakázka",
@@ -222,6 +223,7 @@ const chapters=[
     "steps": [
       "Přepni na Vybrat a upravit, potom klepni na kótu nebo čáru.",
       "Bílé úchopy u konců přesouvají jednotlivé koncové body; střední oblast slouží k posunu celého objektu.",
+      "Jsou-li koncové úchopy dvou kót blízko sebe, klepnutí přímo na zřetelně bližší úchop vybere příslušnou kótu. U téměř stejně blízkých úchopů má přednost již označená kóta; v případě nejasnosti obraz přibliž a výběr zopakuj.",
       "U obdélníku, lichoběžníku a vložených obrázků se mohou objevit vlastní rohové či další úchopy.",
       "Při jemné práci používej lupu a podle potřeby vypni magnetické přichytávání.",
       "Po úpravě objekt odznač a ověř polohu i přesnou hodnotu po opětovném otevření."
@@ -300,6 +302,7 @@ const chapters=[
     "intro": "Každá zakázka může mít samostatné textové poznámky a fotografie také bodové poznámky.",
     "steps": [
       "Pomocí ＋ → Nová textová poznámka založ zápis s názvem a vlastním textem.",
+      "V přehledu aktuální složky zvol ＋ → Hlasová poznámka. Nejprve se potvrdí uložení jedné samostatné poznámky; mikrofon se nezapíná sám. V otevřené poznámce postupuj Spustit nahrávání → Zastavit záznam → Uložit. Po úspěšném zastavení se příloha bezpečně připojí k této poznámce, tlačítko Uložit pak zavře zápis. Pokud se uložení nebo připojení nepovede, nepovažuj hlas za připojený; dokončený originál zůstává k prověření v Uchovaných hlasových nahrávkách. Při odmítnutém mikrofonu zkontroluj oprávnění v Androidu. V již otevřené poznámce se hlas připojuje pouze k ní.",
       "V poznámce můžeš vytvořit seznam úkolů, zaškrtávat položky a přidat přílohy.",
       "Pro přidání fotografie nebo souboru použij Přiložit; pro hlasovou poznámku mikrofon, pokud je zařízení a oprávnění podporují.",
       "V editoru fotografie nástrojem Poznámka vyznač bod; podle dostupných funkcí otevři detail poznámky a doplň text nebo obrázky.",
@@ -308,8 +311,9 @@ const chapters=[
     "notes": [
       "Hlasové nahrávání vyžaduje přístup k mikrofonu. Při odmítnutém oprávnění lze zkusit nastavení Androidu.",
       "Hlasovou přílohu v bodové poznámce nejprve bezpečně ukonči tlačítkem Zastavit; k poznámce se zapíše až po potvrzení Uložit nebo po úspěšném Zpět. Zrušit zachová původní text a přílohy. Když Zastavit selže, původní pokus je ukončený a je nutné spustit nové nahrávání; neukládej neúplný hlas. Dokončená, ale nepotvrzená nahrávka zůstane v přehledu Uchované hlasové nahrávky i po restartu. V otevřené poznámce použij Připojit k této poznámce a Uložit. Záznam s nejistým dokončením nebo poškozenou evidencí se nemaže; tlačítkem Uložit kopii originálu jej lze zkopírovat pro kontrolu. Neznámá nebo poškozená evidence vyvolá samostatné upozornění a pozastaví automatické opravy i potvrzování připojení. Ostatní dostupné originály zůstávají v přehledu a lze uložit jejich jednotlivé kopie. Při nesouladu souborů se ověřený originál nabízí samostatně a obsah musí odpovídat evidovanému SHA. Tlačítko Uložit podezřelou kopii zachrání oddělený nejistý soubor pro ruční kontrolu; taková kopie není potvrzením původního obsahu ani připojení k poznámce. Dokončení v návrhu ještě neznamená úspěšné uložení poznámky. Automatické mazání nahrávek je vypnuté i při vysypání koše. ZIP zakázek nezahrnuje nepřipojené nahrávky; jejich kopii ulož samostatně. Uložit nebo šipka zpět v textové poznámce nahrávání ukončí. Při chybě mikrofonu nebo zápisu zůstane formulář otevřený; u bodové poznámky zůstane otevřený i po neúspěšném Zpět.",
+      "Přehled Uchované hlasové nahrávky zůstává dostupný, dokud je nutná kontrola. Stejnou výstrahu aplikace při každém dalším úspěšném uložení znovu neukazuje; při změně počtu uchovaných položek nebo nejistotě evidence se upozornění může znovu objevit. Upozornění se znovu objeví také po novém spuštění aplikace nebo při výslovně neúspěšném připojení. Žádná nahrávka se tím sama neodstraňuje ani automaticky nepotvrzuje.",
       "Nahrávej v otevřené aplikaci; systém může mikrofon na pozadí omezit. Nedokončený hlas se při zničení obrazovky nepřipojí. Existující originál ani při kolizi identifikátoru nepřepisuj. Přílohy s neplatnými metadaty se odmítnou; při nedostatku místa přenos zůstane nedokončený.",
-      "Checklisty a přílohy dostávají revizi a průběžně se ukládají. Příchozí synchronizace během otevřené poznámky počká na dokončení její úpravy. Při chybě zápisu tlačítko Uložit formulář nezavře; zopakuj uložení.",
+      "Checklisty a přílohy dostávají revizi a průběžně se ukládají. Příchozí synchronizace během otevřené poznámky počká na dokončení její úpravy. Při chybě zápisu tlačítko Uložit formulář nezavře; zopakuj uložení. Zpráva „Uloženo, ale přehled nebo upozornění se nepodařilo aktualizovat“ znamená, že data byla uložena, ale přehled může být zastaralý; vrať se do přehledu a ověř přílohu, než se ji pokusíš přidat znovu.",
       "Bodová poznámka může obsahovat zvuk i detailní fotografii. Přehrávání zvuku nemá samo otevřít klávesnici. Do kótování detailu lze vstoupit jen přes obrazovou přílohu, nikoli přes nahraný zvuk. Chybějící náhled nezmění uložený originál. Když smazání není potvrzené, dialog zůstane otevřený.",
       "Pouhé otevření a zavření textové poznámky nebo zobrazení prázdné skici nemění její obsah ani revizi. Uzamčená poznámka nedovolí měnit checklist ani odebírat přílohy.",
       "Soukromé poznámky do zákaznického PDF patří jen při výslovné volbě."
@@ -509,7 +513,12 @@ const chapters=[
       "Odebrání párování zneplatní také právě dokončované spojení. Zařízení lze znovu schválit jen novým výslovným párováním. Pro odebrání důvěry zvol Odebrat párování. Tím se nemažou zakázky už uložené na druhém zařízení; zastaví se nové přenosy a odstraní místní fronta pro toto zařízení.",
       "Pro Google Disk v Synchronizaci zařízení zvol Připojit Google účet. Vyber stejný povolený testovací účet v telefonu i tabletu a potvrď přístup k soukromým datům této aplikace. Zrušený souhlas ponechá původní účet; změna účtu záloh je samostatná. Pokud připojení této verze čeká na dokončení nastavení, zůstává tlačítko nedostupné a místní přenos lze dál používat.",
       "Systémovou složku lze dál vybrat v Nastavení → Systémová složka synchronizace nebo přes ikonu cloudu. Vyber na obou zařízeních stejné místo s právem číst i zapisovat. Přepnutí na složku nahradí pro synchronizaci vybraný Google účet, účet záloh tím nemění.",
-      "Ruční cloudovou synchronizaci spouštěj přes Synchronizovat nyní. Ikona cloudu rozlišuje potvrzeno, čeká a chybu; pouhé odeslání bez potvrzení příjemce není dokončený přenos.",
+      "Ruční cloudovou synchronizaci spouštěj přes Synchronizovat nyní. Ikona cloudu ukazuje čtyři stavy: šedý mrak se šikmým přeškrtnutím = není nastaveno či není spárováno, mrak se šipkou = čeká na ověřené přijetí, zelený mrak s fajfkou = aktuální revize a přílohy mají potvrzení přenosu od schválené instalace, červený mrak s křížkem = chyba. Klepnutím na mrak otevřeš příčinu, Synchronizace zařízení a nabídku Google Disk / ruční přenos. Připojení Google účtu samo o sobě neprokazuje párování ani úspěch. Stejná automatická chyba nepřijde při každém pokusu znovu jako rušivá hláška, ale stav a příčina zůstávají dostupné. Nová nebo kritická chyba se zobrazuje. Odeslání bez potvrzení příjemce není dokončený přenos; potvrzení není samostatná historická záloha.",
+      "Po každém novém úspěšném místním uložení se dříve zelená ikona vrátí do stavu Čeká, dokud se nepotvrdí také tato nová revize a její přílohy. Nově zachované konfliktní kopie synchronizace upozorní jednou; opakované potvrzení stejné kopie zbytečně nezobrazuje novou hlášku. Jejich počet a pokyny zůstávají dostupné klepnutím na mrak. Před odstraněním vždy zkontroluj obě verze.",
+      "Pokud jsou synchronizovaná data už místně uložena, ale zobrazení přehledu nebo upozornění selže, zápis tím není automaticky zrušený. Klepnutím na mrak můžeš znovu načíst informace o konfliktních kopiích přímo z místních dat. Když se nepodaří potvrdit dodatečné sloučení rozpracované změny, aplikace jej nesmí označit za úspěšné: rozpracovaná úprava zůstává zachovaná a vyžaduje opakované bezpečné ověření. Při varování o evidenci nahrávky nejprve zkontroluj její zachovanou kopii, než ji znovu připojíš.",
+      "Pokud po potvrzeném zápisu selže zobrazení upozornění na uchované hlasové nahrávky, zakázka tím není zrušená. Otevři přehled uchovaných nahrávek a ověř je; původní přílohy ani soubory kvůli této chybě nemaž a nezkoušej násilně opakovat již potvrzený zápis. Upozornění na kontrolu nahrávek zůstane také v detailu mraku. Při nedokončeném vykreslení zůstane mrak ve stavu Čeká i s potvrzeným přenosem; skutečně nebezpečná chyba má před tímto upozorněním přednost.",
+      "Pokud se po potvrzeném místním zápisu objeví novější změna druhého zařízení, místní údaje zůstávají uložené, ale společné sloučení zatím není dokončené. Aplikace upozorní na další nutné ověření a při následném ukládání se musí zohlednit obě verze. Neodstraňuj případné konfliktní kopie před jejich kontrolou.",
+      "Může nastat i situace, kdy je místní zápis potvrzený, ale následné načtení stavu úložiště selže. Aplikace zachová potvrzené údaje, označí novější stav jako neověřený a požádá o kontrolu synchronizace. Pouhé otevření detailu mraku neznamená, že už byly nové změny bezpečně převzaté do editoru; upozornění zmizí až po jejich skutečném načtení a zobrazení. Pokud cloud zároveň nahlásí závažnou chybu, původní kritická zpráva má přednost před čekáním na nového příjemce, dalším načtením i upozorněním na nahrávky; detail mraku uchová všechny důvody k ruční kontrole. Potvrzené místní uložení není tímto varováním zrušeno.",
       "Potvrzené přijaté cloudové zprávy se evidují přímo v instalaci pro konkrétní úložiště. Po návratu se jejich obsah nečte zbytečně znovu; přerušené odeslání potvrzení se dokončí z uloženého stavu bez opakování importu.",
       "Před cloudem zařízení nejdříve spáruj místní cestou. Cloudové zprávy i potvrzení mají ověřovaný podpis veřejného certifikátu schválené instalace. Nová cesta nepřepisuje společný projects.json; starší vzdálené soubory zůstávají nedotčené.",
       "Velké cloudové přílohy na měřené nebo neznámé síti čekají. Malá změna může dorazit, pokud má příjemce potřebné originály už uložené. Výjimku pro aktuální pokus povolíš přes ikonu cloudu a Jednorázově povolit velké soubory na měřené síti. Volba Synchronizovat pouze na Wi-Fi omezuje i malé automatické cloudové změny.",
@@ -566,12 +575,16 @@ const chapters=[
     "title": "21. Nastavení, jazyk a vzhled",
     "intro": "V Nastavení najdeš chování editoru, zobrazení, jednotky a další volby.",
     "steps": [
-      "Z hlavního menu otevři Nastavení.",
-      "V Editoru nastav lupu, přichytávání bodů/rastru, mřížku, odstup rastru a citlivost přesouvání.",
-      "V Rozměrech nastav výchozí jednotky a počet zobrazovaných desetinných míst.",
-      "Ve Vzhledu nastav barvu, tloušťku čar, velikost textu, zobrazení a další běžné chování.",
+      "Z hlavního menu otevři Nastavení. Nejprve se zobrazí pět kategorií a vyhledávání; návratem z podstránky se vrátíš k jejich přehledu.",
+      "Editor a kreslení obsahuje lupu, přichytávání, mřížku, citlivost přesouvání a přednastavené texty.",
+      "Měření a jednotky obsahuje výchozí jednotky, desetinná místa a volitelná nastavení kompatibilního laseru.",
+      "Synchronizace a zálohy rozlišuje přenos aktuálních změn od skutečné samostatné zálohy ZIP a historických záloh.",
+      "Vzhled a ovládání obsahuje barvy, tloušťku čar, velikost textu, displej, vibrace a klávesnici.",
+      "Aplikace a údržba obsahuje jazyk, verzi, diagnostiku, připomínky a Obnovu nahrávek. Ve spodní liště přehledu se při nahrávce vyžadující zásah nebo při nejisté evidenci ukáže ikona mikrofonu s vykřičníkem. Klepnutím otevřeš přehled uchovaných nahrávek.",
       "V hlavním menu ☰ → Historie změn nebo v Nastavení → Novinky a historie změn si zobrazíš skutečné novinky, opravené chyby a vylepšení podle verzí. Od verze 1.3.0 se významnější změny projevují druhým číslem verze, menší opravy posledním číslem; číslo sestavení Androidu je samostatné.",
-      "Jazyk aplikace zatím nabízí pouze 🇨🇿 Čeština; další překlady nejsou hotové."
+      "Jazyk aplikace zatím nabízí pouze 🇨🇿 Čeština; další překlady nejsou hotové.",
+      "V Nastavení → Diagnostika výkonu zapni záznam před testem, proveď několik pohybů kót na různých fotografiích, případně restartuj aplikaci a otevři Historii a sdílení diagnostiky. Každé zapnutí vytváří samostatné měření s datem a časem. Stejnou diagnostiku otevřeš také ve fialové vlaječce: krátké klepnutí na položku Diagnostika ji zapne nebo vypne, dlouhé podržení této položky otevře historii. Gesta samotné vlaječky zůstávají beze změny. V Historie a sdílení diagnostiky vyber konkrétní měření pro sdílení; popelnice vedle data smaže jen toto měření po potvrzení. Zvlášť lze smazat všechna měření. Nejvýše 20 měření, každé nejvýše 120 událostí; staré záznamy se automaticky nemažou, při dosažení limitu je nutné některé ručně smazat. Ukládají se jen časy a počty; nic se neodesílá automaticky. Pro dokončené úpravy kót rozlišuje diagnostika posun celé kóty, otočení, změnu délky (roztažení) i jejich kombinaci. Zaznamená jen typ operace a časy, ne souřadnice, geometrii ani skutečnou naměřenou hodnotu. Při otevření editoru se rozlišuje počet položek a běžných rozměrových kót na této fotografii od počtu všech položek, rozměrových kót a fotografií v celé místní databázi aplikace (bez smazaných fotografií). V diagnostické testovací sestavě se navíc rozlišuje převod dat do JSON, opětovné čtení databáze, ochrana historie, doklady obnovitelnosti a databázový zápis.",
+      "Když se diagnostická historie nedá přečíst nebo překračuje povolený rozsah, změny jsou zablokované a uložené bajty zůstávají zachované. Po dočasné chybě zkus aplikaci znovu otevřít. Pokud problém přetrvá, požádej o obnovu čitelné kopie. Při nepotvrzeném zápisu zkontroluj stav v Historii a sdílení diagnostiky. Pokud po migraci zůstala starší kopie, aplikace na to upozorní."
     ],
     "notes": [
       "Změna zobrazení jednotek nebo přiblížení nesmí přepočítat již uloženou naměřenou hodnotu bez tvé výslovné úpravy.",
@@ -591,7 +604,9 @@ const chapters=[
       "opravené chyby",
       "novinky",
       "verze",
-      "nastavení"
+      "nastavení",
+      "diagnostika výkonu",
+      "sekání kót"
     ]
   },
   {
@@ -650,7 +665,17 @@ const chapters=[
       "Nejde vybrat ZIP: najdi soubor v systémovém správci a ověř, že jde o zálohu Zaměřovače, nikoli zákaznický PDF ZIP.",
       "Ztratil se obrázek po přiblížení nebo se zobrazila mřížka: ukonči gesto, obnov zobrazení; nemaž zakázku ani data aplikace.",
       "Při hlášení chyby přímo v aplikaci se potvrzení Uloženo zobrazí až po ověření zápisu seznamu připomínek. Pokud zápis selže, rozpracovaná připomínka zůstane otevřená; nemaž ji, zkontroluj volné místo a uložení zopakuj.",
+      "Pokud aplikace při zápisu připomínek nedokáže ověřit uložený stav nebo najde poškozené starší položky, zablokuje nové hlášení a snímek, další ukládání i ZIP export, aby nepřepsala novější či neznámá data. Rozpracovanou připomínku a původní média nemaž; aplikaci znovu spusť a ověř uložený seznam. Pokud hlášení přetrvá, nemaž data aplikace a požádej o bezpečnou obnovu.",
       "Při ukládání obrázkové připomínky zůstane editor otevřený, dokud zápis neskončí. Zavření, Android Zpět a přepnutí do seznamu se během ukládání bezpečně odmítnou.",
+      "Fialovou vlaječku klepnutím otevři pro novou připomínku se snímkem obrazovky, dlouhým podržením zobraz Moje připomínky. Označ chybu perem, šipkou či textem, můžeš přidat video a připomínku uložit v telefonu.",
+      "V Nastavení se fialová vlaječka nejdříve ukáže v záhlaví, aby nepřekrývala přepínače. I tam ji můžeš prstem přesunout; nová poloha se uloží a zůstane zachovaná po zavření Nastavení.",
+      "Pokud posouvání vlaječky přerušíš, její poslední uložená poloha se nezmění a bezpečné připnutí v záhlaví Nastavení se obnoví, pokud jsi ji předtím úspěšně nepřesunul. Běžné klepnutí a podržení fungují dál.",
+      "V seznamu Moje připomínky vyber hlášení. Uložit ZIP vytvoří místní soubor; Sdílet vybrané nejprve zobrazí výslovné upozornění a až po potvrzení nabídku Androidu. Storno nic neodesílá. Na veřejný GitHub se nic neodesílá automaticky.",
+      "Otevřeš-li Moje připomínky z Nastavení, Android Zpět nejprve zavře připomínky, teprve potom se vrací z podstránky na přehled kategorií. Během ukládání rozpracované připomínky se zavření odmítne, dokud zápis neskončí; žádný záznam se tím nemaže.",
+      "Před sdílením otevři a zkontroluj všechna vybraná hlášení: viditelné osobní údaje, zakázky, adresy, kóty, titulky a video. ZIP neobsahuje původní názvy příloh ani interní ID v JSON, ale video zůstává v původním formátu včetně případných skrytých metadat. Viditelné údaje nejsou automaticky začerněné.",
+      "Příliš velký nebo neúplný balíček je odmítnut místo tichého vynechání přílohy; v jedné dávce může být nejvýše 50 hlášení, u každého 12 videí a celkem 256 MiB vstupních souborů. Fotografie, screenshoty ani videa se při exportu znovu nepřekódují ani nezmenšují. Pro GitHub Issues zkontroluj zvlášť formát, limit velikosti a soukromí. Nepřikládej neveřejná zákaznická data.",
+      "Uložené hlášení můžeš smazat jednotlivě tlačítkem Smazat a potvrzením; nevyřešená hlášení se automaticky nemažou. Seznam uchová všechna hlášení i při více než 300 záznamech. Starý záznam s chybějícím popisem se zobrazí s náhradním textem; sám se neopravuje ani nemaže. Duplicitní ID zablokuje smazání i export. Neplatná pole vybraného hlášení zablokují export místo neúplného ZIPu. Mazání položky neodstraní původní snímky ani videa z telefonu.",
+      "Dočasný ZIP pro místní uložení aplikace odstraní až po ukončení kopírování nebo po zrušení dialogu. ZIP předaný do systémového sdílení nemaže automaticky po čase, protože otevření dialogu nedokazuje doručení. Až když jsou všechna sdílení skutečně dokončena, můžeš v Moje připomínky zvolit Vyčistit dočasné ZIPy a potvrdit úklid v Androidu. Žádný dočasný ZIP se nemaže automaticky jen podle stáří; i nedokončené přípravy lze odstranit až po výslovném potvrzení úklidu.",
       "Pokud chyba přetrvává, poznamenej verzi aplikace a pošli popis kroků a případně snímek či video."
     ],
     "notes": [

@@ -11,7 +11,10 @@ const implementation=source.slice(start,end);
 const persistenceStart=source.indexOf(' const persist=next=>');
 const persistenceEnd=source.indexOf('\n const q=',persistenceStart);
 assert.ok(persistenceStart>=0&&persistenceEnd>persistenceStart,'Real persistence helper must be present');
-const persistenceCode=source.slice(persistenceStart,persistenceEnd);
+const stateStart=source.indexOf(' let feedbackWriteUncertain=false;');
+const stateEnd=source.indexOf('\n // Never truncate',stateStart);
+assert.ok(stateStart>=0&&stateEnd>stateStart,'Production uncertain-write state is required');
+const persistenceCode=source.slice(stateStart,stateEnd)+'\n'+source.slice(persistenceStart,persistenceEnd);
 const deleteStart=source.indexOf("  overlay.querySelector('#feedbackDeleteResolved').onclick=()=>{");
 const deleteEnd=source.indexOf("\n  overlay.querySelector('#feedbackShareZip')",deleteStart);
 assert.ok(deleteStart>=0&&deleteEnd>deleteStart,'Real resolved-report deletion handler must be present');
@@ -126,6 +129,19 @@ async function scenario({stored=report(),change,blobNull=false,finishOk=true,sto
   assert.ok(!s.calls.errors.includes('Připomínka uložena'),'False storage success');
   assert.ok(s.calls.errors.some(x=>x.includes('nepodařilo uložit')),'Failure must be visible');
  }
+ // A completed localStorage write with unreadable ACK must not generate more media
+ // if the user retries Save before restart. Native media bytes are not touched.
+ s=await scenario({stored:null,storageFailure:'read'});
+ assert.equal(s.calls.begin,1,'Initial attempt prepared exactly one annotated PNG');
+ assert.equal(s.calls.persist,1);
+ const beforeRetry={blob:s.calls.blob,begin:s.calls.begin,append:s.calls.append,
+  finish:s.calls.finish,persist:s.calls.persist};
+ await vm.runInContext('saveReport()',s.scope);
+ assert.deepEqual({blob:s.calls.blob,begin:s.calls.begin,append:s.calls.append,
+  finish:s.calls.finish,persist:s.calls.persist},beforeRetry,
+  'Uncertain storage must refuse repeat Save BEFORE creating orphan media copies');
+ assert.ok(s.calls.errors.some(x=>/nejistý/i.test(x)),
+  'User must be told to restart instead of silently retrying stale write');
  s=await scenario({stored:null,storageFailure:'write'});
  assert.equal(s.reports.length,0,'Failed first save must not create a ghost report');
  assert.equal(s.calls.list,0);

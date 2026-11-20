@@ -62,35 +62,66 @@ class SyncAckAcceptanceTest(unittest.TestCase):
                 self.assertIn("--rerun", command)
                 self.assertIn("--no-daemon", command)
 
-    def test_full_inventory_rejects_replaced_method_with_same_count(self):
-        import hashlib
-        import json
+    def test_full_jvm_timeout_is_blocked_with_partial_log_and_never_excused(self):
+        import subprocess
+        import tempfile
         from unittest.mock import patch
 
-        # 513 distinct methods including the two unchanged raw #88 FAIL cases.
-        cases = self.baseline() + [
-            {"id": f"cz.zamerovac.app.SyntheticTest.method{i:03d}",
-             "status": "PASS", "message": ""}
-            for i in range(gate.EXPECTED_CASE_COUNT - len(self.baseline()))
-        ]
-        ids = sorted(case["id"] for case in cases)
-        digest = hashlib.sha256(json.dumps(ids, separators=(",", ":"), ensure_ascii=True).encode("ascii")).hexdigest()
-        with patch.object(gate, "EXPECTED_CASE_IDS_SHA256", digest):
-            self.assertEqual([], gate.inventory_problems(cases))
-            self.assertEqual("FAIL", gate.classify(cases, 1)["gradle"]["status"])
-            self.assertEqual("PASS", gate.classify(cases, 1)["product_acceptance"]["status"])
+        with tempfile.TemporaryDirectory() as tmp:
+            log = Path(tmp) / "gradle-full.log"
+            cmd = ["gradle", "--no-daemon", ":app:testPreviewUnitTest", "--rerun"]
+            with patch.object(gate.subprocess, "run",
+                              side_effect=subprocess.TimeoutExpired(cmd, 1)) as runner:
+                result = gate.run_gradle_logged(cmd, log, max_seconds=1)
+            self.assertEqual(124, result.returncode)
+            self.assertEqual(cmd, runner.call_args.args[0])
+            self.assertEqual(1, runner.call_args.kwargs["timeout"])
+            self.assertIn("BLOCKED: JVM full suite exceeded", log.read_text())
+            self.assertEqual("FAIL", gate.classify(self.baseline(), result.returncode)
+                             ["product_acceptance"]["status"])
 
-            replaced = [dict(case) for case in cases]
-            missing_id = replaced[-1]["id"]
-            replaced[-1]["id"] = "cz.zamerovac.app.SyntheticTest.unexpectedReplacement"
-            self.assertEqual(gate.EXPECTED_CASE_COUNT, len(replaced))
-            self.assertNotIn(missing_id, {case["id"] for case in replaced})
-            self.assertTrue(gate.inventory_problems(replaced),
-                            "A different PASS must not replace a required method")
-            self.assertTrue(gate.inventory_problems(cases[:-1]),
-                            "Missing method without replacement must fail")
-            self.assertTrue(gate.inventory_problems(cases + [dict(cases[-1])]),
-                            "Extra/duplicate method must fail")
+    def test_historical_methods_cannot_disappear_but_new_pass_tests_autocount(self):
+        # Use the exact 513 independently preserved historical IDs, not mocks.
+        cases = [dict(id=name, status="FAIL" if name in gate.EXPECTED else "PASS",
+                      message=gate.EXPECTED.get(name, ""))
+                 for name in sorted(gate.baseline_case_ids())]
+        cases += [dict(id=name, status="PASS", message="")
+                  for name in sorted(gate.REQUIRED_LATER_CASE_IDS)]
+        self.assertEqual(gate.EXPECTED_CASE_COUNT + 2, len(cases))
+        self.assertEqual([], gate.inventory_problems(cases))
+        self.assertEqual("PASS", gate.classify(cases, 1)["product_acceptance"]["status"])
+
+        # Future additions are automatic, with no 515 -> 516 constant update.
+        extra = dict(id="cz.zamerovac.app.AddedSafetyTest.newMethod", status="PASS", message="")
+        self.assertEqual([], gate.inventory_problems(cases + [extra]))
+        self.assertEqual("PASS", gate.classify(cases + [extra], 1)["product_acceptance"]["status"])
+
+        # Still require the old test identities even if count stays equal.
+        replaced = [dict(c) for c in cases]
+        replaced[0]["id"] = extra["id"]
+        self.assertTrue(gate.inventory_problems(replaced))
+        self.assertTrue(gate.inventory_problems(cases[1:]))
+        # The two recent valuable cache/data tests must remain present too.
+        self.assertTrue(gate.inventory_problems(cases[:-1]))
+        self.assertTrue(gate.inventory_problems(cases + [dict(cases[-1])]))
+        # A newly added failing/ignored test is NEVER an acceptable extra.
+        for status in ("FAIL", "ERROR", "SKIP"):
+            with self.subTest(status=status):
+                wrong = dict(extra, status=status)
+                self.assertEqual("FAIL", gate.classify(cases + [wrong], 1)["product_acceptance"]["status"])
+
+    def test_historical_manifest_tampering_is_rejected(self):
+        import tempfile
+        from unittest.mock import patch
+        with tempfile.TemporaryDirectory() as tmp:
+            file = Path(tmp) / "jvm-baseline.txt"
+            valid = gate.BASELINE_CASES_FILE.read_text(encoding="ascii")
+            file.write_text(valid, encoding="ascii")
+            with patch.object(gate, "BASELINE_CASES_FILE", file):
+                self.assertEqual(gate.EXPECTED_CASE_COUNT, len(gate.baseline_case_ids()))
+                file.write_text(valid.replace("cz.zamerovac.app.", "cz.corrupted.app.", 1), encoding="ascii")
+                with self.assertRaisesRegex(ValueError, "fingerprint changed"):
+                    gate.baseline_case_ids()
 
     def test_original_diagnostics_helpers_and_e2e_are_byte_preserved(self):
         self.assertEqual(gate.TEST_DIGESTS, gate.preserved_tests())

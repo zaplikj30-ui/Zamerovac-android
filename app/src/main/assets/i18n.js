@@ -17,6 +17,7 @@
     'trash.restored':'Položka obnovena',
     'trash.failed':'Položku se nepodařilo obnovit',
     'folder.locked':'Nejdříve odemkněte složku.',
+    'audio.indicator':'Nahrávky vyžadují kontrolu',
     'audio.title':'Uchované hlasové nahrávky',
     'audio.retained':'Nahrávka zůstala uchovaná. Připojení ověř v přehledu Uchované hlasové nahrávky.',
     'audio.item':'Nahrávka {number}',

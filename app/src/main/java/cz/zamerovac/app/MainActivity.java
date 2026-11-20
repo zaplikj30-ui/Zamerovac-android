@@ -37,6 +37,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
+import android.os.Trace;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.provider.MediaStore;
@@ -136,7 +137,7 @@ public class MainActivity extends Activity {
     private String mediaSelectionToken;
     private volatile boolean mediaImportBusy;
     private final java.util.concurrent.ThreadPoolExecutor mediaImports=new java.util.concurrent.ThreadPoolExecutor(1,1,30,java.util.concurrent.TimeUnit.SECONDS,new java.util.concurrent.ArrayBlockingQueue<>(1),work->{Thread thread=new Thread(work,"ZamerovacMediaImport");thread.setDaemon(true);return thread;},new java.util.concurrent.ThreadPoolExecutor.AbortPolicy());
-    private String pendingIssueZipId;
+    private volatile String pendingIssueZipId;
     private final PhotoThumbnails photoThumbnails=new PhotoThumbnails();
     private final VideoThumbnails videoThumbnails=new VideoThumbnails();
     private CustomerPdfExport customerExport;
@@ -483,7 +484,7 @@ public class MainActivity extends Activity {
             if(request==REQUEST_BACKUP){pendingArchiveFolderId=null;pendingArchiveSelectionIds=null;}
             if(request==REQUEST_ATTACH)finishMediaSelection(mediaSelectionToken);
             if(request==REQUEST_CAMERA){discardPendingCamera();finishMediaSelection(mediaSelectionToken);}
-            if(request==REQUEST_ISSUE_EXPORT)pendingIssueZipId=null;
+            if(request==REQUEST_ISSUE_EXPORT){String issueId=pendingIssueZipId;pendingIssueZipId=null;deleteIssueZip(issueId);}
             if(request==REQUEST_CUSTOMER_EXPORT)clearCustomerExport();
             return;
         }
@@ -502,14 +503,35 @@ public class MainActivity extends Activity {
             clearCustomerExport();return;
         }
         if(request==REQUEST_ISSUE_EXPORT){
-            String id=pendingIssueZipId;pendingIssueZipId=null;
-            if(id!=null&&data!=null&&data.getData()!=null){
-                try(InputStream in=new FileInputStream(mediaFile(id));
-                    OutputStream out=getContentResolver().openOutputStream(data.getData(),"w")){
-                    if(out==null)throw new IOException("Nelze otevřít výstup");
-                    copy(in,out);
-                    js("window.onReportBundleSaved?.()");
-                }catch(Exception ex){error("Uložení balíčku: "+ex.getMessage());}
+            final String id=pendingIssueZipId;
+            final Uri destination=data==null?null:data.getData();
+            if(id!=null&&destination!=null){
+                // Keep the pending ZIP pinned until the external SAF stream closes.
+                // Clearing it on picker return lets another export/cleanup unlink it mid-copy.
+                synchronized(this){issueBundleBusy=true;}
+                new Thread(()->{
+                    try{
+                        try(InputStream in=new FileInputStream(mediaFile(id));
+                            OutputStream out=getContentResolver().openOutputStream(destination,"w")){
+                            if(out==null)throw new IOException("Nelze otevřít výstup");
+                            copy(in,out);
+                        }
+                        js("window.onReportBundleSaved?.()");
+                    }catch(Exception ex){
+                        try{android.provider.DocumentsContract.deleteDocument(getContentResolver(),destination);}
+                        catch(Exception ignored){}
+                        error("Uložení balíčku: "+ex.getMessage());
+                    }finally{
+                        deleteIssueZip(id);
+                        synchronized(MainActivity.this){
+                            if(id.equals(pendingIssueZipId))pendingIssueZipId=null;
+                            issueBundleBusy=false;
+                        }
+                    }
+                },"ZamerovacIssueExport").start();
+            }else{
+                deleteIssueZip(id);
+                if(id!=null&&id.equals(pendingIssueZipId))pendingIssueZipId=null;
             }
             return;
         }
@@ -641,55 +663,185 @@ public class MainActivity extends Activity {
         return new JSONObject().put("format","cz.zamerovac.archive").put("version",2).put("entries",checksums).toString().getBytes(StandardCharsets.UTF_8);
     }
 
-    /** Local feedback ZIP, including only explicitly captured screenshots and attached videos. */
-    private String createIssueZip(String json) throws IOException, JSONException {
+    /** Feedback-only temporary ZIPs. Never touch project media or original report assets. */
+    private static final long MAX_ISSUE_BUNDLE_BYTES=256L*1024L*1024L;
+    private boolean issueBundleBusy;
+
+    private File checkedIssueMedia(String id,boolean video)throws IOException{
+        if(!validId(id))throw new IOException("Neplatné ID přílohy připomínky");
+        File f=mediaFile(id);
+        if(!f.isFile()||!f.canRead()||f.length()<=0)
+            throw new IOException("Chybí nebo je prázdná příloha připomínky");
+        String mime=mediaMime(id);
+        if(video?!mime.startsWith("video/"):!"image/png".equals(mime))
+            throw new IOException("Příloha připomínky má nesprávný formát");
+        return f;
+    }
+    private void deleteIssueZip(String id){
+        if(id==null||!id.startsWith("issuezip-")||!validId(id))return;
+        if(!settings.getBoolean("issuezip-"+id,false))return;
+        File f=mediaFile(id);
+        if(!f.exists()||f.delete())
+            settings.edit().remove("issuezip-"+id).remove("issuezip-state-"+id)
+                .remove("mime-"+id).remove("name-"+id).apply();
+    }
+    private void requestIssueZipCleanup(){
+        runOnUiThread(()->{
+            new android.app.AlertDialog.Builder(MainActivity.this)
+                .setTitle("Úklid dočasných ZIPů")
+                .setMessage("Pokračuj pouze tehdy, když je sdílení všech dřívějších ZIPů dokončeno a příjemci je již nepotřebují. Otevření nabídky sdílení není potvrzení doručení. Uložených hlášení ani originálních médií se úklid nedotkne.")
+                .setNegativeButton("Zrušit",(dialog,which)->{})
+                .setPositiveButton("Potvrzuji dokončení",(dialog,which)->{
+                    synchronized(MainActivity.this){
+                        if(issueBundleBusy||pendingIssueZipId!=null){
+                            error("Probíhá export připomínek; nyní ZIPy nelze vyčistit");return;
+                        }
+                        issueBundleBusy=true;
+                    }
+                    new Thread(()->{
+                        int deleted=0;
+                        try{
+                            File[] entries=new File(getFilesDir(),"media").listFiles();
+                            if(entries!=null)for(File f:entries){
+                                String id=f.getName();
+                                if(!f.isFile()||!id.startsWith("issuezip-")||!validId(id)
+                                    ||!settings.getBoolean("issuezip-"+id,false))continue;
+                                String state=settings.getString("issuezip-state-"+id,"");
+                                if(!"shared".equals(state)&&!"save-pending".equals(state)
+                                    &&!"building".equals(state)&&!"ready".equals(state))continue;
+                                deleteIssueZip(id);
+                                if(!f.exists())deleted++;
+                            }
+                            js("window.onReportBundlesCleaned?.("+deleted+")");
+                        }catch(Exception ex){error("Úklid dočasných ZIPů: "+ex.getMessage());}
+                        finally{synchronized(MainActivity.this){issueBundleBusy=false;}}
+                    },"ZamerovacIssueManualCleanup").start();
+                }).show();
+        });
+    }
+    /** Preflight all selected attachments BEFORE writing; an incomplete ZIP is never shared. */
+    private String createIssueZip(String json)throws IOException,JSONException{
+        JsonInput.check(json,512*1024); // also rejects excessive nesting before org.json allocation
         JSONObject root=new JSONObject(json);
+        JsonInput.unicode(root); // reject malformed surrogate sequences in external text
         JSONArray reports=root.optJSONArray("reports");
-        if(reports==null||reports.length()==0)throw new IOException("Nejsou vybrány žádné připomínky");
-        String id=UUID.randomUUID().toString();
+        if(reports==null||reports.length()==0||reports.length()>50)
+            throw new IOException("Vyber 1 až 50 připomínek");
+        java.util.ArrayList<File> files=new java.util.ArrayList<>();
+        java.util.ArrayList<String> paths=new java.util.ArrayList<>();
+        java.util.ArrayList<Long> sizes=new java.util.ArrayList<>();
+        JSONArray sanitizedReports=new JSONArray();
+        long bytes=0;
+        for(int i=0;i<reports.length();i++){
+            JSONObject report=reports.optJSONObject(i);
+            if(report==null)throw new IOException("Poškozený záznam připomínky");
+            JSONObject clean=new JSONObject();
+            // No local media IDs, customer filenames, annotations or internal state in the exported JSON.
+            for(String key:new String[]{"type","title","description","screen","appVersion","createdAt","updatedAt"}){
+                Object field=report.opt(key);
+                if(field!=null&&field!=JSONObject.NULL&&!(field instanceof String))
+                    throw new IOException("Neplatný text v připomínce");
+                String value=report.optString(key,"");
+                if(value.length()>16000)throw new IOException("Text připomínky je příliš dlouhý");
+                clean.put(key,value);
+            }
+            String annotated=report.optString("annotatedId","");
+            String screenshot=annotated.isEmpty()?report.optString("screenshotId",""):annotated;
+            File image=checkedIssueMedia(screenshot,false);
+            String imagePath=String.format(java.util.Locale.ROOT,"obrazky/pripominka-%03d.png",i+1);
+            long size=image.length();
+            if(size>MAX_ISSUE_BUNDLE_BYTES-bytes)throw new IOException("Přílohy přesahují limit 256 MiB");
+            bytes+=size;files.add(image);paths.add(imagePath);sizes.add(size);
+            clean.put("obrazek",imagePath);
+            Object videoValue=report.opt("videos");
+            if(videoValue!=null&&videoValue!=JSONObject.NULL&&!(videoValue instanceof JSONArray))
+                throw new IOException("Neplatný seznam videí");
+            JSONArray videos=report.optJSONArray("videos"),videoPaths=new JSONArray();
+            if(videos!=null){
+                if(videos.length()>12)throw new IOException("Jedna připomínka může obsahovat nejvýše 12 videí");
+                for(int j=0;j<videos.length();j++){
+                    Object value=videos.opt(j);
+                    if(!(value instanceof JSONObject)&&!(value instanceof String))
+                        throw new IOException("Neplatný záznam videa");
+                    JSONObject item=videos.optJSONObject(j);
+                    String video=item==null?(String)value:item.optString("id","");
+                    File original=checkedIssueMedia(video,true);
+                    String mime=mediaMime(video);
+                    String extension=mime.contains("webm")?"webm":mime.contains("quicktime")?"mov":
+                        mime.contains("3gpp")?"3gp":mime.equals("video/mp4")?"mp4":"bin";
+                    String path=String.format(java.util.Locale.ROOT,
+                        "videa/pripominka-%03d-%02d.%s",i+1,j+1,extension);
+                    size=original.length();
+                    if(size>MAX_ISSUE_BUNDLE_BYTES-bytes)throw new IOException("Přílohy přesahují limit 256 MiB");
+                    bytes+=size;files.add(original);paths.add(path);sizes.add(size);
+                    videoPaths.put(path);
+                }
+            }
+            clean.put("videa",videoPaths);
+            sanitizedReports.put(clean);
+        }
+        JSONObject sanitized=new JSONObject().put("application","Zaměřovač TEST")
+            .put("formatVersion",2).put("exportedAt",root.optString("exportedAt",""))
+            .put("reports",sanitizedReports);
+        byte[] meta=sanitized.toString(2).getBytes(StandardCharsets.UTF_8);
+        if(meta.length>512*1024||meta.length>MAX_ISSUE_BUNDLE_BYTES-bytes)
+            throw new IOException("Metadata překračují limit balíčku");
+        String id="issuezip-"+UUID.randomUUID();
+        if(!settings.edit().putBoolean("issuezip-"+id,true)
+            .putString("issuezip-state-"+id,"building").commit())
+            throw new IOException("Nelze evidovat dočasný export");
         File target=mediaFile(id);
         try(ZipOutputStream zip=new ZipOutputStream(new FileOutputStream(target))){
             zip.putNextEntry(new ZipEntry("pripominky.json"));
-            zip.write(root.toString(2).getBytes(StandardCharsets.UTF_8));
+            zip.write(meta);
             zip.closeEntry();
-            for(int i=0;i<reports.length();i++){
-                JSONObject report=reports.optJSONObject(i);
-                if(report==null)continue;
-                String screenshot=report.optString("annotatedId","");
-                if(!validId(screenshot)||!mediaFile(screenshot).isFile())
-                    screenshot=report.optString("screenshotId","");
-                if(validId(screenshot)&&mediaFile(screenshot).isFile())
-                    zipIssueFile(zip,mediaFile(screenshot),
-                        String.format(java.util.Locale.ROOT,"obrazky/pripominka-%03d.png",i+1));
-                JSONArray videos=report.optJSONArray("videos");
-                if(videos==null)continue;
-                for(int j=0;j<videos.length();j++){
-                    JSONObject item=videos.optJSONObject(j);
-                    String video=item==null?videos.optString(j,""):item.optString("id","");
-                    if(!validId(video)||!mediaFile(video).isFile())continue;
-                    String mime=mediaMime(video);
-                    String extension=mime.contains("webm")?"webm":mime.contains("quicktime")?"mov":"mp4";
-                    zipIssueFile(zip,mediaFile(video),String.format(java.util.Locale.ROOT,
-                        "videa/pripominka-%03d-%02d.%s",i+1,j+1,extension));
-                }
+            for(int i=0;i<files.size();i++){
+                File f=files.get(i);
+                if(!f.isFile()||f.length()!=sizes.get(i))
+                    throw new IOException("Příloha se během exportu změnila");
+                zipIssueFile(zip,f,paths.get(i),sizes.get(i));
             }
-        }catch(Exception ex){target.delete();throw ex;}
-        settings.edit().putString("mime-"+id,"application/zip")
-            .putString("name-"+id,"Zamerovac-pripominky.zip").apply();
+        }catch(Exception ex){deleteIssueZip(id);throw ex;}
+        if(target.length()>MAX_ISSUE_BUNDLE_BYTES){
+            deleteIssueZip(id);throw new IOException("Hotový ZIP přesahuje limit 256 MiB");
+        }
+        if(!settings.edit().putString("mime-"+id,"application/zip")
+            .putString("name-"+id,"Zamerovac-pripominky.zip")
+            .putString("issuezip-state-"+id,"ready").commit()){
+            deleteIssueZip(id);throw new IOException("Nezdařilo se dokončit dočasný ZIP");
+        }
         return id;
     }
-    private void zipIssueFile(ZipOutputStream zip,File input,String name)throws IOException {
+    private void zipIssueFile(ZipOutputStream zip,File input,String name,long expected)throws IOException{
         zip.putNextEntry(new ZipEntry(name));
-        try(InputStream in=new FileInputStream(input)){copy(in,zip);}
+        long copied=0;
+        try(InputStream in=new FileInputStream(input)){
+            byte[] buf=new byte[64*1024];int n;
+            while((n=in.read(buf))!=-1){
+                if(n>expected-copied)throw new IOException("Příloha se během exportu zvětšila");
+                zip.write(buf,0,n);copied+=n;
+            }
+        }
+        if(copied!=expected)throw new IOException("Příloha se během exportu zkrátila");
         zip.closeEntry();
     }
     private void sendIssueBundle(String text,boolean saveToFile){
+        synchronized(this){
+            if(issueBundleBusy||pendingIssueZipId!=null){
+                error("Jiný export připomínek ještě probíhá");return;
+            }
+            issueBundleBusy=true;
+        }
         new Thread(()->{
+            String ready=null;
             try{
-                String id=createIssueZip(text);
+                ready=createIssueZip(text);
+                final String id=ready;
                 runOnUiThread(()->{
                     try{
                         if(saveToFile){
+                            if(!settings.edit().putString("issuezip-state-"+id,"save-pending").commit())
+                                throw new IOException("Nepotvrzené uložení stavu ZIP");
                             pendingIssueZipId=id;
                             Intent intent=new Intent(Intent.ACTION_CREATE_DOCUMENT);
                             intent.addCategory(Intent.CATEGORY_OPENABLE);
@@ -697,6 +849,8 @@ public class MainActivity extends Activity {
                             intent.putExtra(Intent.EXTRA_TITLE,"Zamerovac-pripominky.zip");
                             startActivityForResult(intent,REQUEST_ISSUE_EXPORT);
                         }else{
+                            if(!settings.edit().putString("issuezip-state-"+id,"shared").commit())
+                                throw new IOException("Nepotvrzené uložení stavu sdílení");
                             Uri uri=new Uri.Builder().scheme("content")
                                 .authority(getPackageName()+".files").appendPath(id).build();
                             Intent intent=new Intent(Intent.ACTION_SEND);
@@ -706,10 +860,22 @@ public class MainActivity extends Activity {
                             intent.setClipData(android.content.ClipData.newRawUri("Připomínky",uri));
                             intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
                             startActivity(Intent.createChooser(intent,"Sdílet připomínky"));
+                            // ACTION_SEND has no reliable completion acknowledgement. Keep the
+                            // read-only ZIP: only explicit user confirmation allows cleanup.
                         }
-                    }catch(Exception ex){error("Sdílení připomínek: "+ex.getMessage());}
+                    }catch(Exception ex){
+                        if(id.equals(pendingIssueZipId))pendingIssueZipId=null;
+                        deleteIssueZip(id);
+                        error("Sdílení připomínek: "+ex.getMessage());
+                    }finally{
+                        synchronized(MainActivity.this){issueBundleBusy=false;}
+                    }
                 });
-            }catch(Exception ex){error("Balíček připomínek: "+ex.getMessage());}
+            }catch(Exception ex){
+                if(ready!=null)deleteIssueZip(ready);
+                synchronized(MainActivity.this){issueBundleBusy=false;}
+                error("Balíček připomínek: "+ex.getMessage());
+            }
         },"ZamerovacIssueBundle").start();
     }
     private void collectMediaIds(JSONObject record,Set<String> ids)throws IOException{
@@ -783,22 +949,86 @@ public class MainActivity extends Activity {
         // Legacy Java test/setup entry only. WebView must use acknowledged compare-and-save.
         public boolean saveData(String text){try{writeDb(text);return true;}catch(Exception e){error("Uložení: "+e.getMessage());return false;}}
         @JavascriptInterface public String saveDataChecked(String text,String expected){
-            synchronized(TrashPurger.LOCK){
-                try{
-                    // Fail closed for stale backup, corrupt primary and lost initialized DB.
-                    String current=readDbForCas();
-                    if(!current.equals(expected)){
-                        // Missing files are an I/O failure, never a valid empty CAS snapshot.
-                        if(current.isEmpty())throw new IOException("Databáze není dostupná pro porovnání");
-                        return new JSONObject().put("ok",false).put("current",current).toString();
-                    }
-                    writeDb(text);lastUiGeneration=LocalDatabase.generation(getFilesDir());
-                    // The project commit has already succeeded. A journal failure cannot roll it back.
-                    try{int pending=new PendingAudio(new File(getFilesDir(),"media"),settings).recoverPrimary().length();return new JSONObject().put("ok",true).put("audioPending",pending>0).put("pendingAudioCount",pending).toString();}
-                    catch(Exception uncertainty){return "{\"ok\":true,\"audioPending\":true}";}
+            // #195: diagnostic Perfetto slices in debuggable builds only.
+            // Static labels only: no names, IDs, JSON, paths, or media bytes.
+            final boolean perf=BuildConfig.DEBUG;
+            // Numeric durations are only emitted in debug/preview ACK responses.
+            final long[] measuredNs=perf?new long[5]:null;
+            final long lockStartNs=perf?System.nanoTime():0L;
+            if(perf)Trace.beginSection("Z195-bridge");
+            try {
+                boolean lockWaitOpen=perf;
+                if(perf)Trace.beginSection("Z195-lock-wait");
+                try {
+                    synchronized(TrashPurger.LOCK){
+                        if(perf)measuredNs[0]=System.nanoTime()-lockStartNs;
+                        if(perf)ProtectedRevisions.beginDebugCounts();
+                        if(perf){
+                            lockWaitOpen=false;
+                            Trace.endSection();
+                        }
+                        try{
+                        // Fail closed for stale backup, corrupt primary and lost initialized DB.
+                        String current;
+                        if(perf)Trace.beginSection("Z195-readDb");
+                        long readStartNs=perf?System.nanoTime():0L;
+                        try{current=readDbForCas();}
+                        finally{if(perf)measuredNs[1]=System.nanoTime()-readStartNs;if(perf)Trace.endSection();}
+                        if(!current.equals(expected)){
+                            // Missing files are an I/O failure, never a valid empty CAS snapshot.
+                            if(current.isEmpty())throw new IOException("Databáze není dostupná pro porovnání");
+                            return new JSONObject().put("ok",false).put("current",current).toString();
+                        }
+                        if(perf)LocalDatabase.beginDebugWrite();
+                        if(perf)Trace.beginSection("Z195-writeDb");
+                        long writeStartNs=perf?System.nanoTime():0L;
+                        try{writeDb(text);}
+                        finally{if(perf)measuredNs[2]=System.nanoTime()-writeStartNs;if(perf)Trace.endSection();}
+                        if(perf)Trace.beginSection("Z195-generation");
+                        long generationStartNs=perf?System.nanoTime():0L;
+                        try{lastUiGeneration=LocalDatabase.generation(getFilesDir());}
+                        finally{if(perf)measuredNs[3]=System.nanoTime()-generationStartNs;if(perf)Trace.endSection();}
+                        // The project commit has already succeeded. A journal failure cannot roll it back.
+                        try{
+                            int pending;
+                            if(perf)Trace.beginSection("Z195-recoverPrimary");
+                            long recoveryStartNs=perf?System.nanoTime():0L;
+                            try{pending=new PendingAudio(new File(getFilesDir(),"media"),settings).recoverPrimary().length();}
+                            finally{if(perf)measuredNs[4]=System.nanoTime()-recoveryStartNs;if(perf)Trace.endSection();}
+                            JSONObject response=new JSONObject().put("ok",true).put("audioPending",pending>0).put("pendingAudioCount",pending);
+                            if(perf){
+                              try{
+                                JSONObject stats=new JSONObject()
+                                  .put("lockWaitMs",measuredNs[0]/1000000.0)
+                                  .put("readMs",measuredNs[1]/1000000.0)
+                                  .put("writeMs",measuredNs[2]/1000000.0)
+                                  .put("generationMs",measuredNs[3]/1000000.0)
+                                  .put("recoveryMs",measuredNs[4]/1000000.0);
+                                long[] writeParts=LocalDatabase.takeDebugWrite();
+                                if(writeParts!=null)stats
+                                    .put("validationMs",writeParts[0]/1000000.0)
+                                    .put("casRecheckMs",writeParts[1]/1000000.0)
+                                    .put("revisionProtectMs",writeParts[2]/1000000.0)
+                                    .put("evidenceMs",writeParts[3]/1000000.0)
+                                    .put("databaseCommitMs",writeParts[4]/1000000.0);
+                                int[] counts=ProtectedRevisions.takeDebugCounts();
+                                if(counts!=null)stats.put("revisionCount",counts[0])
+                                  .put("cacheHits",counts[1])
+                                  .put("cacheMisses",counts[2])
+                                  .put("mediaChecks",counts[3]);
+                                response.put("diag",stats);
+                              }catch(Exception ignored){/* Debug metrics must never change the confirmed ACK. */}
+                            }
+                            return response.toString();
+                        }catch(Exception uncertainty){return "{\"ok\":true,\"audioPending\":true}";}
 
-                }catch(Exception e){try{return new JSONObject().put("ok",false).put("error","Uložení se nezdařilo; poslední potvrzená data zůstávají chráněná. "+e.getMessage()).toString();}catch(Exception ignored){return "{}";}}
-            }
+                        }catch(Exception e){try{return new JSONObject().put("ok",false).put("error","Uložení se nezdařilo; poslední potvrzená data zůstávají chráněná. "+e.getMessage()).toString();}catch(Exception ignored){return "{}";}}
+                    }
+                }finally{
+                    // If monitor entry failed, close the wait slice before bridge.
+                    if(lockWaitOpen)Trace.endSection();
+                }
+            }finally{if(perf)Trace.endSection();if(perf)ProtectedRevisions.takeDebugCounts();if(perf)LocalDatabase.takeDebugWrite();}
         }
         @JavascriptInterface public boolean beginMedia(String id,String mime,String name){return beginMediaChecked(id,mime,name,-1);}
         @JavascriptInterface public boolean beginMediaChecked(String id,String mime,String name,long expected){
@@ -971,6 +1201,7 @@ public class MainActivity extends Activity {
         }
         @JavascriptInterface public void shareIssueBundle(String json){sendIssueBundle(json,false);}
         @JavascriptInterface public void saveIssueBundle(String json){sendIssueBundle(json,true);}
+        @JavascriptInterface public void cleanupFinishedIssueBundles(){requestIssueZipCleanup();}
         @JavascriptInterface public void shareText(String title,String content){
             runOnUiThread(()->{
                 Intent send=new Intent(Intent.ACTION_SEND).setType("text/plain");

@@ -121,3 +121,15 @@
 }
 .feedback-zoom button+button{border-top:1px solid #5b5360}
 .feedback-zoom #feedbackZoomFit{font-size:12px}
+
+/* Lightweight diagnostic toggle inside the feedback sheet, not on the movable flag. */
+.feedback-diagnostics{
+ display:flex;align-items:center;gap:10px;flex:0 0 auto;min-width:0;
+ padding:7px 12px;background:#2d2b32;border-bottom:1px solid #554b60
+}
+.feedback-diagnostics button{
+ flex:1;min-width:0;min-height:40px;color:#f5f4f7;
+ background:#3d3350;border:1px solid #88779c;border-radius:8px;
+ font:inherit;touch-action:manipulation
+}
+.feedback-diagnostics small{color:#d0c6db;font-size:12px;white-space:nowrap}

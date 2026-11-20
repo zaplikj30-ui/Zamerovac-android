@@ -1,0 +1,21 @@
+/* Only the settings presentation changes. Existing controls keep their styles. */
+.settings-home,.settings-page{padding:8px 0 24px}
+.settings-search-label{display:block;margin:10px 15px 6px;font-size:14px;color:var(--text)}
+.settings-search{display:block;width:calc(100% - 30px);margin:0 15px 14px;padding:12px;border:1px solid #777;border-radius:7px;background:#29282d;color:var(--text);font-size:16px}
+.settings-category,.settings-result{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;text-align:left;gap:5px;width:100%;min-height:69px;padding:12px 17px;border-bottom:1px solid #53505a}
+.settings-category strong{font-size:16px;font-weight:600}
+.settings-category small,.settings-result small{font-size:13px;color:#c6bdcc;line-height:1.4}
+.settings-result span{font-size:15px}
+.settings-subgroup h3{font-size:15px;font-weight:600;padding:15px 16px 7px;margin:0;color:var(--accent)}
+.settings-explanation{font-size:13px;line-height:1.5;padding:6px 16px;margin:2px 0 10px;color:#d7d0de}
+.settings-page .setting{width:100%;text-align:left}
+.settings-page .setting input,.settings-page .setting select{flex-shrink:0}
+.settings-page .settings-subgroup{min-width:0}
+.settings-home[hidden],.settings-page[hidden],.settings-search-results[hidden],.settings-categories[hidden]{display:none!important}
+/* Existing PendingAudio API decides whether an alert exists; never conceal its error state. */
+#browserFoot #pendingAudioBanner{min-width:44px;min-height:44px;flex:0 0 44px;width:44px;display:grid;place-items:center;padding:0;border:0;color:#ffe19b}
+@media (max-width:360px){.settings-page .setting{padding-left:9px;padding-right:9px}.settings-category{padding-left:12px}}
+
+/* Keep the report flag accessible but clear of settings controls. */
+#settingsPanel .panelHead{position:sticky;top:0;z-index:1;padding-right:64px}
+#settingsPanel:not([hidden]) ~ #feedbackFlag:not([data-settings-moved]){top:5px!important;right:9px!important;left:auto!important}

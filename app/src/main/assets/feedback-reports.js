@@ -6,18 +6,42 @@
  const KEY='zamerovac-feedback-v1',POS='zamerovac-feedback-flag-position-v1';
  const validId=id=>typeof id==='string'&&/^[a-zA-Z0-9_-]{3,120}$/.test(id);
  let reports=[];
- try{const v=JSON.parse(localStorage.getItem(KEY)||'[]');if(Array.isArray(v))reports=v.filter(x=>x&&typeof x==='object').slice(-300)}catch(e){}
+ // If a write may have reached localStorage but its readback was not verified,
+ // all subsequent mutations must wait for a fresh startup load.
+ let feedbackWriteUncertain=false;
+ // Never truncate on restart: doing so could silently erase older reports on the next save.
+ try{
+  const v=JSON.parse(localStorage.getItem(KEY)||'[]');
+  if(Array.isArray(v)){
+   reports=v.filter(x=>x&&typeof x==='object'&&!Array.isArray(x));
+   // Malformed legacy elements stay intact in storage; never persist a filtered subset.
+   if(reports.length!==v.length)feedbackWriteUncertain=true;
+  }else feedbackWriteUncertain=true;
+ }catch(e){feedbackWriteUncertain=true}
  // Commit the proposed list only after the device confirms its storage bytes.
  // A quota/private-mode failure must never be reported as a successful save.
  const persist=next=>{
+  if(feedbackWriteUncertain){
+   notify('Stav uložených připomínek je nejistý. Před další změnou znovu spusť aplikaci.');
+   return false;
+  }
+  let attempted=false;
   try{
    const serialized=JSON.stringify(next);
+   attempted=true;
    localStorage.setItem(KEY,serialized);
    if(localStorage.getItem(KEY)!==serialized)throw new Error('Nepotvrzený zápis připomínek');
    return true;
-  }catch(e){notify('Nepodařilo se uložit seznam připomínek');return false}
+  }catch(e){
+   // Even if setItem succeeded, a failed readback leaves the persisted baseline unknown.
+   // Do not let the old RAM list overwrite a more recent, actually committed value.
+   if(attempted)feedbackWriteUncertain=true;
+   notify('Nepodařilo se uložit seznam připomínek'+
+    (feedbackWriteUncertain?'. Stav úložiště je nejistý; před další změnou znovu spusť aplikaci.':''));
+   return false;
+  }
  };
- const q=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+ const q=s=>String(typeof s==='string'||typeof s==='number'?s:'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
  const now=()=>new Date().toISOString();
  const makeId=()=>typeof uid==='function'?uid():'f-'+Date.now()+'-'+Math.random().toString(36).slice(2);
  const videoName=v=>typeof v==='string'?v:v?.name||'Video obrazovky';
@@ -38,7 +62,7 @@
  let drag=null,longTimer=null,longHandled=false;
  flag.addEventListener('pointerdown',e=>{
   if(e.button!==0)return;
-  drag={x:e.clientX,y:e.clientY,t:Date.now(),moved:false};
+  drag={x:e.clientX,y:e.clientY,t:Date.now(),moved:false,hadSettingsMoved:flag.dataset.settingsMoved!==undefined};
   longHandled=false;
   try{flag.setPointerCapture(e.pointerId)}catch(err){}
   clearTimeout(longTimer);
@@ -49,6 +73,9 @@
   if(Math.hypot(e.clientX-drag.x,e.clientY-drag.y)>9)drag.moved=true;
   if(drag.moved){
    clearTimeout(longTimer);
+   // CSS places the flag safely on first opening Settings; once dragged,
+   // release that temporary placement so the user's pointer can move it.
+   if(document.getElementById('settingsPanel')?.hidden===false)flag.dataset.settingsMoved='true';
    flag.style.left=clamp(e.clientX-23,4,innerWidth-49)+'px';
    flag.style.top=clamp(e.clientY-23,48,innerHeight-58)+'px';
    flag.style.right='auto';
@@ -66,7 +93,12 @@
    placeFlag();
   }else if(!longHandled){startNewReport()}
  });
- flag.addEventListener('pointercancel',()=>{drag=null;clearTimeout(longTimer);placeFlag()});
+ flag.addEventListener('pointercancel',()=>{
+  // A canceled drag must not disable the settings-header safety placement.
+  // Preserve a marker left by an earlier completed drag.
+  if(drag&&!drag.hadSettingsMoved)delete flag.dataset.settingsMoved;
+  drag=null;clearTimeout(longTimer);placeFlag();
+ });
  flag.addEventListener('contextmenu',e=>{e.preventDefault();clearTimeout(longTimer);drag=null;showReportList()});
  let overlay=null,active=null,busy=false;
  function closeOverlay(){
@@ -82,12 +114,59 @@
   overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');
   overlay.innerHTML=markup;
   document.body.appendChild(overlay);
+  attachQuickDiagnostics();
+ }
+
+ // Quick toggle is inside the flag's window; flag tap/hold/drag stay untouched.
+ function attachQuickDiagnostics(){
+  const flight=window.ZFlight,head=overlay?.querySelector('.feedback-head');
+  if(!flight||!head)return;
+  const line=document.createElement('div');line.className='feedback-diagnostics';
+  const button=document.createElement('button');
+  button.id='feedbackDiagnostics';button.type='button';
+  button.title='Klepnutí zapne/vypne diagnostiku; podržení otevře historii';
+  button.setAttribute('aria-label','Diagnostika: klepnout pro zapnutí nebo vypnutí, podržet pro historii');
+  const hint=document.createElement('small');hint.textContent='Podrž pro historii';
+  const refresh=()=>{button.textContent='Diagnostika: '+(flight.isEnabled()?'Zapnuto':'Vypnuto')};
+  refresh();line.append(button,hint);head.insertAdjacentElement('afterend',line);
+  let timer=null,press=null,wasLong=false;
+  const stop=()=>{if(timer!==null)clearTimeout(timer);timer=null;press=null};
+  function openHistory(){
+   stop();
+   if(busy){notify('Probíhá ukládání připomínky. Nejdřív jej dokonči.');return}
+   if(overlay?.querySelector('#feedbackCanvas')){
+    if(typeof window.confirm!=='function'||
+       !window.confirm('Opustit rozpracovanou připomínku bez uložení?'))return;
+   }
+   closeOverlay();
+   if(!window.openZamerovacDiagnosticHistory?.())notify('Historie diagnostiky není dostupná');
+  }
+  button.addEventListener('pointerdown',e=>{
+   if(e.button!==0)return;
+   stop();wasLong=false;press={x:e.clientX,y:e.clientY};
+   timer=setTimeout(()=>{if(press){wasLong=true;openHistory()}},650);
+  });
+  button.addEventListener('pointermove',e=>{
+   if(press&&Math.hypot(e.clientX-press.x,e.clientY-press.y)>10){stop();wasLong=true}
+  });
+  button.addEventListener('pointerup',stop);
+  button.addEventListener('pointercancel',stop);
+  button.addEventListener('contextmenu',e=>{e.preventDefault();wasLong=true;openHistory()});
+  button.addEventListener('click',e=>{
+   if(wasLong){e.preventDefault();wasLong=false;return}
+   const wanted=!flight.isEnabled();flight.toggle(wanted);refresh();
+   if(wanted&&!flight.isEnabled())notify('Limit diagnostiky: smaž některé starší měření');
+  });
  }
  function screenName(){
   const isSettings=!document.getElementById('settingsPanel')?.hidden;
   return isSettings?'Nastavení':screen==='editor'?'Editor fotografie':screen==='note'?'Poznámka':'Seznam zakázek';
  }
  function startNewReport(){
+  if(feedbackWriteUncertain){
+   notify('Stav uložených připomínek je nejistý. Před novým hlášením znovu spusť aplikaci.');
+   return;
+  }
   if(!native||typeof Native.captureReportScreenshot!=='function'){
    notify('Automatické zachycení obrazovky funguje v testovací Android aplikaci');
    return;
@@ -111,8 +190,14 @@
  };
  function getBase(id){return validId(id)?'https://appassets.androidplatform.net/media/'+encodeURIComponent(id):''}
  function summary(r){
-  return '<div class="feedback-card-title">'+q(r.title||r.description.slice(0,65)||'(Bez popisu)')+'</div>'+
-    '<small>'+q(r.type==='bug'?'Chyba':'Změna')+' · '+q(r.screen||'')+' · '+q(new Date(r.createdAt).toLocaleDateString('cs-CZ'))+
+  const title=typeof r.title==='string'?r.title:'';
+  const description=typeof r.description==='string'?r.description:'';
+  const screen=typeof r.screen==='string'?r.screen:'';
+  const rawDate=typeof r.createdAt==='string'?r.createdAt:'';
+  const date=rawDate&&!Number.isNaN(Date.parse(rawDate))?
+   new Date(rawDate).toLocaleDateString('cs-CZ'):'Datum neuvedeno';
+  return '<div class="feedback-card-title">'+q(title||description.slice(0,65)||'(Bez popisu)')+'</div>'+
+    '<small>'+q(r.type==='bug'?'Chyba':'Změna')+' · '+q(screen)+' · '+q(date)+
     (r.resolved?' · Vyřešeno':'')+'</small>';
  }
  function selectedReports(){
@@ -123,14 +208,17 @@
    '<article class="feedback-card">'+
    '<input type="checkbox" data-feedback-check="'+q(r.id)+'" aria-label="Vybrat připomínku" '+(r.resolved?'':'checked')+'>'+
    '<div class="feedback-card-detail">'+summary(r)+'</div>'+
-   '<button data-feedback-edit="'+q(r.id)+'" class="outline">Otevřít</button></article>'
+   '<button data-feedback-edit="'+q(r.id)+'" class="outline">Otevřít</button>'+
+   '<button data-feedback-delete="'+q(r.id)+'" class="outline">Smazat</button></article>'
   ).join('');
   makeOverlay('<div class="feedback-head"><b>Moje připomínky ('+reports.length+')</b><button id="feedbackClose" class="feedback-close" aria-label="Zavřít">✕</button></div>'+
    '<div class="feedback-list"><p class="feedback-muted">Hlášení zůstávají v tomto zařízení. Až budeš chtít, vybereš je a odešleš společně.</p>'+
+   (feedbackWriteUncertain?'<p class="feedback-muted">Stav uložených hlášení nelze bezpečně ověřit. Změny a export jsou zablokovány; nepřepisuj ani nemaž data aplikace.</p>':'')+
    (cards||'<p>Zatím žádné připomínky. Klepni na vlaječku a označ první problém.</p>')+
    '</div><div class="feedback-list-footer">'+
    '<label class="feedback-check-all"><input type="checkbox" id="feedbackAll"> Vybrat vše</label>'+
    '<button id="feedbackDeleteResolved" class="outline">Smazat vyřešené</button>'+
+   '<button id="feedbackCleanupZip" class="outline">Vyčistit dočasné ZIPy</button>'+
    '<button id="feedbackSaveZip" class="outline">Uložit ZIP</button>'+
    '<button id="feedbackShareZip" class="primary">Sdílet vybrané</button></div>');
   overlay.querySelector('#feedbackClose').onclick=closeOverlay;
@@ -138,6 +226,33 @@
    const report=reports.find(x=>x.id===button.dataset.feedbackEdit);
    if(report)editReport(JSON.parse(JSON.stringify(report)),false);
   });
+  overlay.querySelectorAll('[data-feedback-delete]').forEach(button=>button.onclick=()=>{
+   const id=button.dataset.feedbackDelete;
+   const matches=reports.filter(r=>r.id===id);
+   if(!matches.length)return;
+   if(matches.length!==1){
+    notify('Nelze bezpečně smazat: více hlášení má stejné ID. Nic nebylo smazáno.');
+    return;
+   }
+   const report=matches[0];
+   const safeTitle=typeof report.title==='string'?report.title:'';
+   const safeDescription=typeof report.description==='string'?report.description:'';
+   const name=(safeTitle||safeDescription||'(Bez popisu)').slice(0,100);
+   if(!window.confirm('Opravdu smazat uložené hlášení „'+name+'“?\n'+
+      'Smaže se jen jeho záznam ze seznamu. Původní snímky ani videa se nemažou.'))return;
+   // Remove precisely one confirmed object, never every entry sharing an ID.
+   const remaining=reports.slice();
+   remaining.splice(reports.indexOf(report),1);
+   if(!persist(remaining))return;
+   reports=remaining;showReportList();notify('Hlášení smazáno');
+  });
+  overlay.querySelector('#feedbackCleanupZip').onclick=()=>{
+   if(!native||typeof Native.cleanupFinishedIssueBundles!=='function'){
+    notify('Úklid dočasných ZIPů je dostupný v Android aplikaci');return;
+   }
+   // Native shows its own confirmation. The chooser alone does not prove delivery.
+   Native.cleanupFinishedIssueBundles();
+  };
   overlay.querySelector('#feedbackAll').onchange=e=>overlay.querySelectorAll('[data-feedback-check]').forEach(c=>c.checked=e.target.checked);
   overlay.querySelector('#feedbackDeleteResolved').onclick=()=>{
    const button=overlay.querySelector('#feedbackDeleteResolved');
@@ -157,16 +272,49 @@
   overlay.querySelector('#feedbackSaveZip').onclick=()=>sendBatch(true);
  }
  function sendBatch(saveToFile){
+  if(feedbackWriteUncertain){
+   notify('Stav uložených připomínek je nejistý. Před exportem znovu spusť aplikaci.');
+   return;
+  }
+  // Do not silently omit an ambiguous or invalid record from a shared evidence bundle.
+  if(reports.some(r=>!validId(r.id))||new Set(reports.map(r=>r.id)).size!==reports.length){
+   notify('Nelze bezpečně exportovat: hlášení mají neplatné nebo duplicitní ID.');
+   return;
+  }
   const batch=selectedReports();
   if(!batch.length){notify('Nejdřív vyber alespoň jednu připomínku');return}
-  if(!native||!Native.shareIssueBundle){notify('Export ZIP je dostupný v Android aplikaci');return}
-  // Připojeny jsou výhradně snímky vytvořené při hlášení a videa zvolená uživatelem.
+  if(batch.some(r=>typeof r.title!=='string'||typeof r.description!=='string'||
+      (r.videos!=null&&!Array.isArray(r.videos)))){
+   notify('Nelze bezpečně exportovat: vybrané hlášení má neplatné údaje.');
+   return;
+  }
+  if(!native||typeof (saveToFile?Native.saveIssueBundle:Native.shareIssueBundle)!=='function'){
+   notify('Export ZIP je dostupný v Android aplikaci');return;
+  }
+  if(!saveToFile){
+   const overview=batch.map((r,i)=>{
+    const videos=Array.isArray(r.videos)?r.videos:[];
+    const names=videos.map(v=>{
+    const label=typeof v==='string'?v:(typeof v?.name==='string'?v.name:'Video');
+    return label.slice(0,80);
+   }).join(', ');
+    return (i+1)+'. '+String(r.title||r.description||'(Bez popisu)').slice(0,100)+
+      ' — '+videos.length+' video'+(names?' ('+names+')':'');
+   }).join('\n');
+   const warning='Před sdílením otevři každou připomínku a zkontroluj obsah snímků, videí i textů.\n'+
+     'Viditelné adresy, jména či zakázky se automaticky nezakrývají.\n'+
+     'Video může obsahovat skrytá metadata a zachovává původní kvalitu.\n\n'+
+     'Vybraná hlášení:\n'+overview+'\n\nPokračovat k systémové nabídce sdílení?';
+   if(!window.confirm(warning))return;
+  }
+  // Android vytvoří oddělený ZIP; lokální originály se nepřepisují.
   const manifest={application:'Zaměřovač TEST',exportedAt:now(),
    formatVersion:1,reports:batch.map(r=>({...r,device:'Android'}))};
   if(saveToFile)Native.saveIssueBundle(JSON.stringify(manifest));
   else Native.shareIssueBundle(JSON.stringify(manifest));
  }
  window.onReportBundleSaved=()=>notify('ZIP připomínek uložen');
+ window.onReportBundlesCleaned=count=>notify('Vyčištěné dočasné ZIPy: '+Number(count||0));
  function editReport(report,isNew){
   active={report,isNew,tool:'pen',selected:-1,stroke:null,canvas:null,image:null,
     viewport:{scale:1,x:0,y:0},pointers:new Map(),gesture:null,gestureEnding:false,pan:null};
@@ -427,6 +575,10 @@
  }
  async function saveReport(){
   if(!active||busy)return;
+  if(feedbackWriteUncertain){
+   notify('Stav uložených připomínek je nejistý. Před další změnou znovu spusť aplikaci.');
+   return;
+  }
   const editing=active;
   const r=editing.report;
   r.type=overlay.querySelector('#feedbackType').value;

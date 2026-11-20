@@ -1,6 +1,7 @@
 /* Ověření dotyků u textové poznámky bez Androidu:
    nejdříve odtáhneme poznámku, potom jen hrot šipky. */
 'use strict';
+const {installEditorPaintScheduler}=require('./helpers/editor_move_scheduler.cjs');
 const fs=require('fs');
 const vm=require('vm');
 const assert=require('assert');
@@ -34,7 +35,8 @@ const sandbox={
  openRichNote:()=>{throw Error('Creating an empty note must not open a modal')},
  checkpoints:0,commits:0,edits:0,ids:0,editStack:[],redoStack:[],console
 };
-vm.createContext(sandbox);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-geometry.js','utf8'),sandbox);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-selection.js','utf8'),sandbox);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-translation.js','utf8'),sandbox);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-resize.js','utf8'),sandbox);
+vm.createContext(sandbox);
+installEditorPaintScheduler(vm,sandbox,source);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-geometry.js','utf8'),sandbox);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-selection.js','utf8'),sandbox);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-translation.js','utf8'),sandbox);vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-resize.js','utf8'),sandbox);
 vm.runInContext(fs.readFileSync('app/src/main/assets/annotation-history.js','utf8'),sandbox);
 vm.runInContext(methods,sandbox);
 function pointer(method,x,y){

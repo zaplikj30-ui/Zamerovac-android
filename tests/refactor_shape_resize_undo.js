@@ -2,6 +2,7 @@
  * Executes production stageDown/Move/Up and history functions, stubbing only UI/I/O.
  */
 'use strict';
+const {installEditorPaintScheduler}=require('./helpers/editor_move_scheduler.cjs');
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const asset=name=>fs.readFileSync('app/src/main/assets/'+name,'utf8');
 const plain=x=>JSON.parse(JSON.stringify(x));
@@ -37,6 +38,7 @@ function runShape(type,shape,from,to,check){
   editItem(){throw Error('Shape resize accidentally opened edit modal')}
  };
  vm.createContext(ctx);
+ installEditorPaintScheduler(vm,ctx,editor);
  for(const module of ['annotation-geometry.js','annotation-selection.js',
   'annotation-translation.js','annotation-resize.js','annotation-history.js'])
   vm.runInContext(asset(module),ctx);

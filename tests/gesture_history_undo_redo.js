@@ -1,5 +1,6 @@
 /* B8: real editor handlers; no synthetic replacements for stageDown/Move/Up. */
 'use strict';
+const {installEditorPaintScheduler}=require('./helpers/editor_move_scheduler.cjs');
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const asset=p=>fs.readFileSync('app/src/main/assets/'+p,'utf8');
 const editor=asset('editor.js');
@@ -27,6 +28,7 @@ const app={
  hideEditorLoupe(){app.pointers.clear()},finishPendingPath(){},showFolder(){}
 };
 vm.createContext(app);
+installEditorPaintScheduler(vm,app,editor);
 for(const module of ['annotation-geometry.js','annotation-selection.js','annotation-translation.js','annotation-resize.js','annotation-history.js'])
  vm.runInContext(asset(module),app);
 app.worldToScreen=p=>app.AnnotationGeometry.worldToScreen(p,app.view);

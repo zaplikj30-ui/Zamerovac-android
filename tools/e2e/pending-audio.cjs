@@ -2,6 +2,7 @@
 // Real Chromium/UI/persistence; Native microphone/journal are explicitly a model here.
 // Real filesystem + AtomicFile + bridge coverage is PendingAudioTest/StorageLifecycleTest.
 const {suite,assert,createCanvas,tool,drag,editSelected,redo}=require('./harness.cjs');
+const {checkStatusIcons}=require('./editor-response-checks.cjs');
 async function install(page){
  await page.addInitScript(()=>{
   const disk=()=>localStorage.getItem('audio-ui-disk')||'';
@@ -30,7 +31,7 @@ async function install(page){
 async function prepare(page){await createCanvas(page,'Audio 1250,123456789 in');await tool(page,'note');await drag(page,{x:140,y:240},{x:230,y:290});await editSelected(page);await page.fill('#richText','Původní poznámka');await page.click('#okModal');await page.evaluate(()=>{current.items[0].measure='1250,123456789';current.items[0].unit='in';save()});await editSelected(page);}
 async function stop(page){await page.click('#richVoice');await page.click('#richVoice');}
 suite('pending-audio',async run=>{
- await run('verified-original-and-suspect-reservation-have-separate-actions-and-acknowledgements',async({page,evidence})=>{
+ await run('verified-original-and-suspect-reservation-have-separate-actions-and-acknowledgements',async({page,step,evidence})=>{
   await install(page);await page.evaluate(()=>{
    localStorage.setItem('audio-ui-journal',JSON.stringify([
     {id:'voice-split',token:'verified-one',integrity:'verified',state:'needs-review',available:true,attachable:false},
@@ -46,6 +47,8 @@ suite('pending-audio',async run=>{
   assert.match(await rows.nth(1).innerText(),/Původní obsah není potvrzen/);assert.equal(await rows.getByText('Připojit k této poznámce',{exact:true}).count(),0);
   assert.deepEqual(await page.evaluate(()=>exports),['verified-one','suspect-other']);assert.equal(await page.evaluate(()=>localStorage.getItem('audio-ui-disk')),before);
   evidence({nativeModel:true,originalToken:'verified-one',uncertainToken:'suspect-other',nativeByteProof:'Robolectric split-inode tests'});
+  await page.click('#okModal');
+  await step('Recording and synchronization indicators on narrow screens',()=>checkStatusIcons({page,evidence}));
  });
 
  await run('ordinary-save-uses-native-summary-without-requesting-another-full-media-scan',async({page})=>{

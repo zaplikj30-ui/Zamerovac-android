@@ -114,7 +114,7 @@ final class TrashPurger {
         JSONObject live=new JSONObject(db.toString());live.remove("trashPurgedIds");
         strings(live,protectedIds);candidates.removeAll(protectedIds);
         protection.preserveDatabase(saved); // before records, backup or pending intent can change
-        Set<String> pinned=protection.pins();
+        Set<String> pinned=protection.pinsForCleanup();
         Set<String> retained=new HashSet<>(candidates);retained.retainAll(pinned);
         // A pre-P1 trash-cleanup.json may outlive its deleted DB record. No
         // current preimage can pin that last original after the record is gone.

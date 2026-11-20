@@ -18,6 +18,12 @@ final class ProtectedRevisions {
     // full historical JSON; any inode/size/mtime or AtomicFile residue change
     // forces a fresh bounded read and hash verification. Restart rebuilds it.
     private static final LinkedHashMap<String,CachedHold> VERIFIED=new LinkedHashMap<>(16,0.75f,true);
+    // Current debug Native bridge invocation only: count history scans without IDs.
+    // [revisionCount, verifiedCacheHits, verifiedCacheMisses, originalChecks]
+    private static final ThreadLocal<int[]> DEBUG_COUNTS=new ThreadLocal<>();
+    static void beginDebugCounts(){if(BuildConfig.DEBUG)DEBUG_COUNTS.set(new int[4]);}
+    static int[] takeDebugCounts(){int[] result=DEBUG_COUNTS.get();DEBUG_COUNTS.remove();return result;}
+    private static void countDebug(int index){if(!BuildConfig.DEBUG)return;int[] result=DEBUG_COUNTS.get();if(result!=null)result[index]++;}
     private static final class CachedHold {
         final java.nio.file.attribute.BasicFileAttributes attributes;final JSONObject summary;
         CachedHold(java.nio.file.attribute.BasicFileAttributes attributes,JSONObject summary){this.attributes=attributes;this.summary=summary;}
@@ -78,13 +84,14 @@ final class ProtectedRevisions {
             catch(NoSuchFileException absent){}
         }return false;
     }
-    private JSONObject hold(String hash)throws Exception{
+    private JSONObject hold(String hash,boolean forceVerify)throws Exception{
         File path=file(hash);safe(path);
         safe(new File(path+".bak"));safe(new File(path+".new"));
         java.nio.file.attribute.BasicFileAttributes attrs=null;
         try{attrs=Files.readAttributes(path.toPath(),java.nio.file.attribute.BasicFileAttributes.class,LinkOption.NOFOLLOW_LINKS);}catch(NoSuchFileException absent){}
         CachedHold known=VERIFIED.get(path.getAbsolutePath());
-        if(attrs!=null&&known!=null&&known.matches(attrs)&&!new File(path+".bak").exists()&&!new File(path+".new").exists())return known.summary;
+        if(!forceVerify&&attrs!=null&&known!=null&&known.matches(attrs)&&!new File(path+".bak").exists()&&!new File(path+".new").exists()){countDebug(1);return known.summary;}
+        countDebug(2);
         File pending=new File(path+".new");boolean staged=!exists(path)&&pending.exists();byte[] bytes;
         if(staged){safe(pending);if(pending.length()>3L*LocalDatabase.MAX_BYTES)throw new IOException("Příliš velký nedokončený hold");bytes=Files.readAllBytes(pending.toPath());}
         else bytes=read(path);
@@ -110,15 +117,25 @@ final class ProtectedRevisions {
         if(staged)write(path,bytes); // finish a fully verified interrupted local hold, never a DB promotion
         hold.remove("metadata");JSONObject lookup=new JSONObject();for(int i=0;i<media.length();i++){JSONObject entry=media.getJSONObject(i);lookup.put(entry.getString("id"),entry);}hold.put("_ids",lookup);
         attrs=Files.readAttributes(path.toPath(),java.nio.file.attribute.BasicFileAttributes.class,LinkOption.NOFOLLOW_LINKS);
-        VERIFIED.put(path.getAbsolutePath(),new CachedHold(attrs,hold));
-        while(VERIFIED.size()>8)VERIFIED.remove(VERIFIED.keySet().iterator().next());
+        // Sorted inventory scans churn a small LRU when history exceeds its
+        // capacity. Keep room for typical histories, and bound retained media
+        // summaries separately. Larger holds still receive full verification.
+        if(media.length()<=256){
+            VERIFIED.put(path.getAbsolutePath(),new CachedHold(attrs,hold));
+            while(VERIFIED.size()>128)VERIFIED.remove(VERIFIED.keySet().iterator().next());
+        }else VERIFIED.remove(path.getAbsolutePath());
         return hold;
     }
     /** Repair the union after a crash between the two catalog commits.
      * An orphan valid hold adds protection; a missing/corrupt indexed hold blocks cleanup.
      * No historical manifest is ever pruned, even after epoch/namespace changes.
      */
-    private Map<String,JSONObject> inventory(boolean repair)throws Exception{
+    private Map<String,JSONObject> inventory(boolean repair)throws Exception{return inventory(repair,false);}
+    // Fast metadata cache for routine immutable-history scans; destructive
+    // operations explicitly bypass it and verify every hold's bytes.
+    private Map<String,JSONObject> inventory(boolean repair,boolean forceVerify)throws Exception{
+        if(BuildConfig.DEBUG)android.os.Trace.beginSection("Z195-revision-inventory");
+        try{
         if(Files.isSymbolicLink(home.toPath())||Files.isSymbolicLink(new File(home,"media").toPath())||Files.isSymbolicLink(directory.toPath())||directory.exists()&&!directory.isDirectory()||Files.isSymbolicLink(witness.getParentFile().toPath()))throw new IOException("Neplatné úložiště ochrany");
         File index=new File(directory,"catalog.json");Set<String> local=catalog(index),other=catalog(witness),ids=new TreeSet<>(local);ids.addAll(other);
         File[] files=directory.listFiles();if(files==null&&directory.exists())throw new IOException("Registr ochrany nelze načíst");
@@ -131,9 +148,11 @@ final class ProtectedRevisions {
             if(name.matches("[a-f0-9]{64}\\.json(\\.bak|\\.new)?"))ids.add(name.substring(0,64));
             else if(!name.matches("catalog\\.json(\\.bak|\\.new)?"))throw new IOException("Neznámý soubor ochrany");
         }
-        Map<String,JSONObject> result=new TreeMap<>();for(String id:ids)result.put(id,hold(id));
+        if(BuildConfig.DEBUG){int[] debug=DEBUG_COUNTS.get();if(debug!=null)debug[0]=ids.size();}
+        Map<String,JSONObject> result=new TreeMap<>();for(String id:ids)result.put(id,hold(id,forceVerify));
         if(repair&&!ids.isEmpty()&&(!local.equals(ids)||!other.equals(ids)))saveCatalog(ids);
         return result;
+        }finally{if(BuildConfig.DEBUG)android.os.Trace.endSection();}
     }
     private void saveCatalog(Set<String> ids)throws Exception{
         byte[] bytes=new JSONObject().put("format","cz.zamerovac.protection.catalog").put("version",1).put("holds",new JSONArray(ids)).toString().getBytes(StandardCharsets.UTF_8);
@@ -144,12 +163,22 @@ final class ProtectedRevisions {
             JSONArray list=hold.getJSONArray("media");for(int i=0;i<list.length();i++)ids.add(list.getJSONObject(i).getString("id"));
         }return ids;
     }catch(Exception e){throw blocked(e);}}}
+    /** Rehash all hold files before irreversible cleanup. A metadata-only
+     * fingerprint is not proof against an in-place modification with restored
+     * size/mtime/inode. Keep routine save/drawing scans fast.
+     */
+    Set<String> pinsForCleanup()throws IOException{synchronized(TrashPurger.LOCK){try{
+        Set<String> ids=new TreeSet<>();for(JSONObject hold:inventory(true,true).values()){
+            JSONArray list=hold.getJSONArray("media");
+            for(int i=0;i<list.length();i++)ids.add(list.getJSONObject(i).getString("id"));
+        }return ids;
+    }catch(Exception e){throw blocked(e);}}}
     boolean hasSnapshot(String source)throws IOException{synchronized(TrashPurger.LOCK){try{
         for(JSONObject hold:inventory(true).values())if("snapshot".equals(hold.getString("kind"))&&source.equals(hold.getString("sourceHash")))return true;
         return false;
     }catch(Exception e){throw blocked(e);}}}
     private boolean pinned(String id)throws IOException{synchronized(TrashPurger.LOCK){try{
-        for(JSONObject hold:inventory(true).values())if(hold.getJSONObject("_ids").has(id))return true;
+        for(JSONObject hold:inventory(true,true).values())if(hold.getJSONObject("_ids").has(id))return true;
         return false;
     }catch(Exception e){throw blocked(e);}}}
     JSONObject status()throws IOException{synchronized(TrashPurger.LOCK){try{
@@ -209,7 +238,17 @@ final class ProtectedRevisions {
     }
     private void preserve(String kind,String metadata,PeerSnapshot snapshot)throws IOException{synchronized(TrashPurger.LOCK){try{
         Map<String,JSONObject> prior=inventory(true);String source=PeerWire.hash(metadata.getBytes(StandardCharsets.UTF_8));
-        for(JSONObject old:prior.values())if(kind.equals(old.getString("kind"))&&source.equals(old.getString("sourceHash")))return;
+        // Reusing an existing protection preimage must reverify that exact
+        // hold's bytes. Otherwise a forged unchanged size/mtime/fileKey could
+        // let a stale cached summary silently skip durable protection.
+        // Hash only the matching hold, not all historical holds on each save.
+        for(Map.Entry<String,JSONObject> previous:prior.entrySet()){
+            JSONObject old=previous.getValue();
+            if(kind.equals(old.getString("kind"))&&source.equals(old.getString("sourceHash"))){
+                hold(previous.getKey(),true); // fail closed on corrupt identical preimage
+                return;
+            }
+        }
         JSONObject data=new JSONObject(metadata);if(snapshot!=null)data=data.getJSONObject("data");LocalDatabase.validate(data.toString());
         Set<String> ids=snapshot==null?PeerSnapshot.cleanupReferences(data.getJSONArray("records")):new TreeSet<>(snapshot.media.keySet());
         // Also include older embedded JSON objects and unknown history fields.
@@ -223,7 +262,7 @@ final class ProtectedRevisions {
                     JSONObject known=old.getJSONObject("_ids").optJSONObject(id);
                     if(known!=null&&!known.getString("hash").isEmpty()){entry.put("hash",known.getString("hash")).put("size",known.getLong("size"));break;}
                 }
-            }else entry=ImmutableMediaProof.inspect(original).put("state","VERIFIED");
+            }else{countDebug(3);entry=ImmutableMediaProof.inspect(original).put("state","VERIFIED");}
             for(JSONObject old:prior.values()){
                 JSONObject pinned=old.getJSONObject("_ids").optJSONObject(id);
                 if(pinned!=null&&!pinned.getString("hash").isEmpty()&&!missing&&(pinned.getLong("size")!=entry.getLong("size")||!pinned.getString("hash").equals(entry.getString("hash"))))
@@ -241,7 +280,7 @@ final class ProtectedRevisions {
         byte[] bytes=revision.toString().getBytes(StandardCharsets.UTF_8);String hash=PeerWire.hash(bytes);
         // Reserve is a preflight only; every failed/short write is still verified.
         if(home.getUsableSpace()<bytes.length*3L+1024*1024)throw new IOException("Nedostatek místa pro ochranu původních dat");
-        write(file(hash),bytes);hold(hash);Set<String> all=new TreeSet<>(prior.keySet());all.add(hash);saveCatalog(all);
+        write(file(hash),bytes);hold(hash,false);Set<String> all=new TreeSet<>(prior.keySet());all.add(hash);saveCatalog(all);
     }catch(Exception e){throw blocked(e);}}}
     /** A missing pinned original must never be silently re-created under the same ID. */
     static void requireUnpinned(File original)throws IOException{
@@ -254,7 +293,7 @@ final class ProtectedRevisions {
     static void verifyRestoration(File original,JSONObject expected)throws IOException{synchronized(TrashPurger.LOCK){
         ProtectedRevisions protection=new ProtectedRevisions(original.getParentFile().getParentFile(),null,null);
         try{
-            for(JSONObject hold:protection.inventory(true).values()){
+            for(JSONObject hold:protection.inventory(true,true).values()){
                 JSONObject pin=hold.getJSONObject("_ids").optJSONObject(original.getName());if(pin==null)continue;
                 if(pin.getString("hash").isEmpty()||!pin.getString("hash").equals(expected.getString("hash"))||pin.getLong("size")!=expected.getLong("size"))
                     throw new IOException("Přijímaná příloha neodpovídá chráněnému originálu; obnova byla zastavena.");

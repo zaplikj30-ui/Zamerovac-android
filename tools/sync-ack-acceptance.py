@@ -12,6 +12,7 @@ from pathlib import Path
 import platform
 import shutil
 import subprocess
+import threading
 import time
 import xml.etree.ElementTree as ET
 
@@ -26,12 +27,32 @@ REQUIRED = {
     "cz.zamerovac.app.SyncAckReconciliationTest.driveLateDuplicateAckRestartBothAndRetryMustNotFalselyFinish",
     "cz.zamerovac.app.SyncAckReconciliationTest.safLateDuplicateAckRestartBothAndRetryMustNotFalselyFinish",
 }
-# Exact 513 classname.method IDs from independently preserved #116 JUnit XML (64 suites).
-# This is a TEST INVENTORY fingerprint, not a commit/ref SHA gate.
+# Immutable exact 513 method IDs from independent #116 JUnit inventory.
+# New PASS tests count automatically; no manually maintained total-case gate.
+# This content is fingerprinted against the original independently reviewed XML.
 # https://github.com/zaplikj30-ui/Zamerovac-android/pull/116#issuecomment-6838698456
-# https://github.com/zaplikj30-ui/Zamerovac-android/pull/116#issuecomment-6838705119
 EXPECTED_CASE_IDS_SHA256 = "e4897bcee1daec5a1e319ab0a9854fa915d2ee81d7501f3987ac4e89bad8c8a7"
-EXPECTED_CASE_COUNT = 513
+BASELINE_CASES_FILE = ROOT / "tools/qa/jvm-baseline-116.txt"
+REQUIRED_LATER_CASE_IDS = frozenset({
+    "cz.zamerovac.app.ProtectedRevisionsTest.repeatedDimensionSaveProfile",
+    "cz.zamerovac.app.ProtectedRevisionsTest.warmCacheRejectsSameSizeCorruptionAndReplacement",
+})
+
+
+def baseline_case_ids():
+    """Validate the archived immutable list, then return its exact method IDs."""
+    lines = BASELINE_CASES_FILE.read_text(encoding="ascii").splitlines()
+    if not lines or len(lines) != len(set(lines)) or lines != sorted(lines):
+        raise ValueError("Historical JVM method manifest missing, duplicated or unsorted")
+    digest = hashlib.sha256(
+        json.dumps(lines, separators=(",", ":"), ensure_ascii=True).encode("ascii")
+    ).hexdigest()
+    if digest != EXPECTED_CASE_IDS_SHA256:
+        raise ValueError("Historical #116 JVM baseline fingerprint changed")
+    return frozenset(lines)
+
+
+EXPECTED_CASE_COUNT = len(baseline_case_ids())
 
 TEST_DIGESTS = {
     "provider-and-helpers": "69297e7750a3e5e774211ff2406c9dadcbe9694ff525edbaeb1f872e9725b088",
@@ -102,19 +123,86 @@ def classify(cases, gradle_exit):
 
 
 def inventory_problems(cases):
-    """Reject removed/replaced/extra JVM method IDs, even when the total stays 513."""
+    """Require every original #116 JVM method; count newer PASS tests automatically.
+
+    This prevents the old 513 -> 515 false-fail: no new count/hash to update.
+    The original 513 IDs and two explicitly retained PR #222 tests may never
+    disappear or be renamed. All other new tests must be actual PASS (classify).
+    """
     ids = [case["id"] for case in cases]
+    found = set(ids)
+    required = baseline_case_ids() | REQUIRED_LATER_CASE_IDS
     problems = []
-    if len(ids) != EXPECTED_CASE_COUNT:
-        problems.append(f"Expected {EXPECTED_CASE_COUNT} JVM method IDs, got {len(ids)}")
-    digest = hashlib.sha256(json.dumps(sorted(ids), separators=(",", ":"), ensure_ascii=True).encode("ascii")).hexdigest()
-    if digest != EXPECTED_CASE_IDS_SHA256:
-        problems.append("Missing/replaced/unexpected JVM method ID versus reviewed 513-method baseline (#116)")
+    if len(ids) != len(found):
+        problems.append("Duplicate JVM method IDs in full test inventory")
+    missing = sorted(required - found)
+    if missing:
+        problems.append(
+            f"Missing {len(missing)} protected JVM test methods: " +
+            ", ".join(missing[:8]) + (" ..." if len(missing) > 8 else "")
+        )
+    # New method names are deliberately allowed when all of their tests PASS.
+    # This is additive-only: no original test ID may be removed/replaced.
     return problems
 
 
 def git(*args):
     return subprocess.check_output(["git", *args], cwd=ROOT, text=True).strip()
+
+
+
+# The approved GitHub-hosted job already enforces its own 60-minute limit.
+# A previous successful FULL JVM run took ~52 minutes end-to-end. Do not add
+# a shorter default wall limit that would misclassify a valid run as a failure.
+# A caller may supply a timeout for a deliberately targeted diagnostic test.
+JVM_WALL_LIMIT_SECONDS = None
+
+
+def run_gradle_logged(command, logfile, max_seconds=JVM_WALL_LIMIT_SECONDS):
+    """Preserve the complete Gradle output privately and emit safe CI heartbeats.
+
+    Previous runs redirected all stdout to a file, leaving the Actions step
+    visually silent for tens of minutes. No test data, paths, tokens or saved
+    customer records are echoed. The underlying full JVM command is unchanged.
+    Do not shorten the approved 60-minute Actions job timeout by default.
+    """
+    stop = threading.Event()
+    began = time.monotonic()
+    result = None
+
+    def heartbeat():
+        while not stop.wait(60):
+            try:
+                size = logfile.stat().st_size
+            except OSError:
+                size = 0
+            print(f"JVM progress: elapsed={int(time.monotonic()-began)}s, "
+                  f"gradle_log_bytes={size}; full suite still in progress",
+                  flush=True)
+
+    with logfile.open("w", encoding="utf-8") as log:
+        worker = threading.Thread(target=heartbeat, daemon=True)
+        worker.start()
+        print("JVM full run starting; progress every 60s; "
+              "no additional timeout beyond GitHub's existing job limit "
+              "(raw FAIL remains expected for #88)", flush=True)
+        try:
+            try:
+                result = subprocess.run(command, cwd=ROOT, stdout=log,
+                                        stderr=subprocess.STDOUT, check=False,
+                                        timeout=max_seconds)
+            except subprocess.TimeoutExpired:
+                log.write(f"\nBLOCKED: JVM full suite exceeded {max_seconds}s "
+                          "and was terminated; inspect partial Gradle output.\n")
+                log.flush()
+                print("BLOCKED: JVM full suite timeout; NOT a product PASS. "
+                      "Partial gradle-full.log will be retained as evidence.",
+                      flush=True)
+                result = subprocess.CompletedProcess(command, 124)
+            return result
+        finally:
+            stop.set()
+            worker.join(timeout=0.5)
 
 
 def run():
@@ -133,8 +221,7 @@ def run():
     command += ([] if args.online_dependencies else ["--offline"])
     command += ["--no-daemon", "--max-workers=2", ":app:testPreviewUnitTest", "--rerun"]
     started = time.time_ns()
-    with (output / "gradle-full.log").open("w", encoding="utf-8") as log:
-        process = subprocess.run(command, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, check=False)
+    process = run_gradle_logged(command, output / "gradle-full.log")
     directory = ROOT / "app/build/test-results/testPreviewUnitTest"
     files = list(directory.glob("TEST-*.xml"))
     cases = read_cases(directory)
