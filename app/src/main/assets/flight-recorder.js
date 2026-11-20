@@ -6,7 +6,7 @@ const KEY='zamerovac-perf-diagnostics-v1',LIMIT=120,MAX_MS=600000;
 const TYPES=new Set(['start','enabled','disabled','editor-open','drag-release','editor-commit','native-save','ui-stall','save-error']);
 const FIELDS=new Set(['elapsedMs','bridgeMs','savePathMs','paintMs','undoCount','itemCount','success','lockWaitMs','readMs','writeMs','generationMs','recoveryMs','revisionInventoryMs','revisionCount','cacheMisses','cacheHits','mediaChecks']);
 const clock=()=>performance.now();
-const validTime=t=>typeof t==='string'&&/^\\d{4}-\\d{2}-\\d{2}T\\d{2}:\\d{2}:\\d{2}\\.\\d{3}Z$/.test(t)&&!Number.isNaN(Date.parse(t));
+const validTime=t=>typeof t==='string'&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(t)&&!Number.isNaN(Date.parse(t));
 let rows=[],enabled=false,persistError=false,flushTimer=null,beat=null,lastBeat=clock();
 try{
  const value=JSON.parse(root.localStorage?.getItem(KEY)||'{}');
