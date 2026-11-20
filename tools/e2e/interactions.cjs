@@ -3,6 +3,38 @@ const {suite,assert,createCanvas,tool,drag,clickAt,editSelected,record,projected
 async function dismiss(page){if(await page.locator('#modal').isVisible())await page.click('#cancelModal')}
 async function setup(page){await createCanvas(page,'Gesta – syntetická');await tool(page,'dimension');await drag(page,{x:100,y:180},{x:470,y:360});await editSelected(page);await page.fill('#measureInput','1250,000000123');await page.fill('#dimensionCaption','Český <script>window.__xss=1</script> 😀');await page.click('#okModal');return record(page)}
 (async()=>suite('interactions',async test=>{
+ await test('move_paint_once_per_frame',async({page,evidence})=>{
+  await createCanvas(page,'Seskupení vykreslení – syntetická');
+  const result=await page.evaluate(async()=>{
+   const item={id:'paint-probe',type:'dimension',a:{x:100,y:100},b:{x:300,y:150},
+    measure:'1585,800001',unit:'mm',color:'#ffff00',width:3,fontSize:18};
+   current.items=[item];paint();
+   const bounds=stageCanvas.getBoundingClientRect(),start={x:100,y:100};
+   pointers.set(1,start);
+   selectedHandle={kind:'move-dimension',startScreen:start,dragged:true,item,
+    startA:{...item.a},startB:{...item.b},beforeDragItems:JSON.stringify(current.items)};
+   const originalPaint=paint;let paints=0;
+   paint=function(){paints++;return originalPaint()};
+   for(let n=0;n<100;n++)stageMove({pointerId:1,clientX:bounds.left+start.x+n,clientY:bounds.top+start.y+n});
+   const beforeFrame=paints;
+   await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve)));
+   const afterFrame=paints,position={...item.a},measure=item.measure;
+   selectedHandle=null;pointers.clear();mode='pan';drag={screen:start,dx:view.dx,dy:view.dy};
+   pointers.set(2,start);
+   stageMove({pointerId:2,clientX:bounds.left+start.x+10,clientY:bounds.top+start.y});
+   stageUp({pointerId:2});
+   const afterPanRelease=paints,pendingFrame=movePaintFrame;
+   paint=originalPaint;
+   return {beforeFrame,afterFrame,afterPanRelease,pendingFrame,position,measure};
+  });
+  assert.equal(result.beforeFrame,0,'Pointer moves must not synchronously repaint each event');
+  assert.equal(result.afterFrame,1,'Latest pointer state should paint once on the next frame');
+  assert.ok(result.position.x>100,'Latest dimension position was lost');
+  assert.equal(result.measure,'1585,800001');
+  assert.equal(result.afterPanRelease,2,'Pan release must paint its final position');
+  assert.equal(result.pendingFrame,0,'Pan release must cancel queued paint');
+  evidence(result);
+ });
  await test('rapid_grips_jitter_cancel',async({page,step,evidence})=>{
   const original=await setup(page);await tool(page,'select');
   await step('One/two/three taps and one-pixel jitter do not collapse or delete measurement',async()=>{
