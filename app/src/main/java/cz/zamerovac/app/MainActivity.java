@@ -798,6 +798,7 @@ public class MainActivity extends Activity {
                     synchronized(TrashPurger.LOCK){
                         if(perf){
                             measuredNs[0]=System.nanoTime()-lockStartNs;
+                            ProtectedRevisions.beginDebugCounts();
                             lockWaitOpen=false;
                             Trace.endSection();
                         }
@@ -835,6 +836,14 @@ public class MainActivity extends Activity {
                               .put("writeMs",measuredNs[2]/1000000.0)
                               .put("generationMs",measuredNs[3]/1000000.0)
                               .put("recoveryMs",measuredNs[4]/1000000.0));
+                            if(perf){
+                              int[] counts=ProtectedRevisions.takeDebugCounts();
+                              if(counts!=null)response.getJSONObject("diag")
+                                .put("revisionCount",counts[0])
+                                .put("cacheHits",counts[1])
+                                .put("cacheMisses",counts[2])
+                                .put("mediaChecks",counts[3]);
+                            }
                             return response.toString();
                         }catch(Exception uncertainty){return "{\"ok\":true,\"audioPending\":true}";}
 
