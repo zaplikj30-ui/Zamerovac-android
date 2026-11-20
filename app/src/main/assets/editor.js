@@ -76,10 +76,11 @@ function finishHandleGesture(handle){
  return true;
 }
 function commitEditor(){
- const started=performance.now();
+ const diag=window.ZFlight?.isEnabled?.()===true&&typeof performance!=='undefined';
+ const started=diag?performance.now():0;
  if(current?.kind==='photo'&&stageImg){current.width=photoSize.w;current.height=photoSize.h;}
- touch(current);const confirmed=save();const paintedFrom=performance.now();paint();
- window.ZFlight?.record('editor-commit',{savePathMs:paintedFrom-started,paintMs:performance.now()-paintedFrom,success:confirmed===true?1:0});
+ touch(current);const confirmed=save();const paintedFrom=diag?performance.now():0;paint();
+ if(diag)window.ZFlight.record('editor-commit',{savePathMs:paintedFrom-started,paintMs:performance.now()-paintedFrom,success:confirmed===true?1:0});
  return confirmed;
 }
 function undoEditor(){if(!editStack.length)return;let restored;
