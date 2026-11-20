@@ -788,7 +788,7 @@ public class MainActivity extends Activity {
             // Static labels only: no names, IDs, JSON, paths, or media bytes.
             final boolean perf=BuildConfig.DEBUG;
             // Numeric durations are only emitted in debug/preview ACK responses.
-            final long[] measuredNs=new long[5];
+            final long[] measuredNs=perf?new long[5]:null;
             final long lockStartNs=perf?System.nanoTime():0L;
             if(perf)Trace.beginSection("Z195-bridge");
             try {
