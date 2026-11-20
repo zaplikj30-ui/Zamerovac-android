@@ -8,6 +8,8 @@ const extract=(a,b)=>{
  return src.slice(i,j);
 };
 const code=[
+ 'let movePaintFrame=0;',
+ extract('function scheduleMovePaint(){','function openEditor('),
  extract('function finishHandleGesture(handle){','function commitEditor(){'),
  // The label-hit test executes editor methods in isolation; include their shared
  // caption formatter just as the full editor does.
@@ -24,6 +26,9 @@ const ctx={
  view:{zoom:1,dx:0,dy:0},ctx:{font:'',save(){},restore(){},measureText(t){return{width:t.length*9}}},
  worldToScreen:p=>({...p}),screenToWorld:p=>({...p}),eventPoint:e=>({x:e.x,y:e.y}),
  nearestLabel:()=>null,snap:p=>({...p}),paint:()=>{},
+ // Use the actual editor frame scheduler extracted above; defer callbacks as the browser does.
+ requestAnimationFrame:cb=>{const id=++ctx.nextFrame;ctx.frames.set(id,cb);return id},
+ cancelAnimationFrame:id=>{ctx.frames.delete(id)},frames:new Map(),nextFrame:0,
  checkpoint:()=>{ctx.checkpoints++},commitEditor:()=>{ctx.commits++},
  touch:()=>{},editItem:()=>{ctx.edits++},setTool:k=>{ctx.mode=k},
  checkpoints:0,commits:0,edits:0,editStack:[],redoStack:[],console
@@ -41,6 +46,7 @@ pointer('Up',240,240);
 assert.deepEqual([dim.a.x,dim.a.y,dim.b.x,dim.b.y],[140,240,340,240]);
 assert.equal(dim.measure,'200','Midpoint drag must preserve measurement text');
 assert.equal(ctx.commits,1);
+assert.equal(ctx.frames.size,0,'Completed gesture must cancel queued paint');
 pointer('Down',140,240);
 pointer('Move',160,210);
 pointer('Up',160,210);
