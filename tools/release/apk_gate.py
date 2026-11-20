@@ -274,7 +274,7 @@ def next_preview_code(published_code, run_number):
     number = positive_id(run_number, "GitHub Actions workflow run number")
     if not isinstance(published_code, int) or not 1001 <= published_code < 2147483646:
         stop("previous Android versionCode invalid")
-    code = max(published_code + 1, KNOWN_PREVIEW_VERSION_CODE + number)
+    code = max(published_code, KNOWN_PREVIEW_VERSION_CODE) + number
     if code >= 2147483647:
         stop("preview versionCode exceeds Android signed int range")
     return code
