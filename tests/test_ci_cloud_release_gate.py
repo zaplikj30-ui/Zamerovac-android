@@ -76,9 +76,12 @@ class CloudReleaseSafetyGateTest(unittest.TestCase):
         self.assertNotIn('|| true', step)
         self.assertNotIn('git checkout', step)
 
-    def test_previous_published_apk_determines_next_version_code(self):
+    def test_published_apk_and_monotonic_workflow_determine_version_code(self):
+        # Last signed Release is a lower bound, NOT the only previous installation.
         for snippet in ('def previous(', 'def inspect_apk(', 'SIGNER =', 'PACKAGE =',
-                        'new_code = old["version_code"] + 1',
+                        'KNOWN_PREVIEW_VERSION_CODE = 10008',
+                        'new_code = next_preview_code(old["version_code"], os.environ["GITHUB_RUN_NUMBER"])',
+                        'expected_code = next_preview_code(old["version_code"], run.get("run_number"))',
                         'if semver(version) <= semver(old_version)',
                         'if meta["version_code"] != int(os.environ["NEW_CODE"])'):
             self.assertIn(snippet, GATE)
