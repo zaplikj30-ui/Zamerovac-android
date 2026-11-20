@@ -88,6 +88,38 @@ public class ProtectedRevisionsTest {
         assertEquals(exact,LocalDatabase.readForCas(device));
         exactBytes();
     }
+    @Test public void destructivePathsRehashHoldWithRestoredSizeMtimeAndFileKey()throws Exception{
+        File folder=new File(device.home,"protected-revisions");
+        Path hold=Arrays.stream(Objects.requireNonNull(folder.listFiles()))
+            .filter(f->f.getName().matches("[a-f0-9]{64}\\.json")).findFirst().get().toPath();
+        assertEquals(2,protection.pins().size()); // Warm regular save path.
+        java.nio.file.attribute.BasicFileAttributes before=Files.readAttributes(hold,
+            java.nio.file.attribute.BasicFileAttributes.class,LinkOption.NOFOLLOW_LINKS);
+        byte[] original=Files.readAllBytes(hold),corrupt=original.clone();
+        corrupt[0]=(byte)(corrupt[0]=='!'?'?':'!');
+        Files.write(hold,corrupt);
+        Files.setLastModifiedTime(hold,before.lastModifiedTime());
+        java.nio.file.attribute.BasicFileAttributes after=Files.readAttributes(hold,
+            java.nio.file.attribute.BasicFileAttributes.class,LinkOption.NOFOLLOW_LINKS);
+        assertEquals(before.size(),after.size());
+        assertEquals(before.lastModifiedTime(),after.lastModifiedTime());
+        assertEquals(before.fileKey(),after.fileKey());
+        Assert.assertThrows(IOException.class,protection::pinsForCleanup);
+        int[] published={0};
+        Assert.assertThrows(IOException.class,()->new TrashPurger(device,device.prefs)
+            .purge(exact,exact,new JSONArray().put("photo"),
+                text->{published[0]++;LocalDatabase.write(device,text);}));
+        assertEquals("No DB commit if protected bytes changed",0,published[0]);
+        assertEquals(exact,LocalDatabase.readForCas(device));
+        File unknown=new File(device.home,"media/unowned-new");
+        Files.write(unknown.toPath(),new byte[]{9});
+        assertFalse("Rollback must not remove media on uncertain hold",ProtectedRevisions.rollback(unknown));
+        assertTrue(unknown.exists());
+        exactBytes();
+        Files.write(hold,original);
+        Files.setLastModifiedTime(hold,before.lastModifiedTime());
+        assertEquals(2,protection.pinsForCleanup().size());
+    }
     void exactBytes(){try{assertArrayEquals(photo,Files.readAllBytes(new File(device.home,"media/original-photo").toPath()));assertArrayEquals(video,Files.readAllBytes(new File(device.home,"media/original-video").toPath()));}catch(IOException e){throw new AssertionError(e);}}
     void hasExactDatabase()throws Exception{for(JSONObject hold:holds())if("database".equals(hold.getString("kind"))&&exact.equals(hold.getString("metadata")))return;fail("Missing byte-exact JSON preimage, geometry/laser/history");}
     @Test public void ackSupersessionForgetAndRestartNeverReleaseOriginals()throws Exception{
