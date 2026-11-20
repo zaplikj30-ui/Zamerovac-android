@@ -62,6 +62,24 @@ class SyncAckAcceptanceTest(unittest.TestCase):
                 self.assertIn("--rerun", command)
                 self.assertIn("--no-daemon", command)
 
+    def test_full_jvm_timeout_is_blocked_with_partial_log_and_never_excused(self):
+        import subprocess
+        import tempfile
+        from unittest.mock import patch
+
+        with tempfile.TemporaryDirectory() as tmp:
+            log = Path(tmp) / "gradle-full.log"
+            cmd = ["gradle", "--no-daemon", ":app:testPreviewUnitTest", "--rerun"]
+            with patch.object(gate.subprocess, "run",
+                              side_effect=subprocess.TimeoutExpired(cmd, 1)) as runner:
+                result = gate.run_gradle_logged(cmd, log, max_seconds=1)
+            self.assertEqual(124, result.returncode)
+            self.assertEqual(cmd, runner.call_args.args[0])
+            self.assertEqual(1, runner.call_args.kwargs["timeout"])
+            self.assertIn("BLOCKED: JVM full suite exceeded", log.read_text())
+            self.assertEqual("FAIL", gate.classify(self.baseline(), result.returncode)
+                             ["product_acceptance"]["status"])
+
     def test_historical_methods_cannot_disappear_but_new_pass_tests_autocount(self):
         # Use the exact 513 independently preserved historical IDs, not mocks.
         cases = [dict(id=name, status="FAIL" if name in gate.EXPECTED else "PASS",
