@@ -1,0 +1,90 @@
+name: Zaměřovač PR209 - jednorázová diagnostická APK
+on:
+  push:
+    branches: [qa/pr209-diagnostics-apk-20261120]
+    paths:
+      - .github/workflows/qa-pr209-diagnostics-apk.yml
+permissions:
+  contents: read
+concurrency:
+  group: qa-pr209-diagnostics-apk-once
+  cancel-in-progress: false
+jobs:
+  preview:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.actor == 'zaplikj30-ui' && github.event_name == 'push' && github.ref == 'refs/heads/qa/pr209-diagnostics-apk-20261120' && github.run_attempt == 1 }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+    steps:
+      - name: Checkout exact approved diagnostic revision
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262
+        with:
+          ref: 45899b3b1b1cbfc6c4aba1a830f55c28db75616e
+          persist-credentials: false
+      - name: Verify exact source and test-only package
+        shell: bash
+        run: |
+          set -euo pipefail
+          test "$(git rev-parse HEAD)" = '45899b3b1b1cbfc6c4aba1a830f55c28db75616e'
+          test -f app/build.gradle
+          test -f config/app-version.properties
+          grep -q '^versionName=1.4.1$' config/app-version.properties
+          test -f tools/debug-signing.p12.b64
+          test -f app/src/main/assets/flight-recorder.js
+      - name: Check diagnostics and data-safe JS regressions
+        shell: bash
+        run: |
+          set -euo pipefail
+          for f in app/src/main/assets/flight-recorder.js app/src/main/assets/app.js app/src/main/assets/editor.js app/src/main/assets/help.js tests/flight_recorder.js; do node --check "$f"; done
+          node tests/flight_recorder.js
+          node tests/issue195_trace_contract.js
+          node tests/issue195_trace_review_regressions.js
+          node tests/save_acknowledgement.js
+          node tests/gesture_history_undo_redo.js
+          node tests/dimension_drag_interaction.js
+          node tests/help_guide.js
+      - uses: actions/setup-java@cf277c60eb25467037889841efdb72551f06f6c3
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Build signed preview APK, do not release
+        shell: bash
+        env:
+          GRADLE_USER_HOME: ${{ runner.temp }}/pr209-diagnostics-gradle
+        run: |
+          set -euo pipefail
+          checksum=31c55713e40233a8303827ceb42ca48a47267a0ad4bab9177123121e71524c26
+          curl -fsSL https://services.gradle.org/distributions/gradle-8.10.2-bin.zip -o "$RUNNER_TEMP/pr209-gradle.zip"
+          printf '%s  %s\n' "$checksum" "$RUNNER_TEMP/pr209-gradle.zip" | sha256sum -c -
+          unzip -q "$RUNNER_TEMP/pr209-gradle.zip" -d "$RUNNER_TEMP"
+          GITHUB_RUN_NUMBER=9006 "$RUNNER_TEMP/gradle-8.10.2/bin/gradle" --no-daemon :app:assemblePreview
+      - name: Verify APK integrity, package and version
+        shell: bash
+        run: |
+          set -euo pipefail
+          apk=app/build/outputs/apk/preview/app-preview.apk
+          test -s "$apk"
+          unzip -tq "$apk" >/dev/null
+          sdk="${ANDROID_HOME:-${ANDROID_SDK_ROOT:-/usr/local/lib/android/sdk}}"
+          signer="$(find "$sdk/build-tools" -type f -name apksigner | sort -V | tail -n 1)"
+          aapt="$(find "$sdk/build-tools" -type f -name aapt | sort -V | tail -n 1)"
+          test -n "$signer" && test -n "$aapt"
+          "$signer" verify --verbose "$apk"
+          package="$("$aapt" dump badging "$apk" | grep '^package: ')"
+          printf '%s\n' "$package"
+          [[ "$package" == *"name='cz.zamerovac.app.preview'"* ]]
+          [[ "$package" == *"versionCode='10006'"* ]]
+          [[ "$package" == *"versionName='1.4.1-test'"* ]]
+          mkdir -p dist
+          cp "$apk" dist/Zamerovac-PR209-Diagnostika-Samsung.apk
+          (cd dist && sha256sum Zamerovac-PR209-Diagnostika-Samsung.apk > Zamerovac-PR209-Diagnostika-Samsung.apk.sha256)
+          printf '%s\n' '45899b3b1b1cbfc6c4aba1a830f55c28db75616e' > dist/SOURCE-SHA.txt
+          printf 'Testovací diagnostická APK PR209, produkt SHA 45899b3b1b1cbfc6c4aba1a830f55c28db75616e, ONLY SYNTHETIC DATA.\n' >> "$GITHUB_STEP_SUMMARY"
+          cat dist/*.sha256 >> "$GITHUB_STEP_SUMMARY"
+      - name: Upload APK artifact (no GitHub Release)
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02
+        with:
+          name: Zamerovac-PR209-Diagnostika-Samsung
+          path: dist/
+          if-no-files-found: error
+          retention-days: 7
+          compression-level: 0
