@@ -110,8 +110,13 @@ final class ProtectedRevisions {
         if(staged)write(path,bytes); // finish a fully verified interrupted local hold, never a DB promotion
         hold.remove("metadata");JSONObject lookup=new JSONObject();for(int i=0;i<media.length();i++){JSONObject entry=media.getJSONObject(i);lookup.put(entry.getString("id"),entry);}hold.put("_ids",lookup);
         attrs=Files.readAttributes(path.toPath(),java.nio.file.attribute.BasicFileAttributes.class,LinkOption.NOFOLLOW_LINKS);
-        VERIFIED.put(path.getAbsolutePath(),new CachedHold(attrs,hold));
-        while(VERIFIED.size()>8)VERIFIED.remove(VERIFIED.keySet().iterator().next());
+        // Sorted inventory scans churn a small LRU when history exceeds its
+        // capacity. Keep room for typical histories, and bound retained media
+        // summaries separately. Larger holds still receive full verification.
+        if(media.length()<=256){
+            VERIFIED.put(path.getAbsolutePath(),new CachedHold(attrs,hold));
+            while(VERIFIED.size()>128)VERIFIED.remove(VERIFIED.keySet().iterator().next());
+        }else VERIFIED.remove(path.getAbsolutePath());
         return hold;
     }
     /** Repair the union after a crash between the two catalog commits.
