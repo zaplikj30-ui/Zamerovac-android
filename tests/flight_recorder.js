@@ -6,6 +6,7 @@ const source=fs.readFileSync('app/src/main/assets/flight-recorder.js','utf8');
 const html=fs.readFileSync('app/src/main/assets/index.html','utf8');
 const app=fs.readFileSync('app/src/main/assets/app.js','utf8');
 const editor=fs.readFileSync('app/src/main/assets/editor.js','utf8');
+const help=fs.readFileSync('app/src/main/assets/help.js','utf8');
 const java=fs.readFileSync('app/src/main/java/cz/zamerovac/app/MainActivity.java','utf8');
 const revisions=fs.readFileSync('app/src/main/java/cz/zamerovac/app/ProtectedRevisions.java','utf8');
 const media=fs.readFileSync('app/src/main/java/cz/zamerovac/app/ImmutableMediaProof.java','utf8');
@@ -57,7 +58,8 @@ function run(){
  assert.match(app,/ZFlight\?\.attachSettings/);
  assert.match(editor,/ZFlight\?\.record\('drag-release'/);
  assert.match(editor,/ZFlight\.record\('editor-commit'/);
- for(const label of ['lockWaitMs','readMs','writeMs','generationMs','recoveryMs'])
+ assert(help.includes('Diagnostika výkonu')&&help.includes('120 událostí'),'offline help must explain new diagnostic controls');
+ for(const label of ['lockWaitMs','readMs','writeMs','generationMs','recoveryMs','revisionCount','cacheHits','cacheMisses','mediaChecks'])
   assert(java.includes('.put("'+label+'",'),'missing Native phase '+label);
  for(const marker of ['Z195-revision-inventory','Z195-media-proof'])
   assert((revisions+media).includes(marker),'missing debug trace '+marker);
