@@ -113,6 +113,9 @@ public class GeometrySaveClassifierTest {
         item(after).put("rev", "old-item");
         rejected(before, after);
         after = moved(before);
+        item(after).put("rev", 1234);
+        rejected(before, after);
+        after = moved(before);
         item(after).put("updatedAt", "not-an-ISO-date");
         rejected(before, after);
         after = moved(before);
