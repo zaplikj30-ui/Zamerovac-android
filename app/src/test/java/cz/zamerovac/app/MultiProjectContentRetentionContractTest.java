@@ -49,7 +49,7 @@ public class MultiProjectContentRetentionContractTest {
         int count = 0;
         for (File f : files) {
             if (!f.getName().matches("[a-f0-9]{64}\\.json")) continue;
-            if ("database".equals(new JSONObject(Files.readString(f.toPath()))
+            if ("database".equals(new JSONObject(new String(Files.readAllBytes(f.toPath()), java.nio.charset.StandardCharsets.UTF_8))
                     .optString("kind"))) count++;
         }
         return count;
