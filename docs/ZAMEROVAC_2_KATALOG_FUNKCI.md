@@ -104,7 +104,7 @@
 
 | Stav v2 | ID | Funkce / myšlenka | Dosavadní rozhodnutí | Zdroj |
 |---|---|---|---|---|
-| ☐ | F01 | Fotografické 360° panorama / skládání více snímků; na panoramatu editovatelné kóty a označení bodů | **BUDOUCÍ NÁPAD, upřesněný 21. 11.** | [#221](https://github.com/zaplikj30-ui/Zamerovac-android/issues/221#issuecomment-7061788627) |
+| ☐ | F01 | **Vodorovné 360° panorama místnosti z více překrývajících se fotografií, otáčení pohledu do stran jako ze středu místnosti; část z okraje postupně přijíždí a srovnává se čelně uprostřed, plynulý zoom, minimální rušivé zakřivení/rybí oko; editovatelné kóty stále na místě** | **PODOBA FUNKCE F01 UPŘESNĚNA VLASTNÍKEM; TECHNICKY OVĚŘIT, PROGRAMOVAT POZDĚJI** | [#120](https://github.com/zaplikj30-ui/Zamerovac-android/issues/120), [detail F01](ZAMEROVAC_2_NEDORESENE_NAPADY.md) |
 | ☐ | F02 | Možné prostorové/3D panorama a propojení kót mezi záběry | **OTEVŘENO** | [#221](https://github.com/zaplikj30-ui/Zamerovac-android/issues/221#issuecomment-7061788627), [Vize](../VIZE_A_PLAN.md) |
 | ☐ | F03 | Podpora co nejvíce laserových dálkoměrů různých značek a modelů – Bosch, další podle dostupných protokolů | **BUDOUCÍ POŽADOVANÝ SMĚR, NE PODPORA VŠECH** | [Vize](../VIZE_A_PLAN.md), [Plán §11](../PROJEKTOVY_PLAN_ZAMEROVACE.md) |
 | ☐ | F04 | Samostatný editovatelný půdorys v zakázce, volná kresba, jemné narovnání stěn, šikminy ponechat | **SCHVÁLENÝ ZÁMĚR, BEZ IMPLEMENTAČNÍHO GO** | [Vize – půdorys](../VIZE_A_PLAN.md) |
