@@ -119,7 +119,7 @@
 | ☐ | F13 | Rozpoznávání řeči/diktování čísel, textu a příkazů | **NÁPAD** | [#44](https://github.com/zaplikj30-ui/Zamerovac-android/issues/44) |
 | ☐ | F14 | Rozšiřitelná knihovna symbolů, kategorie, poslední použité, případné otáčení/změna velikosti | **ČÁST DŘÍVE DOHODNUTA, ROTACE OTEVŘENÁ** | [#12](https://github.com/zaplikj30-ui/Zamerovac-android/issues/12), [Rozhodnutí](../ROZHODNUTI_A_NAPADY_Z_TESTU.md) |
 | ☐ | F15 | Galerie, vyhledávání, miniatury, změna vzhledu a personalizace lišty | **DŘÍVE DOHODNUTO / ČÁST OTEVŘENÁ** | [Rozhodnutí](../ROZHODNUTI_A_NAPADY_Z_TESTU.md), [Vize](../VIZE_A_PLAN.md) |
-| ☐ | F16 | Začátečník/Střední/Expert – úrovně přehlednosti UI, NE tarify | **NÁPAD** | [Vize](../VIZE_A_PLAN.md) |
+| ☐ | F16 | **Nastavení → Přizpůsobení nástrojů**: samostatné přepínače pro zobrazení/skrytí jednotlivých nástrojů (základ foto–kóta–poznámka–galerie, volitelně další funkce); možnost ukázat všechny nástroje. Skrytí nic nemaže. | **FUNKČNÍ POŽADAVEK A NÁZEV POTVRZENY; V2 ZATÍM NEIMPLEMENTOVÁNO**. Předvolby Začátečník/Střední/Expert jsou případná pozdější ergonomická možnost. | [Vize](../VIZE_A_PLAN.md), [#224](https://github.com/zaplikj30-ui/Zamerovac-android/issues/224) |
 | ☐ | F17 | Úsporné/vyvážené/kvalitní vykreslování na různě výkonném telefonu | **NÁPAD** | [Vize](../VIZE_A_PLAN.md) |
 | ☐ | F18 | Tmavý/světlý/systémový vzhled, barvy, případně decentní pozadí | **DŘÍVE DOHODNUTO PRO V1 / ROZSAH V2 OTEVŘENÝ** | [Vize](../VIZE_A_PLAN.md), [#17](https://github.com/zaplikj30-ui/Zamerovac-android/issues/17) |
 | ☐ | F19 | Přizpůsobení skládacím telefonům, více oken, rotace a různé velikosti | **BUDOUCÍ POŽADAVEK** | [Vize](../VIZE_A_PLAN.md) |
@@ -129,7 +129,7 @@
 | ☐ | F23 | Budoucí návrh skříněk, kusovník, nářezák, orientace hran/dekorů | **DLOUHODOBÁ VIZE JINÉHO MODULU** | [Vize](../VIZE_A_PLAN.md) |
 | ☐ | F24 | Budoucí kalkulace, práce, doprava, marže, nabídky, ceníky, varianty | **DLOUHODOBÁ VIZE** | [Vize](../VIZE_A_PLAN.md) |
 | ☐ | F25 | Budoucí výrobní a montážní režim, kontroly kolizí a revize výstupů | **DLOUHODOBÁ VIZE** | [Vize](../VIZE_A_PLAN.md) |
-| ☐ | F26 | Zapínatelné funkční moduly, ale samostatné dnešní aplikace | **NÁPAD** | [Plán §11](../PROJEKTOVY_PLAN_ZAMEROVACE.md) |
+| ☐ | F26 | **Samostatné Experimentální funkce**: každou novou, ještě neověřenou možnost povolit vědomě; jasně ukázat omezení konkrétního telefonu a možnost vypnutí. Budoucí volitelné moduly aplikací zůstávají zvláštní nápad. | **ODDĚLENÍ BĚŽNÝCH NÁSTROJŮ A EXPERIMENTŮ POTVRZENO; PLUGINOVÉ MODULY NEROZHODNUTY.** Experimenty nesmějí rozbít přesná měření/ukládání. | [#224](https://github.com/zaplikj30-ui/Zamerovac-android/issues/224), [Vize](../VIZE_A_PLAN.md) |
 | ☐ | F27 | Volitelná monetizace: zdarma, jednorázově, placené funkce, licence, předplatné, reklamy/bez reklam, promo kódy | **OTEVŘENÝ OBCHODNÍ MODEL** | [Vize](../VIZE_A_PLAN.md), [V2 §16](ZAMEROVAC_2_ZIVY_NAVRH.md) |
 | ☐ | F28 | Google Play/App Store – možné veřejné vydání, soukromí a licence | **OTEVŘENÝ SMĚR** | [Vize](../VIZE_A_PLAN.md) |
 | ☐ | F29 | Vzdálený tisk a promítání/TV/projektor | **BUDOUCÍ MOŽNOST, ČÁST POŽADOVANÁ** | [Vize](../VIZE_A_PLAN.md) |
