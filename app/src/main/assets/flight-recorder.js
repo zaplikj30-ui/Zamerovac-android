@@ -201,6 +201,8 @@ function attachEditorInput(canvas){
  };
  canvas.addEventListener('pointerdown',e=>{
   if(!enabled||blocked)return;
+  // A lost pointerup must never accumulate an unbounded in-memory map.
+  if(active.size>=16&&!active.has(e.pointerId))active.clear();
   active.set(e.pointerId,{started:clock(),moves:0});
   record('input-down',values(e));
  },{capture:true,passive:true});
