@@ -3,6 +3,8 @@
 **21. 11. 2026 · ŽIVÝ PLÁN / zatím jen návrh etap, ne schválení implementace.**
 Tento dokument odpovídá na otázky **CO TEĎ → CO PAK → JAK POZNÁME HOTOVO → NA ČEM TO ZÁVISÍ**. Není kopií celé [vize](../VIZE_A_PLAN.md) ani 49 požadavků; ty jsou v [inventuře](ZAMEROVAC_2_INVENTURA_POZADAVKU.md). Vychází z [porovnání skutečného kódu v1 a chyb](ZAMEROVAC_2_POROVNANI_S_V1.md), [ústavy dat M0](ZAMEROVAC_2_USTAVA_DAT.md) a [živého návrhu](ZAMEROVAC_2_ZIVY_NAVRH.md). V1 main při vytvoření podkladů: `8a36e353448ba74a066e16372441604b7e7163c7`.
 
+**PODROBNÉ PRACOVNÍ SEZNAMY:** [Hlavní katalog 49 historických detailů, 12 oblastí a 39 budoucích skupin](ZAMEROVAC_2_KATALOG_FUNKCI.md) a **[samostatný seznam nedotažených nápadů s rozhodovacími otázkami](ZAMEROVAC_2_NEDORESENE_NAPADY.md)**. Strom níže je pouze přehled etap; není úplným seznamem funkcí. Čísla neznamenají počet hotových funkcí a nápad neznamená automatické GO k implementaci.
+
 **PŘENOS CELÉHO ZADÁNÍ JEDNIČKY:** [Registr všech dohledaných návazností, včetně nedokončených nápadů](ZAMEROVAC_2_REGISTR_NAVAZNOSTI_V1.md) je povinný podklad této roadmapy. **Pořadí etap není seznamem toho, co chceme zachovat – nechceme nic z předchozích uživatelských diskusí vyhodit jen proto, že se to netvoří hned.** Zaměřovač 2 se bude rozrůstat po malých otestovaných celcích; výslovně vyloučené referenční funkce zůstávají vyloučené, dokud se rozhodnutí nezmění.
 
 ## 1. Jednoduchý strom – jak se aplikace bude stavět
