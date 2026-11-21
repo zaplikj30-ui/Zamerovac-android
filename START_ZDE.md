@@ -7,7 +7,7 @@
 | Potřeba | Zdroj pravdy |
 |---|---|
 | Práce AI, role, souhlasy, testovací důkazy, HOME/rozpočet | [AGENTS.md](AGENTS.md) |
-| **Nová samostatná aplikace Zaměřovač 2** – aktuální rozhodnutí, technologie, poučení z v1 a pokračování po ztrátě chatu | [docs/ZAMEROVAC_2_ZIVY_NAVRH.md](docs/ZAMEROVAC_2_ZIVY_NAVRH.md), [původní podrobný návrh](NAVRH_NOVEHO_ZAMEROVACE_OD_NULY.md) |
+| **Nová samostatná aplikace Zaměřovač 2** – rozhodnutí a povinná inventura všech známých požadavků, odložených nápadů i rizik před návrhem | [Živý plán v2](docs/ZAMEROVAC_2_ZIVY_NAVRH.md), [inventura požadavků a nápadů](docs/ZAMEROVAC_2_INVENTURA_POZADAVKU.md), [původní návrh](NAVRH_NOVEHO_ZAMEROVACE_OD_NULY.md) |
 | Cílové funkce, ergonomie, vyloučené funkce, nápady a jejich stav | [VIZE_A_PLAN.md](VIZE_A_PLAN.md) a [rozhodnutí z testů](ROZHODNUTI_A_NAPADY_Z_TESTU.md) |
 | Architektura, etapy, technologie a srovnání variant | [PROJEKTOVY_PLAN_ZAMEROVACE.md](PROJEKTOVY_PLAN_ZAMEROVACE.md) |
 | Originální média, editovatelné hodnoty, ZIP, platformy, migrace | [DATOVY_FORMAT_A_PC_KOMPATIBILITA.md](DATOVY_FORMAT_A_PC_KOMPATIBILITA.md) |
