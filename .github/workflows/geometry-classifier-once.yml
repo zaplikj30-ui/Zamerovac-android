@@ -1,5 +1,5 @@
-name: "#221: krátký cílený JVM test klasifikátoru (jednorázový)"
-# Single explicit owner GO 2026-11-21: test PR #235 without the 50-minute suite.
+name: "#221: krátký Node + JVM test klasifikátoru"
+# Owner GO: 2026-11-21 'Tak dělej, na co čekáš?' Short targeted tests only.
 # Run ONLY when this new one-shot workflow file is committed to its QA branch.
 on:
   push:
@@ -19,12 +19,21 @@ jobs:
       - name: Checkout exact product SHA from draft PR #235
         uses: actions/checkout@v4
         with:
-          ref: 4f3f9f0d382e2234246851bc563fb958fafc2a66
+          ref: f540bd31933e77b60b31e0ed13832b9f13e6549a
           persist-credentials: false
       - name: Verify immutable source SHA
         run: |
-          test "$(git rev-parse HEAD)" = "4f3f9f0d382e2234246851bc563fb958fafc2a66"
+          test "$(git rev-parse HEAD)" = "f540bd31933e77b60b31e0ed13832b9f13e6549a"
           echo "Product SHA: $(git rev-parse HEAD)"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Real production JS editor commit -> golden fixtures
+        shell: bash
+        run: |
+          set -euo pipefail
+          node --check tests/geometry_classifier_editor_roundtrip.js
+          timeout --signal=TERM --kill-after=5s 45s node tests/geometry_classifier_editor_roundtrip.js
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
