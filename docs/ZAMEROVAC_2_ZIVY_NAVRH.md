@@ -19,7 +19,7 @@
 
 Cíl je pracovní postup **zakázka → fotografie/podklady → přesná editovatelná kóta/poznámka → volitelně laser → bezpečné uložení → návrat/obnova → export/sdílení**. Podrobná funkční specifikace a stavy jsou v odkazovaných dokumentech. Zachovat ergonomii už schválených kót, čar, šipek, úchopů a lupy; v1 je funkční i nefunkční **reference**, ne zaručená pravda. Reference ImageMeter 26.6.1, Pro 26.5.0 a 3.9.15 využívat pouze ke studiu funkčního chování, **nepřebírat cizí kód či vzhled**.
 
-Klíčové kontrakty: oddělení skutečné číselné hodnoty a jednotky od pixelové geometrie; přesná editovatelná data; původní bajty všech médií; stabilní ID a vazby; Undo/Redo, historie a koš podle definovaných účelů; práce bez internetu **i budoucí online provoz/synchronizace**; bezpečné uložení/obnova, ZIP/import/export, migrace; konflikty synchronizace bez tichého přepsání novějších dat; připravenost na metrické/imperiální jednotky a nejprve angličtinu. Změna v2 nesmí skrytě poškodit žádný z těchto principů.
+Klíčové kontrakty: oddělení skutečné číselné hodnoty a jednotky od pixelové geometrie; přesná editovatelná data; původní bajty všech médií; stabilní ID a vazby; Undo/Redo, historie a koš podle definovaných účelů; **první verze pouze lokálně/offline**, online provoz a synchronizace až v pozdější etapě; bezpečné uložení/obnova, ZIP/import/export, migrace; konflikty synchronizace bez tichého přepsání novějších dat; připravenost na metrické/imperiální jednotky a nejprve angličtinu. Změna v2 nesmí skrytě poškodit žádný z těchto principů.
 
 ## 3. Poučení z jedničky — co nesmíme zopakovat
 
@@ -55,7 +55,7 @@ Klíčové kontrakty: oddělení skutečné číselné hodnoty a jednotky od pix
 2. **Ukládání:** transakční stav, integrita originálních médií, průběžná obnova a verzované migrace; oddělené od UI a od sítě.
 3. **Editor:** rychlý renderer, zásahové oblasti, náhled tahu a gesto; na konci pošle doméně jeden příkaz. Návrh nezaručuje finální technologii rendereru.
 4. **Platformní adaptéry:** kamera, úložiště, Bosch Bluetooth, sdílení/tisk, oprávnění, pero a systémové vazby.
-5. **Přenos a cloud navrhnout od začátku, implementovat postupně:** rozlišit export kopie, zálohu a synchronizaci téže identity; bezpečné konflikty, práci offline i online a nejprve jen čtecí import v1. Žádné spojení v1/v2 na stejné živé úložiště bez speciálně schváleného protokolu.
+5. **Přenos a cloud až v pozdější etapě:** v prvním základu pouze lokální práci a uložení bez účtů, serveru, síťového přenosu či synchronizační fronty. Přitom zachovat čistá data a stabilní identity, aby pozdější rozšíření nebylo zbytečně obtížné. Až bude online etapa aktuální, rozlišit export kopie, zálohu a synchronizaci téže identity, řešit konflikty a bezpečný provoz offline/online; nejprve jen čtecí import v1. Žádné spojení v1/v2 na stejné živé úložiště bez speciálně schváleného protokolu.
 6. **Rozšiřitelnost:** volitelné moduly případně v budoucnu; nyní nebudovat plugin engine ani neslučovat samostatné produkty.
 
 ## 6. Postup, aby nevznikla druhá přebujelá aplikace
@@ -102,17 +102,17 @@ Klíčové kontrakty: oddělení skutečné číselné hodnoty a jednotky od pix
 
 **Vyhodnocení:** nejcennější je začít **kontraktem dat + věrným prototypem foto–kóta–uložení–obnova**, nikoli nejprve sestavovat celý framework. V1 ani předchozí dokumentace se nemění; **výběr technologie, datové úložiště a architektura jsou stále otevřená rozhodnutí**, která vyžadují měření a samostatný souhlas.
 
-## 8. Upřesnění vlastníka 21. 11. 2026: offline + online; ochrana dat bez přehánění
+## 8. Finální upřesnění vlastníka 21. 11. 2026: nejprve čistě offline základ, online až později
 
-**ROZHODNUTÝ PRODUKTOVÝ SMĚR:** Zaměřovač 2 není a nemá být **pouze offline aplikace**. Bez internetu má jít plnohodnotně zaměřovat, kótovat, fotografovat a ukládat. V budoucím online režimu počítat se synchronizací mezi zařízeními, uživatelskými účty, sdílením zakázek a případnými dalšími službami; návrh nesmí záviset výhradně na Googlu. Výpadek internetu nesmí blokovat lokální práci. Když spojení znovu funguje, přenášet bezpečně jen potřebné změny, nikoliv každé gesto a každou položku Undo. Tato **architektonická připravenost je požadavek již nyní**, úplná implementace cloudu se může přidat až po ověřeném lokálním jádru. Žádný konkrétní cloud, poskytovatel přihlášení ani algoritmus sync dosud není vybrán.
+**ROZHODNUTÉ POŘADÍ VÝVOJE:** **První malý funkční Zaměřovač 2 bude jen offline**, bez registrace, cloudového účtu, serveru, síťových volání, synchronizačních front a internetové infrastruktury. Nejdřív fotografie → přesná kóta → plynulé úpravy → Undo/Redo → jednoduché bezpečné lokální uložení → zavření a obnovení; pak postupně další základní nástroje, galerie, zakázky a potřebný export. **Online až v budoucí samostatné etapě**, po ověření fungujícího základu a novém rozhodnutí vlastníka: případně účty, sdílení a synchronizace mezi telefonem, tabletem a počítačem. Aplikace tedy není navždy omezena na offline, ale nyní se online **nenavrhuje do implementačních detailů ani neprogramuje**. Stačí neudělat zbytečně neprůchodné datové hranice (editovatelné objekty, stabilní ID, jasné jednotky). Není nutné dnes vytvářet sync protokol, jeho revize, API ani server. Bez internetu musí budoucí verze vždy umět lokálně pracovat.
 
 **UPŘESNĚNÝ PRINCIP OCHRANY DAT:** Ochrana skutečných zakázek a přesných naměřených hodnot je zásadní, ale první aplikace mohla přebujet zbytečnými vrstvami záloh, historie a potvrzování; **není prokázáno, že právě ony způsobují hlášené zpomalení**. V nové aplikaci upřednostnit *nejmenší jednoduchou ochranu, kterou lze prokázat testem*: po potvrzeném uložení se nesmí poškodit zakázka ani originály médií; při nedokončeném gestu/pádu je přijatelné řešit ztrátu právě rozpracovaného tahu odlišně od ztráty již potvrzené práce. O této hranici rozhodnout konkrétními akceptačními testy, ne obecnou zárukou „nikdy nic neztratíme“.
 
 **NÁVRH IMPLEMENTAČNÍHO PRAVIDLA (zatím neschválené technické řešení):**
 - Normální přesouvání kóty = levný přechodný náhled; hotová úprava = jedna změna dat a jeden Undo krok; běžné uložení se neplete s historií ani sync.
 - Jedno lokální transakční úložiště s rozumným obnovitelným stavem; **žádné násobení nezávislých pojistek jen „pro jistotu“**. Porovnat „1+1“ se SQLite/Room podle skutečné spolehlivosti, náročnosti a výkonu. Neměnit kompaktnost za nevratnou ztrátu již uložených dat.
-- Sync řeší *revizi a konflikt dvou zařízení*; neshromažďuje kopie všech pohybů. Konflikt nevyřeší automatické přepsání novějšího starším. Offline i online scénáře budou samostatně testované, ale bez předčasně komplikovaného protokolu.
-- Vybrat přesné malé testy: plynulý pohyb, uložit → zavřít → obnovit, pád během uložení, vyčerpání místa, chybějící média, přechod offline/online a dvě souběžné kopie. Každou novou ochranu odůvodnit konkrétním rizikem a ověřit, že nevnáší neúměrné zpoždění.
+- **Teď žádný sync.** V budoucí online etapě bude třeba samostatně navrhnout revize a řešení konfliktů dvou zařízení, nepřenášet historii všech gest a nepřepisovat staršími daty novější. Netestovat nyní hypotetický online protokol.
+- **První etapa:** věrné malé testy plynulého pohybu, uložit → zavřít → obnovit, pád během uložení, plný disk a chybějící médium. **Pozdější online etapa:** přechod offline/online a dvě souběžné kopie. Každou novou ochranu odůvodnit konkrétním rizikem a ověřit, že nevnáší neúměrné zpoždění.
 
 **Rozsah tohoto doplnění:** pouze rozhodnutí o cílovém chování a návrhové principy. **NEOVĚŘENO:** konkrétní výkon, příčina chyb v1, spolehlivost 1+1 nebo SQLite, funkční synchronizace a její kompatibilita. Bez nového GO žádné programování ani přepis v1.
 
