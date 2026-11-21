@@ -1,0 +1,81 @@
+# Zaměřovač 2 — živý návrh, rozhodnutí a návaznost mezi chaty
+
+**Aktualizováno:** 21. 11. 2026. **Stav:** návrh nové samostatné aplikace a technický průzkum; žádný implementační GO, merge ani APK.  
+**Pravidlo:** po každém důležitém dohodnutém rozhodnutí sem zapiš stručný stav a zdroj. V novém chatu **nejdřív načíst tento dokument**, [AGENTS.md](../AGENTS.md), [START_ZDE.md](../START_ZDE.md), aktuální PR a níže uvedené zdroje; staré SHA nepovažovat za aktuální.
+
+## 1. Co je rozhodnuto vlastníkem (21. 11. 2026)
+
+1. **Stavíme skutečný Zaměřovač 2 na novém technickém základu, nikoli další záplaty či pouhé přejmenování Zaměřovače 1.** Starý Zaměřovač zůstává nezávislý, nepřepisovat jeho package ID, data ani rozpracované PR. Zde probíhá **návrh**; vytvoření kódu a volba definitivní technologie se schválí odděleně.
+2. **Požadavky a vize už existují.** Nevyptávat se na již vyřešené funkce. Reálně vycházet z [VIZE_A_PLAN.md](../VIZE_A_PLAN.md), [původního návrhu v2](../NAVRH_NOVEHO_ZAMEROVACE_OD_NULY.md), [projektového plánu v1](../PROJEKTOVY_PLAN_ZAMEROVACE.md), [datových kontraktů](../DATOVY_FORMAT_A_PC_KOMPATIBILITA.md), [#13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13), [#28](https://github.com/zaplikj30-ui/Zamerovac-android/issues/28), [#42](https://github.com/zaplikj30-ui/Zamerovac-android/issues/42) a souvisejících PR.
+3. **Nové technologie a kvalitní architektura:** vybrat celosvětově používaný, dlouhodobě udržovaný jazyk a osvědčené technologie. Nepsat vlastní databázi, synchronizační infrastrukturu ani renderer, pokud standardní vhodná možnost obstojí. Zkoumat aktuální oficiální zdroje, kompatibilitu, licence, ekosystém, údržbu, výkon a reálné náklady; nevěřit jen slibům marketingu.
+4. **Multiplatformní směr:** Android je první skutečná platforma. Předem chránit cestu k Windows, iOS a iPadOS (a případně jiným platformám), ale neslibovat souběžné vydání a předčasně neinstalovat či nepsat jejich infrastrukturu.
+5. **Začít malým, kompletním a kvalitním základem, pak postupně nabalovat funkce.** Převzít z v1 ověřené uživatelské chování, datové principy a testy, nikoli nutně její problematickou vnitřní stavbu.
+6. **Klíčový cíl: neopakovat chyby vývoje v1.** Spolehlivost, přesnost, jednoduchost, rychlost, zachování dat a snadné hledání příčiny chyby jsou důležitější než množství funkcí či PR.
+7. **Při vypadnutí/uzavření chatu pokračovat z GitHubu.** Tento dokument je plánovací „checkpoint“, ale GitHub se neaktualizuje sám: je třeba provést a ověřit skutečný commit. Každý nový chat může načíst tuto cestu a příslušné PR.
+
+**Oddělené produkty:** Konfigurátor–Nářezák a Převaděč spojitosti zůstávají samostatné. Budoucí zapínatelné moduly/pluginy jsou pouze možnost, nikoli dnešní úkol či souhlas se sloučením.
+
+## 2. Co chceme umět — zdroje pravdy, ne druhá kopie seznamu
+
+Cíl je pracovní postup **zakázka → fotografie/podklady → přesná editovatelná kóta/poznámka → volitelně laser → bezpečné uložení → návrat/obnova → export/sdílení**. Podrobná funkční specifikace a stavy jsou v odkazovaných dokumentech. Zachovat ergonomii už schválených kót, čar, šipek, úchopů a lupy; v1 je funkční i nefunkční **reference**, ne zaručená pravda. Reference ImageMeter 26.6.1, Pro 26.5.0 a 3.9.15 využívat pouze ke studiu funkčního chování, **nepřebírat cizí kód či vzhled**.
+
+Klíčové kontrakty: oddělení skutečné číselné hodnoty a jednotky od pixelové geometrie; přesná editovatelná data; původní bajty všech médií; stabilní ID a vazby; Undo/Redo, historie a koš podle definovaných účelů; offline provoz; bezpečné uložení/obnova, ZIP/import/export, migrace; konflikty synchronizace bez tichého přepsání novějších dat; připravenost na metrické/imperiální jednotky a nejprve angličtinu. Změna v2 nesmí skrytě poškodit žádný z těchto principů.
+
+## 3. Poučení z jedničky — co nesmíme zopakovat
+
+**HLÁŠENÁ POZOROVÁNÍ z fyzického používání, nikoliv prokázaná příčina:** (a) po opakovaném pohybu kót se editor začne sekat, ač dřívější verze umožňovaly dlouhé souvislé posouvání; (b) přidávání složek/fotek a některé obrazovky je pomalé; (c) po opravách se někdy zhoršilo jiné ovládání nebo galerie; (d) synchronizace, historie a ukládání se komplikovaly; (e) automatické PASS nedokázaly vždy odhalit chybu na telefonu. Konkrétní důkazy/reprodukce hledat v [#13](https://github.com/zaplikj30-ui/Zamerovac-android/issues/13), [#28](https://github.com/zaplikj30-ui/Zamerovac-android/issues/28), [#231 – diagnostika dotyků](https://github.com/zaplikj30-ui/Zamerovac-android/pull/231), [#232 – zjednodušení ukládání](https://github.com/zaplikj30-ui/Zamerovac-android/pull/232) a aktuálních vydáních. **Nelze bez měření prohlásit cache, Undo/Redo, WebView či synchronizaci za prokázanou příčinu.**
+
+**Prevence navrhovaná pro v2 (ověřit prototypem):**
+
+- **Oddělit gesto, pracovní náhled, hotový editační příkaz a trvalé uložení.** Při každém pixelu pohybu neukládat celou zakázku, nepřidávat neomezené kopie celé scény do Undo ani nespouštět sync. Jeden dokončený přesun = jeden srozumitelný Undo krok; dlouhý plynulý přesun nesmí narůstat s počtem pohybů. Výběr úchopu a pohyb objektu mají definované priority; prst, S Pen, myš a zoom nesmějí vykazovat kolize.
+- **Historie úprav ≠ běžné uložení ≠ synchronizace.** Pro běžné bezpečné uložení jednoduchý model aktuálního stavu a obnovitelného zápisu; rozsah Undo/Redo vědomě omezený/správně reprezentovaný, bez nekonečné paměťové historie. Sync potřebuje identitu, revize a ochranu konfliktů, ale nemá automaticky přenášet každý snímek pohybu ani všechny kroky Undo. Není to schválení konkrétního algoritmu, jen hranice odpovědností.
+- **Osvědčená transakční úložiště:** jako kandidát lokální SQLite (případně běžná nadstavba typu Room na Androidu), nikoli vlastní složitý zapisovač; vysvětlit WAL, synchronní režim, média mimo DB, atomické vazby, backup, migrace a chování při pádu/vypnutí/plném disku. SQLite samo o sobě není zárukou integrity originálních souborů. Ověřit nejmenším skutečným testem.
+- **Výkon:** nepřepočítávat či nenačítat vše při každé změně; omezit životnost cache, udržovat pouze potřebný viditelný stav a náhledy; dekódování fotek a miniatur mimo citlivou cestu gest; jasný limit paměti. Měřit latenci začátku tahu, plynulost po 100/1000 pohybech, načítání 10/100/1000 položek, velikost paměti a čas do bezpečného uložení. Konkrétní cílová čísla určit po prvním srovnávacím měření na reálných zařízeních.
+- **Diagnostika od začátku:** lokální, volitelná, bezpečně omezovaná a nízkonákladová; časové značky, délky fází, počty a výjimky bez fotografií, jmen, souřadnic ani měřených hodnot. Selhání diagnostiky nesmí rozbít editor či ukládání. Diagnostika pomáhá hledat příčiny, ale není náhradou testu.
+- **Regrese/odpovědnosti:** každá funkce izolovaně testovatelná a zároveň ověřená v souvisejících pracovních cestách. Chyba z telefonu → reprodukce → věrný RED na starém chování, pokud je proveditelný → oprava → PASS, včetně následných scénářů. Kód musí projít důkladným autorským review a následně nezávislým review jinou osobou/chatem; CI/Chromium/emulátor ≠ fyzický Android.
+- **Předcházet přebujelosti:** nepřidávat novou vrstvu, speciální synchronizační příznaky, cache nebo testovací brány bez důkazu potřeby. Pokud se opakují opravy stejné konstrukce, porovnat drobnou opravu, osvědčenou knihovnu a změnu návrhu. Jednoduché a vratné řešení je cíl.
+
+## 4. Technologie — předběžné varianty k rozhodnutí
+
+**Zatím NEVYBRÁNO.** Cíl není „jediný jazyk za každou cenu“, ale stabilní funkce na požadovaných platformách a rychlá odezva gest.
+
+| Varianta | Proč ji prozkoumat | Riziko / co změřit |
+|---|---|---|
+| **A. Kotlin + Compose Multiplatform + sdílené jádro (KMP)** | Kotlin, Android/iOS/desktop podporované sdílení logiky a Compose UI; možnost nativních adaptérů k přístrojům | Přesnost a rychlost vlastního editoru, práce s gesty a S Pen, kvalita Windows UI, iOS build, velikost a údržba |
+| **B. Flutter + Dart + CustomPainter** | Jedna rozšířená grafická platforma pro Android, iOS, Windows; výrazná kontrola nad vykreslováním | Nativní Bosch/Bluetooth, složitější editor s perem, platformní soubory, přesné rozlišení vstupů, integrace knihoven |
+| **C. Kotlin + nativní Android UI, portovatelné testované jádro** | Menší první krok a přímé Android API, možnost oddělit jádro pro další systémy | Dvojí UI a budoucí portování na Windows/iOS, celkové náklady a týmová údržba |
+
+**První pracovní preference k otestování:** A a B jako hlavní kandidáti; C jako kontrolní varianta s nejmenším Android rizikem. Ověřená dokumentace k 21. 11. 2026: [Kotlin/Compose platformy](https://kotlinlang.org/docs/multiplatform/supported-platforms.html), [Android KMP](https://developer.android.com/kotlin/multiplatform), [Flutter podporované platformy](https://docs.flutter.dev/reference/supported-platforms), [SQLite WAL](https://www.sqlite.org/wal.html), [SQLite trvanlivost](https://www.sqlite.org/pragma.html). **Platformní podpora v dokumentaci není důkazem, že náš editor funguje dobře.** Před výběrem ověřit aktualitu, licence, náročnost CI, bezpečnost a zkušenosti s reálnými aplikacemi.
+
+**Prototyp 1 proti 1:** na stejném testovacím telefonu/tabletu stejná fotografie, jedna přesná kóta, úchopy, posun bez sekání, zoom/pan, Undo/Redo, uložit–zavřít–otevřít, test poruchy uložení; oddělené údaje o odezvě, paměti, velikosti a vývoji. Na desktopu aspoň myš/zoom v malé ukázce; pro iOS posoudit dostupné build/test prostředí. Nevybírat framework bez srovnávacích měření a design/security kontroly.
+
+## 5. Navržené hranice nové aplikace (zatím návrh)
+
+1. **Doména:** zakázky, ID, přílohy, přesné hodnoty/jednotky, geometrie a příkazy editace; čisté testy bez telefonu či renderu.
+2. **Ukládání:** transakční stav, integrita originálních médií, průběžná obnova a verzované migrace; oddělené od UI a od sítě.
+3. **Editor:** rychlý renderer, zásahové oblasti, náhled tahu a gesto; na konci pošle doméně jeden příkaz. Návrh nezaručuje finální technologii rendereru.
+4. **Platformní adaptéry:** kamera, úložiště, Bosch Bluetooth, sdílení/tisk, oprávnění, pero a systémové vazby.
+5. **Přenos a cloud až po jádru:** rozlišit export kopie, zálohu a synchronizaci téže identity; bezpečné konflikty, offline a nejprve jen čtecí import v1. Žádné spojení v1/v2 na stejné živé úložiště bez speciálně schváleného protokolu.
+6. **Rozšiřitelnost:** volitelné moduly případně v budoucnu; nyní nebudovat plugin engine ani neslučovat samostatné produkty.
+
+## 6. Postup, aby nevznikla druhá přebujelá aplikace
+
+- **Teď:** dokumentovaný návrh, soupis známých problémů v1, aktualizace funkční matice z již existujících zdrojů; průzkum a srovnání osvědčených technologií, licencí a nákladů; výběr nejmenšího věrného prototypu. Žádná změna zdrojů Zaměřovače 1.
+- **Potom (samostatné GO):** nový samostatný repozitář, jiné package ID a oddělená data v2; jednoduché testy a automatizace na GitHub-hosted prostředí podle schváleného rozpočtu. HOME RETIRED.
+- **První fungující celek:** otevřít fotografii → přidat přesnou kótu → libovolně dlouho ji plynule přesouvat/upravovat → Undo/Redo → uložit → ukončit aplikaci → beze změny znovu otevřít. Ověřit i po pádu, odpojení, přerušení a s chybějícími médii, podle rizika.
+- **Pak po malých etapách:** složky a galerie, další nástroje, poznámky, export, laser, import v1, zálohy/sync — každá etapa má přímé testy i regrese již hotového základu. Před nárůstem počtu funkcí prokázat, že ovládání a rychlost se nezhoršily.
+- **Srovnání:** u stejného scénáře průkazně porovnat v1 a v2, včetně rychlosti, stability, ergonomie, přesných hodnot, médií a složitosti údržby. Bez dat netvrdit, že je v2 lepší.
+
+### Co je HOTOVO a co NE
+
+- **FAKT:** požadavky/vize a starší návrh v2 existují; vlastník chce nový základ, multiplatformní směr, osvědčené technologie, postupný růst a prevenci chyb.
+- **FAKT:** v1 byla hlášena zhoršená plynulost kót, pomalé operace a regrese; jejich úplná technická příčina tímto dokumentem **nebyla prokázána**.
+- **NÁVRH:** kandidáti A/B/C, architektonické hranice a testovací prototyp.
+- **NOT RUN:** žádný nový prototyp, Android test, benchmark, build, výběr frameworku, iOS či Windows ověření.
+- **STOP:** žádné zásahy do v1, merge, APK, Actions, placené služby ani HOME bez příslušného GO.
+
+## 7. Pokyn pro navazující chat
+
+„**Pokračujeme na Zaměřovači 2. Načti aktuální `docs/ZAMEROVAC_2_ZIVY_NAVRH.md` na GitHubu a odkazované dokumenty. Zkontroluj skutečný HEAD/PR a napiš, co je rozhodnuto, co ještě navrhnout a jaký je nejbližší malý krok. Nové dohody zapisuj do stejného dokumentu v izolované větvi/PR, aby další chat nemusel číst celou historii.**“
+
+Při změně požadavku zapisovat datum, důvod a stav (rozhodnuto/návrh/neověřeno). **Neudělat z pracovního návrhu automaticky implementační schválení**. Podrobný starší návrh: [NAVRH_NOVEHO_ZAMEROVACE_OD_NULY.md](../NAVRH_NOVEHO_ZAMEROVACE_OD_NULY.md). Dokumenty o stávajícím Zaměřovači 1 zůstávají platné pro svou aplikaci.
