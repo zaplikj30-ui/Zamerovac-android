@@ -186,6 +186,11 @@ function attachEditorInput(canvas){
  if(!canvas||typeof canvas.addEventListener!=='function')return false;
  if(canvas.__zFlightInputAttached)return true;
  const active=new Map();
+ let observedSession=activeId;
+ const resetOnSessionChange=()=>{
+  if(observedSession===activeId)return;
+  active.clear();observedSession=activeId;
+ };
  const inputKind=e=>e.pointerType==='touch'?1:e.pointerType==='pen'?2:e.pointerType==='mouse'?3:0;
  const eventAge=e=>{
   const now=clock(),stamp=Number(e.timeStamp),age=now-stamp;
@@ -200,6 +205,7 @@ function attachEditorInput(canvas){
   return result;
  };
  canvas.addEventListener('pointerdown',e=>{
+  resetOnSessionChange();
   if(!enabled||blocked)return;
   // A lost pointerup must never accumulate an unbounded in-memory map.
   if(active.size>=16&&!active.has(e.pointerId))active.clear();
@@ -207,11 +213,13 @@ function attachEditorInput(canvas){
   record('input-down',values(e));
  },{capture:true,passive:true});
  canvas.addEventListener('pointermove',e=>{
+  resetOnSessionChange();
   if(!enabled||blocked)return;
   const gesture=active.get(e.pointerId);
   if(gesture&&gesture.moves<MAX_MS)gesture.moves++;
  },{capture:true,passive:true});
  function end(type,e){
+  resetOnSessionChange();
   const gesture=active.get(e.pointerId);
   active.delete(e.pointerId);
   if(!enabled||blocked)return;
