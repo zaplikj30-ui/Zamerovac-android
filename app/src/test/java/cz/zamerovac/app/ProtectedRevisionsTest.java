@@ -38,7 +38,10 @@ public class ProtectedRevisionsTest {
         assertEquals(109.125,new JSONObject(LocalDatabase.readForCas(device)).getJSONArray("records").getJSONObject(0).getJSONArray("items").getJSONObject(0).getJSONObject("a").getDouble("x"),0);
         exactBytes();
         hasExactDatabase();
-        assertEquals(112,holds().size());
+        // #221: exact legacy/media evidence remains, but 110 ordinary
+        // coordinate edits MUST NOT append 110 whole-database holds.
+        assertTrue("Gesture history grew with each drag: " + holds().size(),
+            holds().size() <= 3);
 
         // Simulate process restart by discarding only the process-local cache.
         java.lang.reflect.Field field=ProtectedRevisions.class.getDeclaredField("VERIFIED");
@@ -58,7 +61,8 @@ public class ProtectedRevisionsTest {
             long reused=verified.entrySet().stream()
                 .filter(entry->warmCache.get(entry.getKey())==entry.getValue()).count();
             System.out.println("ISSUE221 reused="+reused);
-            assertEquals("Warm inventory must reuse verified history",112,reused);
+            assertTrue("Immutable held sources must remain verifiable after restart",
+                reused >= 1 && reused == warmCache.size());
         }
     }
     List<JSONObject> holds()throws Exception{
