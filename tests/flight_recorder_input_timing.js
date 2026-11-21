@@ -82,6 +82,28 @@ const writesBeforeHide=diagnosticWrites;
 assert.strictEqual(pagehideCallbacks.length,1);
 pagehideCallbacks[0]();
 assert(diagnosticWrites>writesBeforeHide,'pagehide did not persist pending touch-only events');
+// A non-input diagnostic timer may already exist when a new drag starts.
+// Its callback MUST NOT write localStorage in the middle of a finger gesture.
+now=1065;recorder.record('editor-open',{itemCount:1},false);
+const timerBeforeDrag=timeoutCallbacks.at(-1);
+assert.strictEqual(typeof timerBeforeDrag,'function');
+const writesBeforeScheduledDrag=diagnosticWrites;
+now=1070;emit('pointerdown',889,'touch',1069);
+timerBeforeDrag();
+assert.strictEqual(diagnosticWrites,writesBeforeScheduledDrag,'Previously queued diagnostic timer wrote storage during live gesture');
+now=1090;emit('pointerup',889,'touch',1089);
+assert(timeoutCallbacks.at(-1)!==timerBeforeDrag,'Deferred diagnostic flush not rescheduled after release');
+const saveAfterDrag=timeoutCallbacks.at(-1);
+saveAfterDrag();
+assert(diagnosticWrites>writesBeforeScheduledDrag,'Previously deferred diagnostic row was not persisted after gesture');
+// Important non-input records should also avoid storage writes while a drag is in progress.
+now=1091;emit('pointerdown',890,'touch',1090);
+const writesBeforeImportant=diagnosticWrites;
+recorder.record('ui-stall',{elapsedMs:2100},true);
+assert.strictEqual(diagnosticWrites,writesBeforeImportant,'Important diagnostic record wrote storage during live gesture');
+now=1099;emit('pointerup',890,'touch',1098);
+timeoutCallbacks.at(-1)();
+assert(diagnosticWrites>writesBeforeImportant,'Important deferred row not persisted after gesture');
 // Native epoch-based stamps cannot be compared with performance.now().
 now=1100;emit('pointerdown',202,'pen',1700000000000);
 let latest=recorder.snapshot().events.at(-1);
