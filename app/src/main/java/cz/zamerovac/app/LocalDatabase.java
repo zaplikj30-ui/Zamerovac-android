@@ -225,14 +225,32 @@ final class LocalDatabase {
             phaseStart=debugPhaseStart();
             String confirmed=readForCas(home,noBackup);
             debugPhaseEnd(1,phaseStart);phaseStart=debugPhaseStart();
-            if(!confirmed.isEmpty()&&!confirmed.equals(text))
-                new ProtectedRevisions(home,noBackup,prefs).preserveDatabase(confirmed);
-            // The pre-upgrade backup may be the only remaining copy of a
-            // different precise revision. Adopt it before rotation can replace it.
-            if(present(backup))new ProtectedRevisions(home,noBackup,prefs).preserveDatabase(readFile(backup));
-            // Protect the proposed exact state before publishing it as current.
-            // If the later DB commit fails, this remains recovery evidence only.
-            new ProtectedRevisions(home,noBackup,prefs).preserveDatabase(text);
+            // Preserve the old append-only evidence for media changes, legacy
+            // backups and deletions. For an ordinary media-stable edit the
+            // current + previous durable DB copies are the approved 1+1 states.
+            // Protection is skipped ONLY after a native verification of
+            // immutable original media against existing durable P1 holds.
+            String previousBackup=present(backup)?readFile(backup):null;
+            ProtectedRevisions protection=new ProtectedRevisions(home,noBackup,prefs);
+            boolean ordinary=protection.canUseOnePlusOne(confirmed,previousBackup,text);
+            if(ordinary){
+                // A fast edit must still reject disk-full BEFORE staging any
+                // new bytes; do not depend on P1 hold's reserve preflight.
+                long needed=Math.addExact(1024L*1024,
+                    Math.multiplyExact(2L,text.getBytes(StandardCharsets.UTF_8).length));
+                if(home.getUsableSpace()<needed)
+                    throw new IOException("Ukládání zastaveno kvůli nedostatku místa; potvrzené soubory zůstaly beze změny");
+            }else{
+                // A missing/inconsistent proof always takes the existing safe
+                // append-only route, never an optimistic shortcut.
+                ProtectedRevisions.forgetMediaCoverage(home);
+                if(!confirmed.isEmpty()&&!confirmed.equals(text))
+                    protection.preserveDatabase(confirmed);
+                // The pre-upgrade backup might be the only exact prior copy.
+                if(previousBackup!=null)protection.preserveDatabase(previousBackup);
+                // Also keep the precise proposed state, before DB publication.
+                protection.preserveDatabase(text);
+            }
             debugPhaseEnd(2,phaseStart);phaseStart=debugPhaseStart();
             // Persist BOTH proofs before the first DB commit; any failed write
             // remains visible to the next process and never authorizes a reset.

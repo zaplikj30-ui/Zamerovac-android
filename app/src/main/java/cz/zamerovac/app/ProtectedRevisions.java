@@ -18,6 +18,56 @@ final class ProtectedRevisions {
     // full historical JSON; any inode/size/mtime or AtomicFile residue change
     // forces a fresh bounded read and hash verification. Restart rebuilds it.
     private static final LinkedHashMap<String,CachedHold> VERIFIED=new LinkedHashMap<>(16,0.75f,true);
+    /**
+     * #221: a verified *media coverage* cache, not a new recovery authority.
+     * Every entry is derived from immutable on-disk holds and both catalogs.
+     * A restarted process or any changed file identity falls back to full
+     * verification. Destructive operations never use this shortcut.
+     *
+     * Normal edits use projects.json + projects.bak (1+1); pending peer
+     * snapshots and legacy protected holds continue to be retained.
+     */
+    private static final LinkedHashMap<String,MediaCoverage> MEDIA_COVERAGE =
+        new LinkedHashMap<>(8,0.75f,true);
+    private static final class FileStamp {
+        final long size;
+        final java.nio.file.attribute.FileTime modified;
+        final Object key;
+        FileStamp(File file,boolean directory)throws IOException{
+            java.nio.file.attribute.BasicFileAttributes a=Files.readAttributes(
+                file.toPath(),java.nio.file.attribute.BasicFileAttributes.class,LinkOption.NOFOLLOW_LINKS);
+            if(a.isSymbolicLink()||(directory?!a.isDirectory():!a.isRegularFile()))
+                throw new IOException("Neověřená identita úložiště");
+            size=a.size();modified=a.lastModifiedTime();key=a.fileKey();
+        }
+        boolean same(File file,boolean directory){
+            try{
+                FileStamp now=new FileStamp(file,directory);
+                return size==now.size&&modified.equals(now.modified)&&Objects.equals(key,now.key);
+            }catch(IOException missingOrUnsafe){return false;}
+        }
+    }
+    private static final class MediaCoverage {
+        final Set<String> media;
+        final FileStamp catalog,witness,directory;
+        final Map<String,FileStamp> originals;
+        MediaCoverage(Set<String> media,FileStamp catalog,FileStamp witness,
+                      FileStamp directory,Map<String,FileStamp> originals){
+            this.media=Collections.unmodifiableSet(new TreeSet<>(media));
+            this.catalog=catalog;this.witness=witness;this.directory=directory;
+            this.originals=originals;
+        }
+        boolean matches(ProtectedRevisions protection,Set<String> ids){
+            if(!media.equals(ids)||!catalog.same(new File(protection.directory,"catalog.json"),false)
+                    ||!witness.same(protection.witness,false)
+                    ||!directory.same(protection.directory,true))return false;
+            for(Map.Entry<String,FileStamp> e:originals.entrySet())
+                if(!e.getValue().same(new File(protection.home,"media/"+e.getKey()),false))
+                    return false;
+            return true;
+        }
+    }
+
     // Current debug Native bridge invocation only: count history scans without IDs.
     // [revisionCount, verifiedCacheHits, verifiedCacheMisses, originalChecks]
     private static final ThreadLocal<int[]> DEBUG_COUNTS=new ThreadLocal<>();
@@ -282,6 +332,90 @@ final class ProtectedRevisions {
         if(home.getUsableSpace()<bytes.length*3L+1024*1024)throw new IOException("Nedostatek místa pro ochranu původních dat");
         write(file(hash),bytes);hold(hash,false);Set<String> all=new TreeSet<>(prior.keySet());all.add(hash);saveCatalog(all);
     }catch(Exception e){throw blocked(e);}}}
+
+    /** Fail-closed check for an ordinary media-stable save. This does not
+     * release ANY old hold, does not approve a sync ACK, and never weakens
+     * the destructive full-hash inventory used by purge/restore/media ingest.
+     * Caller holds TrashPurger.LOCK and has already validated all DB strings.
+     */
+    boolean canUseOnePlusOne(String confirmed,String previous,String proposed){
+        if(confirmed==null||confirmed.isEmpty()||proposed==null||previous==null)
+            return false; // first write or missing backup: establish full evidence
+        try{
+            // Reject ambiguous input before comparing any media references.
+            // JS snapshots contain exact decimal strings; canonicalization
+            // checks syntax/duplicate keys but is NOT persisted.
+            new org.erdtman.jcs.JsonCanonicalizer(confirmed);
+            new org.erdtman.jcs.JsonCanonicalizer(previous);
+            new org.erdtman.jcs.JsonCanonicalizer(proposed);
+            Set<String> oldRefs=referencedOriginals(confirmed);
+            // An older backup may reference fewer originals (e.g. the empty
+            // pre-photo state). It is safe to rotate only if it introduces NO
+            // additional historical original that the current proof lacks.
+            if(!oldRefs.containsAll(referencedOriginals(previous))
+                    ||!oldRefs.equals(referencedOriginals(proposed)))return false;
+            // Deleted records/tombstones need their exact prior state protected.
+            JSONObject before=new JSONObject(confirmed),after=new JSONObject(proposed);
+            if(!CausalClock.canonical(before.opt("syncTombstones"))
+                    .equals(CausalClock.canonical(after.opt("syncTombstones")))
+                ||!CausalClock.canonical(before.opt("trashPurgedIds"))
+                    .equals(CausalClock.canonical(after.opt("trashPurgedIds"))))
+                return false;
+            String key=home.getAbsolutePath();
+            MediaCoverage cached=MEDIA_COVERAGE.get(key);
+            if(cached!=null&&cached.matches(this,oldRefs))return true;
+
+            Map<String,JSONObject> holds=inventory(true);
+            if(holds.isEmpty())return false; // missing P1 initialization
+            Map<String,JSONObject> pins=new TreeMap<>();
+            for(JSONObject hold:holds.values()){
+                JSONObject listed=hold.getJSONObject("_ids");
+                for(Iterator<String> it=listed.keys();it.hasNext();){
+                    String id=it.next();JSONObject entry=listed.getJSONObject(id);
+                    if(entry.getString("hash").isEmpty())continue; // not a proof
+                    JSONObject prior=pins.putIfAbsent(id,entry);
+                    if(prior!=null&&(!prior.getString("hash").equals(entry.getString("hash"))
+                            ||prior.getLong("size")!=entry.getLong("size")))
+                        return false; // contradictory historical original pins
+                }
+            }
+            Map<String,FileStamp> originals=new TreeMap<>();
+            for(String id:oldRefs){
+                JSONObject pin=pins.get(id);
+                if(pin==null)return false;
+                File source=new File(home,"media/"+id);
+                FileStamp stamp=new FileStamp(source,false);
+                JSONObject proof=ImmutableMediaProof.inspect(source);
+                if(proof.getLong("size")!=pin.getLong("size")
+                        ||!proof.getString("hash").equals(pin.getString("hash")))
+                    return false;
+                originals.put(id,stamp);
+            }
+            MediaCoverage verified=new MediaCoverage(oldRefs,
+                new FileStamp(new File(directory,"catalog.json"),false),
+                new FileStamp(witness,false),new FileStamp(directory,true),originals);
+            MEDIA_COVERAGE.put(key,verified);
+            while(MEDIA_COVERAGE.size()>4)
+                MEDIA_COVERAGE.remove(MEDIA_COVERAGE.keySet().iterator().next());
+            return true;
+        }catch(Exception uncertain){
+            MEDIA_COVERAGE.remove(home.getAbsolutePath());
+            return false;
+        }
+    }
+
+    private Set<String> referencedOriginals(String text)throws Exception {
+        JSONObject db=new JSONObject(text);
+        JSONArray records=db.getJSONArray("records");
+        Set<String> ids=PeerSnapshot.cleanupReferences(records);
+        historicalReferences(records,ids,0);
+        return ids;
+    }
+
+    static void forgetMediaCoverage(File home){
+        MEDIA_COVERAGE.remove(home.getAbsolutePath());
+    }
+
     /** A missing pinned original must never be silently re-created under the same ID. */
     static void requireUnpinned(File original)throws IOException{
         File home=original.getParentFile().getParentFile();
