@@ -1,4 +1,4 @@
-name: "#221: krátký Node + JVM test klasifikátoru"
+name: "#221: cílené 1+1, média, sync JVM testy"
 # Owner GO: 2026-11-21 'Tak dělej, na co čekáš?' Short targeted tests only.
 # Run ONLY when this new one-shot workflow file is committed to its QA branch.
 on:
@@ -14,16 +14,16 @@ jobs:
   classifier:
     if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.ref == 'refs/heads/qa/221-geometry-classifier-once' }}
     runs-on: ubuntu-24.04
-    timeout-minutes: 8
+    timeout-minutes: 9
     steps:
       - name: Checkout exact product SHA from draft PR #235
         uses: actions/checkout@v4
         with:
-          ref: f540bd31933e77b60b31e0ed13832b9f13e6549a
+          ref: 19bc823ec2cdfc8871f9f87408ce1ce30a2133bd
           persist-credentials: false
       - name: Verify immutable source SHA
         run: |
-          test "$(git rev-parse HEAD)" = "f540bd31933e77b60b31e0ed13832b9f13e6549a"
+          test "$(git rev-parse HEAD)" = "19bc823ec2cdfc8871f9f87408ce1ce30a2133bd"
           echo "Product SHA: $(git rev-parse HEAD)"
       - uses: actions/setup-node@v4
         with:
@@ -42,12 +42,16 @@ jobs:
         with:
           gradle-version: '8.10.2'
           cache-read-only: true
-      - name: ONLY GeometrySaveClassifierTest (hard six-minute cap)
+      - name: Targeted 1+1 / protected media / classifier JVM only (7min cap)
         shell: bash
         run: |
           set -euo pipefail
-          timeout --signal=TERM --kill-after=10s 5m gradle --no-daemon --refresh-dependencies --console=plain \
+          timeout --signal=TERM --kill-after=10s 7m gradle --no-daemon --refresh-dependencies --console=plain \
             :app:testPreviewUnitTest --tests 'cz.zamerovac.app.GeometrySaveClassifierTest' \
+            --tests 'cz.zamerovac.app.OnePlusOneRetentionContractTest' \
+            --tests 'cz.zamerovac.app.FiveThousandDimensionsContractTest' \
+            --tests 'cz.zamerovac.app.MultiProjectContentRetentionContractTest' \
+            --tests 'cz.zamerovac.app.ProtectedRevisionsTest' \
             -PdriveRequireConfigured=false
       - name: Save exact target-class JUnit results
         if: always()
