@@ -349,7 +349,10 @@ final class ProtectedRevisions {
             new org.erdtman.jcs.JsonCanonicalizer(previous);
             new org.erdtman.jcs.JsonCanonicalizer(proposed);
             Set<String> oldRefs=referencedOriginals(confirmed);
-            if(!oldRefs.equals(referencedOriginals(previous))
+            // An older backup may reference fewer originals (e.g. the empty
+            // pre-photo state). It is safe to rotate only if it introduces NO
+            // additional historical original that the current proof lacks.
+            if(!oldRefs.containsAll(referencedOriginals(previous))
                     ||!oldRefs.equals(referencedOriginals(proposed)))return false;
             // Deleted records/tombstones need their exact prior state protected.
             JSONObject before=new JSONObject(confirmed),after=new JSONObject(proposed);
