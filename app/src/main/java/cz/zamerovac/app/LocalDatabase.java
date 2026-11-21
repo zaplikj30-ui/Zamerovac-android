@@ -239,7 +239,7 @@ final class LocalDatabase {
                 long needed=Math.addExact(1024L*1024,
                     Math.multiplyExact(2L,text.getBytes(StandardCharsets.UTF_8).length));
                 if(home.getUsableSpace()<needed)
-                    throw new IOException("Nedostatek místa pro bezpečné uložení 1+1");
+                    throw new IOException("Ukládání zastaveno kvůli nedostatku místa; potvrzené soubory zůstaly beze změny");
             }else{
                 // A missing/inconsistent proof always takes the existing safe
                 // append-only route, never an optimistic shortcut.
