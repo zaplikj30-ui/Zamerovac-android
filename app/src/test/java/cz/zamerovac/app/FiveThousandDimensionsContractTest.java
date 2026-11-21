@@ -39,7 +39,11 @@ public class FiveThousandDimensionsContractTest {
 
     private static JSONObject photo(String id, String mediaId, int count) throws Exception {
         JSONArray items = new JSONArray();
-        for (int i = 0; i < count; i++) items.put(annotation(i));
+        for (int i = 0; i < count; i++) {
+            JSONObject item = annotation(i);
+            item.put("id", id + "-dimension-" + i);
+            items.put(item);
+        }
         return new JSONObject().put("id", id).put("kind", "photo")
             .put("media", new JSONArray().put(mediaId)).put("items", items)
             .put("syncClock", new JSONObject().put(DEVICE_ID, 1))
@@ -80,12 +84,14 @@ public class FiveThousandDimensionsContractTest {
                 RuntimeEnvironment.getApplication().getCacheDir().toPath(),
                 "zamerovac-5000-").toFile();
             device = new PeerTransferTest.Device(root, "phone");
+            // Establish the durable empty installation before placing any media.
+            // LocalDatabase correctly refuses an uninitialized home with orphan bytes.
+            LocalDatabase.write(device, "{\\"schema\\":1,\\"records\\":[]}");
             mediaDirectory = new File(device.home, "media");
             assertTrue(mediaDirectory.mkdirs());
             Files.write(new File(mediaDirectory, "original-one").toPath(), PHOTO_ONE);
             assertTrue(device.prefs.edit().putString("mime-original-one", "image/jpeg")
                 .putString("name-original-one", "One.jpg").commit());
-            LocalDatabase.write(device, "{\"schema\":1,\"records\":[]}");
             first = photo("photo-one", "original-one", dimensions);
             database = new JSONObject().put("schema", 1)
                 .put("records", new JSONArray().put(first));
