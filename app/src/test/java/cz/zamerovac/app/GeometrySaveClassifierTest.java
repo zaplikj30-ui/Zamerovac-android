@@ -2,6 +2,8 @@ package cz.zamerovac.app;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.robolectric.RobolectricTestRunner;
@@ -197,6 +199,35 @@ public class GeometrySaveClassifierTest {
         assertTrue(newText.contains("\"x\":17.125"));
         assertFalse(GeometrySaveClassifier.isDimensionEndpointMove(
             oldText, newText.replace("\"x\":17.125", repeatedX), LOCAL));
+    }
+
+    private static String jsFixture(String filename) throws Exception {
+        String resource = "/geometry-classifier/" + filename;
+        try (InputStream input = GeometrySaveClassifierTest.class.getResourceAsStream(resource)) {
+            assertNotNull("Missing production-JS fixture " + resource, input);
+            return new String(input.readAllBytes(), StandardCharsets.UTF_8).trim();
+        }
+    }
+
+    @Test public void productionJsTouchCommitAndSaveGoldenFixtures() throws Exception {
+        // The companion Node contract runs the actual app.js touch/save and
+        // editor.js finishHandleGesture/commitEditor with a stub native CAS,
+        // and checks that the committed fixtures still match those sources.
+        String before = jsFixture("editor-before.json");
+        String after = jsFixture("editor-after.json");
+        String bothEndpoints = jsFixture("editor-both-endpoints.json");
+        String conflictBefore = jsFixture("editor-conflict-before.json");
+        String conflictAfter = jsFixture("editor-conflict-after.json");
+        assertTrue("real editor one-endpoint", GeometrySaveClassifier.isDimensionEndpointMove(
+                before, after, LOCAL));
+        assertTrue("real editor both-endpoint move", GeometrySaveClassifier.isDimensionEndpointMove(
+                before, bothEndpoints, LOCAL));
+        assertFalse("touch() deleted hierarchyConflict: must be slow path",
+                GeometrySaveClassifier.isDimensionEndpointMove(
+                        conflictBefore, conflictAfter, LOCAL));
+        // Replay with the wrong native device must never authorize old data.
+        assertFalse("foreign installation", GeometrySaveClassifier.isDimensionEndpointMove(
+                before, after, PEER));
     }
 
     @Test public void repeatedMovesDoNotDependOnNumberOfPreviousGestures() throws Exception {
