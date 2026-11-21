@@ -86,7 +86,7 @@ public class FiveThousandDimensionsContractTest {
             device = new PeerTransferTest.Device(root, "phone");
             // Establish the durable empty installation before placing any media.
             // LocalDatabase correctly refuses an uninitialized home with orphan bytes.
-            LocalDatabase.write(device, "{\\"schema\\":1,\\"records\\":[]}");
+            LocalDatabase.write(device, "{\"schema\":1,\"records\":[]}");
             mediaDirectory = new File(device.home, "media");
             assertTrue(mediaDirectory.mkdirs());
             Files.write(new File(mediaDirectory, "original-one").toPath(), PHOTO_ONE);
