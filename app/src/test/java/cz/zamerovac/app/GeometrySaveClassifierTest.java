@@ -189,7 +189,7 @@ public class GeometrySaveClassifierTest {
 
         // Escaped key spelling must collide after JSON unescaping: "id"
         // and "\\u0069d" are the same semantic key.
-        String escaped = "\"id\":\"dimension-1\",\"" + "\\\\" + "u0069d\":\"dimension-1\"";
+        String escaped = "\"id\":\"dimension-1\",\"" + "\\" + "u0069d\":\"dimension-1\"";
         assertFalse(GeometrySaveClassifier.isDimensionEndpointMove(
             oldText, newText.replace("\"id\":\"dimension-1\"", escaped), LOCAL));
         // Repeated keys in a nested endpoint are not a valid point change.
