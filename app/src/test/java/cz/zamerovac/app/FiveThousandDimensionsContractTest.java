@@ -67,7 +67,7 @@ public class FiveThousandDimensionsContractTest {
         int count = 0;
         for (File file : files) {
             if (!file.getName().matches("[a-f0-9]{64}\\.json")) continue;
-            if ("database".equals(new JSONObject(Files.readString(file.toPath()))
+            if ("database".equals(new JSONObject(new String(Files.readAllBytes(file.toPath()), java.nio.charset.StandardCharsets.UTF_8))
                     .optString("kind"))) count++;
         }
         return count;
