@@ -104,6 +104,20 @@ assert.strictEqual(diagnosticWrites,writesBeforeImportant,'Important diagnostic 
 now=1099;emit('pointerup',890,'touch',1098);
 timeoutCallbacks.at(-1)();
 assert(diagnosticWrites>writesBeforeImportant,'Important deferred row not persisted after gesture');
+// Two simultaneous pointers keep a queued timer deferred until BOTH are released.
+now=1101;recorder.record('editor-open',{itemCount:2},false);
+const overlappingTimer=timeoutCallbacks.at(-1);
+const writesBeforeOverlap=diagnosticWrites;
+now=1102;emit('pointerdown',900,'touch',1101);
+now=1103;emit('pointerdown',901,'pen',1102);
+overlappingTimer();
+assert.strictEqual(diagnosticWrites,writesBeforeOverlap,'Concurrent gesture produced storage write');
+now=1110;emit('pointerup',900,'touch',1109);
+assert.strictEqual(timeoutCallbacks.at(-1),overlappingTimer,'Flush was rearmed before the last pointer lifted');
+now=1120;emit('pointerup',901,'pen',1119);
+assert.notStrictEqual(timeoutCallbacks.at(-1),overlappingTimer,'Flush was not rearmed after last pointer');
+timeoutCallbacks.at(-1)();
+assert(diagnosticWrites>writesBeforeOverlap,'Deferred multi-pointer trace was lost');
 // Native epoch-based stamps cannot be compared with performance.now().
 now=1100;emit('pointerdown',202,'pen',1700000000000);
 let latest=recorder.snapshot().events.at(-1);
