@@ -107,4 +107,15 @@ vm.runInNewContext(source,{
  Date
 },{filename:'flight-recorder-reload.js'});
 assert.strictEqual(restoredRoot.ZFlight.snapshot().events.filter(e=>e.type==='input-up').length>=3,true);
-console.log('flight_recorder_input_timing PASS – opt-in, timestamp mismatch, concurrency, persistence, privacy, disabled');
+// New diagnostic session must discard orphaned pointers from previous session.
+const restored=restoredRoot.ZFlight, laterCallbacks={};
+restored.attachEditorInput({addEventListener:(type,fn)=>{
+ (laterCallbacks[type]||(laterCallbacks[type]=[])).push(fn);
+}});
+assert.strictEqual(restored.toggle(true),true);
+now=8200;laterCallbacks.pointerdown[0]({pointerId:600,pointerType:'touch',timeStamp:8190});
+restored.toggle(false);
+assert.strictEqual(restored.toggle(true),true);
+now=8300;laterCallbacks.pointerdown[0]({pointerId:601,pointerType:'touch',timeStamp:8290});
+assert.strictEqual(restored.snapshot().events.at(-1).values.activePointers,1);
+console.log('flight_recorder_input_timing PASS – opt-in, timestamp mismatch, concurrency, persistence, session reset, privacy, disabled');
