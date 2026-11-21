@@ -9,6 +9,8 @@ const clock=()=>performance.now();
 const validTime=t=>typeof t==='string'&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(t)&&!Number.isNaN(Date.parse(t));
 let sessions=[],activeId=null,rows=[],enabled=false,persistError=false,flushTimer=null,beat=null,lastBeat=clock(),nextId=0;
 let confirmedRaw=null,blocked=false,legacyPending=false;
+// Prevent recorder storage work during a live editor gesture; no app gesture changes.
+let editorInputActive=0,deferredDiagnosticFlush=false;
 function exactKeys(value,keys){
  return value!==null&&typeof value==='object'&&!Array.isArray(value)&&
   Object.keys(value).length===keys.length&&keys.every(key=>Object.hasOwn(value,key));
@@ -147,13 +149,25 @@ function change(update){
  return true;
 }
 function schedule(){
- if(flushTimer===null)flushTimer=setTimeout(flush,1200);
+ if(flushTimer===null)flushTimer=setTimeout(()=>{
+  flushTimer=null;
+  if(editorInputActive>0){deferredDiagnosticFlush=true;return}
+  flush();
+ },1200);
+}
+function editorPointerCount(count){
+ editorInputActive=count;
+ if(count===0&&deferredDiagnosticFlush){
+  deferredDiagnosticFlush=false;
+  schedule();
+ }
 }
 function record(type,values={},important=false,skipSchedule=false){
  if(blocked||!enabled||activeId===null||!TYPES.has(type))return;
  rows.push({time:new Date().toISOString(),type,values:clean(values)});
  if(rows.length>LIMIT)rows.splice(0,rows.length-LIMIT);
- if(important)flush();else if(!skipSchedule)schedule();
+ if(important){if(editorInputActive>0)deferredDiagnosticFlush=true;else flush()}
+ else if(!skipSchedule)schedule();
 }
 // Classify finished dimension geometry only when recording is enabled.
 // No coordinates, angles, dimension lengths or laser values enter the report.
@@ -182,6 +196,7 @@ function recordDimensionGesture(kind,fromA,fromB,toA,toB,values={}){
 // physical touch, or never arrive. Store only counts and timing, not positions,
 // pointer IDs, pressure, annotations, photos or any measurement values.
 // Input callbacks must not schedule localStorage writes during a later drag;
+// queued non-input flush callbacks also defer while any pointer is held;
 // existing commit/stop/share/pagehide paths persist pending input rows.
 // Tracking pointermove uses memory only and never writes to localStorage.
 function attachEditorInput(canvas){
@@ -191,7 +206,7 @@ function attachEditorInput(canvas){
  let observedSession=activeId;
  const resetOnSessionChange=()=>{
   if(observedSession===activeId)return;
-  active.clear();observedSession=activeId;
+  active.clear();editorInputActive=0;deferredDiagnosticFlush=false;observedSession=activeId;
  };
  const inputKind=e=>e.pointerType==='touch'?1:e.pointerType==='pen'?2:e.pointerType==='mouse'?3:0;
  const eventAge=e=>{
@@ -212,6 +227,7 @@ function attachEditorInput(canvas){
   // A lost pointerup must never accumulate an unbounded in-memory map.
   if(active.size>=16&&!active.has(e.pointerId))active.clear();
   active.set(e.pointerId,{started:clock(),moves:0});
+  editorPointerCount(active.size);
   record('input-down',values(e),false,true);
  },{capture:true,passive:true});
  canvas.addEventListener('pointermove',e=>{
@@ -224,6 +240,7 @@ function attachEditorInput(canvas){
   resetOnSessionChange();
   const gesture=active.get(e.pointerId);
   active.delete(e.pointerId);
+  editorPointerCount(active.size);
   if(!enabled||blocked)return;
   const metrics=values(e);
   if(gesture){
@@ -234,7 +251,7 @@ function attachEditorInput(canvas){
  }
  canvas.addEventListener('pointerup',e=>end('input-up',e),{capture:true,passive:true});
  canvas.addEventListener('pointercancel',e=>end('input-cancel',e),{capture:true,passive:true});
- root.document?.addEventListener?.('visibilitychange',()=>{if(root.document.visibilityState==='hidden')active.clear()});
+ root.document?.addEventListener?.('visibilitychange',()=>{if(root.document.visibilityState==='hidden'){active.clear();editorInputActive=0;deferredDiagnosticFlush=false}});
  canvas.__zFlightInputAttached=true;
  return true;
 }
