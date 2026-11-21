@@ -121,3 +121,25 @@ Klíčové kontrakty: oddělení skutečné číselné hodnoty a jednotky od pix
 „**Pokračujeme na Zaměřovači 2. Načti aktuální `docs/ZAMEROVAC_2_ZIVY_NAVRH.md` na GitHubu a odkazované dokumenty. Zkontroluj skutečný HEAD/PR a napiš, co je rozhodnuto, co ještě navrhnout a jaký je nejbližší malý krok. Nové dohody zapisuj do stejného dokumentu v izolované větvi/PR, aby další chat nemusel číst celou historii.**“
 
 Při změně požadavku zapisovat datum, důvod a stav (rozhodnuto/návrh/neověřeno). **Neudělat z pracovního návrhu automaticky implementační schválení**. Podrobný starší návrh: [NAVRH_NOVEHO_ZAMEROVACE_OD_NULY.md](../NAVRH_NOVEHO_ZAMEROVACE_OD_NULY.md). Dokumenty o stávajícím Zaměřovači 1 zůstávají platné pro svou aplikaci.
+
+
+## 10. Rozhodovací bod 21. 11. 2026: zjednodušit v1, nebo stavět v2?
+
+**OTÁZKA VLASTNÍKA, nikoliv finální rozhodnutí:** ochrana dat v1 mohla být přehnaná. Nestačí-li její redukce, dává smysl nový základ? Vlastník zároveň opakovaně pozoroval, že po opravě jedné části vznikají další chyby.
+
+**Nové ověřené podklady z GitHubu:**
+- [#221](https://github.com/zaplikj30-ui/Zamerovac-android/issues/221) dokumentuje uživatelův **fyzický srovnávací test**: po čisté instalaci v1.3.0 plynulé kóty; ve v1.4.0 kumulativní sekání po opakovaných úpravách, přetrvává po restartu a zasahuje druhou fotografii. **Pozorování není důkaz jediné příčiny.**
+- [#231](https://github.com/zaplikj30-ui/Zamerovac-android/pull/231) / [#230](https://github.com/zaplikj30-ui/Zamerovac-android/pull/230) uvádějí naměřená dlouhá synchronní uložení cca 4,6–5,3 s a přibližně 99 % času v `revisionProtectMs`. To je **konkrétní kandidát na zásadní bottleneck**, nikoli důkaz příčin všech UI/regresních problémů. PR #230 je zavřené bez merge; jeho pouhé zvýšení cache nebylo potvrzeným finálním řešením.
+- [#232](https://github.com/zaplikj30-ui/Zamerovac-android/pull/232) je pouze **DRAFT test/RED kontrakt** cílového běžného ukládání „1 aktuální + 1 předchozí“; **neimplementuje opravu, testy nejsou na tomto SHA skutečně spuštěny**. Současná ochrana médií a sync vyžaduje samostatné posouzení, nelze ji plošně odstranit.
+
+**Alternativy k věcnému rozhodnutí:**
+
+| Cesta | Klady | Rizika / hranice |
+|---|---|---|
+| **A. Úzká vratná redukce historie/ochrany ve v1** | Může rychle prokázat, zda je sekání hlavně ukládáním; zachovává hotové funkce | Závislosti na historii, sync, médiích; nutná věrná regrese a SOURCE/SECURITY review; stále stará architektura |
+| **B. Cílené rozdělení v1 na testovatelné části** | Zachová uživatelskou funkčnost a může zmenšit budoucí regresní riziko | Delší zásah do provázaných souborů, regresní rizika, náklady na refaktoring |
+| **C. Nový malý základ v2 + převzetí scénářů, nikoli kódu** | Umožňuje jednodušší hranice, přenositelnost Windows/iOS, rychlý renderer/uložení bez historických vrstev | Počáteční funkční zaostávání; nová technologie přinese vlastní chyby; výkon a cena zatím NEOVĚŘENO |
+
+**DOPORUČENÝ PŘÍŠTÍ NEJMENŠÍ POKUS (návrh, nikoliv souhlas s kódem):** na izolované kopii v1 provést jednu bezpečně vratnou, rizikově omezenou úpravu doloženého bottlenecku, s testem opakovaného pohybu/uložení a kontrolou médií. Pro návrh v2 nezávisle připravit jediný **offline** prototyp foto–kóta–Undo/Redo–uložit–obnovit na vybraných kandidátních technologiích. Nemusí současně běžet dva plné vývojové proudy: nejprve stanovit srovnatelný scénář a bránu, až pak v rozsahu schváleném vlastníkem prototypy. Rozhodovat podle **latence po opakování, stability po restartu, přesnosti a integrity dat, počtu nově rozbitých vazeb a údržby** — nikoli podle dojmu z „moderního“ frameworku.
+
+**ZÁVĚR PRO NYNĚJŠÍ NÁVRH:** nepovažovat ochrany za jediného viníka; jejich přebujelost je **kandidát**, opakované regrese jsou širší varování. Proto ponechat záměr v2 otevřený a nezahazovat funkční v1 bez kontrolovaného srovnání. **Žádné automatické GO pro změny kódu, nové SDK, testovací cloud ani merge.**
