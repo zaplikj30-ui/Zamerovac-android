@@ -80,11 +80,11 @@ Z [qa/coverage-v1.json](../qa/coverage-v1.json) bylo proti úplnému Git stromu 
 
 **Rozsah zdrojového ověření:** přímo otevřené byly `editor.js` (gesto/commit/render/lupa), `app.js` (save/rekord/koš/export), `upgrade.js` (galerie/laser), `LocalDatabase.java`, `ProtectedRevisions.java`, `SyncCadence.java`, `flight-recorder.js` a `MainActivity.java`; u zbývajících oblastí byl proti Git stromu ověřen soubor a jeho test, ne celý obsah. Z mapy proto nelze odvodit přesné procento hotových funkcí.
 
-## 3. Dohledatelnost původních požadavků (49/49) a budoucích nápadů (34)
+## 3. Dohledatelnost původních požadavků (49/49) a budoucích nápadů (39)
 
 Všech [49 očíslovaných požadavků #12](https://github.com/zaplikj30-ui/Zamerovac-android/issues/12) a jejich [přepis do inventury](ZAMEROVAC_2_INVENTURA_POZADAVKU.md) zůstává zachován v původních detailech: 1.1–1.8 kóty/úchopy → editor+geometrie; 2.1–2.8 tvary → editor/sketch; 3.1–3.6 úhly/řetězce → editor/laser; 4.1–4.9 poznámky → rich-notes/AudioCapture; 5.1–5.5 galerie → upgrade/customer-export; 6.1–6.4 symboly → editor; 7.1–7.4 Bosch → BLE/Classic; 8.1–8.5 export/přenos dat → BackupImporter/CustomerPdfExport. Úplný zdrojový detail a rekonstrukce 28 historických testů zůstávají v inventuře. Žádný nezaškrtnutý bod #12 není automaticky fyzický FAIL nebo chybějící kód.
 
-**Budoucí nápady:** [34 skupin v inventuře](ZAMEROVAC_2_INVENTURA_POZADAVKU.md) včetně kót do 360° panoramat, možného 3D, široké podpory laserů, pracovního časovače se sazbou zákazníka a historie práce, fakturace, monetizace a budoucích zapínatelných modulů. Tyto požadavky nemají být záminkou vyvíjet hned 3D/účetnictví/pluginy.
+**Budoucí nápady:** [39 skupin v inventuře](ZAMEROVAC_2_INVENTURA_POZADAVKU.md) včetně kót do 360° panoramat, možného 3D, široké podpory laserů, pracovního časovače se sazbou zákazníka a historie práce, fakturace, monetizace a budoucích zapínatelných modulů. Tyto požadavky nemají být záminkou vyvíjet hned 3D/účetnictví/pluginy.
 
 ### 3.1 Všech 49 jednotlivých bodů – zdrojová stopa a nutná zkouška
 
@@ -143,6 +143,8 @@ Všech [49 očíslovaných požadavků #12](https://github.com/zaplikj30-ui/Zame
 | **8.5** | Zachovat dosavadní funkční ovládání všude, kde nebyla požadována změna. | [zdroj oblasti](../app/src/main/java/cz/zamerovac/app/BackupImporter.java) | ZIP/export vrstva existuje; konkrétní detail neověřen | test ZIP/export/import/reopen/byte-identical |
 
 **44 mapovaných oblastí, 49 položek a 28 historických testů nejsou sčitatelné počty funkcí:** jsou to různé pohledy na stejný kód a chování.
+**Později dohledané konkrétní požadavky mimo původní soupis 34 skupin:** [#72](https://github.com/zaplikj30-ui/Zamerovac-android/issues/72) editovatelné instalační plány (vysoká priorita), [#73](https://github.com/zaplikj30-ui/Zamerovac-android/issues/73) zákaznický portál (nápad), [#216](https://github.com/zaplikj30-ui/Zamerovac-android/issues/216) přímé sdílení, [#217](https://github.com/zaplikj30-ui/Zamerovac-android/issues/217) promo přístupy, [#226](https://github.com/zaplikj30-ui/Zamerovac-android/issues/226) velký diagnostický tester (pro v2 mimo M1). Přidány jako F35–F39, úplný [registr souvisejících issues a zdrojů](ZAMEROVAC_2_REGISTR_NAVAZNOSTI_V1.md). **Neznamená automaticky fyzicky otestované či schválené kódování.**
+
 ## 4. Jednoduchá diagnostika od PRVNÍHO prototypu – upřesnění vlastníka 21. 11. 2026
 
 **Diagnostika je povinnou součástí M1, ale má být MALÁ, JEDNODUCHÁ A SAMOSTATNÁ.** Vlastník ocenil přesunutelnou vlaječku v jedničce a nechce velké diagnostické menu, formuláře hlášení, screenshoty, videonástroje ani další diagnostické funkce zatím. Cílem je snadno předat anonymní časový záznam závady.
