@@ -21,6 +21,8 @@
 
 **NUTNÉ VSTUPNÍ POROVNÁNÍ (ne jen seznam):** [Zaměřovač 2 proti skutečnému kódu v1 – funkce, chyby, testy a diagnostika](ZAMEROVAC_2_POROVNANI_S_V1.md). V1 ověřen na přesném `main` SHA; porovnává 16 funkčních skupin a všech 44 mapovaných oblastí testů včetně známých fyzických regresí. **Nové rozhodnutí vlastníka 21. 11.: diagnostika patří již do M1 prvního offline Kotlin/Compose prototypu**; musí bezpečně a levně měřit fáze gest/vykreslení/uložení/obnovy, bez zákaznických údajů, vyloučit vlastní vliv na výkon a odolat chybám. Samotná existence starých testů není PASS. Nezačínat velký v2 kód před posouzením těchto kontraktů.
 
+**HLAVNÍ ŘÍDICÍ PLÁN VÝVOJE:** [Strom vývoje Zaměřovače 2 – M0, M1–M5 a pozdější větve](ZAMEROVAC_2_STROM_VYVOJE.md). Ukazuje pořadí, závislosti, výsledek a HOTOVO/STOP pro každý malý celek, pravidla práce autor → vlastní review → nezávislý kontrolor → GO vlastníka. **Nejbližší úkol M0 je dokončit datový/úložný kontrakt a bezpečnostní oponenturu**, pak teprve první Kotlin/Compose offline prototyp s jednoduchou diagnostickou vlaječkou. Tato roadmapa není nový souhlas s implementací, Actions nebo APK.
+
 ## 2. Co chceme umět — zdroje pravdy, ne druhá kopie seznamu
 
 Cíl je pracovní postup **zakázka → fotografie/podklady → přesná editovatelná kóta/poznámka → volitelně laser → bezpečné uložení → návrat/obnova → export/sdílení**. Podrobná funkční specifikace a stavy jsou v odkazovaných dokumentech. Zachovat ergonomii už schválených kót, čar, šipek, úchopů a lupy; v1 je funkční i nefunkční **reference**, ne zaručená pravda. Reference ImageMeter 26.6.1, Pro 26.5.0 a 3.9.15 využívat pouze ke studiu funkčního chování, **nepřebírat cizí kód či vzhled**.
