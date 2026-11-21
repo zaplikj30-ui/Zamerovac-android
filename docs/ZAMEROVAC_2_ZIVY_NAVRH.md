@@ -15,6 +15,8 @@
 
 **Oddělené produkty:** Konfigurátor–Nářezák a Převaděč spojitosti zůstávají samostatné. Budoucí zapínatelné moduly/pluginy jsou pouze možnost, nikoli dnešní úkol či souhlas se sloučením.
 
+**Povinný rozcestník před novým návrhem/implementací:** [Inventura požadavků, nápadů a otevřených rozhodnutí](ZAMEROVAC_2_INVENTURA_POZADAVKU.md) obsahuje všech 49 bodů původního issue #12, odkazy na 28 historických testů, 44 oblastí zdrojových/testovacích map, 12 základních funkčních oblastí a 32 skupin budoucích či nedořešených nápadů. Výslovně zahrnuje kótování do 360° panoramat / možný 3D pohled, další laserové dálkoměry různých výrobců, placené funkce i ostatní dřívější nápady. **Nový katalog nenahrazuje originální vizi, komentáře v issues ani pozdější vlastníkův souhlas.** Před rozšířením se vždy kontroluje dopad na známé a budoucí potřeby; žádný nápad automaticky neznamená implementační GO.
+
 ## 2. Co chceme umět — zdroje pravdy, ne druhá kopie seznamu
 
 Cíl je pracovní postup **zakázka → fotografie/podklady → přesná editovatelná kóta/poznámka → volitelně laser → bezpečné uložení → návrat/obnova → export/sdílení**. Podrobná funkční specifikace a stavy jsou v odkazovaných dokumentech. Zachovat ergonomii už schválených kót, čar, šipek, úchopů a lupy; v1 je funkční i nefunkční **reference**, ne zaručená pravda. Reference ImageMeter 26.6.1, Pro 26.5.0 a 3.9.15 využívat pouze ke studiu funkčního chování, **nepřebírat cizí kód či vzhled**.
