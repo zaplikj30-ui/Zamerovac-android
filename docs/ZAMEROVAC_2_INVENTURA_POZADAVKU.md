@@ -2,6 +2,8 @@
 
 **21. 11. 2026 · pracovní inventura, PR #234, nikoli GO k programování.** Přenos znalostí z jedničky včetně starších dohod, plánovaných věcí a budoucích nápadů. **Originální zdroje a novější explicitní rozhodnutí mají přednost před tímto přehledem.** Přečíst také [živý návrh v2](ZAMEROVAC_2_ZIVY_NAVRH.md), [hlavní vizi v1](../VIZE_A_PLAN.md), [projektový plán](../PROJEKTOVY_PLAN_ZAMEROVACE.md), [datový kontrakt](../DATOVY_FORMAT_A_PC_KOMPATIBILITA.md).
 
+**Pozor – tato inventura je seznam záměrů, nikoliv porovnání se skutečnou aplikací.** Vlastníkem požadované [porovnání v2 se zdrojovým kódem v1, známými chybami a 44 oblastmi testů](ZAMEROVAC_2_POROVNANI_S_V1.md) je samostatný povinný podklad. **Diagnostika je povinnou součástí prvního funkčního offline prototypu M1**, podle jeho §4, ne nápad do budoucna.
+
 ## 1. Co zde znamená stav
 
 - **ZÁVAZNÝ CÍL / SCHVÁLENÝ SMĚR:** zadání, které musí architektura respektovat. Neznamená hotovou implementaci.
