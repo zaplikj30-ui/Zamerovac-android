@@ -184,3 +184,15 @@ Při změně požadavku zapisovat datum, důvod a stav (rozhodnuto/návrh/neově
 **FAKT:** Uživatelská zmínka o „ImageMagick používá C++“ může znamenat dvě odlišné věci: **ImageMagick** je knihovna na zpracování obrázků (s C++ API Magick++), nikoli editor zakázek; **ImageMeter** je naše funkční referenční aplikace a na oficiální stránce změn uvádí „upgrade GUI toolkit to Qt6“. To **nedokazuje**, že celá aplikace ImageMeter je v C++; podporuje však prověření Qt6/C++ jako realistické možnosti pro vlastní grafický editor.
 
 **OPONENTURA:** C++/Qt může být dobrý kandidát pro složitou geometrii, rendering, více platforem a rychlé gesta. Není však automaticky rychlejší u neefektivního modelu ukládání/synchronizace; zavádí náročnější správu paměti, multiplatformní balení, mobilní Bluetooth/kamera/pero adaptéry a licenční kontrolu. Licenci Qt hodnotit podle skutečně použitých modulů a modelu distribuce, ne předpokládat bezplatnost nebo nutnost platby. V rámci malého porovnání A/B/D ověřit stejné gesto, 20–50 kót na fotografii, opakované tahy, paměť, rozlišení a Android slabší třídy, důkazy a celkové náklady na vývoj. **Žádný framework ani knihovna ImageMagick se nyní neinstaluje, nic se zatím neimplementuje.**
+
+
+## 14. Volba technologie – minimalizace rizik C++ (rozhodnutí priority, 21. 11. 2026)
+
+**PREFERENCE VLASTNÍKA:** Nenasazovat C++/Qt jen kvůli dojmu maximálního výkonu nebo podobnosti s ImageMeterem. Vyhnout se dodatečným chybám paměti, mobilním adaptérům, licenčnímu a údržbovému zatížení, pokud tato cesta **neprokáže skutečně významnou výhodu dnes či pro realistické budoucí Windows/iOS**. C++ není zakázáno, pouze má vyšší důkazní práh.
+
+**DOPORUČENÉ PRACOVNÍ POŘADÍ, nikoli definitivní schválení frameworku:**
+1. **Kotlin + Jetpack Compose pro první Android prototyp**, s oddělenou Kotlin doménou, přesnou geometrií/jednotkami, lokální SQLite a hardware adaptéry. Sdílené části lze později využít přes Kotlin Multiplatform; Compose Multiplatform má oficiálně stabilní Android/iOS/desktop, ale to **nezaručuje** vyhovující chování konkrétních editorových gest na všech platformách.
+2. Pokud by Compose editor nedosáhl požadované plynulosti ani po profilování a úzké opravě renderingu, krátce ověřit **alternativní renderer / Flutter** na stejném fotokóta gestickém scénáři. Nedělat automaticky kompletní druhý produkt.
+3. **C++/Qt či nativní C++ renderer teprve tehdy**, pokud měření nebo konkrétní budoucí funkce prokáží podstatný náskok, kterého jednodušší cesta nedosáhne za přiměřené náklady. Vyčíslit a zvážit práci na Androidu, Windows/iOS, S Pen/gesta, licence, udržovatelnost a riziko regresí; vše na stejné testovací sadě, včetně slabších telefonů.
+
+**FAKT / LIMIT:** To je technicky zdůvodněné pořadí ke zkoušce, **nikoli naměřené pořadí rychlostí, definitivní výběr technologie ani GO k vytvoření aplikace**, nákupům či cloudovým běhům. Zachovat možnost změny rendereru díky oddělení datového jádra od UI. Příští krok je jediný malý věrný prototyp, ne tři souběžné velké implementace.
