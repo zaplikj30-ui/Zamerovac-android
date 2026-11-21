@@ -218,6 +218,9 @@ public class GeometrySaveClassifierTest {
         String bothEndpoints = jsFixture("editor-both-endpoints.json");
         String conflictBefore = jsFixture("editor-conflict-before.json");
         String conflictAfter = jsFixture("editor-conflict-after.json");
+        String loadedBefore = jsFixture("editor-loaded-before.json");
+        String loadedAfter = jsFixture("editor-loaded-after.json");
+        String initializedImage = jsFixture("editor-image-metadata-after.json");
         assertTrue("real editor one-endpoint", GeometrySaveClassifier.isDimensionEndpointMove(
                 before, after, LOCAL));
         assertTrue("real editor both-endpoint move", GeometrySaveClassifier.isDimensionEndpointMove(
@@ -225,6 +228,12 @@ public class GeometrySaveClassifierTest {
         assertFalse("touch() deleted hierarchyConflict: must be slow path",
                 GeometrySaveClassifier.isDimensionEndpointMove(
                         conflictBefore, conflictAfter, LOCAL));
+        assertTrue("loaded image with stable existing dimensions", 
+                GeometrySaveClassifier.isDimensionEndpointMove(
+                        loadedBefore, loadedAfter, LOCAL));
+        assertFalse("first loaded image metadata change must take slow path",
+                GeometrySaveClassifier.isDimensionEndpointMove(
+                        before, initializedImage, LOCAL));
         // Replay with the wrong native device must never authorize old data.
         assertFalse("foreign installation", GeometrySaveClassifier.isDimensionEndpointMove(
                 before, after, PEER));
