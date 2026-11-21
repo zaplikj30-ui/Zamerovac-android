@@ -205,3 +205,16 @@ Při změně požadavku zapisovat datum, důvod a stav (rozhodnuto/návrh/neově
 **ZÁLOŽNÍ MOŽNOSTI:** při skutečném limitu výkonu/gest po profilování ověřit cílený jiný renderer nebo Flutter. **C++/Qt jen při prokázané výrazné současné nebo budoucí výhodě** nad jednodušším řešením; žádné automatické paralelní tři prototypy. Směr budoucích Windows/iOS zůstává, ale první zkouška je Android a multiplatformní infrastrukturu teď nebudujeme.
 
 **HRANICE SOUHLASU:** souhlas s volbou **prvního prototypu**, nikoli tvrzení o jeho výsledcích či GO k založení projektu, implementaci, cloudovým testům, placeným službám, merge nebo APK. Změny se mají prověřit proti požadavkům kót, prst/S Pen, výkonu slabších Androidů a obnově dat; po měření rozhodnout o pokračování.
+
+
+## 16. Budoucí monetizace – zachovat možnost bez předčasné implementace (21. 11. 2026)
+
+**FAKT / dlouhodobé zadání:** V [VIZE_A_PLAN.md](../VIZE_A_PLAN.md) už je monetizace **výslovně zapsaná jako otevřená možnost** (části „Budoucí zpoplatnění funkcí či modulů“ a „Možná budoucí monetizace reklamou“). Pro Zaměřovač 2 se přebírá **požadavek neznemožnit budoucí komerční model**, nikoli schválená cena, předplatné, reklama či vydání na Google Play.
+
+**Možné varianty k pozdějšímu rozhodnutí:** zdarma; jednorázová koupě celé aplikace; volitelné placené funkce/moduly/balíčky; předplatné; bezplatná varianta s nerušivou reklamou a jednorázovým odstraněním reklam; případně profesionální licence. Do budoucího posouzení patří i možnost legálně poskytnout vybraným testerům/uživatelům bezplatný přístup či promo kód **bez předem vyvíjeného vlastního licenčního serveru**. Ani jedna varianta nyní není definitivně vybrána.
+
+**Architektonická zásada teď:** oddělit data zákaznických zakázek, přesné hodnoty, offline editor a média od případného budoucího **oprávnění k funkcím / licence**. Změna tarifu nebo nedostupnost obchodní služby **nesmí smazat či poškodit zakázky ani zrušit bezpečný přístup k vlastním datům/exportu**. Moduly mohou zůstat logicky oddělené; **nebudovat nyní plugin engine**. Případné reklamy nesmějí zakrývat editor, úchopy nebo kóty ani narušit práci bez internetu; klientské fotografie/zakázky neposílat reklamním SDK.
+
+**TEĎ NEDĚLAT:** platby, účty, licenční server, reklamní SDK, analytiku, bannery, tarify, omezení funkcí ani registraci do obchodů. Před zavedením monetizace odděleně rozhodnout obchodní model, ověřit pravidla Google Play/Apple, soukromí/GDPR, licenční podmínky, offline chování, obnovu případných nákupů a přenositelnost na Windows/iOS. První prototyp Kotlin/Compose zůstává **malý a plně offline**.
+
+**Stav:** pouze zachování budoucí možnosti v architektuře, žádný nový souhlas k obchodním funkcím, výdajům, vydání nebo implementaci.
