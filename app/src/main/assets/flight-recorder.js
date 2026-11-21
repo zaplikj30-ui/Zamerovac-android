@@ -3,8 +3,8 @@
 (function(root){
 'use strict';
 const KEY='zamerovac-perf-diagnostics-v2',LEGACY='zamerovac-perf-diagnostics-v1',LIMIT=120,SESSION_LIMIT=20,MAX_MS=600000;
-const TYPES=new Set(['start','enabled','disabled','editor-open','drag-release','dimension-move','dimension-rotate','dimension-resize','dimension-rotate-resize','dimension-point-adjust','editor-commit','native-save','ui-stall','save-error']);
-const FIELDS=new Set(['elapsedMs','bridgeMs','serializeMs','savePathMs','paintMs','undoCount','itemCount','dimensionCount','databasePhotoCount','databaseItemCount','databaseDimensionCount','success','lockWaitMs','readMs','writeMs','validationMs','casRecheckMs','revisionProtectMs','evidenceMs','databaseCommitMs','generationMs','recoveryMs','revisionInventoryMs','revisionCount','cacheMisses','cacheHits','mediaChecks']);
+const TYPES=new Set(['start','enabled','disabled','editor-open','drag-release','dimension-move','dimension-rotate','dimension-resize','dimension-rotate-resize','dimension-point-adjust','editor-commit','native-save','ui-stall','save-error','input-down','input-up','input-cancel']);
+const FIELDS=new Set(['elapsedMs','bridgeMs','serializeMs','savePathMs','paintMs','undoCount','itemCount','dimensionCount','databasePhotoCount','databaseItemCount','databaseDimensionCount','success','lockWaitMs','readMs','writeMs','validationMs','casRecheckMs','revisionProtectMs','evidenceMs','databaseCommitMs','generationMs','recoveryMs','revisionInventoryMs','revisionCount','cacheMisses','cacheHits','mediaChecks','inputKind','inputDelayMs','gestureMs','moveEvents','activePointers','missingDown']);
 const clock=()=>performance.now();
 const validTime=t=>typeof t==='string'&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(t)&&!Number.isNaN(Date.parse(t));
 let sessions=[],activeId=null,rows=[],enabled=false,persistError=false,flushTimer=null,beat=null,lastBeat=clock(),nextId=0;
@@ -178,6 +178,54 @@ function recordDimensionGesture(kind,fromA,fromB,toA,toB,values={}){
  record(type,values,true);
  return true;
 }
+// Opt-in editor input timing. A WebView callback can arrive long after a
+// physical touch, or never arrive. Store only counts and timing, not positions,
+// pointer IDs, pressure, annotations, photos or any measurement values.
+// Tracking pointermove uses memory only and never writes to localStorage.
+function attachEditorInput(canvas){
+ if(!canvas||typeof canvas.addEventListener!=='function')return false;
+ if(canvas.__zFlightInputAttached)return true;
+ const active=new Map();
+ const inputKind=e=>e.pointerType==='touch'?1:e.pointerType==='pen'?2:e.pointerType==='mouse'?3:0;
+ const eventAge=e=>{
+  const now=clock(),stamp=Number(e.timeStamp),age=now-stamp;
+  // Modern WebView timestamps share performance.now's origin; older ones
+  // sometimes use epoch time. Incompatible clocks are not evidence of delay.
+  return Number.isFinite(stamp)&&stamp>0&&age>=0&&age<=MAX_MS?age:null;
+ };
+ const values=e=>{
+  const result={inputKind:inputKind(e),activePointers:active.size};
+  const age=eventAge(e);
+  if(age!==null)result.inputDelayMs=age;
+  return result;
+ };
+ canvas.addEventListener('pointerdown',e=>{
+  if(!enabled||blocked)return;
+  active.set(e.pointerId,{started:clock(),moves:0});
+  record('input-down',values(e));
+ },{capture:true,passive:true});
+ canvas.addEventListener('pointermove',e=>{
+  if(!enabled||blocked)return;
+  const gesture=active.get(e.pointerId);
+  if(gesture&&gesture.moves<MAX_MS)gesture.moves++;
+ },{capture:true,passive:true});
+ function end(type,e){
+  const gesture=active.get(e.pointerId);
+  active.delete(e.pointerId);
+  if(!enabled||blocked)return;
+  const metrics=values(e);
+  if(gesture){
+   metrics.gestureMs=Math.min(MAX_MS,Math.max(0,clock()-gesture.started));
+   metrics.moveEvents=gesture.moves;
+  }else metrics.missingDown=1;
+  record(type,metrics);
+ }
+ canvas.addEventListener('pointerup',e=>end('input-up',e),{capture:true,passive:true});
+ canvas.addEventListener('pointercancel',e=>end('input-cancel',e),{capture:true,passive:true});
+ root.document?.addEventListener?.('visibilitychange',()=>{if(root.document.visibilityState==='hidden')active.clear()});
+ canvas.__zFlightInputAttached=true;
+ return true;
+}
 function watch(){
  if(beat!==null)clearInterval(beat);
  beat=null;
@@ -306,7 +354,7 @@ root.document?.addEventListener?.('visibilitychange',()=>{
  if(root.document.visibilityState==='hidden')flush();
  else lastBeat=clock();
 });
-const api=Object.freeze({record,recordDimensionGesture,toggle,clear,removeSession,sessionList,share,report,snapshot,attachSettings,showHistory,isEnabled:()=>enabled,flush});
+const api=Object.freeze({record,recordDimensionGesture,toggle,clear,removeSession,sessionList,share,report,snapshot,attachSettings,showHistory,attachEditorInput,isEnabled:()=>enabled,flush});
 root.ZFlight=api;
 watch();
 if(enabled)record('start');
