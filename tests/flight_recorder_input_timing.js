@@ -13,13 +13,14 @@ const doc={visibilityState:'visible',addEventListener(){}};
 const map=new Map();
 let diagnosticWrites=0;
 const timeoutCallbacks=[];
+const pagehideCallbacks=[];
 const localStorage={
  getItem:key=>map.has(key)?map.get(key):null,
  setItem:(key,value)=>{diagnosticWrites++;map.set(key,value)},
  removeItem:key=>map.delete(key)
 };
 let now=1000;
-const root={localStorage,document:doc,addEventListener(){}};
+const root={localStorage,document:doc,addEventListener(type,fn){if(type==='pagehide')pagehideCallbacks.push(fn)}};
 vm.runInNewContext(source,{
  window:root,performance:{now:()=>now},
  setInterval:()=>7,clearInterval(){},
@@ -74,6 +75,13 @@ for(const e of events.filter(row=>row.type.startsWith('input-'))){
 recorder.record('editor-commit',{savePathMs:3},true);
 assert(diagnosticWrites>writesBeforeTouch,'Commit did not persist queued touch events');
 assert(localStorage.getItem('zamerovac-perf-diagnostics-v2').includes('input-down'),'Input lost before committed diagnostic save');
+// Without a completed drag, pagehide still persists last input-only events.
+now=1050;emit('pointerdown',88,'touch',1048);
+now=1060;emit('pointerup',88,'touch',1058);
+const writesBeforeHide=diagnosticWrites;
+assert.strictEqual(pagehideCallbacks.length,1);
+pagehideCallbacks[0]();
+assert(diagnosticWrites>writesBeforeHide,'pagehide did not persist pending touch-only events');
 // Native epoch-based stamps cannot be compared with performance.now().
 now=1100;emit('pointerdown',202,'pen',1700000000000);
 let latest=recorder.snapshot().events.at(-1);
