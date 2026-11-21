@@ -70,6 +70,15 @@ assert.strictEqual(latest.values.gestureMs,20);
 now=1150;emit('pointerup',404,'touch',1145);
 latest=recorder.snapshot().events.at(-1);
 assert.strictEqual(latest.values.missingDown,1);
+// Two simultaneous touches: retain only a count, never either raw pointer ID.
+now=1160;emit('pointerdown',201,'touch',1159);
+now=1170;emit('pointerdown',202,'pen',1169);
+latest=recorder.snapshot().events.at(-1);
+assert.strictEqual(latest.values.activePointers,2);
+now=1180;emit('pointerup',202,'pen',1179);
+assert.strictEqual(recorder.snapshot().events.at(-1).values.activePointers,1);
+now=1190;emit('pointerup',201,'touch',1189);
+assert.strictEqual(recorder.snapshot().events.at(-1).values.activePointers,0);
 // Do not store raw pointer ID, screen coordinates or pressure.
 const report=recorder.report();
 for(const secret of ['"pointerId"','"clientX"','"clientY"','"pressure"']){
@@ -79,4 +88,13 @@ recorder.toggle(false);
 const before=recorder.snapshot().events.length;
 emit('pointerdown',303,'touch',1150);
 assert.strictEqual(recorder.snapshot().events.length,before);
-console.log('flight_recorder_input_timing PASS – opt-in, timestamps, count, cancel, privacy, disabled');
+// All emitted events remain valid across a full recorder reload (v2 session).
+const restoredRoot={localStorage,document:doc,addEventListener(){}};
+vm.runInNewContext(source,{
+ window:restoredRoot,performance:{now:()=>now},
+ setInterval:()=>7,clearInterval(){},
+ setTimeout:()=>9,clearTimeout(){},
+ Date
+},{filename:'flight-recorder-reload.js'});
+assert.strictEqual(restoredRoot.ZFlight.snapshot().events.filter(e=>e.type==='input-up').length>=3,true);
+console.log('flight_recorder_input_timing PASS – opt-in, timestamp mismatch, concurrency, persistence, privacy, disabled');
