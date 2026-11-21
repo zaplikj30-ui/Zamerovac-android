@@ -196,3 +196,12 @@ Při změně požadavku zapisovat datum, důvod a stav (rozhodnuto/návrh/neově
 3. **C++/Qt či nativní C++ renderer teprve tehdy**, pokud měření nebo konkrétní budoucí funkce prokáží podstatný náskok, kterého jednodušší cesta nedosáhne za přiměřené náklady. Vyčíslit a zvážit práci na Androidu, Windows/iOS, S Pen/gesta, licence, udržovatelnost a riziko regresí; vše na stejné testovací sadě, včetně slabších telefonů.
 
 **FAKT / LIMIT:** To je technicky zdůvodněné pořadí ke zkoušce, **nikoli naměřené pořadí rychlostí, definitivní výběr technologie ani GO k vytvoření aplikace**, nákupům či cloudovým běhům. Zachovat možnost změny rendereru díky oddělení datového jádra od UI. Příští krok je jediný malý věrný prototyp, ne tři souběžné velké implementace.
+
+
+## 15. Rozhodnutí vlastníka: první prototyp Kotlin + Compose (21. 11. 2026)
+
+**SCHVÁLENO – technologická preference pro první ověřovací prototyp Zaměřovače 2:** **Kotlin + Jetpack Compose na Androidu**, samostatně testovatelná Kotlin logika (geometrie, hodnoty/jednotky, editační příkazy) a oddělené ukládání; **SQLite je preferovaný kandidát k ověření**, nikoli automaticky hotová databázová architektura. Důvod: pokud C++ nepřinese měřitelný významný přínos, nepřidávat komplikace správy paměti, náklady na údržbu a platformní adaptéry.
+
+**ZÁLOŽNÍ MOŽNOSTI:** při skutečném limitu výkonu/gest po profilování ověřit cílený jiný renderer nebo Flutter. **C++/Qt jen při prokázané výrazné současné nebo budoucí výhodě** nad jednodušším řešením; žádné automatické paralelní tři prototypy. Směr budoucích Windows/iOS zůstává, ale první zkouška je Android a multiplatformní infrastrukturu teď nebudujeme.
+
+**HRANICE SOUHLASU:** souhlas s volbou **prvního prototypu**, nikoli tvrzení o jeho výsledcích či GO k založení projektu, implementaci, cloudovým testům, placeným službám, merge nebo APK. Změny se mají prověřit proti požadavkům kót, prst/S Pen, výkonu slabších Androidů a obnově dat; po měření rozhodnout o pokračování.
