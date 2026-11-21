@@ -3,6 +3,8 @@
 **21. 11. 2026 · ŽIVÝ PLÁN / zatím jen návrh etap, ne schválení implementace.**
 Tento dokument odpovídá na otázky **CO TEĎ → CO PAK → JAK POZNÁME HOTOVO → NA ČEM TO ZÁVISÍ**. Není kopií celé [vize](../VIZE_A_PLAN.md) ani 49 požadavků; ty jsou v [inventuře](ZAMEROVAC_2_INVENTURA_POZADAVKU.md). Vychází z [porovnání skutečného kódu v1 a chyb](ZAMEROVAC_2_POROVNANI_S_V1.md), [ústavy dat M0](ZAMEROVAC_2_USTAVA_DAT.md) a [živého návrhu](ZAMEROVAC_2_ZIVY_NAVRH.md). V1 main při vytvoření podkladů: `8a36e353448ba74a066e16372441604b7e7163c7`.
 
+**PŘENOS CELÉHO ZADÁNÍ JEDNIČKY:** [Registr všech dohledaných návazností, včetně nedokončených nápadů](ZAMEROVAC_2_REGISTR_NAVAZNOSTI_V1.md) je povinný podklad této roadmapy. **Pořadí etap není seznamem toho, co chceme zachovat – nechceme nic z předchozích uživatelských diskusí vyhodit jen proto, že se to netvoří hned.** Zaměřovač 2 se bude rozrůstat po malých otestovaných celcích; výslovně vyloučené referenční funkce zůstávají vyloučené, dokud se rozhodnutí nezmění.
+
 ## 1. Jednoduchý strom – jak se aplikace bude stavět
 
 ```text
@@ -36,16 +38,18 @@ ZAMĚŘOVAČ 2 – samostatná nová aplikace, Android první
        └─ M5  Laser Bosch, poté další ověřené přístroje
           └─ obecný vstup hodnoty; konkrétní adaptéry postupně
 
-POZDĚJI – samostatně rozhodované větve, ne povinná funkce první APK
+POZDĚJI – celý dlouhodobý cíl; samostatně ověřované funkční větve
 ├─ B1  Ověřitelné zálohy mimo telefon (např. Google Disk)
 ├─ B2  Synchronizace telefon/tablet, konflikt, offline fronta
 ├─ B3  Panorama/360°, půdorysy a případné 2D/3D
 ├─ B4  Časovač práce zákazníka, hodinovky, výkazy, faktury
-├─ B5  Monetizace a volitelné moduly/propojení aplikací
-└─ B6  Windows/iOS/iPadOS + další jazyky a jednotky
+├─ B5  KONFIGURÁTOR → KUSOVNÍK → NÁŘEZÁK → výroba/kalkulace
+├─ B6  Instalační plány/šablony + případný zákaznický portál
+├─ B7  Monetizace a volitelné moduly/propojení aplikací
+└─ B8  Windows/iOS/iPadOS + další jazyky a jednotky
 ```
 
-**Závislosti:** B2 až po prokázaném bezpečném lokálním ukládání a řešení identity/revizí; historická záloha B1 je **jiná funkce** než živá sync B2. B3 potřebuje oddělenou geometrii, typ dokumentu a souřadnice; B4 vazbu na zákazníka/zakázku. B5 nesmí měnit ani mazat data. B6 vyžaduje samostatné platformní testy. Větve B1–B6 **nemají teď dané pořadí ani datum**. M2–M5 jsou doporučené pracovní pořadí, ne závazek postavit vše naráz.
+**Závislosti:** B2 až po prokázaném bezpečném lokálním ukládání a řešení identity/revizí; záloha B1 je **jiná funkce** než živá sync B2. B3 potřebuje oddělenou geometrii a souřadnice; B4 vazbu na zákazníka/zakázku. **B5 je dlouhodobá cesta zaměření → návrh skříněk → kusovník → nářez → výroba/montáž.** Konfigurátor–Nářezák zatím zůstává **samostatnou aplikací**, neslučovat repozitáře ani sdílené živé databáze. Vstupní míry a konstrukční dílce/hranování/dekor/revize se nesmí tiše změnit bez uživatelova potvrzení. **B6: instalační plány jsou vysoko prioritním požadavkem [#72](https://github.com/zaplikj30-ui/Zamerovac-android/issues/72), který zařadit brzy po základní stabilizaci, a portál [#73](https://github.com/zaplikj30-ui/Zamerovac-android/issues/73) je zatím jen otevřený nápad.** B7 nesmí ohrozit data/licence. B8 vyžaduje samostatné platformní testy. Větve B1–B8 **nemají dnes pevné pořadí ani termín**; priority se rozhodnou po měřeních a ověření závislostí.
 
 ## 2. Výstup každé etapy a zkouška HOTOVO
 
@@ -57,7 +61,7 @@ POZDĚJI – samostatně rozhodované větve, ne povinná funkce první APK
 | **M3** | Další objekty editoru, poznámky, audio/video přílohy, knihovna symbolů | Samostatné ovládání, gesta a pixelové testy + plný pracovní průchod, přesné hodnoty a média | **NOT STARTED** |
 | **M4** | Verzovaný ZIP zákazníkovi/obnova; bezpečné načtení kopie v1 | Export→import→znovu otevřít, původní bajty médií, přesná data, chybné ZIP, bez změny jedničky | **NOT STARTED** |
 | **M5** | Jeden fyzicky otestovaný Bosch protokol přes jednoduchý adaptér | Reálný přístroj + příslušný telefon; ruční hodnota i offline scénář; další značky jen jednotlivě | **NOT STARTED** |
-| **B1–B6** | Jednotlivé pozdější rozvojové větve | Vlastní návrh, cena/riziko, samostatné GO, adekvátní testy a důkazy | **NÁPAD/PLÁN, BEZ IMPLEMENTACE** |
+| **B1–B8** | Jednotlivé pozdější rozvojové větve | Vlastní návrh, cena/riziko, samostatné GO, adekvátní testy a důkazy | **NÁPAD/PLÁN, BEZ IMPLEMENTACE** |
 
 ## 3. Jak bude vypadat strom uvnitř kódu (návrh hranic, ne předem postavená infrastruktura)
 
