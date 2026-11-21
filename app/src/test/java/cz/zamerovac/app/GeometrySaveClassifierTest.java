@@ -171,6 +171,34 @@ public class GeometrySaveClassifierTest {
         rejected(before, after);
     }
 
+    @Test public void rejectDuplicateAndEscapedJsonKeysBeforeAnyObjectParsing() throws Exception {
+        JSONObject before = fixture(), after = moved(before);
+        String oldText = before.toString(), newText = after.toString();
+        // Duplicate root key on either side: org.json must never silently
+        // collapse it into the same effective value and authorize a fast save.
+        assertFalse(GeometrySaveClassifier.isDimensionEndpointMove(
+            "{\"schema\":1," + oldText.substring(1), newText, LOCAL));
+        assertFalse(GeometrySaveClassifier.isDimensionEndpointMove(
+            oldText, "{\"schema\":1," + newText.substring(1), LOCAL));
+
+        // Duplicates hidden in nested records, arrays or escaped aliases.
+        String doubleId = "\"id\":\"dimension-1\",\"id\":\"dimension-1\"";
+        assertTrue(oldText.contains("\"id\":\"dimension-1\""));
+        assertFalse(GeometrySaveClassifier.isDimensionEndpointMove(
+            oldText.replace("\"id\":\"dimension-1\"", doubleId), newText, LOCAL));
+
+        // Escaped key spelling must collide after JSON unescaping: "id"
+        // and "\\u0069d" are the same semantic key.
+        String escaped = "\"id\":\"dimension-1\",\"" + "\\\\" + "u0069d\":\"dimension-1\"";
+        assertFalse(GeometrySaveClassifier.isDimensionEndpointMove(
+            oldText, newText.replace("\"id\":\"dimension-1\"", escaped), LOCAL));
+        // Repeated keys in a nested endpoint are not a valid point change.
+        String repeatedX = "\"x\":17.125,\"x\":17.125";
+        assertTrue(newText.contains("\"x\":17.125"));
+        assertFalse(GeometrySaveClassifier.isDimensionEndpointMove(
+            oldText, newText.replace("\"x\":17.125", repeatedX), LOCAL));
+    }
+
     @Test public void repeatedMovesDoNotDependOnNumberOfPreviousGestures() throws Exception {
         JSONObject before = fixture();
         for (int i = 0; i < 150; i++) {
