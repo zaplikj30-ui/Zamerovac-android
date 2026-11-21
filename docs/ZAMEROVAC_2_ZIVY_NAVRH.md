@@ -74,7 +74,35 @@ Klíčové kontrakty: oddělení skutečné číselné hodnoty a jednotky od pix
 - **NOT RUN:** žádný nový prototyp, Android test, benchmark, build, výběr frameworku, iOS či Windows ověření.
 - **STOP:** žádné zásahy do v1, merge, APK, Actions, placené služby ani HOME bez příslušného GO.
 
-## 7. Pokyn pro navazující chat
+## 7. Doplnění z konzultace s Claudem (video od vlastníka 21. 11. 2026)
+
+**Zdroj:** vlastník zaslal záznam obrazovky `1000095505.mp4` zachycující svou debatu s Claudem; původní sdílený odkaz: https://claude.ai/share/c825f125-ef29-4e25-a680-ab4c8cfb0b12 . Níže je **věcný výtah z viditelného obsahu videa**, nikoli ověření všech Claudeových tvrzení. Video samotné se kvůli velikosti a soukromí **nevkládá** do veřejného repozitáře.
+
+### Nově upřesněné požadavky vlastníka
+
+- **V1 je testovací aplikace; současná testovací data není nutné převádět.** V2 vzniká vedle ní odděleně, bez přepisu v1. Dřívější plán migrace v1 → v2 proto **není podmínkou zahájení**. Při budoucím importu, práci s reálnými zakázkami nebo přechodu zákazníka bude kompatibilitu, originální média a bezpečnost nutné řešit znovu, ne je vypustit z architektury.
+- **Přenést smysl funkčních testů a známé chování, ne nutně jejich konkrétní testovací kód.** Vlastník chce využít dosavadní testy, specifikaci editoru a scénáře chyb; není požadavek držet WebView/JavaScript jen kvůli snadnému znovupoužití testů.
+- **Zaměřovač může být jednou součástí většího pracovního celku**, ale ostatní aplikace zůstávají samostatné. Vlastník se zajímá o zapínatelné moduly; nyní to neznamená plugin framework ani sloučení aplikací.
+
+### Co konkrétně navrhl Claude (NÁVRH/ODHAD, nikoli rozhodnutí)
+
+1. **Začít návrhem ústavy dat:** jasně určit, co je rozpracovaná editace, potvrzený stav, původní fotografie, přesná naměřená hodnota, popisek, uložená zakázka a odstraněná položka; které části smějí zmizet při pádu a které nikdy. Z funkční matice v1 převzít očekávané chování pro novou architekturu. Toto doporučení přijímáme jako **užitečný návrhový princip**.
+2. **Jednoduché lokální úložiště po zakázkách:** například jednotlivé `job.json` (aktuální stav) a `job.prev.json` (předchozí platná kopie), média zvlášť a neměnná; zápis do dočasného souboru, kontrola a atomické přejmenování. Pohyb kóty není trvalá historie. Undo/Redo patří k editačním příkazům. **Oponentura:** „1+1“ je kandidát pro jednoduchý prototyp, ne schválený produkční kontrakt. Samotné přejmenování nebo jediná kopie nemusí řešit výpadek během zápisu, korektní `fsync`, plný disk, porušení vazeb na média, souběh, konflikty, koš, migrace či backup. Před volbou porovnat se SQLite/Room a otestovat stejné chybové scénáře; nebudovat zbytečné vlastní DB.
+3. **Technologie:** Claude preferuje Kotlin + Jetpack Compose pro Android UI, čisté Kotlin jádro (data, jednotky, geometrie, ukládání) a případný pozdější Kotlin Multiplatform; jako alternativy zmiňuje Flutter, React Native a zachování webového editoru při náročném přepisu. **Není to výsledný výběr**: porovnat s variantami A/B/C v §4, včetně skutečného multiplatformního rozsahu a gest na telefonu/tabletu.
+4. **Moduly místo pluginového frameworku:** sdílené jednoduché jádro (zakázka, ID, geometrie, hodnoty/jednotky), konkrétní moduly/editor/galerie/laser/export s jednosměrnými vazbami a platformní adaptéry. Pozdější propojování aplikací přes explicitní verzovaný **datový kontrakt** (stabilní ID, přesná hodnota nezávislá na textu, jednotky, verze, chování neznámých polí); nechat každé aplikaci vlastní úložiště. Nezavádět dynamické stahované pluginy bez konkrétní potřeby.
+5. **Postup M0–M8 (pracovní návrh, nikoli harmonogram):** M0 pravidla dat a matice testů; M1 fotografie + přesná kóta + uložit/zavřít/otevřít + stres gest; M2 jádro/jednotky/Undo/Redo/obnova po pádu a plném disku; M3 editor a další nástroje; M4 zakázky/galerie/koš; M5 měření včetně Bosch; M6 ZIP/PDF export a import; M7 jazyk/vzhled/ovládání; M8 synchronizace až po vlastním návrhu a důkazech. Toto pořadí lze upravit podle závislostí a výsledků prototypu.
+6. **Možná akceptační metrika M1:** cca **1 000 souvislých tahů bez zhoršení plynulosti** a pokus o uložení do **300 ms na konkrétním testovaném telefonu**. Jsou to **navržené cíle, nikoli naměřené výsledky či univerzální SLA**. Upřesnit význam latence, velikost dat, slabší zařízení a test na Samsung Galaxy S24 Ultra / Tab S11 Ultra před rozhodnutím o technologii.
+
+### Testy z v1: co skutečně jde převzít
+
+- **Funkční scénáře, znalost ergonomie, negativní případy, datové vzorky a očekávané výsledky** jsou přenositelné jako zadání bez ohledu na technologii.
+- **Doslovné JS unit testy** lze využít přímo jen tehdy, když zůstane odpovídající JS jádro/API; u Kotlinu či Flutteru se očekávané chování **přepíše do nativních testů**. Java testy ochrany starého úložiště/sync se nedají prohlásit za PASS nového úložiště.
+- Chromium/Playwright scénáře původního WebView nejsou fyzickým ověřením nového nativního UI. Nutný samostatný test prst/S Pen/zoom/výběr, Android ukládání a pád; později případně Windows myš a iOS zařízení.
+- Claude ve videu uvádí počty souborů/testů a hypotézy o příčinách sekání. **Tyto počty ani příčiny nebyly v tomto doplnění nezávisle ověřeny na aktuálním SHA a nepoužívají se jako důkaz.**
+
+**Vyhodnocení:** nejcennější je začít **kontraktem dat + věrným prototypem foto–kóta–uložení–obnova**, nikoli nejprve sestavovat celý framework. V1 ani předchozí dokumentace se nemění; **výběr technologie, datové úložiště a architektura jsou stále otevřená rozhodnutí**, která vyžadují měření a samostatný souhlas.
+
+## 8. Pokyn pro navazující chat
 
 „**Pokračujeme na Zaměřovači 2. Načti aktuální `docs/ZAMEROVAC_2_ZIVY_NAVRH.md` na GitHubu a odkazované dokumenty. Zkontroluj skutečný HEAD/PR a napiš, co je rozhodnuto, co ještě navrhnout a jaký je nejbližší malý krok. Nové dohody zapisuj do stejného dokumentu v izolované větvi/PR, aby další chat nemusel číst celou historii.**“
 
