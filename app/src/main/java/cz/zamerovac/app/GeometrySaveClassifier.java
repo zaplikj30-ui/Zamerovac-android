@@ -2,6 +2,10 @@ package cz.zamerovac.app;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
+import android.util.JsonReader;
+import android.util.JsonToken;
+import java.io.IOException;
+import java.io.StringReader;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Iterator;
@@ -16,14 +20,18 @@ final class GeometrySaveClassifier {
     private GeometrySaveClassifier() {}
 
     /**
-     * Recognize exactly one endpoint move of one existing dimension in one
-     * photo, accompanied solely by the editor's item + photo touch metadata.
+     * Recognize a move of one or both endpoints of exactly one existing dimension
+     * in one photo, accompanied solely by the editor's item + photo touch metadata.
      * Everything unknown or ambiguous is deliberately rejected.
      * trustedDevice must come from native identity, never a JS suggestion.
      */
     static boolean isDimensionEndpointMove(String before, String after, String trustedDevice) {
         try {
             if (!DeviceIdentity.valid(trustedDevice)) return false;
+            // org.json can silently collapse duplicate names. Never authorize a
+            // future fast-save decision from ambiguous old or new JSON.
+            uniqueJsonKeys(before);
+            uniqueJsonKeys(after);
             LocalDatabase.validate(before);
             LocalDatabase.validate(after);
             JSONObject oldDb = new JSONObject(before);
@@ -70,6 +78,56 @@ final class GeometrySaveClassifier {
         } catch (Exception invalidOrUncertain) {
             // Classification must never authorize a write or swallow a save error.
             return false;
+        }
+    }
+
+    /**
+     * Verify every object on the wire before JSONObject can collapse duplicate
+     * names (including escaped aliases such as "x" and "\\u0078").
+     * Streaming consumes original JSON, not its already-lossy object graph.
+     * LocalDatabase.validate still owns full schema/Unicode/value validation.
+     */
+    private static void uniqueJsonKeys(String source) throws IOException {
+        JsonInput.check(source);
+        try (JsonReader reader = new JsonReader(new StringReader(source))) {
+            reader.setLenient(false);
+            uniqueValue(reader, 0);
+            if (reader.peek() != JsonToken.END_DOCUMENT)
+                throw new IOException("Více kořenových JSON hodnot");
+        }
+    }
+
+    private static void uniqueValue(JsonReader reader, int depth) throws IOException {
+        if (depth > 100) throw new IOException("Příliš hluboký JSON");
+        JsonToken token = reader.peek();
+        switch (token) {
+            case BEGIN_OBJECT:
+                reader.beginObject();
+                Set<String> names = new HashSet<>();
+                while (reader.hasNext()) {
+                    if (!names.add(reader.nextName()))
+                        throw new IOException("Duplicitní JSON klíč");
+                    uniqueValue(reader, depth + 1);
+                }
+                reader.endObject();
+                break;
+            case BEGIN_ARRAY:
+                reader.beginArray();
+                while (reader.hasNext()) uniqueValue(reader, depth + 1);
+                reader.endArray();
+                break;
+            case STRING:
+            case NUMBER:
+                reader.nextString();
+                break;
+            case BOOLEAN:
+                reader.nextBoolean();
+                break;
+            case NULL:
+                reader.nextNull();
+                break;
+            default:
+                throw new IOException("Neplatný JSON token");
         }
     }
 
