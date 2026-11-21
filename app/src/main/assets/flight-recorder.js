@@ -136,12 +136,17 @@ function flush(){
 }
 function change(update){
  if(blocked)return false;
- const previous={sessions,activeId,enabled,nextId};
+ const previous={sessions,activeId,enabled,nextId,editorInputActive,deferredDiagnosticFlush};
  sessions=sessions.map(s=>({...s,events:s.events.slice()}));
  refreshRows();
  update();
+ // A completed/aborted diagnostic session must not leave a stale pointer
+ // blocking automatic recording in the next diagnostic session.
+ if(activeId!==previous.activeId){
+  editorInputActive=0;deferredDiagnosticFlush=false;
+ }
  if(!flush()){
-  ({sessions,activeId,enabled,nextId}=previous);
+  ({sessions,activeId,enabled,nextId,editorInputActive,deferredDiagnosticFlush}=previous);
   refreshRows();
   return false;
  }
