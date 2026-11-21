@@ -12,11 +12,10 @@
 6. **Bezpečná chyba:** plný disk, zamítnuté oprávnění, přerušení zápisu, poškozený soubor nebo chybějící příloha nesmějí vyvolat falešné potvrzení uložení. Přiznat problém; zachovat poslední ověřený stav.
 7. **Pozdější rozšíření:** nyní žádné přihlašování, sync fronty, cloud ani konfliktní protokol. Data mají zůstat srozumitelná, verzovaná a s ID, aby pozdější online funkce nevyžadovaly nevratný přepis.
 
-## Oponentura v1 a doporučené technické minimum
+## Konkrétní technická oponentura
 
-- **FAKT ze zdroje v1 na `main` `8a36e35`:** `LocalDatabase.write` již rotuje `projects.json` + `projects.bak`, ale před běžným zápisem až **3×** volá `ProtectedRevisions.preserveDatabase`; jeho `inventory` prochází rostoucí historické záznamy. `app.js` navíc serializuje celý stav všech zakázek. Diagnostika v [#221](https://github.com/zaplikj30-ui/Zamerovac-android/issues/221) uvádí přibližně **5 s** ochrany revizí. Pouhé přidání/odebrání jedné zálohy tedy neřeší celý problém.
-- **DOPORUČENÍ pro v2, NEVYBRÁNO/NEOTESTOVÁNO:** místní **SQLite** (podle zvoleného frameworku případně Room/odpovídající knihovna); jedna krátká transakce aktualizuje změněnou fotografii/kótu, ne ostatní zakázky. Originální média jsou neměnné soubory mimo DB; dokončení zápisu se potvrzuje až po úspěchu. Předchozí obnovitelný stav navrhnout **bez plné kopie všech zakázek po každém tahu**. Samostatně: omezené Undo/Redo, koš, případné uživatelské zálohy. Žádná online infrastruktura nyní.
-- **STOP před výběrem:** ověřit na prototypu crash/plný disk, integritu fotografií, latenci po 1 000/5 000 úpravách a škálování na více zakázek. SQLite transakce není sama druhou zálohou ani ochranou před ztrátou telefonu.
+- **FAKT:** v1 již má `projects.json` + `projects.bak`, ale při ukládání může ještě **3× archivovat další úplné DB stavy** a prochází rostoucí historické revize; diagnostika naměřila cca 5 s ([#221](https://github.com/zaplikj30-ui/Zamerovac-android/issues/221)). To nechceme opakovat.
+- **DOPORUČENÍ, ne výběr:** ve v2 ověřit transakční **SQLite**, ukládání jen změněné fotografie/kóty a originály médií mimo DB. Žádná neomezená historie plných zakázek; obnova a Undo odděleně. SQLite samo nezaručuje druhou zálohu ani ochranu před ztrátou telefonu.
 
 ## Minimální zkouška před schválením řešení
 
