@@ -177,6 +177,14 @@ assert.strictEqual(restored.toggle(true),true);
 now=8200;laterCallbacks.pointerdown[0]({pointerId:600,pointerType:'touch',timeStamp:8190});
 restored.toggle(false);
 assert.strictEqual(restored.toggle(true),true);
+// Session switches must invalidate the *global* gesture pause as well.
+// A non-input critical diagnostic event immediately after restart must persist,
+// even when the prior session ended while a pointer was still held.
+restored.record('ui-stall',{elapsedMs:1234},true);
+const persistedAcrossSession=JSON.parse(localStorage.getItem('zamerovac-perf-diagnostics-v2'));
+const currentAcrossSession=persistedAcrossSession.sessions.find(e=>e.id===persistedAcrossSession.activeId);
+assert(currentAcrossSession.events.some(e=>e.type==='ui-stall'&&e.values.elapsedMs===1234),
+ 'New session remained stuck in old active-pointer diagnostic pause');
 now=8300;laterCallbacks.pointerdown[0]({pointerId:601,pointerType:'touch',timeStamp:8290});
 assert.strictEqual(restored.snapshot().events.at(-1).values.activePointers,1);
 console.log('flight_recorder_input_timing PASS – opt-in, timestamp mismatch, concurrency, persistence, session reset, privacy, disabled');
