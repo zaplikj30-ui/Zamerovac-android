@@ -86,6 +86,63 @@ Všech [49 očíslovaných požadavků #12](https://github.com/zaplikj30-ui/Zame
 
 **Budoucí nápady:** [34 skupin v inventuře](ZAMEROVAC_2_INVENTURA_POZADAVKU.md) včetně kót do 360° panoramat, možného 3D, široké podpory laserů, pracovního časovače se sazbou zákazníka a historie práce, fakturace, monetizace a budoucích zapínatelných modulů. Tyto požadavky nemají být záminkou vyvíjet hned 3D/účetnictví/pluginy.
 
+### 3.1 Všech 49 jednotlivých bodů – zdrojová stopa a nutná zkouška
+
+**Důležitá hranice:** přítomnost souboru oblasti **neprokazuje implementaci každého požadovaného detailu**. Proto je v tabulce výslovně stav konkrétního bodu **NEOVĚŘENO**, kromě známého fyzického problému galerie a zjevně pouze plánované inteligentní funkce. Je to správné zadání pro budoucí detailní regresi, nikoliv 49 falešných PASS.
+
+| Bod #12 | Požadované chování | Existující cesta ve v1 | Stav konkrétního detailu | Co ověřit před převzetím do v2 |
+|---|---|---|---|---|
+| **1.1** | Zvětšit pouze vzhled bílých úchopových kroužků. Dotykovou oblast a citlivost neměnit. | [zdroj oblasti](../app/src/main/assets/editor.js) | Zdroj editoru doložen; jednotlivá přesná ergonomie neověřena | test gesta / lupa / pixely |
+| **1.2** | Kroužky mají být poloprůhledné a nemají překrývat žluté čáry nebo hroty. | [zdroj oblasti](../app/src/main/assets/editor.js) | Zdroj editoru doložen; jednotlivá přesná ergonomie neověřena | test gesta / lupa / pixely |
+| **1.3** | Uchopením středu čáry nebo kóty přesunout celý objekt. | [zdroj oblasti](../app/src/main/assets/editor.js) | Zdroj editoru doložen; jednotlivá přesná ergonomie neověřena | test gesta / lupa / pixely |
+| **1.4** | Uchopením koncového bodu přesouvat jen daný konec. | [zdroj oblasti](../app/src/main/assets/editor.js) | Zdroj editoru doložen; jednotlivá přesná ergonomie neověřena | test gesta / lupa / pixely |
+| **1.5** | Opravit magnetické přichytávání, aby šly body snadno oddělit. | [zdroj oblasti](../app/src/main/assets/editor.js) | Zdroj editoru doložen; jednotlivá přesná ergonomie neověřena | test gesta / lupa / pixely |
+| **1.6** | Vypnutí přichytávání musí vypnout všechny jeho režimy. | [zdroj oblasti](../app/src/main/assets/editor.js) | Zdroj editoru doložen; jednotlivá přesná ergonomie neověřena | test gesta / lupa / pixely |
+| **1.7** | Text přidaný k šipce zobrazovat nad její čárou. | [zdroj oblasti](../app/src/main/assets/editor.js) | Zdroj editoru doložen; jednotlivá přesná ergonomie neověřena | test gesta / lupa / pixely |
+| **1.8** | Zachovat přesnou lupu při umisťování a přesouvání bodů. | [zdroj oblasti](../app/src/main/assets/editor.js) | Zdroj editoru doložen; jednotlivá přesná ergonomie neověřena | test gesta / lupa / pixely |
+| **2.1** | Plocha: čtyři nezávisle pohyblivé rohy, nepravidelné tvary a rozměry stran. | [zdroj oblasti](../app/src/main/assets/editor.js) | Kód nástrojové oblasti existuje; konkrétní tvar neověřen | test viditelného tvaru a ovládání |
+| **2.2** | Plocha: prostředním úchopem přesouvat celý tvar. | [zdroj oblasti](../app/src/main/assets/editor.js) | Kód nástrojové oblasti existuje; konkrétní tvar neověřen | test viditelného tvaru a ovládání |
+| **2.3** | Obdélník ponechat jako samostatný jednoduchý nástroj. | [zdroj oblasti](../app/src/main/assets/editor.js) | Kód nástrojové oblasti existuje; konkrétní tvar neověřen | test viditelného tvaru a ovládání |
+| **2.4** | Kruh: přesun za střed, změna velikosti za obvod, průměr Ø / poloměr R. | [zdroj oblasti](../app/src/main/assets/editor.js) | Kód nástrojové oblasti existuje; konkrétní tvar neověřen | test viditelného tvaru a ovládání |
+| **2.5** | Elipsa: přesouvání celku a dvě nezávisle upravitelné osy. | [zdroj oblasti](../app/src/main/assets/editor.js) | Kód nástrojové oblasti existuje; konkrétní tvar neověřen | test viditelného tvaru a ovládání |
+| **2.6** | Lomená čára: jednotlivé vrcholy spojené rovnými úsečkami, včetně jejich úprav. | [zdroj oblasti](../app/src/main/assets/editor.js) | Kód nástrojové oblasti existuje; konkrétní tvar neověřen | test viditelného tvaru a ovládání |
+| **2.7** | Volná ruka musí plynule kopírovat pohyb prstu nebo S Penu. | [zdroj oblasti](../app/src/main/assets/editor.js) | Kód nástrojové oblasti existuje; konkrétní tvar neověřen | test viditelného tvaru a ovládání |
+| **2.8** | Inteligentní kreslení: samostatný nástroj pro narovnání ručního náčrtu půdorysu. (inteligentní narovnání není doložené jako hotové) | [zdroj oblasti](../app/src/main/assets/editor.js) | Nedoložené jako implementovaná funkce; jen zadání | test viditelného tvaru a ovládání |
+| **3.1** | Dimenzní řetězec: zobrazovat rozměr každého jednotlivého úseku. | [zdroj oblasti](../app/src/main/assets/editor.js) | Editor a laserový vstup existují; detail neověřen | test hodnot/řetězců/jednotek |
+| **3.2** | Kumulativní řetězec: zobrazovat vzdálenosti od společného počátečního bodu. | [zdroj oblasti](../app/src/main/assets/editor.js) | Editor a laserový vstup existují; detail neověřen | test hodnot/řetězců/jednotek |
+| **3.3** | Oba řetězce: odlišné ikony, přidávání, přesouvání a mazání bodů. | [zdroj oblasti](../app/src/main/assets/editor.js) | Editor a laserový vstup existují; detail neověřen | test hodnot/řetězců/jednotek |
+| **3.4** | Oba řetězce: ruční zadávání délek a přenos měření z laseru Bosch. | [zdroj oblasti](../app/src/main/assets/editor.js) | Editor a laserový vstup existují; detail neověřen | test hodnot/řetězců/jednotek |
+| **3.5** | Úhel: společný vrchol a dvě upravitelná ramena podle ImageMeteru. | [zdroj oblasti](../app/src/main/assets/editor.js) | Editor a laserový vstup existují; detail neověřen | test hodnot/řetězců/jednotek |
+| **3.6** | Sklon čáry: zachovat i naši současnou variantu zobrazení úhlu. | [zdroj oblasti](../app/src/main/assets/editor.js) | Editor a laserový vstup existují; detail neověřen | test hodnot/řetězců/jednotek |
+| **4.1** | Prázdná poznámka: ponechat výchozí text „Klikněte pro zadání textu“. | [zdroj oblasti](../app/src/main/assets/rich-notes.js) | Funkce poznámek existuje; detail v telefonu neověřen | test příloh/oprávnění/gest |
+| **4.2** | Po vložení fotografie zobrazovat fotografii místo výchozího textu. | [zdroj oblasti](../app/src/main/assets/rich-notes.js) | Funkce poznámek existuje; detail v telefonu neověřen | test příloh/oprávnění/gest |
+| **4.3** | Vlastní text a fotografie se zobrazují a přesouvají společně. | [zdroj oblasti](../app/src/main/assets/rich-notes.js) | Funkce poznámek existuje; detail v telefonu neověřen | test příloh/oprávnění/gest |
+| **4.4** | U hlasové poznámky zobrazit malou ikonu mikrofonu. | [zdroj oblasti](../app/src/main/assets/rich-notes.js) | Funkce poznámek existuje; detail v telefonu neověřen | test příloh/oprávnění/gest |
+| **4.5** | Klepnutím na text i fotografii otevřít stejnou úplnou nabídku poznámky. | [zdroj oblasti](../app/src/main/assets/rich-notes.js) | Funkce poznámek existuje; detail v telefonu neověřen | test příloh/oprávnění/gest |
+| **4.6** | Zachovat fotografie, videa, hlasové nahrávky a další přílohy. | [zdroj oblasti](../app/src/main/assets/rich-notes.js) | Funkce poznámek existuje; detail v telefonu neověřen | test příloh/oprávnění/gest |
+| **4.7** | Spojovací šipka: v klidu pouze žlutý hrot, bez viditelné tečky. | [zdroj oblasti](../app/src/main/assets/rich-notes.js) | Funkce poznámek existuje; detail v telefonu neověřen | test příloh/oprávnění/gest |
+| **4.8** | Při přesouvání hrotu zobrazit větší bílý úchop; hrot přesouvat samostatně. | [zdroj oblasti](../app/src/main/assets/rich-notes.js) | Funkce poznámek existuje; detail v telefonu neověřen | test příloh/oprávnění/gest |
+| **4.9** | Po prvním povolení mikrofonu automaticky začít nahrávat bez druhého klepnutí. | [zdroj oblasti](../app/src/main/assets/rich-notes.js) | Funkce poznámek existuje; detail v telefonu neověřen | test příloh/oprávnění/gest |
+| **5.1** | V galerii zobrazovat fotografie se všemi kótami, poznámkami a symboly. | [zdroj oblasti](../app/src/main/assets/upgrade.js) | Galerie existuje; čitelnost kót fyzicky vadná #50 | test čitelnosti a viewer lock |
+| **5.2** | V galerii zamknout úpravy objektů, aby šlo bezpečně listovat prstem. | [zdroj oblasti](../app/src/main/assets/upgrade.js) | Galerie existuje; čitelnost kót fyzicky vadná #50 | test čitelnosti a viewer lock |
+| **5.3** | Po otevření editoru znovu umožnit běžné úpravy všech objektů. | [zdroj oblasti](../app/src/main/assets/upgrade.js) | Galerie existuje; čitelnost kót fyzicky vadná #50 | test čitelnosti a viewer lock |
+| **5.4** | Stejné chování zajistit i ve druhém prohlížeči fotografií. | [zdroj oblasti](../app/src/main/assets/upgrade.js) | Galerie existuje; čitelnost kót fyzicky vadná #50 | test čitelnosti a viewer lock |
+| **5.5** | Po návratu z editoru zobrazovat aktuálně uložené anotace. | [zdroj oblasti](../app/src/main/assets/upgrade.js) | Galerie existuje; čitelnost kót fyzicky vadná #50 | test čitelnosti a viewer lock |
+| **6.1** | Rozšířit knihovnu symbolů pro elektroinstalaci, půdorysy a další použití. | [zdroj oblasti](../app/src/main/assets/editor.js) | Symboly v editoru existují; detail knihovny neověřen | test ikon/kategorií/uložení |
+| **6.2** | Přidat přehledné kategorie a vyhledávání symbolů. | [zdroj oblasti](../app/src/main/assets/editor.js) | Symboly v editoru existují; detail knihovny neověřen | test ikon/kategorií/uložení |
+| **6.3** | Přidat naposledy použité symboly. | [zdroj oblasti](../app/src/main/assets/editor.js) | Symboly v editoru existují; detail knihovny neověřen | test ikon/kategorií/uložení |
+| **6.4** | Umožnit vlastní text u symbolu a zachovat rychlé předvolby. | [zdroj oblasti](../app/src/main/assets/editor.js) | Symboly v editoru existují; detail knihovny neověřen | test ikon/kategorií/uložení |
+| **7.1** | Opravit skutečný přenos naměřených hodnot z Bosch GLM 100-25 C. | [zdroj oblasti](../app/src/main/java/cz/zamerovac/app/BoschBleProtocol.java) | Bosch kód existuje; specifický model vyžaduje fyzický test | test BLE a přesné hodnoty |
+| **7.2** | Přenášet hodnoty do právě aktivní kóty nebo rozměrového pole. | [zdroj oblasti](../app/src/main/java/cz/zamerovac/app/BoschBleProtocol.java) | Bosch kód existuje; specifický model vyžaduje fyzický test | test BLE a přesné hodnoty |
+| **7.3** | Zprovoznit historii naměřených hodnot. | [zdroj oblasti](../app/src/main/java/cz/zamerovac/app/BoschBleProtocol.java) | Bosch kód existuje; specifický model vyžaduje fyzický test | test BLE a přesné hodnoty |
+| **7.4** | Zjednodušit nalezení laseru a jeho opětovné připojení. | [zdroj oblasti](../app/src/main/java/cz/zamerovac/app/BoschBleProtocol.java) | Bosch kód existuje; specifický model vyžaduje fyzický test | test BLE a přesné hodnoty |
+| **8.1** | Odstranit duplicitní export z rozbalené nástrojové lišty. | [zdroj oblasti](../app/src/main/java/cz/zamerovac/app/BackupImporter.java) | ZIP/export vrstva existuje; konkrétní detail neověřen | test ZIP/export/import/reopen/byte-identical |
+| **8.2** | Zachovat ostatní možnosti exportu. | [zdroj oblasti](../app/src/main/java/cz/zamerovac/app/BackupImporter.java) | ZIP/export vrstva existuje; konkrétní detail neověřen | test ZIP/export/import/reopen/byte-identical |
+| **8.3** | Přidat export celé zvolené složky včetně podsložek a příloh. | [zdroj oblasti](../app/src/main/java/cz/zamerovac/app/BackupImporter.java) | ZIP/export vrstva existuje; konkrétní detail neověřen | test ZIP/export/import/reopen/byte-identical |
+| **8.4** | Při aktualizaci zachovat uložené zakázky, fotografie, kóty a poznámky. | [zdroj oblasti](../app/src/main/java/cz/zamerovac/app/BackupImporter.java) | ZIP/export vrstva existuje; konkrétní detail neověřen | test ZIP/export/import/reopen/byte-identical |
+| **8.5** | Zachovat dosavadní funkční ovládání všude, kde nebyla požadována změna. | [zdroj oblasti](../app/src/main/java/cz/zamerovac/app/BackupImporter.java) | ZIP/export vrstva existuje; konkrétní detail neověřen | test ZIP/export/import/reopen/byte-identical |
+
+**44 mapovaných oblastí, 49 položek a 28 historických testů nejsou sčitatelné počty funkcí:** jsou to různé pohledy na stejný kód a chování.
 ## 4. Povinná diagnostika OD PRVNÍHO v2 prototypu – rozhodnutí uživatele 21. 11. 2026
 
 Diagnostika není odložená funkce. Je **akceptační podmínka M1** spolu s editorem, bezpečným uložením a základními testy.
