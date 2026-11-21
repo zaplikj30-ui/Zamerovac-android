@@ -3,12 +3,14 @@
 (function(root){
 'use strict';
 const KEY='zamerovac-perf-diagnostics-v2',LEGACY='zamerovac-perf-diagnostics-v1',LIMIT=120,SESSION_LIMIT=20,MAX_MS=600000;
-const TYPES=new Set(['start','enabled','disabled','editor-open','drag-release','dimension-move','dimension-rotate','dimension-resize','dimension-rotate-resize','dimension-point-adjust','editor-commit','native-save','ui-stall','save-error']);
-const FIELDS=new Set(['elapsedMs','bridgeMs','serializeMs','savePathMs','paintMs','undoCount','itemCount','dimensionCount','databasePhotoCount','databaseItemCount','databaseDimensionCount','success','lockWaitMs','readMs','writeMs','validationMs','casRecheckMs','revisionProtectMs','evidenceMs','databaseCommitMs','generationMs','recoveryMs','revisionInventoryMs','revisionCount','cacheMisses','cacheHits','mediaChecks']);
+const TYPES=new Set(['start','enabled','disabled','editor-open','drag-release','dimension-move','dimension-rotate','dimension-resize','dimension-rotate-resize','dimension-point-adjust','editor-commit','native-save','ui-stall','save-error','input-down','input-up','input-cancel']);
+const FIELDS=new Set(['elapsedMs','bridgeMs','serializeMs','savePathMs','paintMs','undoCount','itemCount','dimensionCount','databasePhotoCount','databaseItemCount','databaseDimensionCount','success','lockWaitMs','readMs','writeMs','validationMs','casRecheckMs','revisionProtectMs','evidenceMs','databaseCommitMs','generationMs','recoveryMs','revisionInventoryMs','revisionCount','cacheMisses','cacheHits','mediaChecks','inputKind','inputDelayMs','gestureMs','moveEvents','activePointers','missingDown']);
 const clock=()=>performance.now();
 const validTime=t=>typeof t==='string'&&/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/.test(t)&&!Number.isNaN(Date.parse(t));
 let sessions=[],activeId=null,rows=[],enabled=false,persistError=false,flushTimer=null,beat=null,lastBeat=clock(),nextId=0;
 let confirmedRaw=null,blocked=false,legacyPending=false;
+// Prevent recorder storage work during a live editor gesture; no app gesture changes.
+let editorInputActive=0,deferredDiagnosticFlush=false;
 function exactKeys(value,keys){
  return value!==null&&typeof value==='object'&&!Array.isArray(value)&&
   Object.keys(value).length===keys.length&&keys.every(key=>Object.hasOwn(value,key));
@@ -134,12 +136,17 @@ function flush(){
 }
 function change(update){
  if(blocked)return false;
- const previous={sessions,activeId,enabled,nextId};
+ const previous={sessions,activeId,enabled,nextId,editorInputActive,deferredDiagnosticFlush};
  sessions=sessions.map(s=>({...s,events:s.events.slice()}));
  refreshRows();
  update();
+ // A completed/aborted diagnostic session must not leave a stale pointer
+ // blocking automatic recording in the next diagnostic session.
+ if(activeId!==previous.activeId){
+  editorInputActive=0;deferredDiagnosticFlush=false;
+ }
  if(!flush()){
-  ({sessions,activeId,enabled,nextId}=previous);
+  ({sessions,activeId,enabled,nextId,editorInputActive,deferredDiagnosticFlush}=previous);
   refreshRows();
   return false;
  }
@@ -147,13 +154,25 @@ function change(update){
  return true;
 }
 function schedule(){
- if(flushTimer===null)flushTimer=setTimeout(flush,1200);
+ if(flushTimer===null)flushTimer=setTimeout(()=>{
+  flushTimer=null;
+  if(editorInputActive>0){deferredDiagnosticFlush=true;return}
+  flush();
+ },1200);
 }
-function record(type,values={},important=false){
+function editorPointerCount(count){
+ editorInputActive=count;
+ if(count===0&&deferredDiagnosticFlush){
+  deferredDiagnosticFlush=false;
+  schedule();
+ }
+}
+function record(type,values={},important=false,skipSchedule=false){
  if(blocked||!enabled||activeId===null||!TYPES.has(type))return;
  rows.push({time:new Date().toISOString(),type,values:clean(values)});
  if(rows.length>LIMIT)rows.splice(0,rows.length-LIMIT);
- if(important)flush();else schedule();
+ if(important){if(editorInputActive>0)deferredDiagnosticFlush=true;else flush()}
+ else if(!skipSchedule)schedule();
 }
 // Classify finished dimension geometry only when recording is enabled.
 // No coordinates, angles, dimension lengths or laser values enter the report.
@@ -176,6 +195,69 @@ function recordDimensionGesture(kind,fromA,fromB,toA,toB,values={}){
  const type=dimensionGestureType(kind,fromA,fromB,toA,toB);
  if(!type)return false;
  record(type,values,true);
+ return true;
+}
+// Opt-in editor input timing. A WebView callback can arrive long after a
+// physical touch, or never arrive. Store only counts and timing, not positions,
+// pointer IDs, pressure, annotations, photos or any measurement values.
+// Input callbacks must not schedule localStorage writes during a later drag;
+// queued non-input flush callbacks also defer while any pointer is held;
+// existing commit/stop/share/pagehide paths persist pending input rows.
+// Tracking pointermove uses memory only and never writes to localStorage.
+function attachEditorInput(canvas){
+ if(!canvas||typeof canvas.addEventListener!=='function')return false;
+ if(canvas.__zFlightInputAttached)return true;
+ const active=new Map();
+ let observedSession=activeId;
+ const resetOnSessionChange=()=>{
+  if(observedSession===activeId)return;
+  active.clear();editorInputActive=0;deferredDiagnosticFlush=false;observedSession=activeId;
+ };
+ const inputKind=e=>e.pointerType==='touch'?1:e.pointerType==='pen'?2:e.pointerType==='mouse'?3:0;
+ const eventAge=e=>{
+  const now=clock(),stamp=Number(e.timeStamp),age=now-stamp;
+  // Modern WebView timestamps share performance.now's origin; older ones
+  // sometimes use epoch time. Incompatible clocks are not evidence of delay.
+  return Number.isFinite(stamp)&&stamp>0&&age>=0&&age<=MAX_MS?age:null;
+ };
+ const values=e=>{
+  const result={inputKind:inputKind(e),activePointers:active.size};
+  const age=eventAge(e);
+  if(age!==null)result.inputDelayMs=age;
+  return result;
+ };
+ canvas.addEventListener('pointerdown',e=>{
+  resetOnSessionChange();
+  if(!enabled||blocked)return;
+  // A lost pointerup must never accumulate an unbounded in-memory map.
+  if(active.size>=16&&!active.has(e.pointerId))active.clear();
+  active.set(e.pointerId,{started:clock(),moves:0});
+  editorPointerCount(active.size);
+  record('input-down',values(e),false,true);
+ },{capture:true,passive:true});
+ canvas.addEventListener('pointermove',e=>{
+  resetOnSessionChange();
+  if(!enabled||blocked)return;
+  const gesture=active.get(e.pointerId);
+  if(gesture&&gesture.moves<MAX_MS)gesture.moves++;
+ },{capture:true,passive:true});
+ function end(type,e){
+  resetOnSessionChange();
+  const gesture=active.get(e.pointerId);
+  active.delete(e.pointerId);
+  editorPointerCount(active.size);
+  if(!enabled||blocked)return;
+  const metrics=values(e);
+  if(gesture){
+   metrics.gestureMs=Math.min(MAX_MS,Math.max(0,clock()-gesture.started));
+   metrics.moveEvents=gesture.moves;
+  }else metrics.missingDown=1;
+  record(type,metrics,false,true);
+ }
+ canvas.addEventListener('pointerup',e=>end('input-up',e),{capture:true,passive:true});
+ canvas.addEventListener('pointercancel',e=>end('input-cancel',e),{capture:true,passive:true});
+ root.document?.addEventListener?.('visibilitychange',()=>{if(root.document.visibilityState==='hidden'){active.clear();editorInputActive=0;deferredDiagnosticFlush=false}});
+ canvas.__zFlightInputAttached=true;
  return true;
 }
 function watch(){
@@ -306,7 +388,7 @@ root.document?.addEventListener?.('visibilitychange',()=>{
  if(root.document.visibilityState==='hidden')flush();
  else lastBeat=clock();
 });
-const api=Object.freeze({record,recordDimensionGesture,toggle,clear,removeSession,sessionList,share,report,snapshot,attachSettings,showHistory,isEnabled:()=>enabled,flush});
+const api=Object.freeze({record,recordDimensionGesture,toggle,clear,removeSession,sessionList,share,report,snapshot,attachSettings,showHistory,attachEditorInput,isEnabled:()=>enabled,flush});
 root.ZFlight=api;
 watch();
 if(enabled)record('start');
