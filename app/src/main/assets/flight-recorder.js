@@ -149,11 +149,11 @@ function change(update){
 function schedule(){
  if(flushTimer===null)flushTimer=setTimeout(flush,1200);
 }
-function record(type,values={},important=false){
+function record(type,values={},important=false,skipSchedule=false){
  if(blocked||!enabled||activeId===null||!TYPES.has(type))return;
  rows.push({time:new Date().toISOString(),type,values:clean(values)});
  if(rows.length>LIMIT)rows.splice(0,rows.length-LIMIT);
- if(important)flush();else schedule();
+ if(important)flush();else if(!skipSchedule)schedule();
 }
 // Classify finished dimension geometry only when recording is enabled.
 // No coordinates, angles, dimension lengths or laser values enter the report.
@@ -181,6 +181,8 @@ function recordDimensionGesture(kind,fromA,fromB,toA,toB,values={}){
 // Opt-in editor input timing. A WebView callback can arrive long after a
 // physical touch, or never arrive. Store only counts and timing, not positions,
 // pointer IDs, pressure, annotations, photos or any measurement values.
+// Input callbacks must not schedule localStorage writes during a later drag;
+// existing commit/stop/share/pagehide paths persist pending input rows.
 // Tracking pointermove uses memory only and never writes to localStorage.
 function attachEditorInput(canvas){
  if(!canvas||typeof canvas.addEventListener!=='function')return false;
@@ -210,7 +212,7 @@ function attachEditorInput(canvas){
   // A lost pointerup must never accumulate an unbounded in-memory map.
   if(active.size>=16&&!active.has(e.pointerId))active.clear();
   active.set(e.pointerId,{started:clock(),moves:0});
-  record('input-down',values(e));
+  record('input-down',values(e),false,true);
  },{capture:true,passive:true});
  canvas.addEventListener('pointermove',e=>{
   resetOnSessionChange();
@@ -228,7 +230,7 @@ function attachEditorInput(canvas){
    metrics.gestureMs=Math.min(MAX_MS,Math.max(0,clock()-gesture.started));
    metrics.moveEvents=gesture.moves;
   }else metrics.missingDown=1;
-  record(type,metrics);
+  record(type,metrics,false,true);
  }
  canvas.addEventListener('pointerup',e=>end('input-up',e),{capture:true,passive:true});
  canvas.addEventListener('pointercancel',e=>end('input-cancel',e),{capture:true,passive:true});
