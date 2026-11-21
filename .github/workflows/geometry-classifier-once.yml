@@ -1,0 +1,50 @@
+name: "#221: krátký cílený JVM test klasifikátoru (jednorázový)"
+# Single explicit owner GO 2026-11-21: test PR #235 without the 50-minute suite.
+# Run ONLY when this new one-shot workflow file is committed to its QA branch.
+on:
+  push:
+    branches: [qa/221-geometry-classifier-once]
+    paths: [.github/workflows/geometry-classifier-once.yml]
+permissions:
+  contents: read
+concurrency:
+  group: z221-classifier-once
+  cancel-in-progress: true
+jobs:
+  classifier:
+    if: ${{ github.repository == 'zaplikj30-ui/Zamerovac-android' && github.ref == 'refs/heads/qa/221-geometry-classifier-once' }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    steps:
+      - name: Checkout exact product SHA from draft PR #235
+        uses: actions/checkout@v4
+        with:
+          ref: 4f3f9f0d382e2234246851bc563fb958fafc2a66
+          persist-credentials: false
+      - name: Verify immutable source SHA
+        run: |
+          test "$(git rev-parse HEAD)" = "4f3f9f0d382e2234246851bc563fb958fafc2a66"
+          echo "Product SHA: $(git rev-parse HEAD)"
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.10.2'
+          cache-read-only: true
+      - name: ONLY GeometrySaveClassifierTest (hard six-minute cap)
+        shell: bash
+        run: |
+          set -euo pipefail
+          timeout --signal=TERM --kill-after=10s 6m gradle --no-daemon --console=plain \
+            :app:testPreviewUnitTest --tests 'cz.zamerovac.app.GeometrySaveClassifierTest' \
+            -PdriveRequireConfigured=false
+      - name: Save exact target-class JUnit results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: z221-geometry-classifier-targeted-junit
+          path: app/build/test-results/testPreviewUnitTest/
+          if-no-files-found: ignore
+          retention-days: 7
