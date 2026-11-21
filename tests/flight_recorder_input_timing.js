@@ -79,6 +79,16 @@ now=1180;emit('pointerup',202,'pen',1179);
 assert.strictEqual(recorder.snapshot().events.at(-1).values.activePointers,1);
 now=1190;emit('pointerup',201,'touch',1189);
 assert.strictEqual(recorder.snapshot().events.at(-1).values.activePointers,0);
+// A callback can arrive 5 seconds after a timestamped touch event.
+now=6200;emit('pointerdown',777,'touch',1200);
+latest=recorder.snapshot().events.at(-1);
+assert.strictEqual(latest.values.inputDelayMs,5000);
+now=6220;emit('pointerup',777,'touch',6210);
+// Missing pointerups cannot grow the transient tracker indefinitely.
+for(let i=0;i<20;i++){
+ now=7000+i;emit('pointerdown',1000+i,'touch',now-1);
+}
+assert(recorder.snapshot().events.at(-1).values.activePointers<=16);
 // Do not store raw pointer ID, screen coordinates or pressure.
 const report=recorder.report();
 for(const secret of ['"pointerId"','"clientX"','"clientY"','"pressure"']){
