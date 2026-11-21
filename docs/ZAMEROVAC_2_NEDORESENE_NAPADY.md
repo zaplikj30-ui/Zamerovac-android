@@ -105,10 +105,10 @@ Každý bod obsahuje původní stav a **konkrétní otázku, kterou bude třeba 
 **Bezpečná návaznost:** Nesměšovat opravu s novou funkcí
 **Původ:** [Rozhodnutí](../ROZHODNUTI_A_NAPADY_Z_TESTU.md), [Vize](../VIZE_A_PLAN.md)
 
-### ☐ F16 · Začátečník/Střední/Expert – úrovně přehlednosti UI, NE tarify
-**Dosavadní stav:** **NÁPAD** · **Práce:** ROZHODNOUT / UPŘESNIT
-**Co ještě dořešit:** Jaké konkrétní rozdíly mají režimy Začátečník / Střední / Expert?
-**Bezpečná návaznost:** Jen vzhled a množství nástrojů, ne změna dat
+### ☐ F16 · Nastavení → Přizpůsobení nástrojů (zobrazit/skrýt jednotlivé funkce)
+**Dosavadní stav:** **NÁZEV A PRINCIP JEDNOTLIVÝCH PŘEPÍNAČŮ POTVRZEN VLASTNÍKEM 21. 11. 2026; V2 ZATÍM NEIMPLEMENTOVÁNO.** · **Práce:** ZÁKLADNÍ UX DOHODNUTO, DOŘEŠIT DETAILY POZDĚJI
+**Co ještě dořešit:** Přesný výchozí výběr nástrojů při první instalaci, logické skupiny v nastavení a případné rychlé předvolby Začátečník/Střední/Expert. Samotné přepínání nástrojů po jednom je dohodnuté.
+**Bezpečná návaznost:** Nastavení skrývá pouze nástroje v nabídce; nezahazuje funkce, nemění měření, neschovává už uložené objekty tak, aby se nedaly otevřít, a nic nemaže. Změna nastavení se zapamatuje a neovlivní rozpracovanou zakázku.
 **Původ:** [Vize](../VIZE_A_PLAN.md)
 
 ### ☐ F17 · Úsporné/vyvážené/kvalitní vykreslování na různě výkonném telefonu
@@ -165,10 +165,10 @@ Každý bod obsahuje původní stav a **konkrétní otázku, kterou bude třeba 
 **Bezpečná návaznost:** Zachovat revize, žádné tiché přepočty
 **Původ:** [Vize](../VIZE_A_PLAN.md)
 
-### ☐ F26 · Zapínatelné funkční moduly, ale samostatné dnešní aplikace
-**Dosavadní stav:** **NÁPAD** · **Práce:** ROZHODNOUT / UPŘESNIT
-**Co ještě dořešit:** Stačí skrývat nástroje, nebo mají být instalovatelné moduly? Kdy má spojení skutečný přínos?
-**Bezpečná návaznost:** Neprogramovat nyní pluginy
+### ☐ F26 · Samostatné Experimentální funkce a budoucí volitelné moduly
+**Dosavadní stav:** **ODDĚLENÉ EXPERIMENTÁLNÍ FUNKCE POTVRZENY VLASTNÍKEM 21. 11. 2026; INSTALOVATELNÉ MODULY ZŮSTÁVAJÍ NÁPADEM.** · **Práce:** EXPERIMENTÁLNÍ REŽIM VYMEZEN, TECHNICKY OVĚŘIT KOMPATIBILITU
+**Co ještě dořešit:** Jak zobrazit konkrétní nepodporované telefony, upozornění na omezení a dostupnost jednotlivých experimentů. Zda budou aplikace někdy propojené nebo skutečně instalovatelnými moduly, se rozhodne zvlášť; nesouvisí to se skrýváním nástrojů.
+**Bezpečná návaznost:** Experimenty jsou výchozí vypnuté a zapínají se jednotlivě, odděleně od Nastavení → Přizpůsobení nástrojů. Zpřístupnění experimentu nesmí ohrozit kóty, originální média a ukládání; při vypnutí nic nesmazat. Neprogramovat teď plugin engine ani neslučovat samostatné aplikace.
 **Původ:** [Plán §11](../PROJEKTOVY_PLAN_ZAMEROVACE.md)
 
 ### ☐ F27 · Volitelná monetizace: zdarma, jednorázově, placené funkce, licence, předplatné, reklamy/bez reklam, promo kódy
