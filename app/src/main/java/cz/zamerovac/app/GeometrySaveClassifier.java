@@ -82,6 +82,9 @@ final class GeometrySaveClassifier {
                         CausalClock.clock(oldValue), device))
                     .equals(CausalClock.canonical(CausalClock.clock(newValue)))) return false;
         if (oldValue.has("rev") && !(oldValue.opt("rev") instanceof String)) return false;
+        // JSONObject.getString() can coerce numbers; a generated revision
+        // must remain an actual string rather than a converted foreign value.
+        if (!(newValue.opt("rev") instanceof String)) return false;
         String rev = newValue.getString("rev");
         if (rev.isEmpty() || rev.length() > 128
                 || rev.equals(oldValue.optString("rev", ""))) return false;
