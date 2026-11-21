@@ -143,18 +143,27 @@ Všech [49 očíslovaných požadavků #12](https://github.com/zaplikj30-ui/Zame
 | **8.5** | Zachovat dosavadní funkční ovládání všude, kde nebyla požadována změna. | [zdroj oblasti](../app/src/main/java/cz/zamerovac/app/BackupImporter.java) | ZIP/export vrstva existuje; konkrétní detail neověřen | test ZIP/export/import/reopen/byte-identical |
 
 **44 mapovaných oblastí, 49 položek a 28 historických testů nejsou sčitatelné počty funkcí:** jsou to různé pohledy na stejný kód a chování.
-## 4. Povinná diagnostika OD PRVNÍHO v2 prototypu – rozhodnutí uživatele 21. 11. 2026
+## 4. Jednoduchá diagnostika od PRVNÍHO prototypu – upřesnění vlastníka 21. 11. 2026
 
-Diagnostika není odložená funkce. Je **akceptační podmínka M1** spolu s editorem, bezpečným uložením a základními testy.
+**Diagnostika je povinnou součástí M1, ale má být MALÁ, JEDNODUCHÁ A SAMOSTATNÁ.** Vlastník ocenil přesunutelnou vlaječku v jedničce a nechce velké diagnostické menu, formuláře hlášení, screenshoty, videonástroje ani další diagnostické funkce zatím. Cílem je snadno předat anonymní časový záznam závady.
 
-1. **Malý oddělený Kotlin záznamník:** předem povolené typy událostí, časová razítka a počty; omezená paměťová historie, oddělená testovací sezení, lokální uložení jen ve vhodný okamžik. Žádná historie každého mikropohybu prstu ani synchronní diskové zápisy v `pointermove`.
-2. **Měřit fáze:** start a otevření editoru, vstup a délku gesta, vykreslení a zadrhnutí snímků, dokončený příkaz, Undo/Redo, serializaci/přípravu transakce, diskový commit, návrat potvrzení, obnovu při restartu, miniatury, galerie, import média, chyby oprávnění a selhání. U každé chyby typ/fáze/počet, bez uživatelského obsahu.
-3. **Výkon pod kontrolou:** počty kót/fotek/složek, stručné údaje o paměti a latenci; srovnání 100 a 1000 opakovaných tahů a 10/100/1000 položek. Měřit **diagnostika vypnutá vs zapnutá**; při zhoršení sama diagnostika nemůže projít.
-4. **Soukromí:** nikdy neukládat fotografii, screenshot, GPS, jména, zákaznické texty, identifikátory zakázek, laserové hodnoty, přesné souřadnice ani zvuk. Žádná síťová telemetrie. Uživatel záznam sám zapne, zobrazí, zkopíruje/sdílí nebo smaže; pro běžný produkční režim se později rozhodne o dostupném minima počítadel.
-5. **Izolace chyb diagnostiky:** překročený limit, poškozený log, nepovolené úložiště nebo vyčerpání paměti nesmí zrušit kótu, poškodit DB, zablokovat Undo ani vyvolat pád. V těchto případech končí nanejvýš diagnostika.
-6. **Použití pro opravy:** chyba z telefonu → reprodukovat, přečíst anonymní časový záznam, určit podezřelou fázi, vytvořit věrný regresní RED, opravit a provést PASS na finálním SHA. CI/Chromium/emulátor a skutečný Android vést odděleně.
+### 4.1 Minimální ovládání
 
-**Přijímací zkouška M1:** fotografie → vložit/editovat kótu → 100/1000 tahů → Undo/Redo → potvrzené lokální uložení → restart → přesné obnovení. Diagnostika musí umět popsat čas gesta, vykreslení, uložení a obnovy. Testovat i plný disk a falešné potvrzení uložení, plus výpadek samotné diagnostiky. Žádná skutečná data zákazníka.
+1. **Jedna nenápadná přesunutelná vlaječka** mimo úchopy a nástroje editoru. Klepnutí otevře malý panel **Diagnostika**, nikoli formulář připomínky z v1. Polohu vlaječky si aplikace pamatuje.
+2. Panel má jasné **Zapnout záznam / Vypnout záznam** a viditelný stav. Každé nové zapnutí začíná nové samostatné měření (sezení), výchozí stav vypnuto.
+3. **Historie měření** se po ukončení aplikace neztrácí. Každé sezení má datum/čas a stručný počet událostí. Zaškrtávacím výběrem lze označit **jedno, více nebo všechna** měření.
+4. **Sdílet vybrané:** pouze označená měření, jedno nebo více, v jednom přehledném anonymním textu/souboru (verze aplikace, čas, povolené časy a počty). Nic se neposílá bez uživatelova klepnutí; sdílení záznamy nesmaže.
+5. **Smazat vybrané / Smazat vše:** hromadná operace jedním potvrzením; **žádné nucené mazání po jednom**. Při dosažení limitu upozornit a umožnit hromadné uvolnění místa, stará měření tiše neodstraňovat. Smazání diagnostiky se nikdy nedotkne zakázek, kót a fotografií.
+6. **Zatím nepřidávat** vlastní formulář připomínek, automatické screenshoty, kreslení do snímků, dashboard, telemetrický server ani mnoho specializovaných panelů. Pozdější rozšíření jen podle skutečné potřeby.
+
+### 4.2 Nutné technické minimum a zkouška
+
+- **Stačí lehké měření hlavních fází:** dokončený tah kóty, vykreslení, místní uložení/obnova, základní počty prvků a typy chyb nebo zastavení UI. Nezapisovat nic na disk při každém pohybu prstu; další podrobné metriky až při konkrétní závadě.
+- **Soukromí:** pevně povolené typy událostí/číselné hodnoty; žádné fotografie, screenshoty, texty, jména či ID zákazníků/zakázek, míry a hodnoty laseru, souřadnice, GPS, audio. Bez automatického odesílání. Výpis lze před sdílením zkontrolovat.
+- **Bezpečnost:** omezená velikost historie, lokální potvrzené uložení, obnova po restartu. Chyba či plná paměť diagnostiky nesmí poškodit historii měření ani zablokovat editor, Undo/Redo, ukládání zakázek nebo pracovat s osobními médii.
+- **Akceptační test M1:** vlaječka → zapnout → posouvat kóty → vypnout → po restartu vybrat dvě starší sezení → sdílet právě ta dvě → hromadně smazat vybraná → ostatní měření i zakázka zůstávají. Ověřit anonymitu, chování při poškození logu/plném disku a režii diagnostiky zapnuté vs vypnuté.
+
+**FAKT z jedničky:** soubor flight-recorder.js už umožňuje jednotlivá sezení, sdílení jednoho, mazání po jednom i všech najednou. Soubor feedback-reports.js nabízí přesunutelnou vlaječku a rychlý přepínač diagnostiky, ale klepnutí hlavně otevírá rozsáhlejší připomínku. **Ve dvojce ponecháme jednoduchou vlaječku a doplníme výběr více sezení pro společné sdílení i hromadné mazání; ostatní funkce zatím ne.**
 
 ## 5. Co musí být správně od začátku, ale nemáme to nyní programovat
 
