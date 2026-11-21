@@ -11,9 +11,11 @@ assert(editor.includes("window.ZFlight?.attachEditorInput?.(stageCanvas);"));
 const callbacks={};
 const doc={visibilityState:'visible',addEventListener(){}};
 const map=new Map();
+let diagnosticWrites=0;
+const timeoutCallbacks=[];
 const localStorage={
  getItem:key=>map.has(key)?map.get(key):null,
- setItem:(key,value)=>map.set(key,value),
+ setItem:(key,value)=>{diagnosticWrites++;map.set(key,value)},
  removeItem:key=>map.delete(key)
 };
 let now=1000;
@@ -21,7 +23,7 @@ const root={localStorage,document:doc,addEventListener(){}};
 vm.runInNewContext(source,{
  window:root,performance:{now:()=>now},
  setInterval:()=>7,clearInterval(){},
- setTimeout:()=>9,clearTimeout(){},
+ setTimeout:fn=>{timeoutCallbacks.push(fn);return 9},clearTimeout(){},
  Date
 },{filename:'flight-recorder.js'});
 const recorder=root.ZFlight;
@@ -42,6 +44,7 @@ const emit=(type,id,kind,stamp)=>callbacks[type][0].fn({
 emit('pointerdown',101,'touch',990);
 assert.strictEqual(recorder.snapshot().events.length,0);
 assert.strictEqual(recorder.toggle(true),true);
+const writesBeforeTouch=diagnosticWrites,scheduledBeforeTouch=timeoutCallbacks.length;
 emit('pointerdown',101,'touch',990);
 now=1010;emit('pointermove',101,'touch',1005);
 now=1020;emit('pointermove',101,'touch',1015);
@@ -57,6 +60,20 @@ assert.strictEqual(up.values.gestureMs,40);
 assert.strictEqual(up.values.inputDelayMs,5);
 assert.strictEqual(up.values.moveEvents,2);
 assert.strictEqual(up.values.activePointers,0);
+// Input callbacks must not schedule a disk flush during a later gesture.
+assert.strictEqual(timeoutCallbacks.length,scheduledBeforeTouch,'Touch events scheduled storage flush mid-gesture');
+assert.strictEqual(diagnosticWrites,writesBeforeTouch,'Touch events wrote storage');
+const allowedInputFields=new Set(['inputKind','inputDelayMs','activePointers','gestureMs','moveEvents','missingDown']);
+for(const e of events.filter(row=>row.type.startsWith('input-'))){
+ for(const [key,value] of Object.entries(e.values)){
+  assert(allowedInputFields.has(key),'Unapproved input metric: '+key);
+  assert(Number.isFinite(value)&&value>=0&&value<=600000,'Invalid input metric: '+key);
+ }
+}
+// Existing critical commit persists previously buffered touch events.
+recorder.record('editor-commit',{savePathMs:3},true);
+assert(diagnosticWrites>writesBeforeTouch,'Commit did not persist queued touch events');
+assert(localStorage.getItem('zamerovac-perf-diagnostics-v2').includes('input-down'),'Input lost before committed diagnostic save');
 // Native epoch-based stamps cannot be compared with performance.now().
 now=1100;emit('pointerdown',202,'pen',1700000000000);
 let latest=recorder.snapshot().events.at(-1);
