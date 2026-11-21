@@ -34,6 +34,9 @@ public class OnePlusOneRetentionContractTest {
                 RuntimeEnvironment.getApplication().getCacheDir().toPath(),
                 "one-plus-one-").toFile();
             device = new PeerTransferTest.Device(root, "phone");
+            // A clean installation must have a durable empty database before media.
+            previous = "{\"schema\":1,\"records\":[]}";
+            LocalDatabase.write(device, previous);
             File media = new File(device.home, "media");
             assertTrue(media.mkdirs());
             Files.write(new File(media, "original-photo").toPath(), ORIGINAL);
@@ -54,8 +57,6 @@ public class OnePlusOneRetentionContractTest {
                 .put("media", new JSONArray().put("original-photo"))
                 .put("items", new JSONArray().put(dimension).put(circle).put(rectangle));
             data = new JSONObject().put("schema", 1).put("records", new JSONArray().put(photo));
-            previous = "{\"schema\":1,\"records\":[]}";
-            LocalDatabase.write(device, previous);
         }
 
         void changeAndCommit(int move) throws Exception {
