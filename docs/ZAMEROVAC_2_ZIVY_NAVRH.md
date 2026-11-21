@@ -157,3 +157,22 @@ Při změně požadavku zapisovat datum, důvod a stav (rozhodnuto/návrh/neově
 3. **Před veřejným vydáním:** rozšířit matici podle cílového rozsahu Android verzí, velikostí a výrobců, včetně služeb na telefonu bez Google účtu a podle relevantnosti různých Bluetooth/stylus variant. Konkrétní modely a minimální Android rozhodnout až podle technologického prototypu. Žádný nákup zařízení či placená testovací služba bez GO vlastníka.
 
 **Důležité:** Android běh, Chromium, emulátor a skutečný jiný telefon nejsou zaměnitelné důkazy. Nevyžadovat každý fyzický model při každé drobné změně; testovat úměrně riziku, ale před tvrzením „funguje na různých telefonech“ mít důkazy z různých zařízení.
+
+
+## 12. Google Disk: zálohy vs. úsporná synchronizace (21. 11. 2026; návrh pro budoucí etapu)
+
+**FAKT – již existující požadavek:** [#40](https://github.com/zaplikj30-ui/Zamerovac-android/issues/40) rozlišuje **živou synchronizaci** aktuální práce mezi zařízeními a **obnovitelné historické zálohy** na Google Disku; zálohy obou zařízení a jejich historie se nemají navzájem přepisovat ani být automaticky smazány přenesením mazání ze synchronizace. Google Disk je možné společné úložiště pro oba účely, avšak **oddělené složky/identity a režim obnovy**. To již bylo plánované; nevymýšlet druhý duplicitní systém. Návrh na obnovení po ztrátě telefonu se netýká jen druhého synchronizovaného telefonu — bezpečná obnova vyžaduje **samostatný historický záložní bod**. U v2 se zálohy/online **neimplementují v první offline etapě**.
+
+**FAKT ze zdrojů v1 na main `8a36e353448ba74a066e16372441604b7e7163c7`:**
+- `editor.js:finishHandleGesture → commitEditor → save()` ukládá po dokončeném gestu lokálně (nikoli per `pointermove`). `LocalDatabase.write` před každým takovým uložením prochází `ProtectedRevisions`. Tato práce může trvat sekundy. **Lokální save není automaticky internetový upload.**
+- `SyncCadence` v režimu auto plánuje cloudový pokus v popředí po ~60 s, systémový Job na pozadí v intervalu ~15 min; přímé připojení k zařízení má auto minimální odstup ~20 s, tick běží po 10 s. Android může běhy zpozdit. Aktuální stav přenosu, objem a konkrétní aktivace na fyzickém telefonu tím nebyly otestované.
+- `PeerSnapshot` a `PeerOutbox` přenášejí potvrzené snapshoty a kvůli stávající recovery i historické podklady; proto by bylo nepřesné tvrdit, že v1 „posílá každý `pointermove`“, i stejně nepřesné tvrdit, že vždy odesílá pouze finální poslední kótu.
+
+**NÁVRH pro budoucí v2, vyžaduje pozdější zvláštní schválení a technický test:**
+1. **Každý dokončený editační příkaz bezpečně lokálně uložit**, okamžitě bez čekání na internet. Přesouvání kóty během držení prstu nesmí vytvářet síťová data či periodický trvalý archiv.
+2. Po uložení označit zakázku jako „čeká na synchronizaci“; **neodesílat každou mezipozici**. Do přenosu poslat nejnovější potvrzený výsledný stav a potřebná originální média. Pokud se mezitím v offline režimu mění více zařízení, uchovat nezbytné údaje o rozdílných revizích, mazání a nevyřešeném konfliktu; bez tichého přepisu.
+3. **Spouštěče přenosu:** odchod z editoru (přednostní), ruční „Synchronizovat“, a úsporný časový/obnovovací spouštěč při dlouho otevřeném editoru či návratu internetu. **Jen odchod z editoru nestačí**: v případě pádu, nuceného ukončení či dlouhé otevřené práce by sync nemusela nastat. Konkrétní interval není schválen, určit podle měření, stavu baterie, sítě a mobilních dat.
+4. **Síť i tvorbu snapshotu vykonávat mimo citlivou cestu dotyku a UI**; pokusy opakovat podle potřeby s omezením a bez nekonečné fronty mezilehlých tahů. Zobrazit „lokálně uloženo / čeká na synchronizaci / synchronizováno / konflikt“.
+5. **Zálohy na Disku oddělené od synchronizace:** manuální bezpečná kopie, později volitelná rozumná automatika až na výslovné rozhodnutí. Úspěšná sync není důkaz existence ověřené zálohy. Smazání na zařízení nesmí tiše odstranit předchozí historický záložní bod.
+
+**Stav:** dohodnutý cíl offline první; Google Disk jako budoucí zálohy/synchronizace dle stávajících plánů; okamžité odesílání každého gesta **není požadavek**. Konkrétní budoucí politika synchronizace je **NÁVRH**, ne implementovaná či telefonem ověřená funkce. Žádný nově schválený cloudový běh ani zásah do v1.
