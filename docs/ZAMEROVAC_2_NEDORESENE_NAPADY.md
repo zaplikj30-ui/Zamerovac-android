@@ -21,11 +21,13 @@ Každý bod obsahuje původní stav a **konkrétní otázku, kterou bude třeba 
 
 **Technický návrh k malému testu (ne definitivní závěr):** běžná perspektivní kamera zobrazující výřez z cylindrického/horizontálního panoramatu, s omezením extrémního zorného úhlu a s plynulým zoomem. To pomůže přirozenému vzhledu; spojovací a perspektivní artefakty z fotografií nezmizí automaticky. V nejmenším prototypu ověřit rovné stěny uprostřed, plynulý příjezd z okraje, kresbu a přesun kót, šev 360°, výkon a restart na skutečném zařízení.
 
-### ☐ F02 · Možné prostorové/3D panorama a propojení kót mezi záběry
-**Dosavadní stav:** **OTEVŘENO** · **Práce:** ROZHODNOUT / UPŘESNIT
-**Co ještě dořešit:** Je potřeba opravdu prostorový 3D model, nebo stačí otočný 360° obraz? Jak řešit projekci a švy?
-**Bezpečná návaznost:** Bez dokladu potřeby nebudovat 3D engine
-**Původ:** [#221](https://github.com/zaplikj30-ui/Zamerovac-android/issues/221#issuecomment-7061788627), [Vize](../VIZE_A_PLAN.md)
+### ☐ F02 · Plná sférická 360° fotografie se všesměrovým rozhlížením a kótami
+**Dosavadní stav:** **FUNKČNÍ CÍL UPŘESNĚN VLASTNÍKEM 21. 11. 2026, NE DUPLICITA F01.** · **Práce:** TECHNICKY OVĚŘIT, PROGRAMOVAT AŽ V POZDĚJŠÍ ETAPĚ
+**Dohodnuté chování:** Jako skutečná 360° fotografie: pohled ze stejného místa do všech směrů – **otáčet doleva/doprava, nahoru/dolů a podle potřeby naklánět pohled**. Nejde o model nábytku ani volný pohyb v 3D prostoru. **Úplná sféra = 360° horizontálně × 180° vertikálně**, tedy i strop a podlaha, když jsou skutečně vyfotografované; nehotové/částečné zachycení nemá předstírat obsah, který nebyl nafocen. Stejná fotografie dovolí přirozeně perspektivní zobrazení, přiblížení/oddálení, výběr a editaci ukotvených kót a poznámek (včetně existující poznámky s detailní fotkou). Zadané hodnoty laseru/ruční čísla se nesmějí přepočítat z pixelů.
+**Rozdíl oproti F01:** F01 = „nekonečný vodorovný film“ jen kolem stěn, bez povinného focení stropu/podlahy. F02 = fotokoule umožňující otočit pohled úplně nahoru a dolů. **Obě funkční představy ponechat**, pouze technické ovládání, anotace a úložiště dle možnosti sdílet.
+**Co ještě dořešit:** Jestli použít stejný průvodce fotografováním jako F01 s dalšími řadami záběrů nahoru/dolů; zda a jak importovat cizí úplné nebo částečné foto-sféry; kompatibilita, skládání, zkreslení nahoře/dole, plynulá editace kót, švy, export a výkon na běžném telefonu. Případné propojení více různých místností/snímacích pozic řešit samostatně.
+**Bezpečná návaznost:** Anotace navázat na směr/polohu na sféře, nikoliv na aktuální pixely obrazovky, čísla a jednotky držet přesně. Původní média zachovat; plný 3D engine nestavět jen kvůli panoramatické fotografii. První technický test může použít hotovou sférickou fotografii a až po PASS ověřovat vytváření nových snímků.
+**Původ:** [#120](https://github.com/zaplikj30-ui/Zamerovac-android/issues/120), [historická představa](https://github.com/zaplikj30-ui/Zamerovac-android/issues/221#issuecomment-7061788627), [formát 360° snímků](https://developers.google.com/streetview/android)
 
 ### ☐ F03 · Podpora co nejvíce laserových dálkoměrů různých značek a modelů – Bosch, další podle dostupných protokolů
 **Dosavadní stav:** **BUDOUCÍ POŽADOVANÝ SMĚR, NE PODPORA VŠECH** · **Práce:** ROZHODNOUT / UPŘESNIT
