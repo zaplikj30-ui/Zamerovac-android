@@ -35,9 +35,10 @@ function initial(){
   syncClock:clock(),rev:'other-photo',updatedAt:'2026-11-21T10:00:00.000Z'};
  return {schema:1,records:[photo,other],prefs:{unit:'mm'},syncProtocol:2};
 }
-function runMove({both=false,conflict=false,imageMetadataChange=false}={}){
+function runMove({both=false,conflict=false,imageMetadataChange=false,imageLoadedExisting=false}={}){
  const seed=initial();
  if(conflict)seed.records[0].items[0].hierarchyConflict={parentId:'folder-1'};
+ if(imageLoadedExisting){seed.records[0].width=1400;seed.records[0].height=900;}
  const state=structuredClone(seed),before=JSON.stringify(seed);
  const saved=[];
  let serial=0,stampSerial=0;
@@ -54,7 +55,7 @@ function runMove({both=false,conflict=false,imageMetadataChange=false}={}){
   uid:()=>('10000000-0000-4000-8000-'+String(++serial).padStart(12,'0')),
   stamp:()=>('2026-11-21T10:00:00.'+String(++stampSerial).padStart(3,'0')+'Z'),
   editStack:[],redoStack:[],photoSize:{w:1400,h:900},
-  stageImg:imageMetadataChange?{}:null,
+  stageImg:imageMetadataChange||imageLoadedExisting?{}:null,
   paint(){},JSON,console,
  };
  vm.createContext(context);
@@ -99,7 +100,11 @@ const conflict=runMove({conflict:true});
 assert.equal(Object.hasOwn(JSON.parse(conflict.after).records[0].items[0],'hierarchyConflict'),false);
 checkFixture('editor-conflict-before.json',conflict.before);
 checkFixture('editor-conflict-after.json',conflict.after);
+const loaded=runMove({imageLoadedExisting:true});
+checkFixture('editor-loaded-before.json',loaded.before);
+checkFixture('editor-loaded-after.json',loaded.after);
 const image=runMove({imageMetadataChange:true});
 assert.ok(Object.hasOwn(JSON.parse(image.after).records[0],'width'),
  'photo loaded: native commit changes dimensions too');
+checkFixture('editor-image-metadata-after.json',image.after);
 console.log('PASS #235: real touch(item) -> commitEditor -> touch(photo) -> save/CAS -> Java fixtures; Undo and negatives');
