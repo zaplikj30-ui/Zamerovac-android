@@ -46,7 +46,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          timeout --signal=TERM --kill-after=10s 6m gradle --no-daemon --console=plain \
+          timeout --signal=TERM --kill-after=10s 5m gradle --no-daemon --refresh-dependencies --console=plain \
             :app:testPreviewUnitTest --tests 'cz.zamerovac.app.GeometrySaveClassifierTest' \
             -PdriveRequireConfigured=false
       - name: Save exact target-class JUnit results
